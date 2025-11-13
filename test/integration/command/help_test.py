@@ -1,6 +1,3 @@
-import argparse
-
-import pytest
 from mock import patch
 
 from conan import __version__

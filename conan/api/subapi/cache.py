@@ -276,7 +276,7 @@ class CacheAPI:
 def _resolve_latest_ref(cache, ref):
     if ref.revision is None or ref.revision == "latest":
         ref.revision = None
-        result = cache.get_latest_recipe_reference(ref)
+        result = cache.get_latest_recipe_revision(ref)
         if result is None:
             raise ConanException(f"'{ref}' not found in cache")
         ref = result
@@ -287,7 +287,7 @@ def _resolve_latest_pref(cache, pref):
     pref.ref = _resolve_latest_ref(cache, pref.ref)
     if pref.revision is None or pref.revision == "latest":
         pref.revision = None
-        result = cache.get_latest_package_reference(pref)
+        result = cache.get_latest_package_revision(pref)
         if result is None:
             raise ConanException(f"'{pref.repr_notime()}' not found in cache")
         pref = result

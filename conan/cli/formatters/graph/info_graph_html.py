@@ -87,8 +87,11 @@ graph_info_html = r"""
                 global_edges = {};
                 let edge_counter = 0;
                 let conflict=null;
+                let provide_conflict=null;
                 if (graph_data["error"] && graph_data["error"]["type"] == "conflict")
                     conflict = graph_data["error"];
+                else if (graph_data["error"] && graph_data["error"]["type"] == "provide_conflict")
+                    provide_conflict = graph_data["error"];
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
                     if (node.context == "build" && hide_build) continue;
                     if (node.test && hide_test) continue;
@@ -124,6 +127,11 @@ graph_info_html = r"""
                     shapeProperties = {};
                     let color = color_map[node.binary]
                     if (conflict && conflict.branch1.dst_id == node_id){
+                        font.color = "white";
+                        color = "Black";
+                        shape = "circle";
+                    }
+                    if (provide_conflict && provide_conflict.node.id == node_id){
                         font.color = "white";
                         color = "Black";
                         shape = "circle";
@@ -198,6 +206,18 @@ graph_info_html = r"""
                                 color: {color: "Red", highlight: "Red"},
                                 label: conflict.branch2.require.ref});
                     global_edges[edge_counter++] = conflict.branch2.require;
+                }
+                if (provide_conflict) {
+                    // The nodes are already there, we'll just add an edge to the conflict node
+                    edges.push({id: edge_counter,
+                                from: provide_conflict.conflicting_node.id,
+                                to: provide_conflict.node.id,
+                                color: {color: "Red", highlight: "Red"},
+                                label: provide_conflict.provided,
+                                title: "Both nodes provide the same requirement: " + provide_conflict.provided.join(", "),
+                                dashes: true});
+                    global_edges[edge_counter++] = {"provided": provide_conflict.provided};
+
                 }
                 return {nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges)};
             };

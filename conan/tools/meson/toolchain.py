@@ -201,9 +201,9 @@ class MesonToolchain:
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         cstd = self._conanfile.settings.get_safe("compiler.cstd")
         #: C++ language standard to use. Defined by ``to_cppstd_flag()`` by default.
-        self.cpp_std = to_cppstd_flag(compiler, compiler_version, cppstd)
+        self.cpp_std = to_cppstd_flag(self._conanfile, compiler, compiler_version, cppstd)
         #: C language standard to use. Defined by ``to_cstd_flag()`` by default.
-        self.c_std = to_cstd_flag(cstd)
+        self.c_std = to_cstd_flag(self._conanfile, cstd)
         #: VS runtime library to use. Defined by ``msvc_runtime_flag()`` by default.
         self.b_vscrt = None
         if compiler in ("msvc", "clang"):

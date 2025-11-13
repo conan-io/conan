@@ -264,6 +264,13 @@ def list(conan_api: ConanAPI, parser, *args):
                                            args.filter_settings or args.filter_options):
             raise ConanException("--package-query and --filter-xxx can only be done for binaries, "
                                  "a 'pkgname/version:*' pattern is necessary")
+        if args.lru:
+            if not ref_pattern.rrev and not ref_pattern.package_id:  # If package_id => #latest
+                raise ConanException("'--lru' must be used with recipe revision pattern, "
+                                     "use 'pkg/version#*' argument")
+            if ref_pattern.package_id and not ref_pattern.prev:
+                raise ConanException("'--lru' must be used with package revision pattern, "
+                                     "use 'pkg/version:*#*' argument")
         # If neither remote nor cache are defined, show results only from cache
         pkglist = MultiPackagesList()
         profile = conan_api.profiles.get_profile(args.filter_profile or [],

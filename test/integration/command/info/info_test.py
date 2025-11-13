@@ -134,7 +134,7 @@ class TestFilters:
         c.save({"conanfile.py": GenConanfile()
                .with_class_attribute("author = 'myself'")
                .with_class_attribute("license = 'MIT'")
-               .with_class_attribute("url = 'http://url.com'")})
+               .with_class_attribute("url = 'https://url.com'")})
         c.run("graph info . ")
         assert "license: MIT" in c.out
         assert "author: myself" in c.out
@@ -154,7 +154,7 @@ class TestFilters:
         c.save({"conanfile.py": GenConanfile()
                .with_class_attribute("author = 'myself'")
                .with_class_attribute("license = 'MIT'")
-               .with_class_attribute("url = 'http://url.com'")})
+               .with_class_attribute("url = 'https://url.com'")})
         c.run("graph info . --filter=license --format=json")
         assert "author" not in c.out
         assert '"license": "MIT"' in c.out
@@ -164,15 +164,36 @@ class TestFilters:
 
 class TestJsonOutput:
     def test_json_package_filter(self):
-        # Formatted output like json or html doesn't make sense to be filtered
         client = TestClient()
-        conanfile = GenConanfile("pkg", "0.1").with_setting("build_type")
-        client.save({"conanfile.py": conanfile})
+        conanfile = GenConanfile("pkg", "0.1").with_setting("build_type").with_requires("dep/0.1")
+        client.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                     "conanfile.py": conanfile})
+        client.run("create dep")
         client.run("graph info . --package-filter=nothing --format=json")
         assert '"nodes": {}' in client.out
         client.run("graph info . --package-filter=pkg* --format=json")
         graph = json.loads(client.stdout)
+        assert len(graph["graph"]["nodes"]) == 1
         assert graph["graph"]["nodes"]["0"]["ref"] == "pkg/0.1"
+
+        # Consumer & filtering
+        client.run("graph info . --package-filter=& --format=json")
+        graph = json.loads(client.stdout)
+        assert len(graph["graph"]["nodes"]) == 1
+        assert graph["graph"]["nodes"]["0"]["ref"] == "pkg/0.1"
+
+        # This returns nothing, doesn't work that way, serialized graph doesn't have the consumer
+        client.run("graph info --requires=dep/0.1 --package-filter=& --format=json")
+        graph = json.loads(client.stdout)
+        assert len(graph["graph"]["nodes"]) == 1
+        assert graph["graph"]["nodes"]["1"]["name"] == "dep"
+
+        # Filter matches all
+        client.run("graph info . --package-filter=* --format=json")
+        graph = json.loads(client.stdout)
+        assert len(graph["graph"]["nodes"]) == 2
+        assert graph["graph"]["nodes"]["0"]["ref"] == "pkg/0.1"
+        assert graph["graph"]["nodes"]["1"]["name"] == "dep"
 
     def test_json_info_outputs(self):
         client = TestClient()
@@ -394,7 +415,6 @@ class TestErrorsInGraph:
         assert exit_code == 0
 
 
-
 class TestInfoUpdate:
 
     def test_update(self):
@@ -481,3 +501,17 @@ def test_graph_info_bundle():
 
     c.run("graph info . -c tools.graph:vendor=build --build='lib*'")
     c.assert_listed_binary({"lib/1.0": (NO_SETTINGS_PACKAGE_ID, "Build")})
+
+
+def test_graph_info_provides_conflict_html():
+    """ This test also makes sure that the serialization of the GraphProvidesConflict works"""
+    tc = TestClient(light=True)
+    tc.save({"bar/conanfile.py": GenConanfile("bar", "1.0"),
+             "foo/conanfile.py": GenConanfile("foo", "1.0").with_provides("bar")})
+
+    tc.run("export bar")
+    tc.run("export foo")
+    tc.run("graph info --requires=bar/1.0 --requires=foo/1.0 --format=html", assert_error=True)
+    # It got properly serialized
+    assert '"type": "provide_conflict"' in tc.out
+    assert "Both 'bar/1.0' and 'foo/1.0' provide '['bar']'"

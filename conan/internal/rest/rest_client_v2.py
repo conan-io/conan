@@ -433,6 +433,7 @@ class RestV2Methods:
         raise PackageNotFoundException(pref)
 
     def get_recipe_revisions_references(self, ref):
+        assert ref.revision is None
         url = self.router.recipe_revisions(ref)
         tmp = self._get_json(url)["revisions"]
         remote_refs = []
@@ -441,9 +442,6 @@ class RestV2Methods:
             _tmp.revision = item.get("revision")
             _tmp.timestamp = from_iso8601_to_timestamp(item.get("time"))
             remote_refs.append(_tmp)
-
-        if ref.revision:  # FIXME: This is a bit messy, is it checking the existance? or getting the time? or both?
-            assert "This shoudln't be happening, get_recipe_revisions_references"
         return remote_refs
 
     def get_latest_recipe_reference(self, ref):
@@ -454,17 +452,12 @@ class RestV2Methods:
         remote_ref.timestamp = from_iso8601_to_timestamp(data.get("time"))
         return remote_ref
 
-    def get_package_revisions_references(self, pref, headers=None):
+    def get_package_revisions_references(self, pref):
+        assert pref.revision is None
         url = self.router.package_revisions(pref)
-        tmp = self._get_json(url, headers=headers)["revisions"]
+        tmp = self._get_json(url)["revisions"]
         remote_prefs = [PkgReference(pref.ref, pref.package_id, item.get("revision"),
                         from_iso8601_to_timestamp(item.get("time"))) for item in tmp]
-
-        if pref.revision:  # FIXME: This is a bit messy, is it checking the existance? or getting the time? or both?
-            for _pref in remote_prefs:
-                if _pref.revision == pref.revision:
-                    return [_pref]
-            raise PackageNotFoundException(pref)
         return remote_prefs
 
     def get_latest_package_reference(self, pref: PkgReference, headers):

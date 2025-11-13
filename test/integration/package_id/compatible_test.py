@@ -1,6 +1,9 @@
 import json
 import textwrap
 
+import pytest
+
+from conan.test.utils.env import environment_update
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
@@ -724,3 +727,95 @@ def test_compatibility_new_setting_forwards_compat():
     tc.run("install --requires=dep/1.0 -s=libc_version=3 -s=compiler.cppstd=14")
     assert f"dep/1.0: Found compatible package '{dep_package_id}': compiler.cppstd=17, " \
            f"libc_version=2" in tc.out
+
+
+def test_compatibility_remove_cppstd():
+    """ This test tries to reflect the following scenario:
+    - User recently added compiler.cppstd to their settings
+    - But up until now, no package was built with that setting
+    - At the user's own risk, we can tell Conan to accept packages built without that setting
+    """
+    tc = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        compiler=gcc
+        compiler.version=11
+        compiler.libcxx=libstdc++11
+        """)
+    tc.save({"conanfile.py": GenConanfile("dep", "1.0").with_settings("compiler"),
+             "profile": profile})
+    tc.run("create . -pr=profile")
+    dep_package_id = tc.created_package_id("dep/1.0")
+    tc.run("install --requires=dep/1.0 -pr=profile -s=compiler.cppstd=17", assert_error=True)
+    # We can't compile, because the dep is not compatible, it's looking for a package with cppstd
+    assert "Missing prebuilt package for 'dep/1.0'" in tc.out
+
+    # Let's create a compatibility extensions
+    no_cppstd_compat = textwrap.dedent("""
+        from conan.tools.scm import Version
+
+        def no_cppstd_compat(conanfile):
+            # Do we have the setting?
+            cppstd_version = conanfile.settings.get_safe("compiler.cppstd")
+            if cppstd_version is None:
+                return []
+            return [{"compiler.cppstd": None}]
+        """)
+    compat = tc.load_home("extensions/plugins/compatibility/compatibility.py")
+    compat = "from no_cppstd_compat import no_cppstd_compat\n" + compat
+    compat = compat.replace("# Append more factors for your custom compatibility rules here",
+                            "factors.append(no_cppstd_compat(conanfile))")
+    tc.save_home({"extensions/plugins/compatibility/no_cppstd_compat.py": no_cppstd_compat,
+                  "extensions/plugins/compatibility/compatibility.py": compat})
+
+    # Now we try again, this time app will find the compatible dep without cppstd
+    tc.run("install --requires=dep/1.0 -pr=profile -s=compiler.cppstd=17")
+    assert f"dep/1.0: Found compatible package '{dep_package_id}'" in tc.out
+
+
+@pytest.mark.parametrize("from_remote", [True, False])
+@pytest.mark.parametrize("update", [True, False])
+def test_compatibility_different_settings_per_context(from_remote, update):
+    tc = TestClient(default_server_user=True)
+    tc.save({"protobuf/conanfile.py": GenConanfile("protobuf", "1.0")
+                .with_settings("compiler"),
+             "conanfile.py": GenConanfile("consumer", "1.0")
+                .with_require("protobuf/1.0")
+                .with_tool_requires("protobuf/1.0")
+    })
+    tc.run("create protobuf -s=compiler.cppstd=14")
+    if from_remote:
+        tc.run("upload * -r=default -c")
+        tc.run("remove * -c")
+    update_arg = "--update" if update else ""
+    tc.run(f"install . -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 --build=missing {update_arg}")
+
+
+@pytest.mark.parametrize("update", [True, False])
+def test_compatibility_different_settings_per_context_prevs(update):
+    tc = TestClient(default_server_user=True)
+    proto = GenConanfile("protobuf", "1.0").with_settings("compiler")
+    proto.with_package_file("file.txt", env_var="MY_VAR")
+    consumer = GenConanfile().with_requires("protobuf/1.0").with_tool_requires("protobuf/1.0")
+    tc.save({"protobuf/conanfile.py": proto,
+             "conanfile.py": consumer})
+
+    settings = "-s:a compiler=gcc -s:a compiler.version=9 -s:a compiler.libcxx=libstdc++"
+    with environment_update({"MY_VAR": "value"}):
+        tc.run(f"create protobuf {settings} -s=compiler.cppstd=14")
+    tc.run("upload * -r=default -c")
+
+    tc2 = TestClient(servers=tc.servers)
+    tc2.save({"conanfile.py": consumer})
+    update_arg = "--update" if update else ""
+    tc2.run(f"install . {settings} -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 {update_arg}")
+    tc2.assert_listed_binary({"protobuf/1.0": ("36d978cbb4dc35906d0fd438732d5e17cd1e388d",
+                                               "Download (default)")})
+
+    with environment_update({"MY_VAR": "value2"}):
+        tc.run(f"create protobuf {settings} -s=compiler.cppstd=14")
+    tc.run("upload * -r=default -c")
+    tc2.run(f"install . {settings} -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 {update_arg}")
+    origin = "Cache" if not update else "Update (default)"
+    tc2.assert_listed_binary({"protobuf/1.0": ("36d978cbb4dc35906d0fd438732d5e17cd1e388d",
+                                               origin)})

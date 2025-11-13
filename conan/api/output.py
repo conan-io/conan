@@ -124,35 +124,34 @@ class ConanOutput:
     def set_warnings_as_errors(cls, value):
         cls._warnings_as_errors = value
 
-    @classmethod
     def current_log_level(cls):
         return cls._conan_output_level
+
+    def valid_log_levels(cls):
+        return {"quiet": LEVEL_QUIET,  # -vquiet 80
+            "error": LEVEL_ERROR,  # -verror 70
+            "warning": LEVEL_WARNING,  # -vwaring 60
+            "notice": LEVEL_NOTICE,  # -vnotice 50
+            "status": LEVEL_STATUS,  # -vstatus 40
+            None: LEVEL_VERBOSE,  # -v 30
+            "verbose": LEVEL_VERBOSE,  # -vverbose 30
+            "debug": LEVEL_DEBUG,  # -vdebug 20
+            "v": LEVEL_DEBUG,  # -vv 20
+            "trace": LEVEL_TRACE,  # -vtrace 10
+            "vv": LEVEL_TRACE  # -vvv 10
+        }
 
     @classmethod
     def define_log_level(cls, v):
         env_level = os.getenv("CONAN_LOG_LEVEL")
         v = env_level or v
-        if isinstance(v, str):
-            levels = {"quiet": LEVEL_QUIET,  # -vquiet 80
-                      "error": LEVEL_ERROR,  # -verror 70
-                      "warning": LEVEL_WARNING,  # -vwaring 60
-                      "notice": LEVEL_NOTICE,  # -vnotice 50
-                      "status": LEVEL_STATUS,  # -vstatus 40
-                      None: LEVEL_VERBOSE,  # -v 30
-                      "verbose": LEVEL_VERBOSE,  # -vverbose 30
-                      "debug": LEVEL_DEBUG,  # -vdebug 20
-                      "v": LEVEL_DEBUG,  # -vv 20
-                      "trace": LEVEL_TRACE,  # -vtrace 10
-                      "vv": LEVEL_TRACE  # -vvv 10
-                      }
-            try:
-                level = levels[v]
-            except KeyError:
-                msg = " defined in CONAN_LOG_LEVEL environment variable" if env_level else ""
-                vals = "quiet, error, warning, notice, status, verbose, debug(v), trace(vv)"
-                raise ConanException(f"Invalid argument '-v{v}'{msg}.\nAllowed values: {vals}")
-            else:
-                cls._conan_output_level = level
+        levels = cls.valid_log_levels()
+        try:
+            level = levels[v]
+        except KeyError:
+            msg = " defined in CONAN_LOG_LEVEL environment variable" if env_level else ""
+            vals = "quiet, error, warning, notice, status, verbose, debug(v), trace(vv)"
+            raise ConanException(f"Invalid argument '-v{v}'{msg}.\nAllowed values: {vals}")
         else:
             cls._conan_output_level = v
 
@@ -273,13 +272,13 @@ class ConanOutput:
             self._write_message(msg, fg=fg, bg=bg)
         return self
 
-    def status(self, msg: str, fg: str = None, bg: str = None, newline: bool = True):
+    def status(self, msg: str, fg: str = None, bg: str = None):
         """ Provides general information about the system or ongoing operations.
 
         Info messages are basic and used to inform about common events,
         like the start or completion of processes, without implying specific problems or achievements."""
         if self._conan_output_level <= LEVEL_STATUS:
-            self._write_message(msg, fg=fg, bg=bg, newline=newline)
+            self._write_message(msg, fg=fg, bg=bg)
         return self
 
     info = status

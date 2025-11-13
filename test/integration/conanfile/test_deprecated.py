@@ -1,7 +1,5 @@
 import textwrap
 
-import pytest
-
 from conan.test.utils.tools import TestClient, GenConanfile
 
 

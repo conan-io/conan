@@ -67,7 +67,9 @@ def test_bazel_relative_paths():
         name = "dep",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -168,7 +170,9 @@ def test_bazeldeps_and_tool_requires():
         name = "dep",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -273,7 +277,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "third",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -291,7 +297,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "second-mycomponent",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -306,7 +314,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "second-myfirstcomp",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -322,7 +332,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "second",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -349,7 +361,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "myfirstlib-cmp1",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -365,7 +379,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "myfirstlib",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -451,7 +467,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "pkg",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -482,7 +500,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "component1",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -497,7 +517,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "fancy_name-cmp2",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -512,7 +534,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "component3",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -528,7 +552,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "fancy_name",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -591,7 +617,9 @@ def test_pkgconfigdeps_with_test_requires():
         name = "{0}",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -667,7 +695,9 @@ def test_with_editable_layout():
             name = "dep",
             hdrs = glob([
                 "include/**",
-            ]),
+            ],
+            allow_empty = True
+            ),
             includes = [
                 "include",
             ],
@@ -765,7 +795,9 @@ def test_tool_requires():
         name = "component1",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -780,7 +812,9 @@ def test_tool_requires():
         name = "libother-cmp2",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -795,7 +829,9 @@ def test_tool_requires():
         name = "component3",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -811,7 +847,9 @@ def test_tool_requires():
         name = "libother",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -1248,7 +1286,9 @@ def test_pkg_with_duplicated_component_requires():
         name = "mylib-myfirstcomp",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -1289,7 +1329,9 @@ def test_apple_frameworks_and_frameworkdirs():
         name = "mylib",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
