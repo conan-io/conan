@@ -153,7 +153,7 @@ class ConanOutput:
             vals = "quiet, error, warning, notice, status, verbose, debug(v), trace(vv)"
             raise ConanException(f"Invalid argument '-v{v}'{msg}.\nAllowed values: {vals}")
         else:
-            cls._conan_output_level = v
+            cls._conan_output_level = level
 
     @classmethod
     def level_allowed(cls, level):
