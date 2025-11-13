@@ -30,6 +30,11 @@ def print_cache_sign_verify_text(data):
 
 
 def print_cache_sign_verify_json(data):
+    for result in data["results"].values():
+        if result is not None and "failed" in result.lower():
+            action_msg = "signature verification" if data.get("action") == "verify" else "signing"
+            data["conan_error"] = f"There were some errors in the {action_msg} process. " \
+                                  "Please check the output."
     myjson = json.dumps(data, indent=4)
     cli_out_write(myjson)
 

@@ -99,7 +99,9 @@ def test_pkg_sign_exception():
           pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164
             :: Signed""") in c.out
     # test json output
-    c.run("cache sign * -f json")
+    c.run("cache sign * -f json", assert_error=True)
+    assert "ERROR: There were some errors in the signing process. " \
+           "Please check the output." in c.out
     data = json.loads(c.stdout)
     assert data["action"] == "sign"
     assert data["results"]["lib/0.1#dbe307e08b1a344fef76f60c85c0c4e8"] == \
@@ -137,7 +139,9 @@ def test_pkg_verify_exception():
           pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164
             :: Signature verified""") in c.out
     # test json output
-    c.run("cache verify * -f json")
+    c.run("cache verify * -f json", assert_error=True)
+    assert "ERROR: There were some errors in the signature verification process. " \
+           "Please check the output." in c.out
     data = json.loads(c.stdout)
     assert data["action"] == "verify"
     assert data["results"]["lib/0.1#dbe307e08b1a344fef76f60c85c0c4e8"] == \
