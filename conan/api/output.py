@@ -124,6 +124,7 @@ class ConanOutput:
     def set_warnings_as_errors(cls, value):
         cls._warnings_as_errors = value
 
+    @classmethod
     def current_log_level(cls):
         return cls._conan_output_level
 
