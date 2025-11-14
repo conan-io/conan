@@ -328,7 +328,7 @@ class _IncludingPresets:
         if inherited_user:
             for preset_type, inherited_names in inherited_user.items():
                 stubs = [
-                    p for p in inherited_names
+                    {"name": p} for p in inherited_names
                     if p not in real_preset_names
                 ]
                 data[preset_type] = stubs
@@ -360,14 +360,6 @@ class _IncludingPresets:
                                     existing.append(i)
 
         return collected_targets
-
-    # @staticmethod
-    # def _clean_user_inherits(data, preset_data):
-    #     for preset_type in "configurePresets", "buildPresets", "testPresets":
-    #         presets = preset_data.get(preset_type, [])
-    #         presets_names = [p["name"] for p in presets]
-    #         other = data.get(preset_type, [])
-    #         other[:] = [p for p in other if p["name"] not in presets_names]
 
     @staticmethod
     def _append_user_preset_path(data, preset_path, output_dir, absolute_paths):
