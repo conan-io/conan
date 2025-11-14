@@ -3,6 +3,7 @@ import pytest
 
 from conan.cli.args import add_profiles_args
 
+
 @pytest.mark.parametrize("argument", [
     ["options", "-o", "--options"],
     ["profile", "-pr", "--profile"],

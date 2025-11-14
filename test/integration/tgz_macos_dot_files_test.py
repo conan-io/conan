@@ -16,7 +16,8 @@ from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")
 class TestTgzMacosDotFiles:
 
-    def _test_for_metadata_in_zip_file(self, tgz, annotated_file, dot_file_expected):
+    @staticmethod
+    def _test_for_metadata_in_zip_file(tgz, annotated_file, dot_file_expected):
         tmp_folder = tempfile.mkdtemp()
         try:
             uncompress_file(src_path=tgz, dest_folder=tmp_folder)

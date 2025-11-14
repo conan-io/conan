@@ -1,14 +1,12 @@
-import os
 import platform
 import textwrap
-import unittest
 
 import pytest
 
 from conan.test.utils.tools import TestClient
 
 
-class BasicTest(unittest.TestCase):
+class TestBasic:
 
     def test_basic(self):
         conanfile = textwrap.dedent("""
@@ -23,9 +21,9 @@ class BasicTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("install .")
 
-        self.assertIn("conanfile.py: Calling generate()", client.out)
+        assert "conanfile.py: Calling generate()" in client.out
         toolchain = client.load("conan_toolchain.cmake")
-        self.assertIn("Conan automatically generated toolchain file", toolchain)
+        assert "Conan automatically generated toolchain file" in toolchain
 
     def test_declarative(self):
         conanfile = textwrap.dedent("""
@@ -38,13 +36,13 @@ class BasicTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("install .")
 
-        self.assertIn("conanfile.py: Generator 'CMakeToolchain' calling 'generate()'", client.out)
-        self.assertIn("conanfile.py: Generator 'MesonToolchain' calling 'generate()'", client.out)
-        self.assertIn("conanfile.py: Generator 'CMakeDeps' calling 'generate()'", client.out)
+        assert "conanfile.py: Generator 'CMakeToolchain' calling 'generate()'" in client.out
+        assert "conanfile.py: Generator 'MesonToolchain' calling 'generate()'" in client.out
+        assert "conanfile.py: Generator 'CMakeDeps' calling 'generate()'" in client.out
         toolchain = client.load("conan_toolchain.cmake")
-        self.assertIn("Conan automatically generated toolchain file", toolchain)
+        assert "Conan automatically generated toolchain file" in toolchain
         toolchain = client.load("conan_meson_native.ini")
-        self.assertIn("[project options]", toolchain)
+        assert "[project options]" in toolchain
 
     @pytest.mark.tool("visual_studio")
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -59,9 +57,9 @@ class BasicTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("install .")
 
-        self.assertIn("conanfile.py: Generator 'MSBuildToolchain' calling 'generate()'", client.out)
+        assert "conanfile.py: Generator 'MSBuildToolchain' calling 'generate()'" in client.out
         toolchain = client.load("conantoolchain.props")
-        self.assertIn("<?xml version", toolchain)
+        assert "<?xml version" in toolchain
 
     def test_error_missing_settings(self):
         conanfile = textwrap.dedent("""
@@ -72,8 +70,8 @@ class BasicTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("install .", assert_error=True)
-        self.assertIn("Error in generator 'MSBuildToolchain': 'settings.build_type' doesn't exist",
-                      client.out)
+        assert ("Error in generator 'MSBuildToolchain': 'settings.build_type' "
+                "doesn't exist") in client.out
 
     def test_error_missing_settings_method(self):
         conanfile = textwrap.dedent("""
@@ -87,7 +85,7 @@ class BasicTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("install .", assert_error=True)
-        self.assertIn("ERROR: conanfile.py: Error in generate() method, line 6", client.out)
+        assert "ERROR: conanfile.py: Error in generate() method, line 6" in client.out
 
     def test_declarative_new_helper(self):
         conanfile = textwrap.dedent("""
@@ -102,8 +100,8 @@ class BasicTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("build .", assert_error=True)  # No CMakeLists.txt
-        self.assertIn('-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"',  client.out)
-        self.assertIn("ERROR: conanfile.py: Error in build() method", client.out)
+        assert '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"' in client.out
+        assert "ERROR: conanfile.py: Error in build() method" in client.out
 
     @pytest.mark.tool("visual_studio")
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
@@ -129,5 +127,5 @@ class BasicTest(unittest.TestCase):
                    ' -s compiler.runtime=dynamic')
 
         conan_toolchain_props = client.load("conantoolchain.props")
-        self.assertIn("<ConanPackageName>Pkg</ConanPackageName>", conan_toolchain_props)
-        self.assertIn("<ConanPackageVersion>0.1</ConanPackageVersion>", conan_toolchain_props)
+        assert "<ConanPackageName>Pkg</ConanPackageName>" in conan_toolchain_props
+        assert "<ConanPackageVersion>0.1</ConanPackageVersion>" in conan_toolchain_props

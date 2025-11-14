@@ -5,7 +5,7 @@ import textwrap
 from conan.test.utils.tools import TestClient
 
 
-def test_multi_cMake():
+def test_multi_cmake():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps

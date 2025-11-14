@@ -256,3 +256,58 @@ def test_transitive_headers_not_public(transitive_libraries):
     rmdir(ConanFileMock(), os.path.join(c.current_folder, "build-release"))
     c.run("build .", assert_error=True)
     # Error should be about not finding matrix
+
+@pytest.mark.tool("premake")
+def test_premake_custom_configuration(transitive_libraries):
+    c = transitive_libraries
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.layout import basic_layout
+        from conan.tools.premake import Premake, PremakeDeps, PremakeToolchain
+
+        class ConsumerRecipe(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            package_type = "application"
+            settings = "os", "compiler", "build_type", "arch"
+            options = {"sanitizer": [True, False]}
+            default_options = {"sanitizer": False}
+            exports_sources = "*"
+
+            def layout(self):
+                basic_layout(self)
+
+            @property
+            def _premake_configuration(self):
+                return str(self.settings.build_type) + "Sanitizer" if self.options.sanitizer else ""
+
+            def generate(self):
+                deps = PremakeDeps(self)
+                deps.configuration = self._premake_configuration
+                deps.generate()
+                tc = PremakeToolchain(self)
+                tc.generate()
+
+            def build(self):
+                premake = Premake(self)
+                premake.configure()
+                # premake.build(workspace="Consumer")
+                premake.build(workspace="Consumer", configuration=self._premake_configuration)
+    """)
+
+    c.save({"src/main.cpp": gen_function_cpp(name="main"),
+            "premake5.lua": gen_premake5(
+                workspace="Consumer",
+                projects=[
+                    {
+                        "name": "consumer",
+                        "files": ["src/main.cpp"],
+                        "kind": "ConsoleApp",
+                    }
+                ],
+                configurations=["Debug", "Release", "DebugSanitizer", "ReleaseSanitizer"],
+            ),
+            "conanfile.py": conanfile,
+    })
+    # Test it builds successfully with the custom configuration
+    c.run("build . -o sanitizer=True")

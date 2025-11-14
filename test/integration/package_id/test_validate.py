@@ -35,10 +35,10 @@ class TestValidate:
 
         error = client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
         assert error == ERROR_INVALID_CONFIGURATION
-        assert "pkg/0.1: Invalid: Windows not supported"in client.out
+        assert "pkg/0.1: Invalid: Windows not supported" in client.out
 
         client.run("graph info --require pkg/0.1 -s os=Windows")
-        assert "binary: Invalid"in client.out
+        assert "binary: Invalid" in client.out
         assert "info_invalid: Windows not supported" in client.out
 
         client.run("graph info --require pkg/0.1 -s os=Windows --format json")
@@ -132,26 +132,26 @@ class TestValidate:
 
         client.run("install --requires=pkg/0.1@ -s os=Windows --build=pkg*", assert_error=True)
         assert "pkg/0.1: Cannot build for this configuration: Windows not supported" in client.out
-        assert "Windows not supported"in client.out
+        assert "Windows not supported" in client.out
 
         client.run("install --requires=pkg/0.1@ -s os=Windows")
-        assert f"pkg/0.1: Main binary package '{missing_id}' missing"in client.out
-        assert f"Found compatible package '{package_id}'"in client.out
+        assert f"pkg/0.1: Main binary package '{missing_id}' missing" in client.out
+        assert f"Found compatible package '{package_id}'" in client.out
         client.assert_listed_binary({"pkg/0.1": (package_id, "Cache")})
 
         # --build=missing means "use existing binary if possible", and compatibles are valid binaries
         client.run("install --requires=pkg/0.1@ -s os=Windows --build=missing")
-        assert f"pkg/0.1: Main binary package '{missing_id}' missing"in client.out
-        assert f"Found compatible package '{package_id}'"in client.out
+        assert f"pkg/0.1: Main binary package '{missing_id}' missing" in client.out
+        assert f"Found compatible package '{package_id}'" in client.out
         client.assert_listed_binary({"pkg/0.1": (package_id, "Cache")})
 
         client.run("graph info --requires=pkg/0.1@ -s os=Windows")
-        assert f"pkg/0.1: Main binary package '{missing_id}' missing"in client.out
-        assert f"Found compatible package '{package_id}'"in client.out
-        assert f"package_id: {package_id}"in client.out
+        assert f"pkg/0.1: Main binary package '{missing_id}' missing" in client.out
+        assert f"Found compatible package '{package_id}'" in client.out
+        assert f"package_id: {package_id}" in client.out
 
         client.run("graph info --requires=pkg/0.1@ -s os=Windows --build=pkg*")
-        assert "binary: Invalid"in client.out
+        assert "binary: Invalid" in client.out
 
     def test_validate_remove_package_id_create(self):
         client = TestClient()
@@ -172,15 +172,15 @@ class TestValidate:
         client.save({"conanfile.py": conanfile})
 
         client.run("create . --name=pkg --version=0.1 -s os=Linux")
-        assert "pkg/0.1: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID)in client.out
+        assert "pkg/0.1: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
 
         client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
-        assert "pkg/0.1: Invalid: Windows not supported"in client.out
+        assert "pkg/0.1: Invalid: Windows not supported" in client.out
         client.assert_listed_binary({"pkg/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                                  "Invalid")})
 
         client.run("graph info --requires=pkg/0.1@ -s os=Windows")
-        assert "package_id: {}".format(NO_SETTINGS_PACKAGE_ID)in client.out
+        assert "package_id: {}".format(NO_SETTINGS_PACKAGE_ID) in client.out
 
     def test_validate_compatible_also_invalid(self):
         client = TestClient()
@@ -212,7 +212,7 @@ class TestValidate:
                            assert_error=True)
 
         assert error == ERROR_INVALID_CONFIGURATION
-        assert "pkg/0.1: Invalid: Windows not supported"in client.out
+        assert "pkg/0.1: Invalid: Windows not supported" in client.out
 
         client.run("graph info --requires=pkg/0.1@ -s os=Windows")
         assert "binary: Invalid" in client.out
@@ -245,24 +245,24 @@ class TestValidate:
         # Windows invalid configuration
         error = client.run("create . --name=pkg --version=0.1 -s os=Windows -s build_type=Release",
                            assert_error=True)
-        assert error== ERROR_INVALID_CONFIGURATION
-        assert "pkg/0.1: Invalid: Windows not supported"in client.out
+        assert error == ERROR_INVALID_CONFIGURATION
+        assert "pkg/0.1: Invalid: Windows not supported" in client.out
 
         error = client.run("install --requires=pkg/0.1@ -s os=Windows -s build_type=Release",
                            assert_error=True)
-        assert error== ERROR_INVALID_CONFIGURATION
-        assert "pkg/0.1: Invalid: Windows not supported"in client.out
+        assert error == ERROR_INVALID_CONFIGURATION
+        assert "pkg/0.1: Invalid: Windows not supported" in client.out
 
         # Windows missing binary: INVALID
         error = client.run("install --requires=pkg/0.1@ -s os=Windows -s build_type=Debug",
                            assert_error=True)
-        assert error== ERROR_INVALID_CONFIGURATION
-        assert "pkg/0.1: Invalid: Windows not supported"in client.out
+        assert error == ERROR_INVALID_CONFIGURATION
+        assert "pkg/0.1: Invalid: Windows not supported" in client.out
 
         error = client.run("create . --name=pkg --version=0.1 -s os=Windows -s build_type=Debug",
                            assert_error=True)
-        assert error== ERROR_INVALID_CONFIGURATION
-        assert "pkg/0.1: Invalid: Windows not supported"in client.out
+        assert error == ERROR_INVALID_CONFIGURATION
+        assert "pkg/0.1: Invalid: Windows not supported" in client.out
 
         # info
         client.run("graph info --requires=pkg/0.1@ -s os=Windows")
@@ -298,8 +298,8 @@ class TestValidate:
 
         client.save({"conanfile.py": GenConanfile().with_requires("pkg2/0.1", "pkg1/0.1")})
         error = client.run("install .", assert_error=True)
-        assert error== ERROR_INVALID_CONFIGURATION
-        assert "pkg1/0.1: Invalid: Option 2 of 'dep' not supported"in client.out
+        assert error == ERROR_INVALID_CONFIGURATION
+        assert "pkg1/0.1: Invalid: Option 2 of 'dep' not supported" in client.out
 
     def test_validate_requires(self):
         client = TestClient()
@@ -324,15 +324,15 @@ class TestValidate:
                     .with_requirement("pkg1/0.1")
                     .with_requirement("dep/0.2", override=True)})
         error = client.run("install .", assert_error=True)
-        assert error== ERROR_INVALID_CONFIGURATION
-        assert "pkg1/0.1: Invalid: dep> 0.1 is not supported"in client.out
+        assert error == ERROR_INVALID_CONFIGURATION
+        assert "pkg1/0.1: Invalid: dep> 0.1 is not supported" in client.out
 
         client.save({"conanfile.py": GenConanfile()
                     .with_requirement("pkg1/0.1")
                     .with_requirement("dep/0.2", force=True)})
         error = client.run("install .", assert_error=True)
-        assert error== ERROR_INVALID_CONFIGURATION
-        assert "pkg1/0.1: Invalid: dep> 0.1 is not supported"in client.out
+        assert error == ERROR_INVALID_CONFIGURATION
+        assert "pkg1/0.1: Invalid: dep> 0.1 is not supported" in client.out
 
     def test_validate_package_id_mode(self):
         client = TestClient()
@@ -352,13 +352,13 @@ class TestValidate:
 
         client.save({"conanfile.py": GenConanfile().with_requires("dep/0.1")})
         error = client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
-        assert error== ERROR_INVALID_CONFIGURATION
+        assert error == ERROR_INVALID_CONFIGURATION
         client.assert_listed_binary({"dep/0.1": ("ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715",
                                                  "Invalid")})
         client.assert_listed_binary({"pkg/0.1": ("19ad5731bb09f24646c81060bd7730d6cb5b6108",
                                                  "Build")})
-        assert "ERROR: There are invalid packages:"in client.out
-        assert "dep/0.1: Invalid: Windows not supported"in client.out
+        assert "ERROR: There are invalid packages:" in client.out
+        assert "dep/0.1: Invalid: Windows not supported" in client.out
 
     def test_validate_export_pkg(self):
         # https://github.com/conan-io/conan/issues/9797
@@ -694,7 +694,8 @@ class TestValidateCppstd:
         assert "compiler.cppstd=14" in client.out
         assert "compiler.cppstd=17" not in client.out
 
-    @pytest.mark.skipif(platform.system() == "Windows", reason="Needs at least 3 cppstd values available, msvc 191 does not")
+    @pytest.mark.skipif(platform.system() == "Windows",
+                        reason="Needs at least 3 cppstd values available, msvc 191 does not")
     def test_extension_properties_cppstd_compat_non_transitiveness(self):
         """
         The cppstd_compat is not transitive, so if a recipe has cppstd_compat=False,
@@ -702,13 +703,11 @@ class TestValidateCppstd:
         """
         tc = TestClient()
         tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_setting("compiler"),
-                 "lib/conanfile.py": GenConanfile("lib", "1.0")
-                    .with_setting("compiler")
-                    .with_class_attribute('extension_properties = {"compatibility_cppstd": False}')
-                    .with_requirement("dep/1.0"),
-                 "app/conanfile.py": GenConanfile("app", "1.0")
-                    .with_setting("compiler")
-                    .with_requirement("lib/1.0")})
+                 "lib/conanfile.py": GenConanfile("lib", "1.0").with_setting("compiler")
+                 .with_class_attribute('extension_properties = {"compatibility_cppstd": False}')
+                 .with_requirement("dep/1.0"),
+                 "app/conanfile.py": GenConanfile("app", "1.0").with_setting("compiler")
+                 .with_requirement("lib/1.0")})
         tc.run("create dep -s=compiler.cppstd=20")
         tc.run("create lib -s=compiler.cppstd=17")
         tc.run("create app -s=compiler.cppstd=14", assert_error=True)
@@ -724,28 +723,27 @@ class TestValidateCppstd:
         """
         tc = TestClient()
         tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0").with_setting("compiler"),
-                 "dep/conanfile.py": GenConanfile("dep", "1.0")
-                    .with_setting("compiler")
-                    .with_class_attribute('extension_properties = {"compatibility_cppstd": False}')
-                    .with_requirement("lib/1.0"),
-                 "conanfile.py": GenConanfile("app", "1.0")
-                    .with_setting("compiler")
-                    .with_requirement("dep/1.0")})
+                 "dep/conanfile.py": GenConanfile("dep", "1.0").with_setting("compiler")
+                .with_class_attribute('extension_properties = {"compatibility_cppstd": False}')
+                .with_requirement("lib/1.0"),
+                 "conanfile.py": GenConanfile("app", "1.0").with_setting("compiler")
+                .with_requirement("dep/1.0")})
         tc.run("create lib -s=compiler.cppstd=17")
         tc.run("create dep -s=compiler.cppstd=14")
         tc.run("create . -s=compiler.cppstd=14")
 
-        compat_path = os.path.join(tc.cache_folder, "extensions/plugins/compatibility/compatibility.py")
+        compat_path = os.path.join(tc.cache_folder,
+                                   "extensions/plugins/compatibility/compatibility.py")
         compat_contents = load(compat_path)
 
         transitive_expansions = textwrap.indent(textwrap.dedent("""
-        extension_properties = getattr(conanfile, "extension_properties", {}).copy()
-        for dep in conanfile.dependencies.values():
-            if not dep.extension_properties.get("compatibility_cppstd", True):
-                extension_properties["compatibility_cppstd"] = False
-        """), "    ")
-
-        compat_contents = compat_contents.replace('extension_properties = getattr(conanfile, "extension_properties", {})', transitive_expansions)
+            extension_properties = getattr(conanfile, "extension_properties", {}).copy()
+            for dep in conanfile.dependencies.values():
+                if not dep.extension_properties.get("compatibility_cppstd", True):
+                    extension_properties["compatibility_cppstd"] = False
+            """), "    ")
+        existing = 'extension_properties = getattr(conanfile, "extension_properties", {})'
+        compat_contents = compat_contents.replace(existing, transitive_expansions)
         save(compat_path, compat_contents)
 
         tc.run("install --requires=app/1.0 -s=compiler.cppstd=17", assert_error=True)
@@ -875,7 +873,7 @@ class TestCompatibleSettingsTarget:
         error = client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7",
                            assert_error=True)
         assert error == ERROR_GENERAL
-        assert "ERROR: Missing prebuilt package for 'tool/0.1'"in client.out
+        assert "ERROR: Missing prebuilt package for 'tool/0.1'" in client.out
 
     def test_no_settings_target_in_recipe_but_in_global_compatibility(self):
         client = TestClient()
@@ -913,9 +911,10 @@ class TestCompatibleSettingsTarget:
             """)
 
         client.save({"conanfile.py": app_conanfile})
-        error = client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7", assert_error=True)
+        error = client.run("create . --name=app --version=0.1 -s os=Linux -s:h arch=armv7",
+                           assert_error=True)
         assert error == ERROR_GENERAL
-        assert "ERROR: Missing prebuilt package for 'tool/0.1'"in client.out
+        assert "ERROR: Missing prebuilt package for 'tool/0.1'" in client.out
 
     def test_three_packages_with_and_without_settings_target(self):
         client = TestClient()
@@ -945,7 +944,8 @@ class TestCompatibleSettingsTarget:
             """)
 
         client.save({"conanfile.py": tool_a_conanfile})
-        client.run("create . --name=tool_a --version=0.1 -s os=Linux -s:h arch=armv6 -s:b arch=x86_64 --build-require")
+        client.run("create . --name=tool_a --version=0.1 "
+                   "-s os=Linux -s:h arch=armv6 -s:b arch=x86_64 --build-require")
         package_id_tool_a = client.created_package_id("tool_a/0.1")
         assert f"tool_a/0.1: Package '{package_id_tool_a}' created" in client.out
 
@@ -957,7 +957,8 @@ class TestCompatibleSettingsTarget:
             """)
 
         client.save({"conanfile.py": tool_b_conanfile})
-        client.run("create . --name=tool_b --version=0.1 -s os=Linux -s arch=x86_64 -s:b arch=x86_64")
+        client.run("create . --name=tool_b --version=0.1 -s os=Linux "
+                   "-s arch=x86_64 -s:b arch=x86_64")
         package_id_tool_b = client.created_package_id("tool_b/0.1")
         assert f"tool_b/0.1: Package '{package_id_tool_b}' created" in client.out
 

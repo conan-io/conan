@@ -5,6 +5,7 @@ import pytest
 from conan.test.utils.tools import TestClient
 
 
+@pytest.mark.tool("ninja")
 @pytest.mark.tool("meson")
 @pytest.mark.tool("pkg_config")
 def test_meson_lib_template():
@@ -31,6 +32,7 @@ def test_meson_lib_template():
     assert "hello/0.1: Hello World Release!" in client.out
 
 
+@pytest.mark.tool("ninja")
 @pytest.mark.tool("meson")
 def test_meson_exe_template():
     client = TestClient(path_with_spaces=False)

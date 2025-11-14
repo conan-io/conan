@@ -125,6 +125,7 @@ def test_apple_meson_toolchain_cross_compiling(arch, os_, os_version, os_sdk):
         assert f"'-mmacosx-version-min={os_version}'" in content
 
 
+@pytest.mark.tool("ninja")
 @pytest.mark.tool("meson")
 # for Linux, build for x86 will require a multilib compiler
 # for macOS, build for x86 is no longer supported by modern Xcode

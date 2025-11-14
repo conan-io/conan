@@ -469,7 +469,7 @@ class TestClient:
         return self.open(os.path.join(self.cache_folder, filename))
 
     @property
-    def cache(self):
+    def cache(self) -> PkgCache:
         # Returns a temporary cache object intended for inspecting it
         return PkgCache(self.cache_folder, load_global_conf(self.cache_folder))
 

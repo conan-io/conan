@@ -125,7 +125,8 @@ class GraphManagerTest:
 
         return deps_graph
 
-    def _check_node(self, node, ref, deps=None, dependents=None, settings=None, options=None):
+    @staticmethod
+    def _check_node(node, ref, deps=None, dependents=None, settings=None, options=None):
         dependents = dependents or []
         deps = deps or []
 
