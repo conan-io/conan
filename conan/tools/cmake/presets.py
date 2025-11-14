@@ -305,32 +305,32 @@ class _IncludingPresets:
 
         data = _IncludingPresets._append_user_preset_path(data, preset_path, output_dir, absolute_paths)
 
-        # Read include field from data and get all absolute paths to included presets if they exist
-        included_files = []
-        for inc in data.get("include", []):
-            inc_path = os.path.join(output_dir, inc) if not absolute_paths else inc
-            if os.path.exists(inc_path):
-                included_files.append(inc_path)
-
-        real_preset_names = set()
-        build_preset_to_configure_preset = {}
-
-        for inc_path in included_files:
-            try:
-                inc_json = json.loads(load(inc_path))
-            except Exception:
-                continue
-            for preset_type in ("configurePresets", "buildPresets", "testPresets"):
-                for p in inc_json.get(preset_type, []):
-                    name = p.get("name")
-                    if name:
-                        real_preset_names.add(name)
-                    if preset_type in ("buildPresets", "testPresets"):
-                        configure_preset = p.get("configurePreset")
-                        if configure_preset:
-                            build_preset_to_configure_preset[name] = configure_preset
-
         if inherited_user:
+            # Read include field from data and get all absolute paths to included presets if they exist
+            included_files = []
+            for inc in data.get("include", []):
+                inc_path = os.path.join(output_dir, inc) if not absolute_paths else inc
+                if os.path.exists(inc_path):
+                    included_files.append(inc_path)
+
+            real_preset_names = set()
+            build_preset_to_configure_preset = {}
+
+            for inc_path in included_files:
+                try:
+                    inc_json = json.loads(load(inc_path))
+                except Exception:
+                    continue
+                for preset_type in ("configurePresets", "buildPresets", "testPresets"):
+                    for p in inc_json.get(preset_type, []):
+                        name = p.get("name")
+                        if name:
+                            real_preset_names.add(name)
+                        if preset_type in ("buildPresets", "testPresets"):
+                            configure_preset = p.get("configurePreset")
+                            if configure_preset:
+                                build_preset_to_configure_preset[name] = configure_preset
+
             for preset_type, inherited_names in inherited_user.items():
                 stubs = []
                 for p in inherited_names:
