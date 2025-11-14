@@ -3,6 +3,7 @@ import os
 import platform
 import re
 import textwrap
+from shutil import rmtree
 
 import pytest
 from mock import mock
@@ -629,10 +630,21 @@ def test_cmake_presets_shared_preset(presets):
                  "CMakeLists.txt": ""})  # File must exist for Conan to do Preset things.
 
     client.run("install . -s build_type=Debug")
-
     conan_presets = json.loads(client.load("ConanPresets.json"))
     assert len(conan_presets["configurePresets"]) == 1
     assert conan_presets["configurePresets"][0]["name"] == "conan-release"
+
+    # check that if you remove the build folder and regenerate the presets
+    # the stubs are regenerated correctly
+    client.run("install . -s build_type=Release")
+    client.run_command("cmake --list-presets")
+    assert "'conan-debug' config" in client.out
+    assert "'conan-release' config" in client.out
+
+    rmtree(os.path.join(client.current_folder, "build"))
+    client.run("install . -s build_type=Release")
+    client.run_command("cmake --list-presets")
+    assert "'conan-release' config" in client.out
 
 
 def test_cmake_presets_multiconfig():
