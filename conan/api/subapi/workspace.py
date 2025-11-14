@@ -18,8 +18,8 @@ from conan.internal.methods import auto_language, auto_shared_fpic_config_option
 from conan.internal.model.options import Options
 from conan.internal.model.workspace import Workspace, WORKSPACE_YML, WORKSPACE_PY, WORKSPACE_FOLDER
 from conan.tools.scm import Git
-from conan.internal.graph.graph import RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL, Node, \
-    RECIPE_CONSUMER
+from conan.internal.graph.graph import (RECIPE_EDITABLE, DepsGraph, CONTEXT_HOST, RECIPE_VIRTUAL,
+                                        Node, RECIPE_CONSUMER)
 from conan.internal.graph.graph import TransitiveRequirement
 from conan.internal.graph.profile_node_definer import consumer_definer, initialize_conanfile_profile
 from conan.internal.loader import load_python_file
@@ -118,7 +118,7 @@ class WorkspaceAPI:
             rel_path = editable_info["path"]
             path = os.path.normpath(os.path.join(self._folder, rel_path, "conanfile.py"))
             if not os.path.isfile(path):
-                raise ConanException(f"Workspace editable not found: {path}")
+                raise ConanException(f"Workspace package not found: {path}")
             ref = editable_info.get("ref")
             try:
                 if ref is None:
@@ -128,12 +128,12 @@ class WorkspaceAPI:
                 else:
                     reference = RecipeReference.loads(ref)
                 reference.validate_ref(reference)
-            except:
-                raise ConanException(f"Workspace editable reference could not be deduced by"
+            except Exception as e:
+                raise ConanException(f"Workspace package reference could not be deduced by"
                                      f" {rel_path}/conanfile.py or it is not"
-                                     f" correctly defined in the conanws.yml file.")
+                                     f" correctly defined in the conanws.yml file: {e}")
             if reference in packages:
-                raise ConanException(f"Workspace editable reference '{str(reference)}' already exists.")
+                raise ConanException(f"Workspace package '{str(reference)}' already exists.")
             packages[reference] = {"path": path}
             if editable_info.get("output_folder"):
                 packages[reference]["output_folder"] = (
@@ -313,6 +313,8 @@ class WorkspaceAPI:
                                          f"in the workspace: {deps_edit}")
                 result.add_node(node)
                 continue
+            # At the moment we are exposing the full conanfile, docs will warn against usage of
+            # non pure functions
             conanfile.workspace_packages[node.ref] = node.conanfile
             for r, t in node.transitive_deps.items():
                 if t.node.recipe == RECIPE_EDITABLE:

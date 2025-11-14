@@ -337,6 +337,7 @@ class TestAddRemove:
         c = TestClient(light=True)
         c.save({"conanws.yml": ""})
         c.run("workspace remove kk", assert_error=True)
+        print(c.out)
         assert "ERROR: No editable package to remove from this path: kk" in c.out
 
 
@@ -1204,7 +1205,7 @@ def test_workspace_defining_duplicate_references():
         "liba2/conanfile.py": GenConanfile(name="liba", version="0.1"),
     })
     c.run("workspace install", assert_error=True)
-    assert "Workspace editable reference 'liba/0.1' already exists." in c.out
+    assert "Workspace package 'liba/0.1' already exists." in c.out
 
 
 def test_workspace_reference_error():
@@ -1216,5 +1217,5 @@ def test_workspace_reference_error():
     c.save({"conanws.yml": conanws_with_labels,
             "libx/conanfile.py": ""})
     c.run("workspace install", assert_error=True)
-    assert ("Workspace editable reference could not be deduced by libx/conanfile.py or it is not"
-            " correctly defined in the conanws.yml file.") in c.out
+    assert ("Workspace package reference could not be deduced by libx/conanfile.py or it is not"
+            " correctly defined in the conanws.yml file") in c.out
