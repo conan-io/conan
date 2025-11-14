@@ -297,27 +297,41 @@ class _IncludingPresets:
         if not os.path.exists(user_presets_path):
             data = {"version": 4,
                     "vendor": {"conan": dict()}}
-            for preset, inherits in inherited_user.items():
-                for i in inherits:
-                    data.setdefault(preset, []).append({"name": i})
         else:
             data = json.loads(load(user_presets_path))
             if "conan" not in data.get("vendor", {}):
                 # The file is not ours, we cannot overwrite it
                 return
 
-        if inherited_user:
-            _IncludingPresets._clean_user_inherits(data, preset_data)
+        data = _IncludingPresets._append_user_preset_path(data, preset_path, output_dir, absolute_paths)
 
-        if not absolute_paths:
-            try:  # Make it relative to the CMakeUserPresets.json if possible
-                preset_path = os.path.relpath(preset_path, output_dir)
-                # If we don't normalize, path will be removed in Linux shared folders
-                # https://github.com/conan-io/conan/issues/18434
-                preset_path = preset_path.replace("\\", "/")
-            except ValueError:
-                pass
-        data = _IncludingPresets._append_user_preset_path(data, preset_path, output_dir)
+        # 1. lee del data el campo include y saca todos los paths absolutos a los presets incluidos si existen
+        included_files = []
+        for inc in data.get("include", []):
+            inc_path = os.path.join(output_dir, inc) if not absolute_paths else inc
+            if os.path.exists(inc_path):
+                included_files.append(inc_path)
+
+        real_preset_names = set()
+
+        for inc_path in included_files:
+            try:
+                inc_json = json.loads(load(inc_path))
+            except Exception:
+                continue
+            for preset_type in ("configurePresets", "buildPresets", "testPresets"):
+                for p in inc_json.get(preset_type, []):
+                    name = p.get("name")
+                    if name:
+                        real_preset_names.add(name)
+
+        if inherited_user:
+            for preset_type, inherited_names in inherited_user.items():
+                stubs = [
+                    p for p in inherited_names
+                    if p not in real_preset_names
+                ]
+                data[preset_type] = stubs
 
         data = json.dumps(data, indent=4)
         ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {user_presets_path}")
@@ -347,20 +361,29 @@ class _IncludingPresets:
 
         return collected_targets
 
-    @staticmethod
-    def _clean_user_inherits(data, preset_data):
-        for preset_type in "configurePresets", "buildPresets", "testPresets":
-            presets = preset_data.get(preset_type, [])
-            presets_names = [p["name"] for p in presets]
-            other = data.get(preset_type, [])
-            other[:] = [p for p in other if p["name"] not in presets_names]
+    # @staticmethod
+    # def _clean_user_inherits(data, preset_data):
+    #     for preset_type in "configurePresets", "buildPresets", "testPresets":
+    #         presets = preset_data.get(preset_type, [])
+    #         presets_names = [p["name"] for p in presets]
+    #         other = data.get(preset_type, [])
+    #         other[:] = [p for p in other if p["name"] not in presets_names]
 
     @staticmethod
-    def _append_user_preset_path(data, preset_path, output_dir):
+    def _append_user_preset_path(data, preset_path, output_dir, absolute_paths):
         """ - Appends a 'include' to preset_path if the schema supports it.
             - Otherwise it merges to "data" all the configurePresets, buildPresets etc from the
               read preset_path.
         """
+        if not absolute_paths:
+            try:  # Make it relative to the CMakeUserPresets.json if possible
+                preset_path = os.path.relpath(preset_path, output_dir)
+                # If we don't normalize, path will be removed in Linux shared folders
+                # https://github.com/conan-io/conan/issues/18434
+                preset_path = preset_path.replace("\\", "/")
+            except ValueError:
+                pass
+
         if "include" not in data:
             data["include"] = []
         # Clear the folders that have been deleted
