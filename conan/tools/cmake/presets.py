@@ -305,7 +305,7 @@ class _IncludingPresets:
 
         data = _IncludingPresets._append_user_preset_path(data, preset_path, output_dir, absolute_paths)
 
-        # 1. lee del data el campo include y saca todos los paths absolutos a los presets incluidos si existen
+        # Read include field from data and get all absolute paths to included presets if they exist
         included_files = []
         for inc in data.get("include", []):
             inc_path = os.path.join(output_dir, inc) if not absolute_paths else inc
@@ -313,6 +313,7 @@ class _IncludingPresets:
                 included_files.append(inc_path)
 
         real_preset_names = set()
+        build_preset_to_configure_preset = {}
 
         for inc_path in included_files:
             try:
@@ -324,13 +325,22 @@ class _IncludingPresets:
                     name = p.get("name")
                     if name:
                         real_preset_names.add(name)
+                    if preset_type in ("buildPresets", "testPresets"):
+                        configure_preset = p.get("configurePreset")
+                        if configure_preset:
+                            build_preset_to_configure_preset[name] = configure_preset
 
         if inherited_user:
             for preset_type, inherited_names in inherited_user.items():
-                stubs = [
-                    {"name": p} for p in inherited_names
-                    if p not in real_preset_names
-                ]
+                stubs = []
+                for p in inherited_names:
+                    if p not in real_preset_names:
+                        stub = {"name": p}
+                        # For buildPresets and testPresets, add configurePreset if mapping exists
+                        # or use the same name if no mapping (assuming same base name)
+                        if preset_type in ("buildPresets", "testPresets"):
+                            stub["configurePreset"] = build_preset_to_configure_preset.get(p, p)
+                        stubs.append(stub)
                 data[preset_type] = stubs
 
         data = json.dumps(data, indent=4)

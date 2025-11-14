@@ -647,6 +647,78 @@ def test_cmake_presets_shared_preset(presets):
     assert "'conan-release' config" in client.out
 
 
+@pytest.mark.parametrize("presets", ["CMakePresets.json", "CMakeUserPresets.json"])
+def test_cmake_presets_shared_build_preset(presets):
+    """valid user preset file is created when multiple project buildPresets inherit
+    from the same conan buildPresets, and stubs have configurePreset field.
+    """
+    client = TestClient()
+    project_presets = textwrap.dedent("""
+            {
+        "version": 4,
+        "cmakeMinimumRequired": {
+            "major": 3,
+            "minor": 23,
+            "patch": 0
+        },
+        "include":["ConanPresets.json"],
+        "configurePresets": [
+            {
+                "name": "debug1",
+                "inherits": ["conan-debug"]
+            },
+            {
+                "name": "release1",
+                "inherits": ["conan-release"]
+            }
+        ],
+        "buildPresets": [
+            {
+                "name": "build-debug1",
+                "configurePreset": "debug1",
+                "inherits": ["conan-debug"]
+            },
+            {
+                "name": "build-release1",
+                "configurePreset": "release1",
+                "inherits": ["conan-release"]
+            }
+        ]
+    }""")
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.cmake import cmake_layout, CMakeToolchain
+
+    class TestPresets(ConanFile):
+        generators = ["CMakeDeps"]
+        settings = "build_type"
+
+        def layout(self):
+            cmake_layout(self)
+
+        def generate(self):
+            tc = CMakeToolchain(self)
+            tc.user_presets_path = 'ConanPresets.json'
+            tc.generate()
+    """)
+
+    client.save({presets: project_presets,
+                 "conanfile.py": conanfile,
+                 "CMakeLists.txt": ""})  # File must exist for Conan to do Preset things.
+
+    client.run("install . -s build_type=Debug")
+    conan_presets = json.loads(client.load("ConanPresets.json"))
+    assert "buildPresets" in conan_presets
+    build_presets = conan_presets["buildPresets"]
+    assert len(build_presets) == 1, f"Should have 1 buildPreset stub."
+    release_stub = build_presets[0]
+    assert release_stub["name"] == "conan-release"
+    assert "configurePreset" in release_stub, "buildPreset stub should have configurePreset field"
+    assert release_stub["configurePreset"] == "conan-release"
+    client.run_command("cmake --list-presets")
+    assert "'conan-debug' config" in client.out
+
+
 def test_cmake_presets_multiconfig():
     client = TestClient()
     profile = textwrap.dedent("""
