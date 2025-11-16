@@ -15,10 +15,11 @@ class InstallAPI:
         self._conan_api = conan_api
         self._helpers = helpers
 
-    def install_binaries(self, deps_graph, remotes=None):
+    def install_binaries(self, deps_graph, remotes=None, return_install_error=False):
         """ Install binaries for dependency graph
         :param deps_graph: Dependency graph to intall packages for
         :param remotes:
+        :param return_install_error: If True, do not raise an exception, but return it
         """
         app = ConanBasicApp(self._conan_api)
         installer = BinaryInstaller(app, self._helpers.global_conf, app.editable_packages,
@@ -26,11 +27,15 @@ class InstallAPI:
         install_graph = InstallGraph(deps_graph)
         install_graph.raise_errors()
         install_order = install_graph.install_order()
+        installer.install_system_requires(deps_graph, install_order=install_order)
         try:  # To be able to capture the output, report or save graph.json, then raise later
-            installer.install_system_requires(deps_graph, install_order=install_order)
             installer.install(deps_graph, remotes, install_order=install_order)
         except ConanException as e:
-            return str(e)
+            # If true, allows to return the exception, so progress can be reported like the
+            # already built binaries to upload them
+            if not return_install_error:
+                raise
+            return e
 
     def install_system_requires(self, graph, only_info=False):
         """ Install binaries for dependency graph
