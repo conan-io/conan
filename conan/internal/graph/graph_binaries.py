@@ -164,8 +164,17 @@ class GraphBinariesAnalyzer:
             for package_id, compatible_package in compatibles.items():
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
+                # Check that this same reference hasn't already been checked
+                if self._evaluate_is_cached(node):
+                    # If we have already processed this compatible pref,
+                    # mark it as usable based on previous evaluation
+                    if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD):
+                        self._compatible_found(conanfile, package_id, compatible_package)
+                    return
                 cache_latest_prev = self._compatible_cache_latest_prev(node)  # not check remotes
                 if cache_latest_prev:
+                    # If we have binary info, it means that the package was already processed,
+                    # and we got a hit from the cache of compatibles
                     self._binary_in_cache(node, cache_latest_prev)
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
@@ -186,6 +195,13 @@ class GraphBinariesAnalyzer:
                                       f"{conanfile.info.dump_diff(compatible_package)}")
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
+
+                if self._evaluate_is_cached(node):
+                    # If we have already processed this compatible pref,
+                    # mark it as usable based on previous evaluation
+                    if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
+                        self._compatible_found(conanfile, package_id, compatible_package)
+                    return
                 cache_latest_prev = self._compatible_cache_latest_prev(node)  # Not check remotes
                 if cache_latest_prev:
                     self._evaluate_cache_update(cache_latest_prev, node, remotes, update)
@@ -203,10 +219,6 @@ class GraphBinariesAnalyzer:
         """ simplified checking of compatible_packages, that should be found existing, but
         will never be built, for example. They cannot be editable either at this point.
         """
-        # Check that this same reference hasn't already been checked
-        if self._evaluate_is_cached(node):
-            return
-
         # TODO: Test that this works
         if node.conanfile.info.invalid:
             node.binary = BINARY_INVALID

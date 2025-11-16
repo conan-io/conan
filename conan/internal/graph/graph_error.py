@@ -68,6 +68,13 @@ class GraphProvidesError(GraphError):
         self.conflicting_node = conflicting_node
         node.error = conflicting_node.error
 
+    def serialize(self):
+        return {"type": "provide_conflict",
+                "node": {"id": self.node.id, "ref": str(self.node.ref)},
+                "conflicting_node": {"id": self.conflicting_node.id,
+                                     "ref": str(self.conflicting_node.ref)},
+                "provided": self.node.conanfile.provides or self.conflicting_node.conanfile.provides}
+
     def __str__(self):
         return f"Provide Conflict: Both '{self.node.ref}' and '{self.conflicting_node.ref}' " \
                f"provide '{self.node.conanfile.provides or self.conflicting_node.conanfile.provides}'."

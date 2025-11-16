@@ -18,7 +18,8 @@ diff_html = r"""
             data-path="{{ file_info["relative_path"] }}">
             <a href="#diff_{{- safe_filename(file_info["filename"]) -}}"
                 onclick="setDataIsLinked(event)" draggable="false"
-                class="side-link">
+                class="side-link"
+                title="{{ replace_cache_paths(file_info["relative_path"]) | replace("(old)/", "") | replace("(new)/", "") }}">
                 {% if file_info["renamed_to"] %}
                     {{ file_info["renamed_to"].split("/")[1:][-1] }}
                 {% else %}
