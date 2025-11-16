@@ -88,7 +88,8 @@ class GraphAPI:
         return root_node
 
     def _load_root_virtual_conanfile(self, profile_host, profile_build, requires, tool_requires,
-                                     lockfile, remotes, update, check_updates=False, python_requires=None):
+                                     lockfile, remotes, update, check_updates=False,
+                                     python_requires=None):
         if not python_requires and not requires and not tool_requires:
             raise ConanException("Provide requires or tool_requires")
         app = ConanApp(self._conan_api)
@@ -164,8 +165,8 @@ class GraphAPI:
         """ Compute the dependency graph, starting from a root package, evaluation the graph with
         the provided configuration in profile_build, and profile_host. The resulting graph is a
         graph of recipes, but packages are not computed yet (package_ids) will be empty in the
-        result. The result might have errors, like version or configuration conflicts, but it is still
-        possible to inspect it. Only trying to install such graph will fail
+        result. The result might have errors, like version or configuration conflicts, but it is
+        still possible to inspect it. Only trying to install such graph will fail
 
         :param root_node: the starting point, an already initialized Node structure, as
             returned by the "load_root_node" api

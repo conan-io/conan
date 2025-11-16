@@ -8,8 +8,9 @@ from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
 from conan.internal.api.uploader import compress_files
 from conan.internal.cache.cache import PkgCache
-from conan.internal.cache.conan_reference_layout import EXPORT_SRC_FOLDER, EXPORT_FOLDER, SRC_FOLDER, \
-    METADATA, DOWNLOAD_EXPORT_FOLDER
+from conan.internal.cache.conan_reference_layout import (EXPORT_SRC_FOLDER, EXPORT_FOLDER,
+                                                         SRC_FOLDER, METADATA,
+                                                         DOWNLOAD_EXPORT_FOLDER)
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.cache.integrity_check import IntegrityChecker
 from conan.internal.rest.download_cache import DownloadCache
@@ -104,7 +105,8 @@ class CacheAPI:
                     if not os.path.exists(manifest) or not os.path.exists(info):
                         rmdir(folder)
         if backup_sources:
-            backup_files = self._conan_api.cache.get_backup_sources(package_list, exclude=False, only_upload=False)
+            backup_files = self._conan_api.cache.get_backup_sources(package_list, exclude=False,
+                                                                    only_upload=False)
             ConanOutput().verbose(f"Cleaning {len(backup_files)} backup sources")
             for f in backup_files:
                 remove(f)
@@ -175,7 +177,8 @@ class CacheAPI:
         pkglist_path = os.path.join(tempfile.gettempdir(), "pkglist.json")
         save(pkglist_path, serialized)
         tar_files["pkglist.json"] = pkglist_path
-        compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path), compresslevel, recursive=True)
+        compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path),
+                       compresslevel, recursive=True)
         remove(pkglist_path)
 
     def restore(self, path):
@@ -260,7 +263,8 @@ class CacheAPI:
         download_cache_path = config.get("core.sources:download_cache")
         download_cache_path = download_cache_path or HomePaths(
             self._conan_api.cache_folder).default_sources_backup_folder
-        excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[]) if exclude else []
+        excluded_urls = config.get("core.sources:exclude_urls",
+                                   check_type=list, default=[]) if exclude else []
         download_cache = DownloadCache(download_cache_path)
         return download_cache.get_backup_sources_files(excluded_urls, package_list, only_upload)
 
