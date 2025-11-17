@@ -95,7 +95,6 @@ class WorkspaceAPI:
     def enable(self, value):
         self._enabled = value
 
-    @property
     def name(self):
         self._check_ws()
         return self._ws.name()
@@ -238,7 +237,7 @@ class WorkspaceAPI:
 
     def info(self):
         self._check_ws()
-        return {"name": self.name,
+        return {"name": self._ws.name(),
                 "folder": self._folder,
                 "packages": self._ws.packages()}
 

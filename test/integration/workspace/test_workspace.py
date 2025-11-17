@@ -337,7 +337,6 @@ class TestAddRemove:
         c = TestClient(light=True)
         c.save({"conanws.yml": ""})
         c.run("workspace remove kk", assert_error=True)
-        print(c.out)
         assert "ERROR: No editable package to remove from this path: kk" in c.out
 
 
@@ -1191,7 +1190,7 @@ def test_workspace_defining_duplicate_references():
     """
     Testing duplicate references but different paths
     """
-    c = TestClient()
+    c = TestClient(light=True)
     conanws_with_labels = textwrap.dedent("""\
     packages:
       - path: liba
@@ -1209,7 +1208,7 @@ def test_workspace_defining_duplicate_references():
 
 
 def test_workspace_reference_error():
-    c = TestClient()
+    c = TestClient(light=True)
     conanws_with_labels = textwrap.dedent("""\
     packages:
       - path: libx
@@ -1219,3 +1218,22 @@ def test_workspace_reference_error():
     c.run("workspace install", assert_error=True)
     assert ("Workspace package reference could not be deduced by libx/conanfile.py or it is not"
             " correctly defined in the conanws.yml file") in c.out
+
+
+def test_workspace_python_error():
+    c = TestClient()
+    workspace = textwrap.dedent("""\
+       from conan import Workspace
+
+       class MyWorkspace(Workspace):
+           def packages(self):
+               os.listdir(self.folder)
+      """)
+    c.save({"conanws.yml": "",
+            "conanws.py": "bad"})
+    c.run("workspace info", assert_error=True)
+    assert "ERROR: Error loading conanws.py at" in c.out
+    c.save({"conanws.yml": "",
+            "conanws.py": workspace})
+    c.run("workspace info", assert_error=True)
+    assert "ERROR: Workspace conanws.py file: Error in packages() method, line 5" in c.out
