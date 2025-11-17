@@ -211,7 +211,7 @@ class GraphBinariesAnalyzer:
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
 
-        node.conanfile.output.info("No compatible configuration not found", fg=Color.BRIGHT_CYAN)
+        node.conanfile.output.info("No compatible configuration found", fg=Color.BRIGHT_CYAN)
         # If no compatible is found, restore original state
         node.binary = original_binary
         node._package_id = original_package_id
