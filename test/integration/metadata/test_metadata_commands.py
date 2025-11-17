@@ -17,7 +17,8 @@ class TestMetadataCommands:
         pid = client.created_package_id("pkg/0.1")
         return client, pid
 
-    def save_metadata_file(self, client, pkg_ref, filename="somefile.log"):
+    @staticmethod
+    def save_metadata_file(client, pkg_ref, filename="somefile.log"):
         client.run(f"cache path {pkg_ref} --folder=metadata")
         metadata_path = str(client.stdout).strip()
         myfile = os.path.join(metadata_path, "logs", filename)

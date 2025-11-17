@@ -219,8 +219,10 @@ class MSBuildToolchain:
         # Now, it's time to get all the flags defined by the user
         cxxflags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         cflags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
-        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
+                                                   check_type=list)
+        exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[],
+                                                check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
         return cxxflags, cflags, defines, sharedlinkflags, exelinkflags
 
