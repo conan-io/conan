@@ -143,6 +143,13 @@ class ConanFileLoader:
             with conanfile_exception_formatter("conanfile.py", "set_version"):
                 conanfile.set_version()
 
+        if not conanfile.version:
+            # Last chance, try to get version from conan_data.
+            # Only works if only one version is present
+            sources = getattr(conanfile, "conan_data", {}).get("sources", {})
+            if len(sources) == 1:
+                conanfile.version = next(iter(sources))
+
         return conanfile
 
     def load_export(self, conanfile_path, name, version, user, channel, graph_lock=None,
