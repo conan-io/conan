@@ -752,6 +752,7 @@ def test_cmake_presets_shared_preset(presets):
     assert "'conan-release' config" in client.out
 
 
+@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.parametrize("presets", ["CMakePresets.json", "CMakeUserPresets.json"])
 def test_cmake_presets_shared_build_preset(presets):
     """valid user preset file is created when multiple project buildPresets inherit
