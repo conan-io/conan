@@ -1,6 +1,7 @@
 import pytest
 
 from conan.api.model import ListPattern
+from conan.errors import ConanException
 
 
 @pytest.mark.parametrize("pattern, result",
@@ -11,3 +12,12 @@ from conan.api.model import ListPattern
 def test_cli_pattern_matching(pattern, result):
     pattern = ListPattern(pattern)
     assert result == (pattern.ref, pattern.rrev, pattern.package_id, pattern.prev)
+
+
+def test_list_pattern():
+    with pytest.raises(ConanException) as e:
+        ListPattern("*", package_id="*", only_recipe=True)
+    assert "Do not specify 'package_id' with 'only-recipe'" in str(e.value)
+    with pytest.raises(ConanException) as e:
+        ListPattern("*:*", package_id=None, only_recipe=True)
+    assert "Do not specify 'package_id' with 'only-recipe'" in str(e.value)

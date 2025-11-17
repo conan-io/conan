@@ -504,13 +504,6 @@ class Conf:
                 existing.compose_conf_value(v)
         return self
 
-    def filter_user_modules(self):
-        result = Conf()
-        for k, v in self._values.items():
-            if _is_profile_module(k):
-                result._values[k] = v
-        return result
-
     def copy_conaninfo_conf(self):
         """
         Get a new `Conf()` object with all the configurations required by the consumer

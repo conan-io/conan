@@ -2,7 +2,7 @@ import sqlite3
 import threading
 from collections import defaultdict, namedtuple
 from contextlib import contextmanager
-from typing import Tuple, List, Optional
+from typing import Tuple, List
 
 
 class BaseDbTable:
@@ -32,24 +32,18 @@ class BaseDbTable:
             self._lock.release()
 
     def create_table(self):
-        def field(name, typename, nullable=False, check_constraints: Optional[List] = None,
-                  unique=False):
+        def field(name, typename, nullable=False, unique=False):
             field_str = name
-            if typename in [str, ]:
+            if typename is str:
                 field_str += ' text'
-            elif typename in [int, ]:
+            elif typename is int:
                 field_str += ' integer'
-            elif typename in [float, ]:
-                field_str += ' real'
             else:
-                assert False, f"sqlite3 type not mapped for type '{typename}'"
+                assert typename is float, f"sqlite3 type not mapped for type '{typename}'"
+                field_str += ' real'
 
             if not nullable:
                 field_str += ' NOT NULL'
-
-            if check_constraints:
-                constraints = ', '.join([str(it) for it in check_constraints])
-                field_str += f' CHECK ({name} IN ({constraints}))'
 
             if unique:
                 field_str += ' UNIQUE'
@@ -61,11 +55,3 @@ class BaseDbTable:
         table_checks = f", UNIQUE({', '.join(self.unique_together)})" if self.unique_together else ''
         with self.db_connection() as conn:
             conn.execute(f"CREATE TABLE {guard} {self.table_name} ({fields} {table_checks});")
-
-    def dump(self):
-        print(f"********* BEGINTABLE {self.table_name}*************")
-        with self.db_connection() as conn:
-            r = conn.execute(f'SELECT rowid, * FROM {self.table_name}')
-            for it in r.fetchall():
-                print(str(it))
-            print(f"********* ENDTABLE {self.table_name}*************")
