@@ -146,7 +146,8 @@ class ConanFileLoader:
         if not conanfile.version:
             # Last chance, try to get version from conan_data.
             # Only works if only one version is present
-            sources = getattr(conanfile, "conan_data", {}).get("sources", {})
+            conan_data = getattr(conanfile, "conan_data", {})
+            sources = conan_data.get("sources", {}) if conan_data else {}
             if len(sources) == 1:
                 conanfile.version = next(iter(sources))
 
