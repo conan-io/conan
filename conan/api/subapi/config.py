@@ -59,12 +59,47 @@ class ConfigAPI:
         if os.path.isdir(path):
             path = os.path.join(path, "conanconfig.json")
         requires = loadconanconfig(path)
-        refs = []
+        refs = self._handle_reqs(requires, force)
         for require in requires:
             ref = self._install_pkg(require, lockfile, force, remotes, profile)
             refs.append(ref)
         self._conan_api.reinit()
         return refs
+
+    def _handle_reqs(self, requires, force):
+        config_version_file = HomePaths(self._conan_api.home_folder).config_version_path
+        if not os.path.exists(config_version_file):
+            return requires
+        config_versions = loadconanconfig(config_version_file)
+        config_versions_dict = {r.name: r for r in config_versions}
+        if len(config_versions_dict) < len(config_versions):
+            raise ConanException("There are multiple requirerements for the same package "
+                                 f"with different versions: {config_version_file}")
+        result = []
+        for require in requires:
+            existing = config_versions_dict.get(require.name)
+            if not existing:
+                result.append(require)
+                continue
+            if existing == require:
+                if force:
+                    ConanOutput().info(f"Package '{require}' already configured, "
+                                       "but re-installation forced. It is recommended to do a "
+                                       "'conan config clean' before.")
+                    result.append(require)
+                else:
+                    ConanOutput().info(f"Package '{require}' already configured, "
+                                       "skipping configuration install")
+            else:
+                if force:
+                    ConanOutput().warning(f"Package '{existing}' already configured, forced "
+                                          f"installation of '{require} on top. "
+                                          f"Recommended a 'conan config clean' before")
+                    result.append(require)
+                else:
+                    raise ConanException(f"Package '{existing}' already configured, but tried "
+                                         f"to install '{require}. Do a 'conan config clean' before")
+        return result
 
     def _install_pkg(self, ref, lockfile=None, force=False, remotes=None,
                      profile=None) -> PkgReference:
@@ -105,18 +140,7 @@ class ConfigAPI:
 
         # We check if this specific version is already installed
         config_pref = pkg.ref.repr_notime()
-        config_versions = []
-        config_version_file = HomePaths(conan_api.home_folder).config_version_path
-        if os.path.exists(config_version_file):
-            config_versions = loadconanconfig(config_version_file)
-            if config_pref in config_versions:
-                if force:
-                    ConanOutput().info(f"Package '{pkg}' already configured, "
-                                       "but re-installation forced")
-                else:
-                    ConanOutput().info(f"Package '{pkg}' already configured, "
-                                       "skipping configuration install")
-                    return pkg.ref  # Already installed, we can skip repeating the install
+        xxxx
 
         from conan.internal.api.config.config_installer import configuration_install
         cache_folder = self._conan_api.cache_folder
