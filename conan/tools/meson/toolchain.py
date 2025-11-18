@@ -289,8 +289,6 @@ class MesonToolchain:
 
         # Read configuration for sys_root property (honoring existing conf)
         self._sys_root = self._conanfile_conf.get("tools.build:sysroot", check_type=str)
-        if self._sys_root:
-            self.properties["sys_root"] = self._sys_root
 
         # Read configuration for compilers
         compilers_by_conf = self._conanfile_conf.get("tools.build:compiler_executables", default={},
