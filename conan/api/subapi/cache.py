@@ -81,15 +81,15 @@ class CacheAPI:
         """Sign packages with the signing plugin"""
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder)
-        results = pkg_signer.sign(package_list, context="cache")
-        return {"results": results, "context": "cache", "action": "sign"}
+        pkg_signer.sign(package_list, context="cache")
+        return {"results": package_list.serialize(), "context": "cache", "action": "sign"}
 
     def verify(self, package_list):
         """Verify packages with the signing plugin"""
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder)
-        results = pkg_signer.verify_pkglist(package_list, context="cache")
-        return {"results": results, "context": "cache", "action": "verify"}
+        pkg_signer.verify_pkglist(package_list, context="cache")
+        return {"results": package_list.serialize(), "context": "cache", "action": "verify"}
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True,
               backup_sources=False):

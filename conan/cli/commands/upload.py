@@ -14,8 +14,10 @@ def summary_upload_list(results):
     """
     ConanOutput().subtitle("Upload summary")
     info = results["results"]
+    package_sign_error = False
 
     def format_upload(item):
+        nonlocal package_sign_error
         if isinstance(item, dict):
             result = {}
             for k, v in item.items():
@@ -24,17 +26,31 @@ def summary_upload_list(results):
                     v.pop("timestamp", None)
                     v.pop("files", None)
                     v.pop("upload-urls", None)
+                    uploaded_value = v.pop("uploaded", None)
                     upload_value = v.pop("upload", None)
-                    if upload_value is not None:
-                        msg = "Uploaded" if upload_value else "Skipped, already in server"
+                    if uploaded_value is not None and upload_value is not None:
                         force_upload = v.pop("force_upload", None)
-                        if force_upload:
-                            msg += " - forced"
+                        if uploaded_value:
+                            msg = "Uploaded"
+                            if force_upload:
+                                msg += " - forced"
+                        elif not upload_value:
+                            msg = "Skipped, already in server"
+                        else:
+                            msg = "Not uploaded"
                         k = f"{k} ({msg})"
+                        package_sign = v.get("package sign", None)
+                        if package_sign is not None:
+                            if "fail" in package_sign.lower() or "error" in package_sign.lower():
+                                package_sign_error = True
                 result[k] = format_upload(v)
             return result
         return item
+
     info = {remote: format_upload(values) for remote, values in info.items()}
+    if package_sign_error:
+        results["conan_error"] = f"There were some errors in the signature verification process. " \
+                              "Please check the output."
     print_serial(info)
 
 
@@ -97,13 +113,21 @@ def upload(conan_api: ConanAPI, parser, *args):
         ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
 
+    results = {
+        "conan_api": conan_api
+    }
+
     if package_list:
         # If only if search with "*" we ask for confirmation
         if not args.list and not args.confirm and "*" in args.pattern:
             package_list = _ask_confirm_upload(conan_api, package_list)
 
-        conan_api.upload.upload_full(package_list, remote, enabled_remotes, args.check,
-                                     args.force, args.metadata, args.dry_run)
+        try:
+            conan_api.upload.upload_full(package_list, remote, enabled_remotes, args.check,
+                                         args.force, args.metadata, args.dry_run)
+        except ConanException as e:
+            results["conan_error"] = str(e)
+
     elif args.list:
         # Don't error on no recipes for automated workflows using list,
         # but warn to tell the user that no packages were uploaded
@@ -113,10 +137,8 @@ def upload(conan_api: ConanAPI, parser, *args):
 
     pkglist = MultiPackagesList()
     pkglist.add(remote.name, package_list)
-    return {
-        "results": pkglist.serialize(),
-        "conan_api": conan_api
-    }
+    results["results"] = pkglist.serialize()
+    return results
 
 
 def _ask_confirm_upload(conan_api, package_list):

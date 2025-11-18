@@ -2,10 +2,10 @@ import json
 
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write, ConanOutput, Color
+from conan.api.output import cli_out_write, ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
-from conan.cli.commands.list import print_list_text, print_list_json
+from conan.cli.commands.list import print_list_text, print_list_json, print_serial
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
@@ -16,27 +16,47 @@ def json_export(data):
 
 
 def print_cache_sign_verify_text(data):
-    elements = data.get("results")
-    if elements:
-        title = "Verification" if data.get("action") == "verify" else "Signing"
-        cli_out_write(f"[Package signing plugin] {title} results:", fg=Color.BRIGHT_BLUE)
-        for ref, result in elements.items():
-            cli_out_write(f"  {ref}", fg=Color.BRIGHT_BLUE)
-            if result is None:
-                result = "Signed" if data.get("action") == "sign" else "Signature verified"
-            color = Color.BRIGHT_YELLOW if "warn" in result else Color.BRIGHT_WHITE
-            color = Color.BRIGHT_RED if "fail" in result else color
-            cli_out_write(f"    :: {result}", fg=color)
+    action = data.get('action')
+    if action == "verify":
+        cli_out_write("[Package sign] Verifying signature of packages in local cache...",
+                      endline="\n\n")
+    else:
+        cli_out_write("[Package sign] Signing packages in local cache...", endline="\n\n")
+
+    print_serial(data.get("results"))
+
+    results = []
+    for ref, revisions in data.get("results").items():
+        for revision, revision_data in revisions.get("revisions").items():
+            results.append(revision_data["package sign"])
+            for package_id, package_data in revision_data["packages"].items():
+                for prev, prev_data in package_data["revisions"].items():
+                    results.append(prev_data["package sign"])
+
+    warn_count = 0
+    fail_count = 0
+    ok_count = 0
+
+    for result in results:
+        lower = result.lower()
+        if "warn" in lower:
+            warn_count += 1
+        elif "fail" in lower or "error" in lower:
+            fail_count += 1
+        else:
+            ok_count += 1
+    cli_out_write(f"\n[Package sign] Summary: OK={ok_count}, WARN={warn_count}, "
+                  f"FAILED={fail_count}")
 
 
 def print_cache_sign_verify_json(data):
-    for result in data["results"].values():
-        if result is not None and "failed" in result.lower():
-            action_msg = "signature verification" if data.get("action") == "verify" else "signing"
-            data["conan_error"] = f"There were some errors in the {action_msg} process. " \
-                                  "Please check the output."
-    myjson = json.dumps(data, indent=4)
-    cli_out_write(myjson)
+    data_str = str(data).lower()
+    if "fail" in data_str or "error" in data_str:
+        action_msg = "signature verification" if data.get("action") == "verify" else "signing"
+        data["conan_error"] = f"There were some errors in the {action_msg} process. " \
+                              "Please check the output."
+    json_data = json.dumps(data, indent=4)
+    cli_out_write(json_data)
 
 
 @conan_command(group="Consumer")

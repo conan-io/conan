@@ -5,7 +5,7 @@ from typing import List
 
 from requests.exceptions import ConnectionError
 
-from conan.api.model import LOCAL_RECIPES_INDEX
+from conan.api.model import LOCAL_RECIPES_INDEX, PackagesList
 from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
@@ -78,7 +78,9 @@ class RemoteManager:
             if "conanmanifest.txt" not in zipped_files:
                 raise ConanException(f"Corrupted {ref} in '{remote.name}' remote: "
                                      f"no conanmanifest.txt")
-            self._signer.verify(ref, download_export, files=zipped_files)
+            pkg_list = PackagesList()
+            pkg_list.add_ref(ref)
+            self._signer.verify_pkglist(pkg_list, "install")
         except BaseException:  # So KeyboardInterrupt also cleans things
             ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'",
                                               error_type="exception")
@@ -129,7 +131,9 @@ class RemoteManager:
             mkdir(export_sources_folder)  # create the folder even if no source files
             return
 
-        self._signer.verify(ref, download_folder, files=zipped_files)
+        pkg_list = PackagesList()
+        pkg_list.add_ref(ref)
+        self._signer.verify_pkglist(pkg_list, "install")
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
         uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
 
@@ -178,7 +182,10 @@ class RemoteManager:
             for f in ("conaninfo.txt", "conanmanifest.txt", "conan_package.tgz"):
                 if f not in zipped_files:
                     raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: no {f}")
-            self._signer.verify(pref, download_pkg_folder, zipped_files)
+            pkg_list = PackagesList()
+            pkg_list.add_ref(pref.ref)
+            pkg_list.add_pref(pref)
+            self._signer.verify_pkglist(pkg_list, "install")
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             package_folder = layout.package()
