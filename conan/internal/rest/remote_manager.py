@@ -80,7 +80,7 @@ class RemoteManager:
                                      f"no conanmanifest.txt")
             pkg_list = PackagesList()
             pkg_list.add_ref(ref)
-            self._signer.verify_pkglist(pkg_list, "install")
+            self._signer.verify(pkg_list, "install")
         except BaseException:  # So KeyboardInterrupt also cleans things
             ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'",
                                               error_type="exception")
@@ -133,7 +133,7 @@ class RemoteManager:
 
         pkg_list = PackagesList()
         pkg_list.add_ref(ref)
-        self._signer.verify_pkglist(pkg_list, "install")
+        self._signer.verify(pkg_list, "install")
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
         uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
 
@@ -185,7 +185,7 @@ class RemoteManager:
             pkg_list = PackagesList()
             pkg_list.add_ref(pref.ref)
             pkg_list.add_pref(pref)
-            self._signer.verify_pkglist(pkg_list, "install")
+            self._signer.verify(pkg_list, "install")
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             package_folder = layout.package()

@@ -85,7 +85,8 @@ class PkgSignaturesPlugin:
         self._cache = cache
         self.sign_plugin_path = HomePaths(home_folder).sign_plugin_path
         self._plugin_sign_function = self._plugin_verify_function = None
-        if os.path.isfile(self.sign_plugin_path):
+        self._plugin_file_exists = os.path.isfile(self.sign_plugin_path)
+        if self._plugin_file_exists:
             mod, _ = load_python_file(self.sign_plugin_path)
             try:
                 self._plugin_sign_function = mod.sign
@@ -97,6 +98,8 @@ class PkgSignaturesPlugin:
                 pass
 
     def sign(self, pkg_list, context="upload"):  # cache, upload,
+        if not self._plugin_file_exists:
+            return
         if self._plugin_sign_function is None:
             raise ConanException("[Package sign] sign() function not found "
                                  f"in {self.sign_plugin_path}")
@@ -127,10 +130,7 @@ class PkgSignaturesPlugin:
                     _sign(pref, pkg_bundle_files, self._cache.pkg_layout(pref).download_package(),
                           pkg_bundle, context)
 
-    def verify(self, ref, folder, files, dict_info, context="install"):
-        if self._plugin_verify_function is None:
-            raise ConanException("[Package sign] verify() function not found in "
-                                 f"{self.sign_plugin_path}")
+    def _verify(self, ref, folder, files, dict_info, context="install"):
         metadata_sign = os.path.join(folder, METADATA, "sign")
         try:
             result = self._plugin_verify_function(ref, artifacts_folder=folder,
@@ -139,7 +139,9 @@ class PkgSignaturesPlugin:
         except (ConanException, AssertionError) as e:
             _handle_failure(e, context, dict_info)
 
-    def verify_pkglist(self, pkg_list, context="cache"):  # cache, install, upload
+    def verify(self, pkg_list, context="cache"):  # cache, install, upload
+        if not self._plugin_file_exists:
+            return
         if self._plugin_verify_function is None:
             raise ConanException("[Package sign] verify() function not found in "
                                  f"{self.sign_plugin_path}")
@@ -149,12 +151,12 @@ class PkgSignaturesPlugin:
                 recipe_bundle = pkg_list.recipe_dict(rref)
                 if recipe_bundle:
                     rref_folder = self._cache.recipe_layout(rref).download_export()
-                    self.verify(rref, rref_folder, os.listdir(rref_folder), recipe_bundle, context)
+                    self._verify(rref, rref_folder, os.listdir(rref_folder), recipe_bundle, context)
                 for pref in packages:
                     pkg_bundle = pkg_list.package_dict(pref)
                     if pkg_bundle:
                         pref_folder = self._cache.pkg_layout(pref).download_package()
-                        self.verify(pref, pref_folder, os.listdir(pref_folder), pkg_bundle, context)
+                        self._verify(pref, pref_folder, os.listdir(pref_folder), pkg_bundle, context)
         except ConanException as e:
             finally_raise = e
         if context == "install":

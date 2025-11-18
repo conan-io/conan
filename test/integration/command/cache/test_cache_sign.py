@@ -15,6 +15,7 @@ def _remove_timestamps(output):
 
 def test_pkg_sign_no_plugin():
     c = TestClient()
+    c.save_home({"extensions/plugins/sign/sign.py": ""})
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     c.run("cache sign *", assert_error=True)
