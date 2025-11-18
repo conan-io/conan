@@ -1,4 +1,4 @@
-from mock import mock
+from unittest import mock
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient

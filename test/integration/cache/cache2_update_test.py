@@ -2,7 +2,7 @@ import copy
 from collections import OrderedDict
 
 import pytest
-from mock import patch
+from unittest.mock import patch
 
 from conan.api.model import RecipeReference
 from conans.server.revision_list import RevisionList
