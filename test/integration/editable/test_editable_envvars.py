@@ -66,13 +66,13 @@ def test_editable_envvars_package_info():
             name = "dep"
             version = "1.0"
             def layout(self):
-                self.layouts.build.runenv_info.define_path("SOME_PATH", "mypath_layout")
+                self.layouts.build.runenv_info.define("SOME_PATH", "mypath_layout")
                 self.cpp.build.includedirs = ["mylayoutinclude"]
                 self.layouts.build.conf_info.define("user:myconf", "mylayoutconf")
 
             def package_info(self):
                 print("Running package_info!!")
-                self.runenv_info.define_path("SOME_PATH", "mypath_pkginfo")
+                self.runenv_info.define("SOME_PATH", "mypath_pkginfo")
                 self.cpp_info.includedirs = ["mypkginfoinclude"]
                 self.conf_info.define("user:myconf", "mypkginfoconf")
         """)
@@ -92,11 +92,11 @@ def test_editable_envvars_package_info():
             "pkg/conanfile.py": pkg})
     c.run("editable add dep ")
     c.run("install pkg -s os=Linux -s:b os=Linux -g CMakeDeps")
-    assert "conanfile.py (pkg/1.0): DEP CONFINFO mypkginfoconf" in c.out
+    assert "conanfile.py (pkg/1.0): DEP CONFINFO mylayoutconf" in c.out
     cmake = c.load("pkg/dep-release-data.cmake")
     assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/mylayoutinclude")' in cmake
     runenv = c.load("pkg/conanrunenv-release.sh")
-    assert f'export SOME_PATH="mypath_pkginfo"' in runenv
+    assert f'export SOME_PATH="mypath_layout"' in runenv
 
 
 def test_editable_envvars_package():
