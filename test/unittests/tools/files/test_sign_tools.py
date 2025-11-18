@@ -2,9 +2,10 @@ import os
 
 import pytest
 
-from conan.internal.rest.pkg_sign import PkgSignaturesTools
 from conan.test.utils.tools import temp_folder, save_files
 
+from conan.tools.pkg_signing.plugin import (create_summary_content, get_summary_file_path,
+                                            is_pkg_signed, load_summary, save_summary)
 
 @pytest.fixture
 def pkg_sign_tools():
@@ -14,16 +15,18 @@ def pkg_sign_tools():
     signature_folder = os.path.join(main_folder, "sf")
     os.mkdir(signature_folder)
     save_files(artifacts_folder, {"conan_package.tgz": "", "conanmanifest.txt": ""})
-    return PkgSignaturesTools(artifacts_folder, signature_folder)
+    return artifacts_folder, signature_folder
 
 
 def test_get_summary_file_path(pkg_sign_tools):
-    sfp = pkg_sign_tools.get_summary_file_path()
+    _, signature_folder = pkg_sign_tools
+    sfp = get_summary_file_path(signature_folder)
     assert f"sf{os.path.sep}sign-summary.json" in sfp
 
 
 def test_create_summary_content(pkg_sign_tools):
-    c = pkg_sign_tools.create_summary_content()
+    artifacts_folder, _ = pkg_sign_tools
+    c = create_summary_content(artifacts_folder)
     assert c.get("method") is None
     assert c.get("provider") is None
     assert c.get("files").get("conan_package.tgz")
@@ -31,21 +34,23 @@ def test_create_summary_content(pkg_sign_tools):
 
 
 def test_save_load_summary(pkg_sign_tools):
-    c = pkg_sign_tools.create_summary_content()
+    artifacts_folder, signature_folder = pkg_sign_tools
+    c = create_summary_content(artifacts_folder)
     c["provider"] = "conan"
     c["method"] = "sigstore"
-    pkg_sign_tools.save_summary(c)
-    assert os.path.exists(os.path.join(pkg_sign_tools._signature_folder, "sign-summary.json"))
-    summary = pkg_sign_tools.load_summary()
+    save_summary(signature_folder, c)
+    assert os.path.exists(os.path.join(signature_folder, "sign-summary.json"))
+    summary = load_summary(signature_folder)
     assert summary.get("provider") == "conan"
     assert summary.get("method") == "sigstore"
     assert list(summary.get("files").keys()) == ["conan_package.tgz", "conanmanifest.txt"]
 
 
 def test_is_pkg_signed(pkg_sign_tools):
-    assert not pkg_sign_tools.is_pkg_signed()
-    c = pkg_sign_tools.create_summary_content()
+    artifacts_folder, signature_folder = pkg_sign_tools
+    assert not is_pkg_signed(signature_folder)
+    c = create_summary_content(artifacts_folder)
     c["provider"] = "the provider"
     c["method"] = "the method"
-    pkg_sign_tools.save_summary(c)
-    assert pkg_sign_tools.is_pkg_signed()
+    save_summary(signature_folder, c)
+    assert is_pkg_signed(signature_folder)
