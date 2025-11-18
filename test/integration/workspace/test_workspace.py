@@ -333,6 +333,13 @@ class TestAddRemove:
         c.run("workspace info")
         assert "dep/0.1" not in c.out
 
+    def test_remove_non_existing_error(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+        c.run("workspace remove kk", assert_error=True)
+        print(c.out)
+        assert "ERROR: No editable package to remove from this path: kk" in c.out
+
 
 class TestOpenAdd:
     def test_without_git(self):
@@ -686,8 +693,8 @@ class TestMeta:
             class MyWs(ConanFile):
                 settings = "arch", "build_type"
                 def generate(self):
-                    for pkg, options in self.workspace_packages_options.items():
-                        for k, v in options.items():
+                    for pkg, dep in self.workspace_packages.items():
+                        for k, v in dep.options.items():
                             self.output.info(f"Generating with opt {pkg}:{k}={v}!!!!")
 
             class Ws(Workspace):
@@ -702,6 +709,63 @@ class TestMeta:
         assert "project Conanfile: Generating with opt dep/0.1:myoption=None!!!!" in c.out
         c.run("workspace super-install -of=build -o *:myoption=1")
         assert "project Conanfile: Generating with opt dep/0.1:myoption=1!!!!" in c.out
+
+    def test_workspace_pkg_definitions(self):
+        c = TestClient()
+        conanfilews = textwrap.dedent("""
+            from conan import ConanFile
+            from conan import Workspace
+            from conan.tools.cmake import CMakeToolchain
+
+            class MyWs(ConanFile):
+                settings = "arch", "build_type"
+                def generate(self):
+                    tc = CMakeToolchain(self)
+                    for ref, dep in self.workspace_packages.items():
+                        dep.configure_toolchain(tc)
+                    tc.generate()
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+            """)
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "1.2.3"
+
+                def configure_toolchain(self, tc):
+                    tc.preprocessor_definitions["DEP_SOME_DEFINITION"] = self.version
+
+                def generate(self):
+                    tc = CMakeToolchain(self)
+                    self.configure_toolchain(tc)
+                    tc.generate()
+            """)
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "pkg"
+                version = "2.3.4"
+
+                def configure_toolchain(self, tc):
+                    tc.preprocessor_definitions["SOME_PKG_DEFINE"] = self.version
+
+                def generate(self):
+                    tc = CMakeToolchain(self)
+                    self.configure_toolchain(tc)
+                    tc.generate()
+            """)
+        c.save({"dep/conanfile.py": dep,
+                "pkg/conanfile.py": pkg,
+                "conanws.py": conanfilews})
+        c.run("workspace add dep")
+        c.run("workspace add pkg")
+        c.run("workspace super-install")
+        tc = c.load("conan_toolchain.cmake")
+        assert 'add_compile_definitions("SOME_PKG_DEFINE=2.3.4")' in tc
+        assert 'add_compile_definitions("DEP_SOME_DEFINITION=1.2.3")' in tc
 
     def test_intermediate_non_editable(self):
         c = TestClient(light=True)
@@ -1141,7 +1205,7 @@ def test_workspace_defining_duplicate_references():
         "liba2/conanfile.py": GenConanfile(name="liba", version="0.1"),
     })
     c.run("workspace install", assert_error=True)
-    assert "Workspace editable reference 'liba/0.1' already exists." in c.out
+    assert "Workspace package 'liba/0.1' already exists." in c.out
 
 
 def test_workspace_reference_error():
@@ -1153,5 +1217,5 @@ def test_workspace_reference_error():
     c.save({"conanws.yml": conanws_with_labels,
             "libx/conanfile.py": ""})
     c.run("workspace install", assert_error=True)
-    assert ("Workspace editable reference could not be deduced by libx/conanfile.py or it is not"
-            " correctly defined in the conanws.yml file.") in c.out
+    assert ("Workspace package reference could not be deduced by libx/conanfile.py or it is not"
+            " correctly defined in the conanws.yml file") in c.out

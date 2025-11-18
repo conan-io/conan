@@ -23,6 +23,30 @@ def _create_py_hello_world(folder):
     save_files(folder, {"setup.py": setup_py, "hello/__init__.py": hello_py})
 
 
+def test_empty_pipenv():
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.system import PipEnv
+
+        class PipPackage(ConanFile):
+
+            def generate(self):
+                PipEnv(self).generate()
+
+            def build(self):
+                self.run("python -m pip list")
+        """)
+
+    c = TestClient(path_with_spaces=False)
+    c.save({"conanfile.py": conanfile})
+    c.run("build")
+    # Test that some Conan common deps are not in this pip list
+    assert "requests" not in c.out
+    assert "colorama" not in c.out
+    assert "Jinja2" not in c.out
+    assert "PyJWT" not in c.out
+
+
 def test_build_pip_manager():
 
     pip_package_folder = temp_folder(path_with_spaces=True)
@@ -52,7 +76,8 @@ def test_build_pip_manager():
                 self.run("hello-world")
         """)
 
-    client = TestClient(path_with_spaces=False)  # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
+    client = TestClient(path_with_spaces=False)
+    # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
     client.save({"pip/conanfile.py": conanfile_pip})
     client.run("build pip/conanfile.py")
 
@@ -106,7 +131,8 @@ def test_create_pip_manager():
                 self.run("hello-world")
         """)
 
-    client = TestClient(path_with_spaces=False)  # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
+    client = TestClient(path_with_spaces=False)
+    # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
     client.save({"pip/conanfile.py": conanfile_pip, "consumer/conanfile.py": conanfile})
     client.run("create pip/conanfile.py --version=0.1")
     client.run("build consumer/conanfile.py")

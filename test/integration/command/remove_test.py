@@ -105,7 +105,7 @@ class TestRemovePackageRevisions:
         c.run("list *:* -r default")
         assert "foobar/0.1@user/testing" in c.out
         assert "arch: x86_64" in c.out
-        assert "arch: x86" in  c.out
+        assert "arch: x86" in c.out
 
         c.run("remove -c foobar/0.1@user/testing:* -r default")
         c.run("list *:* -r default")
