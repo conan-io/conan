@@ -8,6 +8,7 @@ from conan.internal.loader import load_python_file
 from conan.internal.util.files import mkdir
 
 
+#FIXME: This is copied from conan.cli.commands.list to avoid circular dependency loading ConanAPI
 def print_serial(item, indent=None, color_index=None):
     indent = "" if indent is None else (indent + "  ")
     color_index = 0 if color_index is None else (color_index + 1)
@@ -43,10 +44,10 @@ def print_cache_sign_verify_text(data):
     context = data.get('context')
     if context == "cache":
         if action == "verify":
-            cli_out_write("[Package sign] Verification results:",
+            cli_out_write("[Package sign] Verifying signature of packages in local cache...",
                           endline="\n\n")
         else:
-            cli_out_write("[Package sign] Signing results:", endline="\n\n")
+            cli_out_write("[Package sign] Signing packages in local cache...", endline="\n\n")
     else:
         if action == "verify":
             cli_out_write("[Package sign] Verification results:")
