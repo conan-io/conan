@@ -34,8 +34,6 @@ Global
         HideSolutionNode = FALSE
     EndGlobalSection
 EndGlobal
-
-
 '''
 
 vcxproj_file = r'''<?xml version="1.0" encoding="utf-8"?>

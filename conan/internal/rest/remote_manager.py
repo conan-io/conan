@@ -61,6 +61,7 @@ class RemoteManager:
         local_folder_remote = self._local_folder_remote(remote)
         if local_folder_remote is not None:
             local_folder_remote.get_recipe(ref, export_folder)
+            mkdir(layout.metadata())
             return layout
 
         download_export = layout.download_export()
@@ -97,6 +98,7 @@ class RemoteManager:
 
         # Make sure that the source dir is deleted
         rmdir(layout.source())
+        mkdir(layout.metadata())
         return layout
 
     def get_recipe_metadata(self, ref, remote, metadata):
@@ -145,6 +147,7 @@ class RemoteManager:
 
         pkg_layout = self._cache.create_pkg_layout(pref)
         with pkg_layout.set_dirty_context_manager():
+            mkdir(pkg_layout.metadata())
             self._get_package(pkg_layout, pref, remote, output, metadata)
 
     def get_package_metadata(self, pref, remote, metadata):

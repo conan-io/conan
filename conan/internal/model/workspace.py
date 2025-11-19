@@ -5,6 +5,7 @@ import yaml
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
+from conan.internal.errors import scoped_traceback
 from conan.internal.util.files import load, save
 
 # Related folder
@@ -24,6 +25,23 @@ class Workspace:
         self.conan_data = self._conan_load_data()
         self._conan_api = conan_api
         self.output = ConanOutput(scope=f"Workspace '{self.name()}'")
+
+    def __getattribute__(self, item):
+        # Return a protected wrapper around workspace overridable callables in order to
+        # be able to have clean errors if user errors in conanws.py code
+        myattr = object.__getattribute__(self, item)
+        if item not in ("name", "packages", "add", "remove", "clean", "build_order"):
+            return myattr
+
+        def wrapper(*args, **kwargs):
+            try:
+                return myattr(*args, **kwargs)
+            except ConanException:
+                raise
+            except Exception as e:
+                m = scoped_traceback(f"Error in {item}() method", e, scope="conanws.py")
+                raise ConanException(f"Workspace conanws.py file: {m}")
+        return wrapper
 
     def name(self):
         return self.conan_data.get("name") or os.path.basename(self.folder)
@@ -59,8 +77,8 @@ class Workspace:
 
     def remove(self, path):
         path = self._conan_rel_path(path)
-        package_found = next(package_info for package_info in self.conan_data.get("packages", [])
-                             if package_info["path"].replace("\\", "/") == path)
+        package_found = next((package_info for package_info in self.conan_data.get("packages", [])
+                              if package_info["path"].replace("\\", "/") == path), None)
         if not package_found:
             raise ConanException(f"No editable package to remove from this path: {path}")
         self.conan_data["packages"].remove(package_found)

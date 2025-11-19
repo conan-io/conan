@@ -1,7 +1,7 @@
 import platform
 from unittest.mock import MagicMock, patch
 
-import mock
+from unittest import mock
 import pytest
 from unittest.mock import PropertyMock
 

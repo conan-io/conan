@@ -5,7 +5,7 @@ import stat
 import textwrap
 
 import pytest
-from mock import patch
+from unittest.mock import patch
 
 from conan.api.model import Remote
 from conan.internal.api.config.config_installer import _hide_password
