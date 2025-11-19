@@ -5,6 +5,8 @@ import json
 from conan.internal.util.files import sha256sum
 from conan.tools.files import load, save
 
+# FIXME: Maybe this tools should be placed at conan.api.cache, as they are not recipe tools
+
 SIGN_SUMMARY_CONTENT = {
     "provider": None,
     "method": None,
