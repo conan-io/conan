@@ -125,8 +125,12 @@ class ConanOutput:
         cls._warnings_as_errors = value
 
     @classmethod
-    def current_log_level(cls):
+    def get_output_level(cls):
         return cls._conan_output_level
+
+    @classmethod
+    def set_output_level(cls, level):
+        cls._conan_output_level = level
 
     @classmethod
     def valid_log_levels(cls):
@@ -149,13 +153,13 @@ class ConanOutput:
         v = env_level or v
         levels = cls.valid_log_levels()
         try:
-            level = levels[v] if isinstance(v, str) or v is None else v
+            level = levels[v]
         except KeyError:
             msg = " defined in CONAN_LOG_LEVEL environment variable" if env_level else ""
             vals = "quiet, error, warning, notice, status, verbose, debug(v), trace(vv)"
             raise ConanException(f"Invalid argument '-v{v}'{msg}.\nAllowed values: {vals}")
         else:
-            cls._conan_output_level = level
+            cls.set_output_level(level)
 
     @classmethod
     def level_allowed(cls, level):

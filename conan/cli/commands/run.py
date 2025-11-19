@@ -26,9 +26,9 @@ def run(conan_api, parser, *args):
 
     ConanOutput().info("Installing and building dependencies, this might take a while...",
                        fg=Color.BRIGHT_MAGENTA)
-    previous_log_level = ConanOutput.current_log_level()
+    previous_log_level = ConanOutput.get_output_level()
     if previous_log_level == LEVEL_STATUS:
-        ConanOutput.define_log_level(LEVEL_QUIET)
+        ConanOutput.set_output_level(LEVEL_QUIET)
 
     with tempfile.TemporaryDirectory("conanrun") as tmpdir:
         # Default values for install
@@ -37,7 +37,7 @@ def run(conan_api, parser, *args):
         try:
             deps_graph, lockfile = run_install_command(conan_api, args, cwd)
         except Exception as e:
-            ConanOutput.define_log_level(previous_log_level)
+            ConanOutput.set_output_level(previous_log_level)
             ConanOutput().error("Error installing the dependencies. To debug this, you can either:\n"
                                 " - Re-run the command with increased verbosity (-v, -vv)\n"
                                 " - Run 'conan install' first to ensure dependencies are installed, "
@@ -50,5 +50,5 @@ def run(conan_api, parser, *args):
         }
         envfiles = list(context_env_map.values()) if args.context is None \
             else [context_env_map.get(args.context)]
-        ConanOutput.define_log_level(LEVEL_ERROR)
+        ConanOutput.set_output_level(LEVEL_ERROR)
         deps_graph.root.conanfile.run(args.command, cwd=cwd, env=envfiles)
