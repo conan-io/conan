@@ -1,5 +1,5 @@
 
-import mock
+from unittest import mock
 import pytest
 
 from conan.internal.api.detect.detect_api import detect_gcc_compiler

@@ -1,7 +1,7 @@
 import types
 
 import pytest
-from mock import Mock
+from unittest.mock import Mock
 
 from conan import ConanFile
 from conan.internal.default_settings import default_settings_yml

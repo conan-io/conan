@@ -1,5 +1,5 @@
 import os
-import mock
+from unittest import mock
 
 import conan.test.utils.env
 

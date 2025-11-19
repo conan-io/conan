@@ -5,7 +5,7 @@ import sys
 from contextlib import contextmanager
 
 import pytest
-from mock.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.env import environment_update

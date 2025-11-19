@@ -175,8 +175,10 @@ jobs:
 
       - name: Install homebrew dependencies
         run: |
+          brew update
           brew install xcodegen make libtool zlib autoconf automake ninja emscripten
           export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+          emcc --version
           cmake --version
           bazel --version
 

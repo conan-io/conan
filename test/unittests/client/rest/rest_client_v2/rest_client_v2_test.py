@@ -1,5 +1,5 @@
 from conan.internal.rest.rest_client_v2 import RestV2Methods
-from mock import MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 
 @patch("conan.internal.rest.conan_requester.ConanRequester")
