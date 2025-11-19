@@ -103,7 +103,7 @@ def test_pkg_sign_exception():
     c.run("export .")
     c.save({"conanfile.py": GenConanfile("package", "0.1")})
     c.run("export .")
-    c.run("cache sign *")
+    c.run("cache sign *", assert_error=True)
     c_out = re.sub(r"\s*timestamp\s*\n.*\n", "\n", c.out)  # Remove timestamp lines
     assert textwrap.dedent("""\
         [Package sign] Signing packages in local cache...
@@ -129,14 +129,13 @@ def test_pkg_sign_exception():
     c.run("cache sign * -f json", assert_error=True)
     assert "ERROR: There were some errors in the signing process. " \
            "Please check the output." in c.out
-    data = json.loads(c.stdout)
-    assert data["action"] == "sign"
-    results = data.get("results")
+    results = json.loads(c.stdout)
     assert results["lib/0.1"]["revisions"]["dbe307e08b1a344fef76f60c85c0c4e8"]["package sign"] == \
            "Failed: Error signing package"
-    assert results["package/0.1"]["revisions"]["1fd0e5bcc411dcd3ff5b16024e2d7c04"]["package sign"] == \
-           "Success"
-    assert results["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]["package sign"] == "Created"
+    assert results["package/0.1"]["revisions"]["1fd0e5bcc411dcd3ff5b16024e2d7c04"]["package sign"]\
+           == "Success"
+    assert results["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]["package sign"] == \
+           "Created"
 
 
 def test_pkg_verify_exception():
@@ -158,7 +157,7 @@ def test_pkg_verify_exception():
     c.run("export .")
     c.save({"conanfile.py": GenConanfile("package", "0.1")})
     c.run("export .")
-    c.run("cache verify *")
+    c.run("cache verify *", assert_error=True)
     c_out = _remove_timestamps(c.out)
     assert textwrap.dedent("""\
         [Package sign] Verifying signature of packages in local cache...
@@ -184,9 +183,7 @@ def test_pkg_verify_exception():
     c.run("cache verify * -f json", assert_error=True)
     assert "ERROR: There were some errors in the signature verification process. " \
            "Please check the output." in c.out
-    data = json.loads(c.stdout)
-    assert data["action"] == "verify"
-    results = data.get("results")
+    results = json.loads(c.stdout)
     assert results["lib/0.1"]["revisions"]["dbe307e08b1a344fef76f60c85c0c4e8"]["package sign"] == \
            "Failed: Wrong signature"
     assert results["package/0.1"]["revisions"]["1fd0e5bcc411dcd3ff5b16024e2d7c04"]["package sign"] == \

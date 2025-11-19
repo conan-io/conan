@@ -12,6 +12,25 @@ from conan.api.model import RecipeReference
 from conan.internal.rest.pkg_sign import print_cache_sign_verify_text
 
 
+def _check_package_sign_errors(data):
+    errors_in_package_sign = False
+    for ref, revisions in data.get("results").items():
+        for revision, revision_data in revisions.get("revisions").items():
+            pkgsign_result = revision_data["package sign"].lower()
+            if "error" in pkgsign_result or "fail" in pkgsign_result:
+                errors_in_package_sign = True
+            if "packages" in revision_data:
+                for package_id, package_data in revision_data["packages"].items():
+                    for prev, prev_data in package_data["revisions"].items():
+                        pkgsign_result = prev_data["package sign"].lower()
+                        if "error" in pkgsign_result or "fail" in pkgsign_result:
+                            errors_in_package_sign = True
+
+    if errors_in_package_sign:
+        action_msg = "signature verification" if data.get("action") == "verify" else "signing"
+        data["conan_error"] = f"There were some errors in the {action_msg} process. " \
+                              "Please check the output."
+
 def json_export(data):
     cli_out_write(json.dumps({"cache_path": data}))
 
@@ -174,7 +193,7 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
 
 
 @conan_subcommand(formatters={"text": print_cache_sign_verify_text,
-                              "json": print_cache_sign_verify_json})
+                              "json": print_list_json})
 def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
     """
     Sign packages with the Package Signing Plugin
@@ -200,11 +219,14 @@ def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
     else:
         ref_pattern = ListPattern(args.pattern, package_id="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
-    return conan_api.cache.sign(package_list)
+
+    data = conan_api.cache.sign(package_list)
+    _check_package_sign_errors(data)
+    return data
 
 
 @conan_subcommand(formatters={"text": print_cache_sign_verify_text,
-                              "json": print_cache_sign_verify_json})
+                              "json": print_list_json})
 def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
     """
     Check the signature of packages with the Package Singing Plugin
@@ -230,7 +252,9 @@ def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
     else:
         ref_pattern = ListPattern(args.pattern, package_id="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
-    return conan_api.cache.verify(package_list)
+    data = conan_api.cache.verify(package_list)
+    _check_package_sign_errors(data)
+    return data
 
 
 @conan_subcommand(formatters={"text": print_list_text,
