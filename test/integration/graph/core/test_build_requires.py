@@ -26,7 +26,7 @@ def _check_transitive(node, transitive_deps):
             if v1.require.test is not v2[5]: raise Exception(f"{v1.node}!={v2[0]} test")
 
 
-class BuildRequiresGraphTest(GraphManagerTest):
+class TestBuildRequiresGraph(GraphManagerTest):
 
     @parameterized.expand([("recipe", ), ("profile", )])
     def test_basic(self, build_require):
@@ -567,7 +567,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         assert type(deps_graph.error) == GraphConflictError
 
 
-class BuildRequiresPackageIDTest(GraphManagerTest):
+class TestBuildRequiresPackageID(GraphManagerTest):
 
     def test_default_no_affect(self,):
         # app -> lib -(br)-> cmake
@@ -618,7 +618,7 @@ class BuildRequiresPackageIDTest(GraphManagerTest):
         assert lib.package_id != NO_SETTINGS_PACKAGE_ID
 
 
-class PublicBuildRequiresTest(GraphManagerTest):
+class TestPublicBuildRequires(GraphManagerTest):
 
     def test_simple(self):
         # app -> lib -(br public)-> cmake
@@ -658,7 +658,7 @@ class PublicBuildRequiresTest(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requirement("liba/0.1", run=True))
 
         # Build requires always apply to the consumer
-        self.assertEqual(8 + 4, len(deps_graph.nodes))
+        assert 8 + 4 == len(deps_graph.nodes)
         app = deps_graph.root
         liba = app.edges[0].dst
         libb = liba.edges[0].dst

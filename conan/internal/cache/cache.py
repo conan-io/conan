@@ -117,12 +117,12 @@ class PkgCache:
         ref = ref_data.get("ref")  # new revision with timestamp
         return RecipeLayout(ref, os.path.join(self._base_folder, ref_path))
 
-    def get_latest_recipe_reference(self, ref: RecipeReference):
+    def get_latest_recipe_revision(self, ref: RecipeReference) -> RecipeReference:
         assert ref.revision is None
         ref_data = self._db.get_latest_recipe(ref)
         return ref_data.get("ref")
 
-    def get_recipe_revisions_references(self, ref: RecipeReference):
+    def get_recipe_revisions(self, ref: RecipeReference):
         # For listing multiple revisions only
         assert ref.revision is None
         return self._db.get_recipe_revisions_references(ref)
@@ -183,7 +183,7 @@ class PkgCache:
         # Used just by download to skip downloads if prev already exists in cache
         return self._db.exists_prev(pref)
 
-    def get_latest_package_reference(self, pref):
+    def get_latest_package_revision(self, pref: PkgReference) -> PkgReference:
         return self._db.get_latest_package_reference(pref)
 
     def get_package_references(self, ref: RecipeReference,
@@ -191,8 +191,8 @@ class PkgCache:
         """Get the latest package references"""
         return self._db.get_package_references(ref, only_latest_prev)
 
-    def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
-        return self._db.get_package_revisions_references(pref, only_latest_prev)
+    def get_package_revisions(self, pref: PkgReference) -> List[PkgReference]:
+        return self._db.get_package_revisions_references(pref)
 
     def get_matching_build_id(self, ref, build_id):
         return self._db.get_matching_build_id(ref, build_id)

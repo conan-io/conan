@@ -14,4 +14,4 @@ def test_requester_reinit():
     conan_api = ConanAPI(tmp_folder)
     save(os.path.join(home_path.global_conf_path), "core.net.http:timeout=(10, 20)")
     conan_api.reinit()
-    assert conan_api.remotes.requester._timeout == (10, 20)
+    assert conan_api._api_helpers.requester._timeout == (10, 20)

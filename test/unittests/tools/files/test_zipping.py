@@ -12,7 +12,7 @@ from conan.errors import ConanException
 
 
 def test_impossible_to_import_untargz():
-    with pytest.raises(ImportError) as exc:
+    with pytest.raises(ImportError):
         from conan.tools.files import untargz
 
 
@@ -49,6 +49,16 @@ def test_unzip_with_pattern():
 
     dest_dir = temp_folder()
     unzip(conanfile, archive, dest_dir, pattern="foo.txt")
+    assert exists(join(dest_dir, "foo.txt"))
+    assert not exists(join(dest_dir, "src", "bar.txt"))
+
+
+def test_unzip_with_exclude_pattern():
+    archive = create_example_zip(subfolder=True)
+    conanfile = ConanFileMock({})
+
+    dest_dir = temp_folder()
+    unzip(conanfile, archive, dest_dir, excludes=["src/*"])
     assert exists(join(dest_dir, "foo.txt"))
     assert not exists(join(dest_dir, "src", "bar.txt"))
 
@@ -122,6 +132,16 @@ def test_untargz_with_pattern():
 
     dest_dir = temp_folder()
     unzip(conanfile, archive, dest_dir, pattern="foo.txt")
+    assert exists(join(dest_dir, "foo.txt"))
+    assert not exists(join(dest_dir, "src", "bar.txt"))
+
+
+def test_untargz_with_exclude_pattern():
+    archive = create_example_tar(subfolder=True)
+    conanfile = ConanFileMock({})
+
+    dest_dir = temp_folder()
+    unzip(conanfile, archive, dest_dir, excludes=["src/*"])
     assert exists(join(dest_dir, "foo.txt"))
     assert not exists(join(dest_dir, "src", "bar.txt"))
 

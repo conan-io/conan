@@ -1,7 +1,4 @@
-import argparse
-
-import pytest
-from mock import patch
+from unittest.mock import patch
 
 from conan import __version__
 from conan.test.utils.env import environment_update

@@ -15,7 +15,7 @@ from conan.internal.util.files import save, load
                          [("profile.py", "msvc", "EME_ESE_VC"),
                           ("compatibility/compatibility.py", "conanfile", "conian_file")])
 def test_migration_profile_checker_plugin(plugin_path, string_replace, new_string):
-    t = TestClient()
+    t = TestClient(light=True)
     # Any command that checks the package cache generates the DB
     t.run("list")
     assert os.path.exists(os.path.join(t.cache_folder, "p", "cache.sqlite3"))
@@ -41,7 +41,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
     assert new_string not in contents
 
     # New client, everything new
-    t2 = TestClient()
+    t2 = TestClient(light=True)
     # This generates the new plugin file
     t2.run("list")
 
@@ -68,7 +68,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
 
 
 def test_back_migrations():
-    t = TestClient()
+    t = TestClient(light=True)
 
     # add 3 migrations
     for number in (1, 2, 3):
@@ -97,7 +97,7 @@ def test_back_migrations():
 
 
 def test_back_default_compatibility_migration():
-    t = TestClient()
+    t = TestClient(light=True)
     t.run("-v")  # Fire the backward migration
     migration_file = os.path.join(t.cache_folder, "migrations", "2.4_1-migrate.py")
     assert os.path.exists(migration_file)
@@ -113,7 +113,7 @@ def test_back_default_compatibility_migration():
 
 class TestMigrationCppstdCompat:
     def test_migration(self):
-        t = TestClient()
+        t = TestClient(light=True)
         t.run("-v")
         cppstd_compat_path = "extensions/plugins/compatibility/cppstd_compat.py"
         compatibility_path = "extensions/plugins/compatibility/compatibility.py"
@@ -125,7 +125,7 @@ class TestMigrationCppstdCompat:
         assert not os.path.exists(os.path.join(t.cache_folder, cppstd_compat_path))
 
     def test_cppstd_modified(self):
-        t = TestClient()
+        t = TestClient(light=True)
         t.run("-v")
         cppstd_compat_path = "extensions/plugins/compatibility/cppstd_compat.py"
         compatibility_path = "extensions/plugins/compatibility/compatibility.py"
@@ -139,7 +139,7 @@ class TestMigrationCppstdCompat:
         assert "def cppstd_compat(conanfile)" not in t.load_home(compatibility_path)
 
     def test_compatibility_modified(self):
-        t = TestClient()
+        t = TestClient(light=True)
         t.run("-v")
         cppstd_compat_path = "extensions/plugins/compatibility/cppstd_compat.py"
         compatibility_path = "extensions/plugins/compatibility/compatibility.py"
@@ -150,3 +150,26 @@ class TestMigrationCppstdCompat:
         assert t.load_home(compatibility_path) == "Modified file"
         # not Removed because compatibility was modified
         assert "POTATO" in t.load_home(cppstd_compat_path)
+
+    def test_compatibility_modified_by_conan(self):
+        t = TestClient(light=True)
+        t.run("-v")
+        compatibility_path = "extensions/plugins/compatibility/compatibility.py"
+        old = t.load_home(compatibility_path)
+        # In old versions of Conan, assume POTATO was present in the file
+        new = old + "\n# POTATO"
+        t.save_home({"version.txt": "2.11",
+                     compatibility_path: new})
+        # But now with the newer version, Conan removed it
+        # so the triggered migration should remove it
+        t.run("-v")
+        assert "Successfully updated compatibility.py" in t.out
+        assert "# POTATO" not in t.load_home(compatibility_path)
+
+    def test_compatibility_no_rewrite(self):
+        t = TestClient(light=True)
+        t.run("-v")
+        # compatibility.py exists and is not modified
+        t.save_home({"version.txt": "2.11"})
+        t.run("-v")
+        assert "Successfully updated compatibility.py" not in t.out

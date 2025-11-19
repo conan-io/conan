@@ -1442,3 +1442,49 @@ def test_cmaketoolchain_check_function_exists():
     c.run("build . ")  # Release breaks the check
     assert "Looking for pow - found" in c.out
     # And it no longer crashes
+
+
+@pytest.mark.skipif(platform.system() != "Linux", reason="Linker scripts in Linux only")
+def test_cmake_linker_scripts():
+    conanfile = textwrap.dedent("""
+       from conan import ConanFile
+       from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+
+       class Test(ConanFile):
+           exports_sources = "CMakeLists.txt", "src/*"
+           settings = "os", "compiler", "arch", "build_type"
+           generators = "CMakeToolchain"
+
+           def layout(self):
+               cmake_layout(self)
+
+           def build(self):
+               cmake = CMake(self)
+               cmake.configure()
+               cmake.build()
+       """)
+
+    main = "int main() {}"
+
+    cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        cmake_minimum_required(VERSION 3.15)
+        project(Test CXX)
+        add_executable(example main.cpp)
+        """)
+    profile = textwrap.dedent("""
+       include(default)
+       [conf]
+       tools.build:linker_scripts=['{{profile_dir}}/mylinkscript.ld']
+       """)
+
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "CMakeLists.txt": cmakelists,
+            "main.cpp": main,
+            "mylinkscript.ld": "",
+            "profile": profile})
+    c.run('build . -pr=profile', assert_error=True)
+    # This error means the linker script was fonud and loaded, it failed because empty
+    assert "PHDR segment not covered by LOAD segment" in c.out

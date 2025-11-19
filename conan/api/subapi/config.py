@@ -42,7 +42,7 @@ class ConfigAPI:
         """
         from conan.internal.api.config.config_installer import configuration_install
         cache_folder = self._conan_api.cache_folder
-        requester = self._conan_api.remotes.requester
+        requester = self._helpers.requester
         configuration_install(cache_folder, requester, path_or_url, verify_ssl,
                               config_type=config_type, args=args,
                               source_folder=source_folder, target_folder=target_folder)
@@ -103,7 +103,7 @@ class ConfigAPI:
 
         from conan.internal.api.config.config_installer import configuration_install
         cache_folder = self._conan_api.cache_folder
-        requester = self._conan_api.remotes.requester
+        requester = self._helpers.requester
         configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder,
                               verify_ssl=False, config_type="dir",
                               ignore=["conaninfo.txt", "conanmanifest.txt"])
@@ -150,3 +150,40 @@ class ConfigAPI:
         self._conan_api.reinit()
         # CHECK: This also generates a remotes.json that is not there after a conan profile show?
         self._conan_api.migrate()
+
+    @property
+    def settings_yml(self):
+        """ Get the contents of the settings.yml and user_settings.yml files,
+            which define the possible values for settings.
+
+            Note that this is different from the settings present in a conanfile,
+            which represent the actual values for a specific package, while this
+            property represents the possible values for each setting.
+
+            :returns: A read-only object representing the settings scheme, with a
+                ``possible_values()`` method that returns a dictionary with the possible values for each setting,
+                and a ``fields`` property that returns an ordered list with the fields of each setting.
+                Note that it's possible to access nested settings using attribute access,
+                such as ``settings_yml.compiler.possible_values()``.
+        """
+
+        class SettingsYmlInterface:
+            def __init__(self, settings):
+                self._settings = settings
+
+            def possible_values(self):
+                """ returns a dict with the possible values for each setting """
+                return self._settings.possible_values()
+
+            @property
+            def fields(self):
+                """ returns a dict with the fields of each setting """
+                return self._settings.fields
+
+            def __getattr__(self, item):
+                return SettingsYmlInterface(getattr(self._settings, item))
+
+            def __str__(self):
+                return str(self._settings)
+
+        return SettingsYmlInterface(self._helpers.settings_yml)

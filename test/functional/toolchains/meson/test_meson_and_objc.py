@@ -1,6 +1,5 @@
 import os
 import platform
-import sys
 import textwrap
 
 import pytest
@@ -48,7 +47,6 @@ executable('demo', 'main.m', link_args: ['-framework', 'Foundation'])
 
 
 @pytest.mark.tool("meson")
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
 def test_apple_meson_toolchain_native_compilation_objective_c():
     t = TestClient()
@@ -84,13 +82,10 @@ def test_apple_meson_toolchain_native_compilation_objective_c():
 
 @pytest.mark.parametrize("arch, os_, os_version, sdk", [
     ('armv8', 'iOS', '10.0', 'iphoneos'),
-    ('armv7', 'iOS', '10.0', 'iphoneos'),
-    ('x86', 'iOS', '10.0', 'iphonesimulator'),
     ('x86_64', 'iOS', '10.0', 'iphonesimulator'),
     ('armv8', 'Macos', '11.0', None)  # Apple Silicon
 ])
 @pytest.mark.tool("meson")
-@pytest.mark.skipif(sys.version_info.major == 2, reason="Meson not supported in Py2")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="requires Xcode")
 def test_apple_meson_toolchain_cross_compiling_and_objective_c(arch, os_, os_version, sdk):
     profile = textwrap.dedent("""

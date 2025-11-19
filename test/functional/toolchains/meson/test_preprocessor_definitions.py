@@ -1,11 +1,14 @@
 import os
 import textwrap
 
+import pytest
+
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
-from test.functional.toolchains.meson._base import TestMesonBase
+from conan.test.utils.tools import TestClient
+from test.functional.toolchains.meson._base import check_binary
 
 
-class MesonPreprocessorDefinitionsTest(TestMesonBase):
+class TestMesonPreprocessorDefinitionsTest:
     _conanfile_py = textwrap.dedent("""
     from conan import ConanFile
     from conan.tools.meson import Meson, MesonToolchain
@@ -41,30 +44,33 @@ class MesonPreprocessorDefinitionsTest(TestMesonBase):
     executable('demo', 'main.cpp', link_with: hello)
     """)
 
+    @pytest.mark.tool("ninja")
+    @pytest.mark.tool("meson")
     def test_build(self):
         hello_h = gen_function_h(name="hello")
         hello_cpp = gen_function_cpp(name="hello",
                                      preprocessor=["TEST_DEFINITION1", "TEST_DEFINITION2"])
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
-        self.t.save({"conanfile.py": self._conanfile_py,
-                     "meson.build": self._meson_build,
-                     "hello.h": hello_h,
-                     "hello.cpp": hello_cpp,
-                     "main.cpp": app})
+        t = TestClient()
+        t.save({"conanfile.py": self._conanfile_py,
+                "meson.build": self._meson_build,
+                "hello.h": hello_h,
+                "hello.cpp": hello_cpp,
+                "main.cpp": app})
 
-        self.t.run("install .")
+        t.run("install .")
 
-        content = self.t.load("conan_meson_native.ini")
+        content = t.load("conan_meson_native.ini")
 
-        self.assertIn("[built-in options]", content)
-        self.assertIn("buildtype = 'release'", content)
+        assert "[built-in options]" in content
+        assert "buildtype = 'release'" in content
 
-        self.t.run("build .")
-        self.t.run_command(os.path.join("build", "demo"))
+        t.run("build .")
+        t.run_command(os.path.join("build", "demo"))
 
-        self.assertIn("hello: Release!", self.t.out)
-        self.assertIn("TEST_DEFINITION1: TestPpdValue1", self.t.out)
-        self.assertIn("TEST_DEFINITION2: TestPpdValue2", self.t.out)
+        assert "hello: Release!" in t.out
+        assert "TEST_DEFINITION1: TestPpdValue1" in t.out
+        assert "TEST_DEFINITION2: TestPpdValue2" in t.out
 
-        self._check_binary()
+        check_binary(t)

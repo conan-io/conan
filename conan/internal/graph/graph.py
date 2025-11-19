@@ -138,11 +138,13 @@ class Node:
 
         assert not require.version_range  # No ranges slip into transitive_deps definitions
         # TODO: Might need to move to an update() for performance
-        self.transitive_deps.pop(require, None)
+        poped = self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
-        if ill_formed:  # remove dead .edges, to avoid orphans
-            direct_nodes = set(t.node for t in self.transitive_deps.values() if t.require.direct)
-            self.edges = [e for e in self.edges if e.dst in direct_nodes]
+        if poped is not None:  # adjust .edges, to avoid orphans
+            for e in self.edges:
+                if e.dst is poped.node:  # check for identity, pointing to that node
+                    e.dst = node
+                    break
 
         if self.conanfile.vendor:
             return
