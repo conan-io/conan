@@ -485,14 +485,13 @@ def test_trim_conandata_anchors():
         """)
 
 
-@pytest.mark.parametrize("multiple_versions", [True, False])
 @pytest.mark.parametrize("command", [
-    ("source", False),
-     ("graph info", False),
-      ("create", True),
-       ("export", True)
+    "source",
+    "graph info",
+    "create",
+    "export"
 ])
-def test_commands_auto_pick_version(multiple_versions, command):
+def test_commands_auto_pick_version(command):
     c = TestClient(light=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -502,31 +501,44 @@ def test_commands_auto_pick_version(multiple_versions, command):
             def source(self):
                 self.output.info("ok")
         """)
-    if multiple_versions:
-        conandata = textwrap.dedent("""
-            sources:
-                1.0:
-                    url: "url1"
-                    sha256: "sha1"
-                2.0:
-                    url: "url2"
-                    sha256: "sha2"
-        """)
-    else:
-        conandata = textwrap.dedent("""
+    conandata = textwrap.dedent("""
         sources:
             1.0:
                 url: "url1"
-                sha256: "sha1"
-        """)
+            2.0:
+                url: "url2"
+    """)
+
     c.save({"conanfile.py": conanfile,
             "conandata.yml": conandata})
-    assert_error = multiple_versions and command[1]
-    c.run(command[0], assert_error=assert_error)
-    if multiple_versions:
-        if command[1]:
-            assert "ERROR: conanfile didn't specify version" in c.out
-        else:
-            assert "pkg/None" in c.out
-    else:
-        assert "pkg/1.0" in c.out
+    c.run(command)
+    assert "pkg/2.0" in c.out
+
+
+@pytest.mark.parametrize("conandata", [
+    pytest.param(
+        textwrap.dedent("""
+        sources:
+            # Empty, no content
+        """), id="empty sources"),
+    pytest.param(
+        textwrap.dedent("""
+        # No sources key
+        foo: 1
+        """), id="no sources"),
+])
+def test_commands_auto_pick_version_no_version_conandata(conandata):
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+
+                def source(self):
+                    self.output.info("ok")
+            """)
+
+    c.save({"conanfile.py": conanfile,
+            "conandata.yml": conandata})
+    c.run("create", assert_error=True)
+    assert "conanfile didn't specify version" in c.out

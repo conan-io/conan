@@ -16,6 +16,7 @@ from conan.api.output import ConanOutput
 from conan.tools.cmake import cmake_layout
 from conan.tools.google import bazel_layout
 from conan.tools.microsoft import vs_layout
+from conan.tools.scm import Version
 from conan.internal.errors import conanfile_exception_formatter, NotFoundException
 from conan.errors import ConanException
 from conan.internal.model.conan_file import ConanFile
@@ -148,8 +149,10 @@ class ConanFileLoader:
             # Only works if only one version is present
             conan_data = getattr(conanfile, "conan_data", {})
             sources = conan_data.get("sources", {}) if conan_data else {}
-            if len(sources) == 1:
-                conanfile.version = next(iter(sources))
+            sources = sources or {}
+            sorted_versions = sorted(sources.keys(), key=lambda x: Version(x))
+            if sorted_versions:
+                conanfile.version = sorted_versions.pop()
 
         return conanfile
 
