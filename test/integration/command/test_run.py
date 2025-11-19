@@ -64,8 +64,10 @@ def test_run(client, context_flag, requires_context, use_conanfile):
     if should_find_binary:
         assert "Hello World!" in client.out
     else:
-        # TODO: test won't work in non-sh environments
-        assert "command not found" in client.out
+        if platform.system() == "Windows":
+            assert "not recognized as an internal or external command" in client.out
+        else:
+            assert "Error 127 while executing" in client.out
 
 
 def test_run_context_priority(client):
@@ -78,8 +80,10 @@ def test_run_context_priority(client):
 
 def test_run_missing_executable(client):
     client.run(f"run a-binary-name-that-does-not-exist --requires=pkg/0.1", assert_error=True)
-    # TODO: test won't work in non-sh environments
-    assert "command not found" in client.out
+    if platform.system() == "Windows":
+        assert "not recognized as an internal or external command" in client.out
+    else:
+        assert "Error 127 while executing" in client.out
 
 
 def test_run_missing_binary(client):
