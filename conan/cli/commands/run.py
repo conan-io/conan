@@ -46,8 +46,8 @@ def run(conan_api, parser, *args):
             raise e
         if not install_error:
             context_env_map = {
+                "build": "conanbuild",
                 "host": "conanrun",
-                "build": "conanbuild"
             }
             envfiles = list(context_env_map.values()) if args.context is None \
                 else [context_env_map.get(args.context)]
