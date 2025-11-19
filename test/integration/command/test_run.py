@@ -1,4 +1,5 @@
 import textwrap
+
 import pytest
 import platform
 
@@ -22,7 +23,7 @@ def client():
             version = "0.1"
             # So that the requirement is run=True even for --requires
             package_type = "application"
-            options = {"foo": [True, False]}
+            options = {"foo": [True, False, "bar"]}
             default_options = {"foo": True}
             settings = "os"
 
@@ -63,7 +64,8 @@ def test_run(client, context_flag, requires_context, use_conanfile):
     if should_find_binary:
         assert "Hello World!" in client.out
     else:
-        assert "ERROR" in client.out
+        # TODO: test won't work in non-sh environments
+        assert "command not found" in client.out
 
 
 def test_run_context_priority(client):
@@ -72,3 +74,28 @@ def test_run_context_priority(client):
     client.run(f"run {executable} --requires=pkg/0.1 --tool-requires=pkg/0.1 -o:b=pkg/*:foo=False")
     # True is host, False is build, run gives priority to host
     assert "Hello World! foo=True" in client.out
+
+
+def test_run_missing_executable(client):
+    client.run(f"run a-binary-name-that-does-not-exist --requires=pkg/0.1", assert_error=True)
+    # TODO: test won't work in non-sh environments
+    assert "command not found" in client.out
+
+
+def test_run_missing_binary(client):
+    client.run("run foo --requires=pkg/0.1 -o=pkg/*:foo=bar", assert_error=True)
+    assert "Error installing the dependencies" in client.out
+    assert "Missing prebuilt package for 'pkg/0.1'" in client.out
+
+
+def test_run_missing_package(client):
+    client.run("run foo --requires=pkg/2.1", assert_error=True)
+    assert "Error installing the dependencies" in client.out
+    assert "Package 'pkg/2.1' not resolved" in client.out
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Unix only")
+def test_run_status_is_propagated(client):
+    client.run("run false --requires=pkg/0.1", assert_error=True)
+    assert "Error installing the dependencies" not in client.out
+    assert "ERROR: Error 1 while executing" in client.out

@@ -91,10 +91,10 @@ def run_install_command(conan_api, args, cwd):
     if not install_error:
         ConanOutput().title("Finalizing install (deploy, generators)")
         conan_api.install.install_consumer(deps_graph, args.generator, source_folder, output_folder,
-                                           deploy=args.deployer,
-                                           deploy_package=args.deployer_package,
-                                           deploy_folder=args.deployer_folder,
-                                           envs_generation=args.envs_generation)
+                                           deploy=getattr(args, "deployer", None),
+                                           deploy_package=getattr(args, "deployer_package", None),
+                                           deploy_folder=getattr(args, "deployer_folder", None),
+                                           envs_generation=getattr(args, "envs_generation", None))
         ConanOutput().success("Install finished successfully")
 
     return deps_graph, lockfile, install_error
