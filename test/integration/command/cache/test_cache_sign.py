@@ -48,7 +48,6 @@ def test_pkg_sign_basic():
                   revisions
                     0ba8627bd47edc3a501e8f0eb9a79e5e
                       package sign: ok
-                  info
               package sign: Created
 
         [Package sign] Summary: OK=2, WARN=0, FAILED=0""") in c_out

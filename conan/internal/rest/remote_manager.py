@@ -62,7 +62,7 @@ class RemoteManager:
         if local_folder_remote is not None:
             local_folder_remote.get_recipe(ref, export_folder)
             mkdir(layout.metadata())
-            return layout
+            return layout, None
 
         download_export = layout.download_export()
         try:
