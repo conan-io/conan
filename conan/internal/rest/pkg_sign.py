@@ -65,6 +65,22 @@ def print_serial(item, indent=None, color_index=None):
 
 
 def print_cache_sign_verify_text(data):
+    results = []
+    for ref, revisions in data.get("results").items():
+        for revision, revision_data in revisions.get("revisions").items():
+            recipe_pkg_sign = revision_data.get("package sign", None)
+            if recipe_pkg_sign:
+                results.append(recipe_pkg_sign)
+            if "packages" in revision_data:
+                for package_id, package_data in revision_data["packages"].items():
+                    for prev, prev_data in package_data["revisions"].items():
+                        package_pkg_sign = prev_data.get("package sign")
+                        if package_pkg_sign:
+                            results.append(package_pkg_sign)
+
+    if not results:
+        return  # there is no package signing info
+
     action = data.get('action')
     context = data.get('context')
     if context == "cache":
@@ -95,14 +111,6 @@ def print_cache_sign_verify_text(data):
 
     print_serial(items)
 
-    results = []
-    for ref, revisions in data.get("results").items():
-        for revision, revision_data in revisions.get("revisions").items():
-            results.append(revision_data["package sign"])
-            if "packages" in revision_data:
-                for package_id, package_data in revision_data["packages"].items():
-                    for prev, prev_data in package_data["revisions"].items():
-                        results.append(prev_data["package sign"])
     if context == "cache":
         warn_count = 0
         fail_count = 0
