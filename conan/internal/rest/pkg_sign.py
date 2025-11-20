@@ -73,10 +73,11 @@ def print_cache_sign_verify_text(data):
                 results.append(recipe_pkg_sign)
             if "packages" in revision_data:
                 for package_id, package_data in revision_data["packages"].items():
-                    for prev, prev_data in package_data["revisions"].items():
-                        package_pkg_sign = prev_data.get("package sign")
-                        if package_pkg_sign:
-                            results.append(package_pkg_sign)
+                    if package_data.get("revisions", None):
+                        for prev, prev_data in package_data["revisions"].items():
+                            package_pkg_sign = prev_data.get("package sign")
+                            if package_pkg_sign:
+                                results.append(package_pkg_sign)
 
     if not results:
         return  # there is no package signing info
