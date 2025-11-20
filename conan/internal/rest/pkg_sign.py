@@ -13,6 +13,8 @@ def print_graph_package_sign(graph):
     pkg_list = PackagesList()
     for node in graph.nodes:
         if node.ref:
+            if not node.ref.revision:
+                return  # Package sign output does not make sense without revisions
             pkg_list.add_ref(node.ref)
 
             if node.package_id:
