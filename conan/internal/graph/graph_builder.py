@@ -244,7 +244,7 @@ class DepsGraphBuilder:
             try:
                 result = self._proxy.get_recipe(alias, self._remotes, self._update,
                                                 self._check_update)
-                layout, recipe_status, remote = result
+                layout, recipe_status, remote, pkg_sign = result
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
 
@@ -375,8 +375,10 @@ class DepsGraphBuilder:
                 resolved = self._resolve_recipe(require.ref, graph_lock)
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
-
-        layout, dep_conanfile, recipe_status, remote, pkg_sign = resolved
+            layout, dep_conanfile, recipe_status, remote, pkg_sign = resolved
+        else:
+            layout, dep_conanfile, recipe_status, remote = resolved
+            pkg_sign = None
 
         new_ref = layout.reference
         dep_conanfile.folders.set_base_recipe_metadata(layout.metadata())  # None for platform_xxx

@@ -145,7 +145,7 @@ class WorkspaceAPI:
         ref = RecipeReference.loads(require)
         recipe = app.proxy.get_recipe(ref, remotes, update=False, check_update=False)
 
-        layout, recipe_status, remote = recipe
+        layout, recipe_status, remote, pkg_sign = recipe
         if recipe_status == RECIPE_EDITABLE:
             raise ConanException(f"Can't open a dependency that is already an editable: {ref}")
         ref = layout.reference

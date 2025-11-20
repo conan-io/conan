@@ -124,7 +124,7 @@ class PyRequireLoader(object):
             recipe = self._proxy.get_recipe(ref, remotes, update, check_update)
         except ConanException as e:
             raise ConanException(f"Cannot resolve python_requires '{ref}': {str(e)}")
-        layout, recipe_status, remote = recipe
+        layout, recipe_status, remote, pkg_sign = recipe
         path = layout.conanfile()
         new_ref = layout.reference
         conanfile, module = loader.load_basic_module(path, graph_lock, remotes=remotes,

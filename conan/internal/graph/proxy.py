@@ -34,7 +34,7 @@ class ConanProxy:
 
         conanfile_path = self._editable_packages.get_path(reference)
         if conanfile_path is not None:
-            return BasicLayout(reference, conanfile_path), RECIPE_EDITABLE, None
+            return BasicLayout(reference, conanfile_path), RECIPE_EDITABLE, None, None
 
         # check if it there's any revision of this recipe in the local cache
         try:
@@ -77,9 +77,9 @@ class ConanProxy:
                 # the remote one is newer
                 if should_update_reference(remote_ref, update):
                     output.info("Retrieving from remote '%s'..." % remote.name)
-                    new_recipe_layout = self._download(remote_ref, remote)
+                    new_recipe_layout, pkg_sign = self._download(remote_ref, remote)
                     status = RECIPE_UPDATED
-                    return new_recipe_layout, status, remote, None
+                    return new_recipe_layout, status, remote, pkg_sign
                 else:
                     status = RECIPE_UPDATEABLE
             else:
