@@ -59,9 +59,10 @@ def test_pkg_sign():
 
 def test_pkg_sign_canonical():
     c = TestClient(default_server_user=True)
-    c.save({"conanfile1.py": GenConanfile("lib1ok", "0.1"),
+    c.save({"conanfile1.py": GenConanfile("lib1ok", "0.1").with_exports_sources("*.txt").with_package_file("package.txt", "kk"),
             "conanfile2.py": GenConanfile("lib2fail", "0.1"),  # This pkg fails when installed
-            "conanfile3.py": GenConanfile("lib3fail", "0.1")})  # This pkg should always fail
+            "conanfile3.py": GenConanfile("lib3fail", "0.1"),  # This pkg should always fail
+            "sources.txt": "kk"})
     c.run("create conanfile1.py")
     c.run("create conanfile2.py")
     c.run("create conanfile3.py")
@@ -106,19 +107,19 @@ def test_pkg_sign_canonical():
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
 
-    # Cache verify command does not fail if package is not signed
-    c.run("cache verify *")
+    # Cache verify command fails and reports if package is not signed
+    c.run("cache verify *", assert_error=True)
     c_out = re.sub(r"\s*timestamp\s*\n.*\n", "\n", c.out)
     assert textwrap.dedent("""
      [Package sign] Verifying signature of packages in local cache...
 
      lib1ok/0.1
        revisions
-         a5e2af5522a1edcab963447eec649700
+         a6a4e799bb673d6e5ca4f904118d672e
            packages
              da39a3ee5e6b4b0d3255bfef95601890afd80709
                revisions
-                 0ba8627bd47edc3a501e8f0eb9a79e5e
+                 76285bcb59a81071122cba04b2269b52
                    package sign: Failed: Package is not signed
                info
            package sign: Failed: Package is not signed
@@ -145,19 +146,19 @@ def test_pkg_sign_canonical():
 
      [Package sign] Summary: OK=0, WARN=0, FAILED=6""") in c_out
 
-    # Cache sign command does not fail if a package fails to sign, but it reports it
-    c.run("cache sign *")
+    # Cache sign command fails if a package fails to sign and reports it
+    c.run("cache sign *", assert_error=True)
     c_out = re.sub(r"\s*timestamp\s*\n.*\n", "\n", c.out)
     assert textwrap.dedent("""
         [Package sign] Signing packages in local cache...
 
         lib1ok/0.1
           revisions
-            a5e2af5522a1edcab963447eec649700
+            a6a4e799bb673d6e5ca4f904118d672e
               packages
                 da39a3ee5e6b4b0d3255bfef95601890afd80709
                   revisions
-                    0ba8627bd47edc3a501e8f0eb9a79e5e
+                    76285bcb59a81071122cba04b2269b52
                       package sign: Signature ok
                   info
               package sign: Signature ok
@@ -192,11 +193,11 @@ def test_pkg_sign_canonical():
         default
           lib1ok/0.1
             revisions
-              a5e2af5522a1edcab963447eec649700 (Not uploaded)
+              a6a4e799bb673d6e5ca4f904118d672e (Not uploaded)
                 packages
                   da39a3ee5e6b4b0d3255bfef95601890afd80709
                     revisions
-                      0ba8627bd47edc3a501e8f0eb9a79e5e (Not uploaded)
+                      76285bcb59a81071122cba04b2269b52 (Not uploaded)
                         package sign: Package already signed by the same provider
                 package sign: Package already signed by the same provider
           lib2fail/0.1
@@ -227,13 +228,14 @@ def test_pkg_sign_canonical():
     c.run("remove * -c")
 
     # Install verify command should fail if package is signed by another provider
-    c.run("install --requires lib1ok/0.1 --requires lib2fail/0.1 -r default", assert_error=True)
+    c.run("install --requires lib1ok/0.1 --build lib1ok/0.1 -r default -f json", assert_error=False)  # --requires lib2fail/0.1
+    print(c.out)
     assert "ERROR: Package 'lib2fail/0.1' not resolved: [Package sign] Failed: wrong provider" in c.out
     assert textwrap.dedent("""\
         [Package sign] Verification results:
         lib1ok/0.1
           revisions
-            a5e2af5522a1edcab963447eec649700
+            a6a4e799bb673d6e5ca4f904118d672e
               package sign: Verification ok
         """) in re.sub(r"\s*timestamp\s*\n.*\n", "\n", c.out)
 
@@ -247,7 +249,7 @@ def test_pkg_sign_canonical():
 
         lib1ok/0.1
           revisions
-            a5e2af5522a1edcab963447eec649700
+            a6a4e799bb673d6e5ca4f904118d672e
               packages
               package sign: Verification ok
 

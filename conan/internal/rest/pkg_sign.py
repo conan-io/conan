@@ -147,24 +147,16 @@ class PkgSignaturesPlugin:
             raise ConanException("[Package sign] verify() function not found in "
                                  f"{self.sign_plugin_path}")
         finally_raise = None
-        try:
-            for rref, packages in pkg_list.items():
-                recipe_bundle = pkg_list.recipe_dict(rref)
-                if recipe_bundle:
-                    rref_folder = self._cache.recipe_layout(rref).download_export()
-                    self._verify(rref, rref_folder, os.listdir(rref_folder), recipe_bundle, context)
-                for pref in packages:
-                    pkg_bundle = pkg_list.package_dict(pref)
-                    if pkg_bundle:
-                        pref_folder = self._cache.pkg_layout(pref).download_package()
-                        self._verify(pref, pref_folder, os.listdir(pref_folder), pkg_bundle, context)
-        except ConanException as e:
-            finally_raise = e
-        if context == "install":
-            install_data = {"results": pkg_list.serialize(), "context": context, "action": "verify"}
-            print_cache_sign_verify_text(install_data)
-        if finally_raise:
-            raise finally_raise
+        for rref, packages in pkg_list.items():
+            recipe_bundle = pkg_list.recipe_dict(rref)
+            if recipe_bundle:
+                rref_folder = self._cache.recipe_layout(rref).download_export()
+                self._verify(rref, rref_folder, os.listdir(rref_folder), recipe_bundle, context)
+            for pref in packages:
+                pkg_bundle = pkg_list.package_dict(pref)
+                if pkg_bundle:
+                    pref_folder = self._cache.pkg_layout(pref).download_package()
+                    self._verify(pref, pref_folder, os.listdir(pref_folder), pkg_bundle, context)
 
 
 def _handle_failure(exception, context, dict_info):
@@ -172,5 +164,4 @@ def _handle_failure(exception, context, dict_info):
     error_msg = f"Failed: {exception_msg}"
     dict_info["package sign"] = error_msg
     if context in ["upload", "install"]:
-        # TODO: Mark folder with set_dirty(artifacts_folder)
         raise ConanException(f"[Package sign] {error_msg}")

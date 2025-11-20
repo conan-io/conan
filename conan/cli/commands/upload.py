@@ -126,7 +126,7 @@ def upload(conan_api: ConanAPI, parser, *args):
             conan_api.upload.upload_full(package_list, remote, enabled_remotes, args.check,
                                          args.force, args.metadata, args.dry_run)
         except ConanException as e:
-            results["conan_error"] = str(e)
+            results["conan_error"] = e
 
     elif args.list:
         # Don't error on no recipes for automated workflows using list,

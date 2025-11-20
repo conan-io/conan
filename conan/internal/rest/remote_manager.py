@@ -99,7 +99,7 @@ class RemoteManager:
         # Make sure that the source dir is deleted
         rmdir(layout.source())
         mkdir(layout.metadata())
-        return layout
+        return layout, pkg_list.recipe_dict(ref).get("package sign", None)
 
     def get_recipe_metadata(self, ref, remote, metadata):
         """
@@ -138,6 +138,7 @@ class RemoteManager:
         self._signer.verify(pkg_list, "install")
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
         uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
+        return pkg_list.recipe_dict(ref).get("package sign", None)
 
     def get_package(self, pref, remote, metadata=None):
         output = ConanOutput(scope=str(pref.ref))
@@ -148,7 +149,8 @@ class RemoteManager:
         pkg_layout = self._cache.create_pkg_layout(pref)
         with pkg_layout.set_dirty_context_manager():
             mkdir(pkg_layout.metadata())
-            self._get_package(pkg_layout, pref, remote, output, metadata)
+            pkg_sign = self._get_package(pkg_layout, pref, remote, output, metadata)
+        return pkg_sign
 
     def get_package_metadata(self, pref, remote, metadata):
         """
@@ -207,6 +209,7 @@ class RemoteManager:
                                 error_type="exception")
             scoped_output.error(f"Exception: {type(e)} {str(e)}", error_type="exception")
             raise
+        return pkg_list.package_dict(pref).get("package sign", None)
 
     def search_recipes(self, remote, pattern):
         # Used by ListAPI to "conan list *" recipes, and by RangeResolver to resolve version-ranges

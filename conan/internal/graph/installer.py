@@ -192,7 +192,9 @@ class BinaryInstaller:
         export_source_folder = recipe_layout.export_sources()
         source_folder = recipe_layout.source()
 
-        retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, node.ref, remotes)
+        pkg_sign = retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile,
+                                            node.ref, remotes)
+        node.pkg_sign_sources = pkg_sign
 
         conanfile.folders.set_base_source(source_folder)
         conanfile.folders.set_base_export_sources(source_folder)
@@ -294,7 +296,8 @@ class BinaryInstaller:
         node = package.nodes[0]
         assert node.pref.revision is not None
         assert node.pref.timestamp is not None
-        self._remote_manager.get_package(node.pref, node.binary_remote)
+        pkg_sign = self._remote_manager.get_package(node.pref, node.binary_remote)
+        node.pkg_sign_package = pkg_sign
 
     def _handle_package(self, package, install_reference, handled_count, total_count):
         if package.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):

@@ -10,7 +10,7 @@ from conan.internal.util.files import is_dirty, mkdir, rmdir, set_dirty_context_
 
 def _try_get_sources(ref, remote_manager, recipe_layout, remote):
     try:
-        remote_manager.get_recipe_sources(ref, recipe_layout, remote)
+        pkg_sign = remote_manager.get_recipe_sources(ref, recipe_layout, remote)
     except NotFoundException:
         return
     except Exception as e:
@@ -18,7 +18,7 @@ def _try_get_sources(ref, remote_manager, recipe_layout, remote):
                "Probably it was installed from a remote that is no longer available.\n"
                % str(ref))
         raise ConanException("\n".join([str(e), msg]))
-    return remote
+    return remote, pkg_sign
 
 
 def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remotes):
@@ -34,7 +34,7 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
         return None
 
     for r in remotes:
-        sources_remote = _try_get_sources(ref, remote_manager, recipe_layout, r)
+        sources_remote, pkg_sign = _try_get_sources(ref, remote_manager, recipe_layout, r)
         if sources_remote:
             break
     else:
@@ -44,6 +44,7 @@ def retrieve_exports_sources(remote_manager, recipe_layout, conanfile, ref, remo
         raise ConanException(msg)
 
     ConanOutput(scope=str(ref)).info("Sources downloaded from '{}'".format(sources_remote.name))
+    return pkg_sign
 
 
 def config_source(export_source_folder, conanfile, hook_manager):

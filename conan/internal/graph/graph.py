@@ -60,6 +60,9 @@ class Node:
         self.binary_remote = None
         self.context = context
         self.test = test
+        self.pkg_sign_recipe = None
+        self.pkg_sign_sources = None
+        self.pkg_sign_package = None
 
         # real graph model
         self.transitive_deps = OrderedDict()  # of _TransitiveRequirement
@@ -277,6 +280,9 @@ class Node:
         result["rrev_timestamp"] = self.ref.timestamp if self.ref is not None else None
         result["prev_timestamp"] = self.pref_timestamp
         result["remote"] = self.remote.name if self.remote else None
+        result["package_sign_recipe"] = self.pkg_sign_recipe
+        result["package_sign_sources"] = self.pkg_sign_sources
+        result["package_sign_package"] = self.pkg_sign_package
         result["binary_remote"] = self.binary_remote.name if self.binary_remote else None
         from conan.internal.graph.installer import build_id
         result["build_id"] = build_id(self.conanfile)

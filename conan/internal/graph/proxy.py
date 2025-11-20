@@ -45,9 +45,9 @@ class ConanProxy:
         except ConanException:
             # NOT in disk, must be retrieved from remotes
             # we will only check all servers for latest revision if we did a --update
-            layout, remote = self._download_recipe(reference, remotes, output, update, check_update)
+            layout, remote, pkg_sign = self._download_recipe(reference, remotes, output, update, check_update)
             status = RECIPE_DOWNLOADED
-            return layout, status, remote
+            return layout, status, remote, pkg_sign
 
         self._cache.update_recipe_lru(ref)
 
@@ -55,14 +55,14 @@ class ConanProxy:
         # TODO: If the revision is given, then we don't need to check for updates?
         if not (check_update or should_update_reference(reference, update)):
             status = RECIPE_INCACHE
-            return recipe_layout, status, None
+            return recipe_layout, status, None, None
 
         # Need to check updates
         remote, remote_ref = self._find_newest_recipe_in_remotes(reference, remotes,
                                                                  update, check_update)
         if remote_ref is None:  # Nothing found in remotes
             status = RECIPE_NOT_IN_REMOTE
-            return recipe_layout, status, None
+            return recipe_layout, status, None, None
 
         # Something found in remotes, check if we already have the latest in local cache
         # TODO: cache2.0 here if we already have a revision in the cache but we add the
@@ -79,7 +79,7 @@ class ConanProxy:
                     output.info("Retrieving from remote '%s'..." % remote.name)
                     new_recipe_layout = self._download(remote_ref, remote)
                     status = RECIPE_UPDATED
-                    return new_recipe_layout, status, remote
+                    return new_recipe_layout, status, remote, None
                 else:
                     status = RECIPE_UPDATEABLE
             else:
@@ -94,7 +94,7 @@ class ConanProxy:
             else:
                 self._cache.update_recipe_timestamp(remote_ref)
                 status = RECIPE_INCACHE_DATE_UPDATED
-        return recipe_layout, status, remote
+        return recipe_layout, status, remote, None
 
     def _find_newest_recipe_in_remotes(self, reference, remotes, update, check_update):
         output = ConanOutput(scope=str(reference))
@@ -156,16 +156,16 @@ class ConanProxy:
             msg = "Unable to find '%s' in remotes" % repr(ref)
             raise NotFoundException(msg)
 
-        recipe_layout = self._download(latest_rref, remote)
-        return recipe_layout, remote
+        recipe_layout, pkg_sign = self._download(latest_rref, remote)
+        return recipe_layout, remote, pkg_sign
 
     def _download(self, ref, remote):
         assert ref.revision
         assert ref.timestamp
-        recipe_layout = self._remote_manager.get_recipe(ref, remote)
+        recipe_layout, pkg_sign = self._remote_manager.get_recipe(ref, remote)
         output = ConanOutput(scope=str(ref))
         output.info("Downloaded recipe revision %s" % ref.revision)
-        return recipe_layout
+        return recipe_layout, pkg_sign
 
 
 def should_update_reference(reference, update):

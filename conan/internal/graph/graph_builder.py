@@ -267,12 +267,12 @@ class DepsGraphBuilder:
 
     def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
-        layout, recipe_status, remote = result
+        layout, recipe_status, remote, pkg_sign = result
         conanfile_path = layout.conanfile()
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
                                                     remotes=self._remotes, update=self._update,
                                                     check_update=self._check_update)
-        return layout, dep_conanfile, recipe_status, remote
+        return layout, dep_conanfile, recipe_status, remote, pkg_sign
 
     @staticmethod
     def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
@@ -376,7 +376,7 @@ class DepsGraphBuilder:
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
 
-        layout, dep_conanfile, recipe_status, remote = resolved
+        layout, dep_conanfile, recipe_status, remote, pkg_sign = resolved
 
         new_ref = layout.reference
         dep_conanfile.folders.set_base_recipe_metadata(layout.metadata())  # None for platform_xxx
@@ -389,6 +389,7 @@ class DepsGraphBuilder:
         new_node = Node(new_ref, dep_conanfile, context=context, test=require.test or node.test)
         new_node.recipe = recipe_status
         new_node.remote = remote
+        new_node.pkg_sign_recipe = pkg_sign
 
         down_options = self._compute_down_options(node, require, new_ref)
 
