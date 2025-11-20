@@ -385,3 +385,64 @@ class TestErrorVisibleFalse:
         assert dep_pkg2["visible"] is True
         assert dep_pkg3["ref"] == "pkg3/1.1"
         assert dep_pkg2["visible"] is True
+
+
+def test_visible_order_issue():
+    #  libc  -> libb/1.0 (static) -> lib_a/1.1 (header)
+    #   \-------------------------------/
+    # Order mattered here
+    #  libc2 ---------------------> lib_a/1.1 (header)
+    #   \----> libb/1.0 (static) -> lib_a/1.2 (header)
+    c = TestClient(light=True)
+    c.save({"liba/conanfile.py": GenConanfile("lib_a").with_package_type("header-library"),
+            "libb/conanfile.py": GenConanfile("lib_b", "1.0").with_package_type("static-library")
+                                                             .with_requires("lib_a/[>=1]"),
+            "libc/conanfile.py": GenConanfile("lib_c", "1.0").with_package_type("shared-library")
+                                                             .with_requirement("lib_b/1.0",
+                                                                               visible=False)
+                                                             .with_requirement("lib_a/1.1"),
+            "libc2/conanfile.py": GenConanfile("lib_c", "1.0").with_package_type("shared-library")
+                                                              .with_requirement("lib_a/1.1")
+                                                              .with_requirement("lib_b/1.0",
+                                                                                visible=False),
+            })
+    c.run("export liba --version=1.0")
+    c.run("export liba --version=1.1")
+    c.run("export liba --version=1.2")
+    c.run("export libb")
+    c.run("graph info libc --format=json")
+    graph = json.loads(c.stdout)
+    assert len(graph["graph"]["nodes"]) == 3
+
+    c.run("graph info libc2 --format=json")
+    graph = json.loads(c.stdout)
+    assert len(graph["graph"]["nodes"]) == 3
+
+
+def test_visible_order_full_diamond_issue():
+    c = TestClient(light=True)
+    c.save({"liba/conanfile.py": GenConanfile("lib_a").with_package_type("header-library"),
+            "libb/conanfile.py": GenConanfile("lib_b", "1.0").with_package_type("static-library")
+                                                             .with_requires("lib_a/[>=1]"),
+            "libd/conanfile.py": GenConanfile("lib_d", "1.0").with_package_type("static-library")
+                                                             .with_requires("lib_a/1.1"),
+            "libc/conanfile.py": GenConanfile("lib_c", "1.0").with_package_type("shared-library")
+                                                             .with_requirement("lib_b/1.0",
+                                                                               visible=False)
+                                                             .with_requirement("lib_d/1.0"),
+            "libc2/conanfile.py": GenConanfile("lib_c", "1.0").with_package_type("shared-library")
+                                                              .with_requirement("lib_d/1.0")
+                                                              .with_requirement("lib_b/1.0",
+                                                                                visible=False),
+            })
+    c.run("export liba --version=1.0")
+    c.run("export liba --version=1.1")
+    c.run("export liba --version=1.2")
+    c.run("export libb")
+    c.run("export libd")
+    c.run("graph info libc", assert_error=True)
+    assert "ERROR: Version conflict: Conflict between lib_a/1.1 and lib_a/1.2 in the graph" in c.out
+
+    c.run("graph info libc2 --format=json")
+    graph = json.loads(c.stdout)
+    assert len(graph["graph"]["nodes"]) == 4
