@@ -1,11 +1,34 @@
 import os
 
-from conan.api.output import cli_out_write, Color
+from conan.api.model import PackagesList
+from conan.api.output import cli_out_write, Color, ConanOutput
 from conan.errors import ConanException
 from conan.internal.cache.conan_reference_layout import METADATA
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.loader import load_python_file
 from conan.internal.util.files import mkdir
+
+
+def print_graph_package_sign(graph):
+    pkg_list = PackagesList()
+    for node in graph.nodes:
+        if node.ref:
+            pkg_list.add_ref(node.ref)
+
+            if node.package_id:
+                pkg_list.add_pref(node.pref)
+
+            for rref, packages in pkg_list.items():
+                recipe_bundle = pkg_list.recipe_dict(rref)
+                if node.pkg_sign_recipe:
+                    recipe_bundle["package sign"] = node.pkg_sign_recipe
+                for pref in packages:
+                    pkg_bundle = pkg_list.package_dict(pref)
+                    if node.pkg_sign_package:
+                        pkg_bundle["package sign"] = node.pkg_sign_package
+
+    print_cache_sign_verify_text({"context": "install", "action": "verify",
+                                  "results": pkg_list.serialize()})
 
 
 #FIXME: This is copied from conan.cli.commands.list to avoid circular dependency loading ConanAPI
@@ -54,7 +77,21 @@ def print_cache_sign_verify_text(data):
         else:
             cli_out_write("[Package sign] Signing results:")
 
-    print_serial(data.get("results"))
+    def format_data(item):
+        if isinstance(item, dict):
+            result = {}
+            for k, v in item.items():
+                if isinstance(v, dict):
+                    v.pop("info", None)
+                    v.pop("timestamp", None)
+                    v.pop("files", None)
+                result[k] = format_data(v)
+            return result
+        return item
+
+    items = {ref: format_data(data) for ref, data in data.get("results").items()}
+
+    print_serial(items)
 
     results = []
     for ref, revisions in data.get("results").items():

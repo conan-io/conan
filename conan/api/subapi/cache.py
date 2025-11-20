@@ -6,12 +6,13 @@ import tempfile
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
-from conan.internal.api.uploader import compress_files
+from conan.internal.api.uploader import compress_files, PackagePreparator
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.conan_reference_layout import EXPORT_SRC_FOLDER, EXPORT_FOLDER, SRC_FOLDER, \
     METADATA, DOWNLOAD_EXPORT_FOLDER
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.cache.integrity_check import IntegrityChecker
+from conan.internal.conan_app import ConanApp
 from conan.internal.rest.download_cache import DownloadCache
 from conan.errors import ConanException
 from conan.api.model import PkgReference
@@ -81,6 +82,9 @@ class CacheAPI:
         """Sign packages with the signing plugin"""
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder)
+        app = ConanApp(self._conan_api)
+        preparator = PackagePreparator(app, self._api_helpers.global_conf)
+        preparator.prepare(package_list, [], force=True)
         pkg_signer.sign(package_list, context="cache")
         return {"results": package_list.serialize(), "context": "cache", "action": "sign"}
 

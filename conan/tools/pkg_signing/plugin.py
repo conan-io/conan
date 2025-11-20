@@ -59,6 +59,7 @@ def create_summary_content(artifacts_folder):
         if os.path.isfile(file_path):
             sha256 = sha256sum(file_path)
             checksums[fname] = sha256
+    assert checksums, f"Summary file content cannot be created: No files found in {artifacts_folder}"
     sorted_checksums = dict(sorted(checksums.items()))
     content = copy.deepcopy(SIGN_SUMMARY_CONTENT)
     content["files"] = sorted_checksums

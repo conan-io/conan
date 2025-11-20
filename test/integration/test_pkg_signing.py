@@ -1,4 +1,3 @@
-import re
 import textwrap
 
 from conan.test.assets.genconanfile import GenConanfile
@@ -70,18 +69,13 @@ def test_pkg_sign_canonical():
         import os
         from conan.errors import ConanException
         from conan.api.output import ConanOutput
-        from conan.tools.pkg_signing.plugin import (create_summary_content, is_pkg_signed,
-            load_summary, save_summary)
+        from conan.tools.files import save
+        from conan.tools.pkg_signing.plugin import (create_summary_content, get_summary_file_path,
+            is_pkg_signed, load_summary, save_summary)
 
         def sign(ref, artifacts_folder, signature_folder):
             ConanOutput().info("Signing reference")
             ConanOutput().info(f"Signing folder: {artifacts_folder}")
-            if is_pkg_signed(signature_folder):
-                summary = load_summary(signature_folder)
-                if summary.get("provider") != "conan-client":
-                    return "Warn: Package already signed by another provider"
-                return "Package already signed by the same provider"
-
             c = create_summary_content(artifacts_folder)
             c["method"] = "sigstore"
 
@@ -92,24 +86,30 @@ def test_pkg_sign_canonical():
             else:
                 c["provider"] = "conan-client"
             save_summary(signature_folder, c)
+            # Simulate signing the package
+            sfp = get_summary_file_path(signature_folder)
+            save(None, f"{sfp}.sig", "")
             return "Signature ok"
 
         def verify(ref, artifacts_folder, signature_folder, files):
             ConanOutput().info(f"Verifying reference")
-            if not is_pkg_signed(signature_folder):
+            sfp = get_summary_file_path(signature_folder)
+            signature_file_path = f"{sfp}.sig"
+            if not os.path.isfile(signature_file_path):
                 raise ConanException("Package is not signed")
 
             if "lib3fail" in str(ref):
                 raise ConanException(f"verify failed for {ref}")
             summary = load_summary(signature_folder)
-            assert summary.get("provider") == "conan-client", "wrong provider"
+            # Simulate verification
+            if summary.get("provider") != "conan-client":
+                raise ConanException("Failed to verify the package")
             return f"Verification ok"
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
 
     # Cache verify command fails and reports if package is not signed
     c.run("cache verify *", assert_error=True)
-    c_out = re.sub(r"\s*timestamp\s*\n.*\n", "\n", c.out)
     assert textwrap.dedent("""
      [Package sign] Verifying signature of packages in local cache...
 
@@ -121,7 +121,6 @@ def test_pkg_sign_canonical():
                revisions
                  76285bcb59a81071122cba04b2269b52
                    package sign: Failed: Package is not signed
-               info
            package sign: Failed: Package is not signed
      lib2fail/0.1
        revisions
@@ -131,7 +130,6 @@ def test_pkg_sign_canonical():
                revisions
                  0ba8627bd47edc3a501e8f0eb9a79e5e
                    package sign: Failed: Package is not signed
-               info
            package sign: Failed: Package is not signed
      lib3fail/0.1
        revisions
@@ -141,14 +139,12 @@ def test_pkg_sign_canonical():
                revisions
                  0ba8627bd47edc3a501e8f0eb9a79e5e
                    package sign: Failed: Package is not signed
-               info
            package sign: Failed: Package is not signed
 
-     [Package sign] Summary: OK=0, WARN=0, FAILED=6""") in c_out
+     [Package sign] Summary: OK=0, WARN=0, FAILED=6""") in c.out
 
     # Cache sign command fails if a package fails to sign and reports it
     c.run("cache sign *", assert_error=True)
-    c_out = re.sub(r"\s*timestamp\s*\n.*\n", "\n", c.out)
     assert textwrap.dedent("""
         [Package sign] Signing packages in local cache...
 
@@ -160,7 +156,6 @@ def test_pkg_sign_canonical():
                   revisions
                     76285bcb59a81071122cba04b2269b52
                       package sign: Signature ok
-                  info
               package sign: Signature ok
         lib2fail/0.1
           revisions
@@ -170,7 +165,6 @@ def test_pkg_sign_canonical():
                   revisions
                     0ba8627bd47edc3a501e8f0eb9a79e5e
                       package sign: Signature ok
-                  info
               package sign: Signature ok
         lib3fail/0.1
           revisions
@@ -180,11 +174,10 @@ def test_pkg_sign_canonical():
                   revisions
                     0ba8627bd47edc3a501e8f0eb9a79e5e
                       package sign: Failed: sign failed
-                  info
               package sign: Failed: sign failed
 
         [Package sign] Summary: OK=4, WARN=0, FAILED=2
-        """) in c_out
+        """) in c.out
 
     # Upload sign fails if package signing fails
     c.run("upload * -c -r default", assert_error=True)
@@ -198,8 +191,8 @@ def test_pkg_sign_canonical():
                   da39a3ee5e6b4b0d3255bfef95601890afd80709
                     revisions
                       76285bcb59a81071122cba04b2269b52 (Not uploaded)
-                        package sign: Package already signed by the same provider
-                package sign: Package already signed by the same provider
+                        package sign: Signature ok
+                package sign: Signature ok
           lib2fail/0.1
             revisions
               70a185be5a95af3dde25b74ae800b2f2 (Not uploaded)
@@ -207,8 +200,8 @@ def test_pkg_sign_canonical():
                   da39a3ee5e6b4b0d3255bfef95601890afd80709
                     revisions
                       0ba8627bd47edc3a501e8f0eb9a79e5e (Not uploaded)
-                        package sign: Warn: Package already signed by another provider
-                package sign: Warn: Package already signed by another provider
+                        package sign: Signature ok
+                package sign: Signature ok
           lib3fail/0.1
             revisions
               09ccc766ddd11c96aa78307b3f166fd6 (Not uploaded)
@@ -227,24 +220,24 @@ def test_pkg_sign_canonical():
     c.run("upload lib2fail* -c -r default")
     c.run("remove * -c")
 
-    # Install verify command should fail if package is signed by another provider
-    c.run("install --requires lib1ok/0.1 --build lib1ok/0.1 -r default -f json", assert_error=False)  # --requires lib2fail/0.1
-    print(c.out)
-    assert "ERROR: Package 'lib2fail/0.1' not resolved: [Package sign] Failed: wrong provider" in c.out
+    # Install verify command should fail if package sign verification fails
+    c.run("install --requires lib1ok/0.1 --requires lib2fail/0.1 -r default", assert_error=True)
+    assert "ERROR: Package 'lib2fail/0.1' not resolved: [Package sign] Failed: Failed to "\
+           "verify the package" in c.out
     assert textwrap.dedent("""\
         [Package sign] Verification results:
         lib1ok/0.1
           revisions
             a6a4e799bb673d6e5ca4f904118d672e
               package sign: Verification ok
-        """) in re.sub(r"\s*timestamp\s*\n.*\n", "\n", c.out)
+        """) in c.out
 
-    # Packages that failed in install verification should not appear as installed
+    # If packages fail to verify signature, they should not be installed
     c.run("list *")
     assert "lib1ok" in c.out
     assert "lib2fail" not in c.out
     c.run("cache verify *")
-    assert  textwrap.dedent("""\
+    assert textwrap.dedent("""\
         [Package sign] Verifying signature of packages in local cache...
 
         lib1ok/0.1
@@ -254,4 +247,4 @@ def test_pkg_sign_canonical():
               package sign: Verification ok
 
         [Package sign] Summary: OK=1, WARN=0, FAILED=0
-    """) in re.sub(r"\s*timestamp\s*\n.*\n", "\n", c.out)
+    """) in c.out

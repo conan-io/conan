@@ -7,6 +7,7 @@ from conan.cli.command import conan_command
 from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
+from conan.internal.rest.pkg_sign import print_graph_package_sign
 
 
 @conan_command(group="Consumer", formatters={"json": format_graph_json})
@@ -67,6 +68,8 @@ def install(conan_api, parser, *args):
         deps_graph = gapi.load_graph_requires(args.requires, args.tool_requires, profile_host,
                                               profile_build, lockfile, remotes, args.update)
     print_graph_basic(deps_graph)
+    if deps_graph.error:
+        print_graph_package_sign(deps_graph)
     deps_graph.report_graph_error()
     gapi.analyze_binaries(deps_graph, args.build, remotes, update=args.update, lockfile=lockfile)
     print_graph_packages(deps_graph)
@@ -82,6 +85,8 @@ def install(conan_api, parser, *args):
                                            deploy_folder=args.deployer_folder,
                                            envs_generation=args.envs_generation)
         ConanOutput().success("Install finished successfully")
+
+    print_graph_package_sign(deps_graph)
 
     # Update lockfile if necessary
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
