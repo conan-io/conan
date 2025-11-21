@@ -148,7 +148,9 @@ class PkgSignaturesPlugin:
 
     def sign(self, pkg_list, context="upload"):  # cache, upload,
         if not self._plugin_file_exists:
-            return
+            if context == "upload":
+                return
+            raise ConanException(f"[Package sign] Plugin not configured at {self.sign_plugin_path}")
         if self._plugin_sign_function is None:
             raise ConanException("[Package sign] sign() function not found "
                                  f"in {self.sign_plugin_path}")
@@ -190,7 +192,9 @@ class PkgSignaturesPlugin:
 
     def verify(self, pkg_list, context="cache"):  # cache, install, upload
         if not self._plugin_file_exists:
-            return
+            if context == "install":
+                return
+            raise ConanException(f"[Package sign] Plugin not configured at {self.sign_plugin_path}")
         if self._plugin_verify_function is None:
             raise ConanException("[Package sign] verify() function not found in "
                                  f"{self.sign_plugin_path}")

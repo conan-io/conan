@@ -10,6 +10,16 @@ from conan.test.utils.tools import TestClient
 
 def test_pkg_sign_no_plugin():
     c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("create .")
+    c.run("cache sign *", assert_error=True)
+    assert "ERROR: [Package sign] Plugin not configured" in c.out
+    c.run("cache verify *", assert_error=True)
+    assert "ERROR: [Package sign] Plugin not configured" in c.out
+
+
+def test_pkg_sign_no_plugin_functions():
+    c = TestClient()
     c.save_home({"extensions/plugins/sign/sign.py": ""})
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")

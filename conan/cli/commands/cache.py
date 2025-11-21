@@ -16,15 +16,19 @@ def _check_package_sign_errors(data):
     errors_in_package_sign = False
     for ref, revisions in data.get("results").items():
         for revision, revision_data in revisions.get("revisions").items():
-            pkgsign_result = revision_data["package sign"].lower()
-            if "error" in pkgsign_result or "fail" in pkgsign_result:
-                errors_in_package_sign = True
+            pkg_sign = revision_data.get("package sign", None)
+            if pkg_sign:
+                pkgsign_result = pkg_sign.lower()
+                if "error" in pkgsign_result or "fail" in pkgsign_result:
+                    errors_in_package_sign = True
             if "packages" in revision_data:
                 for package_id, package_data in revision_data["packages"].items():
                     for prev, prev_data in package_data["revisions"].items():
-                        pkgsign_result = prev_data["package sign"].lower()
-                        if "error" in pkgsign_result or "fail" in pkgsign_result:
-                            errors_in_package_sign = True
+                        pkg_sign = prev_data.get("package sign", None)
+                        if pkg_sign:
+                            pkgsign_result = pkg_sign.lower()
+                            if "error" in pkgsign_result or "fail" in pkgsign_result:
+                                errors_in_package_sign = True
 
     if errors_in_package_sign:
         action_msg = "signature verification" if data.get("action") == "verify" else "signing"
