@@ -5,60 +5,38 @@ from conan.api.model import ListPattern, MultiPackagesList
 from conan.api.output import cli_out_write, ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
-from conan.cli.commands.list import print_list_text, print_list_json, print_serial
+from conan.cli.commands.list import print_list_text, print_list_json
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.rest.pkg_sign import print_cache_sign_verify_text
 
 
-def _check_package_sign_errors(data):
-    errors_in_package_sign = False
-    for ref, revisions in data.get("results").items():
-        for revision, revision_data in revisions.get("revisions").items():
-            pkg_sign = revision_data.get("package sign", None)
-            if pkg_sign:
-                pkgsign_result = pkg_sign.lower()
-                if "error" in pkgsign_result or "fail" in pkgsign_result:
-                    errors_in_package_sign = True
-            if "packages" in revision_data:
-                for package_id, package_data in revision_data["packages"].items():
-                    for prev, prev_data in package_data["revisions"].items():
-                        pkg_sign = prev_data.get("package sign", None)
-                        if pkg_sign:
-                            pkgsign_result = pkg_sign.lower()
-                            if "error" in pkgsign_result or "fail" in pkgsign_result:
-                                errors_in_package_sign = True
-
-    if errors_in_package_sign:
-        action_msg = "signature verification" if data.get("action") == "verify" else "signing"
-        data["conan_error"] = f"There were some errors in the {action_msg} process. " \
-                              "Please check the output."
-
 def json_export(data):
     cli_out_write(json.dumps({"cache_path": data}))
 
 
-def print_cache_sign_verify_json(data):
-    errors_in_package_sign = False
-    for ref, revisions in data.get("results").items():
-        for revision, revision_data in revisions.get("revisions").items():
-            pkgsign_result = revision_data["package sign"].lower()
-            if "error" in pkgsign_result or "fail" in pkgsign_result:
-                errors_in_package_sign = True
-            if "packages" in revision_data:
-                for package_id, package_data in revision_data["packages"].items():
-                    for prev, prev_data in package_data["revisions"].items():
-                        pkgsign_result = prev_data["package sign"].lower()
-                        if "error" in pkgsign_result or "fail" in pkgsign_result:
-                            errors_in_package_sign = True
+def _check_package_sign_errors(data):
+    """Checks if there is any package sign with error or fail"""
 
-    if errors_in_package_sign:
+    def is_error(sign):
+        return bool(sign) and ("error" in sign.lower() or "fail" in sign.lower())
+
+    def all_signs():
+        """Genera todos los valores de 'package sign' en todos los niveles."""
+        for ref_data in data.get("results", {}).values():
+            for revision_data in ref_data.get("revisions", {}).values():
+                yield revision_data.get("package sign")
+                for package_data in revision_data.get("packages", {}).values():
+                    for prev_data in package_data.get("revisions", {}).values():
+                        yield prev_data.get("package sign")
+
+    if any(is_error(sign) for sign in all_signs()):
         action_msg = "signature verification" if data.get("action") == "verify" else "signing"
-        data["conan_error"] = f"There were some errors in the {action_msg} process. " \
-                              "Please check the output."
-    json_data = json.dumps(data, indent=4)
-    cli_out_write(json_data)
+        data["conan_error"] = (
+            f"There were some errors in the {action_msg} process. "
+            "Please check the output."
+        )
 
 
 @conan_command(group="Consumer")

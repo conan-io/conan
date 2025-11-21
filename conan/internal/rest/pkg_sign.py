@@ -1,36 +1,12 @@
 import os
 
 from conan.api.model import PackagesList
-from conan.api.output import cli_out_write, Color, ConanOutput
+from conan.api.output import cli_out_write, Color
 from conan.errors import ConanException
 from conan.internal.cache.conan_reference_layout import METADATA
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.loader import load_python_file
 from conan.internal.util.files import mkdir
-
-
-def print_graph_package_sign(graph):
-    pkg_list = PackagesList()
-    for node in graph.nodes:
-        if node.ref:
-            if not node.ref.revision:
-                return  # Package sign output does not make sense without revisions
-            pkg_list.add_ref(node.ref)
-
-            if node.package_id:
-                pkg_list.add_pref(node.pref)
-
-            for rref, packages in pkg_list.items():
-                recipe_bundle = pkg_list.recipe_dict(rref)
-                if node.pkg_sign_recipe:
-                    recipe_bundle["package sign"] = node.pkg_sign_recipe
-                for pref in packages:
-                    pkg_bundle = pkg_list.package_dict(pref)
-                    if node.pkg_sign_package:
-                        pkg_bundle["package sign"] = node.pkg_sign_package
-
-    print_cache_sign_verify_text({"context": "install", "action": "verify",
-                                  "results": pkg_list.serialize()})
 
 
 #FIXME: This is copied from conan.cli.commands.list to avoid circular dependency loading ConanAPI
@@ -64,69 +40,75 @@ def print_serial(item, indent=None, color_index=None):
         cli_out_write(f"{indent}{item}", fg=color)
 
 
+def print_graph_package_sign(graph):
+    pkg_list = PackagesList()
+
+    for node in graph.nodes:
+        if not node.ref:
+            continue
+        if not node.ref.revision:
+            return  # Package sign output does not make sense without revisions
+
+        pkg_list.add_ref(node.ref)
+
+        if node.package_id:
+            pkg_list.add_pref(node.pref)
+
+        if node.pkg_sign_recipe:
+            pkg_list.recipe_dict(node.ref)["package sign"] = node.pkg_sign_recipe
+        if node.package_id and node.pkg_sign_package:
+            pkg_list.package_dict(node.pref)["package sign"] = node.pkg_sign_package
+
+    print_cache_sign_verify_text({
+        "context": "install",
+        "action": "verify",
+        "results": pkg_list.serialize(),
+    })
+
+
 def print_cache_sign_verify_text(data):
-    results = []
-    for ref, revisions in data.get("results").items():
-        for revision, revision_data in revisions.get("revisions").items():
-            recipe_pkg_sign = revision_data.get("package sign", None)
-            if recipe_pkg_sign:
-                results.append(recipe_pkg_sign)
-            if "packages" in revision_data:
-                for package_id, package_data in revision_data["packages"].items():
-                    if package_data.get("revisions", None):
-                        for prev, prev_data in package_data["revisions"].items():
-                            package_pkg_sign = prev_data.get("package sign")
-                            if package_pkg_sign:
-                                results.append(package_pkg_sign)
+    def iter_signs(results):
+        for ref_data in results.values():
+            for revision_data in ref_data.get("revisions", {}).values():
+                sign = revision_data.get("package sign")
+                if sign:
+                    yield sign
+                for pkg in revision_data.get("packages", {}).values():
+                    for prev in pkg.get("revisions", {}).values():
+                        sign = prev.get("package sign")
+                        if sign:
+                            yield sign
 
-    if not results:
-        return  # there is no package signing info
+    results_dict = data.get("results", {})
+    signs = list(iter_signs(results_dict))
+    if not signs:
+        return
 
-    action = data.get('action')
-    context = data.get('context')
+    action = data.get("action")
+    context = data.get("context")
     if context == "cache":
-        if action == "verify":
-            cli_out_write("[Package sign] Verifying signature of packages in local cache...",
-                          endline="\n\n")
-        else:
-            cli_out_write("[Package sign] Signing packages in local cache...", endline="\n\n")
+        msg = "Verifying signature of" if action == "verify" else "Signing"
+        cli_out_write(f"[Package sign] {msg} packages in local cache...\n")
     else:
-        if action == "verify":
-            cli_out_write("[Package sign] Verification results:")
-        else:
-            cli_out_write("[Package sign] Signing results:")
+        msg = "Verification results" if action == "verify" else "Signing results"
+        cli_out_write(f"[Package sign] {msg}:")
 
-    def format_data(item):
-        if isinstance(item, dict):
-            result = {}
-            for k, v in item.items():
-                if isinstance(v, dict):
-                    v.pop("info", None)
-                    v.pop("timestamp", None)
-                    v.pop("files", None)
-                result[k] = format_data(v)
-            return result
-        return item
+    def clean(obj):
+        remove_keys = {"info", "timestamp", "files"}
+        if not isinstance(obj, dict):
+            return obj
+        return {k: clean(v) for k, v in obj.items() if k not in remove_keys}
 
-    items = {ref: format_data(data) for ref, data in data.get("results").items()}
-
+    items = {ref: clean(item) for ref, item in results_dict.items()}
     print_serial(items)
 
+    # Summary
     if context == "cache":
-        warn_count = 0
-        fail_count = 0
-        ok_count = 0
-
-        for result in results:
-            lower = result.lower()
-            if "warn" in lower:
-                warn_count += 1
-            elif "fail" in lower or "error" in lower:
-                fail_count += 1
-            else:
-                ok_count += 1
-        cli_out_write(f"\n[Package sign] Summary: OK={ok_count}, WARN={warn_count}, "
-                      f"FAILED={fail_count}")
+        signs_lower = [s.lower() for s in signs]
+        warn = sum("warn" in s for s in signs_lower)
+        fail = sum(("fail" in s) or ("error" in s) for s in signs_lower)
+        ok = len(signs) - warn - fail
+        cli_out_write(f"\n[Package sign] Summary: OK={ok}, WARN={warn}, FAILED={fail}")
 
 
 class PkgSignaturesPlugin:
@@ -190,6 +172,19 @@ class PkgSignaturesPlugin:
         except (ConanException, AssertionError) as e:
             _handle_failure(e, context, dict_info)
 
+    def verify_ref(self, ref):
+        pkg_list = PackagesList()
+        pkg_list.add_ref(ref)
+        self.verify(pkg_list, context="install")
+        return pkg_list.recipe_dict(ref).get("package sign")
+
+    def verify_pref(self, pref):
+        pkg_list = PackagesList()
+        pkg_list.add_ref(pref.ref)
+        pkg_list.add_pref(pref)
+        self.verify(pkg_list, context="install")
+        return pkg_list.package_dict(pref).get("package sign")
+
     def verify(self, pkg_list, context="cache"):  # cache, install, upload
         if not self._plugin_file_exists:
             if context == "install":
@@ -198,7 +193,6 @@ class PkgSignaturesPlugin:
         if self._plugin_verify_function is None:
             raise ConanException("[Package sign] verify() function not found in "
                                  f"{self.sign_plugin_path}")
-        finally_raise = None
         for rref, packages in pkg_list.items():
             recipe_bundle = pkg_list.recipe_dict(rref)
             if recipe_bundle:

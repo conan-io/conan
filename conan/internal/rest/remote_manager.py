@@ -5,7 +5,7 @@ from typing import List
 
 from requests.exceptions import ConnectionError
 
-from conan.api.model import LOCAL_RECIPES_INDEX, PackagesList
+from conan.api.model import LOCAL_RECIPES_INDEX
 from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
@@ -79,9 +79,7 @@ class RemoteManager:
             if "conanmanifest.txt" not in zipped_files:
                 raise ConanException(f"Corrupted {ref} in '{remote.name}' remote: "
                                      f"no conanmanifest.txt")
-            pkg_list = PackagesList()
-            pkg_list.add_ref(ref)
-            self._signer.verify(pkg_list, "install")
+            pkg_sign = self._signer.verify_ref(ref)
         except BaseException:  # So KeyboardInterrupt also cleans things
             ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'",
                                               error_type="exception")
@@ -99,7 +97,7 @@ class RemoteManager:
         # Make sure that the source dir is deleted
         rmdir(layout.source())
         mkdir(layout.metadata())
-        return layout, pkg_list.recipe_dict(ref).get("package sign", None)
+        return layout, pkg_sign
 
     def get_recipe_metadata(self, ref, remote, metadata):
         """
@@ -133,12 +131,10 @@ class RemoteManager:
             mkdir(export_sources_folder)  # create the folder even if no source files
             return
 
-        pkg_list = PackagesList()
-        pkg_list.add_ref(ref)
-        self._signer.verify(pkg_list, "install")
+        pkg_sign = self._signer.verify_ref(ref)
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
         uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
-        return pkg_list.recipe_dict(ref).get("package sign", None)
+        return pkg_sign
 
     def get_package(self, pref, remote, metadata=None):
         output = ConanOutput(scope=str(pref.ref))
@@ -187,10 +183,7 @@ class RemoteManager:
             for f in ("conaninfo.txt", "conanmanifest.txt", "conan_package.tgz"):
                 if f not in zipped_files:
                     raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: no {f}")
-            pkg_list = PackagesList()
-            pkg_list.add_ref(pref.ref)
-            pkg_list.add_pref(pref)
-            self._signer.verify(pkg_list, "install")
+            pkg_sign = self._signer.verify_pref(pref)
 
             tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
             package_folder = layout.package()
@@ -209,7 +202,7 @@ class RemoteManager:
                                 error_type="exception")
             scoped_output.error(f"Exception: {type(e)} {str(e)}", error_type="exception")
             raise
-        return pkg_list.package_dict(pref).get("package sign", None)
+        return pkg_sign
 
     def search_recipes(self, remote, pattern):
         # Used by ListAPI to "conan list *" recipes, and by RangeResolver to resolve version-ranges
