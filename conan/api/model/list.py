@@ -403,7 +403,7 @@ class ListPattern:
         self.package_id, prev = split(package, "#", prev)
         self.prev, _ = split(prev, "%")
         if only_recipe:
-            if self.package_id or package_id:
+            if self.package_id:
                 raise ConanException("Do not specify 'package_id' with 'only-recipe'")
         else:
             self.package_id = self.package_id or package_id
