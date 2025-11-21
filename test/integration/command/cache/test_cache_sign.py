@@ -8,11 +8,6 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-def _remove_timestamps(output):
-    # Remove timestamp lines
-    return re.sub(r"\s*timestamp\s*\n.*\n", "\n", output)
-
-
 def test_pkg_sign_no_plugin():
     c = TestClient()
     c.save_home({"extensions/plugins/sign/sign.py": ""})
@@ -36,7 +31,6 @@ def test_pkg_sign_basic():
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.run("create .")
     c.run("cache sign *")
-    c_out = _remove_timestamps(c.out)
     assert textwrap.dedent("""\
         [Package sign] Signing packages in local cache...
 
@@ -50,7 +44,7 @@ def test_pkg_sign_basic():
                       package sign: ok
               package sign: Created
 
-        [Package sign] Summary: OK=2, WARN=0, FAILED=0""") in c_out
+        [Package sign] Summary: OK=2, WARN=0, FAILED=0""") in c.out
 
 
 def test_pkg_verify_basic():
@@ -65,7 +59,6 @@ def test_pkg_verify_basic():
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.run("create .")
     c.run("cache verify *")
-    c_out = _remove_timestamps(c.out)
     assert textwrap.dedent("""
         [Package sign] Verifying signature of packages in local cache...
 
@@ -79,7 +72,8 @@ def test_pkg_verify_basic():
                       package sign: ok
               package sign: Verified
 
-        [Package sign] Summary: OK=2, WARN=0, FAILED=0""") in c_out
+        [Package sign] Summary: OK=2, WARN=0, FAILED=0""") in c.out
+
 
 def test_pkg_sign_exception():
     c = TestClient()
@@ -102,7 +96,6 @@ def test_pkg_sign_exception():
     c.save({"conanfile.py": GenConanfile("package", "0.1")})
     c.run("export .")
     c.run("cache sign *", assert_error=True)
-    c_out = re.sub(r"\s*timestamp\s*\n.*\n", "\n", c.out)  # Remove timestamp lines
     assert textwrap.dedent("""\
         [Package sign] Signing packages in local cache...
 
@@ -122,7 +115,7 @@ def test_pkg_sign_exception():
               packages
               package sign: Created
 
-        [Package sign] Summary: OK=2, WARN=0, FAILED=1""") in c_out
+        [Package sign] Summary: OK=2, WARN=0, FAILED=1""") in c.out
     # test json output
     c.run("cache sign * -f json", assert_error=True)
     assert "ERROR: There were some errors in the signing process. " \
@@ -156,7 +149,6 @@ def test_pkg_verify_exception():
     c.save({"conanfile.py": GenConanfile("package", "0.1")})
     c.run("export .")
     c.run("cache verify *", assert_error=True)
-    c_out = _remove_timestamps(c.out)
     assert textwrap.dedent("""\
         [Package sign] Verifying signature of packages in local cache...
 
@@ -176,7 +168,7 @@ def test_pkg_verify_exception():
               packages
               package sign: Warning: message
 
-        [Package sign] Summary: OK=1, WARN=1, FAILED=1""") in c_out
+        [Package sign] Summary: OK=1, WARN=1, FAILED=1""") in c.out
     # test json output
     c.run("cache verify * -f json", assert_error=True)
     assert "ERROR: There were some errors in the signature verification process. " \
@@ -184,7 +176,7 @@ def test_pkg_verify_exception():
     results = json.loads(c.stdout)
     assert results["lib/0.1"]["revisions"]["dbe307e08b1a344fef76f60c85c0c4e8"]["package sign"] == \
            "Failed: Wrong signature"
-    assert results["package/0.1"]["revisions"]["1fd0e5bcc411dcd3ff5b16024e2d7c04"]["package sign"] == \
-           "Success"
+    assert results["package/0.1"]["revisions"]["1fd0e5bcc411dcd3ff5b16024e2d7c04"]["package sign"]\
+           == "Success"
     assert results["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]["package sign"] == \
            "Warning: message"
