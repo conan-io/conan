@@ -17,7 +17,7 @@ SIGN_SUMMARY_FILENAME = "sign-summary.json"
 
 
 def get_summary_file_path(signature_folder):
-    """"
+    """
     Gets the path of the summary file path
     @param signature_folder: Signature folder path
     @return: Path of the summary file
