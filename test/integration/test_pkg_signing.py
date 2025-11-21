@@ -181,7 +181,7 @@ def test_pkg_sign_canonical():
 
     # Upload sign fails if package signing fails
     c.run("upload * -c -r default", assert_error=True)
-    assert "ERROR: There were some errors in the signature verification process. Please check the output." in c.out
+    assert "ERROR: There were some errors in the signing process. Please check the output." in c.out
     assert textwrap.dedent("""
         default
           lib1ok/0.1
