@@ -5,7 +5,7 @@ import pytest
 from conan.test.utils.tools import temp_folder, save_files
 
 from conan.tools.pkg_signing.plugin import (create_summary_content, get_summary_file_path,
-                                            is_pkg_signed, load_summary, save_summary)
+                                            load_summary, save_summary)
 
 @pytest.fixture
 def pkg_sign_tools():
@@ -44,13 +44,3 @@ def test_save_load_summary(pkg_sign_tools):
     assert summary.get("provider") == "conan"
     assert summary.get("method") == "sigstore"
     assert list(summary.get("files").keys()) == ["conan_package.tgz", "conanmanifest.txt"]
-
-
-def test_is_pkg_signed(pkg_sign_tools):
-    artifacts_folder, signature_folder = pkg_sign_tools
-    assert not is_pkg_signed(signature_folder)
-    c = create_summary_content(artifacts_folder)
-    c["provider"] = "the provider"
-    c["method"] = "the method"
-    save_summary(signature_folder, c)
-    assert is_pkg_signed(signature_folder)

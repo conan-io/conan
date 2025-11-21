@@ -71,7 +71,7 @@ def test_pkg_sign_canonical():
         from conan.api.output import ConanOutput
         from conan.tools.files import save
         from conan.tools.pkg_signing.plugin import (create_summary_content, get_summary_file_path,
-            is_pkg_signed, load_summary, save_summary)
+            load_summary, save_summary)
 
         def sign(ref, artifacts_folder, signature_folder):
             ConanOutput().info("Signing reference")
