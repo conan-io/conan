@@ -229,7 +229,7 @@ def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
                               "json": print_list_json})
 def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Check the signature of packages with the Package Singing Plugin
+    Check the signature of packages with the Package Signing Plugin
     """
     subparser.add_argument("pattern", nargs="?",
                            help="Selection pattern for references to verify their signature")
