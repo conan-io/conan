@@ -35,7 +35,7 @@ def load_summary(signature_folder):
 
 
 def is_pkg_signed(signature_folder):
-    """"
+    """
     Indicates if the package is signed or not
     @param signature_folder: Signature folder path
     @return: True if the package is signed (the summary file exists and has content)
