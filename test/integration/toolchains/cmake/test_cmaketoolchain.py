@@ -5,7 +5,7 @@ import re
 import textwrap
 
 import pytest
-from mock import mock
+from unittest import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
 from conan.test.assets.genconanfile import GenConanfile

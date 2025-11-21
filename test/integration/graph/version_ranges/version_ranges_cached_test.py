@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 import pytest
-from mock import patch
+from unittest.mock import patch
 
 from conan.internal.rest.remote_manager import RemoteManager
 from conan.api.model import RecipeReference

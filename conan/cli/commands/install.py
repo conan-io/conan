@@ -72,17 +72,21 @@ def install(conan_api, parser, *args):
     print_graph_packages(deps_graph)
 
     # Installation of binaries and consumer generators
-    conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
-    ConanOutput().title("Finalizing install (deploy, generators)")
-    conan_api.install.install_consumer(deps_graph, args.generator, source_folder, output_folder,
-                                       deploy=args.deployer, deploy_package=args.deployer_package,
-                                       deploy_folder=args.deployer_folder,
-                                       envs_generation=args.envs_generation)
-    ConanOutput().success("Install finished successfully")
+    install_error = conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes,
+                                                       return_install_error=True)
+    if not install_error:
+        ConanOutput().title("Finalizing install (deploy, generators)")
+        conan_api.install.install_consumer(deps_graph, args.generator, source_folder, output_folder,
+                                           deploy=args.deployer,
+                                           deploy_package=args.deployer_package,
+                                           deploy_folder=args.deployer_folder,
+                                           envs_generation=args.envs_generation)
+        ConanOutput().success("Install finished successfully")
 
     # Update lockfile if necessary
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
     return {"graph": deps_graph,
-            "conan_api": conan_api}
+            "conan_api": conan_api,
+            "conan_error": install_error}
