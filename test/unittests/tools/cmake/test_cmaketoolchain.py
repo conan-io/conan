@@ -351,6 +351,34 @@ def test_older_msvc_toolset():
     assert 'CMAKE_CXX_STANDARD 98' in content
 
 
+def test_vs_clangcl():
+    c = ConanFile(None)
+    c.settings = Settings({"os": ["Windows"],
+                           "compiler": {"clang": {"version": ["20"], "runtime": ["v145"],
+                                                  "cppstd": ["14"]}},
+                           "build_type": ["Release"],
+                           "arch": ["x86_64"]})
+    c.settings.build_type = "Release"
+    c.settings.arch = "x86_64"
+    c.settings.compiler = "clang"
+    c.settings.compiler.runtime = "v145"
+    c.settings.compiler.version = "20"
+    c.settings.compiler.cppstd = "14"
+    c.settings.os = "Windows"
+    c.settings_build = c.settings
+    c.conf = Conf()
+    c.conf.define("tools.cmake.cmaketoolchain:generator", "Visual Studio 18")
+    c.folders.set_base_generators(".")
+    c._conan_node = Mock()
+    c._conan_node.dependencies = []
+    c._conan_node.transitive_deps = {}
+    c._conan_node.replaced_requires = {}
+    toolchain = CMakeToolchain(c)
+    content = toolchain.content
+    assert 'CMAKE_GENERATOR_TOOLSET "ClangCL"' in content
+    assert 'CMAKE_CXX_STANDARD 14' in content
+
+
 def test_older_msvc_toolset_update():
     # https://github.com/conan-io/conan/issues/15787
     c = ConanFile(None)
