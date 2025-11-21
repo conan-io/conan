@@ -334,6 +334,21 @@ class TestMSVCToolset:
         # As by the CMake docs, this has no effect for VS < 2015
         assert 'CMAKE_CXX_STANDARD 14' in content
 
+    def test_vs_clangcl(self, conanfile_msvc):
+        c = conanfile_msvc
+        c.settings.build_type = "Release"
+        c.settings.arch = "x86_64"
+        c.settings.compiler = "clang"
+        c.settings.compiler.runtime_version = "v145"
+        c.settings.compiler.version = "20"
+        c.settings.compiler.cppstd = "14"
+        c.settings.os = "Windows"
+        c.conf.define("tools.cmake.cmaketoolchain:generator", "Visual Studio 18")
+        toolchain = CMakeToolchain(c)
+        content = toolchain.content
+        assert 'CMAKE_GENERATOR_TOOLSET "ClangCL"' in content
+        assert 'CMAKE_CXX_STANDARD 14' in content
+
     def test_older_msvc_toolset_update(self, conanfile_msvc):
         # https://github.com/conan-io/conan/issues/15787
         c = conanfile_msvc
