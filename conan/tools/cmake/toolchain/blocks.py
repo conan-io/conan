@@ -13,7 +13,7 @@ from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.utils import is_multi_configuration, parse_extra_variable
+from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version, msvc_platform_from_arch
 from conan.internal.api.install.generators import relativize_path
@@ -1005,11 +1005,11 @@ class GenericSystemBlock(Block):
                     toolset += ",version=14.{}{}".format(compiler_version[-1], compiler_update)
         elif compiler == "clang":
             if generator and "Visual" in generator:
-                if "Visual Studio 16" in generator or "Visual Studio 17" in generator:
+                if any(f"Visual Studio {v}" in generator for v in ("16", "17", "18")):
                     toolset = "ClangCL"
                 else:
                     raise ConanException("CMakeToolchain with compiler=clang and a CMake "
-                                         "'Visual Studio' generator requires VS16 or VS17")
+                                         "'Visual Studio' generator requires VS16, VS17 or VS18")
         toolset_arch = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
         if toolset_arch is not None:
             toolset_arch = "host={}".format(toolset_arch)
