@@ -337,7 +337,6 @@ class TestAddRemove:
         c = TestClient(light=True)
         c.save({"conanws.yml": ""})
         c.run("workspace remove kk", assert_error=True)
-        print(c.out)
         assert "ERROR: No editable package to remove from this path: kk" in c.out
 
 
@@ -564,6 +563,9 @@ class TestMeta:
                 settings = "arch", "build_type"
                 generators = "MSBuildDeps"
 
+                def generate(self):
+                    self.run("echo myhello world!!!!")
+
             class Ws(Workspace):
                 def root_conanfile(self):
                     return MyWs
@@ -573,6 +575,7 @@ class TestMeta:
                 "conanws.py": conanfilews})
         c.run("workspace add dep")
         c.run("workspace super-install -of=build")
+        assert "myhello world!!!!" in c.out
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conandeps.props" in files
 
@@ -781,6 +784,46 @@ class TestMeta:
         c.run("workspace super-install", assert_error=True)
         assert ("Workspace definition error. Package libb/0.1 in the Conan cache "
                 "has dependencies to packages in the workspace: [liba/0.1]") in c.out
+
+    def test_deployers_json(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            import os
+            from conan.tools.files import save
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "1.0"
+
+                def package(self):
+                    save(self, os.path.join(self.package_folder, "myfile.txt"), "content")
+            """)
+        pkg = textwrap.dedent("""
+            import os
+            from conan.tools.files import save
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                requires = "dep/1.0"
+
+                def package(self):
+                    save(self, os.path.join(self.package_folder, "myfile.txt"), "content")
+            """)
+        c.save({"dep/conanfile.py": dep,
+                "pkg/conanfile.py": pkg})
+        c.run("workspace init")
+        c.run("create dep")
+        c.run("workspace add pkg")
+        c.run("workspace super-install --format=json --deployer=full_deploy")
+        graph = json.loads(c.stdout)
+        # Only 1 node, pkg is not a node in the graph!
+        assert graph["graph"]["nodes"]["1"]["name"] == "dep"
+        deploy_folder = os.path.join(c.current_folder, "full_deploy", "host")
+        folders = os.listdir(deploy_folder)
+        assert "dep" in folders
+        assert "pkg" not in folders
+        assert os.path.isfile(os.path.join(deploy_folder, "dep", "1.0", "myfile.txt"))
 
 
 def test_workspace_with_local_recipes_index():
@@ -1191,7 +1234,7 @@ def test_workspace_defining_duplicate_references():
     """
     Testing duplicate references but different paths
     """
-    c = TestClient()
+    c = TestClient(light=True)
     conanws_with_labels = textwrap.dedent("""\
     packages:
       - path: liba
@@ -1209,7 +1252,7 @@ def test_workspace_defining_duplicate_references():
 
 
 def test_workspace_reference_error():
-    c = TestClient()
+    c = TestClient(light=True)
     conanws_with_labels = textwrap.dedent("""\
     packages:
       - path: libx
@@ -1219,3 +1262,22 @@ def test_workspace_reference_error():
     c.run("workspace install", assert_error=True)
     assert ("Workspace package reference could not be deduced by libx/conanfile.py or it is not"
             " correctly defined in the conanws.yml file") in c.out
+
+
+def test_workspace_python_error():
+    c = TestClient()
+    workspace = textwrap.dedent("""\
+       from conan import Workspace
+
+       class MyWorkspace(Workspace):
+           def packages(self):
+               os.listdir(self.folder)
+      """)
+    c.save({"conanws.yml": "",
+            "conanws.py": "bad"})
+    c.run("workspace info", assert_error=True)
+    assert "ERROR: Error loading conanws.py at" in c.out
+    c.save({"conanws.yml": "",
+            "conanws.py": workspace})
+    c.run("workspace info", assert_error=True)
+    assert "ERROR: Workspace conanws.py file: Error in packages() method, line 5" in c.out

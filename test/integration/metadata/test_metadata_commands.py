@@ -11,18 +11,18 @@ class TestMetadataCommands:
 
     @pytest.fixture
     def create_conan_pkg(self):
-        client = TestClient(default_server_user=True)
+        client = TestClient(default_server_user=True, light=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         client.run("create .")
         pid = client.created_package_id("pkg/0.1")
         return client, pid
 
     @staticmethod
-    def save_metadata_file(client, pkg_ref, filename="somefile.log"):
+    def save_metadata_file(client, pkg_ref, filename="somefile.log", content=None):
         client.run(f"cache path {pkg_ref} --folder=metadata")
         metadata_path = str(client.stdout).strip()
         myfile = os.path.join(metadata_path, "logs", filename)
-        save(myfile, f"{pkg_ref}!!!!")
+        save(myfile, f"{content or str(pkg_ref)}!!!!")
         return metadata_path, myfile
 
     def test_upload(self, create_conan_pkg):
@@ -47,10 +47,12 @@ class TestMetadataCommands:
 
         c.run("remove * -c")
         c.run("install --requires=pkg/0.1")  # wont install metadata by default
-        c.run("cache path pkg/0.1 --folder=metadata", assert_error=True)
-        assert "'metadata' folder does not exist for the reference pkg/0.1" in c.out
-        c.run(f"cache path pkg/0.1:{pid} --folder=metadata", assert_error=True)
-        assert f"'metadata' folder does not exist for the reference pkg/0.1:{pid}" in c.out
+        c.run("cache path pkg/0.1 --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        assert os.listdir(metadata_path) == []
+        c.run(f"cache path pkg/0.1:{pid} --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        assert os.listdir(metadata_path) == []
 
         # Forcing the download of the metadata of cache-existing things with the "download" command
         c.run("download pkg/0.1 -r=default --metadata=*")
@@ -64,7 +66,7 @@ class TestMetadataCommands:
             assert os.path.isfile(os.path.join(pkg_metadata_path, f))
 
     def test_update_contents(self):
-        c = TestClient(default_server_user=True)
+        c = TestClient(default_server_user=True, light=True)
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("export .")
 
@@ -89,6 +91,72 @@ class TestMetadataCommands:
 
         content = load(os.path.join(metadata_path, "logs", "mylogs.txt"))
         assert "mylogs2!!!!" in content
+
+    def test_append_contents(self):
+        # I can add extra files to metadata without necessarily downloading it first
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        pkgid = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        # Add some metadata
+        self.save_metadata_file(c, "pkg/0.1", "mylogs.txt", content="mylogs")
+        self.save_metadata_file(c, f"pkg/0.1:{pkgid}", "mybin.txt", content="mybin")
+
+        # Now upload everything
+        c.run("upload * -c -r=default")
+        assert "pkg/0.1: Recipe metadata: 1 files" in c.out
+
+        c2 = TestClient(servers=c.servers, light=True, inputs=["admin", "password"])
+        c2.run("install --requires=pkg/0.1")
+        self.save_metadata_file(c2, "pkg/0.1", "mylogs2.txt", content="mylogs2")
+        self.save_metadata_file(c2, f"pkg/0.1:{pkgid}", "mybin2.txt", content="mybin2")
+        c2.run("upload * -c -r=default --metadata=*")
+        assert "pkg/0.1: Recipe metadata: 1 files" in c2.out
+
+        c.run("remove * -c")
+        c.run("download pkg/0.1 -r=default --metadata=*")
+
+        c.run("cache path pkg/0.1 --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        assert "mylogs!!!!" in load(os.path.join(metadata_path, "logs", "mylogs.txt"))
+        assert "mylogs2!!!!" in load(os.path.join(metadata_path, "logs", "mylogs2.txt"))
+
+        c.run(f"cache path pkg/0.1:{pkgid} --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        assert "mybin!!!!" in load(os.path.join(metadata_path, "logs", "mybin.txt"))
+        assert "mybin2!!!!" in load(os.path.join(metadata_path, "logs", "mybin2.txt"))
+
+    def test_overwrite_server_contents(self):
+        # I can overwrite server contents
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        pkgid = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+        # Add some metadata
+        self.save_metadata_file(c, "pkg/0.1", "mylogs.txt", content="mylogs")
+        self.save_metadata_file(c, f"pkg/0.1:{pkgid}", "mybin.txt", content="mybin")
+
+        # Now upload everything
+        c.run("upload * -c -r=default")
+        assert "pkg/0.1: Recipe metadata: 1 files" in c.out
+
+        c2 = TestClient(servers=c.servers, light=True, inputs=["admin", "password"])
+        c2.run("install --requires=pkg/0.1")
+        self.save_metadata_file(c2, "pkg/0.1", "mylogs.txt", content="mylogs2")
+        self.save_metadata_file(c2, f"pkg/0.1:{pkgid}", "mybin.txt", content="mybin2")
+        c2.run("upload * -c -r=default --metadata=*")
+        assert "pkg/0.1: Recipe metadata: 1 files" in c2.out
+
+        c.run("remove * -c")
+        c.run("download pkg/0.1 -r=default --metadata=*")
+
+        c.run("cache path pkg/0.1 --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        assert "mylogs2!!!!" in load(os.path.join(metadata_path, "logs", "mylogs.txt"))
+
+        c.run(f"cache path pkg/0.1:{pkgid} --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        assert "mybin2!!!!" in load(os.path.join(metadata_path, "logs", "mybin.txt"))
 
     def test_folder_exist(self, create_conan_pkg):
         """ so we can cp -R to the metadata folder, having to create the folder in the cache
@@ -149,7 +217,7 @@ class TestMetadataCommands:
         assert "pkg/0.1: Recipe metadata: 1 files" in c.out
         assert "pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709: Package metadata: 1 files" in c.out
 
-        c2 = TestClient(servers=c.servers)
+        c2 = TestClient(servers=c.servers, light=True)
         tmp_folder = temp_folder()
         # MOST important part: activate cache
         c2.save_home({"global.conf": f"core.download:download_cache={tmp_folder}\n"})
@@ -197,7 +265,7 @@ class TestMetadataCommands:
         """
         Upload command should fail when passing --metadata="" and a pattern
         """
-        client = TestClient(default_server_user=True)
+        client = TestClient(default_server_user=True, light=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         client.run("export .")
 

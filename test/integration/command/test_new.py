@@ -51,10 +51,18 @@ class TestNewCommand:
         c = TestClient(light=True)
         for t in ("cmake_lib", "cmake_exe", "meson_lib", "meson_exe", "msbuild_lib", "msbuild_exe",
                   "bazel_lib", "bazel_exe", "autotools_lib", "autotools_exe"):
-            c.run(f"new {t} -f")
+            c.save({}, clean_first=True)
+            c.run(f"new {t}")
             conanfile = c.load("conanfile.py")
             assert 'name = "mypkg"' in conanfile
             assert 'version = "0.1"' in conanfile
+            if t == "cmake_lib":
+                cmake = c.load("CMakeLists.txt")
+                assert "src/mypkg.cpp" in cmake
+                cpp = c.load("src/mypkg.cpp")
+                assert "mypkg()" in cpp
+                hpp = c.load("include/mypkg.h")
+                assert "void mypkg();" in hpp
 
             c.run(f"new {t} -d name=mylib -f")
             conanfile = c.load("conanfile.py")

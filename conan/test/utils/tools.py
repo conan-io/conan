@@ -16,10 +16,10 @@ from contextlib import contextmanager
 from inspect import getframeinfo, stack
 from urllib.parse import urlsplit, urlunsplit
 
-import mock
+from unittest import mock
 import pytest
 import requests
-from mock import Mock
+from unittest.mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 

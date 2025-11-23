@@ -95,7 +95,6 @@ class WorkspaceAPI:
     def enable(self, value):
         self._enabled = value
 
-    @property
     def name(self):
         self._check_ws()
         return self._ws.name()
@@ -238,7 +237,7 @@ class WorkspaceAPI:
 
     def info(self):
         self._check_ws()
-        return {"name": self.name,
+        return {"name": self._ws.name(),
                 "folder": self._folder,
                 "packages": self._ws.packages()}
 
@@ -281,17 +280,20 @@ class WorkspaceAPI:
         root_class = self._ws.root_conanfile()
         if root_class is not None:
             conanfile = root_class(f"{WORKSPACE_PY} base project Conanfile")
+            # To inject things like cmd_wrapper to the consumer conanfile, so self.run() works
+            helpers = ConanApp(self._conan_api).loader._conanfile_helpers  # noqa
+            conanfile._conan_helpers = helpers
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
                                          is_build_require=False)
             # consumer_definer(conanfile, profile_host, profile_build)
             self._init_options(conanfile, profile_host.options)
-            root = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
-                        path=self._folder)  # path lets use the conanws.py folder
-            root.should_build = True  # It is a consumer, this is something we are building
             for field in ("requires", "build_requires", "test_requires", "requirements", "build",
                           "source", "package"):
                 if getattr(conanfile, field, None):
                     raise ConanException(f"Conanfile in conanws.py shouldn't have '{field}'")
+            root = Node(None, conanfile, context=CONTEXT_HOST, recipe=RECIPE_CONSUMER,
+                        path=self._folder)  # path lets use the conanws.py folder
+            root.should_build = True  # It is a consumer, this is something we are building
         else:
             ConanOutput().info(f"Workspace {WORKSPACE_PY} not found in the workspace folder, "
                                "using default behavior")
