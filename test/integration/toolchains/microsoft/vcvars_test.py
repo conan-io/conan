@@ -143,7 +143,9 @@ def test_vcvars_clang_visual2026():
     client.save({"conanfile.txt": "[generators]\nVCVars"})
     client.run('install . -s:b os=Windows -s compiler=clang -s compiler.version=20 '
                '-s compiler.cppstd=14 -s compiler.runtime=static -s arch=x86_64 '
-               '-s compiler.runtime_version=v145')
+               '-s compiler.runtime_version=v145 '
+               # Using a known existing path to avoid auto-detection via vswhere
+               '-c tools.microsoft.msbuild:installation_path=C:/')
 
     vcvars = client.load("conanvcvars.bat")
     assert '-vcvars_ver=14.5' in vcvars
