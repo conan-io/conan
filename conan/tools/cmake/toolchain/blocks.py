@@ -773,6 +773,12 @@ class ExtraFlagsBlock(Block):
         add_compile_definitions({% for define in defines %} "{{ define }}"{% endfor %})
         {% endif %}
         {% endif %}
+        {% if compilation_verbosity == "verbose" %}
+        set(CMAKE_VERBOSE_MAKEFILE ON)
+        {% endif %}
+        {% if build_verbosity %}
+        set(CMAKE_MESSAGE_LOG_LEVEL "{{ build_verbosity|upper }}")
+        {% endif %}
         # Conan conf flags end
     """)
 
@@ -829,6 +835,12 @@ class ExtraFlagsBlock(Block):
         if is_multi_configuration(self._toolchain.generator):
             config = self._conanfile.settings.get_safe("build_type")
             suffix = f"_{config.upper()}" if config else ""
+        compilation_verbosity = self._conanfile.conf.get("tools.compilation:verbosity",
+                                                         choices=("quiet", "verbose"))
+        build_verbosity = self._conanfile.conf.get("tools.build:verbosity",
+                                                   choices=("quiet", "verbose"))
+        if build_verbosity == "quiet":
+            build_verbosity = "error"
         return {
             "config": config,
             "suffix": suffix,
@@ -836,7 +848,9 @@ class ExtraFlagsBlock(Block):
             "cflags": cflags,
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags,
-            "defines": [define.replace('"', '\\"') for define in defines]
+            "defines": [define.replace('"', '\\"') for define in defines],
+            "compilation_verbosity": compilation_verbosity,
+            "build_verbosity": build_verbosity,
         }
 
 

@@ -1488,3 +1488,25 @@ def test_cmake_linker_scripts():
     c.run('build . -pr=profile', assert_error=True)
     # This error means the linker script was fonud and loaded, it failed because empty
     assert "PHDR segment not covered by LOAD segment" in c.out
+
+
+def test_cmake_toolchain_verbosity_propagation():
+    t = TestClient(light=True)
+    t.save({"conanfile.py": GenConanfile("mylib", "1.0")})
+    t.run("create .")
+    t.run("install --requires=mylib/1.0 -g CMakeToolchain")
+    toolchain = t.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_VERBOSE_MAKEFILE' not in toolchain
+    assert 'set(CMAKE_MESSAGE_LOG_LEVEL' not in toolchain
+
+    t.run("install --requires=mylib/1.0 -g CMakeToolchain -c tools.build:verbosity=verbose "
+          "-c tools.compilation:verbosity=verbose")
+    toolchain = t.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_VERBOSE_MAKEFILE ON)' in toolchain
+    assert 'set(CMAKE_MESSAGE_LOG_LEVEL "VERBOSE")' in toolchain
+
+    t.run("install --requires=mylib/1.0 -g CMakeToolchain -c tools.build:verbosity=quiet "
+          "-c tools.compilation:verbosity=quiet")
+    toolchain = t.load("conan_toolchain.cmake")
+    # assert 'set(CMAKE_VERBOSE_MAKEFILE OFF)' in toolchain
+    assert 'set(CMAKE_MESSAGE_LOG_LEVEL "ERROR")' in toolchain
