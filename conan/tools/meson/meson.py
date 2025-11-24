@@ -37,6 +37,9 @@ class Meson(object):
                                                  default=[], check_type=list)
         cmd = "meson setup "
         if is_cross_build:
+            #Do not let pkgconf prefix sysroot path in front of paths to Conan packages (that are 
+            #outside the toolchain sysroot).
+            os.environ['PKG_CONFIG_FDO_SYSROOT_RULES'] = "1"
             machine_files.insert(0, cross)
             cmd += " ".join([f'--cross-file "{file}"' for file in machine_files])
         if os.path.exists(native):
