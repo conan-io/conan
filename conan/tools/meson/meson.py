@@ -88,7 +88,7 @@ class Meson(object):
         if self._conanfile.conf.get("tools.build:install_strip", check_type=bool):
             cmd += " --strip"
         if cli_args:
-            cmd += " " + " ".join(filter(None, cli_args))
+            cmd += " " + " ".join(cli_args)
         self._conanfile.run(cmd)
 
     def test(self):
