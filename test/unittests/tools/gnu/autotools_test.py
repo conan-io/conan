@@ -1,6 +1,6 @@
 import pytest
 import os
-from mock import patch
+from unittest.mock import patch
 
 from conan.tools.build import save_toolchain_args
 from conan.tools.gnu import Autotools

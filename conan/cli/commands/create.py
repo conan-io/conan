@@ -68,6 +68,7 @@ def create(conan_api, parser, *args):
     if args.build is not None and args.build_test is None:
         args.build_test = args.build
 
+    install_error = None
     if is_python_require:
         deps_graph = conan_api.graph.load_graph_requires([], [],
                                                          profile_host=profile_host,
@@ -98,7 +99,9 @@ def create(conan_api, parser, *args):
                                          update=args.update, lockfile=lockfile)
         print_graph_packages(deps_graph)
 
-        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
+        install_error = conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes,
+                                                           return_install_error=True)
+
         # We update the lockfile, so it will be updated for later ``test_package``
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
@@ -111,7 +114,7 @@ def create(conan_api, parser, *args):
             and deps_graph.root.edges[0].dst.binary != "Build":
         test_conanfile_path = None  # disable it
 
-    if test_conanfile_path:
+    if test_conanfile_path and not install_error:
         # TODO: We need arguments for:
         #  - decide update policy "--test_package_update"
         # If it is a string, it will be injected always, if it is a RecipeReference, then it will
@@ -126,7 +129,8 @@ def create(conan_api, parser, *args):
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
     return {"graph": deps_graph,
-            "conan_api": conan_api}
+            "conan_api": conan_api,
+            "conan_error": install_error}
 
 
 def _check_tested_reference_matches(deps_graph, tested_ref, out):

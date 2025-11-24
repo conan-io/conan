@@ -4,6 +4,7 @@ from collections import OrderedDict
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.env import environment_update
 from conan.test.utils.tools import TestClient, TestServer
 
 
@@ -214,6 +215,115 @@ class TestPkgListFindRemote:
         assert "app/1.0: Retrieving recipe metadata from remote 'remote2'" in c.out
         assert "app/1.0: Retrieving package metadata" in c.out
 
+    def test_input_only_name_version(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("create zlib")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list * --format=json", redirect_stdout="mylist.json")
+        pkglist = json.loads(c.load("mylist.json"))
+        expected = {"zlib/1.0": {}}
+        assert pkglist["Local Cache"] == expected
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default")
+        pkglist = json.loads(c.stdout)
+        assert pkglist["default"] == expected
+
+    def test_input_recipe_revisions(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("create zlib")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list *#* --format=json", redirect_stdout="mylist.json")
+
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            revs = pkglist[origin]["zlib/1.0"]["revisions"]
+            assert list(revs) == ["c570d63921c5f2070567da4bf64ff261"]
+            assert "packages" not in revs["c570d63921c5f2070567da4bf64ff261"]
+
+        _check("Local Cache")
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default",
+              redirect_stdout="mylist.json")
+        _check("default")
+
+    def test_input_only_package_ids(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("os")})
+        c.run("create zlib -s os=Linux")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list *:* --format=json", redirect_stdout="mylist.json")
+
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            revs = pkglist[origin]["zlib/1.0"]["revisions"]
+            assert list(revs) == ["1cb7410d0365f87510a6767c7bef804e"]
+            info = {"info": {'settings': {'os': 'Linux'}}}
+            expected = {"9a4eb3c8701508aa9458b1a73d0633783ecc2270": info}
+            assert revs["1cb7410d0365f87510a6767c7bef804e"]["packages"] == expected
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default",
+              redirect_stdout="mylist.json")
+        _check("default")
+
+    def test_graph_pkg_list_of_recipes_and_binaries(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("os")})
+        c.run("create zlib -s os=Linux")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list *#*:*#* --format=json", redirect_stdout="mylist.json")
+
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            revs = pkglist[origin]["zlib/1.0"]["revisions"]
+            assert list(revs) == ["1cb7410d0365f87510a6767c7bef804e"]
+            expected = {'settings': {'os': 'Linux'}}
+            pkgs = revs["1cb7410d0365f87510a6767c7bef804e"]["packages"]
+            assert list(pkgs) == ["9a4eb3c8701508aa9458b1a73d0633783ecc2270"]
+            pkg = pkgs["9a4eb3c8701508aa9458b1a73d0633783ecc2270"]
+            assert pkg["info"] == expected
+            assert list(pkg["revisions"]) == ["1d3c57385f4133c1fbd6d13bd538496e"]
+
+        _check("Local Cache")
+        c.run("pkglist find-remote mylist.json --format=json --remote default",
+              redirect_stdout="mylist.json")
+        _check("default")
+
+    def test_graph_pkg_list_counter_example(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"conanfile.py": GenConanfile("zlib", "1.0").with_package_file("file.txt",
+                                                                              env_var="MY_VAR")})
+
+        with environment_update({"MY_VAR": "1"}):
+            c.run("create .")
+        with environment_update({"MY_VAR": "2"}):
+            c.run("create .")
+        c.run("upload zlib*:*#* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list zlib/1.0#latest:*#latest --format=json", redirect_stdout="mylist.json")
+
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            prevs = pkglist[origin]["zlib/1.0"]["revisions"]
+            input_pkgs = prevs["212b9babae6a4b8a8362703cec4257ad"]["packages"]
+            prevs = input_pkgs["da39a3ee5e6b4b0d3255bfef95601890afd80709"]["revisions"]
+            assert len(prevs) == 1
+
+        _check("Local Cache")
+        c.run("pkglist find-remote mylist.json --format=json --remote default",
+              redirect_stdout="mylist.json")
+        _check("default")
+
 
 class TestPkgListMerge:
     """ deep merge lists
@@ -395,7 +505,7 @@ class TestListRemove:
 
     @pytest.mark.parametrize("remote", [False, True])
     def test_remove_packages_no_revisions(self, client, remote):
-        # It is necessary to do *#* for actually removing something
+        # It is necessary to do *#*:*#* for actually removing binaries
         remote = "-r=default" if remote else ""
         client.run(f"list *#*:* {remote} --format=json", redirect_stdout="pkglist.json")
         client.run(f"remove --list=pkglist.json {remote} -c --format=json")
@@ -408,7 +518,7 @@ class TestListRemove:
 
     @pytest.mark.parametrize("remote", [False, True])
     def test_remove_packages(self, client, remote):
-        # It is necessary to do *#* for actually removing something
+        # It is necessary to do *#*:*#* for actually removing binaries
         remote = "-r=default" if remote else ""
         client.run(f"list *#*:*#* {remote} --format=json", redirect_stdout="pkglist.json")
         client.run(f"remove --list=pkglist.json {remote} -c --dry-run")

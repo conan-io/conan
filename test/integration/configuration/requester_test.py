@@ -1,7 +1,7 @@
 import os
 
-import mock
-from mock import Mock, MagicMock
+from unittest import mock
+from unittest.mock import Mock, MagicMock
 
 from conan import __version__
 from conan.internal.rest.conan_requester import ConanRequester

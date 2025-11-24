@@ -36,7 +36,6 @@ class TestCompilerFlags:
         conanfile.settings = settings
         assert architecture_flag(conanfile) == flag
 
-
     @pytest.mark.parametrize("compiler,threads,flag", [("clang", None, []),
                            ("emcc", None, []),
                            ("emcc", "posix", ["-pthread"]),

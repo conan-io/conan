@@ -4,7 +4,7 @@ import unittest
 from collections import OrderedDict
 
 import pytest
-from mock import patch
+from unittest.mock import patch
 
 from conan.test.utils.env import environment_update
 from conan.internal.errors import RecipeNotFoundException
