@@ -45,7 +45,7 @@ def install(conan_api, parser, *args):
     validate_common_graph_args(args)
     cwd = os.getcwd()
 
-    deps_graph, lockfile, install_error = run_install_command(conan_api, args, cwd)
+    deps_graph, lockfile, install_error = _run_install_command(conan_api, args, cwd)
 
     # Update lockfile if necessary
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
@@ -56,7 +56,14 @@ def install(conan_api, parser, *args):
             "conan_error": install_error}
 
 
-def run_install_command(conan_api, args, cwd):
+def _run_install_command(conan_api, args, cwd, return_install_error=True):
+    """
+    This method should not be imported as-is, it is internal to the installation process and
+    its signature might change without warning.
+
+    Users are however free to copy its code and adapt it to their needs, as an example of
+    using the Conan API to perform an installation
+    """
     # basic paths
 
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
@@ -87,7 +94,7 @@ def run_install_command(conan_api, args, cwd):
 
     # Installation of binaries and consumer generators
     install_error = conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes,
-                                                       return_install_error=True)
+                                                       return_install_error=return_install_error)
     if not install_error:
         ConanOutput().title("Finalizing install (deploy, generators)")
         conan_api.install.install_consumer(deps_graph, args.generator, source_folder, output_folder,

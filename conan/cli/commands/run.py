@@ -1,11 +1,10 @@
 import os
 import tempfile
 
-from conan.api.output import ConanOutput, LEVEL_WARNING, LEVEL_STATUS, Color, LEVEL_ERROR, \
-    LEVEL_QUIET
+from conan.api.output import ConanOutput, LEVEL_STATUS, Color, LEVEL_ERROR, LEVEL_QUIET
 from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command
-from conan.cli.commands.install import run_install_command
+from conan.cli.commands.install import _run_install_command
 from conan.errors import ConanException
 
 
@@ -36,21 +35,21 @@ def run(conan_api, parser, *args):
         setattr(args, "output_folder", tmpdir)
         setattr(args, "generator", [])
         try:
-            deps_graph, lockfile, install_error = run_install_command(conan_api, args, cwd)
+            deps_graph, lockfile, _ = _run_install_command(conan_api, args, cwd,
+                                                           return_install_error=False)
         except ConanException as e:
             ConanOutput.set_output_level(previous_log_level)
             ConanOutput().error("Error installing the dependencies. To debug this, you can either:\n"
                                 " - Re-run the command with increased verbosity (-v, -vv)\n"
                                 " - Run 'conan install' first to ensure dependencies are installed, "
-                                "or to see errors during installation")
+                                "or to see errors during installation\n")
             raise e
-        if not install_error:
-            context_env_map = {
-                "build": "conanbuild",
-                "host": "conanrun",
-            }
-            envfiles = list(context_env_map.values()) if args.context is None \
-                else [context_env_map.get(args.context)]
-            ConanOutput.set_output_level(LEVEL_ERROR)
-            deps_graph.root.conanfile.run(args.command, cwd=cwd, env=envfiles)
-        return {"conan_error": install_error}
+
+        context_env_map = {
+            "build": "conanbuild",
+            "host": "conanrun",
+        }
+        envfiles = list(context_env_map.values()) if args.context is None \
+            else [context_env_map.get(args.context)]
+        ConanOutput.set_output_level(LEVEL_ERROR)
+        deps_graph.root.conanfile.run(args.command, cwd=cwd, env=envfiles)
