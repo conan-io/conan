@@ -156,11 +156,17 @@ diff_html = r"""
                 border-bottom: 1px solid var(--search-area-borderColor);
             }
 
+            .search-header {
+                display: flex;
+                justify-content: space-between;
+            }
+
             .search-field {
                 border: 1px solid var(--search-field-borderColor);
                 border-radius: 5px;
                 padding: 5px;
                 margin: 5px;
+                width: 80%;
             }
 
             .file-tree-controls {
@@ -173,11 +179,12 @@ diff_html = r"""
 
             .file-tree-controls .folder-collapse button {
                 display: inline-block;
-                line-height: 0.8;
+                line-height: 0.7;
             }
 
             .file-tree-controls button,
-            .sidebar-reveal button {
+            .sidebar-reveal button,
+            .search-header button {
                 cursor: pointer;
                 border: 0px solid var(--search-field-borderColor);
                 border-radius: 5px;
@@ -187,7 +194,8 @@ diff_html = r"""
             }
 
             .file-tree-controls button:hover,
-            .sidebar-reveal button:hover {
+            .sidebar-reveal button:hover,
+            .search-header button:hover {
                 background-color: var(--sidebar-li-a-hover-bgColor);
             }
 
@@ -809,34 +817,37 @@ diff_html = r"""
             <div class='sidebar'>
                 <div id="sidebar-contents">
                     <div class="search-area">
-                        <input type="search" class="search-field" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
-                        <input type="search" class="search-field" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
-                        <span id="searching_icon" style="display:none">...</span>
+                        <div class="search-header">
+                            <div>
+                                <input type="search" class="search-field" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
+                                <input type="search" class="search-field" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
+                                <span id="searching_icon" style="display:none">...</span>
+                            </div>
+
+                            <button onclick="toggleSidebar(false)" title="Hide">
+                                &#x2190;
+                            </button>
+                        </div>
                         <p>Showing <b id="file-count">{{ content|length }}</b> out of <b>{{ content|length }}</b> files</p>
                     </div>
                     <div class="file-tree">
                         <div class="file-tree-controls">
                             <div class="folder-collapse">
                                 <button onclick="toggleFolders(true)" title="Expand current level">
-                                    &#x25BC;
+                                    &#x02C4;
                                     <br/>
-                                    &#x25B2;
+                                    &#x02C5;
                                 </button>
                                 <button onclick="toggleFolders(false)" title="Collapse all">
-                                    &#x25B2;
+                                    &#x02C5;
                                     <br/>
-                                    &#x25BC;
+                                    &#x02C4
                                 </button>
                             </div>
-                            <div>
-                                <button onclick="toggleSidebar(false)" title="Hide">
-                                    &#x2190;
-                                </button>
-                                <button onclick="toggleMoreFileTree()" title="Show more options"
-                                    class="file-tree-reveal-more">
-                                        &#x22EE;
-                                </button>
-                            </div>
+                            <button onclick="toggleMoreFileTree()" title="Show more options"
+                                class="file-tree-reveal-more">
+                                    &#x22EE;
+                            </button>
                         </div>
                         <div class="file-tree-more">
                             <h4>Show...</h4>
