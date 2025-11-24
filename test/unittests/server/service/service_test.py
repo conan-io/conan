@@ -96,10 +96,10 @@ class TestConanService:
                                 }
 
         info = self.search_service.search_packages(ref2, list_only=True)
-        self.assertEqual(info, {'12345587754': {}})
+        assert info == {'12345587754': {}}
 
         info = self.search_service.search_packages(ref3, list_only=True)
-        self.assertEqual(info, {'77777777777': {}})
+        assert info == {'77777777777': {}}
 
     def test_remove(self):
         ref2 = RecipeReference("OpenCV", "3.0", "lasote", "stable", DEFAULT_REVISION)

@@ -159,9 +159,6 @@ class GraphBinariesAnalyzer:
         original_package_id = node.package_id
         conanfile.output.info(f"Main binary package '{original_package_id}' missing")
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
-        # As a conf for testing for now, this will be removed before merge
-        # use_compatibility_optimization = len(compatibles) >= node.conanfile.conf.get("user.graph:compatibility_optimization_threshold", 5)
-        use_compatibility_optimization = True
         if not should_update_reference(conanfile.ref, update):
             # First look all in the cache
             for package_id, compatible_package in compatibles.items():
@@ -181,16 +178,12 @@ class GraphBinariesAnalyzer:
                     self._binary_in_cache(node, cache_latest_prev)
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
-            # If not found in the cache, then look first one in servers
+            # If not found in the cache, then look for the first one in servers
             conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
-            if use_compatibility_optimization:
-                compatible_packages = self._compatible_get_packages_from_remotes(node.ref, remotes)
-                candidates = {pkg_id: pkg for pkg_id, pkg in compatibles.items()
-                              if pkg_id in compatible_packages}
-                node.conanfile.output.info(f"Found {len(candidates)} compatible configurations in remotes")
-            else:
-                candidates = compatibles
-                compatible_packages = {}
+            compatible_packages = self._compatible_get_packages_from_remotes(node.ref, remotes)
+            candidates = {pkg_id: pkg for pkg_id, pkg in compatibles.items()
+                          if pkg_id in compatible_packages}
+            node.conanfile.output.info(f"Found {len(candidates)} compatible configurations in remotes")
             for package_id, compatible_package in candidates.items():
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
@@ -203,10 +196,7 @@ class GraphBinariesAnalyzer:
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
         else:  # Need to check in servers too for the latest thing
-            if use_compatibility_optimization:
-                compatible_packages = self._compatible_get_packages_from_remotes(node.ref, remotes)
-            else:
-                compatible_packages = {}
+            compatible_packages = self._compatible_get_packages_from_remotes(node.ref, remotes)
             for package_id, compatible_package in compatibles.items():
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
@@ -220,9 +210,7 @@ class GraphBinariesAnalyzer:
                         self._compatible_found(conanfile, package_id, compatible_package)
                     return
                 cache_latest_prev = self._compatible_cache_latest_prev(node)  # Not check remotes
-                available_remotes = compatible_packages.get(package_id,
-                                                            [] if use_compatibility_optimization
-                                                            else remotes)
+                available_remotes = compatible_packages.get(package_id, [])
                 if cache_latest_prev:
                     self._evaluate_cache_update(cache_latest_prev, node, available_remotes, update)
                 else:
