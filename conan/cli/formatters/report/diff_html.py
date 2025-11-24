@@ -74,6 +74,7 @@ diff_html = r"""
                 --folder-summary-hover-bgColor: #e0e0e033;
                 --folder-ul-hover-borderColor: #00000066;
                 --sidebar-li-a-hover-bgColor: #e0e0e0;
+                --sidebar-button-hover-bgColor: var(--sidebar-li-a-hover-bgColor);
                 --sidebar-link-color: black;
                 --sidebar-link-hover-color: var(--sidebar-link-color);
                 --sidebar-link-visited-color: var(--sidebar-link-color);
@@ -143,6 +144,12 @@ diff_html = r"""
                 padding-top: 5px;
             }
 
+            .sidebar-reveal {
+                display: none;
+                position: sticky;
+                top: 10px;
+            }
+
             .search-area {
                 border-bottom: 1px solid var(--search-area-borderColor);
             }
@@ -157,14 +164,24 @@ diff_html = r"""
             .file-tree-controls {
                 border-bottom: 1px solid var(--search-area-borderColor);
                 padding: 5px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
             }
 
-            .file-tree-controls button {
+            .file-tree-controls button,
+            .sidebar-reveal button {
                 cursor: pointer;
-                border: 1px solid var(--search-field-borderColor);
+                border: 0px solid var(--search-field-borderColor);
                 border-radius: 5px;
                 background: none;
                 padding: 5px;
+                min-width: 3ch;
+            }
+
+            .file-tree-controls button:hover,
+            .sidebar-reveal button:hover {
+                background-color: var(--sidebar-li-a-hover-bgColor);
             }
 
             .file-list {
@@ -726,6 +743,21 @@ diff_html = r"""
                     document.querySelectorAll('details.folder:open').forEach(d => d.open = false);
                 }
             }
+
+            function toggleSidebar(show) {
+                const sidebar = document.querySelector('.sidebar');
+                const sidebarReveal = document.querySelector('.sidebar-reveal');
+                const content = document.querySelector('.content');
+                if (show) {
+                    sidebar.style.display = 'block';
+                    sidebarReveal.style.display = 'none';
+                    content.style.padding = '20px';
+                } else {
+                    sidebar.style.display = 'none';
+                    sidebarReveal.style.display = 'block';
+                    content.style.padding = '20px 20px 20px 5px';
+                }
+            }
         </script>
     </head>
     <body>
@@ -740,8 +772,17 @@ diff_html = r"""
                     </div>
                     <div class="file-tree">
                         <div class="file-tree-controls">
-                            <button onclick="toggleFolders(true)">Expand level</button>
-                            <button onclick="toggleFolders(false)">Collapse all</button>
+                            <div>
+                                <button onclick="toggleFolders(true)" title="Expand current level">
+                                    &#x25BC;
+                                </button>
+                                <button onclick="toggleFolders(false)" title="Collapse all">
+                                    &#x25B2;
+                                </button>
+                            </div>
+                            <button onclick="toggleSidebar(false)" title="Hide">
+                                &#x2190;
+                            </button>
                         </div>
                         <ul class="file-list">
                             {{ render_sidebar_folder("", per_folder) }}
@@ -749,6 +790,11 @@ diff_html = r"""
                     </div>
                 </div>
                 <span id="empty_search" style="display:none">No results found</span>
+            </div>
+            <div class='sidebar-reveal'>
+                <button onclick="toggleSidebar(true)" title="Show">
+                    &#x2192;
+                </button>
             </div>
             <div class='content'>
                 <div class="diff-header">
