@@ -48,6 +48,7 @@ def find_file_walk_up(start, filename, end=None):
         path = path.parent
     return None
 
+
 def get_conan_user_home():
 
     def _user_home_from_conanrc_file():

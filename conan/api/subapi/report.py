@@ -41,7 +41,6 @@ class ReportAPI:
                               remotes)
             return export_ref, cache_path
 
-
         old_export_ref, old_cache_path = _source(old_path, old_reference)
         new_export_ref, new_cache_path = _source(new_path, new_reference)
 
@@ -79,6 +78,7 @@ class ReportAPI:
             "dst_prefix": dst_prefix,
         }
 
+
 def _configure_source(conan_api, hook_manager, conanfile_path, ref, remotes):
     app = ConanApp(conan_api)
     conanfile = app.loader.load_consumer(conanfile_path, name=ref.name, version=str(ref.version),
@@ -100,6 +100,7 @@ def _configure_source(conan_api, hook_manager, conanfile_path, ref, remotes):
     conanfile.folders.set_base_export_sources(export_source_folder)
     conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
     config_source(export_source_folder, conanfile, hook_manager)
+
 
 def _get_ref_from_cache_or_remote(conan_api, reference, enabled_remotes):
     ref = RecipeReference.loads(reference)

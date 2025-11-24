@@ -9,6 +9,7 @@ from conan.cli import make_abs_path
 from conan.cli.args import add_reference_args, add_common_install_arguments, add_lockfile_args
 from conan.cli.command import conan_command, conan_subcommand
 from conan.cli.commands.list import print_serial
+from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
@@ -187,7 +188,7 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                         conan_api.command.run(cmd)
 
 
-@conan_subcommand()
+@conan_subcommand(formatters={"json": format_graph_json})
 def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
     """
     Install the workspace as a monolith, installing only external dependencies to the workspace,
@@ -197,6 +198,14 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
     subparser.add_argument("-g", "--generator", action="append", help='Generators to use')
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
+    subparser.add_argument("-d", "--deployer", action="append",
+                           help="Deploy using the provided deployer to the output folder. "
+                             "Built-in deployers: 'full_deploy', 'direct_deploy', 'runtime_deploy'")
+    subparser.add_argument("--deployer-folder",
+                           help="Deployer output folder, base build folder by default if not set")
+    subparser.add_argument("--deployer-package", action="append",
+                           help="Execute the deploy() method of the packages matching "
+                             "the provided patterns")    
     subparser.add_argument("--envs-generation", default=None, choices=["false"],
                            help="Generation strategy for virtual environment files for the root")
     add_common_install_arguments(subparser)
@@ -229,9 +238,16 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
                                      lockfile=lockfile)
     print_graph_packages(ws_graph)
     conan_api.install.install_binaries(deps_graph=ws_graph, remotes=remotes)
+    ConanOutput().title("Finalizing install (deploy, generators)")
     output_folder = make_abs_path(args.output_folder) if args.output_folder else None
     conan_api.install.install_consumer(ws_graph, args.generator, ws_folder, output_folder,
+                                       deploy=args.deployer, deploy_package=args.deployer_package,
+                                       deploy_folder=args.deployer_folder,
                                        envs_generation=args.envs_generation)
+    ConanOutput().success("Install finished successfully")
+
+    return {"graph": ws_graph,
+            "conan_api": conan_api}
 
 
 @conan_subcommand()

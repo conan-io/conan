@@ -93,6 +93,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
+    "tools.cmake:ctest_args": "To inject list of arguments to CMake.ctest() runner",
     "tools.cmake:install_strip": "(Deprecated) Add --strip to cmake.install(). Use tools.build:install_strip instead",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
@@ -130,6 +131,7 @@ BUILT_IN_CONFS = {
     "tools.system.package_manager:mode": "Mode for package_manager tools: 'check', 'report', 'report-installed' or 'install'",
     "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
+    "tools.system.pipenv:python_interpreter": "Path to the Python interpreter to be used to create the virtualenv",
     "tools.apple:sdk_path": "Path to the SDK to be used",
     "tools.apple:enable_bitcode": "(boolean) Enable/Disable Bitcode Apple Clang flags",
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
@@ -502,13 +504,6 @@ class Conf:
             else:
                 existing.compose_conf_value(v)
         return self
-
-    def filter_user_modules(self):
-        result = Conf()
-        for k, v in self._values.items():
-            if _is_profile_module(k):
-                result._values[k] = v
-        return result
 
     def copy_conaninfo_conf(self):
         """

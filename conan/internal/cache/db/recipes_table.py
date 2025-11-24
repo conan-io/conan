@@ -10,7 +10,7 @@ class RecipesDBTable(BaseDbTable):
     table_name = 'recipes'
     columns_description = [('reference', str),
                            ('rrev', str),
-                           ('path', str, False, None, True),
+                           ('path', str, False, True),
                            ('timestamp', float),
                            ('lru', int)]
     unique_together = ('reference', 'rrev')
