@@ -12,10 +12,12 @@ diff_html = r"""
         </li>
     {%- endfor %}
     {%- for name, file_info in folder_info["files"].items() %}
-        <li class="file file-{{ "renamed" if file_info["renamed_to"] else (
-                                "deleted" if file_info["is_deleted"] else (
-                                "new" if file_info["is_new"] else "old")) }}"
-            data-path="{{ file_info["relative_path"] }}">
+        {% set file_type = "renamed" if file_info["renamed_to"] else (
+                           "deleted" if file_info["is_deleted"] else (
+                           "new" if file_info["is_new"] else "old")) %}
+        <li class="file file-{{ file_type }}"
+            data-path="{{ file_info["relative_path"] }}"
+            data-type="{{ file_type }}">
             <a href="#diff_{{- safe_filename(file_info["filename"]) -}}"
                 onclick="setDataIsLinked(event)" draggable="false"
                 class="side-link">
@@ -169,6 +171,11 @@ diff_html = r"""
                 align-items: center;
             }
 
+            .file-tree-controls .folder-collapse button {
+                display: inline-block;
+                line-height: 0.8;
+            }
+
             .file-tree-controls button,
             .sidebar-reveal button {
                 cursor: pointer;
@@ -182,6 +189,16 @@ diff_html = r"""
             .file-tree-controls button:hover,
             .sidebar-reveal button:hover {
                 background-color: var(--sidebar-li-a-hover-bgColor);
+            }
+
+            .file-tree-more {
+                display: none;
+                padding: 5px;
+                border-bottom: 1px solid var(--search-area-borderColor);
+            }
+
+            .file-tree-more-option {
+                display: block;
             }
 
             .file-list {
@@ -650,12 +667,28 @@ diff_html = r"""
                 let emptySearch = true;
                 let includedFiles = 0;
 
+                const typeVisibility = {
+                    "renamed": document.getElementById("show-moved-files").checked,
+                    "deleted": document.getElementById("show-deleted-files").checked,
+                    "new": document.getElementById("show-new-files").checked,
+                    "old": document.getElementById("show-old-files").checked,
+                };
+
                 sidebar.forEach(async function(item) {
+                    if (item.dataset.path === undefined) {
+                        // A folder, those are handled later
+                        return;
+                    }
                     const text = item.dataset.path.toLowerCase();
                     const shouldInclude = includeSearchQuery === "" || text.includes(includeSearchQuery);
-                    const shouldExclude = excludeSearchQuery !== "" && text.includes(excludeSearchQuery);
+                    let shouldExclude = excludeSearchQuery !== "" && text.includes(excludeSearchQuery);
                     const associatedId = item.querySelector("a").getAttribute("href").substring(1)
                     const contentItem = document.getElementById(associatedId);
+
+                    const fileType = item.dataset.type;
+                    const isTypeVisible = typeVisibility[fileType] !== false;
+
+                    shouldExclude = shouldExclude || !isTypeVisible;
 
                     if (shouldInclude) {
                         if (shouldExclude) {
@@ -758,6 +791,17 @@ diff_html = r"""
                     content.style.padding = '20px 20px 20px 5px';
                 }
             }
+
+            function toggleMoreFileTree() {
+                const moreOptions = document.querySelector('.file-tree-more');
+                console.log(moreOptions.style.display);
+                const show = moreOptions.style.display !== 'block';
+                if (show) {
+                    moreOptions.style.display = 'block';
+                } else {
+                    moreOptions.style.display = 'none';
+                }
+            }
         </script>
     </head>
     <body>
@@ -772,17 +816,53 @@ diff_html = r"""
                     </div>
                     <div class="file-tree">
                         <div class="file-tree-controls">
-                            <div>
+                            <div class="folder-collapse">
                                 <button onclick="toggleFolders(true)" title="Expand current level">
                                     &#x25BC;
+                                    <br/>
+                                    &#x25B2;
                                 </button>
                                 <button onclick="toggleFolders(false)" title="Collapse all">
                                     &#x25B2;
+                                    <br/>
+                                    &#x25BC;
                                 </button>
                             </div>
-                            <button onclick="toggleSidebar(false)" title="Hide">
-                                &#x2190;
-                            </button>
+                            <div>
+                                <button onclick="toggleSidebar(false)" title="Hide">
+                                    &#x2190;
+                                </button>
+                                <button onclick="toggleMoreFileTree()" title="Show more options"
+                                    class="file-tree-reveal-more">
+                                        &#x22EE;
+                                </button>
+                            </div>
+                        </div>
+                        <div class="file-tree-more">
+                            <h4>Show...</h4>
+                            <div class="file-tree-more-option">
+                                <input type="checkbox" id="show-old-files" checked
+                                    onclick="debouncedOnSearchInput(event)"/>
+                                <label for="show-old-files">Old files</label>
+                            </div>
+
+                            <div class="file-tree-more-option">
+                                <input type="checkbox" id="show-new-files" checked
+                                    onclick="debouncedOnSearchInput(event)"/>
+                                <label for="show-new-files">New files</label>
+                            </div>
+
+                            <div class="file-tree-more-option">
+                                <input type="checkbox" id="show-deleted-files" checked
+                                    onclick="debouncedOnSearchInput(event)"/>
+                                <label for="show-deleted-files">Deleted files</label>
+                            </div>
+
+                            <div class="file-tree-more-option">
+                                <input type="checkbox" id="show-moved-files" checked
+                                    onclick="debouncedOnSearchInput(event)"/>
+                                <label for="show-moved-files">Moved files</label>
+                            </div>
                         </div>
                         <ul class="file-list">
                             {{ render_sidebar_folder("", per_folder) }}
