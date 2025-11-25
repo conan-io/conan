@@ -210,7 +210,7 @@ class TestGenerators:
         client.run("install . -pr=profile")
         assert "tool/1.1 - Platform" in client.out
         assert not os.path.exists(os.path.join(client.current_folder, "tool-config.cmake"))
-        assert not os.path.exists(os.path.join(client.current_folder, "tool.pc"))
+        assert not os.path.exists(os.path.join(client.current_folder, "tool-uninstalled.pc"))
 
 
 class TestPackageID:

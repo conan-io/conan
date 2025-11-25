@@ -43,7 +43,7 @@ def test_pkg_config_dirs():
     client.run("create .")
     client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
-    pc_path = os.path.join(client.current_folder, "mylib.pc")
+    pc_path = os.path.join(client.current_folder, "mylib-uninstalled.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
     assert 'Name: mylib' in pc_content
@@ -90,7 +90,7 @@ def test_empty_dirs():
     client.run("create .")
     client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
-    pc_path = os.path.join(client.current_folder, "mylib.pc")
+    pc_path = os.path.join(client.current_folder, "mylib-uninstalled.pc")
     assert os.path.exists(pc_path) is True
     pc_content = load(pc_path)
     expected = textwrap.dedent("""
@@ -122,7 +122,7 @@ def test_system_libs():
     client.run("create .")
     client.run("install --requires=mylib/0.1@ -g PkgConfigDeps")
 
-    pc_content = client.load("mylib.pc")
+    pc_content = client.load("mylib-uninstalled.pc")
     assert 'Libs: -L"${libdir}" -lmylib1 -lmylib2 -lsystem_lib1 -lsystem_lib2' in pc_content
 
 
@@ -147,7 +147,7 @@ def test_multiple_include():
     client.run("create . --name=pkg --version=0.1")
     client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
-    pc_content = client.load("pkg.pc")
+    pc_content = client.load("pkg-uninstalled.pc")
     assert "includedir=${prefix}/inc1" in pc_content
     assert "includedir1=${prefix}/inc2" in pc_content
     assert "includedir2=${prefix}/inc3/foo" in pc_content
@@ -187,7 +187,7 @@ def test_custom_content():
     client.run("create . --name=pkg --version=0.1")
     client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
 
-    pc_content = client.load("pkg.pc")
+    pc_content = client.load("pkg-uninstalled.pc")
     prefix = pc_content.splitlines()[0]
     expected = textwrap.dedent(f"""\
     {prefix}
@@ -223,7 +223,7 @@ def test_custom_content_and_version_components():
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=pkg --version=0.1")
     client.run("install --requires=pkg/0.1@ -g PkgConfigDeps")
-    pc_content = client.load("pkg-mycomponent.pc")
+    pc_content = client.load("pkg-mycomponent-uninstalled.pc")
     assert "componentdir=${prefix}/mydir" in pc_content
     assert "Version: 19.8.199" in pc_content
 
@@ -239,7 +239,7 @@ def test_custom_content_and_version_components():
         """)
     client.save({"conan.lock": lockfile})
     client.run("install --requires=pkg/0.1 -g PkgConfigDeps --lockfile=conan.lock")
-    pc_content = client.load("pkg-mycomponent.pc")
+    pc_content = client.load("pkg-mycomponent-uninstalled.pc")
     assert "componentdir=${prefix}/mydir" in pc_content
     assert "Version: 19.8.199" in pc_content
 
@@ -258,7 +258,7 @@ def test_custom_version():
     client.run("create . --name=pkg --version=0.1")
     client.run("install --requires=pkg/0.1 -g PkgConfigDeps")
 
-    pc_content = client.load("pkg.pc")
+    pc_content = client.load("pkg-uninstalled.pc")
     assert "Version: 19.8.199" in pc_content
 
     # Now with lockfile
@@ -273,7 +273,7 @@ def test_custom_version():
         """)
     client.save({"conan.lock": lockfile})
     client.run("install --requires=pkg/0.1 -g PkgConfigDeps --lockfile=conan.lock")
-    pc_content = client.load("pkg.pc")
+    pc_content = client.load("pkg-uninstalled.pc")
     assert "Version: 19.8.199" in pc_content
 
 
@@ -347,18 +347,18 @@ def test_pkg_with_public_deps_and_component_requires():
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
 
-    pc_content = client2.load("third.pc")
+    pc_content = client2.load("third-uninstalled.pc")
     # Originally posted: https://github.com/conan-io/conan/issues/9939
     assert "Requires: second other" == get_requires_from_content(pc_content)
-    pc_content = client2.load("second.pc")
+    pc_content = client2.load("second-uninstalled.pc")
     assert "Requires: second-mycomponent second-myfirstcomp" == get_requires_from_content(pc_content)
-    pc_content = client2.load("second-mycomponent.pc")
+    pc_content = client2.load("second-mycomponent-uninstalled.pc")
     assert "Requires: myfirstlib-cmp1" == get_requires_from_content(pc_content)
-    pc_content = client2.load("second-myfirstcomp.pc")
+    pc_content = client2.load("second-myfirstcomp-uninstalled.pc")
     assert "Requires: second-mycomponent" == get_requires_from_content(pc_content)
-    pc_content = client2.load("myfirstlib.pc")
+    pc_content = client2.load("myfirstlib-uninstalled.pc")
     assert "Requires: myfirstlib-cmp1" == get_requires_from_content(pc_content)
-    pc_content = client2.load("other.pc")
+    pc_content = client2.load("other-uninstalled.pc")
     assert "" == get_requires_from_content(pc_content)
 
 
@@ -421,13 +421,13 @@ def test_pkg_with_public_deps_and_component_requires_2():
         """)
     client2.save({"conanfile.txt": conanfile})
     client2.run("install .")
-    pc_content = client2.load("pkg.pc")
+    pc_content = client2.load("pkg-uninstalled.pc")
     assert "Requires: component1" == get_requires_from_content(pc_content)
-    pc_content = client2.load("fancy_name.pc")
+    pc_content = client2.load("fancy_name-uninstalled.pc")
     assert "Requires: component1 fancy_name-cmp2 component3" == get_requires_from_content(pc_content)
-    assert client2.load("component1.pc")
-    assert client2.load("fancy_name-cmp2.pc")
-    pc_content = client2.load("component3.pc")
+    assert client2.load("component1-uninstalled.pc")
+    assert client2.load("fancy_name-cmp2-uninstalled.pc")
+    pc_content = client2.load("component3-uninstalled.pc")
     assert "Requires: component1" == get_requires_from_content(pc_content)
 
 
@@ -489,12 +489,12 @@ def test_pkg_config_name_full_aliases():
     client.save({"conanfile.txt": conanfile}, clean_first=True)
     client.run("install .")
 
-    pc_content = client.load("compo1.pc")
+    pc_content = client.load("compo1-uninstalled.pc")
     prefix = pc_content.splitlines()[0]
     assert "Description: Conan component: compo1" in pc_content
     assert "Requires" not in pc_content
 
-    pc_content = client.load("compo1_alias.pc")
+    pc_content = client.load("compo1_alias-uninstalled.pc")
     content = textwrap.dedent(f"""\
     Name: compo1_alias
     Description: Alias compo1_alias for compo1
@@ -503,7 +503,7 @@ def test_pkg_config_name_full_aliases():
     """)
     assert content == pc_content
 
-    pc_content = client.load("pkg_other_name.pc")
+    pc_content = client.load("pkg_other_name-uninstalled.pc")
     content = textwrap.dedent(f"""\
     {prefix}
     libdir=${{prefix}}/lib
@@ -521,7 +521,7 @@ def test_pkg_config_name_full_aliases():
     """)
     assert content == pc_content
 
-    pc_content = client.load("pkg_alias1.pc")
+    pc_content = client.load("pkg_alias1-uninstalled.pc")
     content = textwrap.dedent(f"""\
     Name: pkg_alias1
     Description: Alias pkg_alias1 for pkg_other_name
@@ -530,7 +530,7 @@ def test_pkg_config_name_full_aliases():
     """)
     assert content == pc_content
 
-    pc_content = client.load("pkg_alias2.pc")
+    pc_content = client.load("pkg_alias2-uninstalled.pc")
     content = textwrap.dedent(f"""\
     Name: pkg_alias2
     Description: Alias pkg_alias2 for pkg_other_name
@@ -539,7 +539,7 @@ def test_pkg_config_name_full_aliases():
     """)
     assert content == pc_content
 
-    pc_content = client.load("second-mycomponent.pc")
+    pc_content = client.load("second-mycomponent-uninstalled.pc")
     assert "Requires: compo1" == get_requires_from_content(pc_content)
 
 
@@ -589,12 +589,12 @@ def test_components_and_package_pc_creation_order():
     pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
     pc_files.sort()
     # Let's check all the PC file names created just in case
-    assert pc_files == ['OpenCL.pc', 'OtherCL.pc', 'pkgb.pc']
-    pc_content = client.load("OpenCL.pc")
+    assert pc_files == ['OpenCL-uninstalled.pc', 'OtherCL-uninstalled.pc', 'pkgb-uninstalled.pc']
+    pc_content = client.load("OpenCL-uninstalled.pc")
     assert "Name: OpenCL" in pc_content
     assert "Description: Conan component: OpenCL" in pc_content
     assert "Requires:" not in pc_content
-    pc_content = client.load("pkgb.pc")
+    pc_content = client.load("pkgb-uninstalled.pc")
     assert "Requires: OpenCL" in get_requires_from_content(pc_content)
 
 
@@ -627,8 +627,8 @@ def test_pkgconfigdeps_with_test_requires():
         """)
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -g PkgConfigDeps")
-    assert "Description: Conan package: test" in client.load("test.pc")
-    assert "Description: Conan package: app" in client.load("app.pc")
+    assert "Description: Conan package: test" in client.load("test-uninstalled.pc")
+    assert "Description: Conan package: app" in client.load("app-uninstalled.pc")
 
 
 def test_with_editable_layout():
@@ -654,7 +654,7 @@ def test_with_editable_layout():
     client.run("editable add dep")
     with client.chdir("pkg"):
         client.run("install . -g PkgConfigDeps")
-        pc = client.load("dep.pc")
+        pc = client.load("dep-uninstalled.pc")
         assert 'Libs: -L"${libdir}" -lmylib' in pc
         assert 'includedir=' in pc
         assert 'Cflags: -I"${includedir}"' in pc
@@ -717,18 +717,18 @@ def test_tool_requires():
     pc_files = [os.path.basename(i) for i in glob.glob(os.path.join(client.current_folder, '*.pc'))]
     pc_files.sort()
     # Let's check all the PC file names created just in case
-    assert pc_files == ['component1_bo.pc', 'component3_bo.pc',
-                        'libother_bo-cmp2.pc', 'libother_bo.pc', 'tool_bt.pc']
-    pc_content = client.load("tool_bt.pc")
+    assert pc_files == ['component1_bo-uninstalled.pc', 'component3_bo-uninstalled.pc',
+                        'libother_bo-cmp2-uninstalled.pc', 'libother_bo-uninstalled.pc', 'tool_bt-uninstalled.pc']
+    pc_content = client.load("tool_bt-uninstalled.pc")
     assert "Name: tool_bt" in pc_content
-    pc_content = client.load("libother_bo.pc")
+    pc_content = client.load("libother_bo-uninstalled.pc")
     assert "Name: libother_bo" in pc_content
     assert "Requires: component1_bo libother_bo-cmp2 component3_bo" == get_requires_from_content(pc_content)
-    pc_content = client.load("component1_bo.pc")
+    pc_content = client.load("component1_bo-uninstalled.pc")
     assert "Name: component1_bo" in pc_content
-    pc_content = client.load("libother_bo-cmp2.pc")
+    pc_content = client.load("libother_bo-cmp2-uninstalled.pc")
     assert "Name: libother_bo-cmp2" in pc_content
-    pc_content = client.load("component3_bo.pc")
+    pc_content = client.load("component3_bo-uninstalled.pc")
     assert "Name: component3_bo" in pc_content
     assert "Requires: component1_bo" == get_requires_from_content(pc_content)
 
@@ -826,9 +826,9 @@ def test_error_missing_pc_build_context():
             generators = "PkgConfigDeps"
             settings = "build_type"
             def build(self):
-                assert os.path.exists("math.pc")
-                assert os.path.exists("engine.pc")
-                assert os.path.exists("game.pc")
+                assert os.path.exists("math-uninstalled.pc")
+                assert os.path.exists("engine-uninstalled.pc")
+                assert os.path.exists("game-uninstalled.pc")
             """)
     c.save({"math/conanfile.py": GenConanfile("math", "1.0").with_settings("build_type"),
             "engine/conanfile.py": GenConanfile("engine", "1.0").with_settings("build_type")
@@ -877,10 +877,10 @@ class TestPCGenerationBuildContext:
                     deps.generate()
 
                 def build(self):
-                    assert os.path.exists("wayland.pc")
-                    assert os.path.exists("wayland_BUILD.pc")
-                    assert os.path.exists("dep.pc")
-                    assert os.path.exists("dep_BUILD.pc")
+                    assert os.path.exists("wayland-uninstalled.pc")
+                    assert os.path.exists("wayland_BUILD-uninstalled.pc")
+                    assert os.path.exists("dep-uninstalled.pc")
+                    assert os.path.exists("dep_BUILD-uninstalled.pc")
                 """)
         c.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_package_type("shared-library"),
                 "wayland/conanfile.py": GenConanfile("wayland", "1.0").with_requires("dep/1.0"),
@@ -917,21 +917,21 @@ class TestPCGenerationBuildContext:
                     deps.generate()
 
                 def build(self):
-                    assert os.path.exists("wayland.pc")
-                    assert os.path.exists("wayland-client.pc")
-                    assert os.path.exists("wayland-server.pc")
-                    assert os.path.exists("wayland_BUILD.pc")
-                    assert os.path.exists("wayland_BUILD-client.pc")
-                    assert os.path.exists("wayland_BUILD-server.pc")
-                    assert os.path.exists("dep.pc")
-                    assert os.path.exists("dep_BUILD.pc")
+                    assert os.path.exists("wayland-uninstalled.pc")
+                    assert os.path.exists("wayland-client-uninstalled.pc")
+                    assert os.path.exists("wayland-server-uninstalled.pc")
+                    assert os.path.exists("wayland_BUILD-uninstalled.pc")
+                    assert os.path.exists("wayland_BUILD-client-uninstalled.pc")
+                    assert os.path.exists("wayland_BUILD-server-uninstalled.pc")
+                    assert os.path.exists("dep-uninstalled.pc")
+                    assert os.path.exists("dep_BUILD-uninstalled.pc")
 
                     # Issue: https://github.com/conan-io/conan/issues/12342
                     # Issue: https://github.com/conan-io/conan/issues/14935
-                    assert not os.path.exists("build/wayland.pc")
-                    assert not os.path.exists("build/wayland-client.pc")
-                    assert not os.path.exists("build/wayland-server.pc")
-                    assert not os.path.exists("build/dep.pc")
+                    assert not os.path.exists("build/wayland-uninstalled.pc")
+                    assert not os.path.exists("build/wayland-client-uninstalled.pc")
+                    assert not os.path.exists("build/wayland-server-uninstalled.pc")
+                    assert not os.path.exists("build/dep-uninstalled.pc")
                 """)
         wayland = textwrap.dedent("""
             from conan import ConanFile
@@ -979,18 +979,18 @@ class TestPCGenerationBuildContext:
                     deps.generate()
 
                 def build(self):
-                    assert os.path.exists("wayland.pc")
-                    assert os.path.exists("wayland-client.pc")
-                    assert os.path.exists("wayland-server.pc")
-                    assert os.path.exists("dep.pc")
+                    assert os.path.exists("wayland-uninstalled.pc")
+                    assert os.path.exists("wayland-client-uninstalled.pc")
+                    assert os.path.exists("wayland-server-uninstalled.pc")
+                    assert os.path.exists("dep-uninstalled.pc")
 
                     # Issue: https://github.com/conan-io/conan/issues/12342
                     # Issue: https://github.com/conan-io/conan/issues/14935
                     if "{build_folder_name}":
-                        assert os.path.exists("{build_folder_name}/wayland.pc")
-                        assert os.path.exists("{build_folder_name}/wayland-client.pc")
-                        assert os.path.exists("{build_folder_name}/wayland-server.pc")
-                        assert os.path.exists("{build_folder_name}/dep.pc")
+                        assert os.path.exists("{build_folder_name}/wayland-uninstalled.pc")
+                        assert os.path.exists("{build_folder_name}/wayland-client-uninstalled.pc")
+                        assert os.path.exists("{build_folder_name}/wayland-server-uninstalled.pc")
+                        assert os.path.exists("{build_folder_name}/dep-uninstalled.pc")
                 """.format(build_folder_name=build_folder_name))
         wayland = textwrap.dedent("""
             from conan import ConanFile
@@ -1039,11 +1039,11 @@ class TestPCGenerationBuildContext:
                        deps.generate()
 
                     def build(self):
-                        assert os.path.exists("waylandx264.pc")
-                        assert not os.path.exists("wayland.pc")
+                        assert os.path.exists("waylandx264-uninstalled.pc")
+                        assert not os.path.exists("wayland-uninstalled.pc")
                         if "{build_folder_name}":
-                            assert os.path.exists("{build_folder_name}/waylandx264.pc")
-                            assert not os.path.exists("{build_folder_name}/wayland.pc")
+                            assert os.path.exists("{build_folder_name}/waylandx264-uninstalled.pc")
+                            assert not os.path.exists("{build_folder_name}/wayland-uninstalled.pc")
                    """.format(build_folder_name=build_folder_name))
         wayland = textwrap.dedent("""
                from conan import ConanFile
@@ -1144,7 +1144,7 @@ def test_pkg_config_deps_and_private_deps():
     client.save({"conanfile.py": conanfile}, clean_first=True)
     # Now, it passes and creates the pc files correctly (the skipped one is not created)
     client.run("install .")
-    assert "Requires:" not in client.load("pkg.pc")
+    assert "Requires:" not in client.load("pkg-uninstalled.pc")
 
 
 def test_using_deployer_folder():
@@ -1159,7 +1159,7 @@ def test_using_deployer_folder():
     client.run("create dep/conanfile.py")
     client.run("install --requires=dep/0.1 --deployer=direct_deploy "
                "--deployer-folder=mydeploy -g PkgConfigDeps")
-    content = client.load("dep.pc")
+    content = client.load("dep-uninstalled.pc")
     prefix_base = client.current_folder.replace('\\', '/')
     assert f"prefix={prefix_base}/mydeploy/direct_deploy/dep" in content
     assert "libdir=${prefix}/lib" in content
@@ -1192,13 +1192,13 @@ def test_pkg_config_deps_set_property():
     c.run("create dep")
     c.run("create other")
     c.run("install app")
-    assert not os.path.exists(os.path.join(c.current_folder, "app", "dep.pc"))
+    assert not os.path.exists(os.path.join(c.current_folder, "app", "dep-uninstalled.pc"))
 
-    dep = c.load("app/depx264.pc")
+    dep = c.load("app/depx264-uninstalled.pc")
     assert 'Name: depx264' in dep
-    other = c.load("app/other.pc")
+    other = c.load("app/other-uninstalled.pc")
     assert 'Name: other' in other
-    other_mycomp1 = c.load("app/new_other_comp.pc")
+    other_mycomp1 = c.load("app/new_other_comp-uninstalled.pc")
     assert 'Name: new_other_comp' in other_mycomp1
     assert other.split("\n")[0] == other_mycomp1.split("\n")[0]
 
@@ -1225,7 +1225,7 @@ def test_pkg_with_duplicated_component_requires():
     client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_require("mylib/0.1")},
                 clean_first=True)
     client.run("install . -g PkgConfigDeps")
-    pc_content = client.load("mylib-myfirstcomp.pc")
+    pc_content = client.load("mylib-myfirstcomp-uninstalled.pc")
     assert "Requires: mylib-mycomponent" == get_requires_from_content(pc_content)
 
 
@@ -1267,16 +1267,16 @@ def test_pkg_skip_component():
 
     tc.run("install --requires=pkg_c/0.1 --generator=PkgConfigDeps -of=out")
     install_contents = os.listdir(os.path.join(tc.current_folder, "out"))
-    assert "pkg_a.pc" not in install_contents
-    assert "pkg_b.pc" in install_contents
-    pkg_b_content = tc.load(os.path.join("out", "pkg_b.pc"))
+    assert "pkg_a-uninstalled.pc" not in install_contents
+    assert "pkg_b-uninstalled.pc" in install_contents
+    pkg_b_content = tc.load(os.path.join("out", "pkg_b-uninstalled.pc"))
     pkg_b_requires = get_requires_from_content(pkg_b_content)
     assert "b-cmp1" in pkg_b_requires
     assert "pkg_a" not in pkg_b_requires
     assert "none" not in pkg_b_requires
-    assert "b-cmp1.pc" in install_contents
-    b_cmp1_content = tc.load(os.path.join("out", "b-cmp1.pc"))
+    assert "b-cmp1-uninstalled.pc" in install_contents
+    b_cmp1_content = tc.load(os.path.join("out", "b-cmp1-uninstalled.pc"))
     assert "Requires:" not in b_cmp1_content
-    assert "pkg_c.pc" in install_contents
+    assert "pkg_c-uninstalled.pc" in install_contents
     # Components can not skip the PC file creation
-    assert "none.pc" in install_contents
+    assert "none-uninstalled.pc" in install_contents

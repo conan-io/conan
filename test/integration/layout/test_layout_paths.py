@@ -33,7 +33,7 @@ def test_editable_layout_paths():
     data = c.load(f"pkg/dep-release-x86_64-data.cmake")
 
     assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/include")' in data
-    pc = c.load("pkg/dep.pc")
+    pc = c.load("pkg/dep-uninstalled.pc")
     assert "includedir=${prefix}/include" in pc
     xcode = c.load("pkg/conan_dep_dep_release_x86_64.xcconfig")
     dep_path = os.path.join(c.current_folder, "dep")

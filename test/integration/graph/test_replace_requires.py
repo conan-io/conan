@@ -445,9 +445,9 @@ class TestReplaceRequiresTransitiveGenerators:
         c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
         assert "zlib/0.1: zlib-ng/0.1" in c.out
 
-        pc_content = c.load("app/ZLIB.pc")
+        pc_content = c.load("app/ZLIB-uninstalled.pc")
         assert 'Libs: -L"${libdir}" -lzlib' in pc_content
-        pc_content = c.load("app/openssl.pc")
+        pc_content = c.load("app/openssl-uninstalled.pc")
         assert 'Requires: ZLIB' in pc_content
 
         cmake = c.load("app/ZLIB-Targets-release.cmake")
@@ -525,9 +525,9 @@ class TestReplaceRequiresTransitiveGenerators:
         c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
         assert "zlib/0.1: zlib-ng/0.1" in c.out
 
-        pc_content = c.load("app/ZLIB.pc")
+        pc_content = c.load("app/ZLIB-uninstalled.pc")
         assert 'Libs: -L"${libdir}" -lzlib' in pc_content
-        pc_content = c.load("app/openssl-crypto.pc")
+        pc_content = c.load("app/openssl-crypto-uninstalled.pc")
         assert 'Requires: ZLIB' in pc_content
 
         cmake = c.load("app/ZLIB-Targets-release.cmake")
@@ -609,11 +609,11 @@ class TestReplaceRequiresTransitiveGenerators:
         c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
         assert "zlib/0.1: zlib-ng/0.1" in c.out
 
-        pc_content = c.load("app/zlib-ng.pc")
+        pc_content = c.load("app/zlib-ng-uninstalled.pc")
         assert 'Requires: ZLIB' in pc_content
-        pc_content = c.load("app/ZLIB.pc")
+        pc_content = c.load("app/ZLIB-uninstalled.pc")
         assert 'Libs: -L"${libdir}" -lzlib' in pc_content
-        pc_content = c.load("app/openssl.pc")
+        pc_content = c.load("app/openssl-uninstalled.pc")
         assert 'Requires: zlib-ng' in pc_content
 
         cmake = c.load("app/ZLIB-Targets-release.cmake")
@@ -699,11 +699,11 @@ class TestReplaceRequiresTransitiveGenerators:
         c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
         assert "zlib/0.1: zlib-ng/0.1" in c.out
 
-        pc_content = c.load("app/zlib-ng.pc")
+        pc_content = c.load("app/zlib-ng-uninstalled.pc")
         assert 'Requires: ZLIB' in pc_content
-        pc_content = c.load("app/ZLIB.pc")
+        pc_content = c.load("app/ZLIB-uninstalled.pc")
         assert 'Libs: -L"${libdir}" -lzlib' in pc_content
-        pc_content = c.load("app/openssl-crypto.pc")
+        pc_content = c.load("app/openssl-crypto-uninstalled.pc")
         assert f'Requires: {"zlib-ng" if package_requires else "ZLIB"}' in pc_content
 
         cmake = c.load("app/ZLIB-Targets-release.cmake")

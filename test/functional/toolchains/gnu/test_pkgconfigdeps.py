@@ -51,8 +51,8 @@ def test_pkgconfigdeps_with_test_requires():
         ''')
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -g PkgConfigDeps")
-    assert "Description: Conan package: test" in client.load("test.pc")
-    assert "Description: Conan package: app" in client.load("app.pc")
+    assert "Description: Conan package: test" in client.load("test-uninstalled.pc")
+    assert "Description: Conan package: app" in client.load("app-uninstalled.pc")
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="It makes sense only for Windows")
@@ -126,5 +126,5 @@ def test_pkgconfigdeps_component_matches_package_name():
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("export-pkg .")
     client.run("install --requires=hello/0.1 -g PkgConfigDeps")
-    content = client.load("hello.pc")
+    content = client.load("hello-uninstalled.pc")
     assert "Conan component: hello" in content
