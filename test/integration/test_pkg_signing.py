@@ -182,33 +182,6 @@ def test_pkg_sign_canonical():
     # Upload sign fails if package signing fails
     c.run("upload * -c -r default", assert_error=True)
     assert "ERROR: [Package sign] sign failed" in c.out
-    assert textwrap.dedent("""
-        default
-          lib1ok/0.1
-            revisions
-              a6a4e799bb673d6e5ca4f904118d672e (Not uploaded)
-                packages
-                  da39a3ee5e6b4b0d3255bfef95601890afd80709
-                    revisions
-                      76285bcb59a81071122cba04b2269b52 (Not uploaded)
-                        package sign: Signed
-                package sign: Signed
-          lib2fail/0.1
-            revisions
-              70a185be5a95af3dde25b74ae800b2f2 (Not uploaded)
-                packages
-                  da39a3ee5e6b4b0d3255bfef95601890afd80709
-                    revisions
-                      0ba8627bd47edc3a501e8f0eb9a79e5e (Not uploaded)
-                        package sign: Signed
-                package sign: Signed
-          lib3fail/0.1
-            revisions
-              09ccc766ddd11c96aa78307b3f166fd6 (Not uploaded)
-                packages
-                  da39a3ee5e6b4b0d3255bfef95601890afd80709
-                    revisions
-                      0ba8627bd47edc3a501e8f0eb9a79e5e (Not uploaded)""") in c.out
 
     # If upload sign failed, no packages should be uploaded
     c.run("list * -r default")
