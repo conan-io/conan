@@ -85,7 +85,7 @@ class PackagePreparator:
         self._app = app
         self._global_conf = global_conf
 
-    def prepare(self, pkg_list, enabled_remotes):
+    def prepare(self, pkg_list, enabled_remotes, force=False):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
         for ref, packages in pkg_list.items():
             layout = self._app.cache.recipe_layout(ref)
@@ -102,13 +102,13 @@ class PackagePreparator:
             bundle = pkg_list.recipe_dict(ref)
             bundle.pop("files", None)
             bundle.pop("upload-urls", None)
-            if bundle.get("upload"):
+            if bundle.get("upload") or force:
                 self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
             for pref in packages:
                 prev_bundle = pkg_list.package_dict(pref)
                 prev_bundle.pop("files", None)  # If defined from a previous upload
                 prev_bundle.pop("upload-urls", None)
-                if prev_bundle.get("upload"):
+                if prev_bundle.get("upload") or force:
                     self._prepare_package(pref, prev_bundle)
 
     def _prepare_recipe(self, ref, ref_bundle, conanfile, remotes):

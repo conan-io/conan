@@ -5,10 +5,70 @@ from conan.api.model import ListPattern, MultiPackagesList
 from conan.api.output import cli_out_write, ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
-from conan.cli.commands.list import print_list_text, print_list_json
+from conan.cli.commands.list import print_list_text, print_list_json, print_serial
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+
+
+def _check_package_sign_errors(pkg_list):
+    """Checks if there is any package sign with error or fail"""
+
+    def is_error(sign):
+        return bool(sign) and ("error" in sign.lower() or "fail" in sign.lower())
+
+    def iter_signs(pkg_list):
+        for rref, packages in pkg_list.items():
+            recipe_bundle = pkg_list.recipe_dict(rref)
+            if recipe_bundle:
+                yield recipe_bundle.get("package sign")
+            for pref in packages:
+                pkg_bundle = pkg_list.package_dict(pref)
+                if pkg_bundle:
+                    yield pkg_bundle.get("package sign")
+
+    if any(is_error(sign) for sign in iter_signs(pkg_list)):
+        return ConanException("There were some errors in the package signing process. "
+                              "Please check the output.")
+    else:
+        return None
+
+
+def print_cache_sign_verify_text(data):
+    def iter_signs(results):
+        for ref_data in results.values():
+            for revision_data in ref_data.get("revisions", {}).values():
+                sign = revision_data.get("package sign")
+                if sign:
+                    yield sign
+                for pkg in revision_data.get("packages", {}).values():
+                    for prev in pkg.get("revisions", {}).values():
+                        sign = prev.get("package sign")
+                        if sign:
+                            yield sign
+
+    results_dict = data.get("results", {})
+    signs = list(iter_signs(results_dict))
+    if not signs:
+        return
+
+    cli_out_write(f"[Package sign] Results:\n")
+
+    def clean(obj):
+        remove_keys = {"info", "timestamp", "files"}
+        if not isinstance(obj, dict):
+            return obj
+        return {k: clean(v) for k, v in obj.items() if k not in remove_keys}
+
+    items = {ref: clean(item) for ref, item in results_dict.items()}
+    print_serial(items)
+
+    # Summary
+    signs_lower = [s.lower() for s in signs]
+    warn = sum("warn" in s for s in signs_lower)
+    fail = sum(("fail" in s) or ("error" in s) for s in signs_lower)
+    ok = len(signs) - warn - fail
+    cli_out_write(f"\n[Package sign] Summary: OK={ok}, WARN={warn}, FAILED={fail}")
 
 
 def json_export(data):
@@ -148,6 +208,70 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
     conan_api.cache.check_integrity(package_list)
     ConanOutput().success("Integrity check: ok")
+
+@conan_subcommand(formatters={"text": print_cache_sign_verify_text,
+                              "json": print_list_json})
+def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Sign packages with the Package Signing Plugin
+    """
+    subparser.add_argument("pattern", nargs="?",
+                           help="Selection pattern for references to be signed")
+    subparser.add_argument("-l", "--list", action=OnceArgument,
+                           help="Package list of packages to be signed")
+    subparser.add_argument('-p', '--package-query', action=OnceArgument,
+                           help="Only the packages matching a specific query, e.g., "
+                                "os=Windows AND (arch=x86 OR compiler=gcc)")
+    args = parser.parse_args(*args)
+
+    if args.pattern is None and args.list is None:
+        raise ConanException("Missing pattern or package list file")
+    if args.pattern and args.list:
+        raise ConanException("Cannot specify both pattern and list")
+
+    if args.list:
+        listfile = make_abs_path(args.list)
+        multi_package_list = MultiPackagesList.load(listfile)
+        package_list = multi_package_list["Local Cache"]
+    else:
+        ref_pattern = ListPattern(args.pattern, package_id="*")
+        package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+
+    conan_api.cache.sign(package_list)
+    return {"results": package_list.serialize(),
+            "conan_error": _check_package_sign_errors(package_list)}
+
+
+@conan_subcommand(formatters={"text": print_cache_sign_verify_text,
+                              "json": print_list_json})
+def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Check the signature of packages with the Package Signing Plugin
+    """
+    subparser.add_argument("pattern", nargs="?",
+                           help="Selection pattern for references to verify their signature")
+    subparser.add_argument("-l", "--list", action=OnceArgument,
+                           help="Package list of packages to verify their signature")
+    subparser.add_argument('-p', '--package-query', action=OnceArgument,
+                           help="Only the packages matching a specific query, e.g., "
+                                "os=Windows AND (arch=x86 OR compiler=gcc)")
+    args = parser.parse_args(*args)
+
+    if args.pattern is None and args.list is None:
+        raise ConanException("Missing pattern or package list file")
+    if args.pattern and args.list:
+        raise ConanException("Cannot specify both pattern and list")
+
+    if args.list:
+        listfile = make_abs_path(args.list)
+        multi_package_list = MultiPackagesList.load(listfile)
+        package_list = multi_package_list["Local Cache"]
+    else:
+        ref_pattern = ListPattern(args.pattern, package_id="*")
+        package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+    conan_api.cache.verify(package_list)
+    return {"results": package_list.serialize(),
+            "conan_error": _check_package_sign_errors(package_list)}
 
 
 @conan_subcommand(formatters={"text": print_list_text,

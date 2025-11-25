@@ -17,6 +17,9 @@ from conan.internal.rest.download_cache import DownloadCache
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.api.uploader import PackagePreparator
+from conan.internal.conan_app import ConanApp
+from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.util.dates import revision_timestamp_now
 from conan.internal.util.files import rmdir, mkdir, remove, save
 
@@ -76,6 +79,23 @@ class CacheAPI:
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         checker = IntegrityChecker(cache)
         checker.check(package_list)
+
+    def sign(self, package_list):
+        """Sign packages with the package signing plugin"""
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
+        pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder)
+        app = ConanApp(self._conan_api)
+        preparator = PackagePreparator(app, self._api_helpers.global_conf)
+        preparator.prepare(package_list, [], force=True)
+        pkg_signer.sign(package_list, from_cache=True)
+        return package_list
+
+    def verify(self, package_list):
+        """Verify packages with the package signing plugin"""
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
+        pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder)
+        pkg_signer.verify_pkglist(package_list, from_cache=True)
+        return package_list
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True,
               backup_sources=False):
