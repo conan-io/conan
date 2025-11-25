@@ -765,12 +765,14 @@ class TestListOnlyCompatibilityOptimization:
         tc.run(f"upload pkg/0.1:{std17_id} -r=default -c")
 
         tc.run("remove * -c")
-        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=11 {update_arg}")
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=11 {update_arg} "
+               "-c:a user.graph.compatibility:new=True")
         assert f"Found compatible package '{std14_id}'" in tc.out
 
         tc.run("remove * -c")
         tc.run(f"remove pkg/0.1:{std17_id} -r=default -c")
-        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=17 {update_arg}")
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=17 {update_arg} "
+               "-c:a user.graph.compatibility:new=True")
         if not update:
             assert "Found 2 compatible configurations in remotes" in tc.out
         assert f"Found compatible package '{std14_id}'" in tc.out
@@ -780,7 +782,8 @@ class TestListOnlyCompatibilityOptimization:
         std11_id = tc.created_layout().reference.package_id
         tc.run(f"upload pkg/0.1:{std11_id} -r=default -c")
         tc.run("remove * -c")
-        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=17 -vvv {update_arg}")
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=17 -vvv {update_arg} "
+               "-c:a user.graph.compatibility:new=True")
         assert f"Found compatible package '{std11_id}'" in tc.out
         # An HTTP request is made to the server to search for compatible packages
         if not update:
@@ -890,7 +893,8 @@ def test_compatibility_different_settings_per_context(from_remote, update):
         tc.run("upload * -r=default -c")
         tc.run("remove * -c")
     update_arg = "--update" if update else ""
-    tc.run(f"install . -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 --build=missing {update_arg}")
+    tc.run(f"install . -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 --build=missing {update_arg} "
+           "-c:a user.graph.compatibility:new=True")
 
 
 @pytest.mark.parametrize("update", [True, False])
@@ -910,14 +914,16 @@ def test_compatibility_different_settings_per_context_prevs(update):
     tc2 = TestClient(servers=tc.servers)
     tc2.save({"conanfile.py": consumer})
     update_arg = "--update" if update else ""
-    tc2.run(f"install . {settings} -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 {update_arg}")
+    tc2.run(f"install . {settings} -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 {update_arg} "
+            "-c:a user.graph.compatibility:new=True")
     tc2.assert_listed_binary({"protobuf/1.0": ("36d978cbb4dc35906d0fd438732d5e17cd1e388d",
                                                "Download (default)")})
 
     with environment_update({"MY_VAR": "value2"}):
         tc.run(f"create protobuf {settings} -s=compiler.cppstd=14")
     tc.run("upload * -r=default -c")
-    tc2.run(f"install . {settings} -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 {update_arg}")
+    tc2.run(f"install . {settings} -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 {update_arg} "
+            "-c:a user.graph.compatibility:new=True")
     origin = "Cache" if not update else "Update (default)"
     tc2.assert_listed_binary({"protobuf/1.0": ("36d978cbb4dc35906d0fd438732d5e17cd1e388d",
                                                origin)})
