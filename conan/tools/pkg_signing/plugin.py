@@ -2,8 +2,7 @@ import copy
 import os
 import json
 
-from conan.internal.util.files import sha256sum
-from conan.tools.files import load, save
+from conan.internal.util.files import load, sha256sum, save
 
 # FIXME: Maybe this tools should be placed at conan.api.cache, as they are not recipe tools
 
@@ -31,7 +30,7 @@ def load_summary(signature_folder):
     @param signature_folder: Signature folder path
     @return: Dictionary object with the content of the summary
     """
-    return json.loads(load(None, get_summary_file_path(signature_folder)))
+    return json.loads(load(get_summary_file_path(signature_folder)))
 
 
 def create_summary_content(artifacts_folder):
@@ -62,4 +61,4 @@ def save_summary(signature_folder, content):
     """
     assert content.get("provider")
     assert content.get("method")
-    save(None, get_summary_file_path(signature_folder), json.dumps(content))
+    save(get_summary_file_path(signature_folder), json.dumps(content))
