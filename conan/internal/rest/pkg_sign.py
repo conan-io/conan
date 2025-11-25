@@ -31,6 +31,8 @@ class PkgSignaturesPlugin:
         def _sign(ref, files, folder):
             metadata_sign = os.path.join(folder, METADATA, "sign")
             mkdir(metadata_sign)
+            # TODO: Consider creating the package sign summary file by default and check after
+            #  calling the plugins' sign function that provider and method fields are filled.
             try:
                 result = self._plugin_sign_function(ref, artifacts_folder=folder,
                                                     signature_folder=metadata_sign)
