@@ -24,6 +24,7 @@ class PkgSignaturesPlugin:
     def sign(self, upload_data, from_cache=False):
         if self._plugin_sign_function is None or self._plugin_verify_function is None:
             if not from_cache:
+                # Not raise if plugin is not configured and this is called from an upload command
                 return
             raise ConanException("[Package sign] Plugin not configured. Both sign() and verify() "
                                  "functions should be defined.")
@@ -61,6 +62,7 @@ class PkgSignaturesPlugin:
     def verify(self, ref, folder, files, from_cache=False):
         if self._plugin_verify_function is None or self._plugin_sign_function is None:
             if not from_cache:
+                # Not raise if plugin is not configured and this is called from an install command
                 return
             raise ConanException("[Package sign] Plugin not configured. Both sign() and verify() "
                                  "functions should be defined.")
