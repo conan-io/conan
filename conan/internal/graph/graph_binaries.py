@@ -160,11 +160,10 @@ class GraphBinariesAnalyzer:
         original_package_id = node.package_id
         conanfile.output.info(f"Main binary package '{original_package_id}' missing")
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
-        use_compatibility_optimization = node.conanfile.conf.get("user.graph.compatibility:new",
-                                                                 check_type=bool, default=False)
+        compatibility_mode = self._global_conf.get("core.graph:compatibility_mode",
+                                                   choices=("optimized",))
+        use_compatibility_optimization = compatibility_mode == "optimized"
 
-        self._warn_about_new_compatibility = (self._warn_about_new_compatibility or
-                                              not use_compatibility_optimization)
         if not should_update_reference(conanfile.ref, update):
             # First look all in the cache
             for package_id, compatible_package in compatibles.items():
@@ -195,6 +194,7 @@ class GraphBinariesAnalyzer:
             else:
                 candidates = compatibles
                 compatible_packages = {}
+                self._warn_about_new_compatibility = True
             for package_id, compatible_package in candidates.items():
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
@@ -211,6 +211,7 @@ class GraphBinariesAnalyzer:
                 compatible_packages = self._compatible_get_packages_from_remotes(node.ref, remotes)
             else:
                 compatible_packages = {}
+                self._warn_about_new_compatibility = True
             for package_id, compatible_package in compatibles.items():
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
@@ -541,11 +542,12 @@ class GraphBinariesAnalyzer:
                     _evaluate_single(n)
 
         if self._warn_about_new_compatibility:
-            ConanOutput().info("A new experimental approach for binary compatibility detection is available.\n"
-                                  "Enable it by setting the 'user.graph.compatibility:new=True' conf "
-                                  "and get improved performance when querying multiple compatible binaries.\n"
-                                  "Report any issues you find in https://github.com/conan-io/conan/issues",
-                                  fg=Color.BRIGHT_YELLOW)
+            (ConanOutput().info("\nA new experimental approach for binary compatibility detection "
+                                "is available.\n"
+                                "    Enable it by setting the ", newline=False)
+             .info('core.graph:compatibility_mode=optimized', newline=False, fg=Color.BRIGHT_YELLOW)
+             .info(" conf\n"
+                   "    and get improved performance when querying multiple compatible binaries in remotes.\n"))
 
         # Last level is always necessarily a consumer or a virtual
         assert len(levels[-1]) == 1

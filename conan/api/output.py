@@ -270,13 +270,13 @@ class ConanOutput:
             self._write_message(msg, fg=fg, bg=bg)
         return self
 
-    def status(self, msg: str, fg: str = None, bg: str = None):
+    def status(self, msg: str, fg: str = None, bg: str = None, newline: bool = True):
         """ Provides general information about the system or ongoing operations.
 
         Info messages are basic and used to inform about common events,
         like the start or completion of processes, without implying specific problems or achievements."""
         if self._conan_output_level <= LEVEL_STATUS:
-            self._write_message(msg, fg=fg, bg=bg)
+            self._write_message(msg, fg=fg, bg=bg, newline=newline)
         return self
 
     info = status
