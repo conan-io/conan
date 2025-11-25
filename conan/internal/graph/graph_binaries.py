@@ -42,6 +42,7 @@ class GraphBinariesAnalyzer:
         python_mode = global_conf.get("core.package_id:default_python_mode", default="minor_mode")
         build_mode = global_conf.get("core.package_id:default_build_mode", default=None)
         self._modes = unknown_mode, non_embed, embed_mode, python_mode, build_mode
+        self._warn_about_new_compatibility = False
 
     @staticmethod
     def _evaluate_build(node, build_mode):
@@ -161,6 +162,9 @@ class GraphBinariesAnalyzer:
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
         use_compatibility_optimization = node.conanfile.conf.get("user.graph.compatibility:new",
                                                                  check_type=bool, default=False)
+
+        self._warn_about_new_compatibility = (self._warn_about_new_compatibility or
+                                              not use_compatibility_optimization)
         if not should_update_reference(conanfile.ref, update):
             # First look all in the cache
             for package_id, compatible_package in compatibles.items():
@@ -535,6 +539,13 @@ class GraphBinariesAnalyzer:
             for pref, pref_nodes in nodes.items():
                 for n in pref_nodes[1:]:
                     _evaluate_single(n)
+
+        if self._warn_about_new_compatibility:
+            ConanOutput().info("A new experimental approach for binary compatibility detection is available.\n"
+                                  "Enable it by setting the 'user.graph.compatibility:new=True' conf "
+                                  "and get improved performance when querying multiple compatible binaries.\n"
+                                  "Report any issues you find in https://github.com/conan-io/conan/issues",
+                                  fg=Color.BRIGHT_YELLOW)
 
         # Last level is always necessarily a consumer or a virtual
         assert len(levels[-1]) == 1

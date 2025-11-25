@@ -809,7 +809,8 @@ class TestListOnlyCompatibilityOptimization:
         tc.run(f"upload pkg/0.1:{std17_id}#latest -r=default -c")
         tc.run(f"remove pkg/0.1:{std17_id}#latest -c")
 
-        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=11 -r=default -u")
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=11 -r=default -u "
+               "-c:a user.graph.compatibility:new=True")
         assert "Current package revision is older than the remote one "
         assert f"Found compatible package '{std17_id}'" in tc.out
         assert std17_old_ref.revision not in tc.out
@@ -828,10 +829,23 @@ class TestListOnlyCompatibilityOptimization:
         tc.run(f"upload pkg/0.1:{std20_id}#* -r=default -c")
         tc.run(f"remove pkg/0.1:{std20_id} -c")
 
-        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=11 -r=default -u")
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=11 -r=default -u "
+               "-c:a user.graph.compatibility:new=True")
         assert f"Found compatible package '{std20_id}'" in tc.out
         assert std20_old_ref.revision not in tc.out
         assert std20_new_ref.revision in tc.out
+
+    @pytest.mark.parametrize("enable", [True, False])
+    def test_message_if_not_enabled(self, enable):
+        tc = TestClient()
+        tc.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("compiler")})
+        tc.run("create . -s=compiler.cppstd=17")
+        arg = "-c:a user.graph.compatibility:new=True" if enable else ""
+        tc.run(f"install --requires=pkg/0.1 -s=compiler.cppstd=14 {arg}")
+        if enable:
+            assert "A new experimental approach for binary compatibility detection is available" not in tc.out
+        else:
+            assert "A new experimental approach for binary compatibility detection is available" in tc.out
 
 
 def test_compatibility_remove_cppstd():
