@@ -41,7 +41,7 @@ class PkgSignaturesPlugin:
                     raise ConanException(f"[Package sign] {e}")
                 else:
                     result = f"Failed: {e}"
-            return result if result is not None else "Created"
+            return result if result is not None else "Signed"
 
         for rref, packages in upload_data.items():
             recipe_bundle = upload_data.recipe_dict(rref)

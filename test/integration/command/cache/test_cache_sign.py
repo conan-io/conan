@@ -54,7 +54,7 @@ def test_pkg_sign_basic():
                   revisions
                     0ba8627bd47edc3a501e8f0eb9a79e5e
                       package sign: ok
-              package sign: Created
+              package sign: Signed
 
         [Package sign] Summary: OK=2, WARN=0, FAILED=0""") in c.out
 
@@ -131,7 +131,7 @@ def test_pkg_sign_exception():
           revisions
             485dad6cb11e2fa99d9afbe44a57a164
               packages
-              package sign: Created
+              package sign: Signed
 
         [Package sign] Summary: OK=2, WARN=0, FAILED=1""") in c.out
     # test json output
@@ -144,7 +144,7 @@ def test_pkg_sign_exception():
     assert results["package/0.1"]["revisions"]["1fd0e5bcc411dcd3ff5b16024e2d7c04"]["package sign"]\
            == "Success"
     assert results["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]["package sign"] == \
-           "Created"
+           "Signed"
 
 
 def test_pkg_verify_exception():

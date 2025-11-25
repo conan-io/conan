@@ -74,7 +74,7 @@ def test_pkg_sign_canonical():
             load_summary, save_summary)
 
         def sign(ref, artifacts_folder, signature_folder):
-            ConanOutput().info("Signing reference")
+            ConanOutput().info(f"Signing reference {ref}")
             ConanOutput().info(f"Signing folder: {artifacts_folder}")
             c = create_summary_content(artifacts_folder)
             c["method"] = "sigstore"
@@ -89,10 +89,10 @@ def test_pkg_sign_canonical():
             # Simulate signing the package
             sfp = get_summary_file_path(signature_folder)
             save(None, f"{sfp}.sig", "")
-            return "Signature ok"
+            ConanOutput().info(f"Signature ok for {ref}")
 
         def verify(ref, artifacts_folder, signature_folder, files):
-            ConanOutput().info(f"Verifying reference")
+            ConanOutput().info(f"Verifying reference {ref}")
             sfp = get_summary_file_path(signature_folder)
             signature_file_path = f"{sfp}.sig"
             if not os.path.isfile(signature_file_path):
@@ -103,8 +103,8 @@ def test_pkg_sign_canonical():
             summary = load_summary(signature_folder)
             # Simulate verification
             if summary.get("provider") != "conan-client":
-                raise ConanException("Failed to verify the package")
-            return f"Verification ok"
+                raise ConanException(f"Failed to verify the package {ref}")
+            ConanOutput().info(f"Verification ok for {ref}")
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
 
@@ -155,8 +155,8 @@ def test_pkg_sign_canonical():
                 da39a3ee5e6b4b0d3255bfef95601890afd80709
                   revisions
                     76285bcb59a81071122cba04b2269b52
-                      package sign: Signature ok
-              package sign: Signature ok
+                      package sign: Signed
+              package sign: Signed
         lib2fail/0.1
           revisions
             70a185be5a95af3dde25b74ae800b2f2
@@ -164,8 +164,8 @@ def test_pkg_sign_canonical():
                 da39a3ee5e6b4b0d3255bfef95601890afd80709
                   revisions
                     0ba8627bd47edc3a501e8f0eb9a79e5e
-                      package sign: Signature ok
-              package sign: Signature ok
+                      package sign: Signed
+              package sign: Signed
         lib3fail/0.1
           revisions
             09ccc766ddd11c96aa78307b3f166fd6
@@ -191,8 +191,8 @@ def test_pkg_sign_canonical():
                   da39a3ee5e6b4b0d3255bfef95601890afd80709
                     revisions
                       76285bcb59a81071122cba04b2269b52 (Not uploaded)
-                        package sign: Signature ok
-                package sign: Signature ok
+                        package sign: Signed
+                package sign: Signed
           lib2fail/0.1
             revisions
               70a185be5a95af3dde25b74ae800b2f2 (Not uploaded)
@@ -200,8 +200,8 @@ def test_pkg_sign_canonical():
                   da39a3ee5e6b4b0d3255bfef95601890afd80709
                     revisions
                       0ba8627bd47edc3a501e8f0eb9a79e5e (Not uploaded)
-                        package sign: Signature ok
-                package sign: Signature ok
+                        package sign: Signed
+                package sign: Signed
           lib3fail/0.1
             revisions
               09ccc766ddd11c96aa78307b3f166fd6 (Not uploaded)
@@ -222,7 +222,7 @@ def test_pkg_sign_canonical():
     # Install verify command should fail if package sign verification fails
     c.run("install --requires lib1ok/0.1 --requires lib2fail/0.1 -r default", assert_error=True)
     assert "ERROR: Package 'lib2fail/0.1' not resolved: [Package sign] Failed to verify " \
-           "the package" in c.out
+           "the package lib2fail/0.1" in c.out
 
     # If packages fail to verify signature, they should not be installed
     c.run("list *")
@@ -236,7 +236,7 @@ def test_pkg_sign_canonical():
           revisions
             a6a4e799bb673d6e5ca4f904118d672e
               packages
-              package sign: Verification ok
+              package sign: Verified
 
         [Package sign] Summary: OK=1, WARN=0, FAILED=0
     """) in c.out
