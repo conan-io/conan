@@ -295,7 +295,7 @@ class _BazelDepBuildGenerator:
                 # Issue: https://github.com/conan-io/conan/issues/19135
                 # (UNIX) Adding the rpath flag as any application could link through the library
                 # which points out a symlink, but that name does not appear in the library location
-                info["linkopts"] = [f'"-Wl,-rpath,{cpp_info.libdirs[0]}"']
+                info["linkopts"] = [f'"-Wl,-rpath,{libdir}"' for libdir in cpp_info.libdirs]
             return info
 
         libs = cpp_info.libs
