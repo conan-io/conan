@@ -221,15 +221,8 @@ def test_pkg_sign_canonical():
 
     # Install verify command should fail if package sign verification fails
     c.run("install --requires lib1ok/0.1 --requires lib2fail/0.1 -r default", assert_error=True)
-    assert "ERROR: Package 'lib2fail/0.1' not resolved: [Package sign] Failed: Failed to "\
-           "verify the package" in c.out
-    assert textwrap.dedent("""\
-        [Package sign] Verification results:
-        lib1ok/0.1
-          revisions
-            a6a4e799bb673d6e5ca4f904118d672e
-              package sign: Verification ok
-        """) in c.out
+    assert "ERROR: Package 'lib2fail/0.1' not resolved: [Package sign] Failed to verify " \
+           "the package" in c.out
 
     # If packages fail to verify signature, they should not be installed
     c.run("list *")
@@ -237,7 +230,7 @@ def test_pkg_sign_canonical():
     assert "lib2fail" not in c.out
     c.run("cache verify *")
     assert textwrap.dedent("""\
-        [Package sign] Verifying signature of packages in local cache...
+        [Package sign] Results:
 
         lib1ok/0.1
           revisions

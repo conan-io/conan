@@ -39,6 +39,7 @@ class UploadUpstreamChecker:
     def _check_upstream_recipe(self, ref, ref_bundle, remote, force):
         output = ConanOutput(scope=str(ref))
         output.info("Checking which revisions exist in the remote server")
+        ref_bundle["uploaded"] = False
         try:
             assert ref.revision
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
@@ -61,6 +62,7 @@ class UploadUpstreamChecker:
         assert (pref.revision is not None), "Cannot upload a package without PREV"
         assert (pref.ref.revision is not None), "Cannot upload a package without RREV"
 
+        prev_bundle["uploaded"] = False
         try:
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
             server_revisions = self._app.remote_manager.get_package_revision(pref, remote)
@@ -250,6 +252,7 @@ class UploadExecutor:
         self._app.remote_manager.upload_recipe(ref, cache_files, remote)
 
         duration = time.time() - t1
+        bundle["uploaded"] = True
         output.debug(f"Upload {ref} in {duration} time")
         return ref
 
@@ -264,6 +267,7 @@ class UploadExecutor:
         t1 = time.time()
         self._app.remote_manager.upload_package(pref, cache_files, remote)
         duration = time.time() - t1
+        prev_bundle["uploaded"] = True
         output.debug(f"Upload {pref} in {duration} time")
 
 

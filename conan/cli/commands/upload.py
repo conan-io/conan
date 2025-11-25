@@ -25,11 +25,17 @@ def summary_upload_list(results):
                     v.pop("files", None)
                     v.pop("upload-urls", None)
                     upload_value = v.pop("upload", None)
-                    if upload_value is not None:
-                        msg = "Uploaded" if upload_value else "Skipped, already in server"
-                        force_upload = v.pop("force_upload", None)
-                        if force_upload:
-                            msg += " - forced"
+                    force_upload_value = v.pop("force_upload", None)
+                    uploaded_value = v.pop("uploaded", None)
+                    if uploaded_value is not None:
+                        if uploaded_value:
+                            msg = "Uploaded"
+                            if force_upload_value:
+                                msg += " - forced"
+                        elif not upload_value:
+                            msg = "Skipped, already in server"
+                        else:
+                            msg = "Not uploaded"
                         k = f"{k} ({msg})"
                 result[k] = format_upload(v)
             return result
