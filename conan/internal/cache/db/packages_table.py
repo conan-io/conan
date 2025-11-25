@@ -13,7 +13,7 @@ class PackagesDBTable(BaseDbTable):
                            ('rrev', str),
                            ('pkgid', str, True),
                            ('prev', str, True),
-                           ('path', str, False, None, True),
+                           ('path', str, False, True),
                            ('timestamp', float),
                            ('build_id', str, True),
                            ('lru', int)]

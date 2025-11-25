@@ -150,4 +150,3 @@ class ConanAPI:
         @property
         def requester(self):
             return self._requester
-

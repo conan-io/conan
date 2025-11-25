@@ -107,7 +107,7 @@ class RestApiClientLocalRecipesIndex:
     def search(self, pattern=None):
         return self._layout.get_recipes_references(pattern)
 
-    def search_packages(self, reference):
+    def search_packages(self, reference, _=False):
         assert self and reference
         return {}
 
