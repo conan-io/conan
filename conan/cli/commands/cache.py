@@ -11,7 +11,7 @@ from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 
 
-def _check_package_sign_errors(pkg_list):
+def _get_package_sign_error(pkg_list):
     """Checks if there is any package sign with error or fail"""
 
     def is_error(sign):
@@ -34,33 +34,33 @@ def _check_package_sign_errors(pkg_list):
         return None
 
 
-def print_cache_sign_verify_text(data):
-    def iter_signs(results):
-        for ref_data in results.values():
-            for revision_data in ref_data.get("revisions", {}).values():
-                sign = revision_data.get("package sign")
-                if sign:
-                    yield sign
-                for pkg in revision_data.get("packages", {}).values():
-                    for prev in pkg.get("revisions", {}).values():
-                        sign = prev.get("package sign")
-                        if sign:
-                            yield sign
-
+def print_package_sign_text(data):
     results_dict = data.get("results", {})
-    signs = list(iter_signs(results_dict))
-    if not signs:
-        return
 
-    cli_out_write(f"[Package sign] Results:\n")
+    signs = []
+    for ref_data in results_dict.values():
+        for revision_data in ref_data.get("revisions", {}).values():
+            sign = revision_data.get("package sign")
+            if sign:
+                signs.append(sign)
 
-    def clean(obj):
-        remove_keys = {"info", "timestamp", "files"}
+            for pkg in revision_data.get("packages", {}).values():
+                for prev in pkg.get("revisions", {}).values():
+                    sign = prev.get("package sign")
+                    if sign:
+                        signs.append(sign)
+
+    remove_keys = {"info", "timestamp", "files"}
+
+    def clean_inline(obj):
         if not isinstance(obj, dict):
             return obj
-        return {k: clean(v) for k, v in obj.items() if k not in remove_keys}
+        return {k: clean_inline(v) for k, v in obj.items() if k not in remove_keys}
 
-    items = {ref: clean(item) for ref, item in results_dict.items()}
+    items = {ref: clean_inline(item) for ref, item in results_dict.items()}
+
+    # Output
+    cli_out_write(f"[Package sign] Results:\n")
     print_serial(items)
 
     # Summary
@@ -209,7 +209,7 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     conan_api.cache.check_integrity(package_list)
     ConanOutput().success("Integrity check: ok")
 
-@conan_subcommand(formatters={"text": print_cache_sign_verify_text,
+@conan_subcommand(formatters={"text": print_package_sign_text,
                               "json": print_list_json})
 def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
     """
@@ -238,11 +238,14 @@ def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
 
     conan_api.cache.sign(package_list)
-    return {"results": package_list.serialize(),
-            "conan_error": _check_package_sign_errors(package_list)}
+    result = {"results": package_list.serialize()}
+    error = _get_package_sign_error(package_list)
+    if error:
+        result["conan_error"] = error
+    return result
 
 
-@conan_subcommand(formatters={"text": print_cache_sign_verify_text,
+@conan_subcommand(formatters={"text": print_package_sign_text,
                               "json": print_list_json})
 def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
     """
@@ -269,9 +272,13 @@ def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
     else:
         ref_pattern = ListPattern(args.pattern, package_id="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+
     conan_api.cache.verify(package_list)
-    return {"results": package_list.serialize(),
-            "conan_error": _check_package_sign_errors(package_list)}
+    result = {"results": package_list.serialize()}
+    error = _get_package_sign_error(package_list)
+    if error:
+        result["conan_error"] = error
+    return result
 
 
 @conan_subcommand(formatters={"text": print_list_text,
