@@ -12,26 +12,25 @@ from conan.api.model import RecipeReference
 
 
 def _get_package_sign_error(pkg_list):
-    """Checks if there is any package sign with error or fail"""
-
-    def is_error(sign):
+    def _is_error_inline(sign):
         return bool(sign) and ("error" in sign.lower() or "fail" in sign.lower())
 
-    def iter_signs(pkg_list):
-        for rref, packages in pkg_list.items():
-            recipe_bundle = pkg_list.recipe_dict(rref)
-            if recipe_bundle:
-                yield recipe_bundle.get("package sign")
-            for pref in packages:
-                pkg_bundle = pkg_list.package_dict(pref)
-                if pkg_bundle:
-                    yield pkg_bundle.get("package sign")
+    signs = []
+    for rref, packages in pkg_list.items():
+        recipe_bundle = pkg_list.recipe_dict(rref)
+        if recipe_bundle:
+            signs.append(recipe_bundle.get("package sign"))
+        for pref in packages:
+            pkg_bundle = pkg_list.package_dict(pref)
+            if pkg_bundle:
+                signs.append(pkg_bundle.get("package sign"))
 
-    if any(is_error(sign) for sign in iter_signs(pkg_list)):
+    if any(_is_error_inline(sign) for sign in signs):
         return ConanException("There were some errors in the package signing process. "
                               "Please check the output.")
     else:
         return None
+
 
 
 def print_package_sign_text(data):
