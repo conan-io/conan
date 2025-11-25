@@ -773,12 +773,6 @@ class ExtraFlagsBlock(Block):
         add_compile_definitions({% for define in defines %} "{{ define }}"{% endfor %})
         {% endif %}
         {% endif %}
-        {% if compilation_verbosity == "verbose" %}
-        set(CMAKE_VERBOSE_MAKEFILE ON)
-        {% endif %}
-        {% if build_verbosity %}
-        set(CMAKE_MESSAGE_LOG_LEVEL "{{ build_verbosity|upper }}")
-        {% endif %}
         # Conan conf flags end
     """)
 
@@ -835,12 +829,6 @@ class ExtraFlagsBlock(Block):
         if is_multi_configuration(self._toolchain.generator):
             config = self._conanfile.settings.get_safe("build_type")
             suffix = f"_{config.upper()}" if config else ""
-        compilation_verbosity = self._conanfile.conf.get("tools.compilation:verbosity",
-                                                         choices=("quiet", "verbose"))
-        build_verbosity = self._conanfile.conf.get("tools.build:verbosity",
-                                                   choices=("quiet", "verbose"))
-        if build_verbosity == "quiet":
-            build_verbosity = "error"
         return {
             "config": config,
             "suffix": suffix,
@@ -849,8 +837,6 @@ class ExtraFlagsBlock(Block):
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags,
             "defines": [define.replace('"', '\\"') for define in defines],
-            "compilation_verbosity": compilation_verbosity,
-            "build_verbosity": build_verbosity,
         }
 
 
@@ -1220,6 +1206,23 @@ class ExtraVariablesBlock(Block):
         # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
         extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
                                                    default={}, check_type=dict)
+        compilation_verbosity = self._conanfile.conf.get("tools.compilation:verbosity",
+                                                         choices=("quiet", "verbose"))
+        build_verbosity = self._conanfile.conf.get("tools.build:verbosity",
+                                                   choices=("quiet", "verbose"))
+        if build_verbosity == "quiet":
+            build_verbosity = "error"
+
+        if compilation_verbosity == "verbose":
+            extra_variables.setdefault("CMAKE_VERBOSE_MAKEFILE",
+                                       {"cache": True, "type": "BOOL",
+                                        "value": "ON"})
+
+        if build_verbosity:
+            extra_variables.setdefault("CMAKE_MESSAGE_LOG_LEVEL",
+                                       {"cache": True, "type": "STRING",
+                                        "value": build_verbosity.upper()})
+
         parsed_extra_variables = {}
         for key, value in extra_variables.items():
             parsed_extra_variables[key] = parse_extra_variable("tools.cmake.cmaketoolchain:extra_variables",

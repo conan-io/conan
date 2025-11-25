@@ -1502,11 +1502,17 @@ def test_cmake_toolchain_verbosity_propagation():
     t.run("install --requires=mylib/1.0 -g CMakeToolchain -c tools.build:verbosity=verbose "
           "-c tools.compilation:verbosity=verbose")
     toolchain = t.load("conan_toolchain.cmake")
-    assert 'set(CMAKE_VERBOSE_MAKEFILE ON)' in toolchain
-    assert 'set(CMAKE_MESSAGE_LOG_LEVEL "VERBOSE")' in toolchain
+    assert 'set(CMAKE_VERBOSE_MAKEFILE "ON"' in toolchain
+    assert 'set(CMAKE_MESSAGE_LOG_LEVEL "VERBOSE"' in toolchain
 
     t.run("install --requires=mylib/1.0 -g CMakeToolchain -c tools.build:verbosity=quiet "
           "-c tools.compilation:verbosity=quiet")
     toolchain = t.load("conan_toolchain.cmake")
-    # assert 'set(CMAKE_VERBOSE_MAKEFILE OFF)' in toolchain
-    assert 'set(CMAKE_MESSAGE_LOG_LEVEL "ERROR")' in toolchain
+    assert 'set(CMAKE_MESSAGE_LOG_LEVEL "ERROR"' in toolchain
+
+    # Extra variables have preference
+    t.run("install --requires=mylib/1.0 -g CMakeToolchain -c tools.compilation:verbosity=quiet "
+          "-c tools.cmake.cmaketoolchain:extra_variables=\"{'CMAKE_MESSAGE_LOG_LEVEL': 'WARNING'}\"")
+    toolchain = t.load("conan_toolchain.cmake")
+    # assert 'set(CMAKE_VERBOSE_MAKEFILE "OFF"' in toolchain
+    assert 'set(CMAKE_MESSAGE_LOG_LEVEL "WARNING"' in toolchain
