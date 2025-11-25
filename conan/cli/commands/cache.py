@@ -32,7 +32,6 @@ def _get_package_sign_error(pkg_list):
         return None
 
 
-
 def print_package_sign_text(data):
     results_dict = data.get("results", {})
 

@@ -4,7 +4,7 @@ import json
 
 from conan.internal.util.files import load, sha256sum, save
 
-# FIXME: Maybe this tools should be placed at conan.api.cache, as they are not recipe tools
+# FIXME: Maybe this tools should be placed at conan.api.subapi.cache as they are not recipe tools?
 
 SIGN_SUMMARY_CONTENT = {
     "provider": None,
