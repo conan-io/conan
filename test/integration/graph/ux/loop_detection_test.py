@@ -81,6 +81,6 @@ def test_build_require_undetected_loop():
             "app/conanfile.py": conanfile})
 
     c.run("create cmake")
-    c.run("install app", assert_error=True)
-    # It doesn't hang, and it sees correctly the duplicated dependency
-    assert "Duplicated requirement: cmake/3.31.6" in c.out
+    c.run("install app")
+    # It doesn't hang, and it sees correctly just 1 dependency
+    assert "conanfile.py (test/1.0): NUM DEPS: 1" in c.out

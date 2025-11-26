@@ -9,7 +9,8 @@ class Requirement:
     """
     def __init__(self, ref, *, headers=None, libs=None, build=False, run=None, visible=None,
                  transitive_headers=None, transitive_libs=None, test=None, package_id_mode=None,
-                 force=None, override=None, direct=None, options=None, no_skip=False):
+                 force=None, override=None, direct=None, options=None, no_skip=False,
+                 consistent=None):
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
@@ -26,6 +27,7 @@ class Requirement:
         self._force = force
         self._override = override
         self._direct = direct
+        self._consistent = consistent
         self.options = options
         # Meta and auxiliary information
         # The "defining_require" is the require that defines the current value. If this require is
@@ -101,6 +103,15 @@ class Requirement:
     @direct.setter
     def direct(self, value):
         self._direct = value
+
+    @property
+    def consistent(self):
+        default_consistent = self.visible or self.test
+        return self._default_if_none(self._consistent, default_consistent)
+
+    @consistent.setter
+    def consistent(self, value):
+        self._consistent = value
 
     @property
     def build(self):
@@ -229,8 +240,7 @@ class Requirement:
                  (self.headers and other.headers) or
                  (self.libs and other.libs) or
                  (self.run and other.run) or
-                 (self.test and other.test) or
-                 (self.visible or other.visible) or  # THIS IS AN OR!!
+                 (self.consistent and other.consistent) or
                  (self.ref == other.ref and self.options == other.options)))
 
     def aggregate(self, other):
@@ -349,6 +359,8 @@ class Requirement:
         # TODO: Automatic assignment invalidates user possibility of overriding default
         # if required.run is not None:
         #    downstream_require.run = required.run
+
+        downstream_require.consistent = require.consistent and self.consistent
 
         if self.test:
             downstream_require.test = True

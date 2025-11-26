@@ -399,12 +399,12 @@ def test_visible_order_issue():
                                                              .with_requires("lib_a/[>=1]"),
             "libc/conanfile.py": GenConanfile("lib_c", "1.0").with_package_type("shared-library")
                                                              .with_requirement("lib_b/1.0",
-                                                                               visible=False)
+                                                                               visible=False, consistent=True)
                                                              .with_requirement("lib_a/1.1"),
             "libc2/conanfile.py": GenConanfile("lib_c", "1.0").with_package_type("shared-library")
                                                               .with_requirement("lib_a/1.1")
                                                               .with_requirement("lib_b/1.0",
-                                                                                visible=False),
+                                                                                visible=False, consistent=True),
             })
     c.run("export liba --version=1.0")
     c.run("export liba --version=1.1")
@@ -428,12 +428,12 @@ def test_visible_order_full_diamond_issue():
                                                              .with_requires("lib_a/1.1"),
             "libc/conanfile.py": GenConanfile("lib_c", "1.0").with_package_type("shared-library")
                                                              .with_requirement("lib_b/1.0",
-                                                                               visible=False)
+                                                                               visible=False, consistent=True)
                                                              .with_requirement("lib_d/1.0"),
             "libc2/conanfile.py": GenConanfile("lib_c", "1.0").with_package_type("shared-library")
                                                               .with_requirement("lib_d/1.0")
                                                               .with_requirement("lib_b/1.0",
-                                                                                visible=False),
+                                                                                visible=False, consistent=True),
             })
     c.run("export liba --version=1.0")
     c.run("export liba --version=1.1")
