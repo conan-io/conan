@@ -29,7 +29,9 @@ def test_wrong_home_error():
 def test_short_storage_path():
     c = TestClient()
     global_conf = textwrap.dedent("""\
-        core.cache:storage_path=C:/conan_{{hash_str(conan_home_folder)}}
+        {% set h = hashlib.new("sha256", conan_home_folder.encode(),
+                               usedforsecurity=False).hexdigest() %}
+        core.cache:storage_path=C:/conan_{{h[:6]}}
         """)
     c.save_home({"global.conf": global_conf})
     c.run("config show *")
