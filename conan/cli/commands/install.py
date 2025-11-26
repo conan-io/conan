@@ -43,8 +43,29 @@ def install(conan_api, parser, *args):
                         help="Generation strategy for virtual environment files for the root")
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
-    # basic paths
     cwd = os.getcwd()
+
+    deps_graph, lockfile, install_error = _run_install_command(conan_api, args, cwd)
+
+    # Update lockfile if necessary
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
+    return {"graph": deps_graph,
+            "conan_api": conan_api,
+            "conan_error": install_error}
+
+
+def _run_install_command(conan_api, args, cwd, return_install_error=True):
+    """
+    This method should not be imported as-is, it is internal to the installation process and
+    its signature might change without warning.
+
+    Users are however free to copy its code and adapt it to their needs, as an example of
+    using the Conan API to perform an installation
+    """
+    # basic paths
+
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
     source_folder = os.path.dirname(path) if args.path else cwd
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None
@@ -73,20 +94,14 @@ def install(conan_api, parser, *args):
 
     # Installation of binaries and consumer generators
     install_error = conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes,
-                                                       return_install_error=True)
+                                                       return_install_error=return_install_error)
     if not install_error:
         ConanOutput().title("Finalizing install (deploy, generators)")
         conan_api.install.install_consumer(deps_graph, args.generator, source_folder, output_folder,
-                                           deploy=args.deployer,
-                                           deploy_package=args.deployer_package,
-                                           deploy_folder=args.deployer_folder,
-                                           envs_generation=args.envs_generation)
+                                           deploy=getattr(args, "deployer", None),
+                                           deploy_package=getattr(args, "deployer_package", None),
+                                           deploy_folder=getattr(args, "deployer_folder", None),
+                                           envs_generation=getattr(args, "envs_generation", None))
         ConanOutput().success("Install finished successfully")
 
-    # Update lockfile if necessary
-    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
-                                                  clean=args.lockfile_clean)
-    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
-    return {"graph": deps_graph,
-            "conan_api": conan_api,
-            "conan_error": install_error}
+    return deps_graph, lockfile, install_error

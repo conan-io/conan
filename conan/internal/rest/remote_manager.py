@@ -211,15 +211,18 @@ class RemoteManager:
             cached_method[pattern] = result
             return result
 
-    def search_packages(self, remote, ref):
+    def search_packages(self, remote, ref, list_only=False):
         # Used only by ListAPI to list the different package_ids for a reference
         if remote.recipes_only:
             return {}
-        packages = self._call_remote(remote, "search_packages", ref)
-        # Avoid serializing conaninfo in server side
-        packages = {PkgReference(ref, pid): load_binary_info(data["content"])
-                    if "content" in data else data
-                    for pid, data in packages.items() if not data.get("recipe_hash")}
+        packages = self._call_remote(remote, "search_packages", ref, list_only)
+        if list_only:
+            packages = {PkgReference(ref, pid): None for pid, data in packages.items()}
+        else:
+            # Avoid serializing conaninfo in server side
+            packages = {PkgReference(ref, pid): load_binary_info(data["content"])
+                        if "content" in data else data
+                        for pid, data in packages.items() if not data.get("recipe_hash")}
         return packages
 
     def remove_recipe(self, ref, remote):
