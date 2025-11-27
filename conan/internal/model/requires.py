@@ -171,7 +171,7 @@ class Requirement:
                   "require": str(self._required_ref)}
         serializable = ("run", "libs", "skip", "test", "force", "direct", "build",
                         "transitive_headers", "transitive_libs", "headers",
-                        "package_id_mode", "visible")
+                        "package_id_mode", "visible", "consistent")
         for attribute in serializable:
             result[attribute] = getattr(self, attribute)
         return result
@@ -180,7 +180,8 @@ class Requirement:
         return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
                            run=self.run, visible=self.visible,
                            transitive_headers=self.transitive_headers,
-                           transitive_libs=self.transitive_libs)
+                           transitive_libs=self.transitive_libs,
+                           consistent=self.consistent)
 
     @property
     def version_range(self):
@@ -265,6 +266,7 @@ class Requirement:
         self.libs |= other.libs
         self.run = self.run or other.run
         self.visible |= other.visible
+        self.consistent |= other.consistent
         self.force |= other.force
         self.direct |= other.direct
         self.transitive_headers = self.transitive_headers or other.transitive_headers

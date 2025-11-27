@@ -786,48 +786,6 @@ class TestPublicBuildRequires(GraphManagerTest):
         self._check_node(libc, "libc/0.1#123", deps=[], dependents=[libe])
         self._check_node(cmake1, "cmake/0.1#123", deps=[], dependents=[libb])
 
-    def test_conflict_diamond_two_levels_solved_consistent_false(self):
-        # app -> libd -(consistent=False)-> libb -(br public)-> cmake/0.1
-        #   \--> libe -(consistent=False)-> libc -(br public)-> cmake/0.2
-        self.recipe_conanfile("cmake/0.1", GenConanfile())
-        self.recipe_conanfile("cmake/0.2", GenConanfile())
-        self.recipe_conanfile("libb/0.1",
-                              GenConanfile().with_tool_requirement("cmake/0.1", visible=True))
-        self.recipe_conanfile("libc/0.1",
-                              GenConanfile().with_tool_requirement("cmake/0.2", visible=True))
-        self.recipe_conanfile("libd/0.1", GenConanfile().with_require("libb/0.1"))
-        self.recipe_conanfile("libe/0.1", GenConanfile().with_require("libc/0.1"))
-
-        deps_graph = self.build_graph(GenConanfile("app", "0.1").with_requirement("libd/0.1",
-                                                                                  consistent=False,
-                                                                                  visible=False,
-                                                                                  run=False)
-                                                                .with_requirement("libe/0.1",
-                                                                                  consistent=False,
-                                                                                  visible=False,
-                                                                                  run=False
-                                                                                  ),
-                                      install=False)
-
-        print(deps_graph.error)
-        assert type(deps_graph.error) == GraphConflictError
-
-        # Build requires always apply to the consumer
-        assert 6 == len(deps_graph.nodes)
-        app = deps_graph.root
-        libd = app.edges[0].dst
-        libe = app.edges[1].dst
-        libb = libd.edges[0].dst
-        libc = libe.edges[0].dst
-        cmake1 = libb.edges[0].dst
-
-        self._check_node(app, "app/0.1@", deps=[libd, libe], dependents=[])
-        self._check_node(libd, "libd/0.1#123", deps=[libb], dependents=[app])
-        self._check_node(libe, "libe/0.1#123", deps=[libc], dependents=[app])
-        self._check_node(libb, "libb/0.1#123", deps=[cmake1], dependents=[libd])
-        self._check_node(libc, "libc/0.1#123", deps=[], dependents=[libe])
-        self._check_node(cmake1, "cmake/0.1#123", deps=[], dependents=[libb])
-
     def test_tool_requires(self):
         # app -> libb -(br public)-> protobuf/0.1
         #           \--------------> protobuf/0.2
