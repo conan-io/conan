@@ -39,6 +39,10 @@ class Requirement:
         self.skip = False
         self.required_nodes = set()  # store which intermediate nodes are required, to compute "Skip"
         self.no_skip = no_skip
+        # computed ones, not default ones
+        if self.visible and not self.consistent:
+            raise ConanException(f"Requirement {ref} with visible=True and consistent=False is not"
+                                 f" supported. Please open a Github ticket to report it")
 
     @property
     def files(self):  # require needs some files in dependency package
@@ -292,7 +296,9 @@ class Requirement:
             # Build-requires will propagate its main trait for running exes/shared to downstream
             # consumers so run=require.run, irrespective of the 'self.run' trait
             downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                             run=require.run, visible=self.visible, direct=False)
+                                             run=require.run, visible=self.visible, direct=False,
+                                             # require.consistent is always True
+                                             consistent=self.consistent)
             return downstream_require
 
         if self.build:  # Build-requires
@@ -300,7 +306,9 @@ class Requirement:
             # visible=self.visible will further propagate it downstream
             if dep_pkg_type is PackageType.SHARED or require.run:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                                 run=True, visible=self.visible, direct=False)
+                                                 run=True, visible=self.visible, direct=False,
+                                                 # require.consistent is always True
+                                                 consistent=self.consistent)
                 return downstream_require
             return
 
@@ -345,6 +353,8 @@ class Requirement:
         if self.transitive_libs is not None:
             downstream_require.transitive_libs = self.transitive_libs
 
+        downstream_require.consistent = require.consistent and self.consistent
+
         if self.visible is False:
             downstream_require.visible = False
 
@@ -359,8 +369,6 @@ class Requirement:
         # TODO: Automatic assignment invalidates user possibility of overriding default
         # if required.run is not None:
         #    downstream_require.run = required.run
-
-        downstream_require.consistent = require.consistent and self.consistent
 
         if self.test:
             downstream_require.test = True

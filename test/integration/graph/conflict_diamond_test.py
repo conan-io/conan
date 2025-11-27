@@ -387,62 +387,89 @@ class TestErrorVisibleFalse:
         assert dep_pkg2["visible"] is True
 
 
-def test_visible_order_issue():
-    #  libc  -> libb/1.0 (static) -> lib_a/1.1 (header)
-    #   \-------------------------------/
-    # Order mattered here
-    #  libc2 ---------------------> lib_a/1.1 (header)
-    #   \----> libb/1.0 (static) -> lib_a/1.2 (header)
-    c = TestClient(light=True)
-    c.save({"liba/conanfile.py": GenConanfile("lib_a").with_package_type("header-library"),
-            "libb/conanfile.py": GenConanfile("lib_b", "1.0").with_package_type("static-library")
-                                                             .with_requires("lib_a/[>=1]"),
-            "libc/conanfile.py": GenConanfile("lib_c", "1.0").with_package_type("shared-library")
-                                                             .with_requirement("lib_b/1.0",
-                                                                               visible=False, consistent=True)
-                                                             .with_requirement("lib_a/1.1"),
-            "libc2/conanfile.py": GenConanfile("lib_c", "1.0").with_package_type("shared-library")
-                                                              .with_requirement("lib_a/1.1")
-                                                              .with_requirement("lib_b/1.0",
-                                                                                visible=False, consistent=True),
-            })
-    c.run("export liba --version=1.0")
-    c.run("export liba --version=1.1")
-    c.run("export liba --version=1.2")
-    c.run("export libb")
-    c.run("graph info libc --format=json")
-    graph = json.loads(c.stdout)
-    assert len(graph["graph"]["nodes"]) == 3
+class TestConsistentTrait:
+    def test_visible_order_issue(self):
+        #  libc  -> libb/1.0 (static) -> liba/1.1 (header)
+        #   \-------------------------------/
+        # Order mattered here
+        #  libc2 ---------------------> liba/1.1 (header)
+        #   \----> libb/1.0 (static) -> liba/1.2 (header)
+        c = TestClient(light=True)
+        c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
+                                                                .with_requires("liba/[>=1]"),
+                "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+                                                                .with_requirement("libb/1.0",
+                                                                                  visible=False,
+                                                                                  consistent=True)
+                                                                .with_requirement("liba/1.1"),
+                "libc2/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+                                                                 .with_requirement("liba/1.1")
+                                                                 .with_requirement("libb/1.0",
+                                                                                   visible=False,
+                                                                                   consistent=True),
+                })
+        c.run("export liba --version=1.0")
+        c.run("export liba --version=1.1")
+        c.run("export liba --version=1.2")
+        c.run("export libb")
+        c.run("graph info libc --format=json")
+        graph = json.loads(c.stdout)
+        assert len(graph["graph"]["nodes"]) == 3
 
-    c.run("graph info libc2 --format=json")
-    graph = json.loads(c.stdout)
-    assert len(graph["graph"]["nodes"]) == 3
+        c.run("graph info libc2 --format=json")
+        graph = json.loads(c.stdout)
+        assert len(graph["graph"]["nodes"]) == 3
 
+    def test_visible_order_full_diamond_issue(self):
+        # This is a conflict, because the depth-first graph resolution approach can't see
+        # beyond the current branch to see there is an incompatible version in other branch not
+        # expanded yet
+        #  libc --(v=F, c=T)-> libb/1.0 (static) -(range)--> liba/1.2(header)
+        #   \----------------> libd/1.0 (static)-----------> liba/1.1 (header) CONFLICT
 
-def test_visible_order_full_diamond_issue():
-    c = TestClient(light=True)
-    c.save({"liba/conanfile.py": GenConanfile("lib_a").with_package_type("header-library"),
-            "libb/conanfile.py": GenConanfile("lib_b", "1.0").with_package_type("static-library")
-                                                             .with_requires("lib_a/[>=1]"),
-            "libd/conanfile.py": GenConanfile("lib_d", "1.0").with_package_type("static-library")
-                                                             .with_requires("lib_a/1.1"),
-            "libc/conanfile.py": GenConanfile("lib_c", "1.0").with_package_type("shared-library")
-                                                             .with_requirement("lib_b/1.0",
-                                                                               visible=False, consistent=True)
-                                                             .with_requirement("lib_d/1.0"),
-            "libc2/conanfile.py": GenConanfile("lib_c", "1.0").with_package_type("shared-library")
-                                                              .with_requirement("lib_d/1.0")
-                                                              .with_requirement("lib_b/1.0",
-                                                                                visible=False, consistent=True),
-            })
-    c.run("export liba --version=1.0")
-    c.run("export liba --version=1.1")
-    c.run("export liba --version=1.2")
-    c.run("export libb")
-    c.run("export libd")
-    c.run("graph info libc", assert_error=True)
-    assert "ERROR: Version conflict: Conflict between lib_a/1.1 and lib_a/1.2 in the graph" in c.out
+        # Order matters here, with the other order not a conflict, because fixed dep is
+        # expanded first
+        #  libc2 -----------> libd/1.0 (static) ---------> liba/1.1 (header)
+        #   \--(v=F, c=T)---> libb/1.0 (static) --range-----/ (header)
+        c = TestClient(light=True)
+        c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
+                                                                .with_requires("liba/[>=1]"),
+                "libd/conanfile.py": GenConanfile("lib_d", "1.0").with_package_type("static-library")
+                                                                 .with_requires("liba/1.1"),
+                "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+                                                                .with_requirement("libb/1.0",
+                                                                                  visible=False,
+                                                                                  consistent=True)
+                                                                 .with_requirement("lib_d/1.0"),
+                "libc2/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+                                                                 .with_requirement("lib_d/1.0")
+                                                                 .with_requirement("libb/1.0",
+                                                                                   visible=False,
+                                                                                   consistent=True),
+                })
+        c.run("export liba --version=1.0")
+        c.run("export liba --version=1.1")
+        c.run("export liba --version=1.2")
+        c.run("export libb")
+        c.run("export libd")
+        # This is still a conflict, the consistent=True raises this conflict
+        c.run("graph info libc", assert_error=True)
+        assert "ERROR: Version conflict: Conflict between liba/1.1 and liba/1.2 in the graph" in c.out
 
-    c.run("graph info libc2 --format=json")
-    graph = json.loads(c.stdout)
-    assert len(graph["graph"]["nodes"]) == 4
+        c.run("graph info libc2 --format=json")
+        graph = json.loads(c.stdout)
+        assert len(graph["graph"]["nodes"]) == 4
+
+    def test_visible_consistent(self):
+        c = TestClient(light=True)
+        c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
+                                                                 .with_requirement("liba/[>=1]",
+                                                                                   consistent=False),
+                })
+        c.run("create liba --version=1.0")
+        c.run("install libb", assert_error=True)
+        assert ("Requirement liba/[>=1] with visible=True and "
+                "consistent=False is not supported") in c.out
