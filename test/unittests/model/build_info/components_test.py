@@ -15,7 +15,7 @@ class TestCppInfoComponents:
 
         import pytest
         with pytest.raises(AttributeError):
-            cpp_info.required_components = ["liba::liba"]
+            cpp_info.required_components = ["liba::liba"]  # noqa
 
     def test_no_components_inside_components(self):
         cpp_info = CppInfo()
