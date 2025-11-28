@@ -825,6 +825,28 @@ class TestMeta:
         assert "pkg" not in folders
         assert os.path.isfile(os.path.join(deploy_folder, "dep", "1.0", "myfile.txt"))
 
+    def test_customize_generator_per_package(self):
+        # https://github.com/conan-io/conan/issues/19326
+        c = TestClient(light=True)
+
+        pkg = GenConanfile("pkg", "0.1")
+        workspace = textwrap.dedent("""\
+            from conan import Workspace, ConanFile
+
+            class MyWs(ConanFile):
+                pass
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+           """)
+        c.save({"pkg/conanfile.py": pkg,
+                "conanws.py": workspace})
+        c.run("workspace add pkg")
+        c.run("workspace super-install -c acme*:tools.cmake.cmaketoolchain:generator=Ninja")
+        # It no longer crashes
+        assert "Install finished successfully" in c.out
+
 
 def test_workspace_with_local_recipes_index():
     c3i_folder = temp_folder()

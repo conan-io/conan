@@ -283,6 +283,7 @@ class WorkspaceAPI:
             # To inject things like cmd_wrapper to the consumer conanfile, so self.run() works
             helpers = ConanApp(self._conan_api).loader._conanfile_helpers  # noqa
             conanfile._conan_helpers = helpers
+            conanfile._conan_is_consumer = True
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
                                          is_build_require=False)
             # consumer_definer(conanfile, profile_host, profile_build)
