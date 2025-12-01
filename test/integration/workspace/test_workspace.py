@@ -433,10 +433,21 @@ class TestComplete:
                 "pkgd/conanfile.py": GenConanfile("pkgd", "0.1").with_requires("pkgb/0.1",
                                                                                "pkgc/0.1")})
 
+        c.run("workspace complete")  # Does nothing, but it doesn't fail
+        assert "There are no packages in this workspace, nothing to complete" in c.out
+        c.run("workspace info")
+        assert "packages: (empty)" in c.out
+
         for pkg in ("pkga", "pkgx", "pkgb", "pkgc", "pkgd"):
             c.run(f"export {pkg}")
 
         c.run("workspace add pkgd")
+        c.run("workspace complete")  # Does nothing, but it doesn't fail
+        assert "There are no intermediate packages to add to the workspace" in c.out
+        c.run("workspace info")
+        assert "pkgd/0.1" in c.out
+        assert "pkga/0.1" not in c.out
+
         c.run("workspace add pkga")
         c.run("workspace install --build=missing", assert_error=True)
         assert "Workspace definition error. Package pkgb/0.1 in the Conan cache" in c.out

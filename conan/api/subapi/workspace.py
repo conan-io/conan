@@ -206,6 +206,10 @@ class WorkspaceAPI:
 
     def complete(self, profile_host, profile_build, lockfile, remotes, update):
         packages = self.packages()
+        if not packages:
+            ConanOutput().info("There are no packages in this workspace, nothing to complete")
+            return
+
         for ref, info in packages.items():
             ConanOutput().title(f"Computing the dependency graph for package: {ref}")
             gapi = self._conan_api.graph
@@ -213,24 +217,31 @@ class WorkspaceAPI:
                                                   lockfile, remotes, update)
             deps_graph.report_graph_error()
             print_graph_basic(deps_graph)
+
+            nodes_to_complete = []
             for node in deps_graph.nodes[1:]:  # Exclude the current virtual root
                 if node.recipe != RECIPE_EDITABLE:
                     # sanity check, a pacakge in the cache cannot have dependencies to the workspace
-                    deps_edit = [d.node for d in node.transitive_deps.values()
-                                 if d.node.recipe == RECIPE_EDITABLE]
-                    if deps_edit:
-                        full_path = os.path.join(self._folder, node.name, "conanfile.py")
-                        dep_ref = node.ref
-                        ConanOutput().info(f"Adding to workspace {dep_ref}")
-                        try:
-                            self._ws.add(dep_ref, full_path, output_folder=None)
-                        except ConanException:
-                            if os.path.isfile(full_path):
-                                raise
-                            ConanOutput().info(f"Conanfile in {node.name} not found, trying "
-                                               "to open it first")
-                            self.open(dep_ref, remotes, cwd=self._folder)
-                            self._ws.add(dep_ref, full_path, output_folder=None)
+                    if any(d.node.recipe == RECIPE_EDITABLE for d in node.transitive_deps.values()):
+                        nodes_to_complete.append(node)
+
+            if not nodes_to_complete:
+                ConanOutput().info("There are no intermediate packages to add to the workspace")
+                return
+
+            for node in nodes_to_complete:
+                full_path = os.path.join(self._folder, node.name, "conanfile.py")
+                dep_ref = node.ref
+                ConanOutput().info(f"Adding to workspace {dep_ref}")
+                try:
+                    self._ws.add(dep_ref, full_path, output_folder=None)
+                except ConanException:
+                    if os.path.isfile(full_path):
+                        raise
+                    ConanOutput().info(f"Conanfile in {node.name} not found, trying "
+                                       "to open it first")
+                    self.open(dep_ref, remotes, cwd=self._folder)
+                    self._ws.add(dep_ref, full_path, output_folder=None)
 
     @staticmethod
     def init(path):
