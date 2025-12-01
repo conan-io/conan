@@ -10,11 +10,10 @@ from conan.api.output import ConanOutput
 from conan.internal.source import retrieve_exports_sources
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
-from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
-                                  EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO, PACKAGE_TZSTD_NAME)
+from conan.internal.paths import CONAN_MANIFEST, CONANFILE, CONANINFO
 from conan.internal.util.files import (clean_dirty, is_dirty, gather_files,
-                                       set_dirty_context_manager, mkdir, human_size,
-                                       tar_zst_compress)
+                                       set_dirty_context_manager, mkdir, human_size)
+from conan.internal.util.zstd import tar_zst_compress
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_SKIP = "skip-upload"
@@ -129,14 +128,6 @@ class PackagePreparator:
     def _compress_recipe_files(self, layout, ref):
         download_export_folder = layout.download_export()
 
-        output = ConanOutput(scope=str(ref))
-        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
-            tgz_path = os.path.join(download_export_folder, f)
-            if is_dirty(tgz_path):
-                output.warning("Removing %s, marked as dirty" % f)
-                os.remove(tgz_path)
-                clean_dirty(tgz_path)
-
         export_folder = layout.export()
         files, symlinked_folders = gather_files(export_folder)
         files.update(symlinked_folders)
@@ -160,18 +151,12 @@ class PackagePreparator:
         files.pop(CONANFILE)
         files.pop(CONAN_MANIFEST)
 
-        def add_tgz(tgz_name, tgz_files):
-            tgz = os.path.join(download_export_folder, tgz_name)
-            if os.path.isfile(tgz):
-                result[tgz_name] = tgz
-            elif tgz_files:
-                compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
-                tgz = compress_files(tgz_files, tgz_name, download_export_folder,
-                                     compresslevel=compresslevel, ref=ref)
-                result[tgz_name] = tgz
-
-        add_tgz(EXPORT_TGZ_NAME, files)
-        add_tgz(EXPORT_SOURCES_TGZ_NAME, src_files)
+        if files:
+            comp = self._compressed_file("conan_export", files, download_export_folder, ref)
+            result[comp] = os.path.join(download_export_folder, comp)
+        if src_files:
+            comp = self._compressed_file("conan_sources", src_files, download_export_folder, ref)
+            result[comp] = os.path.join(download_export_folder, comp)
         return result
 
     def _prepare_package(self, pref, prev_bundle):
@@ -182,27 +167,49 @@ class PackagePreparator:
         cache_files = self._compress_package_files(pkg_layout, pref)
         prev_bundle["files"] = cache_files
 
+    def _compressed_file(self, filename, files, download_folder, ref):
+        output = ConanOutput(scope=str(ref))
+        formats = {"zstd": ".tzst",
+                   "xz": ".txz",
+                   "gzip": ".tgz"}
+
+        # Check if there is some existing compressed file alreday
+        matches = []
+        for extension in formats.values():
+            file_name = filename + extension
+            package_file = os.path.join(download_folder, file_name)
+            if is_dirty(package_file):
+                output.warning(f"Removing {file_name}, marked as dirty")
+                os.remove(package_file)
+                clean_dirty(package_file)
+            if os.path.isfile(package_file):
+                matches.append(file_name)
+        if len(matches) > 1:
+            raise ConanException(f"{ref}: Multiple package files found for {filename}: {matches}")
+        if len(matches) == 1:
+            return matches[0]
+
+        # No compressed file exists, need to compress
+        compressformat = self._global_conf.get("core.upload:compression_format",
+                                               default="gzip", choices=("zstd", "xz", "gzip"))
+        compresslevel = self._global_conf.get("core:compresslevel", check_type=int)
+        if compresslevel is None and compressformat == "gzip":
+            compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
+            if compresslevel is not None:
+                ConanOutput().warning("core.gzip:compresslevel is deprecated, "
+                                      "use core.compresslevel instead", warn_tag="deprecated")
+
+        file_name = filename + formats[compressformat]
+        package_file = os.path.join(download_folder, file_name)
+        compressed_path = compress_files(files, file_name, download_folder,
+                                         compresslevel=compresslevel, compressformat=compressformat,
+                                         ref=ref)
+        assert compressed_path == package_file
+        assert os.path.exists(package_file)
+        return file_name
+
     def _compress_package_files(self, layout, pref):
-        output = ConanOutput(scope=str(pref))
         download_pkg_folder = layout.download_package()
-
-        compression_format = self._global_conf.get("core.upload:compression_format",
-                                                   default="gzip")
-        if compression_format == "gzip":
-            compress_level_config = "core.gzip:compresslevel"
-            package_file_name = PACKAGE_TGZ_NAME
-            package_file = os.path.join(download_pkg_folder, PACKAGE_TGZ_NAME)
-        elif compression_format == "zstd":
-            compress_level_config = "core.zstd:compresslevel"
-            package_file_name = PACKAGE_TZSTD_NAME
-            package_file = os.path.join(download_pkg_folder, PACKAGE_TZSTD_NAME)
-        else:
-            raise ConanException(f"Unsupported compression format '{compression_format}'")
-
-        if is_dirty(package_file):
-            output.warning(f"Removing {package_file_name}, marked as dirty")
-            os.remove(package_file)
-            clean_dirty(package_file)
 
         # Get all the files in that directory
         # existing package
@@ -223,17 +230,8 @@ class PackagePreparator:
         files.pop(CONANINFO)
         files.pop(CONAN_MANIFEST)
 
-        if not os.path.isfile(package_file):
-            tgz_files = {f: path for f, path in files.items()}
-            compresslevel = self._global_conf.get(compress_level_config, check_type=int)
-            compressed_path = compress_files(tgz_files, package_file_name, download_pkg_folder,
-                                             compresslevel=compresslevel, compressformat=compression_format,
-                                             ref=pref)
-
-            assert compressed_path == package_file
-            assert os.path.exists(package_file)
-
-        return {package_file_name: package_file,
+        compressed_file = self._compressed_file("conan_package", files, download_pkg_folder, pref)
+        return {compressed_file: os.path.join(download_pkg_folder, compressed_file),
                 CONANINFO: os.path.join(download_pkg_folder, CONANINFO),
                 CONAN_MANIFEST: os.path.join(download_pkg_folder, CONAN_MANIFEST)}
 
@@ -303,12 +301,20 @@ def compress_files(files, name, dest_dir, compressformat=None, compresslevel=Non
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
+    if ref:
+        ConanOutput(scope=str(ref) if ref else None).info(f"Compressing {name}")
+
     if compressformat == "zstd":
         tar_zst_compress(tgz_path, files, compresslevel=compresslevel)
         return
 
-    if ref:
-        ConanOutput(scope=str(ref) if ref else None).info(f"Compressing {name}")
+    if compressformat == "xz":
+        with tarfile.open(tgz_path, "w:xz") as tar:
+            for filename, abs_path in sorted(files.items()):
+                # recursive is False by default in case it is a symlink to a folder
+                tar.add(abs_path, filename, recursive=recursive)
+        return tgz_path
+
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
         for filename, abs_path in sorted(files.items()):
