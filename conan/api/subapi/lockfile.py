@@ -2,15 +2,15 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
-from conans.client.graph.graph import Overrides
-from conans.errors import ConanException
-from conans.model.graph_lock import Lockfile, LOCKFILE
+from conan.internal.graph.graph import Overrides
+from conan.errors import ConanException
+from conan.internal.model.lockfile import Lockfile, LOCKFILE
 
 
 class LockfileAPI:
 
     def __init__(self, conan_api):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
 
     @staticmethod
     def get_lockfile(lockfile=None, conanfile_path=None, cwd=None, partial=False, overrides=None):
@@ -79,6 +79,15 @@ class LockfileAPI:
         else:
             lockfile.update_lock(graph, lock_packages)
         return lockfile
+
+    @staticmethod
+    def merge_lockfiles(lockfiles):
+        result = Lockfile()
+        for lockfile in lockfiles:
+            lockfile = make_abs_path(lockfile)
+            graph_lock = Lockfile.load(lockfile)
+            result.merge(graph_lock)
+        return result
 
     @staticmethod
     def add_lockfile(lockfile=None, requires=None, build_requires=None, python_requires=None,

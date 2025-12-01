@@ -3,12 +3,12 @@ import os
 
 from bottle import FileUpload, static_file
 
-from conans.errors import RecipeNotFoundException, PackageNotFoundException, NotFoundException
+from conan.internal.errors import NotFoundException, RecipeNotFoundException, PackageNotFoundException
 from conan.internal.paths import CONAN_MANIFEST
-from conans.model.package_ref import PkgReference
+from conan.api.model import PkgReference
 from conans.server.service.mime import get_mime_type
 from conans.server.store.server_store import ServerStore
-from conans.util.files import mkdir
+from conan.internal.util.files import mkdir
 
 
 class ConanServiceV2:

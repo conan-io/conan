@@ -41,12 +41,14 @@ app_conanfile = textwrap.dedent("""
 """)
 
 
+# needs at least 3.23.3 because of error with "empty identity"
+# https://stackoverflow.com/questions/72746725/xcode-14-beta-cmake-not-able-to-resolve-cmake-c-compiler-and-cmake-cxx-compiler
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_apple_framework_xcode(client):
     app_cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(Testing CXX)
+        project(Testing NONE)
         find_package(foolib REQUIRED)
         message(">>> foolib_FRAMEWORKS_FOUND_DEBUG: ${foolib_FRAMEWORKS_FOUND_DEBUG}")
         message(">>> foolib_FRAMEWORKS_FOUND_RELEASE: ${foolib_FRAMEWORKS_FOUND_RELEASE}")
@@ -89,6 +91,8 @@ conanfile = textwrap.dedent("""
                     self.cpp_info.includedirs = []
             """)
 cmake = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
             project(MyHello CXX)
 
@@ -199,6 +203,8 @@ def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 
     test_cmake = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(Testing CXX)
 
@@ -268,6 +274,8 @@ def test_apple_own_framework_cmake_deps():
     client = TestClient()
 
     test_cmake = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(Testing CXX)
         message(STATUS "CMAKE_BINARY_DIR ${CMAKE_BINARY_DIR}")
@@ -344,6 +352,8 @@ def test_apple_own_framework_cmake_find_package_multi():
     client = TestClient()
 
     test_cmake = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(Testing CXX)
         set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
@@ -435,6 +445,8 @@ void hello_api()
 void hello_api();
         """)
     cmakelists_txt = textwrap.dedent("""
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 cmake_minimum_required(VERSION 3.15)
 project(hello)
 include(GNUInstallDirs)
@@ -487,8 +499,10 @@ int main()
 }
         """)
     test_cmakelists_txt = textwrap.dedent("""
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 cmake_minimum_required(VERSION 3.15)
-project(test_package)
+project(test_package CXX)
 
 find_package(HELLO REQUIRED CONFIG)
 
@@ -530,6 +544,8 @@ def test_iphoneos_crossbuild():
     #        at the toolchain (but it would require the toolchain to know about the deps)
     #        https://stackoverflow.com/questions/65494246/cmakes-find-package-ignores-the-paths-option-when-building-for-ios#
     cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(MyApp CXX)
     set(hello_DIR "${CMAKE_BINARY_DIR}")

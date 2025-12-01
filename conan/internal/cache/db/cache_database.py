@@ -4,9 +4,9 @@ import sqlite3
 from conan.api.output import ConanOutput
 from conan.internal.cache.db.packages_table import PackagesDBTable
 from conan.internal.cache.db.recipes_table import RecipesDBTable
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
-from conans.model.version import Version
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
+from conan.internal.model.version import Version
 
 
 class CacheDatabase:
@@ -22,13 +22,11 @@ class CacheDatabase:
             self._packages.create_table()
 
     def exists_prev(self, ref):
-        # TODO: This logic could be done directly against DB
-        matching_prevs = self.get_package_revisions_references(ref)
-        return len(matching_prevs) > 0
+        return self._packages.get_package_revisions_reference_exists(ref)
 
-    def get_latest_package_reference(self, ref):
-        prevs = self.get_package_revisions_references(ref, True)
-        return prevs[0] if prevs else None
+    def get_latest_package_reference(self, pref):
+        prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
+        return prevs[0]["pref"] if prevs else None
 
     def update_recipe_timestamp(self, ref):
         self._recipes.update_timestamp(ref)
@@ -61,11 +59,9 @@ class CacheDatabase:
         self._packages.remove_build_id(pref)
 
     def get_matching_build_id(self, ref, build_id):
-        # TODO: This can also be done in a single query in DB
-        for d in self._packages.get_package_references(ref):
-            existing_build_id = d["build_id"]
-            if existing_build_id == build_id:
-                return d["pref"]
+        result = self._packages.get_package_references_with_build_id_match(ref, build_id)
+        if result:
+            return result["pref"]
         return None
 
     def get_recipe(self, ref: RecipeReference):
@@ -90,14 +86,23 @@ class CacheDatabase:
     def create_package(self, path, ref: PkgReference, build_id):
         self._packages.create(path, ref, build_id=build_id)
 
-    def list_references(self):
-        return [d["ref"]
-                for d in self._recipes.all_references()]
+    def list_references(self, pattern=None):
+        """Returns a list of all RecipeReference in the cache, optionally filtering by pattern.
+         The references have their revision and timestamp attributes unset"""
+        return [ref for ref in self._recipes.all_references()
+                if pattern is None or ref.partial_match(pattern)]
 
-    def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
+    def get_package_revisions_references(self, pref: PkgReference):
         return [d["pref"]
-                for d in self._packages.get_package_revisions_references(pref, only_latest_prev)]
+                for d in self._packages.get_package_revisions_references(pref,
+                                                                         only_latest_prev=False)]
 
     def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         return [d["pref"]
                 for d in self._packages.get_package_references(ref, only_latest_prev)]
+
+    def path_to_ref(self, path):
+        ref = self._recipes.path_to_ref(path)
+        if ref is not None:
+            return ref
+        return self._packages.path_to_ref(path)

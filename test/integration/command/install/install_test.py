@@ -8,14 +8,14 @@ import pytest
 
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conan.test.utils.tools import TestClient, TestServer, GenConanfile
-from conans.util.files import mkdir, save
+from conan.internal.util.files import mkdir, save
 
 
 @pytest.fixture()
 def client():
     c = TestClient(default_server_user=True)
-    save(c.cache.settings_path, "os: [Windows, Macos, Linux, FreeBSD]\nos_build: [Windows, Macos]")
-    save(c.cache.default_profile_path, "[settings]\nos=Windows")
+    c.save_home({"settings.yml": "os: [Windows, Macos, Linux, FreeBSD]\nos_build: [Windows, Macos]",
+                 "profiles/default": "[settings]\nos=Windows"})
     return c
 
 
@@ -32,7 +32,7 @@ def test_install_reference_error(client):
     assert "ERROR: Can't use --name, --version, --user or --channel arguments with --requires" in client.out
     client.save({"conanfile.py": GenConanfile("pkg", "1.0")})
     client.run("install . --channel=testing", assert_error=True)
-    assert "Can't specify channel without user" in client.out
+    assert "Can't specify channel 'testing' without user" in client.out
 
 
 def test_install_args_error():
@@ -175,12 +175,12 @@ def test_install_with_profile(client):
         """)
 
     client.save({"conanfile.py": conanfile})
-    save(os.path.join(client.cache.profiles_path, "myprofile"), "[settings]\nos=Linux")
+    save(os.path.join(client.paths.profiles_path, "myprofile"), "[settings]\nos=Linux")
     client.run("install . -pr=myprofile --build='*'")
     assert "PKGOS=Linux" in client.out
     mkdir(os.path.join(client.current_folder, "myprofile"))
     client.run("install . -pr=myprofile")
-    save(os.path.join(client.cache.profiles_path, "myotherprofile"), "[settings]\nos=FreeBSD")
+    save(os.path.join(client.paths.profiles_path, "myotherprofile"), "[settings]\nos=FreeBSD")
     client.run("install . -pr=myotherprofile")
     assert "PKGOS=FreeBSD" in client.out
     client.save({"myotherprofile": "Some garbage without sense [garbage]"})
@@ -191,9 +191,13 @@ def test_install_with_profile(client):
 
 
 def test_install_with_path_errors(client):
-    # Install without path param not allowed
+    # Install without path param allowed, but nothing found
     client.run("install", assert_error=True)
-    assert "ERROR: Please specify a path" in client.out
+    assert "Conanfile not found" in client.out
+
+    # Install without path param allowed, but nothing found
+    client.run("install . --requires=foo/1.0", assert_error=True)
+    assert "--requires and --tool-requires arguments are incompatible with [path]" in client.out
 
     # Path with wrong conanfile.txt path
     client.run("install not_real_dir/conanfile.txt", assert_error=True)

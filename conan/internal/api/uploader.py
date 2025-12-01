@@ -1,4 +1,5 @@
 import fnmatch
+import gzip
 import os
 import shutil
 import tarfile
@@ -6,13 +7,14 @@ import time
 
 from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput
-from conans.client.source import retrieve_exports_sources
-from conans.errors import ConanException, NotFoundException
+from conan.internal.source import retrieve_exports_sources
+from conan.internal.errors import NotFoundException
+from conan.errors import ConanException
 from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
-                                  EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, PACKAGE_TZSTD_NAME, CONANINFO)
-from conans.util.files import (clean_dirty, is_dirty, gather_files,
-                               gzopen_without_timestamps, set_dirty_context_manager, mkdir,
-                               human_size, tar_zst_compress)
+                                  EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO, PACKAGE_TZSTD_NAME)
+from conan.internal.util.files import (clean_dirty, is_dirty, gather_files,
+                                       set_dirty_context_manager, mkdir, human_size,
+                                       tar_zst_compress)
 
 UPLOAD_POLICY_FORCE = "force-upload"
 UPLOAD_POLICY_SKIP = "skip-upload"
@@ -27,11 +29,13 @@ class UploadUpstreamChecker:
     def __init__(self, app: ConanApp):
         self._app = app
 
-    def check(self, upload_bundle, remote, force):
-        for ref, recipe_bundle in upload_bundle.refs().items():
-            self._check_upstream_recipe(ref, recipe_bundle, remote, force)
-            for pref, prev_bundle in upload_bundle.prefs(ref, recipe_bundle).items():
-                self._check_upstream_package(pref, prev_bundle, remote, force)
+    def check(self, package_list, remote, force):
+        for ref, packages in package_list.items():
+            recipe_info = package_list.recipe_dict(ref)
+            self._check_upstream_recipe(ref, recipe_info, remote, force)
+            for pref in packages:
+                pkg_dict = package_list.package_dict(pref)
+                self._check_upstream_package(pref, pkg_dict, remote, force)
 
     def _check_upstream_recipe(self, ref, ref_bundle, remote, force):
         output = ConanOutput(scope=str(ref))
@@ -39,7 +43,7 @@ class UploadUpstreamChecker:
         try:
             assert ref.revision
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_ref = self._app.remote_manager.get_recipe_revision_reference(ref, remote)
+            server_ref = self._app.remote_manager.get_recipe_revision(ref, remote)
             assert server_ref  # If successful (not raising NotFoundException), this will exist
         except NotFoundException:
             ref_bundle["force_upload"] = False
@@ -60,7 +64,7 @@ class UploadUpstreamChecker:
 
         try:
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_revisions = self._app.remote_manager.get_package_revision_reference(pref, remote)
+            server_revisions = self._app.remote_manager.get_package_revision(pref, remote)
             assert server_revisions
         except NotFoundException:
             prev_bundle["force_upload"] = False
@@ -82,9 +86,9 @@ class PackagePreparator:
         self._app = app
         self._global_conf = global_conf
 
-    def prepare(self, upload_bundle, enabled_remotes):
+    def prepare(self, pkg_list, enabled_remotes):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
-        for ref, bundle in upload_bundle.refs().items():
+        for ref, packages in pkg_list.items():
             layout = self._app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
@@ -95,9 +99,16 @@ class PackagePreparator:
                                          "This isn't a remote URL, the build won't be reproducible\n"
                                          "Failing because conf 'core.scm:local_url!=allow'")
 
+            # Just in case it was defined from a previous run
+            bundle = pkg_list.recipe_dict(ref)
+            bundle.pop("files", None)
+            bundle.pop("upload-urls", None)
             if bundle.get("upload"):
                 self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
-            for pref, prev_bundle in upload_bundle.prefs(ref, bundle).items():
+            for pref in packages:
+                prev_bundle = pkg_list.package_dict(pref)
+                prev_bundle.pop("files", None)  # If defined from a previous upload
+                prev_bundle.pop("upload-urls", None)
                 if prev_bundle.get("upload"):
                     self._prepare_package(pref, prev_bundle)
 
@@ -194,7 +205,7 @@ class PackagePreparator:
             clean_dirty(package_file)
 
         # Get all the files in that directory
-        # existing package, will use short paths if defined
+        # existing package
         package_folder = layout.package()
         files, symlinked_folders = gather_files(package_folder)
         files.update(symlinked_folders)
@@ -236,10 +247,12 @@ class UploadExecutor:
         self._app = app
 
     def upload(self, upload_data, remote):
-        for ref, bundle in upload_data.refs().items():
+        for ref, packages in upload_data.items():
+            bundle = upload_data.recipe_dict(ref)
             if bundle.get("upload"):
                 self.upload_recipe(ref, bundle, remote)
-            for pref, prev_bundle in upload_data.prefs(ref, bundle).items():
+            for pref in packages:
+                prev_bundle = upload_data.package_dict(pref)
                 if prev_bundle.get("upload"):
                     self.upload_package(pref, prev_bundle, remote)
 
@@ -270,25 +283,42 @@ class UploadExecutor:
         output.debug(f"Upload {pref} in {duration} time")
 
 
-def compress_files(files, name, dest_dir, compressformat=None, compresslevel=None, ref=None):
-    t1 = time.time()
-    tar_path = os.path.join(dest_dir, name)
-    ConanOutput(scope=str(ref)).info(f"Compressing {name}")
+def gzopen_without_timestamps(name, fileobj, compresslevel=None):
+    """ !! Method overrided by laso to pass mtime=0 (!=None) to avoid time.time() was
+        setted in Gzip file causing md5 to change. Not possible using the
+        previous tarfile open because arguments are not passed to GzipFile constructor
+    """
+    compresslevel = compresslevel if compresslevel is not None else 9  # default Gzip = 9
+    fileobj = gzip.GzipFile(name, "w", compresslevel, fileobj, mtime=0)
+    # Format is forced because in Python3.8, it changed and it generates different tarfiles
+    # with different checksums, which break hashes of tgzs
+    # PAX_FORMAT is the default for Py38, lets make it explicit for older Python versions
+    t = tarfile.TarFile.taropen(name, "w", fileobj, format=tarfile.PAX_FORMAT)
+    t._extfileobj = False
+    return t
 
+
+def compress_files(files, name, dest_dir, compressformat=None, compresslevel=None, ref=None,
+                   recursive=False):
+    t1 = time.time()
+    # FIXME, better write to disk sequentially and not keep tgz contents in memory
+    tgz_path = os.path.join(dest_dir, name)
     if compressformat == "zstd":
-        tar_zst_compress(tar_path, files, compresslevel=compresslevel)
-    else:
-        with set_dirty_context_manager(tar_path), open(tar_path, "wb") as tgz_handle:
-            tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle,
-                                            compresslevel=compresslevel)
-            for filename, abs_path in sorted(files.items()):
-                # recursive is False in case it is a symlink to a folder
-                tgz.add(abs_path, filename, recursive=False)
-            tgz.close()
+        tar_zst_compress(tgz_path, files, compresslevel=compresslevel)
+        return
+
+    if ref:
+        ConanOutput(scope=str(ref) if ref else None).info(f"Compressing {name}")
+    with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
+        tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
+        for filename, abs_path in sorted(files.items()):
+            # recursive is False by default in case it is a symlink to a folder
+            tgz.add(abs_path, filename, recursive=recursive)
+        tgz.close()
 
     duration = time.time() - t1
     ConanOutput().debug(f"{name} compressed in {duration} time")
-    return tar_path
+    return tgz_path
 
 
 def _total_size(cache_files):
@@ -314,7 +344,8 @@ def _metadata_files(folder, metadata):
 
 
 def gather_metadata(package_list, cache, metadata):
-    for rref, recipe_bundle in package_list.refs().items():
+    for rref, packages in package_list.items():
+        recipe_bundle = package_list.recipe_dict(rref)
         if metadata or recipe_bundle["upload"]:
             metadata_folder = cache.recipe_layout(rref).metadata()
             files = _metadata_files(metadata_folder, metadata)
@@ -323,7 +354,8 @@ def gather_metadata(package_list, cache, metadata):
                 recipe_bundle.setdefault("files", {}).update(files)
                 recipe_bundle["upload"] = True
 
-        for pref, pkg_bundle in package_list.prefs(rref, recipe_bundle).items():
+        for pref in packages:
+            pkg_bundle = package_list.package_dict(pref)
             if metadata or pkg_bundle["upload"]:
                 metadata_folder = cache.pkg_layout(pref).metadata()
                 files = _metadata_files(metadata_folder, metadata)

@@ -3,7 +3,6 @@ import platform
 import textwrap
 
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.assets.pkg_cmake import pkg_cmake
 from conan.test.utils.tools import TestClient
 
 
@@ -226,7 +225,7 @@ def test_export_pkg_local():
 
 def test_start_dir_failure():
     c = TestClient()
-    c.save(pkg_cmake("dep", "0.1"))
+    c.run("new cmake_lib -d name=dep -d version=0.1")
     c.run("install .")
     if platform.system() != "Windows":
         gen_folder = os.path.join(c.current_folder, "build", "Release", "generators")

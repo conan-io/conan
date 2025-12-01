@@ -2,16 +2,13 @@ import os
 import platform
 import textwrap
 import time
-import unittest
 
 import pytest
-from parameterized.parameterized import parameterized
 
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from test.functional.utils import check_vs_runtime, check_exe_run
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
 
 
 @pytest.mark.tool("cmake", "3.15")
@@ -45,7 +42,7 @@ def test_simple_cmake_mingw():
 
 
 @pytest.mark.tool("cmake")
-class Base(unittest.TestCase):
+class Base:
 
     conanfile = textwrap.dedent(r"""
         from conan import ConanFile
@@ -87,6 +84,10 @@ class Base(unittest.TestCase):
     main = gen_function_cpp(name="main", includes=["app"], calls=["app"])
 
     cmakelist = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(App C CXX)
 
@@ -123,7 +124,8 @@ class Base(unittest.TestCase):
         target_link_libraries(app PRIVATE app_lib)
         """)
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -188,41 +190,36 @@ class Base(unittest.TestCase):
             if platform.system() == "Windows":
                 command_str = command_str.replace("/", "\\")
         self.client.run_command(command_str)
-        self.assertIn("Hello: %s" % build_type, self.client.out)
-        self.assertIn("%s: %s!" % (msg, build_type), self.client.out)
-        self.assertIn("MYVAR: MYVAR_VALUE", self.client.out)
-        self.assertIn("MYVAR_CONFIG: MYVAR_%s" % build_type.upper(), self.client.out)
-        self.assertIn("MYDEFINE: MYDEF_VALUE", self.client.out)
-        self.assertIn("MYDEFINE_CONFIG: MYDEF_%s" % build_type.upper(), self.client.out)
-        self.assertIn("MYDEFINEINT: 42", self.client.out)
-        self.assertIn("MYDEFINEINT_CONFIG: {}".format(421 if build_type == "Debug" else 422),
-                      self.client.out)
+        assert "Hello: %s" % build_type in self.client.out
+        assert "%s: %s!" % (msg, build_type) in self.client.out
+        assert "MYVAR: MYVAR_VALUE" in self.client.out
+        assert "MYVAR_CONFIG: MYVAR_%s" % build_type.upper() in self.client.out
+        assert "MYDEFINE: MYDEF_VALUE" in self.client.out
+        assert "MYDEFINE_CONFIG: MYDEF_%s" % build_type.upper() in self.client.out
+        assert "MYDEFINEINT: 42" in self.client.out
+        value = 421 if build_type == "Debug" else 422
+        assert f"MYDEFINEINT_CONFIG: {value}" in self.client.out
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-class WinTest(Base):
-    @parameterized.expand([("msvc", "Debug", "static", "191", "14", "x86", None, True),
-                           ("msvc", "Release", "dynamic", "191", "17", "x86_64", None, False)]
-                          )
-    def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, toolset,
-                           shared):
+class TestWin(Base):
+    @pytest.mark.parametrize("compiler, build_type, runtime, version, cppstd, arch, shared",
+                             [("msvc", "Debug", "static", "191", "14", "x86", True),
+                              ("msvc", "Release", "dynamic", "191", "17", "x86_64", False)]
+                             )
+    def test_toolchain_win(self, compiler, build_type, runtime, version, cppstd, arch, shared):
         settings = {"compiler": compiler,
                     "compiler.version": version,
-                    "compiler.toolset": toolset,
                     "compiler.runtime": runtime,
                     "compiler.cppstd": cppstd,
                     "arch": arch,
                     "build_type": build_type,
                     }
         options = {"shared": shared}
-        save(self.client.cache.new_config_path, "tools.build:jobs=1")
+        self.client.save_home({"global.conf": "tools.build:jobs=1"})
         self._run_build(settings, options)
-        self.assertIn('cmake -G "Visual Studio 15 2017" '
-                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
-        if toolset == "v140":
-            self.assertIn("Microsoft Visual Studio 14.0", self.client.out)
-        else:
-            self.assertIn("Microsoft Visual Studio/2017", self.client.out)
+        assert ('cmake -G "Visual Studio 15 2017" '
+                '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"') in self.client.out
 
         generator_platform = "x64" if arch == "x86_64" else "Win32"
         arch_flag = "x64" if arch == "x86_64" else "X86"
@@ -243,37 +240,29 @@ class WinTest(Base):
 
         def _verify_out(marker=">>"):
             if shared:
-                self.assertIn("app_lib.dll", self.client.out)
+                assert "app_lib.dll" in self.client.out
             else:
-                self.assertNotIn("app_lib.dll", self.client.out)
+                assert "app_lib.dll" not in self.client.out
 
             out = str(self.client.out).splitlines()
             for k, v in vals.items():
-                self.assertIn("%s %s: %s" % (marker, k, v), out)
+                assert "%s %s: %s" % (marker, k, v) in out
 
         _verify_out()
 
         opposite_build_type = "Release" if build_type == "Debug" else "Debug"
         settings["build_type"] = opposite_build_type
-        if runtime == "MTd":
-            settings["compiler.runtime"] = "MT"
-        if runtime == "MD":
-            settings["compiler.runtime"] = "MDd"
         self._run_build(settings, options)
 
         self._run_app("Release", bin_folder=True)
-        if compiler == "msvc":
-            visual_version = version
-        else:
-            visual_version = "190" if toolset == "v140" else "191"
-        check_exe_run(self.client.out, "main", "msvc", visual_version, "Release", arch, cppstd,
+        check_exe_run(self.client.out, "main", "msvc", version, "Release", arch, cppstd,
                       {"MYVAR": "MYVAR_VALUE",
                        "MYVAR_CONFIG": "MYVAR_RELEASE",
                        "MYDEFINE": "MYDEF_VALUE",
                        "MYDEFINE_CONFIG": "MYDEF_RELEASE"
                        })
         self._run_app("Debug", bin_folder=True)
-        check_exe_run(self.client.out, "main", "msvc", visual_version, "Debug", arch, cppstd,
+        check_exe_run(self.client.out, "main", "msvc", version, "Debug", arch, cppstd,
                       {"MYVAR": "MYVAR_VALUE",
                        "MYVAR_CONFIG": "MYVAR_DEBUG",
                        "MYDEFINE": "MYDEF_VALUE",
@@ -294,8 +283,9 @@ class WinTest(Base):
         self._incremental_build(build_type=opposite_build_type)
         self._run_app(opposite_build_type, bin_folder=True, msg="AppImproved")
 
-    @parameterized.expand([("Debug", "libstdc++", "4.9", "98", "x86_64", True),
-                           ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
+    @pytest.mark.parametrize("build_type, libcxx, version, cppstd, arch, shared",
+                             [("Debug", "libstdc++", "4.9", "98", "x86_64", True),
+                              ("Release", "libstdc++", "4.9", "11", "x86_64", False)])
     @pytest.mark.tool("mingw64")
     @pytest.mark.tool("cmake", "3.15")
     def test_toolchain_mingw_win(self, build_type, libcxx, version, cppstd, arch, shared):
@@ -309,9 +299,9 @@ class WinTest(Base):
                     }
         options = {"shared": shared}
         self._run_build(settings, options)
-        self.assertIn("The C compiler identification is GNU", self.client.out)
-        self.assertIn('cmake -G "MinGW Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+        assert "The C compiler identification is GNU" in self.client.out
+        assert ('cmake -G "MinGW Makefiles" '
+                '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"') in self.client.out
         assert '-DCMAKE_SH="CMAKE_SH-NOTFOUND"' in self.client.out
 
         def _verify_out(marker=">>"):
@@ -329,13 +319,13 @@ class WinTest(Base):
                           "CMAKE_CXX_EXTENSIONS": "OFF",
                           "BUILD_SHARED_LIBS": "ON" if shared else "OFF"}
             if shared:
-                self.assertIn("app_lib.dll", self.client.out)
+                assert "app_lib.dll" in self.client.out
             else:
-                self.assertNotIn("app_lib.dll", self.client.out)
+                assert "app_lib.dll" not in self.client.out
 
             out = str(self.client.out).splitlines()
             for k, v in cmake_vars.items():
-                self.assertIn("%s %s: %s" % (marker, k, v), out)
+                assert "%s %s: %s" % (marker, k, v) in out
 
         _verify_out()
         self._run_app(build_type)
@@ -354,9 +344,10 @@ class WinTest(Base):
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux")
-class LinuxTest(Base):
-    @parameterized.expand([("Debug",  "14", "x86", "libstdc++", True),
-                           ("Release", "gnu14", "x86_64", "libstdc++11", False)])
+class TestLinux(Base):
+    @pytest.mark.parametrize("build_type, cppstd, arch, libcxx, shared",
+                             [("Debug",  "14", "x86", "libstdc++", True),
+                              ("Release", "gnu14", "x86_64", "libstdc++11", False)])
     def test_toolchain_linux(self, build_type, cppstd, arch, libcxx, shared):
         settings = {"compiler": "gcc",
                     "compiler.cppstd": cppstd,
@@ -364,8 +355,8 @@ class LinuxTest(Base):
                     "arch": arch,
                     "build_type": build_type}
         self._run_build(settings, {"shared": shared})
-        self.assertIn('cmake -G "Unix Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+        assert ('cmake -G "Unix Makefiles" '
+                '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"') in self.client.out
 
         extensions_str = "ON" if "gnu" in cppstd else "OFF"
         arch_str = "-m32" if arch == "x86" else "-m64"
@@ -394,13 +385,13 @@ class LinuxTest(Base):
 
         def _verify_out(marker=">>"):
             if shared:
-                self.assertIn("libapp_lib.so", self.client.out)
+                assert "libapp_lib.so" in self.client.out
             else:
-                self.assertIn("libapp_lib.a", self.client.out)
+                assert "libapp_lib.a" in self.client.out
 
             out = str(self.client.out).splitlines()
             for k, v in vals.items():
-                self.assertIn("%s %s: %s" % (marker, k, v), out)
+                assert "%s %s: %s" % (marker, k, v) in out
 
         _verify_out()
 
@@ -413,17 +404,18 @@ class LinuxTest(Base):
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for Apple")
-class AppleTest(Base):
-    @parameterized.expand([("Debug",  "14",  True),
-                           ("Release", "", False)])
+class TestApple(Base):
+    @pytest.mark.parametrize("build_type, cppstd, shared",
+                             [("Debug",  "14",  True),
+                              ("Release", "", False)])
     def test_toolchain_apple(self, build_type, cppstd, shared):
         settings = {"compiler": "apple-clang",
                     "compiler.cppstd": cppstd,
                     "build_type": build_type}
         self._run_build(settings, {"shared": shared})
 
-        self.assertIn('cmake -G "Unix Makefiles" '
-                      '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"', self.client.out)
+        assert ('cmake -G "Unix Makefiles" '
+                '-DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake"') in self.client.out
 
         extensions_str = "OFF" if cppstd else ""
         vals = {"CMAKE_CXX_STANDARD": cppstd,
@@ -451,15 +443,15 @@ class AppleTest(Base):
 
         def _verify_out(marker=">>"):
             if shared:
-                self.assertIn("libapp_lib.dylib", self.client.out)
+                assert "libapp_lib.dylib" in self.client.out
             else:
                 if marker == ">>":
-                    self.assertIn("libapp_lib.a", self.client.out)
+                    assert "libapp_lib.a" in self.client.out
                 else:  # Incremental build not the same msg
-                    self.assertIn("Built target app_lib", self.client.out)
+                    assert "Built target app_lib" in self.client.out
             out = str(self.client.out).splitlines()
             for k, v in vals.items():
-                self.assertIn("%s %s: %s" % (marker, k, v), out)
+                assert "%s %s: %s" % (marker, k, v) in out
 
         _verify_out()
 
@@ -473,20 +465,16 @@ class AppleTest(Base):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-@pytest.mark.parametrize("version, vs_version",
-                         [("190", "15"),
-                          ("191", "15")])
-def test_msvc_vs_versiontoolset(version, vs_version):
+def test_msvc_vs_versiontoolset():
     settings = {"compiler": "msvc",
-                "compiler.version": version,
+                "compiler.version": "191",
                 "compiler.runtime": "static",
                 "compiler.cppstd": "14",
                 "arch": "x86_64",
                 "build_type": "Release",
                 }
     client = TestClient()
-    save(client.cache.new_config_path,
-         "tools.microsoft.msbuild:vs_version={}".format(vs_version))
+    client.save_home({"global.conf": "tools.microsoft.msbuild:vs_version=15"})
     conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMake
@@ -501,7 +489,7 @@ def test_msvc_vs_versiontoolset(version, vs_version):
                     cmake = CMake(self)
                     cmake.configure()
                     cmake.build()
-                    self.run("Release\\myapp.exe")
+                    self.run(r"Release\\myapp.exe")
             """)
     cmakelists = gen_cmakelists(appname="myapp", appsources=["app.cpp"])
     main = gen_function_cpp(name="main")
@@ -513,11 +501,12 @@ def test_msvc_vs_versiontoolset(version, vs_version):
     client.run("create . --name=app --version=1.0 {}".format(settings))
     assert '-G "Visual Studio 15 2017"' in client.out
 
-    check_exe_run(client.out, "main", "msvc", version, "Release", "x86_64", "14")
+    check_exe_run(client.out, "main", "msvc", "191",
+                  "Release", "x86_64", "14")
 
 
 @pytest.mark.tool("cmake")
-class CMakeInstallTest(unittest.TestCase):
+class TestCMakeInstall:
 
     def test_install(self):
         conanfile = textwrap.dedent("""
@@ -539,7 +528,7 @@ class CMakeInstallTest(unittest.TestCase):
 
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 2.8)
-            project(App C)
+            project(App NONE)
             install(FILES header.h DESTINATION include)
             """)
         client = TestClient(path_with_spaces=False)
@@ -548,13 +537,14 @@ class CMakeInstallTest(unittest.TestCase):
                      "header.h": "# my header file"})
 
         # The create flow must work
-        client.run("create . --name=pkg --version=0.1 -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
+        client.run("create . --name=pkg --version=0.1 -c tools.build:verbosity=verbose "
+                   "-c tools.compilation:verbosity=verbose")
         assert "--loglevel=VERBOSE" in client.out
         assert "unrecognized option" not in client.out
         assert "--verbose" in client.out
-        self.assertIn("pkg/0.1: package(): Packaged 1 '.h' file: header.h", client.out)
+        assert "pkg/0.1: package(): Packaged 1 '.h' file: header.h" in client.out
         package_folder = client.created_layout().package()
-        self.assertTrue(os.path.exists(os.path.join(package_folder, "include", "header.h")))
+        assert os.path.exists(os.path.join(package_folder, "include", "header.h"))
 
     def test_install_in_build(self):
         """
@@ -578,7 +568,7 @@ class CMakeInstallTest(unittest.TestCase):
 
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 2.8)
-            project(App C)
+            project(App NONE)
             install(FILES header.h DESTINATION include)
             """)
         client = TestClient(path_with_spaces=False)
@@ -596,8 +586,8 @@ class TestCmakeTestMethod:
     """
     test the cmake.test() helper
     """
-    def test_test(self):
-
+    def test_test(self, matrix_client_shared):
+        c = matrix_client_shared
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.cmake import CMake
@@ -607,7 +597,7 @@ class TestCmakeTestMethod:
                 exports_sources = "CMakeLists.txt", "example.cpp"
 
                 def build_requirements(self):
-                    self.test_requires("test/0.1")
+                    self.test_requires("matrix/1.0")
 
                 def build(self):
                     cmake = CMake(self)
@@ -618,33 +608,32 @@ class TestCmakeTestMethod:
             """)
 
         cmakelist = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
             project(App CXX)
-            find_package(test CONFIG REQUIRED)
+            find_package(matrix CONFIG REQUIRED)
             add_executable(example example.cpp)
-            target_link_libraries(example test::test)
+            target_link_libraries(example matrix::matrix)
 
             enable_testing()
             add_test(NAME example
                       COMMAND example)
             """)
-        c = TestClient()
-        c.run("new cmake_lib -d name=test -d version=0.1")
-        c.run("create .  -tf=\"\" -o test*:shared=True")
 
         c.save({"conanfile.py": conanfile,
                 "CMakeLists.txt": cmakelist,
-                "example.cpp": gen_function_cpp(name="main", includes=["test"], calls=["test"])},
+                "example.cpp": gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])},
                clean_first=True)
 
         # The create flow must work
-        c.run("create . --name=pkg --version=0.1 -pr:b=default -o test*:shared=True")
+        c.run("create . --name=pkg --version=0.1 -pr:b=default -o matrix*:shared=True")
         assert str(c.out).count("1/1 Test #1: example ..........................   Passed") == 2
         assert "pkg/0.1: RUN: ctest --build-config Release --parallel"
 
 
 @pytest.mark.tool("cmake")
-class CMakeOverrideCacheTest(unittest.TestCase):
+class TestCMakeOverrideCache:
 
     def test_cmake_cache_variables(self):
         # https://github.com/conan-io/conan/issues/7832
@@ -665,7 +654,7 @@ class CMakeOverrideCacheTest(unittest.TestCase):
 
         cmakelist = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.7)
-            project(my_project)
+            project(my_project NONE)
             set(my_config_string "default value" CACHE STRING "my config string")
             message(STATUS "VALUE OF CONFIG STRING: ${my_config_string}")
             """)
@@ -673,7 +662,7 @@ class CMakeOverrideCacheTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmakelist})
         client.run("build .")
-        self.assertIn("VALUE OF CONFIG STRING: my new value", client.out)
+        assert "VALUE OF CONFIG STRING: my new value" in client.out
 
 
 @pytest.mark.tool("cmake")
@@ -692,10 +681,8 @@ class TestCMakeFindPackagePreferConfig:
             """)
 
         cmakelist = textwrap.dedent("""
-            set(CMAKE_C_COMPILER_WORKS 1)
-            set(CMAKE_C_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
-            project(my_project C)
+            project(my_project NONE)
             find_package(Comandante REQUIRED)
             """)
 
@@ -724,4 +711,3 @@ class TestCMakeFindPackagePreferConfig:
 
         client.run("build . --profile=profile_false")
         assert "using FindComandante.cmake" in client.out
-

@@ -29,7 +29,7 @@ def get_requires(filename):
 def load_version():
     """ Loads a file content """
     filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                            "conans", "__init__.py"))
+                                            "conan", "__init__.py"))
     with open(filename, "rt") as version_file:
         conan_init = version_file.read()
         version = re.search(r"__version__ = '([0-9a-z.-]+)'", conan_init).group(1)
@@ -52,7 +52,7 @@ exclude = excluded_test_packages + excluded_server_packages
 
 setup(
     name='conan',
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
@@ -84,9 +84,13 @@ setup(
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8'
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13'
     ],
 
     # What does your project relate to?

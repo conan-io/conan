@@ -1,12 +1,10 @@
 import os
 import textwrap
-import unittest
-
 
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
-class InfoTest(unittest.TestCase):
+class TestInfo:
 
     def _create(self, name, version, deps=None, export=True):
         conanfile = textwrap.dedent("""
@@ -100,7 +98,7 @@ class InfoTest(unittest.TestCase):
         self.client.run("graph info . --format=html")
         html = self.client.stdout
         # Just make sure it doesn't crash
-        self.assertIn("<body>", html)
+        assert "<body>" in html
 
 
 def test_user_templates():

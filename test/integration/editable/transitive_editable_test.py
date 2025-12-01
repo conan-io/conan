@@ -5,7 +5,7 @@ from conan.test.utils.tools import TestClient, GenConanfile
 
 def test_transitive_editables_half_diamond():
     # https://github.com/conan-io/conan/issues/4445
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"libc/conanfile.py": GenConanfile("libc", "0.1"),
                  "libb/conanfile.py": GenConanfile("libb", "0.1").with_require("libc/0.1"),
                  "liba/conanfile.py": GenConanfile("liba", "0.1").with_requires("libb/0.1",
@@ -78,7 +78,7 @@ def test_transitive_editable_test_requires():
 
 def test_transitive_editables_python_requires_version_range():
     # https://github.com/conan-io/conan/issues/14411
-    client = TestClient(default_server_user=True)
+    client = TestClient(default_server_user=True, light=True)
     client.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
                  "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("dep/[*]")})
     client.run("editable add pkg", assert_error=True)
@@ -124,7 +124,7 @@ def test_transitive_editable_cascade_build():
     """
     https://github.com/conan-io/conan/issues/15292
     """
-    c = TestClient()
+    c = TestClient(light=True)
     pkga = GenConanfile("pkga", "1.0").with_package_type("static-library")
     pkgb = GenConanfile("pkgb", "1.0").with_requires("pkga/1.0").with_package_type("static-library")
     pkgc = GenConanfile("pkgc", "1.0").with_requires("pkgb/1.0").with_package_type("static-library")
@@ -168,7 +168,7 @@ def test_transitive_editable_cascade_package_id():
     """
     https://github.com/conan-io/conan/issues/15292
     """
-    c = TestClient()
+    c = TestClient(light=True)
     pkga = GenConanfile("pkga", "1.0").with_package_type("static-library")
     pkgb = GenConanfile("pkgb", "1.0").with_requires("pkga/1.0").with_package_type("static-library")
     pkgc = GenConanfile("pkgc", "1.0").with_requires("pkgb/1.0").with_package_type("shared-library")
@@ -207,3 +207,18 @@ def test_transitive_editable_cascade_package_id():
     # The consumers didn't need a new binary, even if I modified pkg
     c.assert_listed_binary({"pkgb/1.0": (pkgb_id, "Cache"),
                             "pkgc/1.0": (pkgc_id, "Build")})
+
+
+def test_warning_from_cache():
+    c = TestClient(light=True)
+    c.save({"pkga/conanfile.py":  GenConanfile("pkga", "1.0"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "1.0").with_requires("pkga/1.0"),
+            "pkgc/conanfile.py": GenConanfile("pkgc", "1.0").with_requires("pkgb/1.0")})
+    c.run("editable add pkga")
+    c.run("create pkgb")
+    assert "pkgb/1.0: WARN: risk: Package is being built in the cache using editable" in c.out
+    c.run("create pkgc")
+    assert "pkgc/1.0: WARN: risk: Package is being built in the cache using editable" in c.out
+    c.run("create pkgc --build=*")
+    assert "pkgb/1.0: WARN: risk: Package is being built in the cache using editable" in c.out
+    assert "pkgc/1.0: WARN: risk: Package is being built in the cache using editable" in c.out

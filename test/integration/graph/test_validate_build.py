@@ -10,7 +10,7 @@ def test_basic_validate_build_test():
     t = TestClient()
     conanfile = textwrap.dedent("""
     from conan import ConanFile
-    from conans.errors import ConanInvalidConfiguration
+    from conan.errors import ConanInvalidConfiguration
 
     class myConan(ConanFile):
         name = "foo"
@@ -57,7 +57,7 @@ def test_with_options_validate_build_test():
     t = TestClient(light=True)
     conanfile = textwrap.dedent("""
     from conan import ConanFile
-    from conans.errors import ConanInvalidConfiguration
+    from conan.errors import ConanInvalidConfiguration
 
     class myConan(ConanFile):
         name = "foo"

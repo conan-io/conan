@@ -1,14 +1,23 @@
 import os
 import textwrap
 
+from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.internal.api.detect.detect_vs import vs_installation_path
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.tools.scm import Version
 from conan.tools.intel.intel_cc import IntelCC
-from conans.util.files import save
+from conan.internal.util.files import save
 
 CONAN_VCVARS = "conanvcvars"
+
+
+def msvc_platform_from_arch(arch):
+    return {"x86": "Win32",
+            "x86_64": "x64",
+            "armv7": "ARM",
+            "armv8": "ARM64",
+            "arm64ec": "ARM64EC"}.get(arch)
 
 
 def check_min_vs(conanfile, version, raise_invalid=True):
@@ -61,7 +70,8 @@ def msvc_version_to_vs_ide_version(version):
                 '191': '15',
                 '192': '16',
                 '193': '17',
-                '194': '17'}  # Note both 193 and 194 belong to VS 17 2022
+                '194': '17',  # Note both 193 and 194 belong to VS 17 2022
+                '195': '18'}
     return _visuals[str(version)]
 
 
@@ -78,7 +88,8 @@ def msvc_version_to_toolset_version(version):
                 '191': 'v141',
                 '192': 'v142',
                 "193": 'v143',
-                "194": 'v143'}
+                "194": 'v143',
+                "195": 'v145'}
     return toolsets.get(str(version))
 
 
@@ -116,7 +127,7 @@ class VCVars:
         os_ = conanfile.settings.get_safe("os")
         build_os_ = conanfile.settings_build.get_safe("os")
 
-        if os_ != "Windows" or build_os_ != "Windows":
+        if (os_ != "Windows" and os_ != "WindowsStore") or build_os_ != "Windows":
             return
 
         compiler = conanfile.settings.get_safe("compiler")
@@ -155,7 +166,19 @@ class VCVars:
         create_env_script(conanfile, content, conan_vcvars_bat, scope)
         _create_deactivate_vcvars_file(conanfile, conan_vcvars_bat)
 
-        is_ps1 = conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool, default=False)
+        try:
+            is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
+            if is_ps1 is not None:
+                ConanOutput().warning(
+                    "Boolean values for 'tools.env.virtualenv:powershell' are deprecated. "
+                    "Please specify 'powershell.exe' or 'pwsh' instead, appending arguments "
+                    "if needed (for example: 'powershell.exe -argument'). "
+                    "To unset this configuration, use `tools.env.virtualenv:powershell=!`, "
+                    "which matches the previous 'False' behavior.",
+                    warn_tag="deprecated"
+                )
+        except ConanException:
+            is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str)
         if is_ps1:
             content_ps1 = textwrap.dedent(rf"""
             if (-not $env:VSCMD_ARG_VCVARS_VER){{
@@ -176,7 +199,7 @@ class VCVars:
 
 def _create_deactivate_vcvars_file(conanfile, filename):
     deactivate_filename = f"deactivate_{filename}"
-    message = f"[{deactivate_filename}]: vcvars env cannot be deactivated"
+    message = f"[{deactivate_filename}]: *** vcvars env cannot be deactivated ***\n"
     is_ps1 = filename.endswith(".ps1")
     if is_ps1:
         content = f"Write-Host {message}"
@@ -275,6 +298,7 @@ def _vcvars_path(version, vs_install_path):
         vcpath = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
     else:
         vcpath = os.path.join(vs_path, "VC/vcvarsall.bat")
+    vcpath = os.path.normpath(vcpath)
     return vcpath
 
 
@@ -288,17 +312,21 @@ def _vcvars_versions(conanfile):
             return None, None
         toolset_version = conanfile.settings.get_safe("compiler.runtime_version")
         vs_version = {"v140": "14",
-                        "v141": "15",
-                        "v142": "16",
-                        "v143": "17",
-                        "v144": "17"}.get(toolset_version)
+                      "v141": "15",
+                      "v142": "16",
+                      "v143": "17",
+                      "v144": "17",
+                      "v145": "18"}.get(toolset_version)
         if vs_version is None:
-            raise ConanException("Visual Studio Runtime version (v140-v144) not defined")
+            raise ConanException("Visual Studio Runtime version (v140-v145) not defined. Please, "
+                                 "add the compiler.runtime_version=[v140-v145] setting to your "
+                                 "profile.")
         vcvars_ver = {"v140": "14.0",
-                        "v141": "14.1",
-                        "v142": "14.2",
-                        "v143": "14.3",
-                        "v144": "14.4"}.get(toolset_version)
+                      "v141": "14.1",
+                      "v142": "14.2",
+                      "v143": "14.3",
+                      "v144": "14.4",
+                      "v145": "14.5"}.get(toolset_version)
         if vcvars_ver and msvc_update is not None:
             vcvars_ver += f"{msvc_update}"
     else:

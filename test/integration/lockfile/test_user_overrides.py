@@ -11,7 +11,7 @@ def test_user_overrides():
     """ Show that it is possible to add things to lockfiles, to pre-lock things explicitly from
     user side
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"math/conanfile.py": GenConanfile("math"),
             "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("math/[*]"),
             "game/conanfile.py": GenConanfile("game", "1.0").with_requires("engine/[*]")})
@@ -46,7 +46,7 @@ def test_user_overrides():
 def test_user_build_overrides():
     """ Test that it is possible to lock also build-requries
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"cmake/conanfile.py": GenConanfile("cmake"),
             "engine/conanfile.py": GenConanfile("engine", "1.0").with_build_requires("cmake/[*]")})
 
@@ -79,7 +79,7 @@ def test_user_build_overrides():
 def test_user_python_overrides():
     """ Test that it is possible to lock also python-requries
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pytool/conanfile.py": GenConanfile("pytool"),
             "engine/conanfile.py": GenConanfile("engine", "1.0").with_python_requires("pytool/[*]")})
 
@@ -112,7 +112,7 @@ def test_user_python_overrides():
 def test_config_overrides():
     """ Test that it is possible to lock also config-requires
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.run("lock add --config-requires=config/1.0")
     assert json.loads(c.load("conan.lock"))["config_requires"] == ["config/1.0"]
     c.run("lock remove --config-requires=config/1.0")
@@ -122,7 +122,7 @@ def test_config_overrides():
 def test_add_revisions():
     """ Is it possible to add revisions explicitly too
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"math/conanfile.py": GenConanfile("math"),
             "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("math/[*]"),
             "game/conanfile.py": GenConanfile("game", "1.0").with_requires("engine/[*]")})
@@ -170,7 +170,7 @@ def test_add_multiple_revisions():
     """ What if we add multiple revisions, mix with and without revisions, with and without
     timestamps and it will not crash
     """
-    c = TestClient()
+    c = TestClient(light=True)
     # without revision, it will resolve to latest
     c.run("lock add --requires=math/1.0#rev1")
     new_lock = c.load("conan.lock")
@@ -206,7 +206,7 @@ def test_timestamps_are_updated():
     """ When ``conan lock add`` adds a revision with a timestamp, or without it, it will be
     updated in the lockfile-out to the resolved new timestamp
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.txt": "[requires]\nmath/1.0",
             "math/conanfile.py": GenConanfile("math", "1.0")})
     c.run("create math")
@@ -221,7 +221,7 @@ def test_timestamps_are_updated():
 
 def test_lock_add_error():
     # https://github.com/conan-io/conan/issues/14465
-    c = TestClient()
+    c = TestClient(light=True)
     c.run(f"lock add --requires=math/1.0:pid1", assert_error=True)
     assert "ERROR: Invalid recipe reference 'math/1.0:pid1' is a package reference" in c.out
 
@@ -241,7 +241,7 @@ class TestLockRemove:
         ('--requires="*/[>=1.0 <2]"', ["math", "engine"])
     ])
     def test_lock_remove(self, args, removed):
-        c = TestClient()
+        c = TestClient(light=True)
         lock = textwrap.dedent("""\
             {
                 "version": "0.5",
@@ -274,7 +274,7 @@ class TestLockRemove:
                                    "math/1.0#85d927a4a067a531b1a9c7619522c015"]),
     ])
     def test_lock_remove_revisions(self, args, removed):
-        c = TestClient()
+        c = TestClient(light=True)
         lock = textwrap.dedent("""\
             {
                 "version": "0.5",
@@ -305,7 +305,7 @@ class TestLockRemove:
         ("--requires=math/[*]@team*", ["math/2.0@team/stable"]),
     ])
     def test_lock_remove_user_channel(self, args, removed):
-        c = TestClient()
+        c = TestClient(light=True)
         lock = textwrap.dedent("""\
             {
                 "version": "0.5",
@@ -336,7 +336,7 @@ class TestLockUpdate:
         ("python-requires", "mytool/1.0", "mytool/1.1"),
     ])
     def test_lock_update(self, kind, old, new):
-        c = TestClient()
+        c = TestClient(light=True)
         lock = textwrap.dedent("""\
             {
                 "version": "0.5",
@@ -360,3 +360,100 @@ class TestLockUpdate:
         lock = c.load("conan.lock")
         assert old not in lock
         assert new in lock
+
+
+
+class TestLockUpgrade:
+    @pytest.mark.parametrize("kind, pkg, old, new", [
+        ("requires", "math", "math/1.0", "math/1.1"),
+        ("build-requires", "cmake", "cmake/1.0", "cmake/1.1"),     # TODO there is not a --build-requires
+        # ("python-requires", "mytool", "mytool/1.0", "mytool/1.1"), # TODO nor a --python-requires
+    ])
+    def test_lock_upgrade(self, kind, pkg, old, new):
+        c = TestClient(light=True)
+        c.save({f"{pkg}/conanfile.py": GenConanfile(pkg)})
+
+        c.run(f"export {pkg} --version=1.0")
+        rev0 = c.exported_recipe_revision()
+        kind_create = "tool-requires" if "build-requires" == kind else kind
+        c.run(f"lock create --{kind_create}={pkg}/[*]")
+        lock = c.load("conan.lock")
+        assert f"{old}#{rev0}" in lock
+
+        c.run(f"export {pkg} --version=1.1")
+        rev1 = c.exported_recipe_revision()
+        c.run(f"lock upgrade --{kind_create}={pkg}/[*] --update-{kind}={pkg}/[*]")
+        lock = c.load("conan.lock")
+        print(lock)
+        assert f"{old}#{rev0}" not in lock
+        assert f"{new}#{rev1}" in lock
+
+
+    def test_lock_upgrade_path(self):
+        c = TestClient(light=True)
+        c.save({"liba/conanfile.py": GenConanfile("liba"),
+                "libb/conanfile.py": GenConanfile("libb"),
+                "libc/conanfile.py": GenConanfile("libc"),
+                "libd/conanfile.py": GenConanfile("libd")})
+        c.run(f"export liba --version=1.0")
+        c.run(f"export libb --version=1.0")
+        c.run(f"export libc --version=1.0")
+        c.run(f"export libd --version=1.0")
+        c.save(
+            {
+                f"conanfile.py": GenConanfile()
+                .with_requires(f"liba/[>=1.0 <2]")
+                .with_requires("libb/[<1.2]")
+                .with_tool_requires("libc/[>=1.0]")
+                .with_python_requires("libd/[>=1.0 <1.2]")
+            }
+        )
+
+        c.run("lock create .")
+        lock = c.load("conan.lock")
+        assert "liba/1.0" in lock
+        assert "libb/1.0" in lock
+        assert "libc/1.0" in lock
+        assert "libd/1.0" in lock
+
+        # Check versions are updated accordingly
+        c.run(f"export liba --version=1.9")
+        c.run(f"export libb --version=1.1")
+        c.run(f"export libb --version=1.2")
+        c.run(f"export libc --version=1.1")
+        c.run(f"export libd --version=1.1")
+        c.run("lock upgrade . --update-requires=liba/1.0 --update-requires=libb/[*] --update-build-requires=libc/[*] --update-python-requires=libd/1.0")
+        lock = c.load("conan.lock")
+        assert "liba/1.9" in lock
+        assert "libb/1.1" in lock
+        assert "libc/1.1" in lock
+        assert "libd/1.1" in lock
+
+        # Check version conanfile version range is respected
+        c.run(f"export libd --version=1.2")
+        c.run("lock upgrade . --update-python-requires=libd/*")
+        lock = c.load("conan.lock")
+        assert "libd/1.1" in lock
+        assert "libd/1.2" not in lock
+
+
+    def test_lock_upgrade_new_requirement(self):
+        c = TestClient(light=True)
+        c.save({"liba/conanfile.py": GenConanfile("liba").with_requires("libb/1.0"),
+                "libb/conanfile.py": GenConanfile("libb").with_requires("libc/1.0"),
+                "libc/conanfile.py": GenConanfile("libc"),
+                "libd/conanfile.py": GenConanfile("libd")})
+        c.run(f"export liba --version=1.0")
+        c.run(f"export libb --version=1.0")
+        c.run(f"export libc --version=1.0")
+        c.run(f"export libd --version=1.0")
+        c.save({f"conanfile.py": GenConanfile().with_requires(f"liba/[>=1.0 <2]")})
+        c.run("lock create .")
+
+        c.save({"libb/conanfile.py": GenConanfile("libb").with_requires("libd/1.0")})
+        c.run(f"export libb --version=2.0")
+        c.run("lock upgrade --requires='libb/[>=2]' --update-requires='libb/*'")
+        lock = c.load("conan.lock")
+        assert "libb/2.0" in lock
+        assert "libd/1.0" in lock
+        assert "libc/1.0" in lock  # TODO: libc should be removed from lockfile? It is not required anymore...

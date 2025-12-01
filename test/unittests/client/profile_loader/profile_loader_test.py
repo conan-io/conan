@@ -4,11 +4,11 @@ import textwrap
 import pytest
 
 from conan.internal.api.profile.profile_loader import _ProfileParser, ProfileLoader
-from conans.errors import ConanException
-from conans.model.recipe_ref import RecipeReference
+from conan.errors import ConanException
+from conan.api.model import RecipeReference
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def test_profile_parser():
@@ -252,3 +252,19 @@ def test_profile_core_confs_error(conf_name):
     with pytest.raises(ConanException) as exc:
         profile_loader.from_cli_args([], [], [], [conf_name], None)
     assert "[conf] 'core.*' configurations are not allowed in profiles" in str(exc.value)
+
+
+def test_profile_compose_numbers():
+    tmp = temp_folder()
+    txt = textwrap.dedent("""
+            [conf]
+            user.version:value=8.1
+            pkg/*:user.version:value=10
+            """)
+    current_profile_path = os.path.join(tmp, "default")
+    save(current_profile_path, txt)
+
+    profile_loader = ProfileLoader(cache_folder=temp_folder())  # If not used cache, will not error
+    profile = profile_loader.load_profile(current_profile_path)
+    assert profile.conf.get("user.version:value") == 8.1
+    assert profile.conf.get("pkg/*:user.version:value") == 10

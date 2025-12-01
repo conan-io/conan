@@ -9,8 +9,6 @@ from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
-from conans.client.graph.graph import BINARY_BUILD
-from conans.util.files import mkdir
 
 
 @conan_command(group="Creator", formatters={"json": format_graph_json})
@@ -63,28 +61,14 @@ def create(conan_api, parser, *args):
     lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref, is_build)
 
     print_profiles(profile_host, profile_build)
-    if profile_host.runner and not os.environ.get("CONAN_RUNNER_ENVIRONMENT"):
-        from conan.internal.runner.docker import DockerRunner
-        from conan.internal.runner.ssh import SSHRunner
-        from conan.internal.runner.wsl import WSLRunner
-        try:
-            runner_type = profile_host.runner['type'].lower()
-        except KeyError:
-            raise ConanException(f"Invalid runner configuration. 'type' must be defined")
-        runner_instances_map = {
-            'docker': DockerRunner,
-            # 'ssh': SSHRunner,
-            # 'wsl': WSLRunner,
-        }
-        try:
-            runner_instance = runner_instances_map[runner_type]
-        except KeyError:
-            raise ConanException(f"Invalid runner type '{runner_type}'. Allowed values: {', '.join(runner_instances_map.keys())}")
-        return runner_instance(conan_api, 'create', profile_host, profile_build, args, raw_args).run()
+    runner = conan_api.command.get_runner(profile_host)
+    if runner is not None:
+        return runner(conan_api, 'create', profile_host, profile_build, args, raw_args).run()
 
     if args.build is not None and args.build_test is None:
         args.build_test = args.build
 
+    install_error = None
     if is_python_require:
         deps_graph = conan_api.graph.load_graph_requires([], [],
                                                          profile_host=profile_host,
@@ -115,7 +99,9 @@ def create(conan_api, parser, *args):
                                          update=args.update, lockfile=lockfile)
         print_graph_packages(deps_graph)
 
-        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
+        install_error = conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes,
+                                                           return_install_error=True)
+
         # We update the lockfile, so it will be updated for later ``test_package``
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                       clean=args.lockfile_clean)
@@ -124,11 +110,11 @@ def create(conan_api, parser, *args):
         if args.test_folder is None else args.test_folder
     test_conanfile_path = _get_test_conanfile_path(test_package_folder, path)
     # If the user provide --test-missing and the binary was not built from source, skip test_package
-    if args.test_missing and deps_graph.root.dependencies\
-            and deps_graph.root.dependencies[0].dst.binary != BINARY_BUILD:
+    if args.test_missing and deps_graph.root.edges\
+            and deps_graph.root.edges[0].dst.binary != "Build":
         test_conanfile_path = None  # disable it
 
-    if test_conanfile_path:
+    if test_conanfile_path and not install_error:
         # TODO: We need arguments for:
         #  - decide update policy "--test_package_update"
         # If it is a string, it will be injected always, if it is a RecipeReference, then it will
@@ -143,7 +129,8 @@ def create(conan_api, parser, *args):
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
     return {"graph": deps_graph,
-            "conan_api": conan_api}
+            "conan_api": conan_api,
+            "conan_error": install_error}
 
 
 def _check_tested_reference_matches(deps_graph, tested_ref, out):
@@ -176,7 +163,7 @@ def test_package(conan_api, deps_graph, test_conanfile_path):
         out.info("Removing previously existing 'test_package' build folder: "
                  f"{conanfile.build_folder}")
         shutil.rmtree(conanfile.build_folder, ignore_errors=True)
-        mkdir(conanfile.build_folder)
+        os.makedirs(conanfile.build_folder, exist_ok=True)
     conanfile.output.info(f"Test package build: {conanfile.folders.build}")
     conanfile.output.info(f"Test package build folder: {conanfile.build_folder}")
     conan_api.install.install_consumer(deps_graph=deps_graph,

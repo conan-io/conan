@@ -1,7 +1,7 @@
 import pytest
 
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet, _get_gnu_os, _get_gnu_arch
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 @pytest.mark.parametrize("os_, arch, compiler, expected", [
@@ -51,6 +51,7 @@ from conans.errors import ConanException
     ["tvOS", "x86_64", None, "x86_64-apple-tvos"],
     ["Emscripten", "asm.js", None, "asmjs-local-emscripten"],
     ["Emscripten", "wasm", None, "wasm32-local-emscripten"],
+    ["Emscripten", "wasm64", None, "wasm64-local-emscripten"],
     ["AIX", "ppc32", None, "rs6000-ibm-aix"],
     ["AIX", "ppc64", None, "powerpc-ibm-aix"],
     ["Neutrino", "armv7", None, "arm-nto-qnx"],

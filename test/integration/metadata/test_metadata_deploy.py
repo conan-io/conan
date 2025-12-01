@@ -35,7 +35,7 @@ class TestMetadataDeploy:
             def deploy(graph, output_folder, **kwargs):
                 conanfile = graph.root.conanfile
                 for r, d in conanfile.dependencies.items():
-                    if not os.path.exists(d.package_metadata_folder):
+                    if not os.listdir(d.package_metadata_folder):
                         continue
                     shutil.copytree(d.package_metadata_folder, os.path.join(output_folder, "pkgs",
                                                                             d.ref.name))

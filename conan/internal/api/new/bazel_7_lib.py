@@ -49,7 +49,10 @@ class {{package_name}}Recipe(ConanFile):
         copy(self, "*.so", build, dest_lib, keep_path=False)
         copy(self, "*.dll", build, dest_bin, keep_path=False)
         copy(self, "*.dylib", build, dest_lib, keep_path=False)
-        copy(self, "*.a", build, dest_lib, keep_path=False)
+        if self.settings.os == "Linux" and self.options.get_safe("fPIC"):
+            copy(self, "*.pic.a", build, dest_lib, keep_path=False)
+        else:
+            copy(self, "*.a", build, dest_lib, keep_path=False)
         copy(self, "*.lib", build, dest_lib, keep_path=False)
         copy(self, "{{name}}.h", os.path.join(self.source_folder, "main"),
              os.path.join(self.package_folder, "include"), keep_path=False)

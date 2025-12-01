@@ -4,10 +4,9 @@ import textwrap
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.utils.tools import TestClient, TurboTestClient
-from conans.util.files import save, load
+from conan.test.utils.tools import TestClient
+from conan.internal.util.files import save, load
 
 
 @pytest.fixture
@@ -16,7 +15,7 @@ def conanfile():
                     .with_import("import os")
                     .with_setting("build_type").with_setting("arch")
                     .with_import("from conan.tools.microsoft import vs_layout")
-                    .with_import("from conan.tools.files import AutoPackager, save"))
+                    .with_import("from conan.tools.files import save, copy"))
 
     conanfile += """
     def source(self):
@@ -29,7 +28,8 @@ def conanfile():
         vs_layout(self)
 
     def package(self):
-        AutoPackager(self).run()
+        copy(self, "*", self.source_folder, self.package_folder)
+        copy(self, "*", self.build_folder, os.path.join(self.package_folder, "lib"), keep_path=False)
     """
     return conanfile
 
@@ -43,15 +43,17 @@ def test_layout_in_cache(conanfile, build_type, arch):
     """The layout in the cache is used too, always relative to the "base" folders that the cache
     requires. But by the default, the "package" is not followed
     """
-    client = TurboTestClient()
+    client = TestClient()
 
     libarch = subfolders_arch.get(arch)
     libpath = "{}{}".format(libarch + "/" if libarch else "", build_type)
-    ref = RecipeReference.loads("lib/1.0")
-    pref = client.create(ref, args="-s arch={} -s build_type={}".format(arch, build_type),
-                         conanfile=conanfile.format(libpath=libpath))
-    bf = client.cache.pkg_layout(pref).build()
-    pf = client.cache.pkg_layout(pref).package()
+
+    client.save({"conanfile.py": conanfile.format(libpath=libpath)})
+    client.run(f"create . --name=lib --version=1.0 -s build_type={build_type} -s arch={arch}")
+
+    layout = client.created_layout()
+    bf = layout.build()
+    pf = layout.package()
 
     # Check the build folder
     assert os.path.exists(os.path.join(os.path.join(bf, libpath), "mylib.lib"))
@@ -104,7 +106,7 @@ def test_error_no_msvc():
         """)
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    save(client.cache.settings_path, settings_yml)
+    save(client.paths.settings_path, settings_yml)
     client.run('install . -s os=Windows -s build_type=Release -s arch=x86_64 '
                '-s compiler=gcc -s compiler.version=8 '
                '-s:b os=Windows -s:b build_type=Release -s:b arch=x86_64 '

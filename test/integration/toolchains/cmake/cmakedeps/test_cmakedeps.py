@@ -715,6 +715,7 @@ def test_cmakedeps_set_legacy_variable_name():
     conanfile = base_conanfile + """
     def package_info(self):
         self.cpp_info.set_property("cmake_file_name", "CMakeFileName")
+        self.cpp_info.set_property("cmake_find_mode", "both")
     """
     client.save({"dep/conanfile.py": conanfile})
     client.run("create dep")
@@ -725,6 +726,45 @@ def test_cmakedeps_set_legacy_variable_name():
     cmake_variables = ["VERSION_STRING", "INCLUDE_DIRS", "INCLUDE_DIR", "LIBRARIES", "DEFINITIONS"]
     for variable in cmake_variables:
         assert f"CMakeFileName_{variable}" in dep_config
+    dep_find = client.load("FindCMakeFileName.cmake")
+    for variable in cmake_variables:
+        assert f"CMakeFileName_{variable}" in dep_find
+
+    consumer_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "build_type", "arch", "compiler"
+
+            def requirements(self):
+                self.requires("dep/1.0")
+
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.set_property("dep", "cmake_additional_variables_prefixes", ["PREFIX", "prefix", "PREFIX"])
+                deps.generate()
+        """)
+
+    client.save({"consumer/conanfile.py": consumer_conanfile})
+    client.run("install consumer")
+
+    dep_config = client.load(os.path.join("consumer", "CMakeFileNameConfig.cmake"))
+    for variable in cmake_variables:
+        assert f"CMakeFileName_{variable}" in dep_config
+        assert f"PREFIX_{variable}" in dep_config
+        assert f"prefix_{variable}" in dep_config
+
+    dep_find = client.load(os.path.join("consumer", "FindCMakeFileName.cmake"))
+    for variable in cmake_variables:
+        assert f"CMakeFileName_{variable}" in dep_find
+        assert f"PREFIX_{variable}" in dep_find
+        assert f"prefix_{variable}" in dep_find
+    assert "set(prefix_FOUND 1)" in dep_find
+    assert "set(PREFIX_FOUND 1)" in dep_find
+    assert 'set(prefix_VERSION "1.0")' in dep_find
+    assert 'set(PREFIX_VERSION "1.0")' in dep_find
 
     conanfile = base_conanfile + """
     def package_info(self):
@@ -819,3 +859,97 @@ def test_component_name_same_package():
     # FIXME: Depending on itself, this doesn't look good
     assert 'set_property(TARGET dep::dep APPEND PROPERTY ' \
            'INTERFACE_LINK_LIBRARIES dep::dep)' in cmake_target
+
+
+def test_cmakedeps_set_get_property_checktype():
+    c = TestClient()
+    app = textwrap.dedent("""\
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeDeps
+        class Pkg(ConanFile):
+            name = "app"
+            version = "0.1"
+            settings = "build_type"
+            requires = "dep/0.1"
+            def generate(self):
+                deps = CMakeDeps(self)
+                deps.set_property("dep", "foo", 1)
+                deps.get_property("foo", self.dependencies["dep"], check_type=list)
+                deps.generate()
+            """)
+
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "app/conanfile.py": app})
+    c.run("create dep")
+    c.run("create app", assert_error=True)
+    assert 'The expected type for foo is "list", but "int" was found' in c.out
+
+
+def test_alias_cmakedeps_set_property():
+    tc = TestClient()
+    tc.save({"dep/conanfile.py": textwrap.dedent("""
+
+        from conan import ConanFile
+        class Dep(ConanFile):
+            name = "dep"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.components["mycomp"].set_property("cmake_target_name", "dep::mycomponent")
+        """),
+             "conanfile.py": textwrap.dedent("""
+             from conan import ConanFile
+             from conan.tools.cmake import CMakeDeps, CMake
+             class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                requires = "dep/1.0"
+
+                def generate(self):
+                    deps = CMakeDeps(self)
+                    deps.set_property("dep", "cmake_target_aliases", ["alias", "dep::other_name"])
+                    deps.set_property("dep::mycomp", "cmake_target_aliases", ["component_alias", "dep::my_aliased_component"])
+                    deps.generate()
+             """)})
+    tc.run("create dep")
+    tc.run("install .")
+    targets_data = tc.load("depTargets.cmake")
+    assert "add_library(dep::dep" in targets_data
+    assert "add_library(alias" in targets_data
+    assert "add_library(dep::other_name" in targets_data
+
+    assert "add_library(component_alias" in targets_data
+    assert "add_library(dep::my_aliased_component" in targets_data
+
+
+def test_package_info_extra_variables():
+    """ Test extra_variables property - This just shows that it works,
+    there are tests for cmaketoolchain that check the actual behavior
+    of parsing the variables"""
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def package_info(self):
+                self.cpp_info.set_property("cmake_extra_variables", {"FOO": 42,
+                                           "BAR": 42,
+                                           "CMAKE_GENERATOR_INSTANCE": "${GENERATOR_INSTANCE}/buildTools/",
+                                           "CACHE_VAR_DEFAULT_DOC": {"value": "hello world",
+                                                                     "cache": True, "type": "PATH"}})
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    client.run("install --requires=pkg/0.1 -g CMakeDeps "
+               """-c tools.cmake.cmaketoolchain:extra_variables="{'BAR': 9}" """)
+    target = client.load("pkg-config.cmake")
+    assert 'set(BAR' not in target
+    assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in target
+    assert 'set(FOO 42)' in target
+    assert 'set(CACHE_VAR_DEFAULT_DOC "hello world" CACHE PATH "CACHE_VAR_DEFAULT_DOC")' in target

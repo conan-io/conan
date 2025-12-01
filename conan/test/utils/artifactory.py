@@ -4,7 +4,7 @@ import uuid
 
 import requests
 
-from conans.errors import RecipeNotFoundException, PackageNotFoundException
+from conan.internal.errors import RecipeNotFoundException, PackageNotFoundException
 from conans.server.revision_list import _RevisionEntry
 
 ARTIFACTORY_DEFAULT_USER = os.getenv("ARTIFACTORY_DEFAULT_USER", "admin")
@@ -25,7 +25,7 @@ class _ArtifactoryServerStore(object):
 
     @staticmethod
     def _root_recipe(ref):
-        return "{}/{}/{}/{}".format(ref.user, ref.name, ref.version, ref.channel)
+        return "{}/{}/{}/{}".format(ref.user or "_", ref.name, ref.version, ref.channel or "_")
 
     @staticmethod
     def _ref_index(ref):

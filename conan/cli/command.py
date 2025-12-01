@@ -1,10 +1,10 @@
 import argparse
 import os
 import textwrap
+from contextlib import redirect_stdout
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conans.model.conf import CORE_CONF_PATTERN
 
 
 class OnceArgument(argparse.Action):
@@ -46,11 +46,16 @@ class BaseConanCommand:
                                  "its use briefly.".format(self._name))
 
     @staticmethod
-    def _init_log_levels(parser):
+    def _init_core_options(parser):
+        # Define possible levels, including "" for verbose
+        possible_levels = list(ConanOutput.valid_log_levels().keys())
+        possible_levels.pop(possible_levels.index(None))
         parser.add_argument("-v", default="status", nargs='?',
                             help="Level of detail of the output. Valid options from less verbose "
                                  "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
-                                 "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace")
+                                 "-v or -vverbose, -vv or -vdebug, -vvv or -vtrace",
+                            choices=possible_levels,
+                            )
         parser.add_argument("-cc", "--core-conf", action="append",
                             help="Define core configuration, overwriting global.conf "
                                  "values. E.g.: -cc core:non_interactive=True")
@@ -69,6 +74,10 @@ class BaseConanCommand:
             help_message = "Select the output format: {}".format(", ".join(formatters))
             parser.add_argument('-f', '--format', action=OnceArgument, help=help_message)
 
+        parser.add_argument("--out-file", action=OnceArgument,
+                            help="Write the output of the command to the specified file instead of "
+                                 "stdout.")
+
     @property
     def name(self):
         return self._name
@@ -84,11 +93,8 @@ class BaseConanCommand:
     def _format(self, parser, info, *args):
         parser_args, _ = parser.parse_known_args(*args)
 
-        default_format = "text"
-        try:
-            formatarg = parser_args.format or default_format
-        except AttributeError:
-            formatarg = default_format
+        formatarg = getattr(parser_args, "format", None) or "text"
+        out_file = getattr(parser_args, "out_file", None)
 
         try:
             formatter = self._formatters[formatarg]
@@ -96,14 +102,29 @@ class BaseConanCommand:
             raise ConanException("{} is not a known format. Supported formatters are: {}".format(
                 formatarg, ", ".join(self._help_formatters)))
 
-        formatter(info)
+        if out_file:
+            if os.path.dirname(out_file):
+                os.makedirs(os.path.dirname(out_file), exist_ok=True)
+            with open(out_file, 'w') as f:
+                with redirect_stdout(f):
+                    formatter(info)
+            ConanOutput().info(f"Formatted output saved to '{out_file}'")
+        else:
+            formatter(info)
 
-    def _dispatch_errors(self, info):
+    @staticmethod
+    def _dispatch_errors(info):
         if info and isinstance(info, dict):
             if info.get("conan_error"):
-                raise ConanException(info["conan_error"])
+                e = info["conan_error"]
+                # Storing and launching an exception is better than the string, as it keeps
+                # the correct backtrace for debugging.
+                if isinstance(e, Exception):
+                    raise e
+                raise ConanException(e)
             if info.get("conan_warning"):
                 ConanOutput().warning(info["conan_warning"])
+
 
 class ConanArgumentParser(argparse.ArgumentParser):
 
@@ -113,18 +134,20 @@ class ConanArgumentParser(argparse.ArgumentParser):
 
     def parse_args(self, args=None, namespace=None):
         args = super().parse_args(args)
-        ConanOutput.define_log_level(os.getenv("CONAN_LOG_LEVEL", args.v))
+        ConanOutput.define_log_level(args.v)
         if getattr(args, "lockfile_packages", None):
             ConanOutput().error("The --lockfile-packages arg is private and shouldn't be used")
+
         if args.core_conf:
-            from conans.model.conf import ConfDefinition
-            confs = ConfDefinition()
-            for c in args.core_conf:
-                if not CORE_CONF_PATTERN.match(c):
-                    raise ConanException(f"Only core. values are allowed in --core-conf. Got {c}")
-            confs.loads("\n".join(args.core_conf))
-            confs.validate()
-            self._conan_api.config.global_conf.update_conf_definition(confs)
+            self._conan_api._api_helpers.set_core_confs(args.core_conf)  # noqa
+
+        global_conf = self._conan_api._api_helpers.global_conf  # noqa
+        # TODO: This might be even better moved to the ConanAPI so users without doing custom
+        #  commands can benefit from it
+        ConanOutput.set_warnings_as_errors(global_conf.get("core:warnings_as_errors",
+                                                           default=[], check_type=list))
+        ConanOutput.define_silence_warnings(global_conf.get("core:skip_warnings",
+                                                            default=[], check_type=list))
         return args
 
 
@@ -134,6 +157,7 @@ class ConanCommand(BaseConanCommand):
         self._subcommands = {}
         self._group = group or "Other"
         self._name = method.__name__.replace("_", "-")
+        self._prog = self._name
 
     def add_subcommand(self, subcommand):
         subcommand.set_name(self.name)
@@ -141,10 +165,11 @@ class ConanCommand(BaseConanCommand):
 
     def run_cli(self, conan_api, *args):
         parser = ConanArgumentParser(conan_api, description=self._doc,
-                                     prog="conan {}".format(self._name),
+                                     prog="conan {}".format(self._prog),
                                      formatter_class=SmartFormatter)
-        self._init_log_levels(parser)
         self._init_formatters(parser)
+        self._init_core_options(parser)
+        parser.suggest_on_error = True
         info = self._method(conan_api, parser, *args)
         if not self._subcommands:
             return info
@@ -163,10 +188,11 @@ class ConanCommand(BaseConanCommand):
 
     def run(self, conan_api, *args):
         parser = ConanArgumentParser(conan_api, description=self._doc,
-                                     prog="conan {}".format(self._name),
+                                     prog="conan {}".format(self._prog),
                                      formatter_class=SmartFormatter)
-        self._init_log_levels(parser)
         self._init_formatters(parser)
+        self._init_core_options(parser)
+        parser.suggest_on_error = True
 
         info = self._method(conan_api, parser, *args)
 
@@ -214,7 +240,8 @@ class ConanSubCommand(BaseConanCommand):
         self._parser = subcommand_parser.add_parser(self._name, conan_api=conan_api, help=self._doc)
         self._parser.description = self._doc
         self._init_formatters(self._parser)
-        self._init_log_levels(self._parser)
+        self._init_core_options(self._parser)
+        self._parser.suggest_on_error = True
 
 
 def conan_command(group=None, formatters=None):

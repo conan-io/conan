@@ -1,7 +1,7 @@
 from jinja2 import Template
 
 from conan.tools import CppInfo
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class SConsDeps:

@@ -9,17 +9,17 @@ from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.build import build_jobs
 from conan.tools.microsoft import is_msvc
-from conans.client.graph.graph import RECIPE_CONSUMER
+from conan.internal.graph.graph import RECIPE_CONSUMER
 from conan.errors import ConanException
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 
 def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
                         user_presets_path=None, preset_prefix=None, buildenv=None, runenv=None,
                         cmake_executable=None, absolute_paths=None):
     preset_path, preset_data = _CMakePresets.generate(conanfile, toolchain_file, generator,
-                                                      cache_variables, preset_prefix, buildenv, runenv,
-                                                      cmake_executable, absolute_paths)
+                                                      cache_variables, preset_prefix, buildenv,
+                                                      runenv, cmake_executable, absolute_paths)
     _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data,
                                absolute_paths)
 
@@ -28,8 +28,8 @@ class _CMakePresets:
     """ Conan generated main CMakePresets.json inside the generators_folder
     """
     @staticmethod
-    def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix, buildenv, runenv,
-                 cmake_executable, absolute_paths):
+    def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix, buildenv,
+                 runenv, cmake_executable, absolute_paths):
         toolchain_file = os.path.abspath(os.path.join(conanfile.generators_folder, toolchain_file))
         if not absolute_paths:
             try:  # Make it relative to the build dir if possible
@@ -104,7 +104,8 @@ class _CMakePresets:
         """
         multiconfig = is_multi_configuration(generator)
         conf = _CMakePresets._configure_preset(conanfile, generator, cache_variables, toolchain_file,
-                                               multiconfig, preset_prefix, buildenv, cmake_executable)
+                                               multiconfig, preset_prefix, buildenv,
+                                               cmake_executable)
         build = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix)
         test = _CMakePresets._test_preset_fields(conanfile, multiconfig, preset_prefix, runenv)
         ret = {"version": 3,
@@ -158,11 +159,23 @@ class _CMakePresets:
                     "strategy": "external"
                 }
 
+        # Second attempt at https://github.com/conan-io/conan/issues/13136
+        # for cmake-tools to activate environment. Similar to CompilersBlock
+        # Only for cl/clang-cl, other compilers such clang can be breaking (Android)
+        compilers_by_conf = conanfile.conf.get("tools.build:compiler_executables", default={})
+        compiler = conanfile.settings.get_safe("compiler")
+        default_cl = "cl" if compiler == "msvc" and "Ninja" in str(generator) else None
+        for lang in ("c", "cpp"):
+            comp = compilers_by_conf.get(lang, default_cl)
+            if comp and os.path.basename(comp) in ("cl", "cl.exe", "clang-cl", "clang-cl.exe"):
+                lang = {"c": "C", "cpp": "CXX"}[lang]
+                ret["cacheVariables"][f"CMAKE_{lang}_COMPILER"] = comp.replace("\\", "/")
+
         ret["toolchainFile"] = toolchain_file
         if conanfile.build_folder:
             # If we are installing a ref: "conan install <ref>", we don't have build_folder, because
             # we don't even have a conanfile with a `layout()` to determine the build folder.
-            # If we install a local conanfile: "conan install ." with a layout(), it will be available.
+            # If we install a local conanfile "conan install ." with a layout(), it will be available
             ret["binaryDir"] = conanfile.build_folder
 
         def _format_val(val):
@@ -204,12 +217,16 @@ class _CMakePresets:
     def _build_preset_fields(conanfile, multiconfig, preset_prefix):
         ret = _CMakePresets._common_preset_fields(conanfile, multiconfig, preset_prefix)
         build_preset_jobs = build_jobs(conanfile)
-        ret["jobs"] = build_preset_jobs
+        if build_preset_jobs:
+            ret["jobs"] = build_preset_jobs
         return ret
 
     @staticmethod
     def _test_preset_fields(conanfile, multiconfig, preset_prefix, runenv):
         ret = _CMakePresets._common_preset_fields(conanfile, multiconfig, preset_prefix)
+        build_preset_jobs = build_jobs(conanfile)
+        if build_preset_jobs:
+            ret.setdefault("execution", {})["jobs"] = build_preset_jobs
         if runenv:
             ret["environment"] = runenv
         return ret
@@ -261,6 +278,7 @@ class _IncludingPresets:
         if not (conanfile.source_folder and conanfile.source_folder != conanfile.generators_folder):
             return
 
+        is_default = user_presets_path == "CMakeUserPresets.json"
         user_presets_path = os.path.join(conanfile.source_folder, user_presets_path)
         if os.path.isdir(user_presets_path):  # Allows user to specify only the folder
             output_dir = user_presets_path
@@ -268,7 +286,7 @@ class _IncludingPresets:
         else:
             output_dir = os.path.dirname(user_presets_path)
 
-        if not os.path.exists(os.path.join(output_dir, "CMakeLists.txt")):
+        if is_default and not os.path.exists(os.path.join(output_dir, "CMakeLists.txt")):
             return
 
         # It uses schema version 4 unless it is forced to 2
@@ -294,6 +312,9 @@ class _IncludingPresets:
         if not absolute_paths:
             try:  # Make it relative to the CMakeUserPresets.json if possible
                 preset_path = os.path.relpath(preset_path, output_dir)
+                # If we don't normalize, path will be removed in Linux shared folders
+                # https://github.com/conan-io/conan/issues/18434
+                preset_path = preset_path.replace("\\", "/")
             except ValueError:
                 pass
         data = _IncludingPresets._append_user_preset_path(data, preset_path, output_dir)

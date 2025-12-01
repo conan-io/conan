@@ -3,13 +3,13 @@ import platform
 import textwrap
 
 import pytest
-from mock import patch
+from unittest.mock import patch
 
 from conan import conan_version
 from conan.internal.api.detect import detect_api
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save, load
+from conan.internal.util.files import save
 from conan.test.utils.tools import TestClient
 
 
@@ -94,7 +94,7 @@ def test_composition_conan_conf(client):
         tools.microsoft.msbuild:vs_version=Slow
         tools.cmake.cmaketoolchain:generator=Extra
         """)
-    save(client.cache.new_config_path, conf)
+    client.save_home({"global.conf": conf})
     profile = textwrap.dedent("""\
         [conf]
         tools.build:verbosity=quiet
@@ -110,13 +110,32 @@ def test_composition_conan_conf(client):
     assert "tools.meson.mesontoolchain:backend$Super" in client.out
 
 
+def test_core_global_conf_not_in_profile(client):
+    client.save_home({"global.conf": "core.upload:retry=1"})
+    profile = textwrap.dedent("""\
+        [conf]
+        tools.build:verbosity=quiet
+        """)
+    client.save({"profile": profile})
+    client.run("install . -pr=profile")
+    assert "tools.build:verbosity$quiet" in client.out
+    # The core conf is not shown
+    assert "core.upload:retry=1" not in client.out
+
+    # also with -cc command line argument
+    client.run("install . -pr=profile -cc core.upload:retry=1")
+    assert "tools.build:verbosity$quiet" in client.out
+    # The core conf is not shown
+    assert "core.upload:retry=1" not in client.out
+
+
 def test_new_config_file(client):
     conf = textwrap.dedent("""\
         tools.build:verbosity=quiet
         user.mycompany.myhelper:myconfig=myvalue
         *:tools.cmake.cmaketoolchain:generator=X
         """)
-    save(client.cache.new_config_path, conf)
+    client.save_home({"global.conf": conf})
     client.run("install .")
     assert "tools.build:verbosity$quiet" in client.out
     assert "user.mycompany.myhelper:myconfig$myvalue" in client.out
@@ -129,18 +148,18 @@ def test_new_config_file(client):
             *:tools.cmake.cmaketoolchain:generator=X
             cache:read_only=True
             """)
-    save(client.cache.new_config_path, conf)
+    client.save_home({"global.conf": conf})
     client.run("install .", assert_error=True)
-    assert "[conf] Either 'cache:read_only' does not exist in configuration list" in client.out
+    assert "[conf] 'cache:read_only' does not exist in configuration list" in client.out
 
 
-@patch("conans.model.version_range.client_version", "1.26.0")
+@patch("conan.__version__", "1.26.0")
 def test_new_config_file_required_version():
     client = TestClient()
     conf = textwrap.dedent("""\
         core:required_conan_version=>=2.0
         """)
-    save(client.cache.new_config_path, conf)
+    client.save_home({"global.conf": conf})
     client.run("install .", assert_error=True)
     assert ("Current Conan version (1.26.0) does not satisfy the defined one (>=2.0)"
             in client.out)
@@ -151,7 +170,7 @@ def test_composition_conan_conf_overwritten_by_cli_arg(client):
         tools.build:verbosity=quiet
         tools.microsoft.msbuild:max_cpu_count=Slow
         """)
-    save(client.cache.new_config_path, conf)
+    client.save_home({"global.conf": conf})
     profile = textwrap.dedent("""\
         [conf]
         tools.build:verbosity=quiet
@@ -177,7 +196,7 @@ def test_composition_conan_conf_different_data_types_by_cli_arg(client):
     conf = textwrap.dedent("""\
         tools.build:cflags=["-Wall"]
         """)
-    save(client.cache.new_config_path, conf)
+    client.save_home({"global.conf": conf})
     client.run('install . -c "tools.build:cflags+=[\'-Werror\']" '
                '-c "tools.microsoft.msbuildtoolchain:compile_options={\'ExceptionHandling\': \'Async\'}"')
 
@@ -186,10 +205,10 @@ def test_composition_conan_conf_different_data_types_by_cli_arg(client):
 
 
 def test_jinja_global_conf(client):
-    save(client.cache.new_config_path, "user.mycompany:parallel = {{os.cpu_count()/2}}\n"
-                                       "user.mycompany:other = {{platform.system()}}\n"
-                                       "user.mycompany:dist = {{distro.id() if distro else '42'}}\n"
-                                       "user.conan:version = {{conan_version}}-{{conan_version>0.1}}")
+    client.save_home({"global.conf": "user.mycompany:parallel = {{os.cpu_count()/2}}\n"
+                                     "user.mycompany:other = {{platform.system()}}\n"
+                                     "user.mycompany:dist = {{distro.id() if distro else '42'}}\n"
+                                     "user.conan:version = {{conan_version}}-{{conan_version>0.1}}"})
     client.run("install .")
     assert "user.mycompany:parallel={}".format(os.cpu_count()/2) in client.out
     assert "user.mycompany:other={}".format(platform.system()) in client.out
@@ -211,7 +230,7 @@ def test_jinja_global_conf_include(client):
         {% set myvar = 42 %}
         user.mycompany:parallel = {{myvar}}
         """)
-    save(client.cache.new_config_path, global_conf)
+    client.save_home({"global.conf": global_conf})
     save(os.path.join(client.cache_folder, "user_global.conf"), user_global_conf)
     client.run("install .")
     assert "user.mycompany:parallel=42" in client.out
@@ -221,7 +240,7 @@ def test_jinja_global_conf_include(client):
 def test_jinja_global_conf_paths():
     c = TestClient()
     global_conf = 'user.mycompany:myfile = {{os.path.join(conan_home_folder, "myfile")}}'
-    save(c.cache.new_config_path, global_conf)
+    c.save_home({"global.conf": global_conf})
     c.run("config show *")
     cache_folder = c.cache_folder.replace("\\", "/")
     assert f"user.mycompany:myfile: {os.path.join(cache_folder, 'myfile')}" in c.out
@@ -236,7 +255,7 @@ def test_profile_detect_os_arch():
         user.myteam:myconf2={{detect_api.detect_arch()}}
         """)
 
-    save(c.cache.new_config_path, global_conf)
+    c.save_home({"global.conf": global_conf})
     c.run("config show *")
     _os = detect_api.detect_os()
     _arch = detect_api.detect_arch()
@@ -288,24 +307,26 @@ def test_nonexisting_conf():
     c = TestClient()
     c.save({"conanfile.txt": ""})
     c.run("install . -c tools.unknown:conf=value", assert_error=True)
-    assert "ERROR: [conf] Either 'tools.unknown:conf' does not exist in configuration" in c.out
+    assert "ERROR: [conf] 'tools.unknown:conf' does not exist in configuration" in c.out
     c.run("install . -c user.some:var=value")  # This doesn't fail
+    c.run("install . -c user.some.var=value", assert_error=True)
+    assert "ERROR: User conf 'user.some.var' invalid format, not 'user.org.group:conf'" in c.out
     c.run("install . -c tool.build:verbosity=v", assert_error=True)
-    assert "ERROR: [conf] Either 'tool.build:verbosity' does not exist in configuration" in c.out
+    assert "ERROR: [conf] 'tool.build:verbosity' does not exist in configuration" in c.out
 
 
 def test_nonexisting_conf_global_conf():
     c = TestClient()
-    save(c.cache.new_config_path, "tools.unknown:conf=value")
+    c.save_home({"global.conf":  "tools.unknown:conf=value"})
     c.save({"conanfile.txt": ""})
     c.run("install . ", assert_error=True)
-    assert "ERROR: [conf] Either 'tools.unknown:conf' does not exist in configuration" in c.out
+    assert "ERROR: [conf] 'tools.unknown:conf' does not exist in configuration" in c.out
 
 
 def test_global_conf_auto_created():
     c = TestClient()
     c.run("config list")  # all commands will trigger
-    global_conf = load(c.cache.new_config_path)
+    global_conf = c.load_home("global.conf")
     assert "# core:non_interactive = True" in global_conf
 
 
@@ -351,7 +372,7 @@ def test_build_test_consumer_only():
                 def generate(self):
                     self.output.info(f'SKIP-TEST: {self.conf.get("tools.build:skip_test")}')
             """)
-    save(c.cache.new_config_path, "tools.build:skip_test=True\n&:tools.build:skip_test=False")
+    c.save_home({"global.conf": "tools.build:skip_test=True\n&:tools.build:skip_test=False"})
     c.save({"dep/conanfile.py": dep,
             "pkg/conanfile.py": pkg,
             "pkg/test_package/conanfile.py": GenConanfile().with_test("pass")})
@@ -388,7 +409,7 @@ def test_conf_should_be_immutable():
             def generate(self):
                 self.output.info(f'user.myteam:myconf: {self.conf.get("user.myteam:myconf")}')
         """)
-    save(c.cache.new_config_path, 'user.myteam:myconf=["root_value"]')
+    c.save_home({"global.conf": 'user.myteam:myconf=["root_value"]'})
     c.save({"dep/conanfile.py": dep,
             "pkg/conanfile.py": pkg})
     c.run("create dep")
@@ -408,9 +429,36 @@ def test_especial_strings_fail():
         user.mycompany:myfunct = re.search
         user.mycompany:mydict = {1: 're', 2: 'fnmatch'}
         """)
-    save(c.cache.new_config_path, global_conf)
+    c.save_home({"global.conf": global_conf})
     c.run("config show *")
     assert "user.mycompany:myfile: re" in c.out
     assert "user.mycompany:myother: fnmatch" in c.out
     assert "user.mycompany:myfunct: re.search" in c.out
     assert "user.mycompany:mydict: {1: 're', 2: 'fnmatch'}" in c.out
+
+
+def test_conf_test_package():
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def generate(self):
+                self.output.info(f'user.myteam:myconf: {self.conf.get("user.myteam:myconf")}')
+        """)
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+            def generate(self):
+                self.output.info(f'user.myteam:myconf: {self.conf.get("user.myteam:myconf")}')
+            def test(self):
+                pass
+        """)
+    c.save({"conanfile.py": dep,
+            "test_package/conanfile.py": pkg})
+    c.run("create . -c &:user.myteam:myconf=myvalue")
+    assert "dep/0.1: user.myteam:myconf: myvalue" in c.out
+    assert "dep/0.1 (test package): user.myteam:myconf: myvalue" in c.out

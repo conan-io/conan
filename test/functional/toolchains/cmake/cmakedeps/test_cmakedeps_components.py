@@ -1,12 +1,11 @@
 import textwrap
-import unittest
 
 import pytest
 
 from conan.test.utils.tools import TestClient
 
 
-class PropagateSpecificComponents(unittest.TestCase):
+class TestPropagateSpecificComponents:
     """
         Feature: recipes can declare the components they are consuming from their requirements,
         only those components should be propagated to their own consumers. If required components
@@ -45,7 +44,8 @@ class PropagateSpecificComponents(unittest.TestCase):
             requires = "middle/version"
         """)
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         client = TestClient()
         client.save({
             'top.py': self.top,
@@ -61,8 +61,8 @@ class PropagateSpecificComponents(unittest.TestCase):
         t.save({'conanfile.py': self.app})
         t.run("install .  -g CMakeDeps")
         config = t.load("middle-Target-release.cmake")
-        self.assertIn('top::cmp1', config)
-        self.assertNotIn("top::top", config)
+        assert 'top::cmp1' in config
+        assert "top::top" not in config
 
     def test_cmakedeps_multi(self):
         t = TestClient(cache_folder=self.cache_folder)
@@ -70,12 +70,12 @@ class PropagateSpecificComponents(unittest.TestCase):
         host_arch = t.get_default_host_profile().settings['arch']
 
         content = t.load(f'middle-release-{host_arch}-data.cmake')
-        self.assertIn("list(APPEND middle_FIND_DEPENDENCY_NAMES top)", content)
+        assert "list(APPEND middle_FIND_DEPENDENCY_NAMES top)" in content
 
         content = t.load('middle-Target-release.cmake')
-        self.assertNotIn("top::top", content)
-        self.assertNotIn("top::cmp2", content)
-        self.assertIn("top::cmp1", content)
+        assert "top::top" not in content
+        assert "top::cmp2" not in content
+        assert "top::cmp1" in content
 
 
 @pytest.fixture
@@ -116,85 +116,6 @@ def test_wrong_component(top_conanfile, from_component):
     assert "Component 'top::not-existing' not found in 'top' package requirement" in t.out
 
 
-# TODO: This is CMakeDeps Independent, move it out of here
-def test_unused_requirement(top_conanfile):
-    """ Requires should include all listed requirements
-        This error is known when creating the package if the requirement is consumed.
-    """
-    consumer = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Recipe(ConanFile):
-            requires = "top/version", "top2/version"
-            def package_info(self):
-                self.cpp_info.requires = ["top::other"]
-    """)
-    t = TestClient()
-    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py --name=top --version=version')
-    t.run('create top.py --name=top2 --version=version')
-    t.run('create consumer.py --name=wrong --version=version', assert_error=True)
-    assert "ERROR: wrong/version: Required package 'top2' not in component 'requires" in t.out
-
-
-
-# TODO: This is CMakeDeps Independent, move it out of here
-def test_unused_tool_requirement(top_conanfile):
-    """ Requires should include all listed requirements
-        This error is known when creating the package if the requirement is consumed.
-    """
-    consumer = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Recipe(ConanFile):
-            requires = "top/version"
-            tool_requires = "top2/version"
-            def package_info(self):
-                self.cpp_info.requires = ["top::other"]
-    """)
-    t = TestClient()
-    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py --name=top --version=version')
-    t.run('create top.py --name=top2 --version=version')
-    t.run('create consumer.py --name=wrong --version=version')
-    # This runs without crashing, because it is not chcking that top::other doesn't exist
-
-
-# TODO: This is CMakeDeps Independent, move it out of here
-def test_wrong_requirement(top_conanfile):
-    """ If we require a wrong requirement, we get a meaninful error.
-        This error is known when creating the package if the requirement is not there.
-    """
-    consumer = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Recipe(ConanFile):
-            requires = "top/version"
-            def package_info(self):
-                self.cpp_info.requires = ["top::cmp1", "other::other"]
-    """)
-    t = TestClient()
-    t.save({'top.py': top_conanfile, 'consumer.py': consumer})
-    t.run('create top.py --name=top --version=version')
-    t.run('create consumer.py --name=wrong --version=version', assert_error=True)
-    assert "ERROR: wrong/version: required component package 'other::' not in dependencies" in t.out
-
-
-# TODO: This is CMakeDeps Independent, move it out of here
-def test_missing_internal():
-    consumer = textwrap.dedent("""
-        from conan import ConanFile
-
-        class Recipe(ConanFile):
-            def package_info(self):
-                self.cpp_info.components["cmp1"].requires = ["other"]
-    """)
-    t = TestClient()
-    t.save({'conanfile.py': consumer})
-    t.run('create . --name=wrong --version=version', assert_error=True)
-    assert "ERROR: wrong/version: Internal components not found: ['other']" in t.out
-
-
 @pytest.mark.tool("cmake")
 def test_components_system_libs():
     conanfile = textwrap.dedent("""
@@ -232,12 +153,13 @@ def test_components_system_libs():
 
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(consumer)
+        project(consumer NONE)
 
         find_package(requirement)
         get_target_property(tmp_libs requirement::component INTERFACE_LINK_LIBRARIES)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
-        get_target_property(tmp_deps requirement_requirement_component_DEPS_TARGET INTERFACE_LINK_LIBRARIES)
+        get_target_property(tmp_deps requirement_requirement_component_DEPS_TARGET
+                            INTERFACE_LINK_LIBRARIES)
         message("component libs: ${tmp_libs}")
         message("component options: ${tmp_options}")
         message("component deps: ${tmp_deps}")
@@ -245,8 +167,10 @@ def test_components_system_libs():
 
     t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
     t.run("create . --build missing -s build_type=Release")
-    assert 'component libs: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;requirement_requirement_component_DEPS_TARGET' in t.out
-    assert 'component deps: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:system_lib_component>;' in t.out
+    assert ('component libs: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;'
+            'requirement_requirement_component_DEPS_TARGET') in t.out
+    assert ('component deps: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:'
+            'system_lib_component>;') in t.out
     assert ('component options: '
             '$<$<CONFIG:Release>:'
             '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;'
@@ -293,7 +217,7 @@ def test_components_exelinkflags():
 
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(consumer)
+        project(consumer NONE)
         find_package(requirement)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
         message("component options: ${tmp_options}")
@@ -347,7 +271,7 @@ def test_components_sharedlinkflags():
 
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(consumer)
+        project(consumer NONE)
         find_package(requirement)
         get_target_property(tmp_options requirement::component INTERFACE_LINK_OPTIONS)
         message("component options: ${tmp_options}")
@@ -405,7 +329,7 @@ def test_cmake_add_subdirectory():
 
     cmakelists = textwrap.dedent("""
             cmake_minimum_required(VERSION 3.15)
-            project(hello CXX)
+            project(hello NONE)
             find_package(Boost CONFIG)
             add_subdirectory(src)
 
@@ -439,7 +363,9 @@ def test_cmake_add_subdirectory():
     # The boost::boost target has linked the two components
     assert "AGGREGATED LIBS: boost::boost" in t.out
     assert "AGGREGATED LINKED: boost::B;boost::A" in t.out
-    assert "BOOST_B LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;boost_boost_B_DEPS_TARGET" in t.out
-    assert "BOOST_A LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;boost_boost_A_DEPS_TARGET" in t.out
+    assert ("BOOST_B LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;"
+            "boost_boost_B_DEPS_TARGET") in t.out
+    assert ("BOOST_A LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:>;"
+            "boost_boost_A_DEPS_TARGET") in t.out
     assert "BOOST_B_DEPS LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:B_1;B_2>" in t.out
     assert "BOOST_A_DEPS LINKED: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:A_1;A_2>;" in t.out

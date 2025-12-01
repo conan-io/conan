@@ -29,6 +29,24 @@ class ConfigTemplate(CMakeDepsFileTemplate):
         return list(set([self.file_name] + prefix_list))
 
     @property
+    def parsed_extra_variables(self):
+        # Reading configuration from "cmake_extra_variables" property
+        from conan.tools.cmake.utils import parse_extra_variable
+        conf_extra_variables = self.conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
+                                                       default={}, check_type=dict)
+        dep_extra_variables = self.cmakedeps.get_property("cmake_extra_variables", self.conanfile,
+                                                          check_type=dict) or {}
+        # The configuration variables have precedence over the dependency ones
+        extra_variables = {dep: value for dep, value in dep_extra_variables.items()
+                           if dep not in conf_extra_variables}
+        parsed_extra_variables = {}
+        for key, value in extra_variables.items():
+            parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",
+                                                               key, value)
+        return parsed_extra_variables
+
+
+    @property
     def context(self):
         targets_include = "" if not self.generating_module else "module-"
         targets_include += "{}Targets.cmake".format(self.file_name)
@@ -36,6 +54,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                 "version": self.conanfile.ref.version,
                 "file_name":  self.file_name,
                 "additional_variables_prefixes": self.additional_variables_prefixes,
+                "extra_variables": self.parsed_extra_variables,
                 "pkg_name": self.pkg_name,
                 "config_suffix": self.config_suffix,
                 "check_components_exist": self.cmakedeps.check_components_exist,
@@ -83,6 +102,12 @@ class ConfigTemplate(CMakeDepsFileTemplate):
 
         {% endfor %}
 
+        # Definition of extra CMake variables from cmake_extra_variables
+
+        {% for key, value in extra_variables.items() %}
+        set({{ key }} {{ value }})
+        {% endfor %}
+
         # Only the last installed configuration BUILD_MODULES are included to avoid the collision
         foreach(_BUILD_MODULE {{ pkg_var(pkg_name, 'BUILD_MODULES_PATHS', config_suffix) }} )
             message({% raw %}${{% endraw %}{{ file_name }}_MESSAGE_MODE} "Conan: Including build module from '${_BUILD_MODULE}'")
@@ -112,5 +137,12 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                                           REQUIRED_VARS {{ file_name }}_VERSION
                                           VERSION_VAR {{ file_name }}_VERSION)
         mark_as_advanced({{ file_name }}_FOUND {{ file_name }}_VERSION)
+
+        {% for prefix in additional_variables_prefixes %}
+        set({{ prefix }}_FOUND 1)
+        set({{ prefix }}_VERSION "{{ version }}")
+        mark_as_advanced({{ prefix }}_FOUND {{ prefix }}_VERSION)
+        {% endfor %}
+
         {% endif %}
         """)

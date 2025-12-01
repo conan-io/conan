@@ -1,5 +1,5 @@
 from conan.test.utils.mocks import ConanFileMock, MockSettings
-from conans.errors import ConanException
+from conan.errors import ConanException
 from conan.tools.android import android_abi
 
 from pytest import raises

@@ -4,6 +4,7 @@ import textwrap
 
 import pytest
 
+from conan.test.utils.mocks import ConanFileMock
 from conan.tools.env.environment import environment_wrap_command
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp
@@ -79,7 +80,7 @@ def test_shared_requires_static(transitive_libraries):
             "conanfile.py": conanfile}, clean_first=True)
 
     c.run("build .")
-    command = environment_wrap_command("conanrun", c.current_folder, ".\\Release\\myapp.exe")
+    command = environment_wrap_command(ConanFileMock(), "conanrun", c.current_folder, ".\\Release\\myapp.exe")
     c.run_command(command)
     assert "matrix/1.0: Hello World Release!" in c.out
 
@@ -116,7 +117,7 @@ def test_transitive_binary_skipped(transitive_libraries):
             "conanfile.py": conanfile}, clean_first=True)
 
     c.run("build . ")
-    command = environment_wrap_command("conanrun", c.current_folder, ".\\Release\\myapp.exe")
+    command = environment_wrap_command(ConanFileMock(), "conanrun", c.current_folder, ".\\Release\\myapp.exe")
     c.run_command(command)
     assert "matrix/1.0: Hello World Release!" in c.out
 

@@ -17,7 +17,9 @@ def build(conan_api, parser, *args):
     parser.add_argument("path",
                         help='Path to a python-based recipe file or a folder '
                              'containing a conanfile.py recipe. conanfile.txt '
-                             'cannot be used with conan build.')
+                             'cannot be used with conan build. '
+                             'Defaults to current directory',
+                        default=".", nargs='?')
     add_reference_args(parser)
     parser.add_argument("-g", "--generator", action="append", help='Generators to use')
     parser.add_argument("-of", "--output-folder",
@@ -29,6 +31,8 @@ def build(conan_api, parser, *args):
                         help="Deployer output folder, base build folder by default if not set")
     parser.add_argument("--build-require", action='store_true', default=False,
                         help='Whether the provided path is a build-require')
+    parser.add_argument("--envs-generation", default=None, choices=["false"],
+                        help="Generation strategy for virtual environment files for the root")
     add_common_install_arguments(parser)
     add_lockfile_args(parser)
     args = parser.parse_args(*args)
@@ -59,12 +63,12 @@ def build(conan_api, parser, *args):
     print_graph_packages(deps_graph)
 
     out = ConanOutput()
-    out.title("Installing packages")
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
     out.title("Finalizing install (deploy, generators)")
     conan_api.install.install_consumer(deps_graph, args.generator, source_folder, output_folder,
-                                       deploy=args.deployer, deploy_folder=deployer_folder)
+                                       deploy=args.deployer, deploy_folder=deployer_folder,
+                                       envs_generation=args.envs_generation)
 
     out.title("Calling build()")
     conanfile = deps_graph.root.conanfile

@@ -3,7 +3,7 @@ import os
 import yaml
 
 from conan.errors import ConanException
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 def update_conandata(conanfile, data):
@@ -47,7 +47,8 @@ def trim_conandata(conanfile, raise_if_missing=True):
     only
     """
     if not hasattr(conanfile, "export_folder") or conanfile.export_folder is None:
-        raise ConanException("The 'trim_conandata()' tool can only be used in the 'export()' method or 'post_export()' hook")
+        raise ConanException("The 'trim_conandata()' tool can only be used in "
+                             "the 'export()' method or 'post_export()' hook")
     path = os.path.join(conanfile.export_folder, "conandata.yml")
     if not os.path.exists(path):
         if raise_if_missing:
@@ -68,6 +69,9 @@ def trim_conandata(conanfile, raise_if_missing=True):
         version_data = v.get(version)
         if version_data is not None:
             result[k] = {version: version_data}
+
+    # Update the internal conanfile data too
+    conanfile.conan_data = result
 
     new_conandata_yml = yaml.safe_dump(result, default_flow_style=False)
     save(path, new_conandata_yml)

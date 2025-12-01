@@ -1,10 +1,10 @@
 import sqlite3
 
 from conan.internal.cache.db.table import BaseDbTable
-from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
-from conans.model.package_ref import PkgReference
-from conans.model.recipe_ref import RecipeReference
-from conans.util.dates import timestamp_now
+from conan.internal.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
+from conan.api.model import PkgReference
+from conan.api.model import RecipeReference
+from conan.internal.util.dates import timestamp_now
 
 
 class PackagesDBTable(BaseDbTable):
@@ -13,7 +13,7 @@ class PackagesDBTable(BaseDbTable):
                            ('rrev', str),
                            ('pkgid', str, True),
                            ('prev', str, True),
-                           ('path', str, False, None, True),
+                           ('path', str, False, True),
                            ('timestamp', float),
                            ('build_id', str, True),
                            ('lru', int)]
@@ -171,6 +171,22 @@ class PackagesDBTable(BaseDbTable):
             for row in r.fetchall():
                 yield self._as_dict(self.row_type(*row))
 
+    def get_package_revisions_reference_exists(self, pref: PkgReference):
+        assert pref.ref.revision, "To check package revision existence you must provide a recipe revision."
+        assert pref.package_id, "To check package revisions existence you must provide a package id."
+        check_prev = f"AND {self.columns.prev} = '{pref.revision}' " if pref.revision else ""
+        query = f'SELECT 1 FROM {self.table_name} ' \
+                f"WHERE {self.columns.rrev} = '{pref.ref.revision}' " \
+                f"AND {self.columns.reference} = '{str(pref.ref)}' " \
+                f"AND {self.columns.pkgid} = '{pref.package_id}' " \
+                f'{check_prev} ' \
+                f'AND {self.columns.prev} IS NOT NULL ' \
+                'LIMIT 1 '
+        with self.db_connection() as conn:
+            r = conn.execute(query)
+            row = r.fetchone()
+            return bool(row)
+
     def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         # Return the latest revisions
         assert ref.revision, "To search for package id's you must provide a recipe revision."
@@ -198,3 +214,42 @@ class PackagesDBTable(BaseDbTable):
             r = conn.execute(query)
             for row in r.fetchall():
                 yield self._as_dict(self.row_type(*row))
+
+    def get_package_references_with_build_id_match(self, ref: RecipeReference, build_id):
+        # Return the latest revisions
+        assert ref.revision, "To search for package id's by build_id you must provide a recipe revision."
+        # we select the latest prev for each package_id
+        # This is the same query as get_package_references, but with an additional filter
+        query = f'SELECT {self.columns.reference}, ' \
+                f'{self.columns.rrev}, ' \
+                f'{self.columns.pkgid}, ' \
+                f'{self.columns.prev}, ' \
+                f'{self.columns.path}, ' \
+                f'MAX({self.columns.timestamp}), ' \
+                f'{self.columns.build_id}, ' \
+                f'{self.columns.lru} ' \
+                f'FROM {self.table_name} ' \
+                f"WHERE {self.columns.rrev} = '{ref.revision}' " \
+                f"AND {self.columns.reference} = '{str(ref)}' " \
+                f"AND {self.columns.build_id} = '{build_id}' " \
+                f'GROUP BY {self.columns.pkgid} '
+
+        with self.db_connection() as conn:
+            r = conn.execute(query)
+            row = r.fetchone()
+            if row:
+                return self._as_dict(self.row_type(*row))
+            return None
+
+    def path_to_ref(self, path):
+        query = f'SELECT * FROM {self.table_name} ' \
+                f"WHERE {self.columns.path}='{path}'"
+        with self.db_connection() as conn:
+            r = conn.execute(query)
+            row = r.fetchone()
+            if not row:
+                return None
+            ref = RecipeReference.loads(row[0])
+            ref.revision = row[1]
+            pref = PkgReference(ref, row[2], row[3], row[5])
+            return pref

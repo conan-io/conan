@@ -4,7 +4,7 @@ import textwrap
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import mkdir
+from conan.internal.util.files import mkdir
 
 
 def test_third_party_patch_flow():

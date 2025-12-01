@@ -5,13 +5,12 @@ import textwrap
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_h, gen_function_cpp
 from conan.test.utils.tools import TestClient
 
 
-@pytest.mark.slow
 @pytest.mark.tool("cmake")
 @pytest.fixture(scope="module")
 def setup_client_with_greetings():
@@ -433,7 +432,6 @@ def test_no_components(setup_client_with_greetings):
     create_chat(client, "none", package_info, cmake_find, test_cmake_find)
 
 
-@pytest.mark.slow
 @pytest.mark.tool("cmake")
 def test_same_names():
     client = TestClient()
@@ -565,9 +563,6 @@ class TestComponentsCMakeGenerators:
             .with_package_info(cpp_info={"components": {"cmp": {"requires": ["mypkg::zlib",
                                                                              "zlib::zlib"]}}},
                                env_info={})
-        consumer = GenConanfile("consumer", "0.1").with_setting("build_type")\
-            .with_generator("CMakeDeps")\
-            .with_requirement(RecipeReference("final", "0.1", None, None))
 
         consumer = textwrap.dedent("""
             from conan import ConanFile
@@ -621,7 +616,6 @@ class TestComponentsCMakeGenerators:
         client.run("install consumer.py", assert_error=True)
         assert "Component 'mypkg::zlib' not found in 'mypkg' package requirement" in client.out
 
-    @pytest.mark.slow
     def test_same_name_global_target_collision(self):
         # https://github.com/conan-io/conan/issues/7889
         conanfile_tpl = textwrap.dedent("""

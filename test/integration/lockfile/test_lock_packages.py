@@ -14,7 +14,7 @@ def test_lock_packages(requires):
     NOTE: They are still not used! only to check that it is possible to store them
           And that the lockfile is still usable
     """
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"pkg/conanfile.py": GenConanfile().with_package_file("file.txt", env_var="MYVAR"),
                  "consumer/conanfile.txt": f"[{requires}]\npkg/[>0.0]"})
     with environment_update({"MYVAR": "MYVALUE"}):

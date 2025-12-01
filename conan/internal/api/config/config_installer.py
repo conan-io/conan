@@ -1,31 +1,48 @@
 import os
 import shutil
 import fnmatch
+import zipfile
 
 from urllib.parse import urlparse, urlsplit
 from contextlib import contextmanager
 
 from conan.api.output import ConanOutput
-from conans.client.downloaders.file_downloader import FileDownloader
-from conans.errors import ConanException
-from conans.util.files import mkdir, rmdir, remove, unzip, chdir
-from conans.util.runners import detect_runner
+from conan.internal.paths import find_file_walk_up
+from conan.internal.rest.file_downloader import FileDownloader
+from conan.errors import ConanException
+from conan.internal.util.files import mkdir, rmdir, remove, chdir
+from conan.internal.util.runners import detect_runner
+from conan.tools.files.files import untargz
 
 
 class _ConanIgnoreMatcher:
     def __init__(self, conanignore_path, ignore=None):
-        conanignore_path = os.path.abspath(conanignore_path)
         self._ignored_entries = {".conanignore"}
-        if os.path.exists(conanignore_path):
-            with open(conanignore_path, 'r') as conanignore:
-                for line in conanignore:
-                    line_content = line.split("#", maxsplit=1)[0].strip()
-                    if line_content:
+        self._included_entries = set()
+        if conanignore_path is None or not os.path.exists(conanignore_path):
+            return
+        with open(conanignore_path, 'r') as conanignore:
+            for line in conanignore:
+                line_content = line.split("#", maxsplit=1)[0].strip()
+                if line_content:
+                    if line_content.startswith("!"):
+                        self._included_entries.add(line_content[1:])
+                    else:
                         self._ignored_entries.add(line_content)
         if ignore:
             self._ignored_entries.update(ignore)
 
     def matches(self, path):
+        """Returns whether the path should be ignored
+
+        It's ignored if:
+         - The path does not match any of the included entries
+         - And the path matches any of the ignored entries
+
+        In any other, the path is not ignored"""
+        for include_entry in self._included_entries:
+            if fnmatch.fnmatch(path, include_entry):
+                return False
         for ignore_entry in self._ignored_entries:
             if fnmatch.fnmatch(path, ignore_entry):
                 return True
@@ -70,7 +87,20 @@ def _process_git_repo(config, cache_folder):
 
 
 def _process_zip_file(config, zippath, cache_folder, tmp_folder, first_remove=False):
-    unzip(zippath, tmp_folder)
+    # First, unzip. This is repeated with the tools.unzip, but better do not mess
+    # Same list as below
+    tgz_exts = (".tar.gz", ".tgz", ".tbz2", ".tar.bz2", ".tar", ".tar.xz", ".txz")
+    if any(zippath.endswith(e) for e in tgz_exts):
+        untargz(zippath, tmp_folder)
+    else:
+        full_path = os.path.normpath(os.path.join(os.getcwd(), tmp_folder))
+        with zipfile.ZipFile(zippath, "r") as z:
+            zip_info = z.infolist()
+            extracted_size = 0
+            for file_ in zip_info:
+                extracted_size += file_.file_size
+                z.extract(file_, full_path)
+
     if first_remove:
         os.unlink(zippath)
     _process_folder(config, tmp_folder, cache_folder)
@@ -117,9 +147,10 @@ def _process_file(directory, filename, config, cache_folder, folder):
 def _process_folder(config, folder, cache_folder, ignore=None):
     if not os.path.isdir(folder):
         raise ConanException("No such directory: '%s'" % str(folder))
+    original_folder = folder
     if config.source_folder:
         folder = os.path.join(folder, config.source_folder)
-    conanignore_path = os.path.join(folder, '.conanignore')
+    conanignore_path = find_file_walk_up(folder, ".conanignore", end=original_folder)
     conanignore = _ConanIgnoreMatcher(conanignore_path, ignore)
     for root, dirs, files in os.walk(folder):
         # .git is always ignored by default, even if not present in .conanignore
@@ -175,14 +206,12 @@ def _is_compressed_file(filename):
     import zipfile
     if zipfile.is_zipfile(filename):
         return True
-    tgz_exts = (".tar.gz", ".tgz", ".tbz2", ".tar.bz2", ".tar", ".gz", ".tar.xz", ".txz")
+    tgz_exts = (".tar.gz", ".tgz", ".tbz2", ".tar.bz2", ".tar", ".tar.xz", ".txz")
     return any(filename.endswith(e) for e in tgz_exts)
 
 
-def configuration_install(app, uri, verify_ssl, config_type=None,
+def configuration_install(cache_folder, requester, uri, verify_ssl, config_type=None,
                           args=None, source_folder=None, target_folder=None, ignore=None):
-    requester = app.requester
-    cache_folder = app.cache_folder
     config = _ConfigOrigin(uri, config_type, verify_ssl, args, source_folder, target_folder)
     try:
         if config.type == "git":

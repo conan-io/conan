@@ -1,23 +1,20 @@
-'''
-
+"""
 This module handles user authentication and permissions
 for read or write a conans or package.
 
 This only reads from file the users and permissions.
 
 Replace this module with other that keeps the interface or super class.
-
-'''
+"""
 
 from abc import ABCMeta, abstractmethod
 
-from conans.errors import AuthenticationException, ForbiddenException, InternalErrorException
-
+from conan.internal.errors import InternalErrorException, AuthenticationException, ForbiddenException
 
 #  ############################################
 #  ############ ABSTRACT CLASSES ##############
 #  ############################################
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 
 
 class Authorizer(object, metaclass=ABCMeta):
@@ -128,9 +125,6 @@ class BasicAuthorizer(Authorizer):
         username: User that request to read the conans
         ref: RecipeReference
         """
-        if ref.user == username:
-            return
-
         self._check_any_rule_ok(username, self.read_permissions, ref)
 
     def check_write_conan(self, username, ref):
@@ -138,9 +132,6 @@ class BasicAuthorizer(Authorizer):
         username: User that request to write the conans
         ref: RecipeReference
         """
-        if ref.user == username:
-            return True
-
         self._check_any_rule_ok(username, self.write_permissions, ref)
 
     def check_delete_conan(self, username, ref):
@@ -207,7 +198,7 @@ class BasicAuthorizer(Authorizer):
                     else:
                         raise ForbiddenException("Permission denied")
                 else:
-                    raise AuthenticationException()
+                    raise AuthenticationException("Authentication error")
 
         return False
 

@@ -1,6 +1,6 @@
 import os
 
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import uncompress_packaged_files
 from conan.test.utils.tools import TestClient
@@ -67,7 +67,7 @@ def test_upload_only_tgz_if_needed():
     conan_path = server_paths.conan_revisions_root(ref)
     assert os.path.exists(conan_path)
 
-    latest_rrev = client.cache.get_latest_recipe_reference(ref)
+    latest_rrev = client.cache.get_latest_recipe_revision(ref)
     package_ids = client.cache.get_package_references(latest_rrev)
     pref = package_ids[0]
 

@@ -1,6 +1,6 @@
 import pytest
 
-from conans.model.version import Version
+from conan.internal.model.version import Version
 
 values = [
     ['1.0.0',       0, "2.0.0"],

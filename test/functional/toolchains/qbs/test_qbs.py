@@ -1,4 +1,6 @@
 import os
+import platform
+
 import pytest
 import textwrap
 
@@ -13,10 +15,8 @@ def gen_file(template, **context):
     return t.render(**context)
 
 
-@pytest.mark.parametrize('shared', [
-    ('False'),
-    ('True'),
-])
+@pytest.mark.parametrize('shared', [False, True])
+@pytest.mark.skipif(platform.system() != "Linux", reason="QBS only for Linux now")
 @pytest.mark.tool("qbs")
 def test_api_qbs_create_lib(shared):
     client = TestClient()
@@ -25,6 +25,7 @@ def test_api_qbs_create_lib(shared):
     assert "compiling hello.cpp" in client.out
 
 
+@pytest.mark.skipif(platform.system() != "Linux", reason="QBS only for Linux now")
 @pytest.mark.tool("qbs")
 def test_qbs_all_products():
     client = TestClient()
@@ -65,6 +66,7 @@ def test_qbs_all_products():
     assert "--all-products" in client.out
 
 
+@pytest.mark.skipif(platform.system() != "Linux", reason="QBS only for Linux now")
 @pytest.mark.tool("qbs")
 def test_qbs_specific_products():
     client = TestClient()
@@ -105,6 +107,7 @@ def test_qbs_specific_products():
     assert "--products hello,hello" in client.out
 
 
+@pytest.mark.skipif(platform.system() != "Linux", reason="QBS only for Linux now")
 @pytest.mark.tool("qbs")
 def test_qbs_multiple_configurations():
     client = TestClient()

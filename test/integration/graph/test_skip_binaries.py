@@ -151,6 +151,8 @@ def test_conf_skip():
 
 
 def test_skipped_intermediate_header():
+    # app -> libc/0.1 (static) -> libb0.1 (header) -> liba0.1 (static)
+    # This libb0.1 cannot be skipped because it is necessary its lib-config.cmake for transitivity
     c = TestClient()
     c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("static-library")
                                                             .with_package_info(cpp_info={"libs":
@@ -235,3 +237,97 @@ def test_skip_tool_requires_context():
     c.run("install app -s:a os=Linux -pr=profile -c=tools.graph:skip_binaries=False --build=missing")
     assert 'export MYVAR="MYVALUE"' in c.out
     assert "gtest/1.0: Package '9a4eb3c8701508aa9458b1a73d0633783ecc2270' built" in c.out
+
+
+def test_skip_intermediate_header():
+    # https://github.com/conan-io/conan/issues/16402
+    # Libb cannot be skipped in any case, because there is a link order libc->liba necessary
+    # app -> libc/0.1 (static) -> libb0.1 (header) -> liba0.1 (static)
+    #  \------------------------------------------------/
+    # libb
+    c = TestClient(light=True)
+    c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("static-library"),
+            "libb/conanfile.py": GenConanfile("libb", "0.1").with_requirement("liba/0.1")
+                                                            .with_package_type("header-library"),
+            "libc/conanfile.py": GenConanfile("libc", "0.1").with_requirement("libb/0.1")
+                                                            .with_package_type("static-library"),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_package_type("application")
+                                                          .with_requires("libc/0.1", "liba/0.1")})
+    c.run("create liba")
+    c.run("create libb")
+    c.run("create libc")
+    c.run("install app")
+    assert "Skipped binaries" not in c.out
+    assert "libb/0.1: Already installed!" in c.out
+    assert "liba/0.1: Already installed!" in c.out
+    assert "libc/0.1: Already installed!" in c.out
+
+
+def test_skip_intermediate_static():
+    # https://github.com/conan-io/conan/issues/16402
+    # In this case, libb can be completely skipped, because there is no linkage relationship at all
+    # app -> libc/0.1 (shared) -> libb0.1 (static) -> liba0.1 (static)
+    #  \------------------------------------------------/
+    # libb
+    c = TestClient(light=True)
+    c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("static-library"),
+            "libb/conanfile.py": GenConanfile("libb", "0.1").with_requirement("liba/0.1")
+                                                            .with_package_type("static-library"),
+            "libc/conanfile.py": GenConanfile("libc", "0.1").with_requirement("libb/0.1")
+                                                            .with_package_type("shared-library"),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_package_type("application")
+                                                          .with_requires("libc/0.1", "liba/0.1")})
+    c.run("create liba")
+    c.run("create libb")
+    c.run("create libc")
+    c.run("remove libb:* -c")  # binary not necessary, can be skipped
+    c.run("install app")
+    assert re.search(r"Skipped binaries(\s*)libb/0.1", c.out)
+    assert "libb/0.1: Already installed!" not in c.out
+    assert "liba/0.1: Already installed!" in c.out
+    assert "libc/0.1: Already installed!" in c.out
+
+
+def test_skip_intermediate_static_complex():
+    # https://github.com/conan-io/conan/issues/16402
+    #  /----- libh(static)--libi(header)---libj(header)----------\
+    # app -> libe(shared)->libd(static) -> libc(static) -> libb(static) -> liba(static)
+    #  \---------libf(static) --libg(header)---------------------------------/
+    # libd and libc can be skipped
+    c = TestClient(light=True)
+    c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("static-library"),
+            "libb/conanfile.py": GenConanfile("libb", "0.1").with_requirement("liba/0.1")
+                                                            .with_package_type("static-library"),
+            "libc/conanfile.py": GenConanfile("libc", "0.1").with_requirement("libb/0.1")
+                                                            .with_package_type("static-library"),
+            "libd/conanfile.py": GenConanfile("libd", "0.1").with_requirement("libc/0.1")
+                                                            .with_package_type("static-library"),
+            "libe/conanfile.py": GenConanfile("libe", "0.1").with_requirement("libd/0.1")
+                                                            .with_package_type("shared-library"),
+            "libg/conanfile.py": GenConanfile("libg", "0.1").with_requirement("liba/0.1")
+                                                            .with_package_type("header-library"),
+            "libf/conanfile.py": GenConanfile("libf", "0.1").with_requirement("libg/0.1")
+                                                            .with_package_type("static-library"),
+            "libj/conanfile.py": GenConanfile("libj", "0.1").with_requirement("libb/0.1")
+                                                            .with_package_type("header-library"),
+            "libi/conanfile.py": GenConanfile("libi", "0.1").with_requirement("libj/0.1")
+                                                            .with_package_type("header-library"),
+            "libh/conanfile.py": GenConanfile("libh", "0.1").with_requirement("libi/0.1")
+                                                            .with_package_type("static-library"),
+            "app/conanfile.py": GenConanfile("app", "0.1").with_package_type("application")
+                                                          .with_requires("libh/0.1", "libe/0.1",
+                                                                         "libf/0.1")
+            })
+    for lib in ("a", "b", "c", "d", "e", "j", "i", "h", "g", "f"):
+        c.run(f"create lib{lib}")
+
+    c.run("remove libd:* -c")  # binary not necessary, can be skipped
+    c.run("remove libc:* -c")  # binary not necessary, can be skipped
+    c.run("install app")
+    assert re.search(r"Skipped binaries(\s*)libc/0.1, libd/0.1", c.out)
+    assert "libd/0.1: Already installed!" not in c.out
+    assert "libc/0.1: Already installed!" not in c.out
+    for lib in ("a", "b", "e", "f", "g", "h", "i", "j"):
+        assert f"lib{lib}/0.1: Already installed!" in c.out
+    for lib in ("c", "d"):
+        assert f"lib{lib}/0.1: Already installed!" not in c.out

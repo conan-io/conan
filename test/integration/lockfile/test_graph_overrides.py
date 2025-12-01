@@ -12,7 +12,7 @@ def test_overrides_half_diamond(override, force):
     pkgc -----> pkgb/0.1 --> pkga/0.1
        \--(override/force)-->pkga/0.2
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pkga/conanfile.py": GenConanfile("pkga"),
             "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
             "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requirement("pkgb/0.1")
@@ -35,8 +35,8 @@ def test_overrides_half_diamond(override, force):
     # apply the lockfile to pkgb, should it lock to pkga/0.2
     c.run("graph info pkgb --lockfile=pkgc/conan.lock --format=json")
     dependencies = json.loads(c.stdout)["graph"]["nodes"]["0"]["dependencies"]
-    assert "pkga/0.2" in str(dependencies)
-    assert "pkga/0.1" not in str(dependencies)
+    assert "pkga/0.2" == dependencies["1"]["ref"]
+    assert "pkga/0.1" == dependencies["1"]["require"]
 
 
 @pytest.mark.parametrize("override, force", [(True, False), (False, True)])
@@ -45,7 +45,7 @@ def test_overrides_half_diamond_ranges(override, force):
        pkgc -----> pkgb/0.1 --> pkga/[>0.1 <0.2]
           \--(override/force)-->pkga/0.2
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pkga/conanfile.py": GenConanfile("pkga"),
             "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/[>=0.1 <0.2]"),
             "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requirement("pkgb/0.1")
@@ -74,7 +74,7 @@ def test_overrides_half_diamond_ranges_inverted(override, force):
        pkgc -----> pkgb/0.1 --> pkga/[>=0.1]
           \--(override/force)-->pkga/0.1
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pkga/conanfile.py": GenConanfile("pkga"),
             "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/[>=0.1]"),
             "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requirement("pkgb/0.1")
@@ -103,7 +103,7 @@ def test_overrides_diamond(override, force):
        \------> pkgc/0.1 --> pkga/0.2
        \--(override/force)-->pkga/0.3
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pkga/conanfile.py": GenConanfile("pkga"),
             "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
             "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkga/0.2"),
@@ -140,9 +140,8 @@ def test_overrides_diamond(override, force):
     c.run("graph info pkgb --lockfile=pkgd/conan.lock --format=json")
     json_graph = json.loads(c.stdout)
     deps = json_graph["graph"]["nodes"]["0"]["dependencies"]
-    assert "pkga/0.3" in str(deps)
-    assert "pkga/0.2" not in str(deps)
-    assert "pkga/0.1" not in str(deps)
+    assert "pkga/0.3" == deps["1"]["ref"]
+    assert "pkga/0.1" == deps["1"]["require"]
     # Redundant assert, but checking "overrides" summary
     overrides = json_graph['graph']["overrides"]
     assert len(overrides) == 1
@@ -156,7 +155,7 @@ def test_overrides_diamond_ranges(override, force):
        \------> pkgc/0.1 --> pkga/[>=0.2 <0.3]
        \--(override/force)-->pkga/0.3
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pkga/conanfile.py": GenConanfile("pkga"),
             "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/[>=0.1 <0.2]"),
             "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkga/[>=0.2 <0.3]"),
@@ -198,7 +197,7 @@ def test_overrides_multiple(override1, force1, override2, force2):
       \           \--override---------> pkga/0.2
        \---override-------------------> pkga/0.3
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pkga/conanfile.py": GenConanfile("pkga"),
             "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
             "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requirement("pkgb/0.1")
@@ -235,7 +234,7 @@ def test_graph_different_overrides():
                 \------override-----> toolc/0.3
     pkgc -> toola/0.3 -> toolb/0.3 -> toolc/0.1
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"toolc/conanfile.py": GenConanfile("toolc"),
             "toolb/conanfile.py": GenConanfile("toolb").with_requires("toolc/0.1"),
             "toola/conanfile.py": GenConanfile("toola", "0.1").with_requirement("toolb/0.1")
@@ -284,7 +283,7 @@ def test_introduced_conflict(override, force):
     Using --lockfile-partial we can evaluate and introduce a new conflict
     pkgd -----> pkgb/[*] --> pkga/[>=0.1 <0.2]
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pkga/conanfile.py": GenConanfile("pkga"),
             "pkgb/conanfile.py": GenConanfile("pkgb").with_requires("pkga/[>=0.1 <0.2]"),
             "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkga/[>=0.2 <0.3]"),
@@ -339,7 +338,7 @@ def test_command_line_lockfile_overrides():
     """
     --lockfile-overrides cannot be abused to inject new overrides, only existing ones
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({
             "pkga/conanfile.py": GenConanfile("pkga"),
             "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
@@ -357,7 +356,7 @@ def test_command_line_lockfile_overrides():
 
 
 def test_consecutive_installs():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({
         "pkga/conanfile.py": GenConanfile("pkga"),
         "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),

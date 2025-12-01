@@ -1,14 +1,13 @@
 import os
-import unittest
 
 from conan.internal.api.uploader import compress_files
-from conans.client.remote_manager import uncompress_file
 from conan.internal.paths import PACKAGE_TGZ_NAME, PACKAGE_TZSTD_NAME
+from conan.internal.rest.remote_manager import uncompress_file
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
-class RemoteManagerTest(unittest.TestCase):
+class TestRemoteManager:
 
     def test_compress_files_tgz(self):
         folder = temp_folder()
@@ -21,9 +20,9 @@ class RemoteManagerTest(unittest.TestCase):
         }
 
         path = compress_files(files, PACKAGE_TGZ_NAME, dest_dir=folder)
-        self.assertTrue(os.path.exists(path))
+        assert os.path.exists(path)
         expected_path = os.path.join(folder, PACKAGE_TGZ_NAME)
-        self.assertEqual(path, expected_path)
+        assert path == expected_path
 
     def test_compress_and_uncompress_zst_files(self):
         folder = temp_folder()
@@ -36,18 +35,18 @@ class RemoteManagerTest(unittest.TestCase):
         }
 
         path = compress_files(files, PACKAGE_TZSTD_NAME, dest_dir=folder, compressformat="zstd")
-        self.assertTrue(os.path.exists(path))
+        assert os.path.exists(path)
         expected_path = os.path.join(folder, PACKAGE_TZSTD_NAME)
-        self.assertEqual(path, expected_path)
+        assert path == expected_path
 
         extract_dir = os.path.join(folder, "extracted")
         uncompress_file(path, extract_dir)
 
         extract_files = list(sorted(os.listdir(extract_dir)))
         expected_files = sorted(files.keys())
-        self.assertEqual(extract_files, expected_files)
+        assert extract_files == expected_files
 
         for name, path in sorted(files.items()):
             extract_path = os.path.join(extract_dir, name)
             with open(path, "r") as f1, open(extract_path, "r") as f2:
-                self.assertEqual(f1.read(), f2.read())
+                assert f1.read() == f2.read()

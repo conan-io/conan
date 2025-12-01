@@ -28,6 +28,57 @@ def test_msbuilddeps_maps_architecture_to_platform(arch, exp_platform):
     assert expected_import in toolchain
 
 
+@pytest.mark.parametrize(
+    "build_type,arch,configuration,exp_platform",
+    [
+        ("Release", "x86", "Release - Test", "Win32"),
+        ("Debug", "x86_64", "Debug - Test", "x64"),
+    ],
+)
+@pytest.mark.parametrize(
+    "config_key,platform_key",
+    [
+        ("GlobalConfiguration", "GlobalPlatform"),
+        (None, None),
+    ],
+)
+def test_msbuilddeps_import_condition(build_type, arch, configuration, exp_platform, config_key, platform_key):
+    client = TestClient()
+    app = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.microsoft import MSBuildDeps
+        class App(ConanFile):
+            requires = ("lib/0.1")
+            settings = "arch", "build_type"
+            options = {{"configuration": ["ANY"],
+                       "platform": ["Win32", "x64"]}}
+
+            def generate(self):
+                ms = MSBuildDeps(self)
+                ms.configuration_key = "{config_key}"
+                ms.configuration = self.options.configuration
+                ms.platform_key = "{platform_key}"
+                ms.platform = self.options.platform
+                ms.generate()
+        """)
+
+    # Remove custom set of keys to test default values
+    app = app.replace(f'ms.configuration_key = "{config_key}"', "") if config_key is None else app
+    app = app.replace(f'ms.platform_key = "{platform_key}"', "") if platform_key is None else app
+    config_key_expected = "Configuration" if config_key is None else config_key
+    platform_key_expected = "Platform" if platform_key is None else platform_key
+
+    client.save({"app/conanfile.py": app,
+                 "lib/conanfile.py": GenConanfile("lib", "0.1").with_package_type("header-library")})
+    client.run("create lib")
+    client.run(f'install app -s build_type={build_type} -s arch={arch} -o *:platform={exp_platform} -o *:configuration="{configuration}"')
+
+    assert os.path.exists(os.path.join(client.current_folder, "app", "conan_lib.props"))
+    dep = client.load(os.path.join(client.current_folder, "app", "conan_lib.props"))
+    expected_import = f"""<Import Condition="'$({config_key_expected})' == '{configuration}' And '$({platform_key_expected})' == '{exp_platform}'" Project="conan_lib_{configuration.lower()}_{exp_platform.lower()}.props"/>"""
+    assert expected_import in dep
+
+
 def test_msbuilddeps_format_names():
     c = TestClient()
     conanfile = textwrap.dedent("""
@@ -130,18 +181,12 @@ class TestMSBuildDepsSkips:
 def test_msbuilddeps_relocatable(withdepl):
     c = TestClient()
     c.save({
-        "libh/conanfile.py": GenConanfile("libh", "0.1")
-            .with_package_type("header-library"),
-        "libs/conanfile.py": GenConanfile("libs", "0.2")
-            .with_package_type("static-library")
-            .with_requires("libh/0.1"),
-        "libd/conanfile.py": GenConanfile("libd", "0.3")
-            .with_package_type("shared-library"),
-        "app/conanfile.py": GenConanfile()
-            .with_requires("libh/0.1")
-            .with_requires("libs/0.2")
-            .with_requires("libd/0.3")
-            .with_settings("arch", "build_type"),
+        "libh/conanfile.py": GenConanfile("libh", "0.1").with_package_type("header-library"),
+        "libs/conanfile.py": GenConanfile("libs", "0.2").with_package_type("static-library")
+                                                        .with_requires("libh/0.1"),
+        "libd/conanfile.py": GenConanfile("libd", "0.3").with_package_type("shared-library"),
+        "app/conanfile.py": GenConanfile().with_requires("libh/0.1", "libs/0.2", "libd/0.3")
+                                          .with_settings("arch", "build_type"),
     })
 
     c.run("create libh")
@@ -155,7 +200,7 @@ def test_msbuilddeps_relocatable(withdepl):
         value = text.split(f"<{marker}>")[1].split(f"</{marker}>")[0]
         if withdepl:
             # path should be relative, since artifacts are moved along with project
-            prefix = '$(MSBuildThisFileDirectory)/'
+            prefix = '$(MSBuildThisFileDirectory)\\'
             assert value.startswith(prefix)
             tail = value[len(prefix):]
             assert not os.path.isabs(tail)
@@ -171,5 +216,30 @@ def test_msbuilddeps_relocatable(withdepl):
         for fn in propsfiles:
             text = c.load(fn)
             text = text.replace('\\', '/')
-            dir = c.current_folder.replace('\\', '/')
-            assert dir not in text
+            folder = c.current_folder.replace('\\', '/')
+            assert folder not in text
+
+
+def test_msbuilddeps_consume_meson():
+    c = TestClient()
+    pkga = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Pkg(ConanFile):
+            name = "pkga"
+            version = "0.1"
+            package_type = "static-library"
+            def package(self):
+                save(self, os.path.join(self.package_folder, "lib", "libpkga.a"), "")
+            def package_info(self):
+                self.cpp_info.libs = ["pkga"]
+        """)
+
+    c.save({"pkga/conanfile.py": pkga,
+            "app/conanfile.py": GenConanfile().with_requires("pkga/0.1")
+                                              .with_settings("arch", "build_type")})
+    c.run("create pkga -s arch=x86_64")
+    c.run("install app -g MSBuildDeps -s arch=x86_64")
+    deps = c.load("app/conan_pkga_vars_release_x64.props")
+    assert "<ConanpkgaLibraries>libpkga.a;</ConanpkgaLibraries>" in deps

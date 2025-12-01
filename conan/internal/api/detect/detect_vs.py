@@ -3,7 +3,7 @@ import os
 from shutil import which
 
 from conan.tools.build import cmd_args_to_string
-from conans.errors import ConanException
+from conan.errors import ConanException
 
 
 def vs_installation_path(version):
@@ -11,7 +11,7 @@ def vs_installation_path(version):
 
 
 def vs_detect_update(version):
-    version = {"194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
+    version = {"195": "18", "194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
     full_version = _vs_installation_path(version)[1]
     components = full_version.split(".")
     if len(components) > 1:
@@ -120,7 +120,7 @@ def vswhere(all_=False, prerelease=True, products=None, requires=None, version="
         arguments.append("-nologo")
 
     try:
-        from conans.util.runners import check_output_runner
+        from conan.internal.util.runners import check_output_runner
         cmd = cmd_args_to_string(arguments)
         output = check_output_runner(cmd).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json

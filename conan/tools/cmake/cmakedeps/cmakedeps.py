@@ -15,7 +15,7 @@ from conan.tools.cmake.cmakedeps.templates.target_data import ConfigDataTemplate
 from conan.tools.cmake.cmakedeps.templates.targets import TargetsTemplate
 from conan.tools.files import save
 from conan.errors import ConanException
-from conans.model.dependencies import get_transitive_requires
+from conan.internal.model.dependencies import get_transitive_requires
 
 
 class CMakeDeps(object):
@@ -39,7 +39,7 @@ class CMakeDeps(object):
 
     def generate(self):
         """
-        This method will save the generated files to the conanfile.generators_folder
+        This method will save the generated files to the ``conanfile.generators_folder`` folder
         """
         check_duplicated_generator(self, self._conanfile)
 
@@ -105,7 +105,7 @@ class CMakeDeps(object):
                 msg.append(f"    find_package({config.file_name})")
             targets = ' '.join(c.root_target_name for c in direct_configs)
             msg.append(f"    target_link_libraries(... {targets})")
-            if self._conanfile._conan_is_consumer:
+            if self._conanfile._conan_is_consumer:  # noqa
                 self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
             else:
                 self._conanfile.output.verbose("\n".join(msg))
@@ -135,8 +135,10 @@ class CMakeDeps(object):
     def set_property(self, dep, prop, value, build_context=False):
         """
         Using this method you can overwrite the :ref:`property<CMakeDeps Properties>` values set by
-        the Conan recipes from the consumer. This can be done for `cmake_file_name`, `cmake_target_name`,
-        `cmake_find_mode`, `cmake_module_file_name` and `cmake_module_target_name` properties.
+        the Conan recipes from the consumer. This can be done for ``cmake_file_name``, ``cmake_target_name``,
+        ``cmake_find_mode``, ``cmake_module_file_name``, ``cmake_module_target_name``, ``cmake_additional_variables_prefixes``,
+        ``cmake_config_version_compat``, ``system_package_version``,
+        ``cmake_build_modules``, ``nosoname``, ``cmake_target_aliases`` and ``cmake_extra_variables``.
 
         :param dep: Name of the dependency to set the :ref:`property<CMakeDeps Properties>`. For
          components use the syntax: ``dep_name::component_name``.
@@ -155,13 +157,17 @@ class CMakeDeps(object):
             dep_name) in self.build_context_activated and dep.context == "build" else ""
         dep_comp = f"{str(dep_name)}::{comp_name}" if comp_name else f"{str(dep_name)}"
         try:
-            return self._properties[f"{dep_comp}{build_suffix}"][prop]
+            value = self._properties[f"{dep_comp}{build_suffix}"][prop]
+            if check_type is not None and not isinstance(value, check_type):
+                raise ConanException(
+                    f'The expected type for {prop} is "{check_type.__name__}", but "{type(value).__name__}" was found')
+            return value
         except KeyError:
             return dep.cpp_info.get_property(prop, check_type=check_type) if not comp_name \
                 else dep.cpp_info.components[comp_name].get_property(prop, check_type=check_type)
 
     def get_cmake_package_name(self, dep, module_mode=None):
-        """Get the name of the file for the find_package(XXX)"""
+        """Get the name of the file for the ``find_package(XXX)`` call"""
         # This is used by CMakeDeps to determine:
         # - The filename to generate (XXX-config.cmake or FindXXX.cmake)
         # - The name of the defined XXX_DIR variables
@@ -176,7 +182,7 @@ class CMakeDeps(object):
     def get_find_mode(self, dep):
         """
         :param dep: requirement
-        :return: "none" or "config" or "module" or "both" or "config" when not set
+        :return: One of ``"none"``, ``"config"``, ``"module"`` or ``"both"``. Defaults to ``"config"`` when not set
         """
         tmp = self.get_property("cmake_find_mode", dep)
         if tmp is None:

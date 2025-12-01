@@ -42,7 +42,7 @@ def test_crossbuild_triplet_from_conf():
     """)
 
     client = TestClient(path_with_spaces=False)
-    client.save({client.cache.settings_path: settings_yml})
+    client.save({client.paths.settings_path: settings_yml})
     client.save({"host_profile": host_profile})
     client.save({"build_profile": build_profile})
 

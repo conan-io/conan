@@ -1,7 +1,7 @@
 import textwrap
 
 from conan.test.utils.tools import TestClient
-from conans import __version__
+from conan import __version__
 
 
 def test_conan_version():
@@ -10,7 +10,7 @@ def test_conan_version():
         from conan import ConanFile
         from conan import conan_version
         from conan.tools.scm import Version
-        from conans import __version__
+        from conan import __version__
 
         class pkg(ConanFile):
 

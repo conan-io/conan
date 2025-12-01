@@ -5,14 +5,15 @@ import textwrap
 
 import pytest
 
+from conan.errors import ConanException
 from conan.tools.env import Environment
 from conan.tools.env.environment import ProfileEnvironment
-from conans.client.subsystems import WINDOWS
-from conans.model.recipe_ref import RecipeReference
+from conan.internal.subsystems import WINDOWS
+from conan.api.model import RecipeReference
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.env import environment_update
-from conans.util.files import save, chdir
+from conan.internal.util.files import save, chdir
 
 
 def test_compose():
@@ -179,7 +180,7 @@ def test_profile():
 
 
 @pytest.fixture
-def env():
+def envvars():
     # Append and define operation over the same variable in Windows preserve order
     env = Environment()
     env.define("MyVar", "MyValueA")
@@ -210,7 +211,7 @@ def check_command_output(cmd, prevenv):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-def test_windows_case_insensitive_bat(env):
+def test_windows_case_insensitive_bat(envvars):
     display = textwrap.dedent("""\
         @echo off
         echo MyVar=%MyVar%!!
@@ -221,16 +222,18 @@ def test_windows_case_insensitive_bat(env):
     prevenv = {
         "MYVAR2": "OldValue2",
     }
+    prevenv.update(dict(os.environ.copy()))  # Necessary from Python 3.12, for SYSTEMROOT var
 
     with chdir(temp_folder()):
-        env.save_bat("test.bat")
+        envvars.save_bat("test.bat")
         save("display.bat", display)
         cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
         check_command_output(cmd, prevenv)
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-def test_windows_case_insensitive_ps1(env):
+@pytest.mark.parametrize("deactivation_mode", ["function", None],)
+def test_windows_case_insensitive_ps1(envvars, deactivation_mode):
     display = textwrap.dedent("""\
         echo "MyVar=$env:MyVar!!"
         echo "MyVar1=$env:MyVar1!!"
@@ -243,9 +246,11 @@ def test_windows_case_insensitive_ps1(env):
     prevenv.update(dict(os.environ.copy()))
 
     with chdir(temp_folder()):
-        env.save_ps1("test.ps1")
+        envvars._deactivation_mode = deactivation_mode
+        envvars.save_ps1("test.ps1")
         save("display.ps1", display)
-        cmd = "powershell.exe .\\test.ps1 ; .\\display.ps1 ; .\\deactivate_test.ps1 ; .\\display.ps1"
+        deactivate_cmd = "deactivate_test" if deactivation_mode else ".\\deactivate_test.ps1"
+        cmd = f"powershell.exe .\\test.ps1 ; .\\display.ps1 ; {deactivate_cmd} ; .\\display.ps1"
         check_command_output(cmd, prevenv)
 
 
@@ -273,28 +278,18 @@ def test_dict_access():
     # With previous values in the environment
     env = Environment()
     env.prepend("MyVar", "MyValue", separator="@")
-    old_env = dict(os.environ)
-    os.environ.update({"MyVar": "PreviousValue"})
-    env_vars = env.vars(ConanFileMock())
-    try:
+    with environment_update({"MyVar": "PreviousValue"}):
+        env_vars = env.vars(ConanFileMock())
         assert env_vars["MyVar"] == "MyValue@PreviousValue"
-    finally:
-        os.environ.clear()
-        os.environ.update(old_env)
 
     env = Environment()
     env.append_path("MyVar", "MyValue")
-    old_env = dict(os.environ)
-    os.environ.update({"MyVar": "PreviousValue"})
-    env_vars = env.vars(ConanFileMock())
-    env_vars._subsystem = WINDOWS
-    try:
+    with environment_update({"MyVar": "PreviousValue"}):
+        env_vars = env.vars(ConanFileMock())
+        env_vars._subsystem = WINDOWS
         assert env_vars["MyVar"] == "PreviousValue;MyValue"
         with env_vars.apply():
             assert os.getenv("MyVar") == "PreviousValue;MyValue"
-    finally:
-        os.environ.clear()
-        os.environ.update(old_env)
 
     assert list(env_vars.keys()) == ["MyVar"]
     assert dict(env_vars.items()) == {"MyVar": "MyValue"}
@@ -367,6 +362,24 @@ class TestProfileEnvRoundTrip:
             MyPath1+=(path)/my/path1
             """)
 
+    def test_append_multiple(self):
+        myprofile = textwrap.dedent("""
+            # define
+            MyVar1+=MyValue1
+            MyVar1+=MyValue2
+            MyPath1 +=(path)/my/path1
+            MyPath1 +=(path)/my/path2
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+            MyVar1+=MyValue1
+            MyVar1+=MyValue2
+            MyPath1+=(path)/my/path1
+            MyPath1+=(path)/my/path2
+            """)
+
     def test_prepend(self):
         myprofile = textwrap.dedent("""
             # define
@@ -380,6 +393,24 @@ class TestProfileEnvRoundTrip:
             MyVar1=+MyValue1
             MyPath1=+(path)/my/path1
             """)
+
+    def test_prepend_multiple(self):
+        myprofile = textwrap.dedent("""
+           # define
+           MyVar1=+MyValue1
+           MyVar1=+MyValue2
+           MyPath1=+(path)/my/path1
+           MyPath1=+(path)/my/path2
+           """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+           MyVar1=+MyValue1
+           MyVar1=+MyValue2
+           MyPath1=+(path)/my/path1
+           MyPath1=+(path)/my/path2
+           """)
 
     def test_combined(self):
         myprofile = textwrap.dedent("""
@@ -398,7 +429,32 @@ class TestProfileEnvRoundTrip:
             MyPath1+=(path)/my/path12
             """)
 
-    def test_combined2(self):
+    def test_combined_multiple(self):
+        myprofile = textwrap.dedent("""
+            MyVar1=+MyValue11
+            MyVar1=+MyValue12
+            MyVar1+=MyValue13
+            MyVar1+=MyValue14
+            MyPath1=+(path)/my/path11
+            MyPath1=+(path)/my/path12
+            MyPath1+=(path)/my/path13
+            MyPath1+=(path)/my/path12
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        assert text == textwrap.dedent("""\
+            MyVar1=+MyValue11
+            MyVar1=+MyValue12
+            MyVar1+=MyValue13
+            MyVar1+=MyValue14
+            MyPath1=+(path)/my/path11
+            MyPath1=+(path)/my/path12
+            MyPath1+=(path)/my/path13
+            MyPath1+=(path)/my/path12
+            """)
+
+    def test_combined_prepend_first(self):
         myprofile = textwrap.dedent("""
             MyVar1+=MyValue11
             MyVar1=+MyValue12
@@ -416,6 +472,32 @@ class TestProfileEnvRoundTrip:
             MyPath1+=(path)/my/path11
             """)
 
+    def test_combined_prepend_first_multiple(self):
+        myprofile = textwrap.dedent("""
+            MyVar1+=MyValue11
+            MyVar1=+MyValue12
+            MyVar1+=MyValue13
+            MyVar1=+MyValue14
+            MyPath1+=(path)/my/path11
+            MyPath1=+(path)/my/path12
+            MyPath1+=(path)/my/path13
+            MyPath1=+(path)/my/path14
+            """)
+
+        env = ProfileEnvironment.loads(myprofile)
+        text = env.dumps()
+        # NOTE: This is reversed order compared to origin, prepend always first
+        assert text == textwrap.dedent("""\
+            MyVar1=+MyValue12
+            MyVar1=+MyValue14
+            MyVar1+=MyValue11
+            MyVar1+=MyValue13
+            MyPath1=+(path)/my/path12
+            MyPath1=+(path)/my/path14
+            MyPath1+=(path)/my/path11
+            MyPath1+=(path)/my/path13
+            """)
+
 
 def test_custom_placeholder():
     # https://github.com/conan-io/conan/issues/12427
@@ -426,3 +508,26 @@ def test_custom_placeholder():
            f"$penv{{MyVar}}:MyValue"
     items = {k: v for k, v in env.items(variable_reference="$penv{{{name}}}")}
     assert items == {"MyVar": f"$penv{{MyVar}}:MyValue"}
+
+
+class TestProfileSeparators:
+
+    def test_define(self):
+        myprofile = "MyPath1 = (sep=@)/my/path1"
+        env = ProfileEnvironment.loads(myprofile).get_profile_env(ref="")
+        assert env.dumps() == "MyPath1=(sep=@)/my/path1"
+        env.append("MyPath1", "/other/value")
+        assert env.vars(ConanFileMock()).get("MyPath1") == "/my/path1@/other/value"
+
+    def test_append(self):
+        myprofile = "MyPath1 +=(sep=@)/my/path1"
+        env = ProfileEnvironment.loads(myprofile).get_profile_env(ref="")
+        assert env.dumps() == "MyPath1+=(sep=@)/my/path1"
+        env.append("MyPath1", "/other/value")
+        assert env.vars(ConanFileMock()).get("MyPath1") == "/my/path1@/other/value"
+
+    def test_error(self):
+        myprofile = "MyPath1 = (sep=@) (path)/my/path1"
+        with pytest.raises(ConanException) as e:
+            ProfileEnvironment.loads(myprofile)
+        assert "Cannot use (sep) and (path) qualifiers simultaneously" in str(e.value)

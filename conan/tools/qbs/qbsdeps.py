@@ -1,6 +1,6 @@
 from conan.tools.files import save
 from conan.errors import ConanException
-from conans.model.dependencies import get_transitive_requires
+from conan.internal.model.dependencies import get_transitive_requires
 import json
 import os
 

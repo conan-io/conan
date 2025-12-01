@@ -2,7 +2,7 @@ import operator
 
 from conan.errors import ConanInvalidConfiguration, ConanException
 from conan.internal.api.detect.detect_api import default_cppstd as default_cppstd_
-from conans.model.version import Version
+from conan.internal.model.version import Version
 
 
 def check_min_cppstd(conanfile, cppstd, gnu_extensions=False):
@@ -104,6 +104,7 @@ def supported_cppstd(conanfile, compiler=None, compiler_version=None):
             "clang": _clang_supported_cppstd,
             "mcst-lcc": _mcst_lcc_supported_cppstd,
             "qcc": _qcc_supported_cppstd,
+            "emcc": _emcc_supported_cppstd,
             }.get(compiler)
     if func:
         return func(Version(compiler_version))
@@ -164,8 +165,14 @@ def _apple_clang_supported_cppstd(version):
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
     if version < "13.0":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+    # https://github.com/conan-io/conan/pull/17092 doesn't show c++23 full support until 16
+    # but it was this before Conan 2.9, so keeping it to not break
+    if version < "16.0":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20",
+                "23", "gnu23"]
 
-    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23",
+            "26", "gnu26"]
 
 
 def _gcc_supported_cppstd(version):
@@ -184,8 +191,13 @@ def _gcc_supported_cppstd(version):
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
     if version < "11":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+    # https://github.com/conan-io/conan/pull/17092
+    if version < "14.0":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20",
+                "23", "gnu23"]
 
-    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23",
+            "26", "gnu26"]
 
 
 def _msvc_supported_cppstd(version):
@@ -222,8 +234,12 @@ def _clang_supported_cppstd(version):
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
     if version < "12":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
-
-    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23"]
+    # https://github.com/conan-io/conan/pull/17092
+    if version < "17.0":
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20",
+                "23", "gnu23"]
+    return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20", "23", "gnu23",
+            "26", "gnu26"]
 
 
 def _mcst_lcc_supported_cppstd(version):
@@ -250,5 +266,21 @@ def _qcc_supported_cppstd(version):
 
     if version < "5":
         return ["98", "gnu98"]
-    else:
+    elif version < "12":
         return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17"]
+    else:
+        return ["98", "gnu98", "11", "gnu11", "14", "gnu14", "17", "gnu17", "20", "gnu20"]
+
+
+def _emcc_supported_cppstd(version):
+    """
+    emcc is based on clang but follow different versioning scheme.
+    """
+    if version <= "3.0.1":
+        return _clang_supported_cppstd(Version("14"))
+    if version <= "3.1.50":
+        return _clang_supported_cppstd(Version("18"))
+    if version <= "4.0.1":
+        return _clang_supported_cppstd(Version("20"))
+    # Since emcc 4.0.2 clang version is 21
+    return _clang_supported_cppstd(Version("21"))

@@ -2,30 +2,11 @@ from collections import defaultdict
 from io import StringIO
 
 from conan import ConanFile
+from conan.errors import ConanException
 from conan.internal.conan_app import ConanFileHelpers
-from conans.errors import ConanException
-from conans.model.conf import Conf
-from conans.model.layout import Folders, Infos
-from conans.model.options import Options
-
-
-class LocalDBMock(object):
-
-    def __init__(self, user=None, access_token=None, refresh_token=None):
-        self.user = user
-        self.access_token = access_token
-        self.refresh_token = refresh_token
-
-    def get_login(self, _):
-        return self.user, self.access_token, self.refresh_token
-
-    def get_username(self, _):
-        return self.user
-
-    def store(self, user, access_token, refresh_token, _):
-        self.user = user
-        self.access_token = access_token
-        self.refresh_token = refresh_token
+from conan.internal.model.conf import Conf
+from conan.internal.model.layout import Folders, Infos
+from conan.internal.model.options import Options
 
 
 class RedirectedInputStream:
@@ -65,19 +46,6 @@ class MockSettings(object):
 
     def possible_values(self):
         return defaultdict(lambda: [])
-
-
-class MockCppInfo(object):
-    def __init__(self):
-        self.bin_paths = []
-        self.lib_paths = []
-        self.include_paths = []
-        self.libs = []
-        self.cflags = []
-        self.cxxflags = []
-        self.defines = []
-        self.frameworks = []
-        self.framework_paths = []
 
 
 class ConanFileMock(ConanFile):

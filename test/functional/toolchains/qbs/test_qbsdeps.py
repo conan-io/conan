@@ -1,3 +1,4 @@
+import platform
 
 import pytest
 
@@ -25,6 +26,7 @@ def gen_qbs_application(**context):
     return t.render(**context)
 
 
+@pytest.mark.skipif(platform.system() != "Linux", reason="QBS only for Linux now")
 @pytest.mark.tool("qbs")
 def test_qbsdeps_with_test_requires_header_only():
     client = TestClient()
@@ -70,6 +72,7 @@ def test_qbsdeps_with_test_requires_header_only():
     client.run_command("qbs build moduleProviders.conan.installDirectory:.")
 
 
+@pytest.mark.skipif(platform.system() != "Linux", reason="QBS only for Linux now")
 @pytest.mark.tool("qbs")
 def test_qbsdeps_with_test_requires_lib():
     client = TestClient()
@@ -94,6 +97,7 @@ def test_qbsdeps_with_test_requires_lib():
     client.run_command("qbs build moduleProviders.conan.installDirectory:.")
 
 
+@pytest.mark.skipif(platform.system() != "Linux", reason="QBS only for Linux now")
 @pytest.mark.tool("qbs")
 def test_qbsdeps_with_qbs_toolchain():
     client = TestClient()

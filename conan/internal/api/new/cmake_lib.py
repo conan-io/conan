@@ -115,7 +115,7 @@ source_cpp = r"""#include <iostream>
 void {{package_name}}(){
     {% if requires is defined -%}
     {% for require in requires -%}
-    {{ as_name(require) }}();
+    {{ as_name(require).replace(".", "_") }}();
     {% endfor %}
     {%- endif %}
 

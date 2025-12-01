@@ -6,7 +6,7 @@ from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, zipdir
-from conans.util.files import save_files, sha256sum
+from conan.internal.util.files import save_files, sha256sum
 
 
 class TestLocalRecipeIndexNew:

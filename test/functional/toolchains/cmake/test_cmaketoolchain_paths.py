@@ -3,8 +3,7 @@ import textwrap
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
-from conan.test.utils.tools import TestClient, TurboTestClient
+from conan.test.utils.tools import TestClient
 
 ios10_armv8_settings = "-s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8"
 
@@ -90,7 +89,7 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings, find_
 
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(MyHello CXX)
+        project(MyHello NONE)
         find_package({package} REQUIRED)
         """).format(package=package)
 
@@ -138,7 +137,7 @@ def test_cmaketoolchain_path_find_package_editable():
 
     consumer = textwrap.dedent("""\
         cmake_minimum_required(VERSION 3.15)
-        project(MyHello CXX)
+        project(MyHello NONE)
         find_package(hello REQUIRED)
         """)
     client.save({"dep/conanfile.py": conanfile,
@@ -215,7 +214,7 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
             FILE "${CMAKE_CURRENT_BINARY_DIR}/helloConfig.cmake"
         )
         install(EXPORT helloConfig
-            DESTINATION "${CMAKE_INSTALL_PREFIX}/hello/cmake"
+            DESTINATION "hello/cmake"
             NAMESPACE hello::
         )
         """)
@@ -294,7 +293,7 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type, settings, find_
     """.format(require_type=require_type))
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(MyHello)
+        project(MyHello NONE)
         include(myowncmake)
     """)
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
@@ -341,7 +340,7 @@ def test_cmaketoolchain_path_find_file_find_path(settings, find_root_path_modes)
 
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(MyHello)
+        project(MyHello NONE)
         find_file(HELLOFILE hello.h)
         if(HELLOFILE)
             message("Found file hello.h")
@@ -377,7 +376,7 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
     """Test that libraries in libdirs of requires can be found with
     find_library() in consumer CMakeLists
     """
-    client = TurboTestClient()
+    client = TestClient()
 
     conanfile = textwrap.dedent("""
         import os
@@ -392,12 +391,14 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
                 copy(self, "*", self.source_folder, dst=os.path.join(self.package_folder, "lib"))
     """)
     client.save({"conanfile.py": conanfile, "libhello.a": "", "hello.lib": ""})
-    pref_host = client.create(RecipeReference.loads("hello_host/0.1"), conanfile, args=settings)
-    host_folder = client.get_latest_pkg_layout(pref_host).base_folder
+    client.run("create . --name=hello_host --version=0.1 {}".format(settings))
+
+    host_folder = client.created_layout().base_folder
     host_folder_hash = host_folder.replace("\\", "/").split("/")[-1]
-    pref_build = client.create(RecipeReference.loads("hello_build/0.1"),
-                               conanfile, args="--build-require")
-    build_folder = client.get_latest_pkg_layout(pref_build).base_folder
+
+    client.run("create . --name=hello_build --version=0.1 --build-require")
+
+    build_folder = client.created_layout().base_folder
     build_folder_hash = build_folder.replace("\\", "/").split("/")[-1]
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -408,7 +409,7 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
     """)
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(MyHello)
+        project(MyHello NONE)
         find_library(HELLOLIB hello)
         if(HELLOLIB)
             message("Found hello lib: ${HELLOLIB}")
@@ -443,7 +444,7 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
     """Test that executables in bindirs of tool_requires can be found with
     find_program() in consumer CMakeLists.
     """
-    client = TurboTestClient()
+    client = TestClient()
 
     conanfile = textwrap.dedent("""
         import os
@@ -458,15 +459,12 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
                 copy(self, "*", self.source_folder, os.path.join(self.package_folder, "bin"))
     """)
     client.save({"conanfile.py": conanfile, "hello": "", "hello.exe": ""})
-    client.run("create . --name=hello_host --version=0.1 {}".format(settings))
-    client.run("create . --name=hello_build --version=0.1 --build-require")
 
-    pref_host = client.create(RecipeReference.loads("hello_host/0.1"), conanfile, args=settings)
-    host_folder = client.get_latest_pkg_layout(pref_host).base_folder
+    client.run("create . --name=hello_host --version=0.1 {}".format(settings))
+    host_folder = client.created_layout().base_folder
     host_folder_hash = host_folder.replace("\\", "/").split("/")[-1]
-    pref_build = client.create(RecipeReference.loads("hello_build/0.1"),
-                               conanfile, args="--build-require")
-    build_folder = client.get_latest_pkg_layout(pref_build).base_folder
+    client.run("create . --name=hello_build --version=0.1 --build-require")
+    build_folder = client.created_layout().base_folder
     build_folder_hash = build_folder.replace("\\", "/").split("/")[-1]
 
     conanfile = textwrap.dedent("""
@@ -478,7 +476,7 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
     """)
     consumer = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(MyHello)
+        project(MyHello NONE)
         find_program(HELLOPROG hello)
         if(HELLOPROG)
             message("Found hello prog: ${HELLOPROG}")

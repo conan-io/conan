@@ -1,5 +1,6 @@
 import os
 import platform
+import subprocess
 from collections import OrderedDict, defaultdict
 
 from jinja2 import Environment, FileSystemLoader
@@ -9,13 +10,13 @@ from conan.api.output import ConanOutput
 from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
 from conan.tools.env.environment import ProfileEnvironment
-from conans.errors import ConanException
-from conans.model.conf import ConfDefinition, CORE_CONF_PATTERN
-from conans.model.options import Options
-from conans.model.profile import Profile
-from conans.model.recipe_ref import RecipeReference
-from conans.util.config_parser import ConfigParser
-from conans.util.files import mkdir, load_user_encoded
+from conan.errors import ConanException
+from conan.internal.model.conf import ConfDefinition, CORE_CONF_PATTERN
+from conan.internal.model.options import Options
+from conan.internal.model.profile import Profile
+from conan.api.model import RecipeReference
+from conan.internal.util.config_parser import TextINIParse
+from conan.internal.util.files import mkdir, load_user_encoded
 
 
 def _unquote(text):
@@ -43,71 +44,35 @@ def profile_plugin(profile):
 
 
 def _check_correct_cppstd(settings):
-    from conan.tools.scm import Version
-    def _error(compiler, cppstd, min_version, version):
-        from conan.errors import ConanException
-        raise ConanException(f"The provided compiler.cppstd={cppstd} requires at least {compiler}"
-                             f">={min_version} but version {version} provided")
     cppstd = settings.get("compiler.cppstd")
     version = settings.get("compiler.version")
 
     if cppstd and version:
-        cppstd = cppstd.replace("gnu", "")
-        version = Version(version)
-        mver = None
         compiler = settings.get("compiler")
-        if compiler == "gcc":
-            mver = {"20": "8",
-                    "17": "5",
-                    "14": "4.8",
-                    "11": "4.3"}.get(cppstd)
-        elif compiler == "clang":
-            mver = {"20": "6",
-                    "17": "3.5",
-                    "14": "3.4",
-                    "11": "2.1"}.get(cppstd)
-        elif compiler == "apple-clang":
-            mver = {"20": "10",
-                    "17": "6.1",
-                    "14": "5.1",
-                    "11": "4.5"}.get(cppstd)
-        elif compiler == "msvc":
-            mver = {"23": "193",
-                    "20": "192",
-                    "17": "191",
-                    "14": "190"}.get(cppstd)
-        if mver and version < mver:
-            _error(compiler, cppstd, mver, version)
+        from conan.tools.build.cppstd import supported_cppstd
+        supported = supported_cppstd(None, compiler, version)
+        # supported is None when we don't have information about the compiler
+        # but an empty list when no flags are supported for this version
+        if supported is not None and cppstd not in supported:
+            from conan.errors import ConanException
+            raise ConanException(f"The provided compiler.cppstd={cppstd} is not supported by {compiler} {version}. "
+                                 f"Supported values are: {supported}")
 
 
 def _check_correct_cstd(settings):
-    from conan.tools.scm import Version
-    def _error(compiler, cstd, min_version, version):
-        from conan.errors import ConanException
-        raise ConanException(f"The provided compiler.cstd={cstd} requires at least {compiler}"
-                             f">={min_version} but version {version} provided")
     cstd = settings.get("compiler.cstd")
     version = settings.get("compiler.version")
 
     if cstd and version:
-        cstd = cstd.replace("gnu", "")
-        version = Version(version)
-        mver = None
         compiler = settings.get("compiler")
-        if compiler == "gcc":
-            # TODO: right versions
-            mver = {}.get(cstd)
-        elif compiler == "clang":
-            # TODO: right versions
-            mver = {}.get(cstd)
-        elif compiler == "apple-clang":
-            # TODO: Right versions
-            mver = {}.get(cstd)
-        elif compiler == "msvc":
-            mver = {"17": "192",
-                    "11": "192"}.get(cstd)
-        if mver and version < mver:
-            _error(compiler, cppstd, mver, version)
+        from conan.tools.build.cstd import supported_cstd
+        supported = supported_cstd(None, compiler, version)
+        # supported is None when we don't have information about the compiler
+        # but an empty list when no flags are supported for this version
+        if supported is not None and cstd not in supported:
+            from conan.errors import ConanException
+            raise ConanException(f"The provided compiler.cstd={cstd} is not supported by {compiler} {version}. "
+                                 f"Supported values are: {supported}")
 """
 
 
@@ -115,7 +80,7 @@ class ProfileLoader:
     def __init__(self, cache_folder):
         self._home_paths = HomePaths(cache_folder)
 
-    def from_cli_args(self, profiles, settings, options, conf, cwd):
+    def from_cli_args(self, profiles, settings, options, conf, cwd, context=None):
         """ Return a Profile object, as the result of merging a potentially existing Profile
         file and the args command-line arguments
         """
@@ -124,20 +89,20 @@ class ProfileLoader:
 
         result = Profile()
         for p in profiles:
-            tmp = self.load_profile(p, cwd)
+            tmp = self.load_profile(p, cwd, context)
             result.compose_profile(tmp)
 
         args_profile = _profile_parse_args(settings, options, conf)
         result.compose_profile(args_profile)
         return result
 
-    def load_profile(self, profile_name, cwd=None):
+    def load_profile(self, profile_name, cwd=None, context=None):
         # TODO: This can be made private, only used in testing now
         cwd = cwd or os.getcwd()
-        profile = self._load_profile(profile_name, cwd)
+        profile = self._load_profile(profile_name, cwd, context)
         return profile
 
-    def _load_profile(self, profile_name, cwd):
+    def _load_profile(self, profile_name, cwd, context):
         """ Will look for "profile_name" in disk if profile_name is absolute path,
         in current folder if path is relative or in the default folder otherwise.
         return: a Profile object
@@ -152,27 +117,32 @@ class ProfileLoader:
         # All profiles will be now rendered with jinja2 as first pass
         base_path = os.path.dirname(profile_path)
         file_path = os.path.basename(profile_path)
-        context = {"platform": platform,
+        renderc = {"platform": platform,
                    "os": os,
+                   "subprocess": subprocess,
                    "profile_dir": base_path,
                    "profile_name": file_path,
                    "conan_version": conan_version,
-                   "detect_api": detect_api}
+                   "detect_api": detect_api,
+                   "context": context}
 
-        rtemplate = Environment(loader=FileSystemLoader(base_path)).from_string(text)
+        # Always include the root Conan home "profiles" folder as secondary route for loading
+        # imports and includes from jinja2 templates.
+        loader_paths = [base_path, profiles_folder]
 
         try:
-            text = rtemplate.render(context)
+            rtemplate = Environment(loader=FileSystemLoader(loader_paths)).from_string(text)
+            text = rtemplate.render(renderc)
         except Exception as e:
             raise ConanException(f"Error while rendering the profile template file '{profile_path}'. "
                                  f"Check your Jinja2 syntax: {str(e)}")
 
         try:
-            return self._recurse_load_profile(text, profile_path)
+            return self._recurse_load_profile(text, profile_path, context)
         except ConanException as exc:
             raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
-    def _recurse_load_profile(self, text, profile_path):
+    def _recurse_load_profile(self, text, profile_path, context):
         """ Parse and return a Profile object from a text config like representation.
             cwd is needed to be able to load the includes
         """
@@ -184,7 +154,7 @@ class ProfileLoader:
             # from parent profiles
             for include in profile_parser.includes:
                 # Recursion !!
-                profile = self._load_profile(include, cwd)
+                profile = self._load_profile(include, cwd, context)
                 inherited_profile.compose_profile(profile)
 
             # Current profile before update with parents (but parent variables already applied)
@@ -257,7 +227,7 @@ class _ProfileValueParser(object):
     @staticmethod
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
-        doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
+        doc = TextINIParse(profile_text, allowed_fields=["tool_requires",
                                                          "system_tools",  # DEPRECATED: platform_tool_requires
                                                          "platform_requires",
                                                          "platform_tool_requires", "settings",
@@ -378,6 +348,8 @@ class _ProfileValueParser(object):
             result_name, result_value = item.split("=", 1)
             result_name = result_name.strip()
             result_value = _unquote(result_value)
+            if result_value == "~":  # Can be used to undefine an already defined setting
+                result_value = None
             return packagename, result_name, result_value
 
         package_settings = OrderedDict()
@@ -418,6 +390,8 @@ def _profile_parse_args(settings, options, conf):
         package_items = defaultdict(list)
         tuples = _get_tuples_list_from_extender_arg(items)
         for name, value in tuples:
+            if value == "~":  # Can be used to undefine an already defined setting
+                value = None
             if ":" in name:  # Scoped items
                 tmp = name.split(":", 1)
                 ref_name = tmp[0]
@@ -443,7 +417,7 @@ def _profile_parse_args(settings, options, conf):
 
 
 def migrate_profile_plugin(cache_folder):
-    from conans.client.migrations import update_file
+    from conan.internal.api.migrations import update_file
 
     profile_plugin_file = HomePaths(cache_folder).profile_plugin_path
     update_file(profile_plugin_file, _default_profile_plugin)

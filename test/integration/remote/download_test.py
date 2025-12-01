@@ -1,5 +1,3 @@
-import unittest
-
 from requests import Response
 
 from conan.test.utils.tools import TestClient, TestServer, TestRequester
@@ -14,7 +12,7 @@ class HelloConan(ConanFile):
 """
 
 
-class DownloadTest(unittest.TestCase):
+class TestDownload:
 
     def test_returns_on_failures(self):
         test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])

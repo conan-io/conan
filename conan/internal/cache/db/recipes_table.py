@@ -1,16 +1,16 @@
 import sqlite3
 
 from conan.internal.cache.db.table import BaseDbTable
-from conans.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
-from conans.model.recipe_ref import RecipeReference
-from conans.util.dates import timestamp_now
+from conan.internal.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
+from conan.api.model import RecipeReference
+from conan.internal.util.dates import timestamp_now
 
 
 class RecipesDBTable(BaseDbTable):
     table_name = 'recipes'
     columns_description = [('reference', str),
                            ('rrev', str),
-                           ('path', str, False, None, True),
+                           ('path', str, False, True),
                            ('timestamp', float),
                            ('lru', int)]
     unique_together = ('reference', 'rrev')
@@ -80,18 +80,12 @@ class RecipesDBTable(BaseDbTable):
 
     # returns all different conan references (name/version@user/channel)
     def all_references(self):
-        query = f'SELECT DISTINCT {self.columns.reference}, ' \
-                    f'{self.columns.rrev}, ' \
-                    f'{self.columns.path} ,' \
-                    f'{self.columns.timestamp}, ' \
-                    f'{self.columns.lru} ' \
-                    f'FROM {self.table_name} ' \
-                    f'ORDER BY {self.columns.timestamp} DESC'
+        query = f'SELECT DISTINCT {self.columns.reference} FROM {self.table_name}'
 
         with self.db_connection() as conn:
             r = conn.execute(query)
-            result = [self._as_dict(self.row_type(*row)) for row in r.fetchall()]
-        return result
+            rows = r.fetchall()
+            return [RecipeReference.loads(row[0]) for row in rows]
 
     def get_recipe(self, ref: RecipeReference):
         query = f'SELECT * FROM {self.table_name} ' \
@@ -133,3 +127,16 @@ class RecipesDBTable(BaseDbTable):
             r = conn.execute(query)
             ret = [self._as_dict(self.row_type(*row))["ref"] for row in r.fetchall()]
         return ret
+
+    def path_to_ref(self, path):
+        query = f'SELECT * FROM {self.table_name} ' \
+                f"WHERE {self.columns.path}='{path}'"
+        with self.db_connection() as conn:
+            r = conn.execute(query)
+            row = r.fetchone()
+            if not row:
+                return None
+            ref = RecipeReference.loads(row[0])
+            ref.revision = row[1]
+            ref.timestamp = row[3]
+            return ref

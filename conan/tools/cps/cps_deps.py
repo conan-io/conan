@@ -32,7 +32,7 @@ class CPSDeps:
     def generate(self):
         cps_folder = os.path.join(self._conanfile.folders.base_build, "build", "cps")
         config_name = self._config_name()
-        folder = os.path.join(cps_folder, config_name)
+        folder = os.path.join(cps_folder, config_name, "cps")  # CMake wants a "/cps/" folder
         self._conanfile.output.info(f"[CPSDeps] folder {cps_folder}")
         deps = self._conanfile.dependencies.host.items()
         mapping = {}

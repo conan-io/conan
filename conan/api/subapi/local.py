@@ -3,19 +3,20 @@ import os
 from conan.cli import make_abs_path
 from conan.internal.conan_app import ConanApp
 from conan.internal.api.local.editable import EditablePackages
-from conans.client.conanfile.build import run_build_method
-from conans.client.graph.graph import CONTEXT_HOST
-from conans.client.graph.profile_node_definer import initialize_conanfile_profile
-from conans.client.source import run_source_method
-from conans.errors import ConanException, conanfile_exception_formatter
-from conans.model.recipe_ref import RecipeReference
-from conans.util.files import chdir
+from conan.internal.methods import run_build_method, run_source_method
+from conan.internal.graph.graph import CONTEXT_HOST
+from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
+from conan.internal.errors import conanfile_exception_formatter
+from conan.errors import ConanException
+from conan.api.model import RecipeReference
+from conan.internal.util.files import chdir
 
 
 class LocalAPI:
 
-    def __init__(self, conan_api):
+    def __init__(self, conan_api, helpers):
         self._conan_api = conan_api
+        self._helpers = helpers
         self.editable_packages = EditablePackages(conan_api.home_folder)
 
     @staticmethod
@@ -45,14 +46,14 @@ class LocalAPI:
 
     def editable_add(self, path, name=None, version=None, user=None, channel=None, cwd=None,
                      output_folder=None, remotes=None):
-        path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
+        path = self.get_conanfile_path(path, cwd, py=True)
         app = ConanApp(self._conan_api)
         conanfile = app.loader.load_named(path, name, version, user, channel, remotes=remotes)
         if conanfile.name is None or conanfile.version is None:
             raise ConanException("Editable package recipe should declare its name and version")
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         # Retrieve conanfile.py from target_path
-        target_path = self._conan_api.local.get_conanfile_path(path=path, cwd=cwd, py=True)
+        target_path = self.get_conanfile_path(path=path, cwd=cwd, py=True)
         output_folder = make_abs_path(output_folder) if output_folder else None
         # Check the conanfile is there, and name/version matches
         self.editable_packages.add(ref, target_path, output_folder=output_folder)
@@ -82,7 +83,9 @@ class LocalAPI:
             with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
 
-        folder = conanfile.recipe_folder
+        folder = conanfile.recipe_folder if conanfile.folders.root is None else \
+            os.path.normpath(os.path.join(conanfile.recipe_folder, conanfile.folders.root))
+
         conanfile.folders.set_base_source(folder)
         conanfile.folders.set_base_export_sources(folder)
         conanfile.folders.set_base_recipe_metadata(os.path.join(folder, "metadata"))
@@ -91,16 +94,16 @@ class LocalAPI:
         conanfile.folders.set_base_build(None)
         conanfile.folders.set_base_package(None)
 
-        app = ConanApp(self._conan_api)
-        run_source_method(conanfile, app.hook_manager)
+        hook_manager = self._helpers.hook_manager
+        run_source_method(conanfile, hook_manager)
 
     def build(self, conanfile):
         """ calls the 'build()' method of the current (user folder) conanfile.py
         """
-        app = ConanApp(self._conan_api)
+        hook_manager = self._helpers.hook_manager
         conanfile.folders.set_base_package(conanfile.folders.base_build)
         conanfile.folders.set_base_pkg_metadata(os.path.join(conanfile.build_folder, "metadata"))
-        run_build_method(conanfile, app.hook_manager)
+        run_build_method(conanfile, hook_manager)
 
     @staticmethod
     def test(conanfile):
@@ -117,3 +120,5 @@ class LocalAPI:
                                           channel=channel, remotes=remotes, graph_lock=lockfile)
         return conanfile
 
+    def reinit(self):
+        self.editable_packages = EditablePackages(self._conan_api.home_folder)

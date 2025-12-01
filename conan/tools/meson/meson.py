@@ -46,8 +46,7 @@ class Meson(object):
             else:  # extra native file for cross-building scenarios
                 cmd += f' --native-file "{native}"'
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
-        # Issue related: https://github.com/mesonbuild/meson/issues/12880
-        cmd += ' --prefix=/'  # this must be an absolute path, otherwise, meson complains
+        cmd += f" --prefix={self._prefix}"
         self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
@@ -72,9 +71,12 @@ class Meson(object):
         self._conanfile.output.info("Meson build cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
-    def install(self):
+    def install(self, cli_args=None):
         """
-        Runs ``meson install -C "." --destdir`` in the build folder.
+        Runs ``meson install -C "." --destdir ..`` in the build folder.
+
+        :param cli_args: List of arguments to be added to the command:
+                    ``meson install -C "." --destdir ... arg1 arg2``
         """
         meson_build_folder = self._conanfile.build_folder.replace("\\", "/")
         meson_package_folder = self._conanfile.package_folder.replace("\\", "/")
@@ -83,6 +85,10 @@ class Meson(object):
         verbosity = self._install_verbosity
         if verbosity:
             cmd += " " + verbosity
+        if self._conanfile.conf.get("tools.build:install_strip", check_type=bool):
+            cmd += " --strip"
+        if cli_args:
+            cmd += " " + " ".join(cli_args)
         self._conanfile.run(cmd)
 
     def test(self):
@@ -112,3 +118,30 @@ class Meson(object):
         # so it's a bit backwards
         verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
         return "--quiet" if verbosity else ""
+
+    @property
+    def _prefix(self):
+        """Generate a valid ``--prefix`` argument value for meson.
+        For conan, the prefix must be similar to the Unix root directory ``/``.
+
+        The result of this function should be passed to
+        ``meson setup --prefix={self._prefix} ...``
+
+        Python 3.13 changed the semantics of ``/`` on the Windows ntpath module,
+        it is now special-cased as a relative directory.
+        Thus, ``os.path.isabs("/")`` is true on Linux but false on Windows.
+        So for Windows, an equivalent path is ``C:\\``. However, this can be
+        parsed wrongly in meson in specific circumstances due to the trailing
+        backslash. Hence, we also use forward slashes for Windows, leaving us
+        with ``C:/`` or similar paths.
+
+        See also
+        --------
+        * The meson issue discussing the need to set ``--prefix`` to ``/``:
+            `mesonbuild/meson#12880 <https://github.com/mesonbuild/meson/issues/12880>`_
+        * The cpython PR introducing the ``/`` behavior change:
+            `python/cpython#113829 <https://github.com/python/cpython/pull/113829>`_
+        * The issue detailing the erroneous parsing of ``\\``:
+            `conan-io/conan#14213 <https://github.com/conan-io/conan/issues/14213>`_
+        """
+        return os.path.abspath("/").replace("\\", "/")

@@ -1,14 +1,14 @@
 import platform
 from unittest.mock import MagicMock, patch
 
-import mock
+from unittest import mock
 import pytest
 from unittest.mock import PropertyMock
 
 from conan.tools.system.package_manager import Apt, Apk, Dnf, Yum, Brew, Pkg, PkgUtil, Chocolatey, \
     Zypper, PacMan, _SystemPackageManagerTool
-from conans.errors import ConanException
-from conans.model.settings import Settings
+from conan.errors import ConanException
+from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 
 
@@ -36,8 +36,13 @@ def test_msys2():
         with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
             context_mock.return_value = "host"
             conanfile = ConanFileMock()
-            conanfile.settings = Settings()
+            conanfile.settings = Settings({"os": {"Windows": {"subsystem": ["msys2"]}}})
             conanfile.conf.define("tools.microsoft.bash:subsystem", "msys2")
+            manager = _SystemPackageManagerTool(conanfile)
+            assert manager.get_default_tool() == "choco"
+
+            conanfile.settings.os = "Windows"
+            conanfile.settings.os.subsystem = "msys2"
             manager = _SystemPackageManagerTool(conanfile)
             assert manager.get_default_tool() == "pacman"
 
@@ -240,6 +245,48 @@ def test_tools_install_mode_install_different_archs(tool_class, arch_host, resul
 
     assert tool._conanfile.command == result
 
+
+@pytest.mark.parametrize("tool_class, arch_host, result", [
+    # Install host package and not cross-compile -> do not add host architecture
+    (Apk, 'x86_64', 'apk add --no-cache package1=0.1 package2=0.2'),
+    (Apt, 'x86_64', 'apt-get install -y --no-install-recommends package1=0.1 package2=0.2'),
+    (Yum, 'x86_64', 'yum install -y package1-0.1 package2-0.2'),
+    (Dnf, 'x86_64', 'dnf install -y package1-0.1 package2-0.2'),
+    (Brew, 'x86_64', 'brew install package1@0.1 package2@0.2'),
+    (Pkg, 'x86_64', 'pkg install -y package1-0.1 package2-0.2'),
+    (PkgUtil, 'x86_64', 'pkgutil --install --yes package1@0.1 package2@0.2'),
+    (Chocolatey, 'x86_64', 'choco install --yes package1 --version 0.1 package2 --version 0.2'),
+    (PacMan, 'x86_64', 'pacman -S --noconfirm package1 package2'),
+    (Zypper, 'x86_64', 'zypper --non-interactive in package1=0.1 package2=0.2'),
+    # Install host package and cross-compile -> add host architecture
+    (Apt, 'x86', 'apt-get install -y --no-install-recommends package1:i386=0.1 package2:i386=0.2'),
+    (Yum, 'x86', 'yum install -y package1-0.1.i?86 package2-0.2.i?86'),
+    (Dnf, 'x86', 'dnf install -y package1-0.1.i?86 package2-0.2.i?86'),
+    (Brew, 'x86', 'brew install package1@0.1 package2@0.2'),
+    (Pkg, 'x86', 'pkg install -y package1-0.1 package2-0.2'),
+    (PkgUtil, 'x86', 'pkgutil --install --yes package1@0.1 package2@0.2'),
+    (Chocolatey, 'x86', 'choco install --yes package1 --version 0.1 package2 --version 0.2'),
+    (PacMan, 'x86', 'pacman -S --noconfirm package1-lib32 package2-lib32'),
+    (Zypper, 'x86', 'zypper --non-interactive in package1=0.1 package2=0.2'),
+])
+def test_tools_install_mode_install_different_archs_with_version(tool_class, arch_host, result):
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"arch": arch_host})
+    conanfile.settings_build = MockSettings({"arch": "x86_64"})
+    conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
+    conanfile.conf.define("tools.system.package_manager:mode", "install")
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = tool_class(conanfile)
+
+        def fake_check(*args, **kwargs):
+            return ["package1=0.1", "package2=0.2"]
+        from conan.tools.system.package_manager import _SystemPackageManagerTool
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
+            tool.install(["package1=0.1", "package2=0.2"])
+    assert tool._conanfile.command == result
+
+
 @pytest.mark.parametrize("tool_class, arch_host, result", [
     # Install build machine package and not cross-compile -> do not add host architecture
     (Apk, 'x86_64', 'apk add --no-cache package1 package2'),
@@ -281,6 +328,49 @@ def test_tools_install_mode_install_to_build_machine_arch(tool_class, arch_host,
 
     assert tool._conanfile.command == result
 
+
+@pytest.mark.parametrize("tool_class, arch_host, result", [
+    # Install build machine package and not cross-compile -> do not add host architecture
+    (Apk, 'x86_64', 'apk add --no-cache package1=0.1 package2=0.2'),
+    (Apt, 'x86_64', 'apt-get install -y --no-install-recommends package1=0.1 package2=0.2'),
+    (Yum, 'x86_64', 'yum install -y package1-0.1 package2-0.2'),
+    (Dnf, 'x86_64', 'dnf install -y package1-0.1 package2-0.2'),
+    (Brew, 'x86_64', 'brew install package1@0.1 package2@0.2'),
+    (Pkg, 'x86_64', 'pkg install -y package1-0.1 package2-0.2'),
+    (PkgUtil, 'x86_64', 'pkgutil --install --yes package1@0.1 package2@0.2'),
+    (Chocolatey, 'x86_64', 'choco install --yes package1 --version 0.1 package2 --version 0.2'),
+    (PacMan, 'x86_64', 'pacman -S --noconfirm package1 package2'),
+    (Zypper, 'x86_64', 'zypper --non-interactive in package1=0.1 package2=0.2'),
+    # Install build machine package and cross-compile -> do not add host architecture
+    (Apt, 'x86', 'apt-get install -y --no-install-recommends package1=0.1 package2=0.2'),
+    (Yum, 'x86', 'yum install -y package1-0.1 package2-0.2'),
+    (Dnf, 'x86', 'dnf install -y package1-0.1 package2-0.2'),
+    (Brew, 'x86', 'brew install package1@0.1 package2@0.2'),
+    (Pkg, 'x86', 'pkg install -y package1-0.1 package2-0.2'),
+    (PkgUtil, 'x86', 'pkgutil --install --yes package1@0.1 package2@0.2'),
+    (Chocolatey, 'x86', 'choco install --yes package1 --version 0.1 package2 --version 0.2'),
+    (PacMan, 'x86', 'pacman -S --noconfirm package1 package2'),
+    (Zypper, 'x86', 'zypper --non-interactive in package1=0.1 package2=0.2'),
+])
+def test_tools_install_mode_install_to_build_machine_arch_with_version(tool_class, arch_host, result):
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"arch": arch_host})
+    conanfile.settings_build = MockSettings({"arch": "x86_64"})
+    conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
+    conanfile.conf.define("tools.system.package_manager:mode", "install")
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = tool_class(conanfile)
+
+        def fake_check(*args, **kwargs):
+            return ["package1=0.1", "package2=0.2"]
+        from conan.tools.system.package_manager import _SystemPackageManagerTool
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
+            tool.install(["package1=0.1", "package2=0.2"], host_package=False)
+
+    assert tool._conanfile.command == result
+
+
 @pytest.mark.parametrize("tool_class, result", [
     # cross-compile but arch_names=None -> do not add host architecture
     # https://github.com/conan-io/conan/issues/12320 because the package is archless
@@ -309,24 +399,115 @@ def test_tools_install_archless(tool_class, result):
 
 
 @pytest.mark.parametrize("tool_class, result", [
+    # cross-compile but arch_names=None -> do not add host architecture
+    # https://github.com/conan-io/conan/issues/12320 because the package is archless
+    (Apt, 'apt-get install -y --no-install-recommends package1=0.1 package2=0.2'),
+    (Yum, 'yum install -y package1-0.1 package2-0.2'),
+    (Dnf, 'dnf install -y package1-0.1 package2-0.2'),
+    (PacMan, 'pacman -S --noconfirm package1 package2'),
+])
+def test_tools_install_archless_with_version(tool_class, result):
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"arch": "x86"})
+    conanfile.settings_build = MockSettings({"arch": "x86_64"})
+    conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
+    conanfile.conf.define("tools.system.package_manager:mode", "install")
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = tool_class(conanfile, arch_names={})
+
+        def fake_check(*args, **kwargs):
+            return ["package1=0.1", "package2=0.2"]
+        from conan.tools.system.package_manager import _SystemPackageManagerTool
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
+            tool.install(["package1=0.1", "package2=0.2"])
+
+    assert tool._conanfile.command == result
+
+
+@pytest.mark.parametrize("tool_class, result", [
     (Apk, 'apk info -e package'),
-    (Apt, 'dpkg-query -W -f=\'${Status}\' package | grep -q "ok installed"'),
+    (Apt, r"dpkg-query -W -f='${Architecture}\n' package | grep -qEx '(amd64|all)'"),
     (Yum, 'rpm -q package'),
     (Dnf, 'rpm -q package'),
     (Brew, 'test -n "$(brew ls --versions package)"'),
     (Pkg, 'pkg info package'),
     (PkgUtil, 'test -n "`pkgutil --list package`"'),
-    (Chocolatey, 'choco search --local-only --exact package | findstr /c:"1 packages installed."'),
+    (Chocolatey, 'choco list --exact package | findstr /c:"1 packages installed."'),
     (PacMan, 'pacman -Qi package'),
     (Zypper, 'rpm -q package'),
 ])
 def test_tools_check(tool_class, result):
     conanfile = ConanFileMock()
-    conanfile.settings = Settings()
+    conanfile.settings = MockSettings({"arch": "x86_64"})
     conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
     with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         tool.check(["package"])
+
+    assert tool._conanfile.command == result
+
+
+@pytest.mark.parametrize("tool_class, result", [
+    (Apk, 'apk info package | grep "0.1"'),
+    (Apt, r"dpkg-query -W -f='${Architecture} ${Version}\n' package | grep -qEx '(amd64|all) 0.1'"),
+    (Yum, 'rpm -q package-0.1'),
+    (Dnf, 'rpm -q package-0.1'),
+    (Brew, 'brew list --versions package | grep "0.1"'),
+    (Pkg, 'pkg info package | grep "Version: 0.1"'),
+    (PkgUtil, 'test -n "`pkgutil --list package`"'),
+    (Chocolatey, 'choco list --local-only package | findstr /i "0.1"'),
+    (PacMan, 'pacman -Qi package'),
+    (Zypper, 'rpm -q package-0.1'),
+])
+def test_tools_check_with_version(tool_class, result):
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"arch": "x86_64"})
+    conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = tool_class(conanfile)
+        tool.check(["package=0.1"])
+
+    assert tool._conanfile.command == result
+
+
+@pytest.mark.parametrize("tool_class, result", [
+    (Apt, r"dpkg-query -W -f='${Architecture}\n' package | grep -qEx '(amd64|all)'"),
+])
+@pytest.mark.parametrize("arch_host", [
+    'x86_64',
+    'x86',
+])
+def test_tools_apt_check_install_to_build_machine_arch(tool_class, arch_host, result):
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"arch": arch_host})
+    conanfile.settings_build = MockSettings({"arch": "x86_64"})
+    conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = tool_class(conanfile)
+        tool.check(["package"], host_package=False)
+
+    assert tool._conanfile.command == result
+
+
+@pytest.mark.parametrize("tool_class, result", [
+    (Apt, r"dpkg-query -W -f='${Architecture} ${Version}\n' package | grep -qEx '(amd64|all) 0.1'"),
+])
+@pytest.mark.parametrize("arch_host", [
+    'x86_64',
+    'x86',
+])
+def test_tools_apt_check_install_to_build_machine_arch_with_version(tool_class, arch_host, result):
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"arch": arch_host})
+    conanfile.settings_build = MockSettings({"arch": "x86_64"})
+    conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = tool_class(conanfile)
+        tool.check(["package=0.1"], host_package=False)
 
     assert tool._conanfile.command == result

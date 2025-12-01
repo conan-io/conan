@@ -2,7 +2,7 @@ import textwrap
 
 import pytest
 
-from conans.model.recipe_ref import RecipeReference
+from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -45,15 +45,15 @@ def test_dependencies_visit():
     client.save({"conanfile.py": conanfile})
 
     client.run("install .")
-    refs = client.cache.get_latest_recipe_reference(RecipeReference.loads("openssl/0.1"))
+    refs = client.cache.get_latest_recipe_revision(RecipeReference.loads("openssl/0.1"))
     pkgs = client.cache.get_package_references(refs)
-    prev1 = client.cache.get_latest_package_reference(pkgs[0])
+    prev1 = client.cache.get_latest_package_revision(pkgs[0])
     assert f"DefRef: {repr(prev1.ref)}!!!" in client.out
     assert f"DefPRef: {prev1.repr_notime()}!!!" in client.out
 
-    refs = client.cache.get_latest_recipe_reference(RecipeReference.loads("openssl/0.2"))
+    refs = client.cache.get_latest_recipe_revision(RecipeReference.loads("openssl/0.2"))
     pkgs = client.cache.get_package_references(refs)
-    prev2 = client.cache.get_latest_package_reference(pkgs[0])
+    prev2 = client.cache.get_latest_package_revision(pkgs[0])
     assert f"DefRefBuild: {repr(prev2.ref)}!!!" in client.out
     assert f"DefPRefBuild: {prev2.repr_notime()}!!!" in client.out
 
@@ -255,11 +255,13 @@ def test_dependency_interface():
         class User(ConanFile):
             requires = "dep/1.0"
             def generate(self):
-                self.output.info("HOME: {}".format(self.dependencies["dep"].homepage))
-                self.output.info("URL: {}".format(self.dependencies["dep"].url))
-                self.output.info("LICENSE: {}".format(self.dependencies["dep"].license))
-                self.output.info("RECIPE: {}".format(self.dependencies["dep"].recipe_folder))
-                self.output.info("CONANDATA: {}".format(self.dependencies["dep"].conan_data))
+                dep = self.dependencies["dep"]
+                self.output.info("HOME: {}".format(dep.homepage))
+                self.output.info("URL: {}".format(dep.url))
+                self.output.info("LICENSE: {}".format(dep.license))
+                self.output.info("RECIPE FOLDER: {}".format(dep.recipe_folder))
+                self.output.info("CONANDATA: {}".format(dep.conan_data))
+                self.output.info("RECIPE: {}".format(dep.recipe))
 
             """)
     c.save({"dep/conanfile.py": conanfile,
@@ -270,8 +272,9 @@ def test_dependency_interface():
     assert "conanfile.py: HOME: myhome" in c.out
     assert "conanfile.py: URL: myurl" in c.out
     assert "conanfile.py: LICENSE: MIT" in c.out
-    assert "conanfile.py: RECIPE:" in c.out
+    assert "conanfile.py: RECIPE FOLDER:" in c.out
     assert "conanfile.py: CONANDATA: {}" in c.out
+    assert "conanfile.py: RECIPE: Cache" in c.out
 
 
 def test_dependency_interface_validate():

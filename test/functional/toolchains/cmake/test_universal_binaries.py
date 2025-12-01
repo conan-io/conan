@@ -5,7 +5,7 @@ import textwrap
 import pytest
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import rmdir
+from conan.internal.util.files import rmdir
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
@@ -94,9 +94,9 @@ def test_create_universal_binary():
     client.run('install . -s="arch=armv8|armv8.3|x86_64" '
                '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.arch"]\'')
 
-    client.run_command("cmake --preset \"conan-armv8|armv8.3|x86_64-release\" ")
-    client.run_command("cmake --build --preset \"conan-armv8|armv8.3|x86_64-release\" ")
-    client.run_command("lipo -info './build/armv8|armv8.3|x86_64/Release/foo'")
+    client.run_command("cmake --preset \"conan-armv8_armv8.3_x86_64-release\" ")
+    client.run_command("cmake --build --preset \"conan-armv8_armv8.3_x86_64-release\" ")
+    client.run_command("lipo -info './build/armv8_armv8.3_x86_64/Release/foo'")
 
     assert "foo are: x86_64 arm64 arm64e" in client.out
 
@@ -122,14 +122,14 @@ def test_create_universal_binary_ninja():
 
     cmake = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.23)
-        project(ninjatest CXX)
+        project(ninjatest NONE)
 
         find_package(mylibrary CONFIG REQUIRED)
         """)
 
     client.save({"conanfile.txt": conanfile,
                  "CMakeLists.txt": cmake},
-                 clean_first=True)
+                clean_first=True)
 
     client.run('install . -s=arch="armv8|x86_64" --build=missing -of=build')
 

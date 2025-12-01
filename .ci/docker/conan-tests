@@ -1,0 +1,194 @@
+FROM ubuntu:24.04
+
+LABEL maintainer="Conan.io <info@conan.io>"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+ENV PY37=3.7.9 \
+    PY38=3.8.6 \
+    PY39=3.9.2 \
+    PY310=3.10.16 \
+    PY312=3.12.3 \
+    PY313=3.13.0 \
+    PY314=3.14.0 \
+    CMAKE_3_15=/usr/share/cmake-3.15.7/bin/cmake \
+    CMAKE_3_16=/usr/share/cmake-3.16.9/bin/cmake \
+    CMAKE_3_17=/usr/share/cmake-3.17.5/bin/cmake \
+    CMAKE_3_19=/usr/share/cmake-3.19.7/bin/cmake \
+    CMAKE_3_23=/usr/share/cmake-3.23.5/bin/cmake \
+    CMAKE_3_27=/usr/share/cmake-3.27.9/bin/cmake \
+    CMAKE_4_0=/usr/share/cmake-4.0.0-rc3/bin/cmake \
+    GCC_9=/usr/bin/gcc-9 \
+    GXX_9=/usr/bin/g++-9 \
+    GCC_11=/usr/bin/gcc-11 \
+    GXX_11=/usr/bin/g++-11 \
+    CLANG_14=/usr/bin/clang-14 \
+    CLANGXX_14=/usr/bin/clang++-14 \
+    BAZEL_6=6.5.0 \
+    BAZEL_7=7.6.2 \
+    BAZEL_8=8.4.2 \
+    EMSDK=4.0.10
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        software-properties-common \
+        build-essential \
+        libtool \
+        automake \
+        autoconf \
+        pkg-config \
+        gettext \
+        git \
+        curl \
+        make \
+        libssl-dev \
+        zlib1g-dev \
+        libbz2-dev \
+        libreadline-dev \
+        libsqlite3-dev \
+        wget \
+        llvm \
+        libncurses5-dev \
+        libncursesw5-dev \
+        xz-utils \
+        tk-dev \
+        libffi-dev \
+        liblzma-dev \
+        python3-openssl \
+        ca-certificates \
+        sudo \
+        tar \
+        linux-libc-dev \
+        subversion \
+        subversion-tools \
+        ninja-build \
+        gcc-9 \
+        g++-9 \
+        gcc-11 \
+        g++-11 \
+        clang-14 \
+        clang++-14 \
+        gcc-arm-linux-gnueabihf \
+        g++-arm-linux-gnueabihf \
+        unzip \
+        apt-transport-https \
+        gnupg-agent \
+        gcc-9-multilib \
+        g++-9-multilib \
+        gcc-11-multilib \
+        g++-11-multilib \
+        scons && \
+    # fix: asm/errno.h: No such file or directory
+    ln -s /usr/include/asm-generic/ /usr/include/asm && \
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test && \
+    apt-get update && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add - && \
+    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable" && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends docker-ce docker-ce-cli containerd.io && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -s /bin/bash conan && \
+    echo 'conan ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+ENV HOME /home/conan
+ENV PYENV_ROOT $HOME/.pyenv
+ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:/usr/bin:/bin:$PATH
+
+RUN curl https://pyenv.run | bash && \
+    pyenv install $PY37 && \
+    pyenv install $PY38 && \
+    pyenv install $PY39 && \
+    pyenv install $PY310 && \
+    pyenv install $PY312 && \
+    pyenv install $PY314 && \
+    pyenv global $PY39 && \
+    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    python get-pip.py && \
+    rm get-pip.py
+
+RUN chown -R conan:conan $HOME
+
+USER root
+
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.7/cmake-3.15.7-Linux-x86_64.tar.gz && \
+    tar -xvzf cmake-3.15.7-Linux-x86_64.tar.gz && mv cmake-3.15.7-Linux-x86_64 /usr/share/cmake-3.15.7  && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.16.9/cmake-3.16.9-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.16.9-Linux-x86_64.tar.gz && mv cmake-3.16.9-Linux-x86_64 /usr/share/cmake-3.16.9 && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.17.5/cmake-3.17.5-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.17.5-Linux-x86_64.tar.gz && mv cmake-3.17.5-Linux-x86_64 /usr/share/cmake-3.17.5 && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.19.7/cmake-3.19.7-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.19.7-Linux-x86_64.tar.gz && mv cmake-3.19.7-Linux-x86_64 /usr/share/cmake-3.19.7 && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.23.5/cmake-3.23.5-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.23.5-Linux-x86_64.tar.gz && mv cmake-3.23.5-linux-x86_64/ /usr/share/cmake-3.23.5 && \
+    wget https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-Linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-3.27.9-Linux-x86_64.tar.gz && mv cmake-3.27.9-linux-x86_64/ /usr/share/cmake-3.27.9 && \
+    wget https://cmake.org/files/v4.0/cmake-4.0.0-rc3-linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-4.0.0-rc3-linux-x86_64.tar.gz && mv cmake-4.0.0-rc3-linux-x86_64/ /usr/share/cmake-4.0.0-rc3 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_15 10 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_16 20 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_17 30 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_19 40 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_23 50 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_27 60 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_4_0 70 && \
+    # set CMake 3.15 as default
+    update-alternatives --set cmake $CMAKE_3_15
+
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 10 && \
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 30 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 10 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 30 && \
+    update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 10 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-14 10 && \
+    update-alternatives --set gcc /usr/bin/gcc-9 && \
+    update-alternatives --set g++ /usr/bin/g++-9 && \
+    update-alternatives --set clang /usr/bin/clang-14 && \
+    update-alternatives --set clang++ /usr/bin/clang++-14
+
+RUN mkdir -p /usr/share/bazel-$BAZEL_6/bin && \
+    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_6}/bazel-${BAZEL_6}-linux-x86_64 && \
+    chmod +x bazel-${BAZEL_6}-linux-x86_64 && \
+    mv bazel-${BAZEL_6}-linux-x86_64 /usr/share/bazel-$BAZEL_6/bin/bazel && \
+    mkdir -p /usr/share/bazel-$BAZEL_7/bin && \
+    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_7}/bazel-${BAZEL_7}-linux-x86_64 && \
+    chmod +x bazel-${BAZEL_7}-linux-x86_64 && \
+    mv bazel-${BAZEL_7}-linux-x86_64 /usr/share/bazel-$BAZEL_7/bin/bazel && \
+    mkdir -p /usr/share/bazel-$BAZEL_8/bin && \
+    wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_8}/bazel-${BAZEL_8}-linux-x86_64 && \
+    chmod +x bazel-${BAZEL_8}-linux-x86_64 && \
+    mv bazel-${BAZEL_8}-linux-x86_64 /usr/share/bazel-$BAZEL_8/bin/bazel
+
+RUN wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta4/premake-5.0.0-beta4-linux.tar.gz && \
+    tar -xvzf premake-5.0.0-beta4-linux.tar.gz && chmod +x premake5 && mkdir /usr/share/premake && \
+    mv premake5 /usr/share/premake
+
+RUN cd /tmp && \
+    mkdir qbs && \
+    cd qbs && \
+    curl -L https://download.qt.io/official_releases/qbs/2.6.0/qbs-linux-x86_64-2.6.0.tar.gz > qbs-linux-x86_64-2.6.0.tar.gz && \
+    tar -xzf qbs-linux-x86_64-2.6.0.tar.gz && \
+    mv qbs-linux-x86_64-2.6.0 /usr/share/qbs && \
+    rm qbs-linux-x86_64-2.6.0.tar.gz
+
+RUN cd /tmp && \
+    wget https://github.com/emscripten-core/emsdk/archive/refs/tags/${EMSDK}.tar.gz && \
+    tar xzf ${EMSDK}.tar.gz --directory /usr/share && \
+    cd /usr/share/emsdk-${EMSDK} && \
+    ./emsdk update && \
+    ./emsdk install latest && \
+    ./emsdk activate latest --permanent && \
+    . /usr/share/emsdk-${EMSDK}/emsdk_env.sh && \
+    embuilder build MINIMAL && \
+    embuilder build MINIMAL --wasm64
+    # echo "EMSDK_QUIET=1 . /usr/share/emsdk-${EMSDK}/emsdk_env.sh" >> /etc/bash.bashrc
+# Manually add the emsdk binaries to the PATH and set emcc cache directory to a writable location
+ENV PATH="/usr/share/emsdk-$EMSDK:/usr/share/emsdk-$EMSDK/upstream/emscripten:/usr/share/emsdk-$EMSDK/node/22.16.0_64bit/bin:$PATH" \
+    EM_CACHE=$HOME/.emscripten_cache
+
+RUN echo "export QT_NO_GLIB=1" >> /etc/profile.d/qt.sh
+
+USER conan
+WORKDIR $HOME
+
+CMD ["/bin/bash"]

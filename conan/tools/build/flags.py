@@ -1,11 +1,27 @@
-from conans.model.version import Version
+from conan.errors import ConanException
+from conan.internal.model.version import Version
 
 
-def architecture_flag(settings):
+def disable_flag(conanfile, flag):
+    disable_flags = conanfile.conf.get("tools.gnu:disable_flags", check_type=list)
+    if disable_flags is None:
+        return False
+    valid = ["arch", "arch_link", "libcxx", "build_type", "build_type_link", "threads",
+             "cppstd", "cstd"]
+    for v in disable_flags:
+        if v not in valid:
+            raise ConanException(f"tools.gnu:disable_flags value '{v}', must be one of: {valid}")
+    return flag in disable_flags
+
+
+def architecture_flag(conanfile):
     """
     returns flags specific to the target architecture and compiler
     Used by CMakeToolchain and AutotoolsToolchain
     """
+    if disable_flag(conanfile, "arch"):
+        return ""
+    settings = conanfile.settings
     from conan.tools.apple.apple import _to_apple_arch
     compiler = settings.get_safe("compiler")
     arch = settings.get_safe("arch")
@@ -19,6 +35,11 @@ def architecture_flag(settings):
         return ""
 
     if compiler == "clang" and the_os == "Windows":
+        comp_exes = conanfile.conf.get("tools.build:compiler_executables", check_type=dict,
+                                       default={})
+        clangcl = "clang-cl" in (comp_exes.get("c") or comp_exes.get("cpp", ""))
+        if clangcl:
+            return ""  # Do not add arch flags for clang-cl, can happen in cross-build runtime=None
         # LLVM/Clang and VS/Clang must define runtime. msys2 clang won't
         runtime = settings.get_safe("compiler.runtime")  # runtime is Windows only
         if runtime is not None:
@@ -60,6 +81,25 @@ def architecture_flag(settings):
                 "e2k-v5": "-march=elbrus-v5",
                 "e2k-v6": "-march=elbrus-v6",
                 "e2k-v7": "-march=elbrus-v7"}.get(arch, "")
+    elif compiler == "emcc":
+        if arch == "wasm64":
+            return "-sMEMORY64=1"
+    return ""
+
+
+def architecture_link_flag(conanfile):
+    """
+    returns exclusively linker flags specific to the target architecture and compiler
+    """
+    if disable_flag(conanfile, "arch_link"):
+        return ""
+    compiler = conanfile.settings.get_safe("compiler")
+    arch = conanfile.settings.get_safe("arch")
+    if compiler == "emcc":
+        # Emscripten default output is WASM since 1.37.x (long time ago)
+        # Deactivate WASM output forcing asm.js output instead
+        if arch == "asm.js":
+            return "-sWASM=0"
     return ""
 
 
@@ -67,12 +107,14 @@ def libcxx_flags(conanfile):
     libcxx = conanfile.settings.get_safe("compiler.libcxx")
     if not libcxx:
         return None, None
+    if disable_flag(conanfile, "libcxx"):
+        return None, None
     compiler = conanfile.settings.get_safe("compiler")
     lib = stdlib11 = None
     if compiler == "apple-clang":
         # In apple-clang 2 only values atm are "libc++" and "libstdc++"
         lib = f'-stdlib={libcxx}'
-    elif compiler == "clang" or compiler == "intel-cc":
+    elif compiler in ("clang", "intel-cc", "emcc"):
         if libcxx == "libc++":
             lib = "-stdlib=libc++"
         elif libcxx == "libstdc++" or libcxx == "libstdc++11":
@@ -87,7 +129,7 @@ def libcxx_flags(conanfile):
     elif compiler == "qcc":
         lib = f'-Y _{libcxx}'
 
-    if compiler in ['clang', 'apple-clang', 'gcc']:
+    if compiler in ['clang', 'apple-clang', 'gcc', 'emcc']:
         if libcxx == "libstdc++":
             stdlib11 = "_GLIBCXX_USE_CXX11_ABI=0"
         elif libcxx == "libstdc++11" and conanfile.conf.get("tools.gnu:define_libcxx11_abi",
@@ -115,21 +157,29 @@ def build_type_link_flags(settings):
     return []
 
 
-def build_type_flags(settings):
+def build_type_flags(conanfile):
     """
     returns flags specific to the build type (Debug, Release, etc.)
     (-s, -g, /Zi, etc.)
     Used only by AutotoolsToolchain
     """
+    if disable_flag(conanfile, "build_type"):
+        return []
+    settings = conanfile.settings
     compiler = settings.get_safe("compiler")
     build_type = settings.get_safe("build_type")
     vs_toolset = settings.get_safe("compiler.toolset")
     if not compiler or not build_type:
         return []
 
-    # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
-    # Modules/Platform/Windows-MSVC.cmake
-    if compiler == "msvc":
+    comp_exes = conanfile.conf.get("tools.build:compiler_executables", check_type=dict,
+                                   default={})
+    clangcl = "clang-cl" in (comp_exes.get("c") or comp_exes.get("cpp", ""))
+
+    if compiler == "msvc" or clangcl:
+        # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
+        # Modules/Platform/Windows-MSVC.cmake
+        # FIXME: This condition seems legacy, as no more "clang" exists in Conan toolsets
         if vs_toolset and "clang" in vs_toolset:
             flags = {"Debug": ["-gline-tables-only", "-fno-inline", "-O0"],
                      "Release": ["-O2"],
@@ -167,6 +217,34 @@ def build_type_flags(settings):
     return []
 
 
+def threads_flags(conanfile):
+    """
+    returns flags specific to the threading model used by the compiler
+    """
+    if disable_flag(conanfile, "threads"):
+        return []
+    compiler = conanfile.settings.get_safe("compiler")
+    threads = conanfile.settings.get_safe("compiler.threads")
+    if compiler == "emcc":
+        if threads == "posix":
+            return ["-pthread"]
+        elif threads == "wasm_workers":
+            return ["-sWASM_WORKERS=1"]
+    return []
+
+
+def llvm_clang_front(conanfile):
+    # Only Windows clang with MSVC backend (LLVM/Clang, not MSYS2 clang)
+    if (conanfile.settings.get_safe("os") != "Windows" or
+            conanfile.settings.get_safe("compiler") != "clang" or
+            not conanfile.settings.get_safe("compiler.runtime")):
+        return
+    compilers = conanfile.conf.get("tools.build:compiler_executables", default={})
+    if "clang-cl" in compilers.get("c", "") or "clang-cl" in compilers.get("cpp", ""):
+        return "clang-cl"  # The MSVC-compatible front
+    return "clang"  # The GNU-compatible front
+
+
 def cppstd_flag(conanfile) -> str:
     """
     Returns flags specific to the C++ standard based on the ``conanfile.settings.compiler``,
@@ -188,6 +266,9 @@ def cppstd_flag(conanfile) -> str:
     if not compiler or not compiler_version or not cppstd:
         return ""
 
+    if disable_flag(conanfile, "cppstd"):
+        return ""
+
     func = {"gcc": _cppstd_gcc,
             "clang": _cppstd_clang,
             "apple-clang": _cppstd_apple_clang,
@@ -197,6 +278,8 @@ def cppstd_flag(conanfile) -> str:
     flag = None
     if func:
         flag = func(Version(compiler_version), str(cppstd))
+    if flag and llvm_clang_front(conanfile) == "clang-cl":
+        flag = flag.replace("=", ":")
     return flag
 
 
@@ -233,7 +316,7 @@ def _cppstd_apple_clang(clang_version, cppstd):
     https://github.com/Kitware/CMake/blob/master/Modules/Compiler/AppleClang-CXX.cmake
     """
 
-    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
+    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = v26 = vgnu26 = None
 
     if clang_version >= "4.0":
         v98 = "c++98"
@@ -267,6 +350,9 @@ def _cppstd_apple_clang(clang_version, cppstd):
     if clang_version >= "16.0":
         v23 = "c++23"
         vgnu23 = "gnu++23"
+
+        v26 = "c++26"
+        vgnu26 = "gnu++26"
     elif clang_version >= "13.0":
         v23 = "c++2b"
         vgnu23 = "gnu++2b"
@@ -276,7 +362,8 @@ def _cppstd_apple_clang(clang_version, cppstd):
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd)
+            "23": v23, "gnu23": vgnu23,
+            "26": v26, "gnu26": vgnu26}.get(cppstd)
 
     return f'-std={flag}' if flag else None
 
@@ -289,7 +376,7 @@ def _cppstd_clang(clang_version, cppstd):
 
     https://clang.llvm.org/cxx_status.html
     """
-    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
+    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = v26 = vgnu26 = None
 
     if clang_version >= "2.1":
         v98 = "c++98"
@@ -331,19 +418,23 @@ def _cppstd_clang(clang_version, cppstd):
         v23 = "c++23"
         vgnu23 = "gnu++23"
 
+        v26 = "c++26"
+        vgnu26 = "gnu++26"
+
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd)
+            "23": v23, "gnu23": vgnu23,
+            "26": v26, "gnu26": vgnu26}.get(cppstd)
     return f'-std={flag}' if flag else None
 
 
 def _cppstd_gcc(gcc_version, cppstd):
     """https://github.com/Kitware/CMake/blob/master/Modules/Compiler/GNU-CXX.cmake"""
     # https://gcc.gnu.org/projects/cxx-status.html
-    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = None
+    v98 = vgnu98 = v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = v23 = vgnu23 = v26 = vgnu26 = None
 
     if gcc_version >= "3.4":
         v98 = "c++98"
@@ -375,58 +466,26 @@ def _cppstd_gcc(gcc_version, cppstd):
         v20 = "c++2a"
         vgnu20 = "gnu++2a"
 
-    if gcc_version >= "11":
-        v23 = "c++2b"
-        vgnu23 = "gnu++2b"
-
-    if gcc_version >= "12":
+    if gcc_version >= "10":
         v20 = "c++20"
         vgnu20 = "gnu++20"
+
+    if gcc_version >= "11":
+        v23 = "c++23"
+        vgnu23 = "gnu++23"
+
+    if gcc_version >= "14":
+        v26 = "c++26"
+        vgnu26 = "gnu++26"
 
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
             "14": v14, "gnu14": vgnu14,
             "17": v17, "gnu17": vgnu17,
             "20": v20, "gnu20": vgnu20,
-            "23": v23, "gnu23": vgnu23}.get(cppstd)
+            "23": v23, "gnu23": vgnu23,
+            "26": v26, "gnu26": vgnu26}.get(cppstd)
     return f'-std={flag}' if flag else None
-
-
-def _cppstd_intel_common(intel_version, cppstd, vgnu98, vgnu0x):
-    # https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-std-qstd
-    # https://software.intel.com/en-us/articles/intel-cpp-compiler-release-notes
-    # NOTE: there are only gnu++98 and gnu++0x, and only for Linux/macOS
-    v98 = v11 = v14 = v17 = v20 = None
-    vgnu11 = vgnu14 = vgnu17 = vgnu20 = None
-
-    if intel_version >= "12":
-        v11 = "c++0x"
-        vgnu11 = vgnu0x
-    if intel_version >= "14":
-        v11 = "c++11"
-        vgnu11 = vgnu0x
-    if intel_version >= "16":
-        v14 = "c++14"
-    if intel_version >= "18":
-        v17 = "c++17"
-    if intel_version >= "19.1":
-        v20 = "c++20"
-
-    return {"98": v98, "gnu98": vgnu98,
-            "11": v11, "gnu11": vgnu11,
-            "14": v14, "gnu14": vgnu14,
-            "17": v17, "gnu17": vgnu17,
-            "20": v20, "gnu20": vgnu20}.get(cppstd)
-
-
-def _cppstd_intel_gcc(intel_version, cppstd):
-    flag = _cppstd_intel_common(intel_version, cppstd, "gnu++98", "gnu++0x")
-    return f'-std={flag}' if flag else None
-
-
-def _cppstd_intel_visualstudio(intel_version, cppstd):
-    flag = _cppstd_intel_common(intel_version, cppstd, None, None)
-    return f'/Qstd={flag}' if flag else None
 
 
 def _cppstd_mcst_lcc(mcst_lcc_version, cppstd):
@@ -508,6 +567,9 @@ def cstd_flag(conanfile) -> str:
     cstd = conanfile.settings.get_safe("compiler.cstd")
 
     if not compiler or not compiler_version or not cstd:
+        return ""
+
+    if disable_flag(conanfile, "cstd"):
         return ""
 
     func = {"gcc": _cstd_gcc,

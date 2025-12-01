@@ -12,7 +12,6 @@ from setuptools import find_packages, setup
 
 import os
 import re
-from os import path
 
 
 # The tests utils are used by conan-package-tools
@@ -32,7 +31,7 @@ def get_requires(filename):
 def load_version():
     """ Loads a file content """
     filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                            "conans", "__init__.py"))
+                                            "conan", "__init__.py"))
     with open(filename, "rt") as version_file:
         conan_init = version_file.read()
         version = re.search(r"__version__ = '([0-9a-z.-]+)'", conan_init).group(1)
@@ -52,7 +51,7 @@ dev_requirements = get_requires("conans/requirements_dev.txt")
 
 
 setup(
-    name='conan-server',
+    name='conan_server',
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
@@ -79,9 +78,13 @@ setup(
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8'
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13'
     ],
 
     # What does your project relate to?
