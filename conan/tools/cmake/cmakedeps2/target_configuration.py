@@ -187,7 +187,7 @@ class TargetConfigurationTemplate2:
                                for i in info.includedirs) if info.includedirs else ""
         requires = self._requires(info, components)
         assert isinstance(requires, dict)
-        defines = " ".join(cmake_escape_value(f) for f in info.defines)
+        defines = ";".join(cmake_escape_value(f) for f in info.defines)
         # FIXME: Filter by lib traits!!!!!
         if not self._require.headers:  # If not depending on headers, paths and
             includedirs = defines = None
@@ -198,10 +198,10 @@ class TargetConfigurationTemplate2:
                   "includedirs": includedirs,
                   "defines": defines,
                   "requires": requires,
-                  "cxxflags": " ".join(cmake_escape_value(f) for f in info.cxxflags),
-                  "cflags": " ".join(cmake_escape_value(f) for f in info.cflags),
-                  "sharedlinkflags": " ".join(cmake_escape_value(v) for v in info.sharedlinkflags),
-                  "exelinkflags": " ".join(cmake_escape_value(v) for v in info.exelinkflags),
+                  "cxxflags": ";".join(cmake_escape_value(f) for f in info.cxxflags),
+                  "cflags": ";".join(cmake_escape_value(f) for f in info.cflags),
+                  "sharedlinkflags": ";".join(cmake_escape_value(v) for v in info.sharedlinkflags),
+                  "exelinkflags": ";".join(cmake_escape_value(v) for v in info.exelinkflags),
                   "system_libs": " ".join(info.system_libs + extra_libs),
                   "sources": " ".join(sources)
                   }
@@ -360,26 +360,26 @@ class TargetConfigurationTemplate2:
         {% endif %}
         {% if lib_info.get("defines") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                     {{config_wrapper(config, lib_info["defines"])}})
+                     "{{config_wrapper(config, lib_info["defines"])}}")
         {% endif %}
         {% if lib_info.get("cxxflags") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
-                     $<$<COMPILE_LANGUAGE:CXX>:{{config_wrapper(config, lib_info["cxxflags"])}}>)
+                     "$<$<COMPILE_LANGUAGE:CXX>:{{config_wrapper(config, lib_info["cxxflags"])}}>")
         {% endif %}
         {% if lib_info.get("cflags") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
-                     $<$<COMPILE_LANGUAGE:C>:{{config_wrapper(config, lib_info["cflags"])}}>)
+                     "$<$<COMPILE_LANGUAGE:C>:{{config_wrapper(config, lib_info["cflags"])}}>")
         {% endif %}
         {% if lib_info.get("sharedlinkflags") %}
         {% set linkflags = config_wrapper(config, lib_info["sharedlinkflags"]) %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{linkflags}}>
-                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{linkflags}}>)
+                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{linkflags}}>"
+                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{linkflags}}>")
         {% endif %}
         {% if lib_info.get("exelinkflags") %}
         {% set exeflags = config_wrapper(config, lib_info["exelinkflags"]) %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>)
+                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>")
         {% endif %}
 
         {% if lib_info.get("link_languages") %}
