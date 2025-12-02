@@ -421,6 +421,77 @@ class TestOpenAdd:
         assert "pkgb/0.1: WARN: BUILD PKGB!" in c.out
 
 
+class TestComplete:
+    def test_complete_add(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+                "pkgx/conanfile.py": GenConanfile("pkgx", "0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
+                "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkga/0.1",
+                                                                               "pkgx/0.1"),
+                "pkgd/conanfile.py": GenConanfile("pkgd", "0.1").with_requires("pkgb/0.1",
+                                                                               "pkgc/0.1")})
+
+        c.run("workspace complete")  # Does nothing, but it doesn't fail
+        assert "There are no packages in this workspace, nothing to complete" in c.out
+        c.run("workspace info")
+        assert "packages: (empty)" in c.out
+
+        for pkg in ("pkga", "pkgx", "pkgb", "pkgc", "pkgd"):
+            c.run(f"export {pkg}")
+
+        c.run("workspace add pkgd")
+        c.run("workspace complete")  # Does nothing, but it doesn't fail
+        assert "There are no intermediate packages to add to the workspace" in c.out
+        c.run("workspace info")
+        assert "pkgd/0.1" in c.out
+        assert "pkga/0.1" not in c.out
+
+        c.run("workspace add pkga")
+        c.run("workspace install --build=missing", assert_error=True)
+        assert "Workspace definition error. Package pkgb/0.1 in the Conan cache" in c.out
+        c.run("workspace info")
+        assert "pkgb/0.1" not in c.out
+        assert "pkgc/0.1" not in c.out
+
+        c.run("workspace complete")
+        c.run("workspace info")
+        assert "pkgb/0.1" in c.out
+        assert "pkgc/0.1" in c.out
+        assert "pkgx/0.1" not in c.out
+
+    def test_complete_open(self):
+        c = TestClient(light=True)
+        c.save({"pkgx/conanfile.py": GenConanfile("pkgx", "0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
+                "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkga/0.1",
+                                                                               "pkgx/0.1")})
+
+        for pkg in ("pkgx", "pkgb", "pkgc"):
+            c.run(f"export {pkg}")
+
+        c.save({"conanws.yml": "",
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+                "pkgd/conanfile.py": GenConanfile("pkgd", "0.1").with_requires("pkgb/0.1",
+                                                                               "pkgc/0.1")},
+               clean_first=True)
+
+        c.run("workspace add pkgd")
+        c.run("workspace add pkga")
+        c.run("workspace install --build=missing", assert_error=True)
+        assert "Workspace definition error. Package pkgb/0.1 in the Conan cache" in c.out
+        c.run("workspace info")
+        assert "pkgb/0.1" not in c.out
+        assert "pkgc/0.1" not in c.out
+
+        c.run("workspace complete")
+        c.run("workspace info")
+        assert "pkgb/0.1" in c.out
+        assert "pkgc/0.1" in c.out
+        assert "pkgx/0.1" not in c.out
+
+
 class TestWorkspaceBuild:
 
     def test_build(self):

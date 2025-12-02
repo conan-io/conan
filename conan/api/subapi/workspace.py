@@ -140,9 +140,10 @@ class WorkspaceAPI:
                 )
         return packages
 
-    def open(self, require, remotes, cwd=None):
+    def open(self, ref, remotes, cwd=None):
+        cwd = cwd or os.getcwd()
         app = ConanApp(self._conan_api)
-        ref = RecipeReference.loads(require)
+        ref = RecipeReference.loads(ref) if isinstance(ref, str) else ref
         recipe = app.proxy.get_recipe(ref, remotes, update=False, check_update=False)
 
         layout, recipe_status, remote = recipe
@@ -153,7 +154,7 @@ class WorkspaceAPI:
         conanfile, module = app.loader.load_basic_module(conanfile_path, remotes=remotes)
 
         scm = conanfile.conan_data.get("scm") if conanfile.conan_data else None
-        dst_path = os.path.join(cwd or os.getcwd(), ref.name)
+        dst_path = os.path.join(cwd, ref.name)
         if scm is None:
             conanfile.output.warning("conandata doesn't contain 'scm' information\n"
                                      "doing a local copy!!!")
@@ -202,6 +203,45 @@ class WorkspaceAPI:
         # Check the conanfile is there, and name/version matches
         self._ws.add(ref, full_path, output_folder)
         return ref
+
+    def complete(self, profile_host, profile_build, lockfile, remotes, update):
+        packages = self.packages()
+        if not packages:
+            ConanOutput().info("There are no packages in this workspace, nothing to complete")
+            return
+
+        for ref, info in packages.items():
+            ConanOutput().title(f"Computing the dependency graph for package: {ref}")
+            gapi = self._conan_api.graph
+            deps_graph = gapi.load_graph_requires([ref], None, profile_host, profile_build,
+                                                  lockfile, remotes, update)
+            deps_graph.report_graph_error()
+            print_graph_basic(deps_graph)
+
+            nodes_to_complete = []
+            for node in deps_graph.nodes[1:]:  # Exclude the current virtual root
+                if node.recipe != RECIPE_EDITABLE:
+                    # sanity check, a pacakge in the cache cannot have dependencies to the workspace
+                    if any(d.node.recipe == RECIPE_EDITABLE for d in node.transitive_deps.values()):
+                        nodes_to_complete.append(node)
+
+            if not nodes_to_complete:
+                ConanOutput().info("There are no intermediate packages to add to the workspace")
+                return
+
+            for node in nodes_to_complete:
+                full_path = os.path.join(self._folder, node.name, "conanfile.py")
+                dep_ref = node.ref
+                ConanOutput().info(f"Adding to workspace {dep_ref}")
+                try:
+                    self._ws.add(dep_ref, full_path, output_folder=None)
+                except ConanException:
+                    if os.path.isfile(full_path):
+                        raise
+                    ConanOutput().info(f"Conanfile in {node.name} not found, trying "
+                                       "to open it first")
+                    self.open(dep_ref, remotes, cwd=self._folder)
+                    self._ws.add(dep_ref, full_path, output_folder=None)
 
     @staticmethod
     def init(path):
@@ -305,15 +345,10 @@ class WorkspaceAPI:
         result = DepsGraph()  # TODO: We might need to copy more information from the original graph
         result.add_node(root)
         conanfile.workspace_packages = {}
+
+        self._check_graph(deps_graph)
         for node in deps_graph.nodes[1:]:  # Exclude the current root
             if node.recipe != RECIPE_EDITABLE:
-                # sanity check, a pacakge in the cache cannot have dependencies to the workspace
-                deps_edit = [d.node for d in node.transitive_deps.values()
-                             if d.node.recipe == RECIPE_EDITABLE]
-                if deps_edit:
-                    raise ConanException(f"Workspace definition error. Package {node} in the "
-                                         f"Conan cache has dependencies to packages "
-                                         f"in the workspace: {deps_edit}")
                 result.add_node(node)
                 continue
             # At the moment we are exposing the full conanfile, docs will warn against usage of
@@ -335,6 +370,20 @@ class WorkspaceAPI:
             result.add_edge(root, t.node, r)
 
         return result
+
+    @staticmethod
+    def _check_graph(graph):
+        for node in graph.nodes[1:]:  # Exclude the current root
+            if node.recipe != RECIPE_EDITABLE:
+                # sanity check, a pacakge in the cache cannot have dependencies to the workspace
+                deps_edit = [d.node for d in node.transitive_deps.values()
+                             if d.node.recipe == RECIPE_EDITABLE]
+                if deps_edit:
+                    raise ConanException(f"Workspace definition error. Package {node} in the "
+                                         f"Conan cache has dependencies to packages "
+                                         f"in the workspace: {deps_edit}\n"
+                                         "Try the 'conan workspace complete' to open/add "
+                                         "intermediate packages")
 
     def export(self, lockfile=None, remotes=None):
         self._check_ws()
@@ -376,6 +425,9 @@ class WorkspaceAPI:
                                                              remotes, update)
             deps_graph.report_graph_error()
             print_graph_basic(deps_graph)
+
+            self._check_graph(deps_graph)
+
             conan_api.graph.analyze_binaries(deps_graph, build_mode, remotes=remotes, update=update,
                                              lockfile=lockfile)
             print_graph_packages(deps_graph)
