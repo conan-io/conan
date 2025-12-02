@@ -238,13 +238,6 @@ class TestAddRemove:
         # For workspace, the version of the conanfile can be ignored if the
         # workspace define a different version.
         c = TestClient(light=True)
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class Lib(ConanFile):
-                name= "pkg"
-                version = "0.1"
-            """)
-
         workspace = textwrap.dedent("""\
             import os
             from conan import Workspace
@@ -255,12 +248,40 @@ class TestAddRemove:
             """)
 
         c.save({"conanws.py": workspace,
-                "dep1/conanfile.py": conanfile})
+                "dep1/conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
         assert info["packages"] == [{"ref": "pkg/1.2.3", "path": "dep1"}]
         c.run("install --requires=pkg/1.2.3")
         # it will not fail
+
+    def test_replace_requires(self):
+        c = TestClient(light=True)
+        workspace = textwrap.dedent("""\
+            import os
+            from conan import Workspace
+
+            class MyWorkspace(Workspace):
+                def packages(self):
+                    pkgs = super().packages()
+                    for item in pkgs:
+                        if item["path"] == "pkga":  # Only certain packages
+                            item["ref"] = item["ref"].replace("0.1", "develop")
+                    return pkgs
+            """)
+
+        c.save({"conanws.py": workspace,
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/develop")})
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb")
+        c.run("workspace info --format=json")
+        info = json.loads(c.stdout)
+        assert info["packages"] == [{"ref": "pkga/develop", "path": "pkga"},
+                                    {"ref": "pkgb/0.1", "path": "pkgb"}]
+        c.run("install --requires=pkgb/0.1")
+        # it will not fail
+        assert "pkga/develop" in c.out
 
     def test_error_uppercase(self):
         c = TestClient(light=True)
