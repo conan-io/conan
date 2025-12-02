@@ -4,7 +4,6 @@ import sys
 import pytest
 
 from conan.internal.api.uploader import compress_files
-from conan.internal.paths import PACKAGE_TGZ_NAME
 from conan.internal.rest.remote_manager import uncompress_file
 from conan.test.utils.test_files import temp_folder
 from conan.internal.util.files import save
@@ -22,9 +21,9 @@ class TestRemoteManager:
             "Two_file.txt": os.path.join(folder, "Two_file.txt"),
         }
 
-        path = compress_files(files, PACKAGE_TGZ_NAME, dest_dir=folder)
+        path = compress_files(files, "conan_package.tgz", dest_dir=folder)
         assert os.path.exists(path)
-        expected_path = os.path.join(folder, PACKAGE_TGZ_NAME)
+        expected_path = os.path.join(folder, "conan_package.tgz")
         assert path == expected_path
 
     def test_compress_and_uncompress_xz_files(self):

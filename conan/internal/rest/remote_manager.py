@@ -7,6 +7,7 @@ from typing import List
 from requests.exceptions import ConnectionError
 
 from conan.api.model import LOCAL_RECIPES_INDEX
+from conan.internal.paths import CONANINFO, CONAN_MANIFEST, PACKAGE_FILE_NAME, EXPORT_FILE_NAME
 from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
@@ -18,7 +19,6 @@ from conan.internal.model.info import load_binary_info
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.files import rmdir, human_size
-from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from conan.internal.util.files import mkdir, tar_extract
 
 
@@ -87,7 +87,8 @@ class RemoteManager:
             self._cache.remove_recipe_layout(layout)
             raise
         export_folder = layout.export()
-        tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
+        export_file = next((f for f in zipped_files if EXPORT_FILE_NAME in f), None)
+        tgz_file = zipped_files.pop(export_file, None)
 
         if tgz_file:
             uncompress_file(tgz_file, export_folder, scope=str(ref))
@@ -133,7 +134,8 @@ class RemoteManager:
             return
 
         self._signer.verify(ref, download_folder, files=zipped_files)
-        tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
+        # Only 1 file is guaranteed
+        tgz_file = next(iter(zipped_files.values()))
         uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
 
     def get_package(self, pref, remote, metadata=None):
@@ -179,11 +181,11 @@ class RemoteManager:
                                              metadata, only_metadata=False)
             zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
             # quick server package integrity check:
-            for f in ("conaninfo.txt", "conanmanifest.txt"):
+            for f in (CONANINFO, CONAN_MANIFEST):
                 if f not in zipped_files:
                     raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: no {f}")
 
-            package_file = next((f for f in zipped_files if "conan_package" in f), None)
+            package_file = next((f for f in zipped_files if PACKAGE_FILE_NAME in f), None)
             if not package_file:
                 raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: "
                                      f"no conan_package found")

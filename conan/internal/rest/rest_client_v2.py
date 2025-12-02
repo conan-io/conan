@@ -9,6 +9,8 @@ from requests.auth import AuthBase, HTTPBasicAuth
 from uuid import getnode as get_mac
 
 from conan.api.output import ConanOutput
+from conan.internal.paths import EXPORT_SOURCES_FILE_NAME, CONANINFO, CONAN_MANIFEST, \
+    EXPORT_FILE_NAME
 from conan.internal.rest.caching_file_downloader import ConanInternalCacheDownloader
 from conan.internal.rest import response_to_str
 from conan.internal.rest.client_routes import ClientV2Router
@@ -17,7 +19,6 @@ from conan.internal.errors import AuthenticationException, ForbiddenException, N
     RecipeNotFoundException, PackageNotFoundException, EXCEPTION_CODE_MAPPING
 from conan.errors import ConanException
 from conan.api.model import PkgReference
-from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import from_iso8601_to_timestamp
 
@@ -238,8 +239,7 @@ class RestV2Methods:
         result = {}
 
         if not only_metadata:
-            accepted_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt",
-                              "metadata/sign"]
+            accepted_files = ["conanfile.py", EXPORT_FILE_NAME, CONAN_MANIFEST,  "metadata/sign"]
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
             # If we didn't indicated reference, server got the latest, use absolute now, it's safer
             urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
@@ -259,9 +259,10 @@ class RestV2Methods:
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        if EXPORT_SOURCES_TGZ_NAME not in files:
+        sources_file = next((f for f in files if EXPORT_SOURCES_FILE_NAME in f), None)
+        if sources_file is None:
             return None
-        files = [EXPORT_SOURCES_TGZ_NAME, ]
+        files = [sources_file, ]
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
@@ -280,7 +281,7 @@ class RestV2Methods:
                                  f"more than one package file: {pkg_files}")
         # Download only known files, but not metadata (except sign)
         if not only_metadata:  # Retrieve package first, then metadata
-            accepted_files = ["conaninfo.txt", "conanmanifest.txt", "metadata/sign"]
+            accepted_files = [CONANINFO, CONAN_MANIFEST, "metadata/sign"]
             if len(pkg_files) == 1:
                 accepted_files.append(pkg_files[0])
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]

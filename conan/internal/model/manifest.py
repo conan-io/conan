@@ -1,7 +1,8 @@
 import os
 from collections import defaultdict
 
-from conan.internal.paths import CONAN_MANIFEST
+from conan.internal.paths import CONAN_MANIFEST, COMPRESSIONS, PACKAGE_FILE_NAME, EXPORT_FILE_NAME, \
+    EXPORT_SOURCES_FILE_NAME
 from conan.internal.util.dates import timestamp_now, timestamp_to_str
 from conan.internal.util.files import load, md5, md5sum, save, gather_files
 
@@ -91,8 +92,8 @@ class FileTreeManifest(object):
         """
         files, _ = gather_files(folder)
         # The folders symlinks are discarded for the manifest
-        for f in ("conan_package", "conan_export", "conan_sources"):
-            for e in (".gz", ".xz", ".tzst"):
+        for f in (PACKAGE_FILE_NAME, EXPORT_FILE_NAME, EXPORT_SOURCES_FILE_NAME):
+            for e in COMPRESSIONS:
                 files.pop(f + e, None)
         files.pop(CONAN_MANIFEST, None)
 
