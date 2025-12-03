@@ -71,11 +71,26 @@ class CacheAPI:
             return ref_layout.finalize()
         return _check_folder_existence(pref, "package", ref_layout.package())
 
-    def check_integrity(self, package_list):
-        """Check if the recipes and packages are corrupted (it will raise a ConanExcepcion)"""
+    def check_integrity(self, package_list, return_pkg_list=False):
+        """
+        Check if the recipes and packages are corrupted
+        :parameter package_list: PackagesList to check
+        :parameter return_pkg_list: If True, return a PackagesList with corrupted artifacts
+        :return PkgagesList with corrupted artifacts if return_pkg_list is True
+        :raises ConanExcepcion if there are corrupted artifacts and return_pkg_list is False
+        """
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         checker = IntegrityChecker(cache)
-        checker.check(package_list)
+        corrupted_artifacts = checker.check(package_list)
+        if return_pkg_list:
+            corrupted_pkglist = PackagesList()
+            for ref, packages in corrupted_artifacts.items():
+                corrupted_pkglist.add_ref(ref)
+                for pref in packages:
+                    corrupted_pkglist.add_pref(pref)
+            return corrupted_pkglist
+        if corrupted_artifacts:
+            raise ConanException("There are corrupted artifacts, check the error logs")
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True,
               backup_sources=False):

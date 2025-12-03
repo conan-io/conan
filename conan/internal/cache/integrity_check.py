@@ -21,13 +21,15 @@ class IntegrityChecker:
         self._cache = cache
 
     def check(self, pkg_list):
-        corrupted = False
+        corrupted_artifacts = {}
         for ref, packages in pkg_list.items():
-            corrupted = self._recipe_corrupted(ref) or corrupted
+            if self._recipe_corrupted(ref):
+                # If the recipe is corrupted, all its packages are considered corrupted
+                corrupted_artifacts[ref] = packages
             for pref in packages:
-                corrupted = self._package_corrupted(pref) or corrupted
-        if corrupted:
-            raise ConanException("There are corrupted artifacts, check the error logs")
+                if self._package_corrupted(pref):
+                    corrupted_artifacts.setdefault(ref, []).append(pref)
+        return corrupted_artifacts
 
     def _recipe_corrupted(self, ref: RecipeReference):
         layout = self._cache.recipe_layout(ref)
