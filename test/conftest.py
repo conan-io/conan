@@ -48,7 +48,14 @@ windows_choco_root = "C:/ProgramData/chocolatey/lib/"
 msys2_path = os.getenv("MSYS2_PATH", "C:/msys64")
 
 tools_locations = {
-    "clang": {"disabled": True},
+    "clang": {
+        "exe": "clang",
+        "default": "19",
+        "19": {
+            "path": {'Windows':  # We can use the Clang installed inside VS
+                     f'{windows_choco_root}/Llvm/bin'}
+        }
+    },
     'visual_studio': {"default": "15",
                       "15": {},
                       "16": {"disabled": True},
