@@ -25,8 +25,7 @@ def _get_package_sign_error(pkg_list):
     if any(isinstance(sign, Exception) for sign in signs):
         return ConanException("There were some errors in the package signing process. "
                               "Please check the output.")
-    else:
-        return None
+    return None
 
 
 def print_package_sign_json(data):
@@ -251,11 +250,10 @@ def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
 
     conan_api.cache.sign(package_list)
-    result = {"results": package_list.serialize()}
-    error = _get_package_sign_error(package_list)
-    if error:
-        result["conan_error"] = error
-    return result
+    return {
+        "conan_error": _get_package_sign_error(package_list),
+        "results": package_list.serialize()
+    }
 
 
 @conan_subcommand(formatters={"text": print_package_sign_text,
@@ -287,11 +285,10 @@ def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
 
     conan_api.cache.verify(package_list)
-    result = {"results": package_list.serialize()}
-    error = _get_package_sign_error(package_list)
-    if error:
-        result["conan_error"] = error
-    return result
+    return {
+        "conan_error": _get_package_sign_error(package_list),
+        "results": package_list.serialize()
+    }
 
 
 @conan_subcommand(formatters={"text": print_list_text,
