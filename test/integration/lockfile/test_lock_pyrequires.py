@@ -198,3 +198,51 @@ def test_pyrequires_test_package_lockfile_error():
     lock = json.loads(c.load("conan.lock"))
     assert "conan-utils/1.8.0" in lock["python_requires"][0]
     assert "conan-utils/1.7.1" in lock["python_requires"][1]
+
+
+def test_pyrequires_test_package_lockfile_error_forward():
+    # https://github.com/conan-io/conan/issues/19340
+    c = TestClient(light=True)
+    bar = textwrap.dedent("""
+        from conan import ConanFile
+        class Bar(ConanFile):
+            name = "bar"
+            version = "8.0.0"
+            python_requires = "conan-utils/[^1]"
+     """)
+    test_bar = textwrap.dedent("""
+        from conan import ConanFile
+        class TestBar(ConanFile):
+            python_requires = "conan-utils/[^1]"
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+            def test(self):
+                pass
+        """)
+    foo = textwrap.dedent("""
+        from conan import ConanFile
+        class Foo(ConanFile):
+            name = "foo"
+            version = "1.0"
+            python_requires = "conan-utils/1.9.0"
+            requires = "bar/[^8]"
+         """)
+
+    c.save({"utils/conanfile.py": GenConanfile("conan-utils").with_package_type("python-require"),
+            "bar/conanfile.py": bar,
+            "bar/test_package/conanfile.py": test_bar,
+            "foo/conanfile.py": foo})
+
+    c.run("create utils --version=1.8.0")
+    c.run("create bar --lockfile-out=conan.lock")
+    print(c.load("conan.lock"))
+    c.run("create utils --version=1.9.0")
+    c.run("create foo --lockfile=conan.lock --lockfile-out=conan.lock")
+
+    c.assert_listed_require({"conan-utils/1.7.1": "Cache",
+                             "conan-utils/1.8.0": "Cache"}, python=True)
+    assert "conan-utils/[^1]: conan-utils/1.8.0" in c.out
+    # It works, no longer fails
+    lock = json.loads(c.load("conan.lock"))
+    assert "conan-utils/1.8.0" in lock["python_requires"][0]
+    assert "conan-utils/1.7.1" in lock["python_requires"][1]
