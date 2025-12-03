@@ -113,7 +113,7 @@ def test_pkg_sign_exception():
           revisions
             dbe307e08b1a344fef76f60c85c0c4e8
               packages
-              package sign: Failed: Error signing package
+              package sign: Error signing package
         package/0.1
           revisions
             1fd0e5bcc411dcd3ff5b16024e2d7c04
@@ -132,7 +132,7 @@ def test_pkg_sign_exception():
            "Please check the output." in c.out
     results = json.loads(c.stdout)
     assert results["lib/0.1"]["revisions"]["dbe307e08b1a344fef76f60c85c0c4e8"]["package sign"] == \
-           "Failed: Error signing package"
+           "Error signing package"
     assert results["package/0.1"]["revisions"]["1fd0e5bcc411dcd3ff5b16024e2d7c04"]["package sign"]\
            == "Signed"
     assert results["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]["package sign"] == \
@@ -166,7 +166,7 @@ def test_pkg_verify_exception():
           revisions
             dbe307e08b1a344fef76f60c85c0c4e8
               packages
-              package sign: Failed: Wrong signature
+              package sign: Wrong signature
         package/0.1
           revisions
             1fd0e5bcc411dcd3ff5b16024e2d7c04
@@ -185,7 +185,7 @@ def test_pkg_verify_exception():
            "Please check the output." in c.out
     results = json.loads(c.stdout)
     assert results["lib/0.1"]["revisions"]["dbe307e08b1a344fef76f60c85c0c4e8"]["package sign"] == \
-           "Failed: Wrong signature"
+           "Wrong signature"
     assert results["package/0.1"]["revisions"]["1fd0e5bcc411dcd3ff5b16024e2d7c04"]["package sign"]\
            == "Verified"
     assert results["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]["package sign"] == \

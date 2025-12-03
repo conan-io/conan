@@ -120,8 +120,8 @@ def test_pkg_sign_canonical():
              da39a3ee5e6b4b0d3255bfef95601890afd80709
                revisions
                  76285bcb59a81071122cba04b2269b52
-                   package sign: Failed: Package is not signed
-           package sign: Failed: Package is not signed
+                   package sign: Package is not signed
+           package sign: Package is not signed
      lib2fail/0.1
        revisions
          70a185be5a95af3dde25b74ae800b2f2
@@ -129,8 +129,8 @@ def test_pkg_sign_canonical():
              da39a3ee5e6b4b0d3255bfef95601890afd80709
                revisions
                  0ba8627bd47edc3a501e8f0eb9a79e5e
-                   package sign: Failed: Package is not signed
-           package sign: Failed: Package is not signed
+                   package sign: Package is not signed
+           package sign: Package is not signed
      lib3fail/0.1
        revisions
          09ccc766ddd11c96aa78307b3f166fd6
@@ -138,8 +138,8 @@ def test_pkg_sign_canonical():
              da39a3ee5e6b4b0d3255bfef95601890afd80709
                revisions
                  0ba8627bd47edc3a501e8f0eb9a79e5e
-                   package sign: Failed: Package is not signed
-           package sign: Failed: Package is not signed
+                   package sign: Package is not signed
+           package sign: Package is not signed
 
      [Package sign] Summary: OK=0, FAILED=6""") in c.out
 
@@ -173,8 +173,8 @@ def test_pkg_sign_canonical():
                 da39a3ee5e6b4b0d3255bfef95601890afd80709
                   revisions
                     0ba8627bd47edc3a501e8f0eb9a79e5e
-                      package sign: Failed: sign failed
-              package sign: Failed: sign failed
+                      package sign: sign failed
+              package sign: sign failed
 
         [Package sign] Summary: OK=4, FAILED=2
         """) in c.out

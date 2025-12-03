@@ -96,7 +96,7 @@ class CacheAPI:
                     pkg_signer.sign_pkg(rref, recipe_bundle.get("files", {}), rref_folder)
                     recipe_bundle["package sign"] = "Signed"
                 except Exception as e:
-                    recipe_bundle["package sign"] = ConanException(f"Failed: {e}")
+                    recipe_bundle["package sign"] = e
             for pref in packages:
                 pkg_bundle = package_list.package_dict(pref)
                 if pkg_bundle:
@@ -105,7 +105,7 @@ class CacheAPI:
                         pkg_signer.sign_pkg(pref, pkg_bundle.get("files", {}), pref_folder)
                         pkg_bundle["package sign"] = "Signed"
                     except Exception as e:
-                        pkg_bundle["package sign"] = ConanException(f"Failed: {e}")
+                        pkg_bundle["package sign"] = e
         return package_list
 
     def verify(self, package_list):
@@ -123,7 +123,7 @@ class CacheAPI:
                     pkg_signer.verify(rref, rref_folder, files)
                     recipe_bundle["package sign"] = "Verified"
                 except Exception as e:
-                    recipe_bundle["package sign"] = ConanException(f"Failed: {e}")
+                    recipe_bundle["package sign"] = e
             for pref in packages:
                 pkg_bundle = package_list.package_dict(pref)
                 if pkg_bundle:
@@ -134,7 +134,7 @@ class CacheAPI:
                         pkg_signer.verify(pref, pref_folder, files)
                         pkg_bundle["package sign"] = "Verified"
                     except Exception as e:
-                        pkg_bundle["package sign"] = ConanException(f"Failed: {e}")
+                        pkg_bundle["package sign"] = e
         return package_list
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True,
