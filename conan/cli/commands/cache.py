@@ -16,11 +16,11 @@ def _get_package_sign_error(pkg_list):
     for rref, packages in pkg_list.items():
         recipe_bundle = pkg_list.recipe_dict(rref)
         if recipe_bundle:
-            signs.append(recipe_bundle.get("package sign"))
+            signs.append(recipe_bundle.get("error"))
         for pref in packages:
             pkg_bundle = pkg_list.package_dict(pref)
             if pkg_bundle:
-                signs.append(pkg_bundle.get("package sign"))
+                signs.append(pkg_bundle.get("error"))
 
     if any(isinstance(sign, Exception) for sign in signs):
         return ConanException("There were some errors in the package signing process. "
@@ -51,22 +51,26 @@ def print_package_sign_text(data):
     signs = []
     for ref_data in results_dict.values():
         for revision_data in ref_data.get("revisions", {}).values():
-            sign = revision_data.get("package sign")
-            if sign:
-                signs.append(sign)
+            sign = revision_data.get("error")
+            signs.append(sign)
 
             for pkg in revision_data.get("packages", {}).values():
                 for prev in pkg.get("revisions", {}).values():
-                    sign = prev.get("package sign")
-                    if sign:
-                        signs.append(sign)
+                    sign = prev.get("error")
+                    signs.append(sign)
 
     remove_keys = {"info", "timestamp", "files"}
 
     def clean_inline(obj):
         if not isinstance(obj, dict):
             return obj
-        return {k: clean_inline(v) for k, v in obj.items() if k not in remove_keys}
+
+        cleaned = {k: clean_inline(v) for k, v in obj.items() if k not in remove_keys}
+
+        if "packages" in cleaned and not cleaned["packages"]:
+            del cleaned["packages"]
+
+        return cleaned
 
     items = {ref: clean_inline(item) for ref, item in results_dict.items()}
 

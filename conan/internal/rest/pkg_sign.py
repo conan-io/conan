@@ -8,7 +8,7 @@ from conan.internal.util.files import mkdir
 
 
 class PkgSignaturesPlugin:
-    def __init__(self, cache, home_folder, raise_if_no_plugin=False):
+    def __init__(self, cache, home_folder):
         self._cache = cache
         signer = HomePaths(home_folder).sign_plugin_path
         if os.path.isfile(signer):
@@ -19,10 +19,9 @@ class PkgSignaturesPlugin:
         else:
             self._plugin_sign_function = self._plugin_verify_function = None
 
-        if (raise_if_no_plugin and
-            (self._plugin_sign_function is None or self._plugin_verify_function is None)):
-            raise ConanException(f"[Package sign] Plugin not configured at {signer}. The file does "
-                                 f"not exist or any of the sing() / verify() functions are missing.")
+    @property
+    def is_configured(self):
+        return self._plugin_sign_function is not None and self._plugin_verify_function is not None
 
     def sign_pkg(self, ref, files, folder):
         metadata_sign = os.path.join(folder, METADATA, "sign")
