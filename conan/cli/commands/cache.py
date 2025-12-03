@@ -122,7 +122,7 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
 
 def handle_check_integrity_result(data):
     """
-    Do not output anything to keep backward compatibility. When format is text, the command will output each check in real time.
+    Do not output anything when format is text. The command will output each check in real time.
     Only raise if corrupted
     """
     if data["results"]["Local Cache"]:

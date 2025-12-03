@@ -25,7 +25,7 @@ class IntegrityChecker:
         for ref, packages in pkg_list.items():
             if self._recipe_corrupted(ref):
                 # If the recipe is corrupted, all its packages are considered corrupted
-                corrupted_artifacts[ref] = {}
+                corrupted_artifacts[ref] = []
             for pref in packages:
                 if self._package_corrupted(pref):
                     corrupted_artifacts.setdefault(ref, []).append(pref)
