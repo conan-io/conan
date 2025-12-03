@@ -7,6 +7,7 @@ import pytest
 
 from conan.api.model import RecipeReference, PkgReference
 from conan.internal.util import load
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -72,3 +73,23 @@ def test_xz(compress):
     downloaded_files = os.listdir(rlayout.download_export())
     assert f"conan_export.t{compress}" in downloaded_files
     assert f"conan_sources.t{compress}" in downloaded_files
+
+
+@pytest.mark.skipif(sys.version_info.minor >= 14, reason="validate zstd error in python<314")
+def test_unsupported_zstd():
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package_file("myfile.h", "contents")})
+    c.run("create")
+    playout = c.created_layout()
+    c.run("upload * -r=default -c -cc core.upload:compression_format=zst", assert_error=True)
+    assert "ERROR: The 'core.upload:compression_format=zst' is only for Python>=3.14" in c.out
+
+    # Lets cheat, creating a fake zstd to test download
+    c.run("upload * -r=default -c --dry-run")
+    os.rename(os.path.join(playout.download_package(), "conan_package.tgz"),
+              os.path.join(playout.download_package(), "conan_package.tzst"))
+    c.run("upload * -r=default -c")
+    c.run("remove * -c")
+    c.run("install --requires=pkg/0.1", assert_error=True)
+    assert ("ERROR: File conan_package.tzst compressed with 'zst', unsupported "
+            "for Python<3.14") in c.out

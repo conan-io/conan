@@ -2,6 +2,7 @@ import fnmatch
 import gzip
 import os
 import shutil
+import sys
 import tarfile
 import time
 
@@ -84,6 +85,21 @@ class PackagePreparator:
     def __init__(self, app: ConanApp, global_conf):
         self._app = app
         self._global_conf = global_conf
+
+        # No compressed file exists, need to compress
+        compressformat = self._global_conf.get("core.upload:compression_format",
+                                               default="gz", choices=COMPRESSIONS)
+        if compressformat == "zst" and sys.version_info.minor < 14:
+            raise ConanException("The 'core.upload:compression_format=zst' is only for Python>=3.14")
+        compresslevel = self._global_conf.get("core:compresslevel", check_type=int)
+        if compresslevel is None and compressformat == "gz":
+            compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
+            if compresslevel is not None:
+                ConanOutput().warning("core.gzip:compresslevel is deprecated, "
+                                      "use core.compresslevel instead", warn_tag="deprecated")
+
+        self._compressformat = compressformat
+        self._compresslevel = compresslevel
 
     def prepare(self, pkg_list, enabled_remotes):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
@@ -171,7 +187,7 @@ class PackagePreparator:
     def _compressed_file(self, filename, files, download_folder, ref):
         output = ConanOutput(scope=str(ref))
 
-        # Check if there is some existing compressed file alreday
+        # Check if there is some existing compressed file already
         matches = []
         for extension in COMPRESSIONS:
             file_name = filename + extension
@@ -187,21 +203,11 @@ class PackagePreparator:
         if len(matches) == 1:
             return matches[0]
 
-        # No compressed file exists, need to compress
-        compressformat = self._global_conf.get("core.upload:compression_format",
-                                               default="gz", choices=COMPRESSIONS)
-        compresslevel = self._global_conf.get("core:compresslevel", check_type=int)
-        if compresslevel is None and compressformat == "gz":
-            compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
-            if compresslevel is not None:
-                ConanOutput().warning("core.gzip:compresslevel is deprecated, "
-                                      "use core.compresslevel instead", warn_tag="deprecated")
-
-        file_name = filename + compressformat
+        file_name = filename + self._compressformat
         package_file = os.path.join(download_folder, file_name)
         compressed_path = compress_files(files, file_name, download_folder,
-                                         compresslevel=compresslevel, compressformat=compressformat,
-                                         ref=ref)
+                                         compresslevel=self._compresslevel,
+                                         compressformat=self._compressformat, ref=ref)
         assert compressed_path == package_file
         assert os.path.exists(package_file)
         return file_name

@@ -62,7 +62,7 @@ BUILT_IN_CONFS = {
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
     # Compression for `conan upload`
     "core.upload:compression_format": "The compression format used when uploading Conan packages. "
-                                      "Possible values: 'zstd', 'xz', 'gzip' (default=gzip)",
+                                      "Possible values: 'zst', 'xz', 'gz' (default=gz)",
     "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9)",
     "core:compresslevel": "The compression level for Conan artifacts (default zstd=3, gz=9)",
     # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks

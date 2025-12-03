@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 
 from collections import namedtuple
 from typing import List
@@ -191,7 +192,7 @@ class RemoteManager:
                                      f"no conan_package found")
             self._signer.verify(pref, download_pkg_folder, zipped_files)
 
-            tgz_file = zipped_files.pop(package_file, None)
+            tgz_file = zipped_files.pop(package_file)
             package_folder = layout.package()
             uncompress_file(tgz_file, package_folder, scope=str(pref.ref))
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
@@ -345,6 +346,9 @@ class RemoteManager:
 
 
 def uncompress_file(src_path, dest_folder, scope=None):
+    if sys.version_info.major < 14 and src_path.endswith(".tzst"):
+        raise ConanException(f"File {os.path.basename(src_path)} compressed with 'zst', "
+                             f"unsupported for Python<3.14 ")
     try:
         filesize = os.path.getsize(src_path)
         big_file = filesize > 10000000  # 10 MB
