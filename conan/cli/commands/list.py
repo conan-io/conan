@@ -33,7 +33,7 @@ def print_serial(item, indent=None, color_index=None):
     color = color_array[color_index % len(color_array)]
     if isinstance(item, dict):
         for k, v in item.items():
-            if isinstance(v, (str, int)):
+            if isinstance(v, (str, int, Exception)):
                 if k.lower() == "error":
                     color = Color.BRIGHT_RED
                     k = "ERROR"

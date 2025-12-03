@@ -141,7 +141,7 @@ def test_pkg_sign_canonical():
                    package sign: Failed: Package is not signed
            package sign: Failed: Package is not signed
 
-     [Package sign] Summary: OK=0, WARN=0, FAILED=6""") in c.out
+     [Package sign] Summary: OK=0, FAILED=6""") in c.out
 
     # Cache sign command fails if a package fails to sign and reports it
     c.run("cache sign *", assert_error=True)
@@ -176,12 +176,12 @@ def test_pkg_sign_canonical():
                       package sign: Failed: sign failed
               package sign: Failed: sign failed
 
-        [Package sign] Summary: OK=4, WARN=0, FAILED=2
+        [Package sign] Summary: OK=4, FAILED=2
         """) in c.out
 
     # Upload sign fails if package signing fails
     c.run("upload * -c -r default", assert_error=True)
-    assert "ERROR: [Package sign] sign failed" in c.out
+    assert "ERROR: sign failed" in c.out
 
     # If upload sign failed, no packages should be uploaded
     c.run("list * -r default")
@@ -193,8 +193,9 @@ def test_pkg_sign_canonical():
     c.run("remove * -c")
 
     # Install verify command should fail if package sign verification fails
-    c.run("install --requires lib1ok/0.1 --requires lib2fail/0.1 -r default", assert_error=True)
-    assert "ERROR: Package 'lib2fail/0.1' not resolved: [Package sign] Failed to verify " \
+    c.run("install --requires lib1ok/0.1 --requires lib2fail/0.1 -r default",
+          assert_error=True)
+    assert "ERROR: Package 'lib2fail/0.1' not resolved: Failed to verify " \
            "the package lib2fail/0.1" in c.out
 
     # If packages fail to verify signature, they should not be installed
@@ -211,5 +212,5 @@ def test_pkg_sign_canonical():
               packages
               package sign: Verified
 
-        [Package sign] Summary: OK=1, WARN=0, FAILED=0
+        [Package sign] Summary: OK=1, FAILED=0
     """) in c.out

@@ -21,11 +21,11 @@ def test_pkg_sign_no_plugin_functions():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     c.run("cache sign *", assert_error=True)
-    assert "ERROR: [Package sign] Plugin not configured. Both sign() and verify() functions " \
-           "should be defined." in c.out
+    assert "ERROR: [Package sign] Plugin not configured" in c.out
+    assert "The file does not exist or any of the sing() / verify() functions are missing" in c.out
     c.run("cache verify *", assert_error=True)
-    assert "ERROR: [Package sign] Plugin not configured. Both sign() and verify() functions " \
-           "should be defined." in c.out
+    assert "ERROR: [Package sign] Plugin not configured" in c.out
+    assert "The file does not exist or any of the sing() / verify() functions are missing" in c.out
 
 
 def test_pkg_sign_basic():
@@ -33,9 +33,7 @@ def test_pkg_sign_basic():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     signer = textwrap.dedent(r"""
         def sign(ref, artifacts_folder, signature_folder, **kwargs):
-            if ":" in str(ref):
-                return "ok"
-            return
+            pass
 
         def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
             pass
@@ -53,10 +51,10 @@ def test_pkg_sign_basic():
                 da39a3ee5e6b4b0d3255bfef95601890afd80709
                   revisions
                     0ba8627bd47edc3a501e8f0eb9a79e5e
-                      package sign: ok
+                      package sign: Signed
               package sign: Signed
 
-        [Package sign] Summary: OK=2, WARN=0, FAILED=0""") in c.out
+        [Package sign] Summary: OK=2, FAILED=0""") in c.out
 
 
 def test_pkg_verify_basic():
@@ -67,9 +65,7 @@ def test_pkg_verify_basic():
             pass
 
         def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
-            if ":" in str(ref):
-                return "ok"
-            return
+            pass
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.run("create .")
@@ -84,10 +80,10 @@ def test_pkg_verify_basic():
                 da39a3ee5e6b4b0d3255bfef95601890afd80709
                   revisions
                     0ba8627bd47edc3a501e8f0eb9a79e5e
-                      package sign: ok
+                      package sign: Verified
               package sign: Verified
 
-        [Package sign] Summary: OK=2, WARN=0, FAILED=0""") in c.out
+        [Package sign] Summary: OK=2, FAILED=0""") in c.out
 
 
 def test_pkg_sign_exception():
@@ -98,10 +94,6 @@ def test_pkg_sign_exception():
         def sign(ref, artifacts_folder, signature_folder):
             if "lib" in ref.repr_notime():
                 raise ConanException("Error signing package")
-            elif "pkg" in ref.repr_notime():
-                return
-            else:
-                return "Success"
 
         def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
             pass
@@ -126,14 +118,14 @@ def test_pkg_sign_exception():
           revisions
             1fd0e5bcc411dcd3ff5b16024e2d7c04
               packages
-              package sign: Success
+              package sign: Signed
         pkg/0.1
           revisions
             485dad6cb11e2fa99d9afbe44a57a164
               packages
               package sign: Signed
 
-        [Package sign] Summary: OK=2, WARN=0, FAILED=1""") in c.out
+        [Package sign] Summary: OK=2, FAILED=1""") in c.out
     # test json output
     c.run("cache sign * -f json", assert_error=True)
     assert "ERROR: There were some errors in the package signing process. " \
@@ -142,7 +134,7 @@ def test_pkg_sign_exception():
     assert results["lib/0.1"]["revisions"]["dbe307e08b1a344fef76f60c85c0c4e8"]["package sign"] == \
            "Failed: Error signing package"
     assert results["package/0.1"]["revisions"]["1fd0e5bcc411dcd3ff5b16024e2d7c04"]["package sign"]\
-           == "Success"
+           == "Signed"
     assert results["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]["package sign"] == \
            "Signed"
 
@@ -158,9 +150,6 @@ def test_pkg_verify_exception():
         def verify(ref, artifacts_folder, signature_folder, files):
             if "lib" in ref.repr_notime():
                 raise ConanException("Wrong signature")
-            elif "pkg" in ref.repr_notime():
-                return "Warning: message"
-            return "Success"
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
@@ -182,14 +171,14 @@ def test_pkg_verify_exception():
           revisions
             1fd0e5bcc411dcd3ff5b16024e2d7c04
               packages
-              package sign: Success
+              package sign: Verified
         pkg/0.1
           revisions
             485dad6cb11e2fa99d9afbe44a57a164
               packages
-              package sign: Warning: message
+              package sign: Verified
 
-        [Package sign] Summary: OK=1, WARN=1, FAILED=1""") in c.out
+        [Package sign] Summary: OK=2, FAILED=1""") in c.out
     # test json output
     c.run("cache verify * -f json", assert_error=True)
     assert "ERROR: There were some errors in the package signing process. " \
@@ -198,6 +187,6 @@ def test_pkg_verify_exception():
     assert results["lib/0.1"]["revisions"]["dbe307e08b1a344fef76f60c85c0c4e8"]["package sign"] == \
            "Failed: Wrong signature"
     assert results["package/0.1"]["revisions"]["1fd0e5bcc411dcd3ff5b16024e2d7c04"]["package sign"]\
-           == "Success"
+           == "Verified"
     assert results["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]["package sign"] == \
-           "Warning: message"
+           "Verified"

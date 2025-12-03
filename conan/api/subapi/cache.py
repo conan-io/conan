@@ -83,18 +83,58 @@ class CacheAPI:
     def sign(self, package_list):
         """Sign packages with the package signing plugin"""
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
-        pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder)
+        pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder, raise_if_no_plugin=True)
         app = ConanApp(self._conan_api)
         preparator = PackagePreparator(app, self._api_helpers.global_conf)
         preparator.prepare(package_list, [], force=True)
-        pkg_signer.sign(package_list, from_cache=True)
+
+        for rref, packages in package_list.items():
+            recipe_bundle = package_list.recipe_dict(rref)
+            if recipe_bundle:
+                rref_folder = cache.recipe_layout(rref).download_export()
+                try:
+                    pkg_signer.sign_pkg(rref, recipe_bundle.get("files", {}), rref_folder)
+                    recipe_bundle["package sign"] = "Signed"
+                except Exception as e:
+                    recipe_bundle["package sign"] = ConanException(f"Failed: {e}")
+            for pref in packages:
+                pkg_bundle = package_list.package_dict(pref)
+                if pkg_bundle:
+                    pref_folder = cache.pkg_layout(pref).download_package()
+                    try:
+                        pkg_signer.sign_pkg(pref, pkg_bundle.get("files", {}), pref_folder)
+                        pkg_bundle["package sign"] = "Signed"
+                    except Exception as e:
+                        pkg_bundle["package sign"] = ConanException(f"Failed: {e}")
         return package_list
 
     def verify(self, package_list):
         """Verify packages with the package signing plugin"""
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
-        pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder)
-        pkg_signer.verify_pkglist(package_list, from_cache=True)
+        pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder, raise_if_no_plugin=True)
+
+        for rref, packages in package_list.items():
+            recipe_bundle = package_list.recipe_dict(rref)
+            if recipe_bundle:
+                rref_folder = cache.recipe_layout(rref).download_export()
+                files = {file: os.path.join(rref_folder, file) for file in
+                         os.listdir(rref_folder) if not file.startswith(METADATA)}
+                try:
+                    pkg_signer.verify(rref, rref_folder, files)
+                    recipe_bundle["package sign"] = "Verified"
+                except Exception as e:
+                    recipe_bundle["package sign"] = ConanException(f"Failed: {e}")
+            for pref in packages:
+                pkg_bundle = package_list.package_dict(pref)
+                if pkg_bundle:
+                    pref_folder = cache.pkg_layout(pref).download_package()
+                    files = {file: os.path.join(pref_folder, file) for file in
+                             os.listdir(pref_folder) if not file.startswith(METADATA)}
+                    try:
+                        pkg_signer.verify(pref, pref_folder, files)
+                        pkg_bundle["package sign"] = "Verified"
+                    except Exception as e:
+                        pkg_bundle["package sign"] = ConanException(f"Failed: {e}")
         return package_list
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True,

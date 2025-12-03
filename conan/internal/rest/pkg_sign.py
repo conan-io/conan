@@ -8,7 +8,7 @@ from conan.internal.util.files import mkdir
 
 
 class PkgSignaturesPlugin:
-    def __init__(self, cache, home_folder):
+    def __init__(self, cache, home_folder, raise_if_no_plugin=False):
         self._cache = cache
         signer = HomePaths(home_folder).sign_plugin_path
         self._plugin_sign_function = self._plugin_verify_function = None
@@ -20,76 +20,42 @@ class PkgSignaturesPlugin:
                 self._plugin_verify_function = mod.verify
             except AttributeError:
                 pass
+        if not self.is_configured and raise_if_no_plugin:
+            raise ConanException(f"[Package sign] Plugin not configured at {signer}. The file does "
+                                 f"not exist or any of the sing() / verify() functions are missing.")
 
-    def sign(self, upload_data, from_cache=False):
-        if self._plugin_sign_function is None or self._plugin_verify_function is None:
-            if not from_cache:
-                # Not raise if plugin is not configured and this is called from an upload command
-                return
-            raise ConanException("[Package sign] Plugin not configured. Both sign() and verify() "
-                                 "functions should be defined.")
+    @property
+    def is_configured(self):
+        """Returns false if any of the sign or verify functions are missing"""
+        return self._plugin_sign_function is not None and self._plugin_verify_function is not None
 
-        def _sign(ref, files, folder):
-            metadata_sign = os.path.join(folder, METADATA, "sign")
-            mkdir(metadata_sign)
-            # TODO: Consider creating the package sign summary file by default and check after
-            #  calling the plugins' sign function that provider and method fields are filled.
-            try:
-                result = self._plugin_sign_function(ref, artifacts_folder=folder,
-                                                    signature_folder=metadata_sign)
-                for f in os.listdir(metadata_sign):
-                    files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
-            except Exception as e:
-                if not from_cache:
-                    raise ConanException(f"[Package sign] {e}")
-                else:
-                    result = f"Failed: {e}"
-            return result if result is not None else "Signed"
+    def sign_pkg(self, ref, files, folder):
+        metadata_sign = os.path.join(folder, METADATA, "sign")
+        mkdir(metadata_sign)
+        # TODO: Consider creating the package sign summary file by default and check after
+        #  calling the plugins' sign function that provider and method fields are filled.
+        self._plugin_sign_function(ref, artifacts_folder=folder, signature_folder=metadata_sign)
+        for f in os.listdir(metadata_sign):
+            files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
+
+    def sign(self, upload_data):
+        if not self.is_configured:
+            return
 
         for rref, packages in upload_data.items():
             recipe_bundle = upload_data.recipe_dict(rref)
             if recipe_bundle:
                 files = recipe_bundle.get("files", {})
-                recipe_result = _sign(rref, files, self._cache.recipe_layout(rref).download_export())
-                recipe_bundle["package sign"] = recipe_result
+                self.sign_pkg(rref, files, self._cache.recipe_layout(rref).download_export())
             for pref in packages:
                 pkg_bundle = upload_data.package_dict(pref)
                 if pkg_bundle:
                     files = pkg_bundle.get("files", {})
-                    pkg_result = _sign(pref, files, self._cache.pkg_layout(pref).download_package())
-                    pkg_bundle["package sign"] = pkg_result
+                    self.sign_pkg(pref, files, self._cache.pkg_layout(pref).download_package())
 
-    def verify(self, ref, folder, files, from_cache=False):
-        if self._plugin_verify_function is None or self._plugin_sign_function is None:
-            if not from_cache:
-                # Not raise if plugin is not configured and this is called from an install command
-                return
-            raise ConanException("[Package sign] Plugin not configured. Both sign() and verify() "
-                                 "functions should be defined.")
+    def verify(self, ref, folder, files):
+        if not self.is_configured:
+            return
         metadata_sign = os.path.join(folder, METADATA, "sign")
-        try:
-            result = self._plugin_verify_function(ref, artifacts_folder=folder,
-                                                  signature_folder=metadata_sign,
-                                                  files=files)
-        except Exception as e:
-            if not from_cache:
-                raise ConanException(f"[Package sign] {e}")
-            else:
-                result = f"Failed: {e}"
-        return result if result is not None else "Verified"
-
-    def verify_pkglist(self, pkg_list, from_cache=False):
-        for rref, packages in pkg_list.items():
-            recipe_bundle = pkg_list.recipe_dict(rref)
-            if recipe_bundle:
-                rref_folder = self._cache.recipe_layout(rref).download_export()
-                recipe_result = self.verify(rref, rref_folder, os.listdir(rref_folder),
-                                            from_cache=from_cache)
-                recipe_bundle["package sign"] = recipe_result
-            for pref in packages:
-                pkg_bundle = pkg_list.package_dict(pref)
-                if pkg_bundle:
-                    pref_folder = self._cache.pkg_layout(pref).download_package()
-                    pkg_result = self.verify(pref, pref_folder, os.listdir(pref_folder),
-                                             from_cache=from_cache)
-                    pkg_bundle["package sign"] = pkg_result
+        self._plugin_verify_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,
+                                     files=files)

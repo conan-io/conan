@@ -25,11 +25,27 @@ def _get_package_sign_error(pkg_list):
             if pkg_bundle:
                 signs.append(pkg_bundle.get("package sign"))
 
-    if any(_is_error_inline(sign) for sign in signs):
+    if any(isinstance(sign, Exception) for sign in signs):
         return ConanException("There were some errors in the package signing process. "
                               "Please check the output.")
     else:
         return None
+
+
+def print_package_sign_json(data):
+    """Converts the package sign Exception to string for JSON serialization and prints the result."""
+    results_dict = data.get("results", {})
+
+    def convert_exceptions(obj):
+        if isinstance(obj, dict):
+            return {k: convert_exceptions(v) for k, v in obj.items()}
+        elif isinstance(obj, Exception):
+            return str(obj)
+        else:
+            return obj
+
+    items = {ref: convert_exceptions(item) for ref, item in results_dict.items()}
+    print_list_json({"results": items})
 
 
 def print_package_sign_text(data):
@@ -62,11 +78,9 @@ def print_package_sign_text(data):
     print_serial(items)
 
     # Summary
-    signs_lower = [s.lower() for s in signs]
-    warn = sum("warn" in s for s in signs_lower)
-    fail = sum(("fail" in s) or ("error" in s) for s in signs_lower)
-    ok = len(signs) - warn - fail
-    cli_out_write(f"\n[Package sign] Summary: OK={ok}, WARN={warn}, FAILED={fail}")
+    fail = sum(isinstance(s, Exception) for s in signs)
+    ok = len(signs) - fail
+    cli_out_write(f"\n[Package sign] Summary: OK={ok}, FAILED={fail}")
 
 
 def json_export(data):
@@ -208,7 +222,7 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     ConanOutput().success("Integrity check: ok")
 
 @conan_subcommand(formatters={"text": print_package_sign_text,
-                              "json": print_list_json})
+                              "json": print_package_sign_json})
 def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
     """
     Sign packages with the Package Signing Plugin
@@ -244,7 +258,7 @@ def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
 
 
 @conan_subcommand(formatters={"text": print_package_sign_text,
-                              "json": print_list_json})
+                              "json": print_package_sign_json})
 def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
     """
     Check the signature of packages with the Package Signing Plugin
