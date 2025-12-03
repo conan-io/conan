@@ -85,7 +85,7 @@ def test_pkg_sign_exception():
     signer = textwrap.dedent(r"""
         from conan.errors import ConanException
 
-        def sign(ref, artifacts_folder, signature_folder):
+        def sign(ref, artifacts_folder, signature_folder, **kwargs):
             if "lib" in ref.repr_notime():
                 raise ConanException("Error signing package")
 
@@ -132,7 +132,7 @@ def test_pkg_verify_exception():
         def sign(ref, artifacts_folder, signature_folder, **kwargs):
             pass
 
-        def verify(ref, artifacts_folder, signature_folder, files):
+        def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
             if "lib" in ref.repr_notime():
                 raise ConanException("Wrong signature")
         """)

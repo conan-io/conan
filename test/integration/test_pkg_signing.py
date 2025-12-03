@@ -73,7 +73,7 @@ def test_pkg_sign_canonical():
         from conan.tools.pkg_signing.plugin import (create_summary_content, get_summary_file_path,
             load_summary, save_summary)
 
-        def sign(ref, artifacts_folder, signature_folder):
+        def sign(ref, artifacts_folder, signature_folder, **kwargs):
             ConanOutput().info(f"Signing reference {ref}")
             ConanOutput().info(f"Signing folder: {artifacts_folder}")
             c = create_summary_content(artifacts_folder)
@@ -91,7 +91,7 @@ def test_pkg_sign_canonical():
             save(None, f"{sfp}.sig", "")
             ConanOutput().info(f"Signature ok for {ref}")
 
-        def verify(ref, artifacts_folder, signature_folder, files):
+        def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
             ConanOutput().info(f"Verifying reference {ref}")
             sfp = get_summary_file_path(signature_folder)
             signature_file_path = f"{sfp}.sig"
