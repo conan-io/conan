@@ -11,23 +11,18 @@ class PkgSignaturesPlugin:
     def __init__(self, cache, home_folder, raise_if_no_plugin=False):
         self._cache = cache
         signer = HomePaths(home_folder).sign_plugin_path
-        self._plugin_sign_function = self._plugin_verify_function = None
         if os.path.isfile(signer):
             mod, _ = load_python_file(signer)
-            try:
-                # TODO: At the moment it requires both methods sign and verify, but that might be relaxed
-                self._plugin_sign_function = mod.sign
-                self._plugin_verify_function = mod.verify
-            except AttributeError:
-                pass
-        if not self.is_configured and raise_if_no_plugin:
+            # TODO: At the moment it requires both methods sign and verify, but that might be relaxed
+            self._plugin_sign_function = getattr(mod, "sign", None)
+            self._plugin_verify_function = getattr(mod, "verify", None)
+        else:
+            self._plugin_sign_function = self._plugin_verify_function = None
+
+        if (raise_if_no_plugin and
+            (self._plugin_sign_function is None or self._plugin_verify_function is None)):
             raise ConanException(f"[Package sign] Plugin not configured at {signer}. The file does "
                                  f"not exist or any of the sing() / verify() functions are missing.")
-
-    @property
-    def is_configured(self):
-        """Returns false if any of the sign or verify functions are missing"""
-        return self._plugin_sign_function is not None and self._plugin_verify_function is not None
 
     def sign_pkg(self, ref, files, folder):
         metadata_sign = os.path.join(folder, METADATA, "sign")
@@ -39,22 +34,22 @@ class PkgSignaturesPlugin:
             files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
 
     def sign(self, upload_data):
-        if not self.is_configured:
+        if self._plugin_sign_function is None:
             return
 
         for rref, packages in upload_data.items():
             recipe_bundle = upload_data.recipe_dict(rref)
-            if recipe_bundle:
-                files = recipe_bundle.get("files", {})
-                self.sign_pkg(rref, files, self._cache.recipe_layout(rref).download_export())
+            if recipe_bundle["upload"]:
+                self.sign_pkg(rref, recipe_bundle["files"],
+                              self._cache.recipe_layout(rref).download_export())
             for pref in packages:
                 pkg_bundle = upload_data.package_dict(pref)
-                if pkg_bundle:
-                    files = pkg_bundle.get("files", {})
-                    self.sign_pkg(pref, files, self._cache.pkg_layout(pref).download_package())
+                if pkg_bundle["upload"]:
+                    self.sign_pkg(pref, pkg_bundle["files"],
+                                  self._cache.pkg_layout(pref).download_package())
 
     def verify(self, ref, folder, files):
-        if not self.is_configured:
+        if self._plugin_verify_function is None:
             return
         metadata_sign = os.path.join(folder, METADATA, "sign")
         self._plugin_verify_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,

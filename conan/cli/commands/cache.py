@@ -12,9 +12,6 @@ from conan.api.model import RecipeReference
 
 
 def _get_package_sign_error(pkg_list):
-    def _is_error_inline(sign):
-        return bool(sign) and ("error" in sign.lower() or "fail" in sign.lower())
-
     signs = []
     for rref, packages in pkg_list.items():
         recipe_bundle = pkg_list.recipe_dict(rref)
