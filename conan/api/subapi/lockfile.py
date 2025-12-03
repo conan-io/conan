@@ -59,7 +59,7 @@ class LockfileAPI:
         # The package_type is not fully processed at export
         is_python_require = conanfile.package_type == "python-require"
         is_require = not is_python_require and not is_build_require
-        if hasattr(conanfile, "python_requires"):
+        if is_python_require and hasattr(conanfile, "python_requires"):
             python_requires = conanfile.python_requires.all_refs()
         else:
             python_requires = []

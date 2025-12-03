@@ -96,7 +96,8 @@ def test_lock_pyrequires_prereleases():
     dep_rrev = tc.exported_recipe_revision()
     tc.run("lock create app --lockfile-out=app.lock", assert_error=True)
     # Makes sense, prereleases are not active
-    assert "Version range '>=0' from requirement 'dep/[>=0]' required by 'python_requires' could not be resolved"
+    assert ("Version range '>=0' from requirement 'dep/[>=0]' required by "
+            "'python_requires' could not be resolved") in tc.out
 
     tc.save_home({"global.conf": "core.version_ranges:resolve_prereleases=True"})
     # This used to crash even with the conf activated
@@ -134,11 +135,66 @@ def test_lock_pyrequires_export_transitive():
 
 
 def test_lock_export_transitive_pyrequire():
+    # https://github.com/conan-io/conan/issues/19340 was producing errors, it seems
+    # that exclusively the exported ref should be added to the lockfile, or if it is a
+    # python require, then the transitive python-requires, but not the python-requires of a
+    # regular package
     c = TestClient(light=True)
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("python-require"),
-            "pkg/conanfile.py": GenConanfile("pkg", "0.1") .with_python_requires("dep/0.1")})
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("dep/0.1")})
     c.run("export dep")
     c.run("export pkg --lockfile-out=conan.lock")
     lock = json.loads(c.load("conan.lock"))
     assert "pkg/0.1#dfd6bc1becb3915043a671111860baee" in lock["requires"][0]
+    assert lock["python_requires"] == []
+
+    # but if we create
+    c.run("create pkg --lockfile-out=conan.lock")
+    lock = json.loads(c.load("conan.lock"))
     assert "dep/0.1#5d31586a2a4355d68898875dc591009a" in lock["python_requires"][0]
+
+
+def test_pyrequires_test_package_lockfile_error():
+    # https://github.com/conan-io/conan/issues/19340
+    c = TestClient(light=True)
+    bar = textwrap.dedent("""
+        from conan import ConanFile
+        class Bar(ConanFile):
+            name = "bar"
+            version = "8.0.0"
+            python_requires = "conan-utils/[^1]"
+     """)
+    test_bar = textwrap.dedent("""
+        from conan import ConanFile
+        class TestBar(ConanFile):
+            python_requires = "conan-utils/[^1]"
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+            def test(self):
+                pass
+        """)
+    foo = textwrap.dedent("""
+        from conan import ConanFile
+        class Foo(ConanFile):
+            name = "foo"
+            version = "1.0"
+            python_requires = "conan-utils/1.7.1"
+            requires = "bar/[^8]"
+         """)
+
+    c.save({"utils/conanfile.py": GenConanfile("conan-utils").with_package_type("python-require"),
+            "bar/conanfile.py": bar,
+            "bar/test_package/conanfile.py": test_bar,
+            "foo/conanfile.py": foo})
+
+    c.run("create utils --version=1.7.1")
+    c.run("create utils --version=1.8.0")
+    c.run("create bar")
+    c.run("create foo --lockfile-out=conan.lock")
+    c.assert_listed_require({"conan-utils/1.7.1": "Cache",
+                             "conan-utils/1.8.0": "Cache"}, python=True)
+    assert "conan-utils/[^1]: conan-utils/1.8.0" in c.out
+    # It works, no longer fails
+    lock = json.loads(c.load("conan.lock"))
+    assert "conan-utils/1.8.0" in lock["python_requires"][0]
+    assert "conan-utils/1.7.1" in lock["python_requires"][1]
