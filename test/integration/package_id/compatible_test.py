@@ -4,7 +4,7 @@ import textwrap
 import pytest
 
 from conan.test.utils.env import environment_update
-from conan.test.utils.tools import TestClient, GenConanfile
+from conan.test.utils.tools import TestClient, GenConanfile, TestServer
 
 
 class TestCompatibleIDsTest:
@@ -900,6 +900,22 @@ class TestListOnlyCompatibilityOptimization:
         origin = "Cache" if not update else "Update (default)"
         tc2.assert_listed_binary({"protobuf/1.0": ("36d978cbb4dc35906d0fd438732d5e17cd1e388d",
                                                    origin)})
+
+    def test_multi_remote(self):
+        # https://github.com/conan-io/conan/issues/19342
+        c = TestClient(servers={"r1": TestServer(), "r2": TestServer()},
+                       inputs=["admin", "password"] * 2)
+
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("compiler")})
+        c.run(f"create . -s=compiler.cppstd=14")
+
+        c.run(f"upload * -r=r1 -c")
+        c.run(f"upload * -r=r2 -c")
+        c.run("remove * -c")
+        c.run(f"install --requires=pkg/0.1 -s=compiler.cppstd=17 "
+              "-cc core.graph:compatibility_mode=optimized")
+        # It doesn't crash
+        assert "pkg/0.1: Found 1 compatible configurations in remotes" in c.out
 
 
 def test_compatibility_remove_cppstd():
