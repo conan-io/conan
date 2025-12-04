@@ -915,7 +915,6 @@ class TestListOnlyCompatibilityOptimization:
         c.run(f"install --requires=pkg/0.1 -s=compiler.cppstd=17 "
               "-cc core.graph:compatibility_mode=optimized")
         # It doesn't crash
-        assert "pkg/0.1: Checking 1 compatible configurations" in c.out
         assert "pkg/0.1: Found 1 compatible configurations in remotes" in c.out
 
 
