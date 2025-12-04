@@ -33,7 +33,11 @@ def test_cache_integrity(use_pkglist, output_pkglist):
     if output_pkglist:
         arg += " --format=json"
 
-    t.run(f"cache check-integrity {arg}", assert_error=True, redirect_stdout="pkglist.json" if output_pkglist else None)
+    t.run(
+        f"cache check-integrity {arg}",
+        assert_error=True,
+        redirect_stdout="pkglist.json" if output_pkglist else None,
+    )
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: Integrity check: ok" in t.out
