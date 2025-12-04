@@ -76,7 +76,7 @@ class CacheAPI:
         Check if the recipes and packages are corrupted
         :parameter package_list: PackagesList to check
         :parameter return_pkg_list: If True, return a PackagesList with corrupted artifacts
-        :return PkgagesList with corrupted artifacts if return_pkg_list is True
+        :return PackagesList with corrupted artifacts if return_pkg_list is True
         :raises ConanExcepcion if there are corrupted artifacts and return_pkg_list is False
         """
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
