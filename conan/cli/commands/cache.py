@@ -120,23 +120,12 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
         conan_api.cache.clean(package_list)
 
 
-def handle_check_integrity_result(data):
-    """
-    Do not output anything when format is text. The command will output each check in real time.
-    Only raise if corrupted
-    """
-    if data["results"]["Local Cache"]:
-        raise ConanException("There are corrupted artifacts, check the error logs")
-    else:
-        ConanOutput().success("Integrity check: ok")
-
 def print_list_check_integrity_json(data):
     results = data["results"]
     myjson = json.dumps(results, indent=4)
     cli_out_write(myjson)
-    handle_check_integrity_result(data)
 
-@conan_subcommand(formatters={"text": handle_check_integrity_result,
+@conan_subcommand(formatters={"text": lambda _: (),
                               "json": print_list_check_integrity_json})
 def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     """
@@ -165,7 +154,8 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
 
     corrupted_artifacts = conan_api.cache.check_integrity(package_list, return_pkg_list=True)
-    return {"results": {"Local Cache": corrupted_artifacts.serialize()}}
+    return {"results": {"Local Cache": corrupted_artifacts.serialize()},
+            "conan_error": "There are corrupted artifacts, check the error logs" if corrupted_artifacts else ""}
 
 
 @conan_subcommand(formatters={"text": print_list_text,
