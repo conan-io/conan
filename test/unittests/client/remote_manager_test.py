@@ -36,7 +36,7 @@ class TestRemoteManager:
             "Two_file.txt": os.path.join(folder, "Two_file.txt"),
         }
 
-        path = compress_files(files, "conan_package.txz", dest_dir=folder, compressformat="xz")
+        path = compress_files(files, "conan_package.txz", dest_dir=folder)
         assert os.path.exists(path)
         expected_path = os.path.join(folder, "conan_package.txz")
         assert path == expected_path
@@ -64,7 +64,7 @@ class TestRemoteManager:
             "Two_file.txt": os.path.join(folder, "Two_file.txt"),
         }
 
-        path = compress_files(files, "conan_package.tzst", dest_dir=folder, compressformat="zstd")
+        path = compress_files(files, "conan_package.tzst", dest_dir=folder)
         assert os.path.exists(path)
         expected_path = os.path.join(folder, "conan_package.tzst")
         assert path == expected_path
