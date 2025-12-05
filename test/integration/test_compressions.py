@@ -93,3 +93,52 @@ def test_unsupported_zstd():
     c.run("install --requires=pkg/0.1", assert_error=True)
     assert ("ERROR: File conan_package.tzst compressed with 'zst', unsupported "
             "for Python<3.14") in c.out
+
+
+class TestDuplicatedInServerErrors:
+
+    def test_duplicated_export(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1"),
+                "conandata.yml": ""})
+        c.run("export")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        c.run("export")
+        c.run("upload * -r=default -c -cc core.upload:compression_format=xz --force")
+        assert ("WARN: risk: The xz compression is highly experimental, use it at your "
+                "own risk and expect issues" in c.out)
+
+        c.run("remove * -c")
+        c.run("install --requires=pkg/0.1", assert_error=True)
+        assert ("it contains more than one compressed file: "
+                "['conan_export.tgz', 'conan_export.txz']") in c.out
+
+    def test_duplicated_source(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports_sources("*.h"),
+                "myheader.h": "content"})
+        c.run("export")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        c.run("export")
+        c.run("upload * -r=default -c -cc core.upload:compression_format=xz --force")
+
+        c.run("remove * -c")
+        c.run("install --requires=pkg/0.1 --build=missing", assert_error=True)
+        assert ("it contains more than one compressed file: "
+                "['conan_sources.tgz', 'conan_sources.txz']") in c.out
+
+    def test_duplicated_package(self):
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        c.run("create")
+        c.run("upload * -r=default -c -cc core.upload:compression_format=xz --force")
+
+        c.run("remove * -c")
+        c.run("install --requires=pkg/0.1", assert_error=True)
+        assert ("it contains more than one compressed file: "
+                "['conan_package.tgz', 'conan_package.txz']") in c.out

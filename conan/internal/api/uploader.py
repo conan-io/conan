@@ -89,6 +89,11 @@ class PackagePreparator:
         # No compressed file exists, need to compress
         compressformat = self._global_conf.get("core.upload:compression_format",
                                                default="gz", choices=COMPRESSIONS)
+        if compressformat in ("xz", "zst"):
+            ConanOutput().warning(f"The {compressformat} compression is highly experimental, "
+                                  f"use it at your own risk and expect issues. Feedback welcome, "
+                                  f"please report it as Github tickets",
+                                  warn_tag="risk")
         if compressformat == "zst" and sys.version_info.minor < 14:
             raise ConanException("The 'core.upload:compression_format=zst' is only for Python>=3.14")
         compresslevel = self._global_conf.get("core:compresslevel", check_type=int)
@@ -206,8 +211,7 @@ class PackagePreparator:
         file_name = filename + self._compressformat
         package_file = os.path.join(download_folder, file_name)
         compressed_path = compress_files(files, file_name, download_folder,
-                                         compresslevel=self._compresslevel,
-                                         compressformat=self._compressformat, ref=ref)
+                                         compresslevel=self._compresslevel, ref=ref)
         assert compressed_path == package_file
         assert os.path.exists(package_file)
         return file_name
@@ -300,21 +304,20 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     return t
 
 
-def compress_files(files, name, dest_dir, compressformat=None, compresslevel=None, ref=None,
-                   recursive=False):
+def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursive=False):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
     if ref:
         ConanOutput(scope=str(ref) if ref else None).info(f"Compressing {name}")
 
-    if compressformat == "zst":
+    if name.endswith("zst"):
         with tarfile.open(tgz_path, "w:zst", level=compresslevel) as tar:  # noqa Py314 only
             for filename, abs_path in sorted(files.items()):
                 tar.add(abs_path, filename, recursive=recursive)
         return tgz_path
 
-    if compressformat == "xz":
+    if name.endswith("xz"):
         with tarfile.open(tgz_path, "w:xz", preset=compresslevel, format=tarfile.PAX_FORMAT) as tar:
             for filename, abs_path in sorted(files.items()):
                 tar.add(abs_path, filename, recursive=recursive)

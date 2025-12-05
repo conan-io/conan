@@ -10,7 +10,7 @@ from uuid import getnode as get_mac
 
 from conan.api.output import ConanOutput
 from conan.internal.paths import EXPORT_SOURCES_FILE_NAME, CONANINFO, CONAN_MANIFEST, \
-    EXPORT_FILE_NAME
+    EXPORT_FILE_NAME, PACKAGE_FILE_NAME
 from conan.internal.rest.caching_file_downloader import ConanInternalCacheDownloader
 from conan.internal.rest import response_to_str
 from conan.internal.rest.client_routes import ClientV2Router
@@ -239,8 +239,11 @@ class RestV2Methods:
         result = {}
 
         if not only_metadata:
-            accepted_files = ["conanfile.py", EXPORT_FILE_NAME, CONAN_MANIFEST,  "metadata/sign"]
+            accepted_files = ["conanfile.py", CONAN_MANIFEST,  "metadata/sign"]
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
+            export_file = self._find_compressed_file(ref, server_files, EXPORT_FILE_NAME)
+            if export_file is not None:
+                files.append(export_file)
             # If we didn't indicated reference, server got the latest, use absolute now, it's safer
             urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
             self._download_and_save_files(urls, dest_folder, files, parallel=True)
@@ -259,10 +262,10 @@ class RestV2Methods:
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        sources_file = next((f for f in files if EXPORT_SOURCES_FILE_NAME in f), None)
-        if sources_file is None:
+        src_file = self._find_compressed_file(ref, files, EXPORT_SOURCES_FILE_NAME)
+        if src_file is None:
             return None
-        files = [sources_file, ]
+        files = [src_file, ]
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
@@ -270,20 +273,28 @@ class RestV2Methods:
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
 
+    @staticmethod
+    def _find_compressed_file(ref, server_files, artifact, exists=False):
+        pkg_files = [f for f in server_files if f.startswith(artifact)]
+        if len(pkg_files) > 1:
+            raise ConanException(f"{ref} is corrupted in the server, it contains "
+                                 f"more than one compressed file: {pkg_files}")
+        if not pkg_files:
+            if not exists:
+                return None
+            raise ConanException(f"Recipe {ref} is corrupted in the server, it doesn't contain "
+                                 f"a {artifact} file")
+        return pkg_files[0]
+
     def get_package(self, pref, dest_folder, metadata, only_metadata):
         url = self.router.package_snapshot(pref)
         data = self._get_file_list_json(url)
         server_files = data["files"]
         result = {}
-        pkg_files = [f for f in server_files if f.startswith("conan_package.")]
-        if len(pkg_files) > 1:
-            raise ConanException(f"Package {pref} is corrupted in the server, it contains "
-                                 f"more than one package file: {pkg_files}")
         # Download only known files, but not metadata (except sign)
         if not only_metadata:  # Retrieve package first, then metadata
-            accepted_files = [CONANINFO, CONAN_MANIFEST, "metadata/sign"]
-            if len(pkg_files) == 1:
-                accepted_files.append(pkg_files[0])
+            pkg_file = self._find_compressed_file(pref, server_files, PACKAGE_FILE_NAME, exists=True)
+            accepted_files = [CONANINFO, pkg_file, CONAN_MANIFEST, "metadata/sign"]
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
             # If we didn't indicated reference, server got the latest, use absolute now, it's safer
             urls = {fn: self.router.package_file(pref, fn) for fn in files}

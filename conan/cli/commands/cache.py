@@ -185,6 +185,9 @@ def cache_save(conan_api: ConanAPI, parser, subparser, *args):
     else:
         ref_pattern = ListPattern(args.pattern)
         package_list = conan_api.list.select(ref_pattern)
+    if args.file and not args.file.endswith(".tgz"):
+        ConanOutput().warning("Compression using other than .tgz is experimental. Use .tzx or "
+                              ".tzst (Python>=3.14 only) extensions for other formats")
     tgz_path = make_abs_path(args.file or "conan_cache_save.tgz")
     conan_api.cache.save(package_list, tgz_path, args.no_source)
     return {"results": {"Local Cache": package_list.serialize()}}

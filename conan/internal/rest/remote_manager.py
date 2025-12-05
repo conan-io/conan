@@ -186,10 +186,8 @@ class RemoteManager:
                 if f not in zipped_files:
                     raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: no {f}")
 
-            package_file = next((f for f in zipped_files if PACKAGE_FILE_NAME in f), None)
-            if not package_file:
-                raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: "
-                                     f"no conan_package found")
+            # This is guaranteed to exists, otherwise RestClient would have raised already
+            package_file = next(f for f in zipped_files if PACKAGE_FILE_NAME in f)
             self._signer.verify(pref, download_pkg_folder, zipped_files)
 
             tgz_file = zipped_files.pop(package_file)
@@ -346,7 +344,7 @@ class RemoteManager:
 
 
 def uncompress_file(src_path, dest_folder, scope=None):
-    if sys.version_info.major < 14 and src_path.endswith(".tzst"):
+    if sys.version_info.minor < 14 and src_path.endswith(".tzst"):
         raise ConanException(f"File {os.path.basename(src_path)} compressed with 'zst', "
                              f"unsupported for Python<3.14 ")
     try:
