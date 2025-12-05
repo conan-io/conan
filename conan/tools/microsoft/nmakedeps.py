@@ -5,7 +5,7 @@ from conan.tools import CppInfo
 from conan.tools.env import Environment
 
 
-class NMakeDeps(object):
+class NMakeDeps:
 
     def __init__(self, conanfile):
         """

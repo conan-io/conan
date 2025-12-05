@@ -279,19 +279,18 @@ class GraphBinariesAnalyzer:
         Get available package ids in remotes for the given node reference
         """
         results = {}
-        for r in remotes:
+        for remote in remotes:
             try:
-                remote_packages = self._remote_manager.search_packages(r, ref, list_only=True)
-                if remote_packages:
-                    for ref in remote_packages:
-                        results.setdefault(ref.package_id, []).append(r)
+                remote_prefs = self._remote_manager.search_packages(remote, ref, list_only=True)
+                if remote_prefs:
+                    for remote_pref in remote_prefs:
+                        results.setdefault(remote_pref.package_id, []).append(remote)
             except NotFoundException:
                 # Not finding the reference in the remote is not an error, just continue
                 pass
             except ConanConnectionError:
-                ConanOutput().error(
-                    f"Failed finding for package ids '{ref}' in remote '{r.name}': "
-                    "remote not available")
+                ConanOutput().error(f"Failed finding for package ids '{ref}' in "
+                                    f"remote '{remote.name}': remote not available")
                 raise
 
         return results
@@ -546,8 +545,8 @@ class GraphBinariesAnalyzer:
                                 "is available.\n"
                                 "    Enable it by setting the ", newline=False)
              .info('core.graph:compatibility_mode=optimized', newline=False, fg=Color.BRIGHT_YELLOW)
-             .info(" conf\n"
-                   "    and get improved performance when querying multiple compatible binaries in remotes.\n"))
+             .info(" conf\n    and get improved performance when querying multiple "
+                   "compatible binaries in remotes.\n"))
 
         # Last level is always necessarily a consumer or a virtual
         assert len(levels[-1]) == 1
