@@ -12,15 +12,15 @@ from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 
 
-@pytest.mark.parametrize("platform, tool", [
+@pytest.mark.parametrize("system, tool", [
     ("Linux", "apt-get"),
     ("Windows", "choco"),
     ("Darwin", "brew"),
     ("Solaris", "pkgutil"),
 ])
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
-def test_package_manager_platform(platform, tool):
-    with mock.patch("platform.system", return_value=platform):
+def test_package_manager_platform(system, tool):
+    with mock.patch("platform.system", return_value=system):
         with mock.patch("distro.id", return_value=''):
             with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
                 context_mock.return_value = "host"

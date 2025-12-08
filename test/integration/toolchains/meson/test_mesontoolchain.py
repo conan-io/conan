@@ -825,6 +825,7 @@ def test_conf_extra_apple_flags():
     for flags in ["objcpp_args", "objc_args"]:
         assert f"{flags} = ['-fno-objc-arc', '-m64', '-fvisibility=hidden', '-fvisibility-inlines-hidden']" in tc
 
+
 @pytest.mark.parametrize(
     "threads, flags",
     [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],

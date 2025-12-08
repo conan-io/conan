@@ -362,11 +362,10 @@ class TestLockUpdate:
         assert new in lock
 
 
-
 class TestLockUpgrade:
     @pytest.mark.parametrize("kind, pkg, old, new", [
         ("requires", "math", "math/1.0", "math/1.1"),
-        ("build-requires", "cmake", "cmake/1.0", "cmake/1.1"),     # TODO there is not a --build-requires
+        ("build-requires", "cmake", "cmake/1.0", "cmake/1.1"),  # TODO there isn't a --build-requires
         # ("python-requires", "mytool", "mytool/1.0", "mytool/1.1"), # TODO nor a --python-requires
     ])
     def test_lock_upgrade(self, kind, pkg, old, new):
@@ -384,10 +383,8 @@ class TestLockUpgrade:
         rev1 = c.exported_recipe_revision()
         c.run(f"lock upgrade --{kind_create}={pkg}/[*] --update-{kind}={pkg}/[*]")
         lock = c.load("conan.lock")
-        print(lock)
         assert f"{old}#{rev0}" not in lock
         assert f"{new}#{rev1}" in lock
-
 
     def test_lock_upgrade_path(self):
         c = TestClient(light=True)
@@ -435,7 +432,6 @@ class TestLockUpgrade:
         lock = c.load("conan.lock")
         assert "libd/1.1" in lock
         assert "libd/1.2" not in lock
-
 
     def test_lock_upgrade_new_requirement(self):
         c = TestClient(light=True)

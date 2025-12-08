@@ -236,7 +236,7 @@ class TestPackageID:
         """
         client = TestClient(light=True)
         client.save_home({"global.conf":
-                              "core.package_id:default_unknown_mode=recipe_revision_mode"})
+                          "core.package_id:default_unknown_mode=recipe_revision_mode"})
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.0#r1",
                      "profile2": "[platform_requires]\ndep/1.0#r2"})

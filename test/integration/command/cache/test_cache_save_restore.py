@@ -14,7 +14,6 @@ from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 from conan.internal.util.files import save, load
 
 
-
 def test_cache_save_restore():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile().with_settings("os")})
@@ -199,7 +198,8 @@ def test_cache_save_restore_metadata():
 
 
 # FIXME: check the timestamps of the conan cache restore
-@pytest.mark.skipif(platform.system() == "Windows", reason="Fails in windows in ci because of the low precission of the clock")
+@pytest.mark.skipif(platform.system() == "Windows",
+                    reason="Fails in windows in ci because of the low precission of the clock")
 def test_cache_save_restore_multiple_revisions():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
@@ -213,7 +213,6 @@ def test_cache_save_restore_multiple_revisions():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("var=123")})
     c.run("create .")
     rrev3 = c.exported_recipe_revision()
-
 
     def check_ordered_revisions(client):
         client.run("list *#* --format=json")
