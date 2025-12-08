@@ -640,3 +640,27 @@ def test_package_info_extra_variables():
     assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in target
     assert 'set(FOO 42)' in target
     assert 'set(CACHE_VAR_DEFAULT_DOC "hello world" CACHE PATH "CACHE_VAR_DEFAULT_DOC")' in target
+
+
+def test_target_defines_only():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def package_info(self):
+                self.cpp_info.components["base"].includedirs = []
+                self.cpp_info.components["base"].defines = ["FOO=1"]
+                self.cpp_info.components["comp"].includedirs = ["include"]
+                self.cpp_info.components["comp"].requires = ["base"]
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    client.run(f"install --requires=pkg/0.1 -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
+    target = client.load("pkg-Targets-release.cmake")
+    assert 'add_library(pkg::base INTERFACE IMPORTED)' in target
+    assert "# Requirement pkg::base => Full link: True" in target
