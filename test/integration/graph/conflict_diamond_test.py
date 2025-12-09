@@ -391,7 +391,10 @@ class TestConsistentTrait:
     def test_visible_order_issue(self):
         #  libc  -> libb/1.0 (static) -> liba/1.1 (header)
         #   \-------------------------------/
-        # Order mattered here
+        # Order doesn't matter here if using consistent=True
+        #  libc2 ---------------------> liba/1.1 (header)
+        #   \----> libb/1.0 (static) ------/
+        # Order matters here if using consistent=False
         #  libc2 ---------------------> liba/1.1 (header)
         #   \----> libb/1.0 (static) -> liba/1.2 (header)
         c = TestClient(light=True)
@@ -408,18 +411,30 @@ class TestConsistentTrait:
                                                                  .with_requirement("libb/1.0",
                                                                                    visible=False,
                                                                                    consistent=True),
+                "libc3/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+                                                                 .with_requirement("liba/1.1")
+                                                                 .with_requirement("libb/1.0",
+                                                                                   visible=False),
                 })
         c.run("export liba --version=1.0")
         c.run("export liba --version=1.1")
         c.run("export liba --version=1.2")
         c.run("export libb")
         c.run("graph info libc --format=json")
+        assert "liba/1.2" not in c.out
         graph = json.loads(c.stdout)
         assert len(graph["graph"]["nodes"]) == 3
 
+        # Different order, but consistent=True
         c.run("graph info libc2 --format=json")
+        assert "liba/1.2" not in c.out
         graph = json.loads(c.stdout)
         assert len(graph["graph"]["nodes"]) == 3
+
+        c.run("graph info libc3 --format=json")
+        assert "liba/1.2" in c.out
+        graph = json.loads(c.stdout)
+        assert len(graph["graph"]["nodes"]) == 4
 
     def test_visible_order_full_diamond_issue(self):
         # This is a conflict, because the depth-first graph resolution approach can't see
@@ -432,6 +447,10 @@ class TestConsistentTrait:
         # expanded first
         #  libc2 -----------> libd/1.0 (static) ---------> liba/1.1 (header)
         #   \--(v=F, c=T)---> libb/1.0 (static) --range-----/ (header)
+
+        # If not consistent, no conflcit
+        #  libc --(v=F, c=T)-> libb/1.0 (static) -(range)--> liba/1.2(header)
+        #   \----------------> libd/1.0 (static)-----------> liba/1.1 (header)
         c = TestClient(light=True)
         c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
                 "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
@@ -442,12 +461,16 @@ class TestConsistentTrait:
                                                                 .with_requirement("libb/1.0",
                                                                                   visible=False,
                                                                                   consistent=True)
-                                                                 .with_requirement("lib_d/1.0"),
+                                                                .with_requirement("lib_d/1.0"),
                 "libc2/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
                                                                  .with_requirement("lib_d/1.0")
                                                                  .with_requirement("libb/1.0",
                                                                                    visible=False,
                                                                                    consistent=True),
+                "libc3/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+                                                                 .with_requirement("lib_d/1.0")
+                                                                 .with_requirement("libb/1.0",
+                                                                                   visible=False),
                 })
         c.run("export liba --version=1.0")
         c.run("export liba --version=1.1")
@@ -456,18 +479,24 @@ class TestConsistentTrait:
         c.run("export libd")
         # This is still a conflict, the consistent=True raises this conflict
         c.run("graph info libc", assert_error=True)
-        assert "ERROR: Version conflict: Conflict between liba/1.1 and liba/1.2 in the graph" in c.out
+        assert "ERROR: Version conflict: Conflict between liba/1.1 and liba/1.2" in c.out
 
         c.run("graph info libc2 --format=json")
+        assert "liba/1.2" not in c.out
         graph = json.loads(c.stdout)
         assert len(graph["graph"]["nodes"]) == 4
+
+        c.run("graph info libc3 --format=json")
+        assert "liba/1.2" in c.out
+        graph = json.loads(c.stdout)
+        assert len(graph["graph"]["nodes"]) == 5
 
     def test_visible_consistent(self):
         c = TestClient(light=True)
         c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
                 "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
-                                                                 .with_requirement("liba/[>=1]",
-                                                                                   consistent=False),
+                                                                .with_requirement("liba/[>=1]",
+                                                                                  consistent=False),
                 })
         c.run("create liba --version=1.0")
         c.run("install libb", assert_error=True)
