@@ -278,7 +278,7 @@ class RestV2Methods:
         pkg_files = [f for f in server_files if f.startswith(artifact)]
         if len(pkg_files) > 1:
             raise ConanException(f"{ref} is corrupted in the server, it contains "
-                                 f"more than one compressed file: {pkg_files}")
+                                 f"more than one compressed file: {sorted(pkg_files)}")
         if not pkg_files:
             if not exists:
                 return None
