@@ -74,6 +74,7 @@ def valid_max_cstd(conanfile, cstd, gnu_extensions=False):
         return False
     return True
 
+
 def default_cstd(conanfile, compiler=None, compiler_version=None):
     """
     Get the default ``compiler.cstd`` for the "conanfile.settings.compiler" and "conanfile
@@ -89,6 +90,7 @@ def default_cstd(conanfile, compiler=None, compiler_version=None):
     if not compiler or not compiler_version:
         raise ConanException("Called default_cppstd with no compiler or no compiler.version")
     return default_cstd_(compiler, Version(compiler_version))
+
 
 def supported_cstd(conanfile, compiler=None, compiler_version=None):
     """

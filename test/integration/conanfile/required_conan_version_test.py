@@ -1,6 +1,6 @@
 import textwrap
 
-import mock
+from unittest import mock
 
 from conan import __version__
 from conan.test.utils.tools import TestClient

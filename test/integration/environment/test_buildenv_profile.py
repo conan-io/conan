@@ -132,3 +132,20 @@ def test_buildenv_package_patterns():
     assert "WARN: dep ENV:Foo" in client.out
     assert "WARN: pkg ENV:Foo2" in client.out
     assert "WARN: None ENV:Var" in client.out
+
+
+def test_buildenv_error_unset():
+    # https://github.com/conan-io/conan/issues/19285#issuecomment-3569891282
+    c = TestClient()
+    profile = textwrap.dedent("""
+        [buildenv]
+        CLASSPATH=!
+        OTHERPATH=
+        """)
+    c.save({"conanfile.txt": "",
+            "profile": profile})
+
+    c.run("install . -pr=profile -s:a os=Linux")
+    env = c.load("conanbuildenv.sh")
+    assert "unset CLASSPATH" in env
+    assert 'export OTHERPATH=""' in env

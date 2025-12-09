@@ -57,8 +57,15 @@ class GraphMissingError(GraphError):
         self.require = require
         self.missing_error = missing_error
 
+    def serialize(self):
+        return {"type": "missing",
+                "node": {"id": self.node.id, "ref": str(self.node.ref)},
+                "require": self.require.serialize(),
+                "error": self.missing_error}
+
     def __str__(self):
-        return f"Package '{self.require.ref}' not resolved: {self.missing_error}."
+        return (f"Package '{self.require.ref}' not resolved: {self.missing_error}. "
+                f"Required by '{self.node.ref or 'cli'}'")
 
 
 class GraphProvidesError(GraphError):
@@ -68,6 +75,14 @@ class GraphProvidesError(GraphError):
         self.conflicting_node = conflicting_node
         node.error = conflicting_node.error
 
+    def serialize(self):
+        return {"type": "provide_conflict",
+                "node": {"id": self.node.id, "ref": str(self.node.ref)},
+                "conflicting_node": {"id": self.conflicting_node.id,
+                                     "ref": str(self.conflicting_node.ref)},
+                "provided": self.node.conanfile.provides or self.conflicting_node.conanfile.provides}
+
     def __str__(self):
+        provides = self.node.conanfile.provides or self.conflicting_node.conanfile.provides
         return f"Provide Conflict: Both '{self.node.ref}' and '{self.conflicting_node.ref}' " \
-               f"provide '{self.node.conanfile.provides or self.conflicting_node.conanfile.provides}'."
+               f"provide '{provides}'."

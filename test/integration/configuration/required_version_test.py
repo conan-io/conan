@@ -1,5 +1,5 @@
 import os
-import mock
+from unittest import mock
 
 from conan import __version__
 from conan.test.utils.test_files import temp_folder

@@ -49,7 +49,7 @@ class BaseConanCommand:
     def _init_core_options(parser):
         # Define possible levels, including "" for verbose
         possible_levels = list(ConanOutput.valid_log_levels().keys())
-        possible_levels[possible_levels.index(None)] = ""
+        possible_levels.pop(possible_levels.index(None))
         parser.add_argument("-v", default="status", nargs='?',
                             help="Level of detail of the output. Valid options from less verbose "
                                  "to more verbose: -vquiet, -verror, -vwarning, -vnotice, -vstatus, "
@@ -116,7 +116,12 @@ class BaseConanCommand:
     def _dispatch_errors(info):
         if info and isinstance(info, dict):
             if info.get("conan_error"):
-                raise ConanException(info["conan_error"])
+                e = info["conan_error"]
+                # Storing and launching an exception is better than the string, as it keeps
+                # the correct backtrace for debugging.
+                if isinstance(e, Exception):
+                    raise e
+                raise ConanException(e)
             if info.get("conan_warning"):
                 ConanOutput().warning(info["conan_warning"])
 
@@ -152,6 +157,7 @@ class ConanCommand(BaseConanCommand):
         self._subcommands = {}
         self._group = group or "Other"
         self._name = method.__name__.replace("_", "-")
+        self._prog = self._name
 
     def add_subcommand(self, subcommand):
         subcommand.set_name(self.name)
@@ -159,7 +165,7 @@ class ConanCommand(BaseConanCommand):
 
     def run_cli(self, conan_api, *args):
         parser = ConanArgumentParser(conan_api, description=self._doc,
-                                     prog="conan {}".format(self._name),
+                                     prog="conan {}".format(self._prog),
                                      formatter_class=SmartFormatter)
         self._init_formatters(parser)
         self._init_core_options(parser)
@@ -182,7 +188,7 @@ class ConanCommand(BaseConanCommand):
 
     def run(self, conan_api, *args):
         parser = ConanArgumentParser(conan_api, description=self._doc,
-                                     prog="conan {}".format(self._name),
+                                     prog="conan {}".format(self._prog),
                                      formatter_class=SmartFormatter)
         self._init_formatters(parser)
         self._init_core_options(parser)

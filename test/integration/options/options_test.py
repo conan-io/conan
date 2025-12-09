@@ -505,6 +505,19 @@ class TestMultipleOptionsPatterns:
         assert "dep3/1.0: SHARED: True!!" in c.out
         assert "dep4/1.0: SHARED: True!!" in c.out
 
+    def test_pattern_version_range_warn(self):
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("foo", "1.0")})
+        c.run("create -o=foo/[>1]:shared=True")
+        assert "WARN: risk: Pattern foo/[>1] contains a version range" in c.out
+
+    def test_pattern_version_range_wrong_split(self):
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("foo", "1.0")})
+        c.run("create -o=foo/[>=1]:shared=True", assert_error=True)
+        # We split by the first =, so this version range we can't catch and warn before it breaks
+        assert "option 'foo/[>' doesn't exist" in c.out
+
 
 class TestTransitiveOptionsShared:
     """

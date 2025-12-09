@@ -75,6 +75,7 @@ class _ContainerConfig(NamedTuple):
             )
         )
 
+
 class DockerRunner:
     def __init__(self, conan_api: ConanAPI, command: str, host_profile: Profile, build_profile: Profile, args: Namespace, raw_args: list[str]):
         self.logger = ConanOutput()
@@ -119,7 +120,7 @@ class DockerRunner:
             raise ConanException(f'"{e.command}" inside docker fail')
         finally:
             if self.container:
-                error = sys.exc_info()[0] is not None # Check if error has been raised
+                error = sys.exc_info()[0] is not None  # Check if error has been raised
                 log = self.logger.error if error else self.logger.status
                 log('Stopping container')
                 self.container.stop()

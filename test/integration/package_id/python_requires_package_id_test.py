@@ -56,7 +56,7 @@ class TestPythonRequiresPackageID:
         self.client.run("export . --name=tool --version=1.1.2")
         self.client2.run("create . --name=pkg --version=0.1")
         assert "tool/1.1.2" in self.client2.out
-        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_2,"Build")})
+        self.client2.assert_listed_binary({"pkg/0.1": (PKG_ID_2, "Build")})
 
     def test_unrelated_conf(self):
         # change the policy in conan.conf
