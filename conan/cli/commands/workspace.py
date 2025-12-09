@@ -190,14 +190,17 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
             ref = RecipeReference.loads(elem["ref"])
             for package_level in elem["packages"]:
                 for package in package_level:
-                    if package["binary"] == "Build":  # Build external to Workspace
-                        cmd = f'install {package["build_args"]} {profile_args}'
-                        ConanOutput().box(f"Workspace building external {ref}")
-                        ConanOutput().info(f"Command: {cmd}\n")
-                        conan_api.command.run(cmd)
-                    elif package["binary"] in ("Editable", "EditableBuild"):
-                        path = all_editables[ref]["path"]
-                        output_folder = all_editables[ref].get("output_folder")
+                    ws_pkg = all_editables.get(ref)
+                    is_editable = package["binary"] in ("Editable", "EditableBuild")
+                    if ws_pkg is None:
+                        if is_editable or package["binary"] == "Build": # Build external to Workspace
+                            cmd = f'install {package["build_args"]} {profile_args}'
+                            ConanOutput().box(f"Workspace building external {ref}")
+                            ConanOutput().info(f"Command: {cmd}\n")
+                            conan_api.command.run(cmd)
+                    else:
+                        path = ws_pkg["path"]
+                        output_folder = ws_pkg.get("output_folder")
                         build_arg = "--build-require" if package["context"] == "build" else ""
                         ref_args = " ".join(f"--{k}={getattr(ref, k)}"
                                             for k in ("name", "version", "user", "channel")

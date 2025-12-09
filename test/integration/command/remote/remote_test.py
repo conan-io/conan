@@ -402,6 +402,7 @@ def test_allowed_packages_remotes():
     assert "app/1.0: Downloaded recipe revision 04ab3bc4b945a2ee44285962c277906d" in tc.out
     assert "liba/1.0: Downloaded recipe revision 4d670581ccb765839f2239cc8dff8fbd" not in tc.out
     assert "ERROR: Package 'liba/1.0' not resolved: Unable to find 'liba/1.0' in remotes" in tc.out
+    assert "Required by 'app/1.0'" in tc.out
     tc.run("remove * -c")
 
     tc.run('remote update default --allowed-packages="liba/*" --allowed-packages="app/*"')
