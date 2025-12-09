@@ -9,7 +9,7 @@ class Requirement:
     """
     def __init__(self, ref, *, headers=None, libs=None, build=False, run=None, visible=None,
                  transitive_headers=None, transitive_libs=None, test=None, package_id_mode=None,
-                 force=None, override=None, direct=None, options=None, no_skip=False):
+                 force=None, override=None, direct=None, options=None, no_skip=False, vendor=False):
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
@@ -37,6 +37,7 @@ class Requirement:
         self.skip = False
         self.required_nodes = set()  # store which intermediate nodes are required, to compute "Skip"
         self.no_skip = no_skip
+        self.vendor = vendor
 
     @property
     def files(self):  # require needs some files in dependency package

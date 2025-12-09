@@ -52,6 +52,9 @@ class DepsGraphBuilder:
                 (require, node) = open_requires.popleft()
                 if require.override:
                     continue
+                if require.vendor and not node.conanfile.conf.get("tools.graph:vendor",
+                                                                  choices=("build",)):
+                    continue
                 new_node = self._expand_require(require, node, dep_graph, profile_host,
                                                 profile_build, graph_lock)
                 if new_node and (not new_node.conanfile.vendor
@@ -450,7 +453,8 @@ class DepsGraphBuilder:
     @staticmethod
     def _remove_overrides(dep_graph):
         for node in dep_graph.nodes:
-            to_remove = [r for r in node.transitive_deps if r.override]
+            build = node.conanfile.conf.get("tools.graph:vendor", choices=("build",))
+            to_remove = [r for r in node.transitive_deps if r.override or (r.vendor and not build)]
             for r in to_remove:
                 node.transitive_deps.pop(r)
 
