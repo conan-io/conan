@@ -597,3 +597,17 @@ class TestListGraphContext:
         tc.run("list --graph=graph_context.json --graph-context=build-only --format=json",
                assert_error=True)
         assert "Note that the graph file should not be filtered" in tc.out
+
+    def test_build_only_binary_mismatch(self):
+        tc = TestClient(light=True)
+        tc.save({
+                "protobuf/conanfile.py": GenConanfile("protobuf", "1.0"),
+                "onnx/conanfile.py": GenConanfile("onnx", "1.0")
+                    .with_requires("protobuf/1.0")
+                    .with_tool_requires("protobuf/1.0")})
+
+        tc.run("create protobuf")
+        tc.run("create onnx")
+        tc.run("graph info --requires=onnx/1.0 -f=json", redirect_stdout="graph.json")
+        tc.run("list --graph=graph.json --graph-context=build-only --format=json")
+        assert "protobuf/1.0" not in tc.out
