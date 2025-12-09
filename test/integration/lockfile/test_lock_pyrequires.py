@@ -142,11 +142,6 @@ def test_lock_export_transitive_pyrequire():
     c.run("export pkg --lockfile-out=conan.lock")
     lock = json.loads(c.load("conan.lock"))
     assert "pkg/0.1#dfd6bc1becb3915043a671111860baee" in lock["requires"][0]
-    assert lock["python_requires"] == []
-
-    # but if we create
-    c.run("create pkg --lockfile-out=conan.lock")
-    lock = json.loads(c.load("conan.lock"))
     assert "dep/0.1#5d31586a2a4355d68898875dc591009a" in lock["python_requires"][0]
 
 
@@ -163,9 +158,8 @@ def test_pyrequires_test_package_lockfile_error():
     c.run("create utils --version=1.7.1")
     c.run("create utils --version=1.8.0")
     c.run("create bar --lockfile-out=bar.lock")
-    c.run("create foo")
-    c.assert_listed_require({"utils/1.7.1": "Cache",
-                             "utils/1.8.0": "Cache"}, python=True)
+    c.run("create foo", assert_error=True)
+    assert "Missing prebuilt package for 'bar/8.0'" in c.out
 
     c.run("create foo --lockfile=bar.lock --lockfile-partial --lockfile-out=foo.lock")
     c.assert_listed_require({"utils/1.7.1": "Cache",
@@ -211,29 +205,16 @@ def test_pyrequires_test_package_lockfile_error_forward():
     assert "Requirement 'utils/1.9.0' not in lockfile 'python_requires'" in c.out
 
     # we can relax the lockfile, and it will be able to resolve,
-    c.run("create foo --lockfile=bar.lock --lockfile-partial --lockfile-out=foo.lock")
-    c.assert_listed_require({"utils/1.8.0": "Cache",
-                             "utils/1.9.0": "Cache"}, python=True)
-    lock = json.loads(c.load("foo.lock"))
-    assert "utils/1.9.0" in lock["python_requires"][0]
-    assert "utils/1.8.0" in lock["python_requires"][1]
+    # but it will still fail with missing binary for bar
+    c.run("create foo --lockfile=bar.lock --lockfile-partial", assert_error=True)
+    assert "Missing prebuilt package for 'bar/8.0'" in c.out
 
-    # BUT this build is NOT REPRODUCIBLE with this lockfile!
-    c.run("create foo --lockfile=foo.lock", assert_error=True)
-    assert "ERROR: Missing prebuilt package for 'bar/8.0'" in c.out
+    c.run("create foo --lockfile=bar.lock --lockfile-partial --build=missing "
+          "--lockfile-out=foo.lock")
+    c.assert_listed_require({"utils/1.9.0": "Cache"}, python=True)
+    assert "utils/1.8.0" not in c.out
 
-    # The correct solution is to properly "lock create" the lockfile
-    c.run("lock create foo --lockfile=bar.lock --lockfile-out=foo.lock")
-    c.assert_listed_require({"utils/1.9.0": "Cache",
-                             "utils/1.8.0": "Cache"}, python=True)
-    lock = json.loads(c.load("foo.lock"))
-    assert "utils/1.9.0" in lock["python_requires"][0]
-    assert "utils/1.8.0" in lock["python_requires"][1]
-
-    # It will return build missing error
-    c.run("create foo --lockfile=foo.lock", assert_error=True)
-    assert "ERROR: Missing prebuilt package for 'bar/8.0'" in c.out
-
-    c.run("create foo --lockfile=foo.lock --build=missing")
+    # This build is reproducible with this lockfile
+    c.run("create foo --lockfile=foo.lock")
     c.assert_listed_require({"utils/1.9.0": "Cache"}, python=True)
     assert "utils/1.8.0" not in c.out
