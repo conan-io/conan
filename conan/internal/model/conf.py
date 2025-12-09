@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import numbers
 import platform
 import re
@@ -756,7 +757,8 @@ def load_global_conf(home_folder):
         content = template.render({"platform": platform, "os": os, "distro": distro,
                                    "conan_version": conan_version,
                                    "conan_home_folder": home_folder,
-                                   "detect_api": detect_api})
+                                   "detect_api": detect_api,
+                                   "hashlib": hashlib})
         new_config.loads(content)
     else:  # creation of a blank global.conf file for user convenience
         default_global_conf = textwrap.dedent("""\

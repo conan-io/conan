@@ -120,7 +120,13 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
         conan_api.cache.clean(package_list)
 
 
-@conan_subcommand()
+def print_list_check_integrity_json(data):
+    results = data["results"]
+    myjson = json.dumps(results, indent=4)
+    cli_out_write(myjson)
+
+@conan_subcommand(formatters={"text": lambda _: (),
+                              "json": print_list_check_integrity_json})
 def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     """
     Check the integrity of the local cache for the given references
@@ -146,8 +152,10 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     else:
         ref_pattern = ListPattern(args.pattern, rrev="*", package_id="*", prev="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
-    conan_api.cache.check_integrity(package_list)
-    ConanOutput().success("Integrity check: ok")
+
+    corrupted_artifacts = conan_api.cache.check_integrity(package_list, return_pkg_list=True)
+    return {"results": {"Local Cache": corrupted_artifacts.serialize()},
+            "conan_error": "There are corrupted artifacts, check the error logs" if corrupted_artifacts else ""}
 
 
 @conan_subcommand(formatters={"text": print_list_text,

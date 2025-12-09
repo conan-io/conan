@@ -469,7 +469,7 @@ def default_msvc_ide_version(version):
 
 def _detect_vs_ide_version():
     from conan.internal.api.detect.detect_vs import vs_installation_path
-    msvc_versions = "17", "16", "15"
+    msvc_versions = "18", "17", "16", "15"
     for version in msvc_versions:
         vs_path = os.getenv('vs%s0comntools' % version)
         path = vs_path or vs_installation_path(version)
