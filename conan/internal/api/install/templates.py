@@ -142,9 +142,9 @@ function global:{{func_name}} {
 {% endif -%}
 
 
-{% for varname, value in values.items() -%}
+{% for varname, (defined, value) in values.items() -%}
 if ($env:{{varname}}) { $env:{{old_env_prefix(filename)}}_{{varname}} = $env:{{varname}} }
-{% if value -%}
+{% if defined -%}
 Write-Verbose "Exporting {{varname}}={{value}}"
 $env:{{varname}}="{{value}}"
 {% else -%}
@@ -175,8 +175,8 @@ foreach ($var in $updated_vars)
 }
 Pop-Location
 {% endif %}
-{% for varname, value in values.items() -%}
-{% if value -%}
+{% for varname, (defined, value) in values.items() -%}
+{% if defined -%}
 $env:{{varname}}="{{value}}"
 {% else -%}
 if (Test-Path env:{{varname}}) { Write-Verbose "Unsetting {{varname}}"; Remove-Item env:{{varname}} }
@@ -212,9 +212,9 @@ sh_virtualenv_function_template = env.from_string(("""
 
 conan_verbose=${conan_verbose:-false}
 
-{% for varname, value in values.items() -%}
+{% for varname, (defined, value) in values.items() -%}
 {% raw %}if [ -n "${{% endraw %}{{ varname }}{% raw %}+x}" ]; then export {% endraw %}{{ old_env_prefix(filename) }}{% raw %}_{% endraw %}{{ varname }}{% raw %}="${{% endraw %}{{ varname }}{% raw %}}";fi{% endraw %}
-{% if value -%}
+{% if defined -%}
 ${conan_verbose} && echo "Exporting {{varname}}={{value}}"
 export {{varname}}="{{value}}"
 {% else -%}
@@ -242,8 +242,8 @@ do
 done
 {% endif %}
 
-{% for varname, value in values.items() -%}
-{% if value -%}
+{% for varname, (defined, value) in values.items() -%}
+{% if defined -%}
 export {{varname}}="{{value}}"
 {% else -%}
 unset {{varname}}

@@ -9,12 +9,16 @@ from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.toolchain.blocks import ExtraVariablesBlock, ToolchainBlocks, UserToolchain, \
-    GenericSystemBlock, \
-    AndroidSystemBlock, AppleSystemBlock, FPicBlock, ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock, \
-    CppStdBlock, ParallelBlock, CMakeFlagsInitBlock, TryCompileBlock, FindFiles, PkgConfigBlock, \
-    SkipRPath, SharedLibBock, OutputDirsBlock, ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock, \
-    VSDebuggerEnvironment, VariablesBlock, PreprocessorBlock
+from conan.tools.cmake.toolchain.blocks import (ExtraVariablesBlock, ToolchainBlocks,
+                                                UserToolchain, GenericSystemBlock,
+                                                AndroidSystemBlock, AppleSystemBlock, FPicBlock,
+                                                ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock,
+                                                CppStdBlock, ParallelBlock, CMakeFlagsInitBlock,
+                                                TryCompileBlock, FindFiles, PkgConfigBlock,
+                                                SkipRPath, SharedLibBock, OutputDirsBlock,
+                                                ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock,
+                                                VSDebuggerEnvironment, VariablesBlock,
+                                                PreprocessorBlock)
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
 from conan.tools.intel import IntelCC
@@ -201,15 +205,20 @@ class CMakeToolchain:
         if self._conanfile.conf.get("tools.cmake.cmaketoolchain:presets_environment", default="",
                                     check_type=str, choices=("disabled", "")) != "disabled":
 
-            build_env = self.presets_build_environment.vars(self._conanfile) if self.presets_build_environment else VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
-            run_env = self.presets_run_environment.vars(self._conanfile) if self.presets_run_environment else VirtualRunEnv(self._conanfile, auto_generate=True).vars()
+            build_env = self.presets_build_environment.vars(self._conanfile) \
+                if self.presets_build_environment \
+                else VirtualBuildEnv(self._conanfile, auto_generate=True).vars()
+            run_env = self.presets_run_environment.vars(self._conanfile) \
+                if self.presets_run_environment \
+                else VirtualRunEnv(self._conanfile, auto_generate=True).vars()
 
             buildenv = {name: value for name, value in
                         build_env.items(variable_reference="$penv{{{name}}}")}
             runenv = {name: value for name, value in
                       run_env.items(variable_reference="$penv{{{name}}}")}
 
-            cmake_executable = self._conanfile.conf.get("tools.cmake:cmake_program", None) or self._find_cmake_exe()
+            cmake_executable = self._conanfile.conf.get("tools.cmake:cmake_program", None)
+            cmake_executable = cmake_executable or self._find_cmake_exe()
 
         user_presets = self.user_presets_path
         try:  # TODO: Refactor this repeated pattern to deduce "is-consumer"

@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 
 import pytest
@@ -99,6 +100,30 @@ def test_unused_requirement(component):
            "by any '(cpp_info/components).requires'." in t.out
 
 
+def test_unused_requirement_not_propagated():
+    # https://github.com/conan-io/conan/issues/19026
+    t = TestClient()
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            requires = "header/0.1", "lib/0.1"
+
+            def package_info(self):
+                self.cpp_info.requires = ["lib::lib", "header::header"]
+    """)
+    t.save({"header/conanfile.py": GenConanfile("header", "0.1").with_package_type("header-library"),
+            "lib/conanfile.py": GenConanfile("lib", "0.1").with_package_type("static-library"),
+            "pkg/conanfile.py": conanfile,
+            "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")})
+    t.run('create header')
+    t.run('create lib')
+    t.run('create pkg')
+    t.run("install app")
+    assert re.search(r"Skipped binaries(\s*)header/0.1", t.out)
+
+
 @pytest.mark.parametrize("component", [True, False])
 def test_wrong_requirement(component):
     """ If we require a wrong requirement, we get a meaninful error.
@@ -137,28 +162,6 @@ def test_missing_internal(component):
     t.run('create . --name=wrong --version=version', assert_error=True)
     assert "ERROR: wrong/version: package_info(): There are '(cpp_info/components).requires' " \
            "to other internal components that are not defined: ['other', 'another']" in t.out
-
-
-def test_missing_external_components():
-    foo = textwrap.dedent("""
-        from conan import ConanFile
-        class Recipe(ConanFile):
-            name = "consumer"
-            version = "1.0"
-            requires = "foo/1.0", "bar/1.0"
-            def package_info(self):
-                self.cpp_info.components["comp1"].libs = []
-                self.cpp_info.components["comp2"].requires = ["comp1"]
-        """)
-    t = TestClient()
-    t.save({'bar/conanfile.py': GenConanfile("bar", "1.0"),
-            'foo/conanfile.py': GenConanfile("foo", "1.0"),
-            "consumer/conanfile.py": foo})
-    t.run('create foo')
-    t.run("create bar")
-    t.run('create consumer', assert_error=True)
-    assert ("package_info(): There are direct dependencies, "
-            "but no '(cpp_info/components).requires' to them.") in t.out
 
 
 def test_unused_tool_requirement():

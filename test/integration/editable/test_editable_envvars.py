@@ -27,10 +27,7 @@ def test_editable_envvars():
         """)
 
     c.save({"dep/conanfile.py": dep,
-            "pkg/conanfile.py": GenConanfile().with_settings("os")
-                                              .with_requires("dep/1.0")
-                                              .with_generator("VirtualBuildEnv")
-                                              .with_generator("VirtualRunEnv")})
+            "pkg/conanfile.py": GenConanfile().with_settings("os").with_requires("dep/1.0")})
     c.run("editable add dep  --name=dep --version=1.0")
     c.run("install pkg -s os=Linux -s:b os=Linux")
     build_path = os.path.join(c.current_folder, "dep", "mybuild", "mylocalbuild")
@@ -56,6 +53,103 @@ def test_editable_envvars():
     assert "mylocalsrc" not in runenv
 
 
+def test_editable_envvars_package_info():
+    """ if the ``layout()`` defines cpp.build.runenv_info/conf_info and the ``package_info()``
+    also defines them, the ``package_info()`` values have precedence. This is not symmetrical
+    with ``cpp_info.includedirs/xxxdirs``. The recommended solution is to use
+    ``self.layouts.package.runenvinfo/conf_info`` instead.
+    """
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Dep(ConanFile):
+            name = "dep"
+            version = "1.0"
+            def layout(self):
+                self.layouts.build.runenv_info.define("SOME_PATH", "mypath_layout")
+                self.cpp.build.includedirs = ["mylayoutinclude"]
+                self.layouts.build.conf_info.define("user:myconf", "mylayoutconf")
+
+            def package_info(self):
+                print("Running package_info!!")
+                self.runenv_info.define("SOME_PATH", "mypath_pkginfo")
+                self.cpp_info.includedirs = ["mypkginfoinclude"]
+                self.conf_info.define("user:myconf", "mypkginfoconf")
+        """)
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Dep(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            settings = "os", "build_type"
+            requires = "dep/1.0"
+            def generate(self):
+                myconf = self.dependencies["dep"].conf_info.get("user:myconf")
+                self.output.info(f"DEP CONFINFO {myconf}")
+        """)
+
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": pkg})
+    c.run("editable add dep ")
+    c.run("install pkg -s os=Linux -s:b os=Linux -g CMakeDeps")
+    assert "conanfile.py (pkg/1.0): DEP CONFINFO mylayoutconf" in c.out
+    cmake = c.load("pkg/dep-release-data.cmake")
+    assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/mylayoutinclude")' in cmake
+    runenv = c.load("pkg/conanrunenv-release.sh")
+    assert f'export SOME_PATH="mypath_layout"' in runenv
+
+
+def test_editable_envvars_package():
+    """ This test shows that ``self.layouts.package.runenvinfo/conf_info`` works, ignored
+    while in editable, but used when regular package
+    """
+    c = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Dep(ConanFile):
+            name = "dep"
+            version = "1.0"
+            def layout(self):
+                self.layouts.build.runenv_info.define("SOME_VALUE", "mypath_layout")
+                self.cpp.build.includedirs = ["mylayoutinclude"]
+                self.layouts.build.conf_info.define("user:myconf", "mylayoutconf")
+
+                self.layouts.package.runenv_info.define("SOME_VALUE", "mypath_pkginfo")
+                self.cpp.package.includedirs = ["mypkginfoinclude"]
+                self.layouts.package.conf_info.define("user:myconf", "mypkginfoconf")
+        """)
+    pkg = textwrap.dedent("""
+        from conan import ConanFile
+        class Dep(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            settings = "os", "build_type"
+            requires = "dep/1.0"
+            def generate(self):
+                myconf = self.dependencies["dep"].conf_info.get("user:myconf")
+                self.output.info(f"DEP CONFINFO {myconf}")
+        """)
+
+    c.save({"dep/conanfile.py": dep,
+            "pkg/conanfile.py": pkg})
+    c.run("editable add dep ")
+    c.run("install pkg -s os=Linux -s:b os=Linux -g CMakeDeps")
+    assert "conanfile.py (pkg/1.0): DEP CONFINFO mylayoutconf" in c.out
+    cmake = c.load("pkg/dep-release-data.cmake")
+    assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/mylayoutinclude")' in cmake
+    runenv = c.load("pkg/conanrunenv-release.sh")
+    assert f'export SOME_VALUE="mypath_layout"' in runenv
+
+    c.run("editable remove dep")
+    c.run("create dep")
+    c.run("install pkg -s os=Linux -s:b os=Linux -g CMakeDeps")
+    assert "conanfile.py (pkg/1.0): DEP CONFINFO mypkginfoconf" in c.out
+    cmake = c.load("pkg/dep-release-data.cmake")
+    assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/mypkginfoinclude")' in cmake
+    runenv = c.load("pkg/conanrunenv-release.sh")
+    assert f'export SOME_VALUE="mypath_pkginfo"' in runenv
+
+
 def test_editable_conf():
     c = TestClient()
     # TODO: Define if we want conf.xxxx_path(), instead of (..., path=True) methods
@@ -67,7 +161,8 @@ def test_editable_conf():
                 self.folders.build = "mybuild"
                 self.layouts.source.conf_info.append_path("user:myconf", "mylocalsrc")
                 self.layouts.build.conf_info.append_path("user:myconf", "mylocalbuild")
-                self.layouts.build.conf_info.update_path("user:mydictconf", {"a": "mypatha", "b": "mypathb"})
+                self.layouts.build.conf_info.update_path("user:mydictconf", {"a": "mypatha",
+                                                                             "b": "mypathb"})
                 self.layouts.build.conf_info.define_path("user:mydictconf2", {"c": "mypathc"})
         """)
 
@@ -80,7 +175,8 @@ def test_editable_conf():
                 self.output.info(f"CONF: {conf}")
                 dictconf = self.dependencies["dep"].conf_info.get("user:mydictconf", check_type=dict)
                 self.output.info(f"CONFDICT: {dictconf}")
-                dictconf2 = self.dependencies["dep"].conf_info.get("user:mydictconf2", check_type=dict)
+                dictconf2 = self.dependencies["dep"].conf_info.get("user:mydictconf2",
+                                                                   check_type=dict)
                 self.output.info(f"CONFDICT: {dictconf2}")
         """)
     c.save({"dep/conanfile.py": dep,

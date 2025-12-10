@@ -219,9 +219,9 @@ class RestV2Methods:
             ret.append(ref)
         return ret
 
-    def search_packages(self, ref):
+    def search_packages(self, ref, list_only):
         """Client is filtering by the query"""
-        url = self.router.search_packages(ref)
+        url = self.router.search_packages(ref, list_only)
         package_infos = self._get_json(url)
         return package_infos
 
@@ -356,7 +356,7 @@ class RestV2Methods:
         if response.status_code == 404:
             # Double check if it is a 404 because there are no packages
             try:
-                package_search_url = self.router.search_packages(ref)
+                package_search_url = self.router.search_packages(ref, list_only=True)
                 if not self._get_json(package_search_url):
                     return
             except Exception as e:

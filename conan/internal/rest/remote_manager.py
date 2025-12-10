@@ -61,6 +61,7 @@ class RemoteManager:
         local_folder_remote = self._local_folder_remote(remote)
         if local_folder_remote is not None:
             local_folder_remote.get_recipe(ref, export_folder)
+            mkdir(layout.metadata())
             return layout
 
         download_export = layout.download_export()
@@ -95,6 +96,7 @@ class RemoteManager:
 
         # Make sure that the source dir is deleted
         rmdir(layout.source())
+        mkdir(layout.metadata())
         return layout
 
     def get_recipe_metadata(self, ref, remote, metadata):
@@ -141,6 +143,7 @@ class RemoteManager:
 
         pkg_layout = self._cache.create_pkg_layout(pref)
         with pkg_layout.set_dirty_context_manager():
+            mkdir(pkg_layout.metadata())
             self._get_package(pkg_layout, pref, remote, output, metadata)
 
     def get_package_metadata(self, pref, remote, metadata):
@@ -208,15 +211,18 @@ class RemoteManager:
             cached_method[pattern] = result
             return result
 
-    def search_packages(self, remote, ref):
+    def search_packages(self, remote, ref, list_only=False):
         # Used only by ListAPI to list the different package_ids for a reference
         if remote.recipes_only:
             return {}
-        packages = self._call_remote(remote, "search_packages", ref)
-        # Avoid serializing conaninfo in server side
-        packages = {PkgReference(ref, pid): load_binary_info(data["content"])
-                    if "content" in data else data
-                    for pid, data in packages.items() if not data.get("recipe_hash")}
+        packages = self._call_remote(remote, "search_packages", ref, list_only)
+        if list_only:
+            packages = {PkgReference(ref, pid): None for pid, data in packages.items()}
+        else:
+            # Avoid serializing conaninfo in server side
+            packages = {PkgReference(ref, pid): load_binary_info(data["content"])
+                        if "content" in data else data
+                        for pid, data in packages.items() if not data.get("recipe_hash")}
         return packages
 
     def remove_recipe(self, ref, remote):

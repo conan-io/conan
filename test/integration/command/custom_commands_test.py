@@ -147,6 +147,14 @@ class TestCustomCommands:
         client.run("-h")
         assert "greet:bye" in client.out
 
+        # Ensure the prog has the full command name
+        client.run("hello -h")
+        assert "conan hello" in client.out
+        client.run("greet:bye -h")
+        assert "conan greet:bye" in client.out
+        client.run("greet:bye say -h")
+        assert "conan greet:bye say" in client.out
+
     def test_custom_command_with_subcommands(self):
         complex_command = textwrap.dedent("""
             import json

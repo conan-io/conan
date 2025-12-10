@@ -83,6 +83,9 @@ class _EnvValue:
         self._path = path
         self._sep = separator
 
+    def __bool__(self):
+        return bool(self._values)  # Empty means unset
+
     def dumps(self):
         result = []
         path = "(path)" if self._path else ""
@@ -458,8 +461,8 @@ class EnvVars:
         abs_base_path, new_path = relativize_paths(self._conanfile, "$PSScriptRoot")
         values = {}
         for varname, varvalues in self._values.items():
-            values[varname] = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep,
-                                                root_path=abs_base_path, script_path=new_path).replace('"', '`"')  # escape quotes
+            values[varname] = (bool(varvalues), varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep,
+                                                root_path=abs_base_path, script_path=new_path).replace('"', '`"'))
         template = ps_virtualenv_function_template if self._deactivation_mode == "function" else ps_virtualenv_script_template
         content = template.render(generate_deactivate=generate_deactivate,
                                   values=values,
@@ -474,8 +477,8 @@ class EnvVars:
         abs_base_path, new_path = relativize_paths(self._conanfile, "$script_folder")
         values = {}
         for varname, varvalues in self._values.items():
-            values[varname] = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
-                                                root_path=abs_base_path, script_path=new_path).replace('"', '\\"')
+            values[varname] = (bool(varvalues), varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
+                                                root_path=abs_base_path, script_path=new_path).replace('"', '\\"'))
         template = sh_virtualenv_function_template if self._deactivation_mode == "function" else sh_virtualenv_script_template
         content = template.render(generate_deactivate=generate_deactivate,
                                   values=values,

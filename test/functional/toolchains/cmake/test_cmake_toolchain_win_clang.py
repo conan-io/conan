@@ -149,8 +149,8 @@ class TestLLVMClang:
         # Make sure that normal CMakeLists with verify=False works
         client.save({"CMakeLists.txt": gen_cmakelists(verify=False, appname="my_app",
                                                       appsources=["src/main.cpp"], install=True)})
-        client.run("create . --name=pkg --version=0.1 -pr=clang -s compiler.runtime=dynamic -s compiler.cppstd=17 "
-                   "-s compiler.runtime_version=v144 "
+        client.run("create . --name=pkg --version=0.1 -pr=clang -s compiler.runtime=dynamic "
+                   "-s compiler.cppstd=17 -s compiler.runtime_version=v144 "
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
 
         assert 'cmake -G "{}"'.format(generator) in client.out

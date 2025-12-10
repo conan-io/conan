@@ -16,10 +16,10 @@ from contextlib import contextmanager
 from inspect import getframeinfo, stack
 from urllib.parse import urlsplit, urlunsplit
 
-import mock
+from unittest import mock
 import pytest
 import requests
-from mock import Mock
+from unittest.mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
@@ -469,7 +469,7 @@ class TestClient:
         return self.open(os.path.join(self.cache_folder, filename))
 
     @property
-    def cache(self):
+    def cache(self) -> PkgCache:
         # Returns a temporary cache object intended for inspecting it
         return PkgCache(self.cache_folder, load_global_conf(self.cache_folder))
 
