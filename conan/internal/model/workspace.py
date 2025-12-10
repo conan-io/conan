@@ -131,5 +131,5 @@ class Workspace:
         msg = ["Packages build order:"]
         for level in order:
             for item in level:
-                msg.append(f"    {item['ref']}")
+                msg.append(f"    {item['ref']}: {item['folder']}")
         self.output.info("\n".join(msg))
