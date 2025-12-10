@@ -4,6 +4,13 @@ import textwrap
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
+PLUGIN_CONTENT = textwrap.dedent("""
+    def sign(ref, artifacts_folder, signature_folder, **kwargs):
+        pass
+
+    def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
+        pass
+""")
 
 def test_pkg_sign_no_plugin():
     c = TestClient()
@@ -29,14 +36,7 @@ def test_pkg_sign_no_plugin_functions():
 def test_pkg_sign_basic():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
-    signer = textwrap.dedent(r"""
-        def sign(ref, artifacts_folder, signature_folder, **kwargs):
-            pass
-
-        def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
-            pass
-        """)
-    c.save_home({"extensions/plugins/sign/sign.py": signer})
+    c.save_home({"extensions/plugins/sign/sign.py": PLUGIN_CONTENT})
     c.run("create .")
     c.run("cache sign *")
     assert textwrap.dedent("""\
@@ -120,7 +120,7 @@ def test_pkg_sign_exception():
     assert "ERROR: There were some errors in the package signing process. " \
            "Please check the output." in c.out
     results = json.loads(c.stdout)
-    assert results["lib/0.1"]["revisions"]["dbe307e08b1a344fef76f60c85c0c4e8"]["error"] == \
+    assert results["lib/0.1"]["revisions"]["dbe307e08b1a344fef76f60c85c0c4e8"]["pkgsign_error"] == \
            "Error signing package"
 
 
@@ -164,5 +164,5 @@ def test_pkg_verify_exception():
     assert "ERROR: There were some errors in the package signing process. " \
            "Please check the output." in c.out
     results = json.loads(c.stdout)
-    assert results["lib/0.1"]["revisions"]["dbe307e08b1a344fef76f60c85c0c4e8"]["error"] == \
+    assert results["lib/0.1"]["revisions"]["dbe307e08b1a344fef76f60c85c0c4e8"]["pkgsign_error"] == \
            "Wrong signature"

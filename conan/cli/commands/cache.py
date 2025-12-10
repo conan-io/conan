@@ -16,32 +16,16 @@ def _get_package_sign_error(pkg_list):
     for rref, packages in pkg_list.items():
         recipe_bundle = pkg_list.recipe_dict(rref)
         if recipe_bundle:
-            signs.append(recipe_bundle.get("error"))
+            signs.append(recipe_bundle.get("pkgsign_error"))
         for pref in packages:
             pkg_bundle = pkg_list.package_dict(pref)
             if pkg_bundle:
-                signs.append(pkg_bundle.get("error"))
+                signs.append(pkg_bundle.get("pkgsign_error"))
 
-    if any(isinstance(sign, Exception) for sign in signs):
+    if any((sign is not None) for sign in signs):
         return ConanException("There were some errors in the package signing process. "
                               "Please check the output.")
     return None
-
-
-def print_package_sign_json(data):
-    """Converts the package sign Exception to string for JSON serialization and prints the result."""
-    results_dict = data.get("results", {})
-
-    def convert_exceptions(obj):
-        if isinstance(obj, dict):
-            return {k: convert_exceptions(v) for k, v in obj.items()}
-        elif isinstance(obj, Exception):
-            return str(obj)
-        else:
-            return obj
-
-    items = {ref: convert_exceptions(item) for ref, item in results_dict.items()}
-    print_list_json({"results": items})
 
 
 def print_package_sign_text(data):
@@ -50,12 +34,12 @@ def print_package_sign_text(data):
     signs = []
     for ref_data in results_dict.values():
         for revision_data in ref_data.get("revisions", {}).values():
-            sign = revision_data.get("error")
+            sign = revision_data.get("pkgsign_error")
             signs.append(sign)
 
             for pkg in revision_data.get("packages", {}).values():
                 for prev in pkg.get("revisions", {}).values():
-                    sign = prev.get("error")
+                    sign = prev.get("pkgsign_error")
                     signs.append(sign)
 
     remove_keys = {"info", "timestamp", "files"}
@@ -78,7 +62,7 @@ def print_package_sign_text(data):
     print_serial(items)
 
     # Summary
-    fail = sum(isinstance(s, Exception) for s in signs)
+    fail = sum((s is not None) for s in signs)
     ok = len(signs) - fail
     cli_out_write(f"\n[Package sign] Summary: OK={ok}, FAILED={fail}")
 
@@ -222,7 +206,7 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     ConanOutput().success("Integrity check: ok")
 
 @conan_subcommand(formatters={"text": print_package_sign_text,
-                              "json": print_package_sign_json})
+                              "json": print_list_json})
 def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
     """
     Sign packages with the Package Signing Plugin
@@ -257,7 +241,7 @@ def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
 
 
 @conan_subcommand(formatters={"text": print_package_sign_text,
-                              "json": print_package_sign_json})
+                              "json": print_list_json})
 def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
     """
     Check the signature of packages with the Package Signing Plugin

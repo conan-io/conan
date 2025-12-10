@@ -100,7 +100,7 @@ class CacheAPI:
                 try:
                     pkg_signer.sign_pkg(rref, recipe_bundle.get("files", {}), rref_folder)
                 except Exception as e:
-                    recipe_bundle["error"] = e
+                    recipe_bundle["pkgsign_error"] = str(e)
             for pref in packages:
                 pkg_bundle = package_list.package_dict(pref)
                 if pkg_bundle:
@@ -108,7 +108,7 @@ class CacheAPI:
                     try:
                         pkg_signer.sign_pkg(pref, pkg_bundle.get("files", {}), pref_folder)
                     except Exception as e:
-                        pkg_bundle["error"] = e
+                        pkg_bundle["pkgsign_error"] = str(e)
         return package_list
 
     def verify(self, package_list):
@@ -130,7 +130,7 @@ class CacheAPI:
                 try:
                     pkg_signer.verify(rref, rref_folder, files)
                 except Exception as e:
-                    recipe_bundle["error"] = e
+                    recipe_bundle["pkgsign_error"] = str(e)
             for pref in packages:
                 pkg_bundle = package_list.package_dict(pref)
                 if pkg_bundle:
@@ -140,7 +140,7 @@ class CacheAPI:
                     try:
                         pkg_signer.verify(pref, pref_folder, files)
                     except Exception as e:
-                        pkg_bundle["error"] = e
+                        pkg_bundle["pkgsign_error"] = str(e)
         return package_list
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True,
