@@ -2,14 +2,13 @@ import inspect
 import os
 import traceback
 import importlib
-import textwrap
 
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.subsystems import deduce_subsystem, subsystem_path
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
 from conan.internal.util.files import save, mkdir, chdir
-from .templates import ps_virtualenv_global_template, ps_virtualenv_call_scripts, sh_virtualenv_global_template, sh_virtualenv_call_scripts
+from conan.internal.api.install.templates import ps_virtualenv_global_template, ps_virtualenv_call_scripts, sh_virtualenv_global_template, sh_virtualenv_call_scripts
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
                "CMakeDeps": "conan.tools.cmake",
