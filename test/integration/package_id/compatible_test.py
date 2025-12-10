@@ -996,21 +996,15 @@ class TestCompatibleFlags:
            """)
         if components:
             conanfile = conanfile.replace(".cpp_info.", ".cpp_info.components['mycomp'].")
-        consumer = textwrap.dedent("""
-            from conan import ConanFile
-            class Pkg(ConanFile):
-                settings = "os", "build_type"
-                requires = "pkg/0.1"
-                generators = "CMakeDeps"
-                """)
+
         c.save({"pkg/conanfile.py": conanfile,
-                "consumer/conanfile.py": consumer})
+                "consumer/conanfile.txt": "[requires]\npkg/0.1\n[generators]\nCMakeDeps"})
 
         c.run("create pkg --name=pkg --version=0.1 -s os=Linux")
 
         def _check(flag, cmake_file):
-            assert f"$<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:RELEASE>:{flag}>>)" in cmake_file
-            assert f"$<$<COMPILE_LANGUAGE:C>:$<$<CONFIG:RELEASE>:{flag}>>)" in cmake_file
+            assert f"$<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:RELEASE>:{flag}>>" in cmake_file
+            assert f"$<$<COMPILE_LANGUAGE:C>:$<$<CONFIG:RELEASE>:{flag}>>" in cmake_file
             assert (f"$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:"
                     f"$<$<CONFIG:RELEASE>:{flag}>>") in cmake_file
             assert (f"$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:"
@@ -1033,6 +1027,41 @@ class TestCompatibleFlags:
         cmake = c.load("consumer/pkg-release-data.cmake")
         assert "-mylinuxflag" in cmake
 
+    def test_editable(self):
+        """ same as above, but more compact condition
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.microsoft import is_msvc
+
+            class Pkg(ConanFile):
+                def layout(self):
+                    self.cpp.source.cxxflags = lambda c: ["-mywineditflag"] if is_msvc(c) else []
+
+                def package_info(self):
+                    self.cpp_info.cxxflags = lambda c: ["-mywinflag"] if is_msvc(c) else []
+           """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                settings = "compiler"
+                requires = "pkg/0.1"
+                def generate(self):
+                    cpp_info = self.dependencies["pkg"].cpp_info
+                    self.output.info(f"CXXFLAGS: {cpp_info.cxxflags}!!!")
+                """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "consumer/conanfile.py": consumer})
+
+        settings = "-s compiler=msvc -s compiler.version=193 -s compiler.runtime=dynamic"
+        c.run(f"editable add pkg --name=pkg --version=0.1")
+
+        c.run(f"install consumer {settings}")
+        assert f"conanfile.py: CXXFLAGS: ['-mywineditflag']!!!" in c.out
+        c.run(f"install consumer {settings} -s &:compiler=clang -s &:compiler.version=19")
+        assert f"conanfile.py: CXXFLAGS: []!!!" in c.out
+
     def test_simple_lambda(self):
         """ same as above, but more compact condition
         """
@@ -1052,7 +1081,6 @@ class TestCompatibleFlags:
                 requires = "pkg/0.1"
                 def generate(self):
                     cpp_info = self.dependencies["pkg"].cpp_info
-                    cpp_info.set_consumer(self)
                     self.output.info(f"CXXFLAGS: {cpp_info.cxxflags}!!!")
                 """)
         c.save({"pkg/conanfile.py": conanfile,
@@ -1091,7 +1119,6 @@ class TestCompatibleFlags:
                 requires = "pkg/0.1"
                 def generate(self):
                     cpp_info = self.dependencies["pkg"].cpp_info
-                    cpp_info.set_consumer(self)
                     self.output.info(f"FLAGS: {cpp_info.cxxflags}!!!")
                 """)
         c.save({"pkg/conanfile.py": conanfile,
@@ -1115,29 +1142,3 @@ class TestCompatibleFlags:
               "-s os=Macos --build=missing")
         assert "dep1/0.1: FLAGS: ['-other-os-flag']!!!" in c.out
         assert "dep2/0.1: FLAGS: ['-other-os-flag']!!!" in c.out
-
-    def test_warnings(self):
-        c = TestClient()
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class Pkg(ConanFile):
-                def package_info(self):
-                    def myflags(conanfile):
-                        return ["-myflag"]
-                    self.cpp_info.cxxflags = myflags
-           """)
-        consumer = textwrap.dedent("""
-            from conan import ConanFile
-            class Pkg(ConanFile):
-                requires = "pkg/0.1"
-                def generate(self):
-                    cpp_info = self.dependencies["pkg"].cpp_info
-                    self.output.info(f"FLAGS: {cpp_info.cxxflags}!!!")
-                """)
-        c.save({"pkg/conanfile.py": conanfile,
-                "consumer/conanfile.py": consumer})
-
-        c.run("create pkg --name=pkg --version=0.1")
-        c.run("install consumer")
-        assert "WARN: Callable for cxxflags:" in c.out
-        assert "FLAGS: []!!!" in c.out

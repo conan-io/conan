@@ -340,14 +340,10 @@ class _Component:
 
     @property
     def cflags(self):
+        if callable(self._cflags):
+            return self._cflags(self._consumer_conanfile)
         if self._cflags is None:
             self._cflags = []
-        elif callable(self._cflags):
-            if self._consumer_conanfile is None:
-                ConanOutput().warning(f"Callable for cflags: {self._cflags}, but generator "
-                                      "didn't call 'set_consumer()' first")
-                return []
-            return self._cflags(self._consumer_conanfile)
         return self._cflags
 
     @cflags.setter
@@ -356,14 +352,10 @@ class _Component:
 
     @property
     def cxxflags(self):
+        if callable(self._cxxflags):
+            return self._cxxflags(self._consumer_conanfile)
         if self._cxxflags is None:
             self._cxxflags = []
-        elif callable(self._cxxflags):
-            if self._consumer_conanfile is None:
-                ConanOutput().warning(f"Callable for cxxflags: {self._cxxflags}, but generator "
-                                      "didn't call 'set_consumer()' first")
-                return []
-            return self._cxxflags(self._consumer_conanfile)
         return self._cxxflags
 
     @cxxflags.setter
@@ -372,14 +364,10 @@ class _Component:
 
     @property
     def sharedlinkflags(self):
+        if callable(self._sharedlinkflags):
+            return self._sharedlinkflags(self._consumer_conanfile)
         if self._sharedlinkflags is None:
             self._sharedlinkflags = []
-        elif callable(self._sharedlinkflags):
-            if self._consumer_conanfile is None:
-                ConanOutput().warning(f"Callable for sharedlinkflags: {self._sharedlinkflags}, but "
-                                      f"generator didn't call 'set_consumer()' first")
-                return []
-            return self._sharedlinkflags(self._consumer_conanfile)
         return self._sharedlinkflags
 
     @sharedlinkflags.setter
@@ -388,14 +376,10 @@ class _Component:
 
     @property
     def exelinkflags(self):
+        if callable(self._exelinkflags):
+            return self._exelinkflags(self._consumer_conanfile)
         if self._exelinkflags is None:
             self._exelinkflags = []
-        elif callable(self._exelinkflags):
-            if self._consumer_conanfile is None:
-                ConanOutput().warning(f"Callable for exelinkflags: {self._exelinkflags}, but "
-                                      f"generator didn't call 'set_consumer()' first")
-                return []
-            return self._exelinkflags(self._consumer_conanfile)
         return self._exelinkflags
 
     @exelinkflags.setter
@@ -469,6 +453,8 @@ class _Component:
     def get_init(self, attribute, default):
         # Similar to dict.setdefault
         item = getattr(self, attribute)
+        if callable(item):
+            return item(self._consumer_conanfile)
         if item is not None:
             return item
         setattr(self, attribute, default)
@@ -476,8 +462,8 @@ class _Component:
 
     def merge(self, other, overwrite=False):
         """
-        @param overwrite:
-        @type other: _Component
+        :param overwrite:
+        :type other: _Component
         """
         def merge_list(o, d):
             d.extend(e for e in o if e not in d)
@@ -486,8 +472,14 @@ class _Component:
             other_values = getattr(other, varname)
             if other_values is not None:
                 if not overwrite:
-                    current_values = self.get_init(varname, [])
-                    merge_list(other_values, current_values)
+                    if (callable(other_values) and other._consumer_conanfile is None) or \
+                           (callable(getattr(self, varname)) and self._consumer_conanfile is None):
+                        setattr(self, varname, other_values)
+                    else:
+                        if callable(other_values):
+                            other_values = other_values(other._consumer_conanfile)
+                        current_values = self.get_init(varname, [])
+                        merge_list(other_values, current_values)
                 else:
                     setattr(self, varname, other_values)
 
