@@ -82,6 +82,9 @@ class _EnvValue:
         self._path = path
         self._sep = separator
 
+    def __bool__(self):
+        return bool(self._values)  # Empty means unset
+
     def dumps(self):
         result = []
         path = "(path)" if self._path else ""
@@ -467,7 +470,7 @@ class EnvVars:
                 result.append(
                     f'if ($env:{varname}) {{ $env:{_old_env_prefix(filename)}_{varname} = $env:{varname} }}'
                 )
-            if value:
+            if varvalues:
                 value = value.replace('"', '`"')  # escape quotes
                 result.append(f'$env:{varname}="{value}"')
             else:
@@ -497,7 +500,7 @@ class EnvVars:
                     f'export {_old_env_prefix(filename)}_{varname}="${{{varname}}}"; '
                     f'fi;'
                 )
-            if value:
+            if varvalues:
                 result.append(f'export {varname}="{value}"')
             else:
                 result.append(f'unset {varname}')
@@ -616,6 +619,7 @@ def _ps1_deactivate_contents(deactivation_mode, values, filename):
         }}
         Pop-Location
     """)
+
 
 def _sh_deactivate_contents(deactivation_mode, values, filename):
     vars_list = " ".join(quote(v) for v in values.keys())

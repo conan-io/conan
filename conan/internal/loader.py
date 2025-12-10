@@ -63,7 +63,7 @@ class ConanFileLoader:
             elif tested_python_requires:
                 if getattr(conanfile, "python_requires", None) != "tested_reference_str":
                     ConanOutput().warning("test_package/conanfile.py should declare 'python_requires"
-                                      " = \"tested_reference_str\"'", warn_tag="deprecated")
+                                          " = \"tested_reference_str\"'", warn_tag="deprecated")
                 conanfile.python_requires = tested_python_requires
 
             if self._pyreq_loader:
@@ -254,6 +254,7 @@ class ConanFileLoader:
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(display_name="cli")
+        conanfile._conan_helpers = self._conanfile_helpers
 
         if tool_requires:
             for reference in tool_requires:

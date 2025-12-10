@@ -836,7 +836,7 @@ class ExtraFlagsBlock(Block):
             "cflags": cflags,
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags,
-            "defines": [define.replace('"', '\\"') for define in defines]
+            "defines": [define.replace('"', '\\"') for define in defines],
         }
 
 
@@ -1206,6 +1206,23 @@ class ExtraVariablesBlock(Block):
         # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
         extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
                                                    default={}, check_type=dict)
+        compilation_verbosity = self._conanfile.conf.get("tools.compilation:verbosity",
+                                                         choices=("quiet", "verbose"))
+        build_verbosity = self._conanfile.conf.get("tools.build:verbosity",
+                                                   choices=("quiet", "verbose"))
+        if build_verbosity == "quiet":
+            build_verbosity = "error"
+
+        if compilation_verbosity == "verbose":
+            extra_variables.setdefault("CMAKE_VERBOSE_MAKEFILE",
+                                       {"cache": True, "type": "BOOL",
+                                        "value": "ON"})
+
+        if build_verbosity:
+            extra_variables.setdefault("CMAKE_MESSAGE_LOG_LEVEL",
+                                       {"cache": True, "type": "STRING",
+                                        "value": build_verbosity.upper()})
+
         parsed_extra_variables = {}
         for key, value in extra_variables.items():
             parsed_extra_variables[key] = parse_extra_variable("tools.cmake.cmaketoolchain:extra_variables",

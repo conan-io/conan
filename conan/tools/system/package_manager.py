@@ -105,9 +105,9 @@ class _SystemPackageManagerTool(object):
         if self._active_tool == self.__class__.tool_name:
             return method(*args, **kwargs)
 
-    def _conanfile_run(self, command, accepted_returns):
+    def _conanfile_run(self, command, accepted_returns, quiet=True):
         # When checking multiple packages, this is too noisy
-        ret = self._conanfile.run(command, ignore_errors=True, quiet=True)
+        ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet)
         if ret not in accepted_returns:
             raise ConanException("Command '%s' failed" % command)
         return ret
@@ -209,7 +209,7 @@ class _SystemPackageManagerTool(object):
                                                       tool=self.tool_name,
                                                       packages=" ".join(packages_arch),
                                                       **kwargs)
-                return self._conanfile_run(command, self.accepted_install_codes)
+                return self._conanfile_run(command, self.accepted_install_codes, quiet=False)
         else:
             self._conanfile.output.info("System requirements: {} already "
                                         "installed".format(" ".join(packages)))
@@ -219,7 +219,7 @@ class _SystemPackageManagerTool(object):
         # in case we are in check mode just ignore
         if self._mode == self.mode_install:
             command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
-            return self._conanfile_run(command, self.accepted_update_codes)
+            return self._conanfile_run(command, self.accepted_update_codes, quiet=False)
 
     def _check(self, packages, host_package=True):
         missing = [pkg for pkg in packages if self.check_package(pkg, host_package) != 0]

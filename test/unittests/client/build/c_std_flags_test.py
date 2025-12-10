@@ -1,7 +1,7 @@
 from conan.internal.api.detect.detect_api import default_cstd
-from conan.tools.build.flags import cstd_flag
 from conan.internal.model.version import Version
-from conan.test.utils.mocks import MockSettings, ConanFileMock
+from conan.test.utils.mocks import ConanFileMock, MockSettings
+from conan.tools.build.flags import cstd_flag
 
 
 def _make_cstd_flag(compiler, compiler_version, cstd=None):
@@ -10,6 +10,16 @@ def _make_cstd_flag(compiler, compiler_version, cstd=None):
                                        "compiler.version": compiler_version,
                                        "compiler.cstd": cstd})
     return cstd_flag(conanfile)
+
+
+def test_gcc_cstd_flags():
+    assert _make_cstd_flag("gcc", "4.2", "99") == "-std=c99"
+    assert _make_cstd_flag("clang", "4.2", "99") == "-std=c99"
+    assert _make_cstd_flag("apple-clang", "4.2", "99") == "-std=c99"
+    assert _make_cstd_flag("msvc", "192", "11") == "/std:c11"
+    assert _make_cstd_flag("msvc", "192", "17") == "/std:c17"
+    assert _make_cstd_flag("msvc", "191", "11") is None
+    assert _make_cstd_flag("msvc", "191", "17") is None
 
 
 def _make_cstd_default(compiler, compiler_version):

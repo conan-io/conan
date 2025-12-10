@@ -57,7 +57,8 @@ class Workspace:
         return data or {}
 
     def add(self, ref, path, output_folder):
-        assert os.path.isfile(path)
+        if not path or not os.path.isfile(path):
+            raise ConanException(f"Cannot add to workspace. File not found: {path}")
         path = self._conan_rel_path(os.path.dirname(path))
         editable = {
             "path": path,

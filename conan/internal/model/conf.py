@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import numbers
 import platform
 import re
@@ -64,6 +65,8 @@ BUILT_IN_CONFS = {
     # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks
     "core.scm:excluded": "List of excluded patterns for builtin git dirty checks",
     "core.scm:local_url": "By default allows to store local folders as remote url, but not upload them. Use 'allow' for allowing upload and 'block' to completely forbid it",
+    # Compatibility opt-in, to be removed in future versions as optimized behavior becomes default
+    "core.graph:compatibility_mode": "(Experimental) Set this to 'optimized' to enable the improved compatibility behaviour when querying multiple compatible binaries in remotes",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
@@ -505,13 +508,6 @@ class Conf:
                 existing.compose_conf_value(v)
         return self
 
-    def filter_user_modules(self):
-        result = Conf()
-        for k, v in self._values.items():
-            if _is_profile_module(k):
-                result._values[k] = v
-        return result
-
     def copy_conaninfo_conf(self):
         """
         Get a new `Conf()` object with all the configurations required by the consumer
@@ -761,7 +757,8 @@ def load_global_conf(home_folder):
         content = template.render({"platform": platform, "os": os, "distro": distro,
                                    "conan_version": conan_version,
                                    "conan_home_folder": home_folder,
-                                   "detect_api": detect_api})
+                                   "detect_api": detect_api,
+                                   "hashlib": hashlib})
         new_config.loads(content)
     else:  # creation of a blank global.conf file for user convenience
         default_global_conf = textwrap.dedent("""\

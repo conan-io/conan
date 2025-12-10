@@ -68,9 +68,9 @@ class AuditAPI:
             )
 
             raise ConanException(
-                f"Provider '{provider_name}' not found. Please specify a valid provider name or add it using: "
-                f"'conan audit provider add {provider_name} {add_arguments} --token=<token>'\n"
-                f"{register_message}"
+                f"Provider '{provider_name}' not found. Please specify a valid provider name or add "
+                f"it using: 'conan audit provider add {provider_name} {add_arguments} "
+                f"--token=<token>'\n{register_message}"
             )
 
         provider_data = providers[provider_name]
@@ -82,9 +82,11 @@ class AuditAPI:
             provider_data["token"] = env_token
         elif "token" in provider_data:
             try:
-                provider_data["token"] = decode(base64.standard_b64decode(provider_data["token"]).decode(), CYPHER_KEY)
-            except binascii.Error as e:
-                raise ConanException(f"Invalid token format for provider '{provider_name}'. The token might be corrupt.")
+                enc_token = base64.standard_b64decode(provider_data["token"]).decode()
+                provider_data["token"] = decode(enc_token, CYPHER_KEY)
+            except binascii.Error:
+                raise ConanException(f"Invalid token format for provider '{provider_name}'. "
+                                     f"The token might be corrupt.")
 
         provider_cls = self._provider_cls.get(provider_data["type"])
 
@@ -142,7 +144,8 @@ class AuditAPI:
         providers = _load_providers(self._providers_path)
 
         assert provider.name in providers
-        providers[provider.name]["token"] = base64.standard_b64encode(encode(token, CYPHER_KEY).encode()).decode()
+        encode_token = encode(token, CYPHER_KEY).encode()
+        providers[provider.name]["token"] = base64.standard_b64encode(encode_token).decode()
         setattr(provider, "token", token)
         _save_providers(self._providers_path, providers)
 

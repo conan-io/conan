@@ -851,8 +851,11 @@ class TestHeaders:
                         self.cpp_info.system_libs = ["m", "dl"]
                         # Just to verify CMake don't break
                     if self.settings.compiler == "gcc":
-                        self.cpp_info.sharedlinkflags = ["-z lazy", "-s"]
-                        self.cpp_info.exelinkflags = ["-z lazy", "-s"]
+                        # This triggers errors when not quoted and list ";" separated
+                        self.cpp_info.sharedlinkflags = ["SHELL:-z lazy", "SHELL:-u symbol1",
+                                                         "SHELL:-u symbol2", "-s"]
+                        self.cpp_info.exelinkflags = ["SHELL:-z lazy", "SHELL:-u symbol1",
+                                                      "SHELL:-u symbol2", "-s"]
              """)
         engine_h = textwrap.dedent("""
             #pragma once

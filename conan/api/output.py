@@ -125,6 +125,14 @@ class ConanOutput:
         cls._warnings_as_errors = value
 
     @classmethod
+    def get_output_level(cls):
+        return cls._conan_output_level
+
+    @classmethod
+    def set_output_level(cls, level):
+        cls._conan_output_level = level
+
+    @classmethod
     def valid_log_levels(cls):
         return {"quiet": LEVEL_QUIET,  # -vquiet 80
             "error": LEVEL_ERROR,  # -verror 70
@@ -151,7 +159,7 @@ class ConanOutput:
             vals = "quiet, error, warning, notice, status, verbose, debug(v), trace(vv)"
             raise ConanException(f"Invalid argument '-v{v}'{msg}.\nAllowed values: {vals}")
         else:
-            cls._conan_output_level = level
+            cls.set_output_level(level)
 
     @classmethod
     def level_allowed(cls, level):
@@ -270,13 +278,13 @@ class ConanOutput:
             self._write_message(msg, fg=fg, bg=bg)
         return self
 
-    def status(self, msg: str, fg: str = None, bg: str = None):
+    def status(self, msg: str, fg: str = None, bg: str = None, newline: bool = True):
         """ Provides general information about the system or ongoing operations.
 
         Info messages are basic and used to inform about common events,
         like the start or completion of processes, without implying specific problems or achievements."""
         if self._conan_output_level <= LEVEL_STATUS:
-            self._write_message(msg, fg=fg, bg=bg)
+            self._write_message(msg, fg=fg, bg=bg, newline=newline)
         return self
 
     info = status
