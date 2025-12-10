@@ -13,15 +13,18 @@ class PkgSignaturesPlugin:
         signer = HomePaths(home_folder).sign_plugin_path
         if os.path.isfile(signer):
             mod, _ = load_python_file(signer)
-            # TODO: At the moment it requires both methods sign and verify, but that might be relaxed
             self._plugin_sign_function = getattr(mod, "sign", None)
             self._plugin_verify_function = getattr(mod, "verify", None)
         else:
             self._plugin_sign_function = self._plugin_verify_function = None
 
     @property
-    def is_configured(self):
-        return self._plugin_sign_function is not None and self._plugin_verify_function is not None
+    def is_sign_configured(self):
+        return self._plugin_sign_function is not None
+
+    @property
+    def is_verify_configured(self):
+        return self._plugin_verify_function is not None
 
     def sign_pkg(self, ref, files, folder):
         metadata_sign = os.path.join(folder, METADATA, "sign")
@@ -33,7 +36,7 @@ class PkgSignaturesPlugin:
             files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
 
     def sign(self, upload_data):
-        if self._plugin_sign_function is None:
+        if not self.is_sign_configured:
             return
 
         for rref, packages in upload_data.items():
@@ -48,7 +51,7 @@ class PkgSignaturesPlugin:
                                   self._cache.pkg_layout(pref).download_package())
 
     def verify(self, ref, folder, files):
-        if self._plugin_verify_function is None:
+        if not self.is_verify_configured:
             return
         metadata_sign = os.path.join(folder, METADATA, "sign")
         self._plugin_verify_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,

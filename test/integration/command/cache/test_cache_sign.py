@@ -17,9 +17,9 @@ def test_pkg_sign_no_plugin():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     c.run("cache sign *", assert_error=True)
-    assert "ERROR: The package sign plugin is not configured." in c.out
+    assert "ERROR: The sign() function in the package sign plugin is not defined." in c.out
     c.run("cache verify *", assert_error=True)
-    assert "ERROR: The package sign plugin is not configured." in c.out
+    assert "ERROR: The verify() function in the package sign plugin is not defined." in c.out
 
 
 def test_pkg_sign_no_plugin_functions():
@@ -28,9 +28,9 @@ def test_pkg_sign_no_plugin_functions():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     c.run("cache sign *", assert_error=True)
-    assert "ERROR: The package sign plugin is not configured." in c.out
+    assert "ERROR: The sign() function in the package sign plugin is not defined." in c.out
     c.run("cache verify *", assert_error=True)
-    assert "ERROR: The package sign plugin is not configured." in c.out
+    assert "ERROR: The verify() function in the package sign plugin is not defined." in c.out
 
 
 def test_pkg_sign_basic():

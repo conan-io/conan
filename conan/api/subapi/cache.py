@@ -80,14 +80,14 @@ class CacheAPI:
         checker = IntegrityChecker(cache)
         checker.check(package_list)
 
-    def sign(self, package_list):
+    def sign(self, package_list, only_packages=False):
         """Sign packages with the package signing plugin"""
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder)
-        if not pkg_signer.is_configured:
+        if not pkg_signer.is_sign_configured:
             raise ConanException(
-                "The package sign plugin is not configured. For more information on how to "
-                "configure it, please read the documentation at "
+                "The sign() function in the package sign plugin is not defined. For more "
+                "information on how to configure the plugin, please read the documentation at "
                 "https://docs.conan.io/2/reference/extensions/package_signing.html.")
         if not package_list.has_items():
             raise ConanException("No packages to sign in the pkglist provided.")
@@ -118,10 +118,10 @@ class CacheAPI:
         """Verify packages with the package signing plugin"""
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder)
-        if not pkg_signer.is_configured:
+        if not pkg_signer.is_verify_configured:
             raise ConanException(
-                "The package sign plugin is not configured. For more information on how to"
-                "configure it, please read the documentation at "
+                "The verify() function in the package sign plugin is not defined. For more "
+                "information on how to configure the plugin, please read the documentation at "
                 "https://docs.conan.io/2/reference/extensions/package_signing.html.")
         if not package_list.has_items():
             raise ConanException("No packages to verify in the pkglist provided.")
