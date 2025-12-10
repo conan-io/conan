@@ -328,6 +328,15 @@ class PackagesList:
                         packages[pref] = prev_info
                 yield recipe, packages
 
+    def has_items(self) -> bool:
+        """Whether the package list contains any element with revision that can be iterated."""
+        it = self.items()
+        try:
+            next(it)
+            return True
+        except StopIteration:
+            return False
+
     def recipe_dict(self, ref: RecipeReference):
         """ Gives read/write access to the dictionary containing a specific RecipeReference
         information.

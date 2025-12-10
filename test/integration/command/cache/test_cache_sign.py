@@ -56,14 +56,7 @@ def test_pkg_sign_basic():
 def test_pkg_verify_basic():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
-    signer = textwrap.dedent(r"""
-        def sign(ref, artifacts_folder, signature_folder, **kwargs):
-            pass
-
-        def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
-            pass
-        """)
-    c.save_home({"extensions/plugins/sign/sign.py": signer})
+    c.save_home({"extensions/plugins/sign/sign.py": PLUGIN_CONTENT})
     c.run("create .")
     c.run("cache verify *")
     assert textwrap.dedent("""
@@ -78,6 +71,17 @@ def test_pkg_verify_basic():
                     0ba8627bd47edc3a501e8f0eb9a79e5e
 
         [Package sign] Summary: OK=2, FAILED=0""") in c.out
+
+
+def test_pkg_sign_no_packages():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.save_home({"extensions/plugins/sign/sign.py": PLUGIN_CONTENT})
+    c.run("create .")
+    c.run("cache sign other-pkg/*", assert_error=True)
+    assert "ERROR: No packages to sign in the pkglist provided" in c.out
+    c.run("cache verify other-pkg/*", assert_error=True)
+    assert "ERROR: No packages to verify in the pkglist provided" in c.out
 
 
 def test_pkg_sign_exception():
@@ -166,3 +170,68 @@ def test_pkg_verify_exception():
     results = json.loads(c.stdout)
     assert results["lib/0.1"]["revisions"]["dbe307e08b1a344fef76f60c85c0c4e8"]["pkgsign_error"] == \
            "Wrong signature"
+
+
+def test_pkg_sign_verify_pkglist():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.save_home({"extensions/plugins/sign/sign.py": PLUGIN_CONTENT})
+    c.run("create .")
+    # test incomplete package list
+    c.run("list */* -f json", redirect_stdout="pkglist.json")
+    c.run("cache sign -l pkglist.json", assert_error=True)
+    assert "ERROR: No packages to sign in the pkglist provided" in c.out
+    c.run("cache verify -l pkglist.json", assert_error=True)
+    assert "ERROR: No packages to verify in the pkglist provided" in c.out
+
+    # test recipe latest package list
+    c.run("list */*#latest -f json", redirect_stdout="pkglist.json")
+    c.run("cache sign -l pkglist.json")
+    expected = textwrap.dedent("""\
+        [Package sign] Results:
+
+        pkg/0.1
+          revisions
+            485dad6cb11e2fa99d9afbe44a57a164
+
+        [Package sign] Summary: OK=1, FAILED=0""")
+    assert expected in c.out
+    c.run("cache verify -l pkglist.json")
+    assert expected in c.out
+
+    # test packages without prev package list
+    c.run("list */*:* -f json", redirect_stdout="pkglist.json")
+    # FIXME: list command is renturning packages without package revision, so packages are not signed
+    c.run("cache sign -l pkglist.json")
+    expected = textwrap.dedent("""\
+        [Package sign] Results:
+
+        pkg/0.1
+          revisions
+            485dad6cb11e2fa99d9afbe44a57a164
+              packages
+                da39a3ee5e6b4b0d3255bfef95601890afd80709
+
+        [Package sign] Summary: OK=1, FAILED=0""")
+    assert expected in c.out
+    c.run("cache verify -l pkglist.json")
+    assert expected in c.out
+
+    # test packages with prev package list
+    c.run("list */*:*#latest -f json", redirect_stdout="pkglist.json")
+    c.run("cache sign -l pkglist.json")
+    expected = textwrap.dedent("""\
+        [Package sign] Results:
+
+        pkg/0.1
+          revisions
+            485dad6cb11e2fa99d9afbe44a57a164
+              packages
+                da39a3ee5e6b4b0d3255bfef95601890afd80709
+                  revisions
+                    0ba8627bd47edc3a501e8f0eb9a79e5e
+
+        [Package sign] Summary: OK=2, FAILED=0""")
+    assert expected in c.out
+    c.run("cache verify -l pkglist.json")
+    assert expected in c.out
