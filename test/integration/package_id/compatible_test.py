@@ -1023,8 +1023,8 @@ class TestCompatibleFlags:
         _check("-other-os-flag", cmake)
 
         # Check old CMakeDeps generator
-        c.run("install consumer -s os=Linux")
-        cmake = c.load("consumer/pkg-release-data.cmake")
+        c.run("install consumer -s os=Linux -s arch=x86_64")
+        cmake = c.load("consumer/pkg-release-x86_64-data.cmake")
         assert "-mylinuxflag" in cmake
 
     def test_editable(self):
