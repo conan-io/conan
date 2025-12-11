@@ -9,10 +9,10 @@ from conan.internal.graph.graph_builder import DepsGraphBuilder
 from conan.internal.graph.profile_node_definer import consumer_definer
 from conan.errors import ConanException
 
-from conan.internal.model.conanconfig import loadconanconfig, saveconanconfig
+from conan.internal.model.conanconfig import loadconanconfig, saveconanconfig, loadconanconfig_yml
 from conan.internal.model.conf import BUILT_IN_CONFS
 from conan.internal.model.pkg_type import PackageType
-from conan.api.model import RecipeReference
+from conan.api.model import RecipeReference, Remote
 from conan.internal.util.files import rmdir, remove
 
 
@@ -62,8 +62,11 @@ class ConfigAPI:
         ConanOutput().warning("The 'conan config install-pkg' is experimental",
                               warn_tag="experimental")
         if os.path.isdir(path):
-            path = os.path.join(path, "conanconfig.json")
-        requested_requires = loadconanconfig(path)
+            path = os.path.join(path, "conanconfig.yml")
+        requested_requires, urls = loadconanconfig_yml(path)
+        if urls:
+            remotes = [Remote(f"config_install_url{('_' + str(i)) if i else ''}", url=url)
+                       for i, url in enumerate(urls)]
         required_pkgs = self._resolve_requires(requested_requires, lockfile, remotes, profile)
         installed_refs = self._install_pkgs(required_pkgs, force)
         self._conan_api.reinit()
@@ -86,8 +89,8 @@ class ConfigAPI:
         new_config = config_versions_dict.copy()
         for required_pkg in required_pkgs:
             new_config.pop(required_pkg.ref.name, None)  # To ensure new order
-            new_config[required_pkg.ref.name] = required_pkg
-        final_config_refs = [pkg.ref for pkg in new_config.values()]
+            new_config[required_pkg.ref.name] = required_pkg.ref
+        final_config_refs = [r for r in new_config.values()]
 
         prev_refs = "\n\t".join(repr(r) for r in config_versions)
         out.info(f"Previously installed configuration packages:\n\t{prev_refs}")

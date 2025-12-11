@@ -16,7 +16,6 @@ from conan.internal.errors import (conanfile_exception_formatter, ConanConnectio
 from conan.errors import ConanException
 from conan.internal.model.conanconfig import loadconanconfig
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
-from conan.api.model import RecipeReference
 from conan.internal.model.pkg_type import PackageType
 
 
