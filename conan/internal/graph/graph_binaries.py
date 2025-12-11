@@ -464,11 +464,7 @@ class GraphBinariesAnalyzer:
         config_version_file = HomePaths(self._home_folder).config_version_path
         try:
             config_refs = loadconanconfig(config_version_file)
-            result = {}
-            for r in config_refs:
-                config_ref = RecipeReference.loads(r)
-                req_info = RequirementInfo(config_ref, None, config_mode)
-                result[config_ref] = req_info
+            result = {r: RequirementInfo(r, None, config_mode) for r in config_refs}
         except Exception as e:
             raise ConanException(f"core.package_id:config_mode defined, but error while loading "
                                  f"'{os.path.basename(config_version_file)}'"

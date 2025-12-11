@@ -739,8 +739,16 @@ class TestConfigInstallPkgLockfiles:
 
     def test_install_from_file(self, servers):
         c = TestClient(servers=servers)
-        c.save({"conanconfig.json": json.dumps({"config_version": ["myconf_a/0.1",
-                                                                   "myconf_b/0.1"]})})
+        # To make explicit the format of the conanconfig file
+        conanconfig = textwrap.dedent("""\
+            {
+                "config_version": [
+                    "myconf_a/0.1",
+                    "myconf_b/0.1"
+                ]
+            }
+            """)
+        c.save({"conanconfig.json": conanconfig})
         c.run("config install-pkg --path=.")
         # First are the newest installed
         path = HomePaths(c.cache_folder).config_version_path
