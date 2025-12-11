@@ -5,8 +5,16 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 PLUGIN_CONTENT = textwrap.dedent("""
+    import os
+    from conan.tools.files import save
+
     def sign(ref, artifacts_folder, signature_folder, **kwargs):
-        pass
+        save(None, os.path.join(signature_folder, "signature.sig"), "signed-content")
+        return [{
+            "method": "dummy-method",
+            "provider": "dummy-provider",
+            "sign_artifacts": {"signature": "signature.sig"}
+        }]
 
     def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
         pass
@@ -87,14 +95,19 @@ def test_pkg_sign_no_packages():
 def test_pkg_sign_exception():
     c = TestClient()
     signer = textwrap.dedent(r"""
+        import os
         from conan.errors import ConanException
+        from conan.tools.files import save
 
         def sign(ref, artifacts_folder, signature_folder, **kwargs):
             if "lib" in ref.repr_notime():
                 raise ConanException("Error signing package")
-
-        def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
-            pass
+            save(None, os.path.join(signature_folder, "signature.sig"), "signed-content")
+            return [{
+                "method": "dummy-method",
+                "provider": "dummy-provider",
+                "sign_artifacts": {"signature": "signature.sig"}
+            }]
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
@@ -132,9 +145,6 @@ def test_pkg_verify_exception():
     c = TestClient()
     signer = textwrap.dedent(r"""
         from conan.errors import ConanException
-
-        def sign(ref, artifacts_folder, signature_folder, **kwargs):
-            pass
 
         def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
             if "lib" in ref.repr_notime():

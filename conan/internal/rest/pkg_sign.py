@@ -1,10 +1,12 @@
 import os
 
-from conan.errors import ConanException
 from conan.internal.cache.conan_reference_layout import METADATA
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.loader import load_python_file
 from conan.internal.util.files import mkdir
+from conan.tools.pkg_signing.plugin import (get_manifest_filepath, get_signatures_filepath,
+                                            _save_manifest, _save_signatures, PKGSIGN_MANIFEST,
+                                            PKGSIGN_SIGNATURES)
 
 
 class PkgSignaturesPlugin:
@@ -29,11 +31,19 @@ class PkgSignaturesPlugin:
     def sign_pkg(self, ref, files, folder):
         metadata_sign = os.path.join(folder, METADATA, "sign")
         mkdir(metadata_sign)
-        # TODO: Consider creating the package sign summary file by default and check after
-        #  calling the plugins' sign function that provider and method fields are filled.
-        self._plugin_sign_function(ref, artifacts_folder=folder, signature_folder=metadata_sign)
-        for f in os.listdir(metadata_sign):
-            files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
+        # Generate the package sign manifest before calling the plugin
+        _save_manifest(folder, metadata_sign)
+        signatures = self._plugin_sign_function(ref, artifacts_folder=folder,
+                                                signature_folder=metadata_sign)
+        # Save signatures file with the plugin's returned signatures data
+        _save_signatures(metadata_sign, signatures)
+        # Add files to package bundle so they get uploaded
+        files[f"{METADATA}/sign/{PKGSIGN_MANIFEST}"] = get_manifest_filepath(metadata_sign)
+        files[f"{METADATA}/sign/{PKGSIGN_SIGNATURES}"] = get_signatures_filepath(metadata_sign)
+        for sig in signatures:
+            for name, file in sig.get("sign_artifacts", {}).items():
+                #TODO: print output?
+                files[f"{METADATA}/sign/{file}"] = os.path.join(metadata_sign, file)
 
     def sign(self, upload_data):
         if not self.is_sign_configured:
