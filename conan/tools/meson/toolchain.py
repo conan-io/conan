@@ -412,7 +412,6 @@ class MesonToolchain:
         self.apple_isysroot_flag = isysroot_flag.split() if isysroot_flag else []
         self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]
         # Objective C/C++ ones
-        flags = []
         self.objc = compilers_by_conf.get("objc", "clang")
         self.objcpp = compilers_by_conf.get("objcpp", "clang++")
         enable_arc = self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)

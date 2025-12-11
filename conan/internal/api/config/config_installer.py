@@ -177,7 +177,7 @@ def _process_download(config, cache_folder, requester):
             raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))
 
 
-class _ConfigOrigin(object):
+class _ConfigOrigin:
     def __init__(self, uri, config_type, verify_ssl, args, source_folder, target_folder):
         if config_type:
             self.type = config_type

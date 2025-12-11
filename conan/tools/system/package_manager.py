@@ -5,7 +5,7 @@ from conan.internal.graph.graph import CONTEXT_BUILD
 from conan.errors import ConanException
 
 
-class _SystemPackageManagerTool(object):
+class _SystemPackageManagerTool:
     mode_check = "check"  # Check if installed, fail if not
     mode_install = "install"
     mode_report = "report"  # Only report what would be installed, no check (can run in any system)

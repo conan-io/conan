@@ -8,7 +8,7 @@ class ConfigMock:
     def __init__(self, run=None):
         self.can_run = run
 
-    def get(self, conf_name, default=None, check_type=None):
+    def get(self, conf_name, default=None, check_type=None):  # noqa
         return self.can_run
 
 
@@ -33,9 +33,9 @@ def test_can_run_cross_building(arch, expected):
     """
     config = ConfigMock(None)
     settings_build = MockSettings({"os": "Macos",
-                             "compiler": "apple-clang",
-                             "compiler.version": "11.0",
-                             "arch": "armv8"})
+                                   "compiler": "apple-clang",
+                                   "compiler.version": "11.0",
+                                   "arch": "armv8"})
     settings = MockSettings({"os": "Macos",
                              "compiler": "apple-clang",
                              "compiler.version": "11.0",
@@ -52,9 +52,9 @@ def test_can_run_cross_building_with_explicit():
     """
     config = ConfigMock(True)
     settings_build = MockSettings({"os": "Macos",
-                             "compiler": "apple-clang",
-                             "compiler.version": "11.0",
-                             "arch": "armv8"})
+                                   "compiler": "apple-clang",
+                                   "compiler.version": "11.0",
+                                   "arch": "armv8"})
     settings = MockSettings({"os": "Macos",
                              "compiler": "apple-clang",
                              "compiler.version": "11.0",

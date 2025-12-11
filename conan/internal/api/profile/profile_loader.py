@@ -220,7 +220,7 @@ class _ProfileParser:
                 raise ConanException("Error while parsing line %i: '%s'" % (counter, line))
 
 
-class _ProfileValueParser(object):
+class _ProfileValueParser:
     """ parses a "pure" or "effective" profile, with no includes, no variables,
     as the one in the lockfiles, or once these things have been processed by ProfileParser
     """

@@ -8,7 +8,7 @@ from conan.tools.microsoft import is_msvc
 from conan.internal.subsystems import subsystem_path, deduce_subsystem
 
 
-class GnuDepsFlags(object):
+class GnuDepsFlags:
 
     def __init__(self, conanfile, cpp_info):
         self._conanfile = conanfile

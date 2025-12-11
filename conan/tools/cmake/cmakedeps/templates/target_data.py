@@ -269,7 +269,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         return ret
 
 
-class _TargetDataContext(object):
+class _TargetDataContext:
 
     def __init__(self, cpp_info, pfolder_var_name, package_folder, require, library_type,
                  is_host_windows, conanfile, cmakedeps, comp_name=None):

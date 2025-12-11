@@ -173,8 +173,6 @@ def lock_update(conan_api, parser, subparser, *args):
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
 
 
-
-
 @conan_subcommand()
 def lock_upgrade(conan_api, parser, subparser, *args):
     """
