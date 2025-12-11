@@ -109,12 +109,15 @@ class GraphAPI:
         Command line helper to scope options when ``command -o myoption=myvalue`` is used,
         that needs to be converted to "-o pkg:myoption=myvalue". The "pkg" value will be
         computed from the given requires/tool_requires
+
+        This is legacy, as options should always be scoped now
         """
-        # FIXME: This helper function here is not great, find a better place
         if requires and len(requires) == 1 and not tool_requires:
-            profile.options.scope(requires[0])
-        if tool_requires and len(tool_requires) == 1 and not requires:
-            profile.options.scope(tool_requires[0])
+            ref = requires[0]
+            if str(ref.version).startswith("["):
+                ref = ref.copy()
+                ref.version = "*"
+            profile.options.scope(ref)
 
     def load_graph_requires(self, requires, tool_requires, profile_host, profile_build,
                             lockfile, remotes, update, check_updates=False, python_requires=None):

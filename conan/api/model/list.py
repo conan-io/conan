@@ -203,6 +203,7 @@ class PackagesList:
 
     def merge(self, other):
         assert isinstance(other, PackagesList)
+
         def recursive_dict_update(d, u):  # TODO: repeated from conandata.py
             for k, v in u.items():
                 if isinstance(v, dict):
