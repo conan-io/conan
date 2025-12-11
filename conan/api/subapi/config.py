@@ -1,4 +1,3 @@
-import json
 import os
 
 from conan.api.output import ConanOutput
@@ -13,8 +12,8 @@ from conan.errors import ConanException
 from conan.internal.model.conanconfig import loadconanconfig, saveconanconfig
 from conan.internal.model.conf import BUILT_IN_CONFS
 from conan.internal.model.pkg_type import PackageType
-from conan.api.model import RecipeReference, PkgReference
-from conan.internal.util.files import save, rmdir, remove
+from conan.api.model import RecipeReference
+from conan.internal.util.files import rmdir, remove
 
 
 class ConfigAPI:
