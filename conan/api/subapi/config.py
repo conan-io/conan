@@ -10,7 +10,7 @@ from conan.internal.graph.graph_builder import DepsGraphBuilder
 from conan.internal.graph.profile_node_definer import consumer_definer
 from conan.errors import ConanException
 
-from conan.internal.model.conanconfig import loadconanconfig
+from conan.internal.model.conanconfig import loadconanconfig, saveconanconfig
 from conan.internal.model.conf import BUILT_IN_CONFS
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference, PkgReference
@@ -51,109 +51,132 @@ class ConfigAPI:
         self._conan_api.reinit()
 
     def install_pkg(self, require, lockfile=None, force=False, remotes=None, profile=None):
-        # Input [refs]  # one or more, possibly partial and even version ranges
-        # load if existing the cache conan_config.json
-        # check for every ref if the existing in the conan_config.json
-        #   pkga/1.0, pkgb/2.2, pkgc/3.3
-        #   if pkgd, pkge => append
-        #   if pkga/1.0, pkgd => error
-        #   if pkga/1.1 => error
-        #   generates list of (ref, action=install, save)
-        # install every one that has to be installed
-        # save conan_config.json
-        ref = self._install_pkg(require, lockfile, force, remotes, profile)
+        ConanOutput().warning("The 'conan config install-pkg' is experimental",
+                              warn_tag="experimental")
+        require = RecipeReference.loads(require)
+        required_pkgs = self._resolve_requires([require], lockfile, remotes, profile)
+        installed_refs = self._install_pkgs(required_pkgs, force)
         self._conan_api.reinit()
-        return ref
+        return installed_refs
 
     def install_pkg_file(self, path, lockfile=None, force=False, remotes=None, profile=None):
+        ConanOutput().warning("The 'conan config install-pkg' is experimental",
+                              warn_tag="experimental")
         if os.path.isdir(path):
             path = os.path.join(path, "conanconfig.json")
-        requires = loadconanconfig(path)
-        refs = self._handle_reqs(requires, force)
-        for require in requires:
-            ref = self._install_pkg(require, lockfile, remotes, profile)
-            refs.append(ref)
+        requested_requires = loadconanconfig(path)
+        required_pkgs = self._resolve_requires(requested_requires, lockfile, remotes, profile)
+        installed_refs = self._install_pkgs(required_pkgs, force)
         self._conan_api.reinit()
-        return refs
+        return installed_refs
 
-    def _handle_reqs(self, requires, force):
+    def _install_pkgs(self, required_pkgs, force):
+        out = ConanOutput()
+        out.title("Configuration packages to install")
         config_version_file = HomePaths(self._conan_api.home_folder).config_version_path
         if not os.path.exists(config_version_file):
-            return requires
-        config_versions = loadconanconfig(config_version_file)
+            config_versions = []
+        else:
+            ConanOutput().info(f"Reading existing config-versions file: {config_version_file}")
+            config_versions = loadconanconfig(config_version_file)
         config_versions_dict = {r.name: r for r in config_versions}
         if len(config_versions_dict) < len(config_versions):
-            raise ConanException("There are multiple requirerements for the same package "
+            raise ConanException("There are multiple requirements for the same package "
                                  f"with different versions: {config_version_file}")
-        result = []
-        for require in requires:
-            existing = config_versions_dict.get(require.name)
-            if not existing:
-                result.append(require)
-                continue
-            if existing == require:
-                if force:
-                    ConanOutput().info(f"Package '{require}' already configured, "
-                                       "but re-installation forced. It is recommended to do a "
-                                       "'conan config clean' before.")
-                    result.append(require)
-                else:
-                    ConanOutput().info(f"Package '{require}' already configured, "
-                                       "skipping configuration install")
-            else:
-                if force:
-                    ConanOutput().warning(f"Package '{existing}' already configured, forced "
-                                          f"installation of '{require} on top. "
-                                          f"Recommended a 'conan config clean' before")
-                    result.append(require)
-                else:
-                    raise ConanException(f"Package '{existing}' already configured, but tried "
-                                         f"to install '{require}. Do a 'conan config clean' before")
-        return result
 
-    def _install_pkg(self, ref, lockfile=None, remotes=None, profile=None) -> PkgReference:
+        new_config = config_versions_dict.copy()
+        for required_pkg in required_pkgs:
+            new_config.pop(required_pkg.ref.name, None)  # To ensure new order
+            new_config[required_pkg.ref.name] = required_pkg
+        final_config_refs = [pkg.ref for pkg in new_config.values()]
+
+        prev_refs = "\n\t".join(repr(r) for r in config_versions)
+        out.info(f"Previously installed configuration packages:\n\t{prev_refs}")
+
+        new_refs = "\n\t".join(r.repr_notime() for r in final_config_refs)
+        out.info(f"New configuration packages to install:\n\t{new_refs}")
+
+        if list(config_versions_dict) == list(new_config)[:len(config_versions_dict)]:
+            # There is no conflict in order, can be done safely
+            if final_config_refs == config_versions:
+                if force:
+                    out.warning("The requested configurations are identical to the already "
+                                "installed ones, but forcing re-installation because --force")
+                    to_install = required_pkgs
+                else:
+                    out.info("The requested configurations are identical to the already "
+                             "installed ones, skipping re-installation")
+                    to_install = []
+            else:
+                out.info("Installing new or updating configuration packages")
+                to_install = required_pkgs
+        else:
+            # Change in order of existing configuration
+            if force:
+                out.warning(f"Installing these configuration packages will break the "
+                            f"already installed order, with possible side effects. "
+                            f"Forcing the installation because --force was defined")
+                to_install = required_pkgs
+            else:
+                raise ConanException(f"Installing these configuration packages will break the "
+                                     f"already installed order, with possible side effects. "
+                                     f"Use --force to force installation")
+
+        out.title("Installing configuration from packages")
+        # install things and update the Conan cache "config_versions.json" file
+        from conan.internal.api.config.config_installer import configuration_install
+        cache_folder = self._conan_api.cache_folder
+        requester = self._helpers.requester
+        for pkg in to_install:
+            out.info(f"Installing configuration from {pkg.ref}")
+            configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder,
+                                  verify_ssl=False, config_type="dir",
+                                  ignore=["conaninfo.txt", "conanmanifest.txt"])
+
+        saveconanconfig(config_version_file, final_config_refs)
+        return final_config_refs
+
+    def _resolve_requires(self, refs, lockfile=None, remotes=None, profile=None):
         """ install configuration stored inside a Conan package
         The installation of configuration will reinitialize the full ConanAPI
         """
-        ConanOutput().warning("The 'conan config install-pkg' is experimental",
-                              warn_tag="experimental")
         conan_api = self._conan_api
         remotes = conan_api.remotes.list() if remotes is None else remotes
         profile_host = profile_build = profile or conan_api.profiles.get_profile([])
 
         app = ConanApp(self._conan_api)
 
-        # Computation of a very simple graph that requires "ref"
-        conanfile = app.loader.load_virtual(requires=[RecipeReference.loads(ref)])
-        consumer_definer(conanfile, profile_host, profile_build)
-        root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
-        root_node.is_conf = True
-        update = ["*"]
-        builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
-                                   update, update, self._helpers.global_conf)
-        deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
+        ConanOutput().title("Fetching requested configuration packages")
+        result = []
+        for ref in refs:
+            # Computation of a very simple graph that requires "ref"
+            # Need to convert input requires to RecipeReference
+            conanfile = app.loader.load_virtual(requires=[ref])
+            consumer_definer(conanfile, profile_host, profile_build)
+            root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST,
+                             recipe=RECIPE_VIRTUAL)
+            root_node.is_conf = True
+            update = ["*"]
+            builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
+                                       update, update, self._helpers.global_conf)
+            deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
 
-        # Basic checks of the package: correct package_type and no-dependencies
-        deps_graph.report_graph_error()
-        pkg = deps_graph.root.edges[0].dst
-        ConanOutput().info(f"Configuration from package: {pkg}")
-        if pkg.conanfile.package_type is not PackageType.CONF:
-            raise ConanException(f'{pkg.conanfile} is not of package_type="configuration"')
-        if pkg.edges:
-            raise ConanException(f"Configuration package {pkg.ref} cannot have dependencies")
+            # Basic checks of the package: correct package_type and no-dependencies
+            deps_graph.report_graph_error()
+            pkg = deps_graph.root.edges[0].dst
+            ConanOutput().info(f"Configuration from package: {pkg}")
+            if pkg.conanfile.package_type is not PackageType.CONF:
+                raise ConanException(f'{pkg.conanfile} is not of package_type="configuration"')
+            if pkg.edges:
+                raise ConanException(f"Configuration package {pkg.ref} cannot have dependencies")
 
-        # The computation of the "package_id" and the download of the package is done as usual
-        # By default we allow all remotes, and build_mode=None, always updating
-        conan_api.graph.analyze_binaries(deps_graph, None, remotes, update=update, lockfile=lockfile)
-        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
-
-        from conan.internal.api.config.config_installer import configuration_install
-        cache_folder = self._conan_api.cache_folder
-        requester = self._helpers.requester
-        configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder,
-                              verify_ssl=False, config_type="dir",
-                              ignore=["conaninfo.txt", "conanmanifest.txt"])
-        return pkg.ref
+            # The computation of the "package_id" and the download of the package is done as usual
+            # By default we allow all remotes, and build_mode=None, always updating
+            conan_api.graph.analyze_binaries(deps_graph, None, remotes, update=update,
+                                             lockfile=lockfile)
+            conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
+            result.append(pkg)
+        return result
 
     def get(self, name, default=None, check_type=None):
         """ get the value of a global.conf item

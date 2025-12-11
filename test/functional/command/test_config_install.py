@@ -623,6 +623,8 @@ class TestConfigInstallPkg:
 
         # Just to make sure it doesn't crash in the update
         c.run("config install-pkg myconf/[*]")
+        assert ("The requested configurations are identical to the already installed ones, "
+                "skipping re-installation") in c.out
         # Conan will not re-download fromthe server the same revision
         assert "myconf/0.1: Downloaded package revision" not in c.out
         # It doesn't re-install either
@@ -731,11 +733,14 @@ class TestConfigInstallPkgLockfiles:
         c = TestClient(servers=servers)
         c.run("config install-pkg myconf_a/0.1 --lockfile-out=config.lock")
         c.run("config install-pkg myconf_a/[*] --lockfile=config.lock")
+        assert ("The requested configurations are identical to the already installed ones, "
+                "skipping re-installation") in c.out
         assert "myconf_a/0.1" in c.out
         assert "myconf_a/0.2" not in c.out
+        # Without the lockfile, it is free to update
         c.run("config install-pkg myconf_a/[*]")
+        assert "Installing new or updating configuration packages"
         assert "myconf_a/0.2" in c.out
-        assert "myconf_a/0.1" not in c.out
 
     def test_install_from_file(self, servers):
         c = TestClient(servers=servers)

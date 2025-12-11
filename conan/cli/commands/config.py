@@ -99,9 +99,8 @@ def config_install_pkg(conan_api, parser, subparser, *args):
         refs = conan_api.config.install_pkg_file(conanconfig, lockfile=lockfile, force=args.force,
                                                  remotes=remotes, profile=profile)
     else:
-        ref = conan_api.config.install_pkg(args.reference, lockfile=lockfile, force=args.force,
-                                           remotes=remotes, profile=profile)
-        refs = [ref]
+        refs = conan_api.config.install_pkg(args.reference, lockfile=lockfile, force=args.force,
+                                            remotes=remotes, profile=profile)
     lockfile = conan_api.lockfile.add_lockfile(lockfile, config_requires=refs)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
 
