@@ -1320,6 +1320,22 @@ class TestInstall:
         assert "conanfile.py (pkgb/0.1): CMakeToolchain generated" in c.out
         assert "conanfile.py (pkgc/0.1): CMakeToolchain generated" in c.out
 
+    def test_install_lockfiles(self):
+        c = TestClient()
+        c.save({"conanws.yml": "",
+                "pkga/conanfile.py": GenConanfile("pkga"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
+                "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkga/0.1")})
+        c.run("create pkga --version=0.1")
+        c.run("workspace add pkgb")
+        c.run("workspace add pkgc")
+        c.run("workspace install --lockfile-out=conan.lock")
+
+        # New version, but lockfile should keep the previous one
+        c.run("create pkga --version=0.2")
+        c.run("workspace install --lockfile=conan.lock")
+        print(c.out)
+
 
 def test_keep_core_conf():
     c = TestClient()
