@@ -457,3 +457,49 @@ class TestLockUpgrade:
         assert "libb/2.0" in lock
         assert "libd/1.0" in lock
         assert "libc/1.0" in lock  # TODO: libc should be removed from lockfile? It is not required anymore...
+
+    def test_config_upgrade(self):
+        """ Test that it is possible to lock also config-requires
+        """
+        c = TestClient(light=True)
+
+        c.save({"config/conanfile.py": GenConanfile("config").with_package_type("configuration"),
+                "conanfile.py": GenConanfile("pkg", "1.0")})
+        c.run("create config --version=1.0")
+        c.run("create config --version=2.0")
+        c.run("config install-pkg config/1.0 --lockfile-out=conan.lock")
+
+        def _check(refs):
+            reqs = json.loads(c.load("conan.lock"))["config_requires"]
+            for a, b in zip(refs, reqs):
+                assert a in b
+
+        def _check_cache(refs):
+            reqs = json.loads(c.load_home("config_version.json"))["config_version"]
+            for a, b in zip(refs, reqs):
+                assert a in b
+
+        _check(["config/1.0"])
+        _check_cache(["config/1.0"])
+
+        c.run("lock upgrade-config --requires=config/[*] --update-config-requires=config/*")
+        _check(["config/2.0"])
+        _check_cache(["config/1.0"])
+
+        c.run("config install-pkg config/1.0 --lockfile=conan.lock", assert_error=True)
+        assert "ERROR: Requirement 'config/1.0' not in lockfile 'config_requires'" in c.out
+        c.run("config install-pkg config/2.0 --lockfile=conan.lock")
+        _check(["config/2.0"])
+        _check_cache(["config/2.0"])
+
+        # Force downgrade
+        c.run("config install-pkg config/1.0 --lockfile= --lockfile-out=conan.lock")
+        _check(["config/1.0"])
+        _check_cache(["config/1.0"])
+
+        c.save({"conanconfig.yml": "packages:\n    - config/[*]"})
+        c.run("lock upgrade-config . --update-config-requires=config/1.0")
+        _check(["config/2.0"])
+        _check_cache(["config/1.0"])
+        c.run("config install-pkg . --lockfile=conan.lock")
+        _check_cache(["config/2.0"])
