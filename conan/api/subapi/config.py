@@ -122,14 +122,17 @@ class ConfigAPI:
         else:
             # Change in order of existing configuration
             if force:
-                out.warning(f"Installing these configuration packages will break the "
-                            f"already installed order, with possible side effects. "
-                            f"Forcing the installation because --force was defined")
+                out.warning("Installing these configuration packages will break the "
+                            "existing order, with possible side effects. "
+                            "Forcing the installation because --force was defined", warn_tag="risk")
                 to_install = required_pkgs
             else:
-                raise ConanException(f"Installing these configuration packages will break the "
-                                     f"already installed order, with possible side effects. "
-                                     f"Use --force to force installation")
+                msg = ("Installing these configuration packages will break the "
+                       "existing order, with possible side effects, like breaking 'package_ids'.\n"
+                       "If you still want to enforce this configuration you can:\n"
+                       "   Use 'conan config clean' first to fully reset your configuration.\n"
+                       "   Or use 'conan config install-pkg --force' to force installation.")
+                raise ConanException(msg)
 
         out.title("Installing configuration from packages")
         # install things and update the Conan cache "config_versions.json" file

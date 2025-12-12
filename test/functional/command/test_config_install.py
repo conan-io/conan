@@ -682,7 +682,8 @@ class TestConfigInstallPkg:
         # update of the first fail
         c.run("config install-pkg myconf_a/[*]", assert_error=True)
         assert "ERROR: Installing these configuration packages will break" in c.out
-        assert "Use --force to force installation" in c.out
+        assert "use 'conan config install-pkg --force' to force" in c.out
+        assert "Use 'conan config clean' first to fully reset your configuration" in c.out
         self._check_conf(c, "myconf_b/0.1")
         self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
 
@@ -852,7 +853,8 @@ class TestConfigInstallPkg:
             """)
         c.save({"conanconfig.yml": conanconfig})
         c.run("config install-pkg .", assert_error=True)
-        assert "Use --force to force installation" in c.out
+        assert "use 'conan config install-pkg --force' to force" in c.out
+        assert "Use 'conan config clean' first to fully reset" in c.out
         self._check_conf(c, "myconf_b/0.1")
         self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
 
