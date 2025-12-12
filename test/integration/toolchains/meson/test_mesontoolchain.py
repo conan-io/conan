@@ -903,3 +903,37 @@ def test_new_public_attributes():
     backend = 'xcode'
     """)
     assert expected in content
+
+
+def test_needs_exe_wrapper():
+    host = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=apple-clang
+    compiler.cppstd=gnu17
+    compiler.libcxx=libc++
+    compiler.version=16
+    os=Macos
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=apple-clang
+    compiler.cppstd=gnu17
+    compiler.libcxx=libc++
+    compiler.version=16
+    os=Macos
+    """)
+    client = TestClient()
+    client.save({
+        "host": host,
+        "build": build,
+        "conanfile.py": GenConanfile("pkg", "1.0")
+                        .with_settings("os", "arch", "compiler", "build_type")
+                        .with_generator("MesonToolchain")
+    })
+    client.run("install . -pr:h host -pr:b build -c 'tools.build.cross_building:can_run=True'")
+    content = client.load(MesonToolchain.cross_filename)
+    assert "needs_exe_wrapper = false" in content
