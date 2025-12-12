@@ -98,7 +98,7 @@ class TargetConfigurationTemplate2:
                         comp = required_comp
                         default_target = f"{required_pkg}::{required_comp}"
                         link = not (pkg_type is PackageType.SHARED and
-                                dep_comp.type is PackageType.SHARED)
+                                    dep_comp.type is PackageType.SHARED)
 
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
                     dep_target = dep_target or default_target
@@ -163,7 +163,7 @@ class TargetConfigurationTemplate2:
                                                            name)
                 target_name = target_name or f"{pkg_name}::{name}"
                 target = self._get_cmake_lib(component, cpp_info.components, pkg_folder,
-                                             pkg_folder_var)
+                                             pkg_folder_var, comp_name=name)
                 if target is not None:
                     cmake_target_aliases = self._get_aliases(name)
                     target["cmake_target_aliases"] = cmake_target_aliases
@@ -178,30 +178,33 @@ class TargetConfigurationTemplate2:
                 libs[target_name] = target
         return libs
 
-    def _get_cmake_lib(self, info, components, pkg_folder, pkg_folder_var):
-        if info.exe or not (info.package_framework or info.includedirs or info.libs or info.system_libs):
+    def _get_cmake_lib(self, info, components, pkg_folder, pkg_folder_var, comp_name=None):
+        if info.exe or not (info.package_framework or info.frameworks or info.includedirs or info.libs
+                            or info.system_libs or info.defines):
             return
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
                                for i in info.includedirs) if info.includedirs else ""
         requires = self._requires(info, components)
         assert isinstance(requires, dict)
-        defines = " ".join(cmake_escape_value(f) for f in info.defines)
+        defines = ";".join(cmake_escape_value(f) for f in info.defines)
         # FIXME: Filter by lib traits!!!!!
         if not self._require.headers:  # If not depending on headers, paths and
             includedirs = defines = None
+        extra_libs = self._cmakedeps.get_property("cmake_extra_interface_libs", self._conanfile,
+                                                  comp_name=comp_name, check_type=list) or []
         sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
                   "defines": defines,
                   "requires": requires,
-                  "cxxflags": " ".join(cmake_escape_value(f) for f in info.cxxflags),
-                  "cflags": " ".join(cmake_escape_value(f) for f in info.cflags),
-                  "sharedlinkflags": " ".join(cmake_escape_value(v) for v in info.sharedlinkflags),
-                  "exelinkflags": " ".join(cmake_escape_value(v) for v in info.exelinkflags),
-                  "system_libs": " ".join(info.system_libs),
+                  "cxxflags": ";".join(cmake_escape_value(f) for f in info.cxxflags),
+                  "cflags": ";".join(cmake_escape_value(f) for f in info.cflags),
+                  "sharedlinkflags": ";".join(cmake_escape_value(v) for v in info.sharedlinkflags),
+                  "exelinkflags": ";".join(cmake_escape_value(v) for v in info.exelinkflags),
+                  "system_libs": " ".join(info.system_libs + extra_libs),
                   "sources": " ".join(sources)
-        }
+                  }
         # System frameworks (only Apple OS)
         if info.frameworks:
             target['frameworks'] = " ".join([f"-framework {frw}" for frw in info.frameworks])
@@ -214,10 +217,12 @@ class TargetConfigurationTemplate2:
             assert lib_type, f"Unknown package type {info.type}"
             assert info.location, f"cpp_info.location missing for framework {info.package_framework}"
             target["type"] = lib_type
-            target["package_framework"]["location"] = self._path(info.location, pkg_folder, pkg_folder_var)
-            target["includedirs"] = []  # empty array as frameworks have their own way to inject headers
+            target["package_framework"]["location"] = self._path(info.location, pkg_folder,
+                                                                 pkg_folder_var)
+            target["includedirs"] = []  # empty as frameworks have their own way to inject headers
             # FIXME: This is not needed for CMake < 3.24. Remove it when Conan requires CMake >= 3.24
-            target["package_framework"]["frameworkdir"] = self._path(pkg_folder, pkg_folder, pkg_folder_var)
+            target["package_framework"]["frameworkdir"] = self._path(pkg_folder, pkg_folder,
+                                                                     pkg_folder_var)
         if info.libs:
             if len(info.libs) != 1:
                 raise ConanException(f"New CMakeDeps only allows 1 lib per component:\n"
@@ -295,6 +300,9 @@ class TargetConfigurationTemplate2:
         transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
         # FIXME: Hardcoded CONFIG
         ret = {self._cmakedeps.get_cmake_filename(r): "CONFIG" for r in transitive_reqs.values()}
+        extra_mods = self._cmakedeps.get_property("cmake_extra_dependencies", self._conanfile,
+                                                  check_type=list) or []
+        ret.update({extra_mod: "" for extra_mod in extra_mods})
         return ret
 
     @staticmethod
@@ -352,26 +360,26 @@ class TargetConfigurationTemplate2:
         {% endif %}
         {% if lib_info.get("defines") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                     {{config_wrapper(config, lib_info["defines"])}})
+                     "{{config_wrapper(config, lib_info["defines"])}}")
         {% endif %}
         {% if lib_info.get("cxxflags") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
-                     $<$<COMPILE_LANGUAGE:CXX>:{{config_wrapper(config, lib_info["cxxflags"])}}>)
+                     "$<$<COMPILE_LANGUAGE:CXX>:{{config_wrapper(config, lib_info["cxxflags"])}}>")
         {% endif %}
         {% if lib_info.get("cflags") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
-                     $<$<COMPILE_LANGUAGE:C>:{{config_wrapper(config, lib_info["cflags"])}}>)
+                     "$<$<COMPILE_LANGUAGE:C>:{{config_wrapper(config, lib_info["cflags"])}}>")
         {% endif %}
         {% if lib_info.get("sharedlinkflags") %}
         {% set linkflags = config_wrapper(config, lib_info["sharedlinkflags"]) %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{linkflags}}>
-                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{linkflags}}>)
+                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{linkflags}}>"
+                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{linkflags}}>")
         {% endif %}
         {% if lib_info.get("exelinkflags") %}
         {% set exeflags = config_wrapper(config, lib_info["exelinkflags"]) %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>)
+                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>")
         {% endif %}
 
         {% if lib_info.get("link_languages") %}

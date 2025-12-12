@@ -12,9 +12,7 @@ class TestOutputLevel:
         t = TestClient(light=True)
         t.save({"conanfile.py": GenConanfile("foo", "1.0")})
         t.run("create . -vfooling", assert_error=True)
-        assert "Invalid argument '-vfooling'" in t.out
-        assert "Allowed values: quiet, error, warning, notice, status, verbose, " \
-               "debug(v), trace(vv)" in t.out
+        assert "argument -v: invalid choice: 'fooling'" in t.out
 
         with environment_update({"CONAN_LOG_LEVEL": "fail"}):
             t.run("create .", assert_error=True)

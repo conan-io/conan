@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 
 import pytest
@@ -97,6 +98,30 @@ def test_unused_requirement(component):
     t.run('create .', assert_error=True)
     assert "ERROR: wrong/version: package_info(): The direct dependency 'top2' is not used " \
            "by any '(cpp_info/components).requires'." in t.out
+
+
+def test_unused_requirement_not_propagated():
+    # https://github.com/conan-io/conan/issues/19026
+    t = TestClient()
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            requires = "header/0.1", "lib/0.1"
+
+            def package_info(self):
+                self.cpp_info.requires = ["lib::lib", "header::header"]
+    """)
+    t.save({"header/conanfile.py": GenConanfile("header", "0.1").with_package_type("header-library"),
+            "lib/conanfile.py": GenConanfile("lib", "0.1").with_package_type("static-library"),
+            "pkg/conanfile.py": conanfile,
+            "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")})
+    t.run('create header')
+    t.run('create lib')
+    t.run('create pkg')
+    t.run("install app")
+    assert re.search(r"Skipped binaries(\s*)header/0.1", t.out)
 
 
 @pytest.mark.parametrize("component", [True, False])

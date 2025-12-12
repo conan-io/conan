@@ -54,6 +54,7 @@ def test_msbuild_toolset():
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
     conanfile = ConanFile(None)
+    conanfile.conf = Conf()
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings = settings
     conanfile.settings.build_type = "Release"
@@ -77,6 +78,7 @@ def test_msbuild_toolset():
 ])
 def test_msbuild_toolset_for_intel_cc(mode, expected_toolset):
     conanfile = ConanFile()
+    conanfile.conf = Conf()
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings = Settings({"build_type": ["Release"],
                                    "compiler": {"intel-cc": {"version": ["2021.3"], "mode": [mode]},

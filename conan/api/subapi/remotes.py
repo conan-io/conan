@@ -58,7 +58,8 @@ class RemotesAPI:
 
         :param pattern: single ``str`` or list of ``str``. If the pattern is an exact name without
           wildcards like "*" and no remote is found matching that exact name, it will raise an error.
-        :return: the list of disabled :ref:`Remote <conan.api.model.Remote>` objects  (even if they were already disabled)
+        :return: the list of disabled :ref:`Remote <conan.api.model.Remote>` objects  (even if they
+          were already disabled)
         """
         remotes = _load(self._remotes_file)
         disabled = _filter(remotes, pattern, only_enabled=False)
@@ -76,7 +77,8 @@ class RemotesAPI:
 
         :param pattern: single ``str`` or list of ``str``. If the pattern is an exact name without
           wildcards like "*" and no remote is found matching that exact name, it will raise an error.
-        :return: the list of enabled :ref:`Remote <conan.api.model.Remote>` objects (even if they were already enabled)
+        :return: the list of enabled :ref:`Remote <conan.api.model.Remote>` objects (even if they
+          were already enabled)
         """
         remotes = _load(self._remotes_file)
         enabled = _filter(remotes, pattern, only_enabled=False)
@@ -93,7 +95,8 @@ class RemotesAPI:
         Obtain a :ref:`Remote <conan.api.model.Remote>` object
 
         :param remote_name: the exact name of the remote to be returned
-        :return: the :ref:`Remote <conan.api.model.Remote>` object, or raise an Exception if the remote does not exist.
+        :return: the :ref:`Remote <conan.api.model.Remote>` object, or raise an Exception if the
+          remote does not exist.
         """
         remotes = _load(self._remotes_file)
         try:
