@@ -52,8 +52,7 @@ tools_locations = {
         "exe": "clang",
         "default": "19",
         "19": {
-            "path": {'Windows':  # We can use the Clang installed inside VS
-                     f'{windows_choco_root}/Llvm/bin'}
+            "path": {'Windows': 'C:/choco_llvm/bin'}  # by choco
         }
     },
     'visual_studio': {"default": "15",

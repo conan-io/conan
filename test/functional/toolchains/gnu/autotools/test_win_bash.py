@@ -76,7 +76,7 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     clangpath = tools_locations["clang"]["19"]["path"]["Windows"]
     # compilers
     c, cpp = ("clang", "clang++") if frontend == "clang" else ("clang-cl", "clang-cl")
-    comps = f'{{"cpp":"{cpp}", "c":"{c}", "rc":"{c}"}}'
+    comps = f'{{"cpp":"{clangpath}/{cpp}", "c":"{clangpath}/{c}", "rc":"{clangpath}/{c}"}}'
     profile_win = textwrap.dedent(f"""
         [settings]
         os=Windows
