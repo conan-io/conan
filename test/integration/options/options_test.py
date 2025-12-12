@@ -505,6 +505,19 @@ class TestMultipleOptionsPatterns:
         assert "dep3/1.0: SHARED: True!!" in c.out
         assert "dep4/1.0: SHARED: True!!" in c.out
 
+    def test_pattern_version_range_warn(self):
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("foo", "1.0")})
+        c.run("create -o=foo/[>1]:shared=True")
+        assert "WARN: risk: Pattern foo/[>1] contains a version range" in c.out
+
+    def test_pattern_version_range_wrong_split(self):
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("foo", "1.0")})
+        c.run("create -o=foo/[>=1]:shared=True", assert_error=True)
+        # We split by the first =, so this version range we can't catch and warn before it breaks
+        assert "option 'foo/[>' doesn't exist" in c.out
+
 
 class TestTransitiveOptionsShared:
     """
@@ -862,3 +875,14 @@ def test_get_safe_none_option_checks():
     assert "get_safe is not None: False" in tc.out
     assert "get_safe == None: True" in tc.out
     assert "get_safe != None: False" in tc.out
+
+
+def test_option_apply_version_range():
+    c = TestClient(light=True)
+    c.save({"conanfile.py": GenConanfile("dep", "0.1").with_shared_option(False)})
+    c.run("create -o shared=True")
+    c.run("install --requires=dep/0.1 -o shared=True")  # This worked without problem
+    c.run("install --requires=dep/[*] -o shared=True")
+    assert "WARN: risk" not in c.out
+    # This failed because of dep/[*] not matching pattern, now it works
+    assert "Install finished successfully" in c.out

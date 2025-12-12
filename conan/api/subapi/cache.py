@@ -22,6 +22,8 @@ from conan.internal.util.files import rmdir, mkdir, remove, save
 
 
 class CacheAPI:
+    """ This CacheAPI is used to interact with the packages storage cache
+    """
 
     def __init__(self, conan_api, api_helpers):
         self._conan_api = conan_api
@@ -71,17 +73,29 @@ class CacheAPI:
             return ref_layout.finalize()
         return _check_folder_existence(pref, "package", ref_layout.package())
 
-    def check_integrity(self, package_list):
-        """Check if the recipes and packages are corrupted (it will raise a ConanExcepcion)"""
+    def check_integrity(self, package_list, return_pkg_list=False):
+        """
+        Check if the recipes and packages are corrupted
+
+        :param package_list: PackagesList to check
+        :param return_pkg_list: If True, return a PackagesList with corrupted artifacts
+        :return: PackagesList with corrupted artifacts if return_pkg_list is True
+        :raises: ConanExcepcion if there are corrupted artifacts and return_pkg_list is False
+        """
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         checker = IntegrityChecker(cache)
-        checker.check(package_list)
+        corrupted_pkg_list = checker.check(package_list)
+        if return_pkg_list:
+            return corrupted_pkg_list
+        if corrupted_pkg_list:
+            raise ConanException("There are corrupted artifacts, check the error logs")
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True,
               backup_sources=False):
         """
         Remove non critical folders from the cache, like source, build and download (.tgz store)
         folders.
+
         :param package_list: the package lists that should be cleaned
         :param source: boolean, remove the "source" folder if True
         :param build: boolean, remove the "build" folder if True
@@ -128,7 +142,7 @@ class CacheAPI:
                 if download:
                     rmdir(pref_layout.download_package())
 
-    def save(self, package_list, tgz_path, no_source=False):
+    def save(self, package_list: PackagesList, tgz_path, no_source=False) -> None:
         global_conf = self._api_helpers.global_conf
         cache = PkgCache(self._conan_api.cache_folder, global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
@@ -181,7 +195,7 @@ class CacheAPI:
                        compresslevel, recursive=True)
         remove(pkglist_path)
 
-    def restore(self, path):
+    def restore(self, path) -> PackagesList:
         if not os.path.isfile(path):
             raise ConanException(f"Restore archive doesn't exist in {path}")
 
@@ -253,11 +267,14 @@ class CacheAPI:
 
     def get_backup_sources(self, package_list=None, exclude=True, only_upload=True):
         """Get list of backup source files currently present in the cache,
-        either all of them if no argument, or filtered by those belonging to the references in the package_list
+        either all of them if no argument, or filtered by those belonging to the references
+        in the package_list
 
-        @param package_list: a PackagesList object to filter backup files from (The files should have been downloaded form any of the references in the package_list)
-        @param exclude: if True, exclude the sources that come from URLs present the core.sources:exclude_urls global conf
-        @param only_upload: if True, only return the files for packages that are set to be uploaded
+        :param package_list: a PackagesList object to filter backup files from (The files should
+          have been downloaded form any of the references in the package_list)
+        :param exclude: if True, exclude the sources that come from URLs present the
+          core.sources:exclude_urls global conf
+        :param only_upload: if True, only return the files for packages that are set to be uploaded
         """
         config = self._api_helpers.global_conf
         download_cache_path = config.get("core.sources:download_cache")

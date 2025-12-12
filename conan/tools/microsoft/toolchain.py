@@ -61,7 +61,7 @@ class MSBuildToolchain:
         self._conanfile = conanfile
         #: Dict-like that defines the preprocessor definitions
         self.preprocessor_definitions = {}
-        #: Dict-like that defines the preprocessor definitions
+        #: Dict with compile options that will be added as <key>value</key> in the ClCompile section
         self.compile_options = {}
         #: List of all the CXX flags
         self.cxxflags = []
@@ -135,9 +135,9 @@ class MSBuildToolchain:
         cstd = f"stdc{self.cstd}" if self.cstd else ""
         runtime_library = self.runtime_library
         toolset = self.toolset or ""
-        compile_options = self._conanfile.conf.get("tools.microsoft.msbuildtoolchain:compile_options",
-                                                   default={}, check_type=dict)
-        self.compile_options.update(compile_options)
+        conf_options = self._conanfile.conf.get("tools.microsoft.msbuildtoolchain:compile_options",
+                                                default={}, check_type=dict)
+        self.compile_options.update(conf_options)
         parallel = ""
         njobs = build_jobs(self._conanfile)
         if njobs:

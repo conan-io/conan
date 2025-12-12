@@ -238,13 +238,6 @@ class TestAddRemove:
         # For workspace, the version of the conanfile can be ignored if the
         # workspace define a different version.
         c = TestClient(light=True)
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class Lib(ConanFile):
-                name= "pkg"
-                version = "0.1"
-            """)
-
         workspace = textwrap.dedent("""\
             import os
             from conan import Workspace
@@ -255,12 +248,36 @@ class TestAddRemove:
             """)
 
         c.save({"conanws.py": workspace,
-                "dep1/conanfile.py": conanfile})
+                "dep1/conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
         assert info["packages"] == [{"ref": "pkg/1.2.3", "path": "dep1"}]
         c.run("install --requires=pkg/1.2.3")
         # it will not fail
+
+    def test_replace_requires(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/develop"),
+                "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1",
+                                                                               "pkga/0.1"),
+                "myreplaces": "[replace_requires]\npkga/develop: pkga/0.1"})
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb")
+        c.run("workspace add pkgc")
+        c.run("workspace info --format=json")
+
+        info = json.loads(c.stdout)
+        assert info["packages"] == [{'path': 'pkga', 'ref': 'pkga/0.1'},
+                                    {'path': 'pkgb', 'ref': 'pkgb/0.1'},
+                                    {'path': 'pkgc', 'ref': 'pkgc/0.1'}]
+        c.run("install --requires=pkgc/0.1", assert_error=True)
+        assert "Version conflict: Conflict between pkga/develop and pkga/0.1 in the graph" in c.out
+        # it will not fail
+        c.run("install --requires=pkgc/0.1 -pr=default -pr=myreplaces")
+        assert "pkga/0.1 - Editable" in c.out
+        assert "pkga/develop: pkga/0.1" in c.out
 
     def test_error_uppercase(self):
         c = TestClient(light=True)
@@ -574,6 +591,34 @@ class TestWorkspaceBuild:
         c.run("workspace build")
         assert "conanfile.py (pkga/0.1): Building pkga AND 0.1!!!" in c.out
 
+    def test_build_with_external_editable_python_requires(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "ext/conanfile.py": GenConanfile("ext", "0.1").with_package_type("python-require"),
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_python_requires("ext/0.1")
+                })
+        c.run("editable add ext")
+        c.run("workspace add pkga")
+        c.run("workspace build")
+        c.assert_listed_binary({"pkga/0.1": ("8bca2eae7cd0d6b6da8d14f8c86069d89d265bd4",
+                                             "EditableBuild")})
+        c.assert_listed_require({"ext/0.1": "Editable"}, python=True)
+
+    def test_build_with_external_editable(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "ext/conanfile.py": GenConanfile("ext", "0.1").with_build_msg("BUILD EXT!"),
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_requires("ext/0.1")
+                })
+        c.run("editable add ext")
+        c.run("workspace add pkga")
+        c.run("workspace build")
+        assert "ext/0.1: WARN: BUILD EXT!" in c.out
+        c.assert_listed_binary({"pkga/0.1": ("38f8a554b1b3c2cbb44321f0e731b3863359126c",
+                                             "EditableBuild"),
+                                "ext/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                                            "EditableBuild")})
+
 
 class TestNew:
     def test_new(self):
@@ -613,7 +658,7 @@ class TestMeta:
         c.run("workspace add libb")
         c.run("workspace super-install -g CMakeDeps -g CMakeToolchain -of=build "
               "--envs-generation=false")
-        assert "Packages build order:\n    liba/0.1\n    libb/0.1" in c.out
+        assert "Packages build order:\n    liba/0.1: liba\n    libb/0.1: libb" in c.out
         assert "Workspace conanws.py not found in the workspace folder, using default" in c.out
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conan_toolchain.cmake" in files
