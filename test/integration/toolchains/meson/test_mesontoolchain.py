@@ -921,6 +921,9 @@ def test_needs_exe_wrapper():
     compiler.libcxx=libc++
     compiler.version=16
     os=Macos
+    [conf]
+    tools.apple:sdk_path=/my/sdk/path
+    tools.build.cross_building:can_run=True
     """)
     build = textwrap.dedent("""
     [settings]
@@ -940,6 +943,6 @@ def test_needs_exe_wrapper():
                         .with_settings("os", "arch", "compiler", "build_type")
                         .with_generator("MesonToolchain")
     })
-    client.run("install . -pr:h host -pr:b build -c tools.build.cross_building:can_run=True")
+    client.run("install . -pr:h host -pr:b build")
     content = client.load(MesonToolchain.cross_filename)
     assert "needs_exe_wrapper = false" in content
