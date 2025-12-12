@@ -8,7 +8,7 @@ from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
     resolve_apple_flags, apple_extra_flags
-from conan.tools.build.cross_building import cross_building
+from conan.tools.build.cross_building import cross_building, can_run
 from conan.tools.build.flags import (architecture_link_flag, libcxx_flags, architecture_flag,
                                      threads_flags)
 from conan.tools.env import VirtualBuildEnv
@@ -266,7 +266,8 @@ class MesonToolchain:
                 sdk_host = conanfile.settings.get_safe("os.sdk")
                 self.cross_build["host"]["subsystem"] = get_apple_subsystem(sdk_host)
                 self.cross_build["build"]["subsystem"] = get_apple_subsystem(sdk_build)
-            self.properties["needs_exe_wrapper"] = True
+            # Issue: https://github.com/conan-io/conan/issues/19217
+            self.properties["needs_exe_wrapper"] = not can_run(self._conanfile)
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target
                 os_target = settings_target.get_safe("os")
