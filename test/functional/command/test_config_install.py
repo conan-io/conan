@@ -631,6 +631,9 @@ class TestConfigInstallPkg:
         assert "Installing new or updating configuration packages" in c.out
         self._check_conf(c, "myconf_a/0.1")
         self._check_conf_file(c, ["myconf_a/0.1"])
+        cache_files = os.listdir(c.cache_folder)
+        assert "conaninfo.txt" not in cache_files
+        assert "conanmanifest.txt" not in cache_files
 
         # skip reinstall
         c.run("config install-pkg myconf_a/0.1")
