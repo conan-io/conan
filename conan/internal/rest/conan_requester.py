@@ -45,19 +45,9 @@ class _SourceURLCredentials:
             return
 
         def _get_auth(credentials):
-            result = {}
-            has_auth = False
-            if "token" in credentials:
-                result["token"] = credentials["token"]
-                has_auth = True
-            if "user" in credentials and "password" in credentials:
-                result["user"] = credentials["user"]
-                result["password"] = credentials["password"]
-                has_auth = True
-            if has_auth:
-                return result
-            else:
-                raise ConanException(f"Unknown credentials method for '{credentials['url']}'")
+            if "token" in credentials or ("user" in credentials and "password" in credentials):
+                return credentials
+            raise ConanException(f"Unknown credentials method for '{credentials['url']}'")
 
         try:
             template = Template(load(creds_path))
@@ -82,6 +72,8 @@ class _SourceURLCredentials:
                     kwargs["headers"]["Authorization"] = f"Bearer {c.get('token')}"
                 if c.get("user") and c.get("password"):
                     kwargs["auth"] = (c.get("user"), c.get("password"))
+                if c.get("headers"):
+                    kwargs.setdefault("headers", {}).update(c["headers"])
                 return
 
         # Then, try to find the credentials in "_urls"
@@ -94,6 +86,9 @@ class _SourceURLCredentials:
                 password = creds.get("password")
                 if user and password:
                     kwargs["auth"] = (user, password)
+                headers = creds.get("headers")
+                if headers:
+                    kwargs.setdefault("headers", {}).update(headers)
                 break
 
 

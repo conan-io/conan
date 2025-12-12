@@ -1,5 +1,5 @@
 import pytest
-from mock import mock
+from unittest import mock
 
 from conan.tools.build import check_max_cppstd, check_min_cppstd, valid_max_cppstd, valid_min_cppstd, \
     valid_min_cstd, valid_max_cstd

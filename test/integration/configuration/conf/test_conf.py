@@ -3,7 +3,7 @@ import platform
 import textwrap
 
 import pytest
-from mock import patch
+from unittest.mock import patch
 
 from conan import conan_version
 from conan.internal.api.detect import detect_api

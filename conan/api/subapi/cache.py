@@ -8,8 +8,9 @@ from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
 from conan.internal.api.uploader import compress_files
 from conan.internal.cache.cache import PkgCache
-from conan.internal.cache.conan_reference_layout import EXPORT_SRC_FOLDER, EXPORT_FOLDER, SRC_FOLDER, \
-    METADATA, DOWNLOAD_EXPORT_FOLDER
+from conan.internal.cache.conan_reference_layout import (EXPORT_SRC_FOLDER, EXPORT_FOLDER,
+                                                         SRC_FOLDER, METADATA,
+                                                         DOWNLOAD_EXPORT_FOLDER)
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.cache.integrity_check import IntegrityChecker
 from conan.internal.rest.download_cache import DownloadCache
@@ -21,6 +22,8 @@ from conan.internal.util.files import rmdir, mkdir, remove, save
 
 
 class CacheAPI:
+    """ This CacheAPI is used to interact with the packages storage cache
+    """
 
     def __init__(self, conan_api, api_helpers):
         self._conan_api = conan_api
@@ -70,17 +73,29 @@ class CacheAPI:
             return ref_layout.finalize()
         return _check_folder_existence(pref, "package", ref_layout.package())
 
-    def check_integrity(self, package_list):
-        """Check if the recipes and packages are corrupted (it will raise a ConanExcepcion)"""
+    def check_integrity(self, package_list, return_pkg_list=False):
+        """
+        Check if the recipes and packages are corrupted
+
+        :param package_list: PackagesList to check
+        :param return_pkg_list: If True, return a PackagesList with corrupted artifacts
+        :return: PackagesList with corrupted artifacts if return_pkg_list is True
+        :raises: ConanExcepcion if there are corrupted artifacts and return_pkg_list is False
+        """
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         checker = IntegrityChecker(cache)
-        checker.check(package_list)
+        corrupted_pkg_list = checker.check(package_list)
+        if return_pkg_list:
+            return corrupted_pkg_list
+        if corrupted_pkg_list:
+            raise ConanException("There are corrupted artifacts, check the error logs")
 
     def clean(self, package_list, source=True, build=True, download=True, temp=True,
               backup_sources=False):
         """
         Remove non critical folders from the cache, like source, build and download (.tgz store)
         folders.
+
         :param package_list: the package lists that should be cleaned
         :param source: boolean, remove the "source" folder if True
         :param build: boolean, remove the "build" folder if True
@@ -104,19 +119,20 @@ class CacheAPI:
                     if not os.path.exists(manifest) or not os.path.exists(info):
                         rmdir(folder)
         if backup_sources:
-            backup_files = self._conan_api.cache.get_backup_sources(package_list, exclude=False, only_upload=False)
+            backup_files = self._conan_api.cache.get_backup_sources(package_list, exclude=False,
+                                                                    only_upload=False)
             ConanOutput().verbose(f"Cleaning {len(backup_files)} backup sources")
             for f in backup_files:
                 remove(f)
 
-        for ref, ref_bundle in package_list.refs().items():
+        for ref, packages in package_list.items():
             ConanOutput(ref.repr_notime()).verbose("Cleaning recipe cache contents")
             ref_layout = cache.recipe_layout(ref)
             if source:
                 rmdir(ref_layout.source())
             if download:
                 rmdir(ref_layout.download_export())
-            for pref, _ in package_list.prefs(ref, ref_bundle).items():
+            for pref in packages:
                 ConanOutput(pref).verbose("Cleaning package cache contents")
                 pref_layout = cache.pkg_layout(pref)
                 if build:
@@ -126,7 +142,7 @@ class CacheAPI:
                 if download:
                     rmdir(pref_layout.download_package())
 
-    def save(self, package_list, tgz_path, no_source=False):
+    def save(self, package_list: PackagesList, tgz_path, no_source=False) -> None:
         global_conf = self._api_helpers.global_conf
         cache = PkgCache(self._conan_api.cache_folder, global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
@@ -135,10 +151,11 @@ class CacheAPI:
         compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
         tar_files: dict[str, str] = {}  # {path_in_tar: abs_path}
 
-        for ref, ref_bundle in package_list.refs().items():
+        for ref, packages in package_list.items():
             ref_layout = cache.recipe_layout(ref)
             recipe_folder = os.path.relpath(ref_layout.base_folder, cache_folder)
             recipe_folder = recipe_folder.replace("\\", "/")  # make win paths portable
+            ref_bundle = package_list.recipe_dict(ref)
             ref_bundle["recipe_folder"] = recipe_folder
             out.info(f"Saving {ref}: {recipe_folder}")
             # Package only selected folders, not DOWNLOAD one
@@ -152,19 +169,20 @@ class CacheAPI:
             if os.path.exists(path):
                 tar_files[f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}"] = path
 
-            for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
+            for pref in packages:
                 pref_layout = cache.pkg_layout(pref)
                 pkg_folder = pref_layout.package()
                 folder = os.path.relpath(pkg_folder, cache_folder)
                 folder = folder.replace("\\", "/")  # make win paths portable
-                pref_bundle["package_folder"] = folder
+                pkg_dict = package_list.package_dict(pref)
+                pkg_dict["package_folder"] = folder
                 out.info(f"Saving {pref}: {folder}")
                 tar_files[folder] = os.path.join(cache_folder, folder)
 
                 if os.path.exists(pref_layout.metadata()):
                     metadata_folder = os.path.relpath(pref_layout.metadata(), cache_folder)
                     metadata_folder = metadata_folder.replace("\\", "/")  # make paths portable
-                    pref_bundle["metadata_folder"] = metadata_folder
+                    pkg_dict["metadata_folder"] = metadata_folder
                     out.info(f"Saving {pref} metadata: {metadata_folder}")
                     tar_files[metadata_folder] = os.path.join(cache_folder, metadata_folder)
 
@@ -173,10 +191,11 @@ class CacheAPI:
         pkglist_path = os.path.join(tempfile.gettempdir(), "pkglist.json")
         save(pkglist_path, serialized)
         tar_files["pkglist.json"] = pkglist_path
-        compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path), compresslevel, recursive=True)
+        compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path),
+                       compresslevel, recursive=True)
         remove(pkglist_path)
 
-    def restore(self, path):
+    def restore(self, path) -> PackagesList:
         if not os.path.isfile(path):
             raise ConanException(f"Restore archive doesn't exist in {path}")
 
@@ -194,7 +213,8 @@ class CacheAPI:
         # After unzipping the files, we need to update the DB that references these files
         out = ConanOutput()
         package_list = PackagesList.deserialize(json.loads(pkglist))
-        for ref, ref_bundle in package_list.refs().items():
+        for ref, packages in package_list.items():
+            ref_bundle = package_list.recipe_dict(ref)
             ref.timestamp = revision_timestamp_now()
             ref_bundle["timestamp"] = ref.timestamp
             try:
@@ -207,8 +227,9 @@ class CacheAPI:
             # In the case of recipes, they are always "in place", so just checking it
             assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
             out.info(f"Restore: {ref} in {recipe_folder}")
-            for pref, pref_bundle in package_list.prefs(ref, ref_bundle).items():
+            for pref in packages:
                 pref.timestamp = revision_timestamp_now()
+                pref_bundle = package_list.package_dict(pref)
                 pref_bundle["timestamp"] = pref.timestamp
                 try:
                     pkg_layout = cache.pkg_layout(pref)
@@ -246,17 +267,21 @@ class CacheAPI:
 
     def get_backup_sources(self, package_list=None, exclude=True, only_upload=True):
         """Get list of backup source files currently present in the cache,
-        either all of them if no argument, or filtered by those belonging to the references in the package_list
+        either all of them if no argument, or filtered by those belonging to the references
+        in the package_list
 
-        @param package_list: a PackagesList object to filter backup files from (The files should have been downloaded form any of the references in the package_list)
-        @param exclude: if True, exclude the sources that come from URLs present the core.sources:exclude_urls global conf
-        @param only_upload: if True, only return the files for packages that are set to be uploaded
+        :param package_list: a PackagesList object to filter backup files from (The files should
+          have been downloaded form any of the references in the package_list)
+        :param exclude: if True, exclude the sources that come from URLs present the
+          core.sources:exclude_urls global conf
+        :param only_upload: if True, only return the files for packages that are set to be uploaded
         """
         config = self._api_helpers.global_conf
         download_cache_path = config.get("core.sources:download_cache")
         download_cache_path = download_cache_path or HomePaths(
             self._conan_api.cache_folder).default_sources_backup_folder
-        excluded_urls = config.get("core.sources:exclude_urls", check_type=list, default=[]) if exclude else []
+        excluded_urls = config.get("core.sources:exclude_urls",
+                                   check_type=list, default=[]) if exclude else []
         download_cache = DownloadCache(download_cache_path)
         return download_cache.get_backup_sources_files(excluded_urls, package_list, only_upload)
 
@@ -272,7 +297,7 @@ class CacheAPI:
 def _resolve_latest_ref(cache, ref):
     if ref.revision is None or ref.revision == "latest":
         ref.revision = None
-        result = cache.get_latest_recipe_reference(ref)
+        result = cache.get_latest_recipe_revision(ref)
         if result is None:
             raise ConanException(f"'{ref}' not found in cache")
         ref = result
@@ -283,7 +308,7 @@ def _resolve_latest_pref(cache, pref):
     pref.ref = _resolve_latest_ref(cache, pref.ref)
     if pref.revision is None or pref.revision == "latest":
         pref.revision = None
-        result = cache.get_latest_package_reference(pref)
+        result = cache.get_latest_package_revision(pref)
         if result is None:
             raise ConanException(f"'{pref.repr_notime()}' not found in cache")
         pref = result

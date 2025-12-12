@@ -8,16 +8,18 @@ from conan.errors import ConanException
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.graph.graph import CONTEXT_BUILD, CONTEXT_HOST
+from conan.tools.cmake.utils import cmake_escape_value
 
 
 class TargetConfigurationTemplate2:
     """
     FooTarget-release.cmake
     """
-    def __init__(self, cmakedeps, conanfile, require):
+    def __init__(self, cmakedeps, conanfile, require, full_cpp_info):
         self._cmakedeps = cmakedeps
         self._conanfile = conanfile  # The dependency conanfile, not the consumer one
         self._require = require
+        self._full_cpp_info = full_cpp_info
 
     def content(self):
         auto_link = self._cmakedeps.get_property("cmake_set_interface_link_directories",
@@ -85,14 +87,18 @@ class TargetConfigurationTemplate2:
                                    f"'{required_pkg}::{required_comp}' but component "
                                    f"'{required_comp}' not found in {required_pkg}")
                             raise ConanException(msg)
+                        if dep.package_type is PackageType.APP:
+                            continue  # It doesn't make sense to link a package that is an App
                         comp = None
                         default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
                         link = pkg_type is not PackageType.SHARED
                     else:
+                        if dep_comp.type is PackageType.APP or dep_comp.exe:
+                            continue  # It doesn't make sense to link a package that is an App
                         comp = required_comp
                         default_target = f"{required_pkg}::{required_comp}"
                         link = not (pkg_type is PackageType.SHARED and
-                                dep_comp.type is PackageType.SHARED)
+                                    dep_comp.type is PackageType.SHARED)
 
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
                     dep_target = dep_target or default_target
@@ -102,7 +108,7 @@ class TargetConfigurationTemplate2:
 
     @property
     def _context(self):
-        cpp_info = self._conanfile.cpp_info.deduce_full_cpp_info(self._conanfile)
+        cpp_info = self._full_cpp_info
         assert isinstance(cpp_info.type, PackageType)
         pkg_name = self._conanfile.ref.name
         # fallback to consumer configuration if it doesn't have build_type
@@ -120,8 +126,6 @@ class TargetConfigurationTemplate2:
             self._add_root_lib_target(libs, pkg_name, cpp_info)
         exes = self._get_exes(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
 
-        prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
-                                                self._conanfile, check_type=list) or []
         seen_aliases = set()
         root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
         root_target_name = root_target_name or f"{pkg_name}::{pkg_name}"
@@ -139,20 +143,6 @@ class TargetConfigurationTemplate2:
                     raise ConanException(f"Alias '{alias}' already defined as a target in "
                                          f"{self._conanfile}. ")
 
-        f = self._cmakedeps.get_cmake_filename(self._conanfile)
-        prefixes = [f] + prefixes
-        include_dirs = definitions = libraries = None
-        if not self._require.build:  # To add global variables for try_compile and legacy
-            aggregated_cppinfo = cpp_info.aggregated_components()
-            # FIXME: Proper escaping of paths for CMake
-            incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
-            incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
-                       for i in incdirs]
-            include_dirs = ";".join(incdirs)
-            definitions = ""
-            root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
-            libraries = root_target_name or f"{pkg_name}::{pkg_name}"
-
         pkg_folder = relativize_path(pkg_folder, self._cmakedeps._conanfile,
                                      "${CMAKE_CURRENT_LIST_DIR}")
         dependencies = self._get_dependencies()
@@ -162,13 +152,7 @@ class TargetConfigurationTemplate2:
                 "config": config,
                 "exes": exes,
                 "libs": libs,
-                "context": self._conanfile.context,
-                # Extra global variables
-                "additional_variables_prefixes": prefixes,
-                "version": self._conanfile.ref.version,
-                "include_dirs": include_dirs,
-                "definitions": definitions,
-                "libraries": libraries,
+                "context": self._conanfile.context
                 }
 
     def _get_libs(self, cpp_info, pkg_name, pkg_folder, pkg_folder_var) -> dict:
@@ -179,7 +163,7 @@ class TargetConfigurationTemplate2:
                                                            name)
                 target_name = target_name or f"{pkg_name}::{name}"
                 target = self._get_cmake_lib(component, cpp_info.components, pkg_folder,
-                                             pkg_folder_var)
+                                             pkg_folder_var, comp_name=name)
                 if target is not None:
                     cmake_target_aliases = self._get_aliases(name)
                     target["cmake_target_aliases"] = cmake_target_aliases
@@ -194,31 +178,33 @@ class TargetConfigurationTemplate2:
                 libs[target_name] = target
         return libs
 
-    def _get_cmake_lib(self, info, components, pkg_folder, pkg_folder_var):
-        if info.exe or not (info.package_framework or info.includedirs or info.libs or info.system_libs):
+    def _get_cmake_lib(self, info, components, pkg_folder, pkg_folder_var, comp_name=None):
+        if info.exe or not (info.package_framework or info.frameworks or info.includedirs or info.libs
+                            or info.system_libs or info.defines):
             return
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
                                for i in info.includedirs) if info.includedirs else ""
         requires = self._requires(info, components)
         assert isinstance(requires, dict)
-        defines = " ".join(info.defines)
-        # TODO: Missing escaping?
+        defines = ";".join(cmake_escape_value(f) for f in info.defines)
         # FIXME: Filter by lib traits!!!!!
         if not self._require.headers:  # If not depending on headers, paths and
             includedirs = defines = None
+        extra_libs = self._cmakedeps.get_property("cmake_extra_interface_libs", self._conanfile,
+                                                  comp_name=comp_name, check_type=list) or []
         sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
         target = {"type": "INTERFACE",
                   "includedirs": includedirs,
                   "defines": defines,
                   "requires": requires,
-                  "cxxflags": " ".join(info.cxxflags),
-                  "cflags": " ".join(info.cflags),
-                  "sharedlinkflags": " ".join(info.sharedlinkflags),
-                  "exelinkflags": " ".join(info.exelinkflags),
-                  "system_libs": " ".join(info.system_libs),
+                  "cxxflags": ";".join(cmake_escape_value(f) for f in info.cxxflags),
+                  "cflags": ";".join(cmake_escape_value(f) for f in info.cflags),
+                  "sharedlinkflags": ";".join(cmake_escape_value(v) for v in info.sharedlinkflags),
+                  "exelinkflags": ";".join(cmake_escape_value(v) for v in info.exelinkflags),
+                  "system_libs": " ".join(info.system_libs + extra_libs),
                   "sources": " ".join(sources)
-        }
+                  }
         # System frameworks (only Apple OS)
         if info.frameworks:
             target['frameworks'] = " ".join([f"-framework {frw}" for frw in info.frameworks])
@@ -231,10 +217,12 @@ class TargetConfigurationTemplate2:
             assert lib_type, f"Unknown package type {info.type}"
             assert info.location, f"cpp_info.location missing for framework {info.package_framework}"
             target["type"] = lib_type
-            target["package_framework"]["location"] = self._path(info.location, pkg_folder, pkg_folder_var)
-            target["includedirs"] = []  # empty array as frameworks have their own way to inject headers
+            target["package_framework"]["location"] = self._path(info.location, pkg_folder,
+                                                                 pkg_folder_var)
+            target["includedirs"] = []  # empty as frameworks have their own way to inject headers
             # FIXME: This is not needed for CMake < 3.24. Remove it when Conan requires CMake >= 3.24
-            target["package_framework"]["frameworkdir"] = self._path(pkg_folder, pkg_folder, pkg_folder_var)
+            target["package_framework"]["frameworkdir"] = self._path(pkg_folder, pkg_folder,
+                                                                     pkg_folder_var)
         if info.libs:
             if len(info.libs) != 1:
                 raise ConanException(f"New CMakeDeps only allows 1 lib per component:\n"
@@ -312,6 +300,9 @@ class TargetConfigurationTemplate2:
         transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
         # FIXME: Hardcoded CONFIG
         ret = {self._cmakedeps.get_cmake_filename(r): "CONFIG" for r in transitive_reqs.values()}
+        extra_mods = self._cmakedeps.get_property("cmake_extra_dependencies", self._conanfile,
+                                                  check_type=list) or []
+        ret.update({extra_mod: "" for extra_mod in extra_mods})
         return ret
 
     @staticmethod
@@ -326,11 +317,6 @@ class TargetConfigurationTemplate2:
                 return f"${{{pkg_folder_var}}}/{escape(rel)}"
             return escape(p)
         return f"${{{pkg_folder_var}}}/{escape(p)}"
-
-    @staticmethod
-    def _escape_cmake_string(values):
-        return " ".join(v.replace("\\", "\\\\").replace('$', '\\$').replace('"', '\\"')
-                        for v in values)
 
     @property
     def _template(self):
@@ -374,26 +360,26 @@ class TargetConfigurationTemplate2:
         {% endif %}
         {% if lib_info.get("defines") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS
-                     {{config_wrapper(config, lib_info["defines"])}})
+                     "{{config_wrapper(config, lib_info["defines"])}}")
         {% endif %}
         {% if lib_info.get("cxxflags") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
-                     $<$<COMPILE_LANGUAGE:CXX>:{{config_wrapper(config, lib_info["cxxflags"])}}>)
+                     "$<$<COMPILE_LANGUAGE:CXX>:{{config_wrapper(config, lib_info["cxxflags"])}}>")
         {% endif %}
         {% if lib_info.get("cflags") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
-                     $<$<COMPILE_LANGUAGE:C>:{{config_wrapper(config, lib_info["cflags"])}}>)
+                     "$<$<COMPILE_LANGUAGE:C>:{{config_wrapper(config, lib_info["cflags"])}}>")
         {% endif %}
         {% if lib_info.get("sharedlinkflags") %}
         {% set linkflags = config_wrapper(config, lib_info["sharedlinkflags"]) %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{linkflags}}>
-                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{linkflags}}>)
+                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{linkflags}}>"
+                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{linkflags}}>")
         {% endif %}
         {% if lib_info.get("exelinkflags") %}
         {% set exeflags = config_wrapper(config, lib_info["exelinkflags"]) %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_OPTIONS
-                     $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>)
+                     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{exeflags}}>")
         {% endif %}
 
         {% if lib_info.get("link_languages") %}
@@ -464,21 +450,6 @@ class TargetConfigurationTemplate2:
         {% if lib_info.get("sources") %}
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_SOURCES
                      {{config_wrapper(config, lib_info["sources"] )}})
-        {% endif %}
-        {% endfor %}
-
-        ################# Global variables for try compile and legacy ##############
-        {% for prefix in additional_variables_prefixes %}
-        set({{ prefix }}_VERSION_STRING "{{ version }}")
-        {% if include_dirs is not none %}
-        set({{ prefix }}_INCLUDE_DIRS "{{ include_dirs }}" )
-        set({{ prefix }}_INCLUDE_DIR "{{ include_dirs }}" )
-        {% endif %}
-        {% if libraries is not none %}
-        set({{ prefix }}_LIBRARIES {{ libraries }} )
-        {% endif %}
-        {% if definitions is not none %}
-        set({{ prefix }}_DEFINITIONS {{ definitions}} )
         {% endif %}
         {% endfor %}
 

@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import numbers
 import platform
 import re
@@ -64,6 +65,8 @@ BUILT_IN_CONFS = {
     # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks
     "core.scm:excluded": "List of excluded patterns for builtin git dirty checks",
     "core.scm:local_url": "By default allows to store local folders as remote url, but not upload them. Use 'allow' for allowing upload and 'block' to completely forbid it",
+    # Compatibility opt-in, to be removed in future versions as optimized behavior becomes default
+    "core.graph:compatibility_mode": "(Experimental) Set this to 'optimized' to enable the improved compatibility behaviour when querying multiple compatible binaries in remotes",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
@@ -93,6 +96,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
+    "tools.cmake:ctest_args": "To inject list of arguments to CMake.ctest() runner",
     "tools.cmake:install_strip": "(Deprecated) Add --strip to cmake.install(). Use tools.build:install_strip instead",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
@@ -104,6 +108,7 @@ BUILT_IN_CONFS = {
     "tools.graph:skip_build": "(Experimental) Do not expand build/tool_requires",
     "tools.graph:skip_test": "(Experimental) Do not expand test_requires. If building it might need 'tools.build:skip_test=True'",
     "tools.gnu:make_program": "Indicate path to make program",
+    "tools.gnu:disable_flags": "Disable the automatic addition of flags to some build systems. List of possible values: ['arch', 'arch_link', 'libcxx', 'build_type', 'build_type_link', 'threads','cppstd', 'cstd']",
     "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
     "tools.gnu:build_triplet": "Custom build triplet to pass to Autotools scripts",
@@ -129,11 +134,14 @@ BUILT_IN_CONFS = {
     "tools.system.package_manager:mode": "Mode for package_manager tools: 'check', 'report', 'report-installed' or 'install'",
     "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
+    "tools.system.pipenv:python_interpreter": "Path to the Python interpreter to be used to create the virtualenv",
     "tools.apple:sdk_path": "Path to the SDK to be used",
     "tools.apple:enable_bitcode": "(boolean) Enable/Disable Bitcode Apple Clang flags",
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
     "tools.env.virtualenv:powershell": "If specified, it generates PowerShell launchers (.ps1). Use this configuration setting the PowerShell executable you want to use (e.g., 'powershell.exe' or 'pwsh'). Setting it to True or False is deprecated as of Conan 2.11.0.",
+    "tools.env:dotenv": "(Experimental) Generate dotenv environment files",
+    "tools.env:deactivation_mode": "(Experimental) If 'function', generate a deactivate function instead of a script to unset the environment variables",
     # Compilers/Flags configurations
     "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc'}",
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
@@ -500,13 +508,6 @@ class Conf:
                 existing.compose_conf_value(v)
         return self
 
-    def filter_user_modules(self):
-        result = Conf()
-        for k, v in self._values.items():
-            if _is_profile_module(k):
-                result._values[k] = v
-        return result
-
     def copy_conaninfo_conf(self):
         """
         Get a new `Conf()` object with all the configurations required by the consumer
@@ -756,7 +757,8 @@ def load_global_conf(home_folder):
         content = template.render({"platform": platform, "os": os, "distro": distro,
                                    "conan_version": conan_version,
                                    "conan_home_folder": home_folder,
-                                   "detect_api": detect_api})
+                                   "detect_api": detect_api,
+                                   "hashlib": hashlib})
         new_config.loads(content)
     else:  # creation of a blank global.conf file for user convenience
         default_global_conf = textwrap.dedent("""\

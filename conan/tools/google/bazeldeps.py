@@ -53,6 +53,13 @@ class _BazelDepBuildGenerator:
         {% if lib_info['import_lib_path'] %}
         interface_library = "{{ lib_info['import_lib_path'] }}",
         {% endif %}
+        {% if lib_info["linkopts"] %}
+        linkopts = [
+            {% for linkopt in lib_info["linkopts"] %}
+            {{ linkopt }},
+            {% endfor %}
+        ],
+        {% endif %}
     )
     {% endfor %}
     {% endmacro %}
@@ -64,7 +71,9 @@ class _BazelDepBuildGenerator:
             {% for header in obj["headers"] %}
             {{ header }},
             {% endfor %}
-        ]),
+        ],
+        allow_empty = True
+        ),
         {% endif %}
         {% if obj["includes"] %}
         includes = [
@@ -214,7 +223,13 @@ class _BazelDepBuildGenerator:
         link_opt = '/DEFAULTLIB:{}' if os_build == "Windows" else '-l{}'
         system_libs = [link_opt.format(lib) for lib in cpp_info.system_libs]
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
-        return [f'"{flag}"' for flag in (system_libs + shared_flags)]
+        frameworkdirs_flags = []
+        framework_flags = []
+        for frw in cpp_info.frameworks:
+            framework_flags.extend(["-framework", frw])
+        for frw_dir in cpp_info.frameworkdirs:
+            frameworkdirs_flags.extend(["-F", frw_dir.replace("\\", "/")])
+        return [f'"{flag}"' for flag in (system_libs + shared_flags + framework_flags + frameworkdirs_flags)]
 
     def _get_copts(self, cpp_info):
         # FIXME: long discussions between copts (-Iflag) vs includes in Bazel. Not sure yet
@@ -268,12 +283,20 @@ class _BazelDepBuildGenerator:
     def _get_lib_info(self, cpp_info, deduced_cpp_info, component_name=None):
 
         def _lib_info(lib_name, virtual_cpp_info):
-            return {
+            info = {
                 "name": lib_name,
                 "is_shared": virtual_cpp_info.type == PackageType.SHARED,
                 "lib_path": _relativize_path(virtual_cpp_info.location, self._package_folder),
-                "import_lib_path": _relativize_path(virtual_cpp_info.link_location, self._package_folder)
+                "import_lib_path": _relativize_path(virtual_cpp_info.link_location, self._package_folder),
+                "linkopts": []
             }
+            if info['is_shared'] and info["lib_path"] and not info["lib_path"].endswith(".dll"):
+                # Issue: https://github.com/conan-io/conan/issues/19190
+                # Issue: https://github.com/conan-io/conan/issues/19135
+                # (UNIX) Adding the rpath flag as any application could link through the library
+                # which points out a symlink, but that name does not appear in the library location
+                info["linkopts"] = [f'"-Wl,-rpath,{libdir}"' for libdir in cpp_info.libdirs]
+            return info
 
         libs = cpp_info.libs
         libs_info = []

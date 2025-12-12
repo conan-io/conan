@@ -166,7 +166,7 @@ class NewAPI:
     @staticmethod
     def render(template_files, definitions):
         result = {}
-        name = definitions.get("name", "pkg")
+        name = definitions.get("name", "mypkg")
         if isinstance(name, list):
             raise ConanException(f"name argument can't be multiple: {name}")
         if name != name.lower():

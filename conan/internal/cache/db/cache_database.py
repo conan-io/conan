@@ -24,9 +24,9 @@ class CacheDatabase:
     def exists_prev(self, ref):
         return self._packages.get_package_revisions_reference_exists(ref)
 
-    def get_latest_package_reference(self, ref):
-        prevs = self.get_package_revisions_references(ref, True)
-        return prevs[0] if prevs else None
+    def get_latest_package_reference(self, pref):
+        prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
+        return prevs[0]["pref"] if prevs else None
 
     def update_recipe_timestamp(self, ref):
         self._recipes.update_timestamp(ref)
@@ -92,9 +92,10 @@ class CacheDatabase:
         return [ref for ref in self._recipes.all_references()
                 if pattern is None or ref.partial_match(pattern)]
 
-    def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
+    def get_package_revisions_references(self, pref: PkgReference):
         return [d["pref"]
-                for d in self._packages.get_package_revisions_references(pref, only_latest_prev)]
+                for d in self._packages.get_package_revisions_references(pref,
+                                                                         only_latest_prev=False)]
 
     def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         return [d["pref"]

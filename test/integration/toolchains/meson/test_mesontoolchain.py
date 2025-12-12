@@ -230,7 +230,6 @@ def test_custom_arch_flag_via_toolchain():
     assert re.search(r"cpp_link_args =.+-mmy-flag.+", content)
 
 
-
 def test_linker_scripts_via_conf():
     profile = textwrap.dedent("""
         [settings]
@@ -256,8 +255,10 @@ def test_linker_scripts_via_conf():
 
     t.run("install . -pr:b=profile -pr=profile")
     content = t.load(MesonToolchain.native_filename)
-    assert "c_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6', '-T\"/linker/scripts/flash.ld\"', '-T\"/linker/scripts/extra_data.ld\"']" in content
-    assert "cpp_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6', '-T\"/linker/scripts/flash.ld\"', '-T\"/linker/scripts/extra_data.ld\"']" in content
+    assert ("c_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6', "
+            "'-T/linker/scripts/flash.ld', '-T/linker/scripts/extra_data.ld']") in content
+    assert ("cpp_link_args = ['-flag0', '-other=val', '-m64', '-flag5', '-flag6', "
+            "'-T/linker/scripts/flash.ld', '-T/linker/scripts/extra_data.ld']") in content
 
 
 def test_correct_quotes():
@@ -689,8 +690,8 @@ def test_compiler_path_with_spaces():
 def test_meson_sysroot_app():
     """Testing when users pass tools.build:sysroot on the profile with Meson
 
-    The generated conan_meson_cross.ini needs to contain both sys_root property to fill the
-    PKG_CONFIG_PATH and the compiler flags with --sysroot.
+    * The generated conan_meson_cross.ini does not fill the "sys_root" property (see https://github.com/conan-io/conan/issues/16468)
+    * It adds the compiler flags with --sysroot.
 
     When cross-building, Meson needs both compiler_executables in the config, otherwise it will fail
     when running setup.
@@ -727,7 +728,7 @@ def test_meson_sysroot_app():
     client.run("install . -pr:h host -pr:b build")
     # Check the meson configuration file
     conan_meson = client.load("conan_meson_cross.ini")
-    assert f"sys_root = '{sysroot}'\n" in conan_meson
+    assert f"sys_root = '{sysroot}'\n" not in conan_meson
     assert re.search(r"c_args =.+--sysroot={}.+".format(sysroot), conan_meson)
     assert re.search(r"c_link_args =.+--sysroot={}.+".format(sysroot), conan_meson)
     assert re.search(r"cpp_args =.+--sysroot={}.+".format(sysroot), conan_meson)

@@ -182,6 +182,11 @@ def _generate_aggregated_env(conanfile):
             result.append(os.path.join(folder, "deactivate_{}".format(f)))
         return result
 
+    def deactivate_function_names(filenames):
+        return [os.path.splitext(os.path.basename(s))[0].replace("-", "_")
+                for s in reversed(filenames)]
+
+    deactivation_mode = conanfile.conf.get("tools.env:deactivation_mode", default=None, check_type=str)
     generated = []
     for group, env_scripts in conanfile.env_scripts.items():
         subsystem = deduce_subsystem(conanfile, group)
@@ -202,12 +207,19 @@ def _generate_aggregated_env(conanfile):
                 ps1s.append("$PSScriptRoot/"+path)
         if shs:
             def sh_content(files):
-                return ". " + " && . ".join('"{}"'.format(s) for s in files)
+                content = ". " + " && . ".join('"{}"'.format(s) for s in files)
+                if deactivation_mode == "function":
+                    content += f"\n\ndeactivate_conan{group}() {{\n"
+                    for deactivate_name in deactivate_function_names(shs):
+                        content += f"    deactivate_{deactivate_name}\n"
+                    content += f"    unset -f deactivate_conan{group}\n}}\n"
+                return content
             filename = "conan{}.sh".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
-            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-                 sh_content(deactivates(shs)))
+            if not deactivation_mode:
+                save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                     sh_content(deactivates(shs)))
         if bats:
             def bat_content(files):
                 return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
@@ -218,12 +230,21 @@ def _generate_aggregated_env(conanfile):
                  bat_content(deactivates(bats)))
         if ps1s:
             def ps1_content(files):
-                return "\r\n".join(['& "{}"'.format(b) for b in files])
+                content = "\r\n".join(['& "{}"'.format(b) for b in files])
+                if deactivation_mode == "function":
+                    content += f"\n\nfunction global:deactivate_conan{group} {{\n"
+                    for deactivate_name in deactivate_function_names(ps1s):
+                        content += f"    deactivate_{deactivate_name}\n"
+                    content += (f"    Remove-Item -Path function:deactivate_conan{group} "
+                                "-ErrorAction SilentlyContinue"
+                                "\n}\n")
+                return content
             filename = "conan{}.ps1".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
-            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-                 ps1_content(deactivates(ps1s)))
+            if not deactivation_mode:
+                save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                     ps1_content(deactivates(ps1s)))
     if generated:
         conanfile.output.highlight("Generating aggregated env files")
         conanfile.output.info(f"Generated aggregated env files: {generated}")

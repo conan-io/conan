@@ -4,7 +4,7 @@ import time
 from collections import OrderedDict
 from datetime import timedelta
 
-from mock import patch
+from unittest.mock import patch
 
 from conan.internal.api.remotes.localdb import LocalDB
 from conan.test.utils.tools import TestClient, TestServer

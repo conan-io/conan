@@ -15,6 +15,7 @@ from conan.errors import ConanException
 from conan.internal.model.cpp_info import CppInfo, MockInfoProperty
 from conan.api.model import PkgReference
 from conan.internal.paths import CONANINFO
+from conan.internal.util import cpu_count
 from conan.internal.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
 
 
@@ -277,8 +278,9 @@ class BinaryInstaller:
         download_count = len(downloads)
         plural = 's' if download_count != 1 else ''
         ConanOutput().subtitle(f"Downloading {download_count} package{plural}")
-        parallel = self._global_conf.get("core.download:parallel", check_type=int)
-        if parallel is not None:
+        parallel = self._global_conf.get("core.download:parallel", check_type=int,
+                                         default=cpu_count())
+        if parallel:  # User can define core.download:parallel=0 to deactivate parallelism
             ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
             thread_pool = ThreadPool(parallel)
             thread_pool.map(self._download_pkg, downloads)
@@ -329,7 +331,8 @@ class BinaryInstaller:
                 pref = node.pref
                 self._cache.update_package_lru(pref)
                 assert node.prev, "PREV for %s is None" % str(pref)
-                node.conanfile.output.success(f'Already installed! ({handled_count} of {total_count})')
+                msg = f'Already installed! ({handled_count} of {total_count})'
+                node.conanfile.output.success(msg)
 
         # Make sure that all nodes with same pref compute package_info()
         pkg_folder = package_layout.package()
@@ -444,12 +447,20 @@ class BinaryInstaller:
 
                     # Paste the editable cpp_info but prioritizing it, only if a
                     # variable is not declared at build/source, the package will keep the value
-                    conanfile.buildenv_info.compose_env(conanfile.layouts.source.buildenv_info)
-                    conanfile.buildenv_info.compose_env(conanfile.layouts.build.buildenv_info)
-                    conanfile.runenv_info.compose_env(conanfile.layouts.source.runenv_info)
-                    conanfile.runenv_info.compose_env(conanfile.layouts.build.runenv_info)
-                    conanfile.conf_info.compose_conf(conanfile.layouts.source.conf_info)
-                    conanfile.conf_info.compose_conf(conanfile.layouts.build.conf_info)
+                    full_buildenv_info = conanfile.layouts.source.buildenv_info.copy()
+                    full_buildenv_info.compose_env(conanfile.layouts.build.buildenv_info)
+                    full_buildenv_info.compose_env(conanfile.buildenv_info)
+                    conanfile.buildenv_info = full_buildenv_info
+
+                    full_runenv_info = conanfile.layouts.source.runenv_info.copy()
+                    full_runenv_info.compose_env(conanfile.layouts.build.runenv_info)
+                    full_runenv_info.compose_env(conanfile.runenv_info)
+                    conanfile.runenv_info = full_runenv_info
+
+                    full_conf_info = conanfile.layouts.source.conf_info.copy()
+                    full_conf_info.compose_conf(conanfile.layouts.build.conf_info)
+                    full_conf_info.compose_conf(conanfile.conf_info)
+                    conanfile.conf_info = full_conf_info
                 else:
                     conanfile.layouts.package.set_relative_base_folder(conanfile.package_folder)
                     conanfile.buildenv_info.compose_env(conanfile.layouts.package.buildenv_info)

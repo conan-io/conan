@@ -28,6 +28,7 @@ from conan.internal.model.settings import load_settings_yml
 from conan.internal.paths import get_conan_user_home
 from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version_range import validate_conan_version
+from conan.internal.rest.conan_requester import ConanRequester
 
 
 class ConanAPI:
@@ -65,23 +66,27 @@ class ConanAPI:
         self.profiles = ProfilesAPI(self, self._api_helpers)
         self.install = InstallAPI(self, self._api_helpers)
         self.graph = GraphAPI(self, self._api_helpers)
-        self.export = ExportAPI(self, self._api_helpers)
+        #: Used to export recipes and pre-compiled package binaries to the Conan cache
+        self.export: ExportAPI = ExportAPI(self, self._api_helpers)
         self.remove = RemoveAPI(self)
         self.new = NewAPI(self)
         #: Used to upload recipes and packages to remotes
         self.upload: UploadAPI = UploadAPI(self, self._api_helpers)
         #: Used to download recipes and packages from remotes
         self.download: DownloadAPI = DownloadAPI(self)
-        self.cache = CacheAPI(self, self._api_helpers)
-        self.lockfile = LockfileAPI(self)
+        #: Used to interact wit the packages storage cache
+        self.cache: CacheAPI = CacheAPI(self, self._api_helpers)
+        #: Used to read and manage lockfile files
+        self.lockfile: LockfileAPI = LockfileAPI(self)
         self.local = LocalAPI(self, self._api_helpers)
-        self.audit = AuditAPI(self)
+        #: Used to check vulnerabilities of dependencies
+        self.audit: AuditAPI = AuditAPI(self)
         # Now, lazy loading of editables
         self.workspace = WorkspaceAPI(self)
-        self.report = ReportAPI(self, self._api_helpers)
+        self.report: ReportAPI = ReportAPI(self, self._api_helpers)
 
     @property
-    def home_folder(self):
+    def home_folder(self) -> str:
         """ Where the Conan user home is located. Read only.
         Can be modified by the ``CONAN_HOME`` environment variable or by the
         ``.conanrc`` file in the current directory or any parent directory
@@ -94,7 +99,6 @@ class ConanAPI:
         Reinitialize the Conan API. This is useful when the configuration changes.
         """
         self._api_helpers.reinit()
-        self.remotes.reinit()
         self.local.reinit()
 
     def migrate(self):
@@ -110,6 +114,9 @@ class ConanAPI:
             self._cli_core_confs = None
             self._init_global_conf()
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+            # Wraps an http_requester to inject proxies, certs, etc
+            self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
+            self._settings_yml = None
 
         def set_core_confs(self, core_confs):
             confs = ConfDefinition()
@@ -134,7 +141,15 @@ class ConanAPI:
         def reinit(self):
             self._init_global_conf()
             self.hook_manager.reinit()
+            self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
+            self._settings_yml = None
 
         @property
         def settings_yml(self):
-            return load_settings_yml(self._conan_api.home_folder)
+            if self._settings_yml is None:
+                self._settings_yml = load_settings_yml(self._conan_api.home_folder)
+            return self._settings_yml
+
+        @property
+        def requester(self):
+            return self._requester

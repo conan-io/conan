@@ -8,7 +8,9 @@ from conan.cli.args import add_reference_args
 
 
 def common_args_export(parser):
-    parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
+    parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py). "
+                                     "Defaults to current directory",
+                        default=".", nargs="?")
     add_reference_args(parser)
 
 
@@ -58,7 +60,7 @@ def export(conan_api, parser, *args):
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
 
     exported_list = PackagesList()
-    exported_list.add_refs([ref])
+    exported_list.add_ref(ref)
 
     pkglist = MultiPackagesList()
     pkglist.add("Local Cache", exported_list)

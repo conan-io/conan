@@ -107,7 +107,7 @@ class RestApiClientLocalRecipesIndex:
     def search(self, pattern=None):
         return self._layout.get_recipes_references(pattern)
 
-    def search_packages(self, reference):
+    def search_packages(self, reference, _=False):
         assert self and reference
         return {}
 
@@ -124,7 +124,7 @@ class RestApiClientLocalRecipesIndex:
         ref = self._export_recipe(ref)
         return [ref]
 
-    def get_package_revisions_references(self, pref, headers=None):
+    def get_package_revisions_references(self, pref):
         raise PackageNotFoundException(pref)
 
     def get_latest_recipe_reference(self, ref):
@@ -149,7 +149,8 @@ class RestApiClientLocalRecipesIndex:
         sys.stderr = StringIO()
         try:
             global_conf = ConfDefinition()
-            new_ref, _ = cmd_export(self._app, self._hook_manager, global_conf, conanfile_path,
+            new_ref, _ = cmd_export(self._app.loader, self._app.cache, self._hook_manager,
+                                    global_conf, conanfile_path,
                                     ref.name, str(ref.version), None, None, remotes=[self._remote])
         except Exception as e:
             raise ConanException(f"Error while exporting recipe from remote: {self._remote.name}\n"

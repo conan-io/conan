@@ -223,6 +223,51 @@ def test_libcxx(config):
         assert expected_flag in env["CXXFLAGS"]
 
 
+def test_disable_libcxx():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings(
+        {"os": "Linux",
+         "build_type": "Release",
+         "arch": "x86",
+         "compiler": "clang",
+         "compiler.libcxx": "libc++",
+         "compiler.version": "7.1",
+         "compiler.cppstd": "17",
+         "compiler.cstd": "99"})
+    conanfile.settings_build = conanfile.settings
+    # Disable just one
+    conanfile.conf.define("tools.gnu:disable_flags", ["libcxx"])
+    be = AutotoolsToolchain(conanfile)
+    assert be.libcxx is None
+    assert be.arch_flag == "-m32"
+    assert be.build_type_flags == ['-O3']
+    assert be.cppstd == "-std=c++17"
+    assert be.cstd == "-std=c99"
+    # Disable two
+    conanfile.conf.define("tools.gnu:disable_flags", ["libcxx", "cppstd"])
+    be = AutotoolsToolchain(conanfile)
+    assert be.libcxx is None
+    assert be.arch_flag == "-m32"
+    assert be.build_type_flags == ['-O3']
+    assert be.cppstd == ""
+    assert be.cstd == "-std=c99"
+    # Error value
+    conanfile.conf.define("tools.gnu:disable_flags", ["other"])
+    try:
+        AutotoolsToolchain(conanfile)
+    except ConanException as e:
+        assert "tools.gnu:disable_flags value 'other', must be one of:" in str(e)
+    conanfile.conf.define("tools.gnu:disable_flags",
+                          ["arch", "arch_link", "libcxx", "build_type",
+                           "build_type_link", "threads", "cppstd", "cstd"])
+    be = AutotoolsToolchain(conanfile)
+    assert be.libcxx is None
+    assert be.arch_flag == ""
+    assert be.build_type_flags == []
+    assert be.cppstd == ""
+    assert be.cstd == ""
+
+
 def test_cxx11_abi_define():
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings(
@@ -284,6 +329,7 @@ def test_architecture_flag(config):
     assert expected in env["CFLAGS"]
     assert expected in env["LDFLAGS"]
     assert "-debug" not in env["LDFLAGS"]
+
 
 @pytest.mark.parametrize("config", [
     ("gcc", "x86_64", ""),

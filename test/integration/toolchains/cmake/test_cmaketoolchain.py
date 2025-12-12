@@ -5,7 +5,7 @@ import re
 import textwrap
 
 import pytest
-from mock import mock
+from unittest import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
 from conan.test.assets.genconanfile import GenConanfile
@@ -521,6 +521,31 @@ def test_extra_flags_via_conf():
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain
     assert 'add_compile_definitions( "D1" "D2")' in toolchain
+
+
+def test_bitcode_enable_flag():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Macos
+        arch=armv8
+        compiler=apple-clang
+        compiler.version=17
+        compiler.libcxx=libc++
+        build_type=Release
+
+        [conf]
+        tools.apple:enable_bitcode=True
+        """)
+
+    client = TestClient(path_with_spaces=False)
+
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type") \
+                              .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(BITCODE "-fembed-bitcode")' in toolchain
 
 
 def test_cmake_presets_binary_dir_available():
@@ -1371,6 +1396,11 @@ def test_presets_njobs():
     c.run('install . -g CMakeToolchain -c tools.build:jobs=42')
     presets = json.loads(c.load("CMakePresets.json"))
     assert presets["buildPresets"][0]["jobs"] == 42
+    assert presets["testPresets"][0]["execution"]["jobs"] == 42
+    c.run('install . -g CMakeToolchain -c tools.build:jobs=0')
+    presets = json.loads(c.load("CMakePresets.json"))
+    assert "jobs" not in presets["buildPresets"][0]
+    assert "execution" not in presets["testPresets"][0]
 
 
 def test_add_cmakeexe_to_presets():
