@@ -76,7 +76,7 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     clangpath = tools_locations["clang"]["19"]["path"]["Windows"]
     # compilers
     c, cpp = ("clang", "clang++") if frontend == "clang" else ("clang-cl", "clang-cl")
-    comps = f'{{"cpp":"{clangpath}/{cpp}", "c":"{clangpath}/{c}", "rc":"{clangpath}/{c}"}}'
+    comps = f'{{"cpp":"{cpp}", "c":"{c}", "rc":"{c}"}}'
     profile_win = textwrap.dedent(f"""
         [settings]
         os=Windows
@@ -93,6 +93,9 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
         tools.microsoft.bash:subsystem=msys2
         tools.microsoft.bash:path=bash
         tools.compilation:verbosity=verbose
+
+        [buildenv]
+        PATH=+(path){clangpath}
         """)
 
     main = gen_function_cpp(name="main")

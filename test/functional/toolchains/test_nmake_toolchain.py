@@ -90,6 +90,7 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.tool("clang", "19")
 def test_toolchain_nmake_clang():
     cppstd = "14"
@@ -99,7 +100,7 @@ def test_toolchain_nmake_clang():
                "TEST_DEFINITION6=foo bar"]
     client = TestClient(path_with_spaces=False)
     settings = {"compiler": "clang",
-                "compiler.version": "18",
+                "compiler.version": "19",
                 "compiler.cppstd": "14",
                 "compiler.runtime": "dynamic",
                 "build_type": build_type,
