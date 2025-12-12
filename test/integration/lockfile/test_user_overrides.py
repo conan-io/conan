@@ -501,5 +501,5 @@ class TestLockUpgrade:
         c.run("lock upgrade-config . --update-config-requires=config/1.0")
         _check(["config/2.0"])
         _check_cache(["config/1.0"])
-        c.run("config install-pkg --path=. --lockfile=conan.lock")
+        c.run("config install-pkg . --lockfile=conan.lock")
         _check_cache(["config/2.0"])
