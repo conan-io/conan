@@ -49,25 +49,32 @@ class ConfigAPI:
                               source_folder=source_folder, target_folder=target_folder)
         self._conan_api.reinit()
 
-    def install_pkg(self, require, lockfile=None, force=False, remotes=None, profile=None):
+    def install_package(self, require, lockfile=None, force=False, remotes=None, profile=None):
         ConanOutput().warning("The 'conan config install-pkg' is experimental",
                               warn_tag="experimental")
         require = RecipeReference.loads(require)
-        required_pkgs = self._resolve_requires([require], lockfile, remotes, profile)
+        required_pkgs = self.fetch_packages([require], lockfile, remotes, profile)
         installed_refs = self._install_pkgs(required_pkgs, force)
         self._conan_api.reinit()
         return installed_refs
 
-    def install_pkg_file(self, path, lockfile=None, force=False, remotes=None, profile=None):
-        ConanOutput().warning("The 'conan config install-pkg' is experimental",
-                              warn_tag="experimental")
+    @staticmethod
+    def load_conanconfig(path, remotes):
         if os.path.isdir(path):
             path = os.path.join(path, "conanconfig.yml")
         requested_requires, urls = loadconanconfig_yml(path)
         if urls:
-            remotes = [Remote(f"config_install_url{('_' + str(i)) if i else ''}", url=url)
-                       for i, url in enumerate(urls)]
-        required_pkgs = self._resolve_requires(requested_requires, lockfile, remotes, profile)
+            new_remotes = [Remote(f"config_install_url{'_' + str(i)}", url=url)
+                           for i, url in enumerate(urls)]
+            remotes = remotes or []
+            remotes += new_remotes
+        return requested_requires, remotes
+
+    def install_conanconfig(self, path, lockfile=None, force=False, remotes=None, profile=None):
+        ConanOutput().warning("The 'conan config install-pkg' is experimental",
+                              warn_tag="experimental")
+        requested_requires, remotes = self.load_conanconfig(path, remotes)
+        required_pkgs = self.fetch_packages(requested_requires, lockfile, remotes, profile)
         installed_refs = self._install_pkgs(required_pkgs, force)
         self._conan_api.reinit()
         return installed_refs
@@ -138,7 +145,7 @@ class ConfigAPI:
         saveconanconfig(config_version_file, final_config_refs)
         return final_config_refs
 
-    def _resolve_requires(self, refs, lockfile=None, remotes=None, profile=None):
+    def fetch_packages(self, refs, lockfile=None, remotes=None, profile=None):
         """ install configuration stored inside a Conan package
         The installation of configuration will reinitialize the full ConanAPI
         """

@@ -769,12 +769,13 @@ class TestConfigInstallPkg:
                 - myconf_b/0.1
             """)
         c.save({"conanconfig.yml": conanconfig})
-        c.run("config install-pkg --path=.")
+        # Admits the default location .
+        c.run("config install-pkg")
         self._check_conf(c, "myconf_b/0.1")
         self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
 
         # install same file again:
-        c.run("config install-pkg --path=.")
+        c.run("config install-pkg .")
         assert ("The requested configurations are identical to the already installed ones, "
                 "skipping re-installation") in c.out
         self._check_conf(c, "myconf_b/0.1")
@@ -782,7 +783,7 @@ class TestConfigInstallPkg:
 
         # Forced re-install
         c.save_home({"global.conf": ""})
-        c.run("config install-pkg --path=. --force")
+        c.run("config install-pkg . --force")
         assert "forcing re-installation because --force" in c.out
         self._check_conf(c, "myconf_b/0.1")
         self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
@@ -793,7 +794,7 @@ class TestConfigInstallPkg:
         server_url = servers["default"].fake_url
         conanconfig = yaml.dump({"packages": ["myconf_a/0.1"], "urls": [server_url]})
         c.save({"conanconfig.yml": conanconfig})
-        c.run("config install-pkg --path=.")
+        c.run("config install-pkg .")
         self._check_conf(c, "myconf_a/0.1")
         self._check_conf_file(c, ["myconf_a/0.1"])
 
@@ -801,7 +802,7 @@ class TestConfigInstallPkg:
         c = TestClient(servers=servers, light=True)
         conanconfig = yaml.dump({"packages": ["myconf_a/0.1", "myconf_b/0.1"]})
         c.save({"conanconfig.yml": conanconfig})
-        c.run("config install-pkg --path=.")
+        c.run("config install-pkg .")
 
         # Now installing "updates" without disrupting the order
         c.run("config install-pkg myconf_c/0.1")
@@ -817,7 +818,7 @@ class TestConfigInstallPkg:
                 - myconf_c/[*]
             """)
         c.save({"conanconfig.yml": conanconfig})
-        c.run("config install-pkg --path=.")
+        c.run("config install-pkg .")
         assert "Installing new or updating configuration packages" in c.out
         self._check_conf(c, "myconf_c/0.2")
         self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1", "myconf_c/0.2"])
@@ -830,7 +831,7 @@ class TestConfigInstallPkg:
                 - myconf_c/[*]
             """)
         c.save({"conanconfig.yml": conanconfig})
-        c.run("config install-pkg --path=.")
+        c.run("config install-pkg .")
         assert "Installing new or updating configuration packages" in c.out
         self._check_conf(c, "myconf_c/0.2")
         self._check_conf_file(c, ["myconf_a/0.2", "myconf_b/0.1", "myconf_c/0.2"])
@@ -839,7 +840,7 @@ class TestConfigInstallPkg:
         c = TestClient(servers=servers, light=True)
         conanconfig = yaml.dump({"packages": ["myconf_a/0.1", "myconf_b/0.1"]})
         c.save({"conanconfig.yml": conanconfig})
-        c.run("config install-pkg --path=.")
+        c.run("config install-pkg .")
 
         # Now installing "updates" without disrupting the order
         conanconfig = textwrap.dedent("""\
@@ -847,12 +848,12 @@ class TestConfigInstallPkg:
                 - myconf_a/0.2
             """)
         c.save({"conanconfig.yml": conanconfig})
-        c.run("config install-pkg --path=.", assert_error=True)
+        c.run("config install-pkg .", assert_error=True)
         assert "Use --force to force installation" in c.out
         self._check_conf(c, "myconf_b/0.1")
         self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
 
-        c.run("config install-pkg --path=. --force")
+        c.run("config install-pkg . --force")
         assert "Forcing the installation because --force was defined" in c.out
         self._check_conf(c, "myconf_a/0.2")
         self._check_conf_file(c, ["myconf_b/0.1", "myconf_a/0.2"])
@@ -863,7 +864,7 @@ class TestConfigInstallPkg:
         c.run("config install-pkg myconf_a/0.1 --lockfile-out=conan.lock")
         conanconfig = yaml.dump({"packages": ["myconf_a/[>=0.1 <1.0]"]})
         c.save({"conanconfig.yml": conanconfig})
-        c.run("config install-pkg --path=.")
+        c.run("config install-pkg .")
         path = HomePaths(c.cache_folder).config_version_path
         # First are the newest installed
         configs = json.loads(load(path))["config_version"]
