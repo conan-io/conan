@@ -266,6 +266,7 @@ class MesonToolchain:
                 sdk_host = conanfile.settings.get_safe("os.sdk")
                 self.cross_build["host"]["subsystem"] = get_apple_subsystem(sdk_host)
                 self.cross_build["build"]["subsystem"] = get_apple_subsystem(sdk_build)
+            # Issue: https://github.com/conan-io/conan/issues/19217
             self.properties["needs_exe_wrapper"] = not can_run(self._conanfile)
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target

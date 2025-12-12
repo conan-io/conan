@@ -906,6 +906,12 @@ def test_new_public_attributes():
 
 
 def test_needs_exe_wrapper():
+    """
+    Tests needs_exe_wrapper depends on `can_run()` function instead of
+    simply checking the cross_building() one.
+
+    Issue: https://github.com/conan-io/conan/issues/19217
+    """
     host = textwrap.dedent("""
     [settings]
     arch=x86_64
