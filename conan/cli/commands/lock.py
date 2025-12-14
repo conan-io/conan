@@ -1,4 +1,3 @@
-from collections import defaultdict
 import os
 
 from conan.api.output import ConanOutput
@@ -27,7 +26,6 @@ def lock_create(conan_api, parser, subparser, *args):
     subparser.add_argument("--build-require", action='store_true', default=False,
                            help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
-
     # parameter validation
     validate_common_graph_args(args)
 
@@ -102,8 +100,7 @@ def lock_add(conan_api, parser, subparser, *args):
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, partial=True)
 
-    global_conf = conan_api.config.global_conf
-    allow_uppercase = global_conf.get("core:allow_uppercase_pkg_names", check_type=bool)
+    allow_uppercase = conan_api.config.get("core:allow_uppercase_pkg_names", check_type=bool)
 
     def _parse_requires(reqs):
         if reqs:
@@ -192,7 +189,6 @@ def lock_upgrade(conan_api, parser, subparser, *args):
     subparser.add_argument('--update-config-requires', action="append", help='Update config-requires from lockfile')
     subparser.add_argument('--build-require', action='store_true', default=False, help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
-
     # parameter validation
     validate_common_graph_args(args)
 

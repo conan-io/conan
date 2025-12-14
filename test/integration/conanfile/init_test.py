@@ -1,10 +1,9 @@
 import textwrap
-import unittest
 
 from conan.test.utils.tools import TestClient
 
 
-class InitTest(unittest.TestCase):
+class TestInit:
     def test_wrong_init(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -16,8 +15,8 @@ class InitTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile})
         client.run("export .", assert_error=True)
-        self.assertIn("Error in init() method, line 5", client.out)
-        self.assertIn("name 'random_error' is not defined", client.out)
+        assert "Error in init() method, line 5" in client.out
+        assert "name 'random_error' is not defined" in client.out
 
     def test_init(self):
         client = TestClient()
@@ -45,8 +44,8 @@ class InitTest(unittest.TestCase):
                      "data.json": data})
 
         client.run("export . --name=pkg --version=version")
-        self.assertIn("description: MyDescription", client.out)
-        self.assertIn("license: MIT", client.out)
+        assert "description: MyDescription" in client.out
+        assert "license: MIT" in client.out
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        self.assertIn("description: MyDescription", client.out)
-        self.assertIn("license: MIT", client.out)
+        assert "description: MyDescription" in client.out
+        assert "license: MIT" in client.out

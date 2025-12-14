@@ -14,7 +14,7 @@ class NewAPI:
     _NOT_TEMPLATES = "not_templates"  # Filename containing filenames of files not to be rendered
 
     def __init__(self, conan_api):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
 
     def save_template(self, template, defines=None, output_folder=None, force=False):
         """
@@ -134,7 +134,7 @@ class NewAPI:
     def get_home_template(self, template_name):
         """ Load a template from the Conan home templates/command/new folder
         """
-        folder_template = os.path.join(self.conan_api.home_folder, "templates", "command/new",
+        folder_template = os.path.join(self._conan_api.home_folder, "templates", "command/new",
                                        template_name)
         if os.path.isdir(folder_template):
             return self._read_files(folder_template)
@@ -166,7 +166,7 @@ class NewAPI:
     @staticmethod
     def render(template_files, definitions):
         result = {}
-        name = definitions.get("name", "pkg")
+        name = definitions.get("name", "mypkg")
         if isinstance(name, list):
             raise ConanException(f"name argument can't be multiple: {name}")
         if name != name.lower():

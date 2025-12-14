@@ -1,8 +1,13 @@
 import os
+import platform
 import tarfile
 import zipfile
 
+import pytest
+import sys
+
 from conan.internal.api.uploader import gzopen_without_timestamps
+from conan.tools.files import load
 from conan.tools.files.files import untargz, unzip
 from conan.errors import ConanException
 from conan.internal.model.manifest import gather_files
@@ -326,3 +331,31 @@ def test_decompressing_folders_with_different_modes():
     extract_folder = temp_folder()
     # Do not raise any PermissionError
     untargz(tgz_file, destination=extract_folder, strip_root=True)
+
+
+@pytest.mark.skipif(sys.version_info < (3, 13, 4), reason="requires Python 3.13.4 or higher")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_decompressing_using_long_path_prefix():
+    """
+    If we use the "\\?\" prefix, untar() function should not
+    raise an OSError: [WinError 123] error.
+
+    Issue related: https://github.com/conan-io/conan/issues/18574
+    """
+    tmp_folder = temp_folder()
+    tgz_folder = temp_folder()
+    tgz_file = os.path.join(tgz_folder, "file.tar.gz")
+    with chdir(tmp_folder):
+        save("root/parent/bin/file1", "contentsfile1")
+        save("root/parent/bin/file2", "contentsfile2")
+        _compress_root_folder(tmp_folder, tgz_file, root_folder_name="root")
+
+    # Tgz unzipped regularly
+    extract_folder = f"\\\\?\\{temp_folder()}"
+    # Do not raise any OSError: [WinError 123]
+    untargz(tgz_file, destination=extract_folder, strip_root=True)
+    assert "contentsfile1" in load(ConanFileMock(), os.path.join(extract_folder, "parent", "bin", "file1"))
+    assert "contentsfile2" in load(ConanFileMock(), os.path.join(extract_folder, "parent", "bin", "file2"))
+    untargz(tgz_file, destination=extract_folder, strip_root=False)
+    assert "contentsfile1" in load(ConanFileMock(), os.path.join(extract_folder, "root", "parent", "bin", "file1"))
+    assert "contentsfile2" in load(ConanFileMock(), os.path.join(extract_folder, "root", "parent", "bin", "file2"))

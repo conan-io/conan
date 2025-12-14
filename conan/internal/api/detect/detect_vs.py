@@ -11,11 +11,12 @@ def vs_installation_path(version):
 
 
 def vs_detect_update(version):
-    version = {"194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
+    version = {"195": "18", "194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
     full_version = _vs_installation_path(version)[1]
     components = full_version.split(".")
     if len(components) > 1:
         return components[1]
+
 
 def _vs_installation_path(version):
     # TODO: Preference hardcoded, [conf] must be defined

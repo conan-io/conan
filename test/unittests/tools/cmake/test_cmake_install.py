@@ -10,7 +10,6 @@ from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import redirect_output
 
 
-
 def test_run_install_component():
     """
     Testing that the proper component is installed.
@@ -79,6 +78,7 @@ def test_run_install_strip(config, deprecated):
     else:
         assert "tools.cmake:install_strip" not in stderr
     assert "--strip" in conanfile.command
+
 
 def test_run_install_cli_args():
     """

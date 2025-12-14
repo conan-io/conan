@@ -14,12 +14,17 @@ from conan.internal.util.runners import conan_run
 
 
 class ReportAPI:
-    def __init__(self, conan_api):
-        self.conan_api = conan_api
+    """ Used to compute the differences (the "diff") between two versions or revisions, for
+    both the recipe and source code.
+    """
+    def __init__(self, conan_api, helpers):
+        self._conan_api = conan_api
+        self._helpers = helpers
 
     def diff(self, old_reference, new_reference, remotes, old_path=None, new_path=None, cwd=None):
         """
         Compare two recipes and return the differences.
+
         :param old_reference: The reference of the old recipe.
         :param new_reference: The reference of the new recipe.
         :param remotes: List of remotes to search for the recipes.
@@ -31,14 +36,15 @@ class ReportAPI:
 
         def _source(path_to_conanfile, reference):
             if path_to_conanfile is None:
-                export_ref, cache_path = _get_ref_from_cache_or_remote(self.conan_api, reference, remotes)
+                export_ref, cache_path = _get_ref_from_cache_or_remote(self._conan_api, reference,
+                                                                       remotes)
             else:
-                export_ref, cache_path = _export_recipe_from_path(self.conan_api, path_to_conanfile,
+                export_ref, cache_path = _export_recipe_from_path(self._conan_api, path_to_conanfile,
                                                                   reference, remotes, cwd)
-            exported_path = self.conan_api.local.get_conanfile_path(cache_path, cwd, py=True)
-            _configure_source(self.conan_api, exported_path, export_ref, remotes)
+            exported_path = self._conan_api.local.get_conanfile_path(cache_path, cwd, py=True)
+            _configure_source(self._conan_api, self._helpers.hook_manager, exported_path, export_ref,
+                              remotes)
             return export_ref, cache_path
-
 
         old_export_ref, old_cache_path = _source(old_path, old_reference)
         new_export_ref, new_cache_path = _source(new_path, new_reference)
@@ -55,7 +61,8 @@ class ReportAPI:
                    f'"{old_diff_path}" "{new_diff_path}"')
 
         ConanOutput().info(
-            f"Generating diff from {old_export_ref.repr_notime()} to {new_export_ref.repr_notime()} (this might take a while)")
+            f"Generating diff from {old_export_ref.repr_notime()} to {new_export_ref.repr_notime()} "
+            f"(this might take a while)")
         ConanOutput().info(command)
 
         stdout, stderr = StringIO(), StringIO()
@@ -63,9 +70,9 @@ class ReportAPI:
         diff = stdout.getvalue()
 
         if old_path:
-            self.conan_api.remove.recipe(old_export_ref)
+            self._conan_api.remove.recipe(old_export_ref)
         if new_path:
-            self.conan_api.remove.recipe(new_export_ref)
+            self._conan_api.remove.recipe(new_export_ref)
 
         return {
             "diff": diff,
@@ -77,7 +84,8 @@ class ReportAPI:
             "dst_prefix": dst_prefix,
         }
 
-def _configure_source(conan_api, conanfile_path, ref, remotes):
+
+def _configure_source(conan_api, hook_manager, conanfile_path, ref, remotes):
     app = ConanApp(conan_api)
     conanfile = app.loader.load_consumer(conanfile_path, name=ref.name, version=str(ref.version),
                                          user=ref.user, channel=ref.channel, graph_lock=None,
@@ -97,7 +105,8 @@ def _configure_source(conan_api, conanfile_path, ref, remotes):
     conanfile.folders.set_base_source(source_folder)
     conanfile.folders.set_base_export_sources(export_source_folder)
     conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
-    config_source(export_source_folder, conanfile, conan_api.config.hook_manager)
+    config_source(export_source_folder, conanfile, hook_manager)
+
 
 def _get_ref_from_cache_or_remote(conan_api, reference, enabled_remotes):
     ref = RecipeReference.loads(reference)
@@ -113,19 +122,20 @@ def _get_ref_from_cache_or_remote(conan_api, reference, enabled_remotes):
                     full_ref = ref
                     matching_remote = remote
                     break
-            except:
+            except (Exception,):
                 continue
         else:
             try:
                 latest_recipe_revision = conan_api.list.latest_recipe_revision(ref, remote)
-            except:
+            except (Exception,):
                 continue
             if full_ref is None or (latest_recipe_revision.timestamp > full_ref.timestamp):
                 full_ref = latest_recipe_revision
                 matching_remote = remote
     if full_ref is None or matching_remote is False:
         raise ConanException(f"No matching reference for {reference} in remotes.\n"
-                             "If you want to check against a local recipe, add an additional --{old,new}-path arg.\n")
+                             "If you want to check against a local recipe, add an "
+                             "additional --{old,new}-path arg.\n")
     if matching_remote is not None:
         conan_api.download.recipe(full_ref, matching_remote)
     cache_path = conan_api.cache.export_path(full_ref)

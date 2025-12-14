@@ -1,7 +1,8 @@
 import os
+import subprocess
 from pathlib import Path
 
-from conan.api.output import ConanOutput, Color
+from conan.api.output import ConanOutput, Color, LEVEL_QUIET
 from conan.internal.subsystems import command_env_wrapper
 from conan.errors import ConanException
 from conan.internal.model.cpp_info import MockInfoProperty
@@ -75,6 +76,7 @@ class ConanFile:
     runenv_info = None
     conf_info = None
     generator_info = None
+    conan_data = None
 
     def __init__(self, display_name=""):
         self.display_name = display_name
@@ -176,6 +178,8 @@ class ConanFile:
         if self.info is not None:
             result["info"] = self.info.serialize()
         result["vendor"] = self.vendor
+        if self.conan_data:
+            result["conandata"] = self.conan_data
         return result
 
     @property
@@ -350,8 +354,27 @@ class ConanFile:
         assert self.generators_folder is not None, "`generators_folder` is `None`"
         return Path(self.generators_folder)
 
-    def run(self, command, stdout=None, cwd=None, ignore_errors=False, env="", quiet=False,
+    def run(self, command: str, stdout=None, cwd=None, ignore_errors=False, env="", quiet=False,
             shell=True, scope="build", stderr=None):
+        """ Run a command in the current package context.
+
+        :parameter command: The command to run.
+        :parameter stdout: The output stream to write the command output. If ``None``, it defaults to
+            the standard output stream.
+        :parameter stderr: The error output stream to write the command error output. If ``None``,
+            it defaults to the standard error stream.
+        :parameter cwd: The current working directory to run the command in.
+        :parameter ignore_errors: If ``True``, do not raise an error if the command returns a
+            non-zero exit code.
+        :parameter env: The environment file to use. If empty, it defaults to ``"conanbuild"`` for
+            when ``scope`` is ``build`` or ``"conanrun"`` for ``run``.
+            If set to ``None`` explicitly, no environment file will be applied,
+            which is useful for commands that do not require any environment.
+        :parameter quiet: If ``True``, suppress the output of the command.
+        :parameter shell: If ``True``, run the command in a shell. This is passed to the
+            underlying ``Popen`` function.
+        :parameter scope: The scope of the command, either ``"build"`` or ``"run"``.
+        """
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         command = self._conan_helpers.cmd_wrapper.wrap(command, conanfile=self)
         if env == "":  # This default allows not breaking for users with ``env=None`` indicating
@@ -364,8 +387,11 @@ class ConanFile:
         wrapped_cmd = command_env_wrapper(self, command, env, envfiles_folder=envfiles_folder)
         from conan.internal.util.runners import conan_run
         if not quiet:
-            ConanOutput().writeln(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)
+            ConanOutput().info(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)
         ConanOutput().debug(f"{self.display_name}: Full command: {wrapped_cmd}")
+        if quiet or ConanOutput.get_output_level() == LEVEL_QUIET:
+            stdout = subprocess.DEVNULL if stdout is None else stdout
+            stderr = subprocess.DEVNULL if stderr is None else stderr
         retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, stderr=stderr, shell=shell)
         if not quiet:
             ConanOutput().writeln("")

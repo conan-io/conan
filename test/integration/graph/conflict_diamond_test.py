@@ -179,8 +179,11 @@ class TestErrorVisibleFalse:
         tc.run("export pkg1")
 
         tc.run("graph info --requires=pkg1/1.0 --format=json")
-        assert "WARN: risk: Packages required both with visible=True and visible=False" in tc.out
-        assert "pkg3/1.0: Required by pkg1/1.0" in tc.out
+        if not test:
+            assert "WARN: risk: Packages required both with visible=True and visible=False" in tc.out
+            assert "pkg3/1.0: Required by pkg1/1.0" in tc.out
+        else:
+            assert "WARN: risk" not in tc.out
         graph = json.loads(tc.stdout)
         assert len(graph["graph"]["nodes"]) == 4  # Including the CLI 0-3
         pkg1 = graph["graph"]["nodes"]["1"]
@@ -301,8 +304,11 @@ class TestErrorVisibleFalse:
         # Creating this pkg1 does generate a conflict
         tc.run("export pkg1")
         tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0 --format=json")
-        assert "WARN: risk: Packages required both with visible=True and visible=False" in tc.out
-        assert "pkg3/1.1: Required by pkg1/1.0" in tc.out
+        if not test:
+            assert "WARN: risk: Packages required both with visible=True and visible=False" in tc.out
+            assert "pkg3/1.1: Required by pkg1/1.0" in tc.out
+        else:
+            assert "WARN: risk" not in tc.out
         graph = json.loads(tc.stdout)
         assert len(graph["graph"]["nodes"]) == 4  # This was having an orphan node!!!
         pkg1 = graph["graph"]["nodes"]["2"]
@@ -362,8 +368,11 @@ class TestErrorVisibleFalse:
         tc.run("export pkg1")
 
         tc.run("graph info --requires=pkg3/1.1 --requires=pkg1/1.0 --format=json")
-        assert "WARN: risk: Packages required both with visible=True and visible=False" in tc.out
-        assert "pkg3/1.1: Required by pkg1/1.0" in tc.out
+        if not test:
+            assert "WARN: risk: Packages required both with visible=True and visible=False" in tc.out
+            assert "pkg3/1.1: Required by pkg1/1.0" in tc.out
+        else:
+            assert "WARN: risk" not in tc.out
         graph = json.loads(tc.stdout)
         assert len(graph["graph"]["nodes"]) == 5  # This was having an orphan node!!!
         pkg1 = graph["graph"]["nodes"]["3"]

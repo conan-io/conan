@@ -28,11 +28,13 @@ class UploadUpstreamChecker:
     def __init__(self, app: ConanApp):
         self._app = app
 
-    def check(self, upload_bundle, remote, force):
-        for ref, recipe_bundle in upload_bundle.refs().items():
-            self._check_upstream_recipe(ref, recipe_bundle, remote, force)
-            for pref, prev_bundle in upload_bundle.prefs(ref, recipe_bundle).items():
-                self._check_upstream_package(pref, prev_bundle, remote, force)
+    def check(self, package_list, remote, force):
+        for ref, packages in package_list.items():
+            recipe_info = package_list.recipe_dict(ref)
+            self._check_upstream_recipe(ref, recipe_info, remote, force)
+            for pref in packages:
+                pkg_dict = package_list.package_dict(pref)
+                self._check_upstream_package(pref, pkg_dict, remote, force)
 
     def _check_upstream_recipe(self, ref, ref_bundle, remote, force):
         output = ConanOutput(scope=str(ref))
@@ -40,7 +42,7 @@ class UploadUpstreamChecker:
         try:
             assert ref.revision
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_ref = self._app.remote_manager.get_recipe_revision_reference(ref, remote)
+            server_ref = self._app.remote_manager.get_recipe_revision(ref, remote)
             assert server_ref  # If successful (not raising NotFoundException), this will exist
         except NotFoundException:
             ref_bundle["force_upload"] = False
@@ -61,7 +63,7 @@ class UploadUpstreamChecker:
 
         try:
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_revisions = self._app.remote_manager.get_package_revision_reference(pref, remote)
+            server_revisions = self._app.remote_manager.get_package_revision(pref, remote)
             assert server_revisions
         except NotFoundException:
             prev_bundle["force_upload"] = False
@@ -85,7 +87,7 @@ class PackagePreparator:
 
     def prepare(self, pkg_list, enabled_remotes):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
-        for ref, bundle in pkg_list.refs().items():
+        for ref, packages in pkg_list.items():
             layout = self._app.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
@@ -96,9 +98,16 @@ class PackagePreparator:
                                          "This isn't a remote URL, the build won't be reproducible\n"
                                          "Failing because conf 'core.scm:local_url!=allow'")
 
+            # Just in case it was defined from a previous run
+            bundle = pkg_list.recipe_dict(ref)
+            bundle.pop("files", None)
+            bundle.pop("upload-urls", None)
             if bundle.get("upload"):
                 self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
-            for pref, prev_bundle in pkg_list.prefs(ref, bundle).items():
+            for pref in packages:
+                prev_bundle = pkg_list.package_dict(pref)
+                prev_bundle.pop("files", None)  # If defined from a previous upload
+                prev_bundle.pop("upload-urls", None)
                 if prev_bundle.get("upload"):
                     self._prepare_package(pref, prev_bundle)
 
@@ -222,10 +231,12 @@ class UploadExecutor:
         self._app = app
 
     def upload(self, upload_data, remote):
-        for ref, bundle in upload_data.refs().items():
+        for ref, packages in upload_data.items():
+            bundle = upload_data.recipe_dict(ref)
             if bundle.get("upload"):
                 self.upload_recipe(ref, bundle, remote)
-            for pref, prev_bundle in upload_data.prefs(ref, bundle).items():
+            for pref in packages:
+                prev_bundle = upload_data.package_dict(pref)
                 if prev_bundle.get("upload"):
                     self.upload_package(pref, prev_bundle, remote)
 
@@ -312,7 +323,8 @@ def _metadata_files(folder, metadata):
 
 
 def gather_metadata(package_list, cache, metadata):
-    for rref, recipe_bundle in package_list.refs().items():
+    for rref, packages in package_list.items():
+        recipe_bundle = package_list.recipe_dict(rref)
         if metadata or recipe_bundle["upload"]:
             metadata_folder = cache.recipe_layout(rref).metadata()
             files = _metadata_files(metadata_folder, metadata)
@@ -321,7 +333,8 @@ def gather_metadata(package_list, cache, metadata):
                 recipe_bundle.setdefault("files", {}).update(files)
                 recipe_bundle["upload"] = True
 
-        for pref, pkg_bundle in package_list.prefs(rref, recipe_bundle).items():
+        for pref in packages:
+            pkg_bundle = package_list.package_dict(pref)
             if metadata or pkg_bundle["upload"]:
                 metadata_folder = cache.pkg_layout(pref).metadata()
                 files = _metadata_files(metadata_folder, metadata)

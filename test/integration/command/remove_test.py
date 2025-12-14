@@ -105,7 +105,7 @@ class TestRemovePackageRevisions:
         c.run("list *:* -r default")
         assert "foobar/0.1@user/testing" in c.out
         assert "arch: x86_64" in c.out
-        assert "arch: x86" in  c.out
+        assert "arch: x86" in c.out
 
         c.run("remove -c foobar/0.1@user/testing:* -r default")
         c.run("list *:* -r default")
@@ -311,7 +311,7 @@ def _get_all_packages(client, ref, with_remote):
         api = ConanAPI(client.cache_folder)
         remote = api.remotes.get("default") if with_remote else None
         try:
-            return set([r.repr_notime() for r in api.list.packages_configurations(ref, remote=remote)])
+            return set([r.repr_notime() for r in api.list._packages_configurations(ref, remote=remote)])  # noqa
         except NotFoundException:
             return set()
 

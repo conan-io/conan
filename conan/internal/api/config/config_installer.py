@@ -143,6 +143,7 @@ def _process_file(directory, filename, config, cache_folder, folder):
         output.info("Copying file %s to %s" % (filename, target_folder))
         _filecopy(directory, filename, target_folder)
 
+
 def _process_folder(config, folder, cache_folder, ignore=None):
     if not os.path.isdir(folder):
         raise ConanException("No such directory: '%s'" % str(folder))

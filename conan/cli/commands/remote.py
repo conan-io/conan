@@ -17,7 +17,8 @@ def _print_remotes_json(remotes):
              "url": r.url,
              "verify_ssl": r.verify_ssl,
              "enabled": not r.disabled,
-             "allowed_packages": r.allowed_packages,}
+             "allowed_packages": r.allowed_packages,
+             "recipes_only": r.recipes_only}
             for r in remotes]
     cli_out_write(json.dumps(info, indent=4))
 
@@ -83,6 +84,9 @@ def remote_add(conan_api, parser, subparser, *args):
                                 "this remote")
     subparser.add_argument("-t", "--type", choices=[LOCAL_RECIPES_INDEX],
                            help="Define the remote type")
+    subparser.add_argument("--recipes-only", action="store_true", default=False,
+                           help="Disallow binary downloads from this remote, only recipes "
+                                "will be downloaded")
 
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
@@ -91,7 +95,8 @@ def remote_add(conan_api, parser, subparser, *args):
     remote_type = args.type or (LOCAL_RECIPES_INDEX if os.path.isdir(url_folder) else None)
     url = url_folder if remote_type == LOCAL_RECIPES_INDEX else args.url
     r = Remote(args.name, url, args.secure, disabled=False, remote_type=remote_type,
-               allowed_packages=args.allowed_packages)
+               allowed_packages=args.allowed_packages,
+               recipes_only=args.recipes_only)
     conan_api.remotes.add(r, force=args.force, index=args.index)
 
 
@@ -122,12 +127,22 @@ def remote_update(conan_api, parser, subparser, *args):
     subparser.add_argument("--index", action=OnceArgument, type=int,
                            help="Insert the remote at a specific position in the remote list")
     subparser.add_argument("-ap", "--allowed-packages", action="append", default=None,
-                           help="Add recipe reference pattern to the list of allowed packages for this remote")
+                           help="Add recipe reference pattern to the list of allowed packages "
+                                "for this remote")
+    subparser.add_argument("--recipes-only", default=None, const="True", nargs="?",
+                           choices=["True", "False"],
+                           help="Disallow binary downloads from this remote, only recipes will "
+                                "be downloaded")
+
     subparser.set_defaults(secure=None)
     args = parser.parse_args(*args)
-    if args.url is None and args.secure is None and args.index is None and args.allowed_packages is None:
+    if (args.url is None and args.secure is None and args.index is None and
+            args.allowed_packages is None and args.recipes_only is None):
         subparser.error("Please add at least one argument to update")
-    conan_api.remotes.update(args.remote, args.url, args.secure, index=args.index, allowed_packages=args.allowed_packages)
+    args.recipes_only = None if args.recipes_only is None else args.recipes_only == "True"
+    conan_api.remotes.update(args.remote, args.url, args.secure, index=args.index,
+                             allowed_packages=args.allowed_packages,
+                             recipes_only=args.recipes_only)
 
 
 @conan_subcommand()
@@ -263,7 +278,8 @@ def _print_auth_json(results):
 @conan_subcommand(formatters={"text": _print_auth, "json": _print_auth_json})
 def remote_auth(conan_api, parser, subparser, *args):
     """
-    Authenticate in the defined remotes. Use CONAN_LOGIN_USERNAME* and CONAN_PASSWORD* variables if available.
+    Authenticate in the defined remotes. Use CONAN_LOGIN_USERNAME* and CONAN_PASSWORD* variables
+    if available.
     Ask for username and password interactively in case (re-)authentication is required and there are
     no CONAN_LOGIN* and CONAN_PASSWORD* variables available which could be used.
     Usually you'd use this method over conan remote login for scripting which needs to run in CI

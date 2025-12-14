@@ -9,10 +9,11 @@ from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
     resolve_apple_flags, apple_extra_flags
 from conan.tools.build.cross_building import cross_building
-from conan.tools.build.flags import architecture_link_flag, libcxx_flags, architecture_flag, threads_flags
+from conan.tools.build.flags import (architecture_link_flag, libcxx_flags, architecture_flag,
+                                     threads_flags)
 from conan.tools.env import VirtualBuildEnv
-from conan.tools.meson.helpers import *
-from conan.tools.meson.helpers import get_apple_subsystem
+from conan.tools.meson.helpers import get_apple_subsystem, to_cppstd_flag, to_cstd_flag, \
+    to_meson_machine, to_meson_value
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conan.internal.util.files import save
 
@@ -150,7 +151,8 @@ class MesonToolchain:
     def __init__(self, conanfile, backend=None, native=False):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
-        :param backend: ``str`` ``backend`` Meson variable value. By default, ``ninja``.
+        :param backend: (**DEPRECATED**, use ``self.backend`` instead) ``str`` ``backend`` Meson variable
+                        value. By default, ``ninja``.
         :param native: ``bool`` Indicates whether you want Conan to create the
                        ``conan_meson_native.ini`` in a cross-building context. Notice that it only
                        makes sense if your project's ``meson.build`` uses the ``native=true``
@@ -168,22 +170,26 @@ class MesonToolchain:
         # Values are kept as Python built-ins so users can modify them more easily, and they are
         # only converted to Meson file syntax for rendering
         # priority: first user conf, then recipe, last one is default "ninja"
-        self._backend = self._conanfile_conf.get("tools.meson.mesontoolchain:backend",
-                                                 default=backend or 'ninja')
+        #: Backend to use. Defined by the conf ``tools.meson.mesontoolchain:backend``. By default, ``ninja``.
+        self.backend = backend or 'ninja'
         build_type = self._conanfile.settings.get_safe("build_type")
-        self._buildtype = {"Debug": "debug",  # Note, it is not "'debug'"
-                           "Release": "release",
-                           "MinSizeRel": "minsize",
-                           "RelWithDebInfo": "debugoptimized"}.get(build_type, build_type)
-        self._b_ndebug = "true" if self._buildtype != "debug" else "false"
+        #: Build type to use.
+        self.buildtype = {"Debug": "debug",  # Note, it is not "'debug'"
+                          "Release": "release",
+                          "MinSizeRel": "minsize",
+                          "RelWithDebInfo": "debugoptimized"}.get(build_type, build_type)
+        #: Disable asserts.
+        self.b_ndebug = "true" if self.buildtype != "debug" else "false"
 
         # https://mesonbuild.com/Builtin-options.html#base-options
         fpic = self._conanfile.options.get_safe("fPIC")
         shared = self._conanfile.options.get_safe("shared")
-        self._b_staticpic = fpic if (shared is False and fpic is not None) else None
+        #: Build static libraries as position independent. By default, ``self.options.get_safe("fPIC")``
+        self.b_staticpic = fpic if (shared is False and fpic is not None) else None
         # https://mesonbuild.com/Builtin-options.html#core-options
         # Do not adjust "debug" if already adjusted "buildtype"
-        self._default_library = ("shared" if shared else "static") if shared is not None else None
+        #: Default library type, e.g., "shared.
+        self.default_library = ("shared" if shared else "static") if shared is not None else None
 
         compiler = self._conanfile.settings.get_safe("compiler")
         if compiler is None:
@@ -193,16 +199,17 @@ class MesonToolchain:
             raise ConanException("MesonToolchain needs 'settings.compiler.version', but it is not defined")
 
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
-        self._cpp_std = to_cppstd_flag(compiler, compiler_version, cppstd)
-
         cstd = self._conanfile.settings.get_safe("compiler.cstd")
-        self._c_std = to_cstd_flag(cstd)
-
-        self._b_vscrt = None
+        #: C++ language standard to use. Defined by ``to_cppstd_flag()`` by default.
+        self.cpp_std = to_cppstd_flag(self._conanfile, compiler, compiler_version, cppstd)
+        #: C language standard to use. Defined by ``to_cstd_flag()`` by default.
+        self.c_std = to_cstd_flag(self._conanfile, cstd)
+        #: VS runtime library to use. Defined by ``msvc_runtime_flag()`` by default.
+        self.b_vscrt = None
         if compiler in ("msvc", "clang"):
             vscrt = msvc_runtime_flag(self._conanfile)
             if vscrt:
-                self._b_vscrt = str(vscrt).lower()
+                self.b_vscrt = str(vscrt).lower()
 
         # Extra flags
         #: List of extra ``CXX`` flags. Added to ``cpp_args``
@@ -282,8 +289,6 @@ class MesonToolchain:
 
         # Read configuration for sys_root property (honoring existing conf)
         self._sys_root = self._conanfile_conf.get("tools.build:sysroot", check_type=str)
-        if self._sys_root:
-            self.properties["sys_root"] = self._sys_root
 
         # Read configuration for compilers
         compilers_by_conf = self._conanfile_conf.get("tools.build:compiler_executables", default={},
@@ -432,36 +437,42 @@ class MesonToolchain:
 
         arch = self._conanfile.settings.get_safe("arch")
         os_build = self.cross_build["build"]["system"]
-        ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt", "{}-x86_64".format(os_build), "bin")
+        ndk_bin = os.path.join(ndk_path, "toolchains",
+                               "llvm", "prebuilt", "{}-x86_64".format(os_build), "bin")
         android_api_level = self._conanfile.settings.get_safe("os.api_level")
         android_target = {'armv7': 'armv7a-linux-androideabi',
                           'armv8': 'aarch64-linux-android',
                           'x86': 'i686-linux-android',
                           'x86_64': 'x86_64-linux-android'}.get(arch)
         os_build = self._conanfile.settings_build.get_safe('os')
-        compiler_extension = ".cmd" if os_build == "Windows" else ""
+        compile_ext = ".cmd" if os_build == "Windows" else ""
         # User has more prio than Conan
-        self.c = os.path.join(ndk_bin, "{}{}-clang{}".format(android_target, android_api_level, compiler_extension))
-        self.cpp = os.path.join(ndk_bin, "{}{}-clang++{}".format(android_target, android_api_level, compiler_extension))
+        self.c = os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{compile_ext}")
+        self.cpp = os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang++{compile_ext}")
         self.ar = os.path.join(ndk_bin, "llvm-ar")
 
     def _get_extra_flags(self):
         # Now, it's time to get all the flags defined by the user
         cxxflags = self._conanfile_conf.get("tools.build:cxxflags", default=[], check_type=list)
         cflags = self._conanfile_conf.get("tools.build:cflags", default=[], check_type=list)
-        sharedlinkflags = self._conanfile_conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
-        exelinkflags = self._conanfile_conf.get("tools.build:exelinkflags", default=[], check_type=list)
-        linker_scripts = self._conanfile_conf.get("tools.build:linker_scripts", default=[], check_type=list)
-        linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
+        sharedlinkflags = self._conanfile_conf.get("tools.build:sharedlinkflags", default=[],
+                                                   check_type=list)
+        exelinkflags = self._conanfile_conf.get("tools.build:exelinkflags", default=[],
+                                                check_type=list)
+        linker_scripts = self._conanfile_conf.get("tools.build:linker_scripts", default=[],
+                                                  check_type=list)
+        linker_script_flags = ['-T' + linker_script for linker_script in linker_scripts]
         defines = self._conanfile_conf.get("tools.build:defines", default=[], check_type=list)
         sys_root = [f"--sysroot={self._sys_root}"] if self._sys_root else [""]
-        ld = sharedlinkflags + exelinkflags + linker_script_flags + sys_root + self.extra_ldflags + self.threads_flags
+        ld = (sharedlinkflags + exelinkflags + linker_script_flags + sys_root + self.extra_ldflags
+              + self.threads_flags)
         # Apple extra flags from confs (visibilty, bitcode, arc)
         cxxflags += self.apple_extra_flags
         cflags += self.apple_extra_flags
         ld += self.apple_extra_flags
         return {
-            "cxxflags": [self.arch_flag] + cxxflags + sys_root + self.extra_cxxflags + self.threads_flags,
+            "cxxflags": [self.arch_flag] + cxxflags + sys_root + self.extra_cxxflags
+                        + self.threads_flags,
             "cflags": [self.arch_flag] + cflags + sys_root + self.extra_cflags + self.threads_flags,
             "ldflags": [self.arch_flag] + [self.arch_link_flag] + ld,
             "defines": [f"-D{d}" for d in (defines + self.extra_defines)]
@@ -537,16 +548,17 @@ class MesonToolchain:
             "windres": self.windres,
             "pkgconfig": self.pkgconfig,
             # https://mesonbuild.com/Builtin-options.html#core-options
-            "buildtype": self._buildtype,
-            "default_library": self._default_library,
-            "backend": self._backend,
+            "buildtype": self.buildtype,
+            "default_library": self.default_library,
+            "backend": self._conanfile_conf.get("tools.meson.mesontoolchain:backend",
+                                                default=self.backend),
             # https://mesonbuild.com/Builtin-options.html#base-options
-            "b_vscrt": self._b_vscrt,
-            "b_staticpic": to_meson_value(self._b_staticpic),  # boolean
-            "b_ndebug": to_meson_value(self._b_ndebug),  # boolean as string
+            "b_vscrt": self.b_vscrt,
+            "b_staticpic": to_meson_value(self.b_staticpic),  # boolean
+            "b_ndebug": to_meson_value(self.b_ndebug),  # boolean as string
             # https://mesonbuild.com/Builtin-options.html#compiler-options
-            "cpp_std": self._cpp_std,
-            "c_std": self._c_std,
+            "cpp_std": self.cpp_std,
+            "c_std": self.c_std,
             "c_args": to_meson_value(self._filter_list_empty_fields(self.c_args)),
             "c_link_args": to_meson_value(self._filter_list_empty_fields(self.c_link_args)),
             "cpp_args": to_meson_value(self._filter_list_empty_fields(self.cpp_args)),
