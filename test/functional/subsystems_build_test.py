@@ -492,7 +492,7 @@ class TestSubsystemsCMakeBuild:
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="cygwin")
 
     @pytest.mark.tool("ninja")
-    @pytest.mark.tool("clang", "19")
+    @pytest.mark.tool("clang", "20")
     def test_clang(self):
         """
         native, LLVM/Clang compiler
