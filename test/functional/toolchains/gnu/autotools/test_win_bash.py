@@ -65,8 +65,8 @@ def test_autotools_bash_complete():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.tool("clang", "19")
 @pytest.mark.tool("msys2")
+@pytest.mark.tool("clang", "19")
 @pytest.mark.parametrize("frontend", ("clang", "clang-cl"))
 @pytest.mark.parametrize("runtime", ("static", "dynamic"))
 @pytest.mark.parametrize("build_type", ("Debug", "Release"))
@@ -117,6 +117,7 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
             def build(self):
                 # These commands will run in bash activating first the vcvars and
                 # then inside the bash activating the
+                self.run("which clang")
                 self.run("aclocal")
                 self.run("autoconf")
                 self.run("automake --add-missing --foreign")
@@ -132,6 +133,7 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
                  "main.cpp": main,
                  "profile_win": profile_win})
     client.run("build . -pr=profile_win")
+    print(client.out)
     client.run_command("main.exe")
     assert "__GNUC__" not in client.out
     assert "main __clang_major__19" in client.out
