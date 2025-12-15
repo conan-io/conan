@@ -86,7 +86,7 @@ class TestLLVMClang:
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
         assert "GNU-like command-line" in client.out
-        assert "main __clang_major__19" in client.out
+        assert "main __clang_major__20" in client.out
         assert "main _MSC_VER194" in client.out
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
@@ -108,7 +108,7 @@ class TestLLVMClang:
 
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "GNU-like command-line" in client.out
-        assert "main __clang_major__19" in client.out
+        assert "main __clang_major__20" in client.out
         assert "main _MSC_VER194" in client.out
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
@@ -132,7 +132,7 @@ class TestLLVMClang:
 
         assert 'cmake -G "Ninja"' in client.out
         assert "MSVC-like command-line" in client.out
-        assert "main __clang_major__19" in client.out
+        assert "main __clang_major__20" in client.out
         assert "main _MSC_VER194" in client.out
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
@@ -155,7 +155,7 @@ class TestLLVMClang:
 
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "GNU-like command-line" in client.out
-        assert "main __clang_major__19" in client.out
+        assert "main __clang_major__20" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER194" in client.out
         assert "main _MSVC_LANG2017" in client.out
@@ -181,7 +181,7 @@ class TestVSClangCL:
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "MSVC-like command-line" in client.out
-        assert "main __clang_major__19" in client.out
+        assert "main __clang_major__20" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         # CI forced the installation of 19.38, seems to prevail there
         assert "main _MSC_VER19" in client.out
@@ -209,7 +209,7 @@ class TestMsysClang:
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
         # TODO: Version is still not controlled
-        assert "main __clang_major__19" in client.out
+        assert "main __clang_major__20" in client.out
         # Not using libstdc++
         assert "_GLIBCXX_USE_CXX11_ABI" not in client.out
         assert "main __cplusplus2014" in client.out
@@ -239,7 +239,7 @@ class TestMsysClang:
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
         # TODO: Version is still not controlled
-        assert "main __clang_major__19" in client.out
+        assert "main __clang_major__20" in client.out
         assert "main _GLIBCXX_USE_CXX11_ABI 0" in client.out
         assert "main __cplusplus2014" in client.out
         assert "main __GNUC__" in client.out
@@ -268,7 +268,7 @@ class TestMsysClang:
         client.run(f"create . --name=pkg --version=0.1 -pr=clang")
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
-        assert "main __clang_major__19" in client.out
+        assert "main __clang_major__20" in client.out
         assert "GLIBCXX" not in client.out
         assert "cplusplus" not in client.out
         assert "main __GNUC__" in client.out
