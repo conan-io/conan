@@ -66,14 +66,14 @@ def test_autotools_bash_complete():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool("msys2")
-@pytest.mark.tool("clang", "19")
+@pytest.mark.tool("clang", "20")
 @pytest.mark.parametrize("frontend", ("clang", "clang-cl"))
 @pytest.mark.parametrize("runtime", ("static", "dynamic"))
 @pytest.mark.parametrize("build_type", ("Debug", "Release"))
 def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     client = TestClient(path_with_spaces=False)
     # Problem is that msys2 also has clang in the path, so we need to make it explicit
-    clangpath = tools_locations["clang"]["19"]["path"]["Windows"]
+    clangpath = tools_locations["clang"]["20"]["path"]["Windows"]
     # compilers
     c, cpp = ("clang", "clang++") if frontend == "clang" else ("clang-cl", "clang-cl")
     comps = f'{{"cpp":"{cpp}", "c":"{c}", "rc":"{c}"}}'
@@ -117,11 +117,6 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
             def build(self):
                 # These commands will run in bash activating first the vcvars and
                 # then inside the bash activating the
-                self.run("which clang")
-                self.run("which clang++")
-                self.run("clang --version")
-                self.run("clang++ --version")
-                return
                 self.run("aclocal")
                 self.run("autoconf")
                 self.run("automake --add-missing --foreign")
@@ -140,7 +135,7 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     print(client.out)
     client.run_command("main.exe")
     assert "__GNUC__" not in client.out
-    assert "main __clang_major__19" in client.out
+    assert "main __clang_major__20" in client.out
     check_exe_run(client.out, "main", "clang", None, build_type, "x86_64", None)
 
     bat_contents = client.load("conanbuild.bat")

@@ -91,7 +91,8 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool("cmake", "3.23")
-@pytest.mark.tool("clang", "19")
+# This test uses clang inside Visual Studio, not managed by mark.tool
+@pytest.mark.tool("visual_studio")
 def test_toolchain_nmake_clang():
     cppstd = "14"
     build_type = "Debug"

@@ -65,7 +65,7 @@ def client():
 
 
 @pytest.mark.tool("cmake")
-@pytest.mark.tool("clang", "19")
+@pytest.mark.tool("clang", "20")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 class TestLLVMClang:
     """ External LLVM/clang, with different CMake generators
@@ -74,7 +74,7 @@ class TestLLVMClang:
 
     @pytest.mark.tool("mingw64")
     @pytest.mark.tool("visual_studio", "17")
-    @pytest.mark.tool("clang", "19")  # repeated, for priority over the mingw64 clang
+    @pytest.mark.tool("clang", "20")  # repeated, for priority over the mingw64 clang
     @pytest.mark.parametrize("runtime", ["static", "dynamic"])
     def test_clang_mingw(self, client, runtime):
         """ compiling with an LLVM-clang installed, which uses by default the
@@ -143,7 +143,7 @@ class TestLLVMClang:
 
     @pytest.mark.tool("ninja")
     @pytest.mark.tool("visual_studio", "17")
-    @pytest.mark.tool("clang", "19")  # repeated, for priority over the mingw64 clang
+    @pytest.mark.tool("clang", "20")  # repeated, for priority over the mingw64 clang
     def test_clang_cmake_runtime_version(self, client):
         generator = "Ninja"
         # Make sure that normal CMakeLists with verify=False works
@@ -288,7 +288,7 @@ class TestMsysClang:
 
 @pytest.mark.tool("cmake")
 @pytest.mark.tool("ninja")
-@pytest.mark.tool("clang", "19")
+@pytest.mark.tool("clang", "20")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_error_clang_cmake_ninja_custom_cxx(client):
     clang_profile = textwrap.dedent("""
@@ -297,7 +297,7 @@ def test_error_clang_cmake_ninja_custom_cxx(client):
         arch=x86_64
         build_type=Release
         compiler=clang
-        compiler.version=18
+        compiler.version=20
         [buildenv]
         CXX=/no/exist/clang++
         """)

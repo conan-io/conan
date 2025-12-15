@@ -50,9 +50,9 @@ msys2_path = os.getenv("MSYS2_PATH", "C:/msys64")
 tools_locations = {
     "clang": {
         "exe": "clang",
-        "default": "19",
-        "19": {
-            "path": {'Windows': 'C:/choco_llvm/bin'}  # by choco
+        "default": "20",
+        "20": {
+            "path": {'Windows': 'C:/Program Files/LLVM/bin'}  # by choco
         }
     },
     'visual_studio': {"default": "15",
