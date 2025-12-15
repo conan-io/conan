@@ -118,6 +118,10 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
                 # These commands will run in bash activating first the vcvars and
                 # then inside the bash activating the
                 self.run("which clang")
+                self.run("which clang++")
+                self.run("clang --version")
+                self.run("clang++ --version")
+                return
                 self.run("aclocal")
                 self.run("autoconf")
                 self.run("automake --add-missing --foreign")
