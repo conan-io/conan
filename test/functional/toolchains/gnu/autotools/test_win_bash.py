@@ -83,7 +83,7 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
         arch=x86_64
         build_type={build_type}
         compiler=clang
-        compiler.version=19
+        compiler.version=20
         compiler.cppstd=14
         compiler.runtime_version=v144
         compiler.runtime={runtime}
