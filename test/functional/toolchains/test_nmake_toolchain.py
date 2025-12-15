@@ -101,7 +101,7 @@ def test_toolchain_nmake_clang():
                "TEST_DEFINITION6=foo bar"]
     client = TestClient(path_with_spaces=False)
     settings = {"compiler": "clang",
-                "compiler.version": "19",
+                "compiler.version": "20",
                 "compiler.cppstd": "14",
                 "compiler.runtime": "dynamic",
                 "build_type": build_type,
