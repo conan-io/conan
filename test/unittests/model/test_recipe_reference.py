@@ -93,3 +93,15 @@ def test_error_pref():
     with pytest.raises(ConanException) as exc:
         r1.validate_ref()
     assert "Invalid recipe reference 'pkg/1.0:pid' is a package reference" in str(exc)
+
+
+@pytest.mark.parametrize("pattern", ["pkg/*", "pkg/*|other/*", "other/*|pkg/*", "!other/*", "!other1/*|other2/*", "!&", "&|pkg/*"])
+def test_pattern_match(pattern):
+    r = RecipeReference.loads("pkg/0.1")
+    assert r.matches(pattern, False)
+
+
+@pytest.mark.parametrize("pattern", ["other/*", "!pkg/*", "!other/*|pkg/*", "!pkg/*|other/*", "!&|pkg/*"])
+def test_pattern_no_match(pattern):
+    r = RecipeReference.loads("pkg/0.1")
+    assert not r.matches(pattern, False)

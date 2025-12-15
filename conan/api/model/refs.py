@@ -173,6 +173,8 @@ class RecipeReference:
         :parameter str pattern: the pattern to match against, it can contain wildcards,
             and can start with ``!`` or ``~`` to negate the match.
             A special value of ``&`` will return a match only of ``is_consumer`` is ``True``
+            One can provide multiple patterns separated by | character.
+            The negation is supported only for the whole pattern colletion.
         :parameter bool is_consumer: if ``True``, the pattern ``&`` will match this reference.
         """
         negate = False
@@ -180,19 +182,22 @@ class RecipeReference:
             pattern = pattern[1:]
             negate = True
 
-        no_user_channel = False
-        if pattern.endswith("@"):  # it means we want to match only without user/channel
-            pattern = pattern[:-1]
-            no_user_channel = True
-        elif "@#" in pattern:
-            pattern = pattern.replace("@#", "#")
-            no_user_channel = True
+        condition = False
+        for pattern_part in pattern.split("|"):
+            no_user_channel = False
+            if pattern_part.endswith("@"):  # it means we want to match only without user/channel
+                pattern_part = pattern_part[:-1]
+                no_user_channel = True
+            elif "@#" in pattern_part:
+                pattern_part = pattern_part.replace("@#", "#")
+                no_user_channel = True
 
-        condition = ((pattern == "&" and is_consumer) or
-                     fnmatch.fnmatchcase(str(self), pattern) or
-                     fnmatch.fnmatchcase(self.repr_notime(), pattern))
-        if no_user_channel:
-            condition = condition and not self.user and not self.channel
+            condition_part = ((pattern_part == "&" and is_consumer) or
+                        fnmatch.fnmatchcase(str(self), pattern_part) or
+                        fnmatch.fnmatchcase(self.repr_notime(), pattern_part))
+            if no_user_channel:
+                condition_part = condition_part and not self.user and not self.channel
+            condition |= condition_part
         if negate:
             return not condition
         return condition
