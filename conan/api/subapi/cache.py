@@ -95,7 +95,7 @@ class CacheAPI:
         app = ConanApp(self._conan_api)
         preparator = PackagePreparator(app, self._api_helpers.global_conf)
         # Some packages can have missing sources/exports_sources
-        enabled_remotes = self._conan_api.remotes.list("*")
+        enabled_remotes = self._conan_api.remotes.list()
         preparator.prepare(package_list, enabled_remotes, force=True)
 
         for rref, packages in package_list.items():
