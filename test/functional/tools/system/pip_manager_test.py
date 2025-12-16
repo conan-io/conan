@@ -1,5 +1,4 @@
 import textwrap
-import platform
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save_files
 from conan.test.utils.test_files import temp_folder
