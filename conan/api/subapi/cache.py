@@ -80,7 +80,7 @@ class CacheAPI:
         checker = IntegrityChecker(cache)
         checker.check(package_list)
 
-    def sign(self, package_list, only_packages=False):
+    def sign(self, package_list):
         """Sign packages with the package signing plugin"""
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder)
@@ -94,7 +94,9 @@ class CacheAPI:
 
         app = ConanApp(self._conan_api)
         preparator = PackagePreparator(app, self._api_helpers.global_conf)
-        preparator.prepare(package_list, [], force=True)
+        # Some packages can have missing sources/exports_sources
+        enabled_remotes = self._conan_api.remotes.list("*")
+        preparator.prepare(package_list, enabled_remotes, force=True)
 
         for rref, packages in package_list.items():
             recipe_bundle = package_list.recipe_dict(rref)
