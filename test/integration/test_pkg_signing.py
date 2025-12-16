@@ -72,7 +72,7 @@ def test_pkg_sign_manifest_signatures():
     signer = textwrap.dedent(r"""
         import os
         from conan.tools.files import load, save
-        from conan.tools.pkg_signing.plugin import (load_manifest, load_signatures, signature_dict,
+        from conan.tools.pkg_signing.plugin import (load_manifest, load_signatures,
                                                     verify_files_checksums)
 
         def sign(ref, artifacts_folder, signature_folder, **kwargs):
