@@ -9,25 +9,21 @@ from conan.errors import ConanException
 
 class PipEnv:
 
-    def __init__(self, conanfile, folder=None, name="", py_version=None):
+    def __init__(self, conanfile, folder=None, name=""):
         """
         :param conanfile: The current conanfile "self"
         :param folder: Optional folder, by default the "build_folder"
         :param name: Optional name for the virtualenv, by default "conan_pipenv"
-        :param py_version: Optional python version for the virtualenv using UV
         """
         self._conanfile = conanfile
-        # venv info
         self.env_name = f"conan_pipenv{f'_{name}' if name else ''}"
-        self._base_env_dir = os.path.abspath(os.path.join(folder or conanfile.build_folder))
-        self._env_dir = os.path.join(self._base_env_dir, self.env_name)
-        self.bin_dir = os.path.join(self._env_dir,
-                                    "Scripts" if platform.system() == "Windows" else "bin")
-        # init the venv
-        if py_version:
-            self._create_uv_venv(py_version)
-        else:
-            self._create_venv()
+        self._env_dir = os.path.abspath(os.path.join(folder or conanfile.build_folder,
+                                                     self.env_name))
+        bins = "Scripts" if platform.system() == "Windows" else "bin"
+        self.bin_dir = os.path.join(self._env_dir, bins)
+        pyexe = "python.exe" if platform.system() == "Windows" else "python"
+        self._python_exe = os.path.join(self.bin_dir, pyexe)
+        self._create_venv()
 
     @property
     def python(self):
@@ -46,46 +42,27 @@ class PipEnv:
         env.prepend_path("PATH", self.bin_dir)
         env.vars(self._conanfile).save_script(self.env_name)
 
-    def _default_python_interpreter(self):
+    @staticmethod
+    def _default_python():
+        python = "python" if platform.system() == "Windows" else "python3"
+        default_python = shutil.which(python)
+        return os.path.realpath(default_python) if default_python else None
+
+    def _create_venv(self):
         python_interpreter = self._conanfile.conf.get("tools.system.pipenv:python_interpreter")
-        if not python_interpreter:
-            python = "python" if platform.system() == "Windows" else "python3"
-            default_python = shutil.which(python)
-            python_interpreter = os.path.realpath(default_python) if default_python else None
+        python_interpreter = python_interpreter or self._default_python()
         if not python_interpreter:
             raise ConanException("PipEnv could not find a Python executable path. Please, install "
                                  "Python system-wide or set the "
                                  "'tools.system.pipenv:python_interpreter' "
                                  "conf to the full path of a Python executable")
-        return python_interpreter
 
-    def _create_uv_venv(self, py_version):
-        _python = self._default_python_interpreter()
-        _uv_env_dir = os.path.join(self._base_env_dir, f"uv_{self.env_name}")
-        _python_exe = self._get_env_python(_uv_env_dir)
         try:
-            self._conanfile.run(cmd_args_to_string(
-                [_python, '-m', 'venv', _uv_env_dir])
-            )
-            self._conanfile.run(cmd_args_to_string(
-                [_python_exe, "-m", "pip", "install", "--disable-pip-version-check", "uv"])
-            )
-            self._conanfile.run(cmd_args_to_string(
-                [_python_exe, '-m', 'uv', 'venv', '--seed', '--python', py_version, self._env_dir])
-            )
-            self._conanfile.output.info(f"Virtual environment for Python "
-                                        f"{py_version} created successfully using UV.")
-        except Exception as e:
-            raise ConanException(f"PipEnv could not create a Python {py_version} virtual "
-                                 f"environment using UV and '{_python}': {e}")
-
-    def _create_venv(self):
-        _python = self._default_python_interpreter()
-        try:
-            self._conanfile.run(cmd_args_to_string([_python, '-m', 'venv', self._env_dir]))
+            self._conanfile.run(cmd_args_to_string([python_interpreter, '-m', 'venv',
+                                                    self._env_dir]))
         except ConanException as e:
             raise ConanException(f"PipEnv could not create a Python virtual "
-                                 f"environment using '{_python}': {e}")
+                                 f"environment using '{python_interpreter}': {e}")
 
     def run(self, args):
         return self._conanfile.run(cmd_args_to_string([self.python] + list(args)))
