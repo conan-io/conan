@@ -12,7 +12,7 @@ RECIPE_INCACHE_DATE_UPDATED = "Cache (Updated date)"
 RECIPE_NEWER = "Newer"  # The local recipe is  modified and newer timestamp than server
 RECIPE_NOT_IN_REMOTE = "Not in remote"
 RECIPE_UPDATEABLE = "Update available"  # The update of recipe is available (only in conan info)
-RECIPE_NO_REMOTE = "No remote"
+# These recipes do not have a full reference, not in the cache
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Cli"  # A virtual conanfile (dynamic in memory conanfile)

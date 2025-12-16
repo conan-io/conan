@@ -269,14 +269,14 @@ class PkgCache:
     def get_recipe_lru(self, ref):
         return self._db.get_recipe_lru(ref)
 
-    def update_recipe_lru(self, ref):
-        self._db.update_recipe_lru(ref)
+    def update_recipes_lru(self, refs):
+        self._db.update_recipes_lru(refs)
 
     def get_package_lru(self, pref):
         return self._db.get_package_lru(pref)
 
-    def update_package_lru(self, pref):
-        self._db.update_package_lru(pref)
+    def update_packages_lru(self, prefs):
+        self._db.update_packages_lru(prefs)
 
     def path_to_ref(self, path):
         try:

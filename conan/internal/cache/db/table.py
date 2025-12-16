@@ -25,9 +25,12 @@ class BaseDbTable:
     def db_connection(self):
         assert self._lock.acquire(timeout=20), "Conan failed to acquire database lock"
         connection = sqlite3.connect(self.filename, isolation_level=None, timeout=20)
+        #connection.set_trace_callback(print)
         try:
+            connection.execute("BEGIN")
             yield connection
         finally:
+            connection.commit()
             connection.close()
             self._lock.release()
 

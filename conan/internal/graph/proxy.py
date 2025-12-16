@@ -49,8 +49,6 @@ class ConanProxy:
             status = RECIPE_DOWNLOADED
             return layout, status, remote
 
-        self._cache.update_recipe_lru(ref)
-
         # TODO: cache2.0: check with new --update flows
         # TODO: If the revision is given, then we don't need to check for updates?
         if not (check_update or should_update_reference(reference, update)):

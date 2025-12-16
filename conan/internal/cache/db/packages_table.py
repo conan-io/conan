@@ -100,17 +100,19 @@ class PackagesDBTable(BaseDbTable):
             except sqlite3.IntegrityError:
                 raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
-    def update_lru(self, pref):
-        assert pref.revision is not None
+    def update_lru(self, prefs):
         # TODO: InstallGraph is dropping the pref.timestamp, cannot be checked here yet
         # assert pref.timestamp is not None, f"PREF _TIMESSTAMP IS NONE {repr(pref)}"
-        where_clause = self._where_clause(pref)
+        params = [(str(pref.ref), pref.ref.revision, pref.package_id, pref.revision)
+                  for pref in prefs]
+        where_clause = (f"{self.columns.reference} = ? AND {self.columns.rrev} = ? "
+                        f"AND {self.columns.pkgid} = ? AND {self.columns.prev} = ?")
         lru = timestamp_now()
         query = f"UPDATE {self.table_name} " \
                 f"SET {self.columns.lru} = '{lru}' " \
                 f"WHERE {where_clause};"
         with self.db_connection() as conn:
-            conn.execute(query)
+            conn.executemany(query, params)
 
     def remove_build_id(self, pref):
         where_clause = self._where_clause(pref)
