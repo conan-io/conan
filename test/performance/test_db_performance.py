@@ -1,13 +1,10 @@
 import os
 import time
-from unittest.mock import patch
 
 import pytest
 
 from conan.api.model import RecipeReference
 from conan.internal.cache.db.cache_database import CacheDatabase
-from conan.internal.cache.db.packages_table import PackagesDBTable
-from conan.internal.cache.db.recipes_table import RecipesDBTable
 from conan.test.utils.test_files import temp_folder
 
 
@@ -74,73 +71,4 @@ def test_db_performance():
     print("    Avg:", exp_time / (experiments * updates))
 
 
-def test_contexts():
-    from contextlib import contextmanager
 
-    class MyConnection:
-        def __init__(self):
-            print("Constructing MYConnection")
-
-        def __enter__(self):
-            print("Enter MYConnection")
-
-        def close(self):
-            print("Close MYConnection")
-
-        def do_something(self):
-            print("Do something MYConnection")
-
-        def __exit__(self, type, value, traceback):
-            print("Exit MYConnection")
-
-    @contextmanager
-    def mydb_connection():
-        connection = MyConnection()
-        try:
-            yield connection
-        finally:
-            connection.close()
-
-    with mydb_connection() as conn:
-        conn.do_something()
-
-
-def test_db_traces():
-    f = temp_folder()
-    print("Tempt folder: ", f)
-    db = CacheDatabase(os.path.join(f, "mytest.sqlite"))
-
-    index = 0
-    ref = RecipeReference.loads(f"pkg/1.{index}#rev1%1")
-    path = os.path.join(f, f"folder{index}")
-    db.create_recipe(path, ref)
-
-
-def test_pure_db_traces():
-    import sqlite3
-    f = temp_folder()
-    filename = os.path.join(f, "mytest.sqlite")
-
-    try:
-        with sqlite3.connect(filename, isolation_level=None) as connection:
-            connection.set_trace_callback(print)
-            connection.execute("CREATE TABLE users (id INTEGER, name TEXT)")
-            connection.execute("INSERT INTO users VALUES (1, 'John Doe')")
-            connection.execute("INSERT INTO users VALUES (2, 'Jane Doe')")
-            connection.execute("INSERT INTO users VALUESS (3, 'John Smith')")
-    except sqlite3.OperationalError as e:
-        print(e)
-
-    r = connection.execute("SELECT * FROM users")
-    print("IN TRANSACTION", connection.in_transaction)
-    ret = len(r.fetchall())
-    assert ret == 2
-
-    connection.close()
-
-    f = temp_folder()
-    filename = os.path.join(f, "mytest2.sqlite")
-    ptable = PackagesDBTable(filename)
-    rtable = RecipesDBTable(filename)
-    assert ptable._lock is rtable._lock
-    print(id(ptable._lock), id(rtable._lock))
