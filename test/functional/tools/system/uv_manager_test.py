@@ -107,6 +107,7 @@ def test_fail_build_uv_manager():
     print(client.out)
     assert "UVEnv could not create a Python 3.11.86 virtual environment using UV" in client.out
 
+
 def test_run_uvx():
 
     pip_package_folder = temp_folder(path_with_spaces=True)
