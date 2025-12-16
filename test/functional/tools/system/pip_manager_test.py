@@ -1,4 +1,5 @@
 import textwrap
+import platform
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save_files
 from conan.test.utils.test_files import temp_folder
@@ -179,7 +180,10 @@ def test_build_pip_manager_using_uv():
     assert "Using CPython 3.11.6" in client.out
     assert "Creating virtual environment with seed packages" in client.out
     assert "Virtual environment for Python 3.11.6 created successfully using UV." in client.out
-    assert "python --version\nPython 3.11.6" in client.out
+    if platform.system() == "Windows":
+        assert "python.exe --version\nPython 3.11.6" in client.out
+    else:
+        assert "python --version\nPython 3.11.6" in client.out
     assert "RUN: hello-world" in client.out
     assert "Hello Test World!" in client.out
 
