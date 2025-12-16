@@ -85,7 +85,7 @@ class RecipesDBTable(BaseDbTable):
         with self.db_connection() as conn:
             r = conn.execute(query)
             rows = r.fetchall()
-            return [RecipeReference.loads(row[0]) for row in rows]
+        return [RecipeReference.loads(row[0]) for row in rows]
 
     def get_recipe(self, ref: RecipeReference):
         query = f'SELECT * FROM {self.table_name} ' \
@@ -94,9 +94,9 @@ class RecipesDBTable(BaseDbTable):
         with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
-            if not row:
-                raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref.repr_notime()}' not found")
-            ret = self._as_dict(self.row_type(*row))
+        if not row:
+            raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref.repr_notime()}' not found")
+        ret = self._as_dict(self.row_type(*row))
         return ret
 
     def get_latest_recipe(self, ref: RecipeReference):
@@ -112,9 +112,9 @@ class RecipesDBTable(BaseDbTable):
         with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
-            if row is None:
-                raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref}' not found")
-            ret = self._as_dict(self.row_type(*row))
+        if row is None:
+            raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref}' not found")
+        ret = self._as_dict(self.row_type(*row))
         return ret
 
     def get_recipe_revisions_references(self, ref: RecipeReference):
@@ -125,7 +125,8 @@ class RecipesDBTable(BaseDbTable):
 
         with self.db_connection() as conn:
             r = conn.execute(query)
-            ret = [self._as_dict(self.row_type(*row))["ref"] for row in r.fetchall()]
+            rows = r.fetchall()
+        ret = [self._as_dict(self.row_type(*row))["ref"] for row in rows]
         return ret
 
     def path_to_ref(self, path):
@@ -134,9 +135,9 @@ class RecipesDBTable(BaseDbTable):
         with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
-            if not row:
-                return None
-            ref = RecipeReference.loads(row[0])
-            ref.revision = row[1]
-            ref.timestamp = row[3]
-            return ref
+        if not row:
+            return None
+        ref = RecipeReference.loads(row[0])
+        ref.revision = row[1]
+        ref.timestamp = row[3]
+        return ref

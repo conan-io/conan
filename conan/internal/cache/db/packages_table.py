@@ -168,8 +168,8 @@ class PackagesDBTable(BaseDbTable):
                     f'ORDER BY {self.columns.timestamp} DESC'
         with self.db_connection() as conn:
             r = conn.execute(query)
-            for row in r.fetchall():
-                yield self._as_dict(self.row_type(*row))
+            rows = r.fetchall()
+        return [self._as_dict(self.row_type(*row)) for row in rows]
 
     def get_package_revisions_reference_exists(self, pref: PkgReference):
         assert pref.ref.revision, "To check package revision existence you must provide a recipe revision."
@@ -185,7 +185,7 @@ class PackagesDBTable(BaseDbTable):
         with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
-            return bool(row)
+        return bool(row)
 
     def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         # Return the latest revisions
@@ -212,8 +212,8 @@ class PackagesDBTable(BaseDbTable):
                     f'ORDER BY {self.columns.timestamp} DESC'
         with self.db_connection() as conn:
             r = conn.execute(query)
-            for row in r.fetchall():
-                yield self._as_dict(self.row_type(*row))
+            rows = r.fetchall()
+        return [self._as_dict(self.row_type(*row)) for row in rows]
 
     def get_package_references_with_build_id_match(self, ref: RecipeReference, build_id):
         # Return the latest revisions
@@ -237,9 +237,9 @@ class PackagesDBTable(BaseDbTable):
         with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
-            if row:
-                return self._as_dict(self.row_type(*row))
-            return None
+        if row:
+            return self._as_dict(self.row_type(*row))
+        return None
 
     def path_to_ref(self, path):
         query = f'SELECT * FROM {self.table_name} ' \
@@ -247,9 +247,9 @@ class PackagesDBTable(BaseDbTable):
         with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
-            if not row:
-                return None
-            ref = RecipeReference.loads(row[0])
-            ref.revision = row[1]
-            pref = PkgReference(ref, row[2], row[3], row[5])
-            return pref
+        if not row:
+            return None
+        ref = RecipeReference.loads(row[0])
+        ref.revision = row[1]
+        pref = PkgReference(ref, row[2], row[3], row[5])
+        return pref
