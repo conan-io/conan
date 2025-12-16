@@ -167,7 +167,7 @@ def test_build_pip_manager_using_uv():
                 pip_env = PipEnv(self, py_version="3.11.6")
                 pip_env.install(["{pip_package_folder}"])
                 pip_env.generate()
-                self.run(pip_env.python + " --version")
+                pip_env.run(["--version"])
 
             def build(self):
                 self.run("hello-world")

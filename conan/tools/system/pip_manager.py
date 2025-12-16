@@ -87,6 +87,9 @@ class PipEnv:
             raise ConanException(f"PipEnv could not create a Python virtual "
                                  f"environment using '{_python}': {e}")
 
+    def run(self, args):
+        return self._conanfile.run(cmd_args_to_string([self.python] + list(args)))
+
     def install(self, packages, pip_args=None):
         """
         Will try to install the list of pip packages passed as a parameter.
@@ -97,10 +100,8 @@ class PipEnv:
                          Defaults to ``None``.
         :return: the return code of the executed pip command.
         """
-        args = [self._get_env_python(self._env_dir),
-                "-m", "pip", "install", "--disable-pip-version-check"]
+        args = ["-m", "pip", "install", "--disable-pip-version-check"]
         if pip_args:
             args += list(pip_args)
         args += list(packages)
-        command = cmd_args_to_string(args)
-        return self._conanfile.run(command)
+        return self.run(args)
