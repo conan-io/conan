@@ -25,9 +25,13 @@ class PipEnv:
                                     "Scripts" if platform.system() == "Windows" else "bin")
         # init the venv
         if py_version:
-            self._crete_uv_venv(py_version)
+            self._create_uv_venv(py_version)
         else:
             self._create_venv()
+
+    @property
+    def python(self):
+        return self._get_env_python(self._env_dir)
 
     @staticmethod
     def _get_env_python(env_dir):
@@ -55,7 +59,7 @@ class PipEnv:
                                  "conf to the full path of a Python executable")
         return python_interpreter
 
-    def _crete_uv_venv(self, py_version):
+    def _create_uv_venv(self, py_version):
         _python = self._default_python_interpreter()
         _uv_env_dir = os.path.join(self._base_env_dir, f"uv_{self.env_name}")
         _python_exe = self._get_env_python(_uv_env_dir)
