@@ -38,9 +38,11 @@ class ConanProxy:
 
         # check if it there's any revision of this recipe in the local cache
         try:
-            cache_ref = self._cache.get_latest_recipe_revision(reference) \
-                if reference.revision is None else reference
-            recipe_layout = self._cache.recipe_layout(cache_ref)
+            # Just do 1 call to the DB, not 2
+            if reference.revision is None:
+                recipe_layout = self._cache.recipe_layout_latest(reference)
+            else:
+                recipe_layout = self._cache.recipe_layout(reference)
             ref = recipe_layout.reference  # latest revision if it was not defined
         except ConanException:
             # NOT in disk, must be retrieved from remotes

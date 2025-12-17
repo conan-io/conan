@@ -252,10 +252,10 @@ class GraphBinariesAnalyzer:
 
         # Obtain the cache_latest valid one, cleaning things if dirty
         while True:
-            cache_latest_prev = self._cache.get_latest_package_revision(node.pref)
+            package_layout = self._cache.pkg_layout_latest(node.pref)
+            cache_latest_prev = package_layout.reference if package_layout else None
             if cache_latest_prev is None:
                 break
-            package_layout = self._cache.pkg_layout(cache_latest_prev)
             if not self._evaluate_clean_pkg_folder_dirty(node, package_layout):
                 break
 
@@ -373,10 +373,10 @@ class GraphBinariesAnalyzer:
 
         # Obtain the cache_latest valid one, cleaning things if dirty
         while True:
-            cache_latest_prev = self._cache.get_latest_package_revision(node.pref)
+            package_layout = self._cache.pkg_layout_latest(node.pref)
+            cache_latest_prev = package_layout.reference if package_layout else None
             if cache_latest_prev is None:
                 break
-            package_layout = self._cache.pkg_layout(cache_latest_prev)
             if not self._evaluate_clean_pkg_folder_dirty(node, package_layout):
                 break
 

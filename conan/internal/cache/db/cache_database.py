@@ -28,6 +28,10 @@ class CacheDatabase:
         prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
         return prevs[0]["pref"] if prevs else None
 
+    def get_latest_package_reference_data(self, pref):
+        prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
+        return prevs[0] if prevs else None
+
     def update_recipe_timestamp(self, ref):
         self._recipes.update_timestamp(ref)
 

@@ -117,6 +117,15 @@ class PkgCache:
         ref = ref_data.get("ref")  # new revision with timestamp
         return RecipeLayout(ref, os.path.join(self._base_folder, ref_path))
 
+    def recipe_layout_latest(self, ref: RecipeReference):
+        """ the revision must be None, the folder must exist
+        """
+        assert ref.revision is None
+        ref_data = self._db.get_latest_recipe(ref)
+        ref_path = ref_data.get("path")
+        ref = ref_data.get("ref")  # new revision with timestamp
+        return RecipeLayout(ref, os.path.join(self._base_folder, ref_path))
+
     def get_latest_recipe_revision(self, ref: RecipeReference) -> RecipeReference:
         assert ref.revision is None
         ref_data = self._db.get_latest_recipe(ref)
@@ -135,6 +144,21 @@ class PkgCache:
         assert pref.revision, "Package revision must be known to get the package layout"
         pref_data = self._db.try_get_package(pref)
         pref_path = pref_data.get("path")
+        # we use abspath to convert cache forward slash in Windows to backslash
+        return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
+
+    def pkg_layout_latest(self, pref: PkgReference):
+        """
+        """
+        assert pref.ref.revision, "Recipe revision must be known to get the package layout"
+        assert pref.package_id, "Package id must be known to get the package layout"
+        assert pref.revision is None
+
+        pref_data = self._db.get_latest_package_reference_data(pref)
+        if pref_data is None:
+            return None
+        pref_path = pref_data.get("path")
+        pref = pref_data.get("pref")  # new revision with timestamp
         # we use abspath to convert cache forward slash in Windows to backslash
         return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
 
