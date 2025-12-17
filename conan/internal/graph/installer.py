@@ -260,7 +260,8 @@ class BinaryInstaller:
                     self._install_source(package.nodes[0], remotes)
                     self._handle_package(package, install_reference, handled_count, package_count)
                     handled_count += 1
-                    prefs_lru.append(package.nodes[0].pref)
+                    if package.binary == BINARY_CACHE:
+                        prefs_lru.append(package.nodes[0].pref)
 
         self._cache.update_packages_lru(prefs_lru)
 
