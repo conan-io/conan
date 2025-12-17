@@ -19,6 +19,8 @@ class _ConanIgnoreMatcher:
     def __init__(self, conanignore_path, ignore=None):
         self._ignored_entries = {".conanignore"}
         self._included_entries = set()
+        if ignore:
+            self._ignored_entries.update(ignore)
         if conanignore_path is None or not os.path.exists(conanignore_path):
             return
         with open(conanignore_path, 'r') as conanignore:
@@ -29,8 +31,6 @@ class _ConanIgnoreMatcher:
                         self._included_entries.add(line_content[1:])
                     else:
                         self._ignored_entries.add(line_content)
-        if ignore:
-            self._ignored_entries.update(ignore)
 
     def matches(self, path):
         """Returns whether the path should be ignored

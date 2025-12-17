@@ -1,6 +1,4 @@
-import json
 import os
-from collections import OrderedDict
 
 from conan.api.output import ConanOutput, Color
 from conan.internal.cache.home_paths import HomePaths
@@ -16,11 +14,9 @@ from conan.internal.graph.proxy import should_update_reference
 from conan.internal.errors import (conanfile_exception_formatter, ConanConnectionError,
                                    NotFoundException, PackageNotFoundException)
 from conan.errors import ConanException
+from conan.internal.model.conanconfig import loadconanconfig
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
-from conan.api.model import PkgReference
-from conan.api.model import RecipeReference
 from conan.internal.model.pkg_type import PackageType
-from conan.internal.util.files import load
 
 
 class GraphBinariesAnalyzer:
@@ -466,16 +462,8 @@ class GraphBinariesAnalyzer:
             return
         config_version_file = HomePaths(self._home_folder).config_version_path
         try:
-            config_refs = json.loads(load(config_version_file))["config_version"]
-            result = OrderedDict()
-            for r in config_refs:
-                try:
-                    config_ref = PkgReference.loads(r)
-                    req_info = RequirementInfo(config_ref.ref, config_ref.package_id, config_mode)
-                except ConanException:
-                    config_ref = RecipeReference.loads(r)
-                    req_info = RequirementInfo(config_ref, None, config_mode)
-                result[config_ref] = req_info
+            config_refs = loadconanconfig(config_version_file)
+            result = {r: RequirementInfo(r, None, config_mode) for r in config_refs}
         except Exception as e:
             raise ConanException(f"core.package_id:config_mode defined, but error while loading "
                                  f"'{os.path.basename(config_version_file)}'"

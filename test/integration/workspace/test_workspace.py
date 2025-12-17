@@ -658,7 +658,7 @@ class TestMeta:
         c.run("workspace add libb")
         c.run("workspace super-install -g CMakeDeps -g CMakeToolchain -of=build "
               "--envs-generation=false")
-        assert "Packages build order:\n    liba/0.1\n    libb/0.1" in c.out
+        assert "Packages build order:\n    liba/0.1: liba\n    libb/0.1: libb" in c.out
         assert "Workspace conanws.py not found in the workspace folder, using default" in c.out
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conan_toolchain.cmake" in files
