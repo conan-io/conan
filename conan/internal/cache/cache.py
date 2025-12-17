@@ -110,6 +110,9 @@ class PkgCache:
 
     def recipe_layout(self, ref: RecipeReference):
         """ the revision must exists, the folder must exist
+        The regular graph building will use this method if the revision is defined, like
+        when using lockfiles or explicit, or recipe_layout_latest() if not, to do one single DB
+        query
         """
         assert ref.revision is not None
         ref_data = self._db.get_recipe(ref)
@@ -119,6 +122,8 @@ class PkgCache:
 
     def recipe_layout_latest(self, ref: RecipeReference):
         """ the revision must be None, the folder must exist
+        This method was added so the ConanProxy used to resolve the dependency graph
+        avoid doing 2 DB calls when the revision is not defined
         """
         assert ref.revision is None
         ref_data = self._db.get_latest_recipe(ref)
@@ -138,6 +143,7 @@ class PkgCache:
 
     def pkg_layout(self, pref: PkgReference):
         """ the revision must exists, the folder must exist
+        No longer used by GraphBinariesAnalyzer
         """
         assert pref.ref.revision, "Recipe revision must be known to get the package layout"
         assert pref.package_id, "Package id must be known to get the package layout"
@@ -149,6 +155,8 @@ class PkgCache:
 
     def pkg_layout_latest(self, pref: PkgReference):
         """
+        GraphBinariesAnalyzer will call this method to avoid doing 2 DB calls, previously
+        it was using pkg_layout() after a get_latest_package_revision()
         """
         assert pref.ref.revision, "Recipe revision must be known to get the package layout"
         assert pref.package_id, "Package id must be known to get the package layout"
@@ -208,6 +216,8 @@ class PkgCache:
         return self._db.exists_prev(pref)
 
     def get_latest_package_revision(self, pref: PkgReference) -> PkgReference:
+        # This is no longer needed by the Graph resolution functionality, only by ListAPI
+        # its usage in graph resolution has been replaced by a single call to pkg_layout_latest()
         return self._db.get_latest_package_reference(pref)
 
     def get_package_references(self, ref: RecipeReference,

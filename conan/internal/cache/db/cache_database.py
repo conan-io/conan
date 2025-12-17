@@ -29,6 +29,8 @@ class CacheDatabase:
         return prevs[0]["pref"] if prevs else None
 
     def get_latest_package_reference_data(self, pref):
+        # Used just for PkgCache.pkg_layout_latest()
+        # TODO: This can be refactored, unified with get_latest_package_reference()
         prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
         return prevs[0] if prevs else None
 
