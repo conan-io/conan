@@ -1,7 +1,10 @@
 import sqlite3
-from collections import namedtuple
+import threading
+from collections import defaultdict, namedtuple
 from contextlib import contextmanager
 from typing import Tuple, List
+
+from conan.errors import ConanException
 
 
 class BaseDbTable:
@@ -10,20 +13,29 @@ class BaseDbTable:
     row_type: namedtuple = None
     columns: namedtuple = None
     unique_together: tuple = None
+    _lock: threading.Lock = None
+    _lock_storage = defaultdict(threading.Lock)
 
     def __init__(self, filename):
         self.filename = filename
         column_names: List[str] = [it[0] for it in self.columns_description]
         self.row_type = namedtuple('_', column_names)
         self.columns = self.row_type(*column_names)
+        self._lock = self._lock_storage[self.filename]
 
     @contextmanager
     def db_connection(self):
+        if not self._lock.acquire(timeout=20):
+            raise ConanException("Conan failed to acquire database lock in 20s. Maybe the system is"
+                                 "under very heavy load. Please report it to Github tickets")
+        # isolation_level=None, puts it in regular SQLITE autocommit mode, every
+        # connection.execute() will autocommit
         connection = sqlite3.connect(self.filename, isolation_level=None, timeout=20)
         try:
             yield connection
         finally:
             connection.close()
+            self._lock.release()
 
     def create_table(self):
         def field(name, typename, nullable=False, unique=False):
