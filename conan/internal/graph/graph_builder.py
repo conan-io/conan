@@ -4,7 +4,7 @@ from conan.internal.cache.conan_reference_layout import BasicLayout
 from conan.internal.methods import run_configure_method
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
-    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE, RECIPE_CONSUMER
 from conan.internal.graph.graph import RECIPE_PLATFORM
 from conan.internal.graph.graph_error import (GraphLoopError, GraphConflictError, GraphMissingError,
                                               GraphError)
@@ -67,6 +67,10 @@ class DepsGraphBuilder:
         except GraphError as e:
             dep_graph.error = e
         dep_graph.resolved_ranges = self._resolver.resolved_ranges
+        refs = set(n.ref for n in dep_graph.nodes
+                   if n.recipe not in (RECIPE_VIRTUAL, RECIPE_EDITABLE, RECIPE_CONSUMER,
+                                       RECIPE_PLATFORM))
+        self._cache.update_recipes_lru(refs)
         return dep_graph
 
     def _expand_require(self, require, node, graph, profile_host, profile_build, graph_lock):
