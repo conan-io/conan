@@ -51,7 +51,7 @@ def test_downstream_override(override):
     force 0.1. It works for override and regular requires too
     """
     c = TestClient()
-    c.save({"global.conf": "core.lockfile:auto=True"}, path=c.cache_folder)
+    c.save_home({"global.conf": "core.lockfile:auto=True"})
     c.save({"dep/conanfile.py": GenConanfile("dep"),
             "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]"),
             "app/conanfile.py": GenConanfile("app", "0.1").with_requirement("pkg/0.1")
@@ -87,7 +87,7 @@ def test_downstream_override(override):
 
 def test_diamond():
     c = TestClient()
-    c.save({"global.conf": "core.lockfile:auto=True"}, path=c.cache_folder)
+    c.save_home({"global.conf": "core.lockfile:auto=True"})
     c.save({"dep/conanfile.py": GenConanfile("dep"),
             "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_requires("dep/[*]"),
             "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("dep/[*]"),

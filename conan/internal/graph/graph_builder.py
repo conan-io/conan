@@ -285,7 +285,7 @@ class DepsGraphBuilder:
             exported_lock = os.path.join(layout.metadata(), "conan", "conan.lock")
             if os.path.isfile(exported_lock):
                 exported_lockfile = Lockfile.load(exported_lock)
-                exported_lockfile.partial = True
+                exported_lockfile.partial = True  # to allow consumers to impose their deps
                 from conan.api.output import ConanOutput
                 ConanOutput(scope=str(ref)).info(f"Using lockfile from metadata: {exported_lock}")
                 if graph_lock is not None:  # For the export case only
