@@ -1,4 +1,6 @@
 import copy
+import json
+import textwrap
 from collections import OrderedDict
 
 import pytest
@@ -447,9 +449,9 @@ class TestUpdateFlows:
                                            ["libc", {"liba/1.0": "Cache",
                                                      "libb/1.0": "Cache"}],
                                            ["liba", {"liba/1.1": "Downloaded (default)",
-                                                       "libb/1.0": "Cache"}],
+                                                     "libb/1.0": "Cache"}],
                                            ["libb", {"liba/1.0": "Cache",
-                                                       "libb/1.1": "Downloaded (default)"}],
+                                                     "libb/1.1": "Downloaded (default)"}],
                                            ["", {"liba/1.0": "Cache",
                                                  "libb/1.0": "Cache"}],
                                            # Patterns not supported, only full name match
@@ -480,3 +482,49 @@ def test_muliref_update_pattern(update, result):
     tc.run(f'install --requires="liba/[>=1.0]" --requires="libb/[>=1.0]" -r default {update_flag}')
 
     tc.assert_listed_require(result)
+
+
+def test_update_remote_older_revision():
+    # https://github.com/conan-io/conan/issues/19313
+    c = TestClient(light=True, default_server_user=True)
+    zlib = textwrap.dedent("""
+       from conan import ConanFile
+       class Zlib(ConanFile):
+           name = "zlib"
+           version = "1.2.11"
+           exports_sources = "*"
+        """)
+    c.save({"conanfile.py": zlib,
+            "file.h": "//myheader"})
+    c.run("export")
+    c.run("upload * -r=default -c")
+
+    c2 = TestClient(light=True, servers=c.servers)
+    c2.run("graph info --requires=zlib/[*]")
+    rev1 = "2e87959c586811f8a4eaf12a327cc042"
+    c2.assert_listed_require({f"zlib/1.2.11#{rev1}": "Downloaded (default)"})
+
+    # Modify zlib code
+    c.save({"file.h": "//myheader 2"})
+    c.run("export")
+    c.run("upload * -r=default -c")
+
+    c2.run("graph info --requires=zlib/[*] --update")
+    rev2 = "934b3de03768d9030b61127d588d0a96"
+    c2.assert_listed_require({f"zlib/1.2.11#{rev2}": "Updated (default)"})
+
+    # revert this to old, make it latestlatest
+    c.save({"file.h": "//myheader"})
+    c.run("export")
+    c.run("remove * -r=default -c")
+    c.run("upload * -r=default -c")
+
+    c2.run("graph info --requires=zlib/[*] --update")
+    assert ("Latest from 'default' was found in "
+            "the cache, using it and updating its timestamp") in c2.out
+    c2.assert_listed_require({f"zlib/1.2.11#{rev1}": "Updated (default)"})
+
+    c2.run("list *#* --format=json")
+    revs = json.loads(c2.stdout)["Local Cache"]["zlib/1.2.11"]["revisions"]
+    # we check that the update from the server has made rev1 the latest in the cache again
+    assert revs[rev1]["timestamp"] > revs[rev2]["timestamp"]
