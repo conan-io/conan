@@ -209,3 +209,31 @@ def test_relative_paths():
                                      shell=True).communicate()
         out = result.decode()
         assert 'Hello MyWorld!!!' in out
+
+
+@pytest.mark.parametrize("values, expected",
+                         [("myscripts", '"$script_folder/myscripts"'),
+                          ("/path/myscripts", '"/path/myscripts"'),
+                          ("../myscripts", '"$script_folder/../myscripts"'),
+                          ("../my scripts", '"$script_folder/../my scripts"'),
+                          (["../my scripts", "path/other"],
+                           '"$script_folder/../my scripts:$script_folder/path/other"')])
+def test_relativize(values, expected):
+    folder = os.path.join(temp_folder(), "subfolder")
+    os.makedirs(folder)
+    if isinstance(values, str):
+        value = os.path.join(folder, values) if not os.path.isabs(values) else values
+    else:
+        value = [os.path.join(folder, v) for v in values]
+    myenv = Environment()
+    myenv.define_path("PATH", value)
+    myenv.prepend_path("OTHER", value)
+    conanfile = ConanFileMock()
+    conanfile.folders._base_generators = folder
+    myenv = myenv.vars(conanfile)
+    with chdir(folder):
+        myenv.save_sh("test.sh")
+        content = load("test.sh")
+        content = content.replace("\\", "/")
+        assert f'export PATH={expected}' in content
+        assert f'export OTHER="{expected}:$OTHER"'
