@@ -147,7 +147,7 @@ jobs:
           xcrun --sdk macosx --show-sdk-version
           clang --version
 
-      # MOVED: Install system dependencies BEFORE setting up the matrix Python.
+      # Install system dependencies BEFORE setting up the matrix Python.
       # This prevents Emscripten (which requires Python 3.10+) from crashing
       # when trying to use Python 3.8 from the matrix.
       - name: Install homebrew dependencies
