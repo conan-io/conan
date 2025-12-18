@@ -1,4 +1,4 @@
-from mock import Mock
+from unittest.mock import Mock
 
 from conan.internal.graph.graph import CONTEXT_HOST
 from conan.internal.graph.graph_builder import DepsGraph, Node

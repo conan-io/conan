@@ -1,7 +1,10 @@
 import json
 import textwrap
 
-from conan.test.utils.tools import TestClient, GenConanfile
+import pytest
+
+from conan.test.utils.env import environment_update
+from conan.test.utils.tools import TestClient, GenConanfile, TestServer
 
 
 class TestCompatibleIDsTest:
@@ -37,14 +40,17 @@ class TestCompatibleIDsTest:
         client.run("export . --name=lib --version=0.1 --user=user --channel=stable")
 
         # package can be used with a profile gcc 4.9 falling back to 4.8 binary
-        client.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1@user/stable", "lib/0.1@user/stable")})
+        client.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1@user/stable",
+                                                                  "lib/0.1@user/stable")})
         # No fallback
         client.run("install . -pr=myprofile --build=missing -u=lib")
         assert "pkg/0.1@user/stable: PackageInfo!: Gcc version: 4.9!" in client.out
         client.assert_listed_binary({"pkg/0.1@user/stable":
                                      ("1ded27c9546219fbd04d4440e05b2298f8230047", "Build")})
-        assert "lib/0.1@user/stable: Compatible configurations not found in cache, checking servers" not in client.out
-        assert "pkg/0.1@user/stable: Compatible configurations not found in cache, checking servers" in client.out
+        assert ("lib/0.1@user/stable: Compatible configurations not found in cache, "
+                "checking servers") not in client.out
+        assert ("pkg/0.1@user/stable: Compatible configurations not found in cache, "
+                "checking servers") in client.out
 
     def test_compatible_setting_no_user_channel(self):
         client = TestClient()
@@ -724,6 +730,195 @@ def test_compatibility_new_setting_forwards_compat():
     tc.run("install --requires=dep/1.0 -s=libc_version=3 -s=compiler.cppstd=14")
     assert f"dep/1.0: Found compatible package '{dep_package_id}': compiler.cppstd=17, " \
            f"libc_version=2" in tc.out
+
+
+class TestListOnlyCompatibilityOptimization:
+
+    @pytest.fixture()
+    def client(self):
+        tc = TestClient(default_server_user=True, light=True)
+        compiler_settings = textwrap.dedent("""
+                compiler:
+                    foo:
+                        version: [1]
+                        cppstd: [7, 11, 14, 17, 20, 23]""")
+        tc.run("version")
+        tc.save_home({"settings_user.yml": compiler_settings})
+        compat = tc.load_home("extensions/plugins/compatibility/compatibility.py")
+        compat = compat.replace("cppstd_possible_values = supported_cppstd(conanfile)",
+                                "cppstd_possible_values = [7, 11, 14, 17, 20, 23]")
+        tc.save_home({"extensions/plugins/compatibility/compatibility.py": compat})
+        return tc
+
+    @pytest.mark.parametrize("update", [True, False])
+    def test_remote_compatible_package(self, client, update):
+        tc = client
+        update_arg = "-u" if update else ""
+        compiler_args = "-s compiler=foo -s compiler.version=1"
+        tc.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("compiler")})
+        tc.run(f"create . {compiler_args} -s=compiler.cppstd=14")
+        std14_id = tc.created_layout().reference.package_id
+        tc.run(f"create . {compiler_args} -s=compiler.cppstd=17")
+        std17_id = tc.created_layout().reference.package_id
+        tc.run(f"create . {compiler_args} -s=compiler.cppstd=20")
+        std20_id = tc.created_layout().reference.package_id
+
+        tc.run(f"upload pkg/0.1:{std20_id} -r=default -c")
+        tc.run(f"upload pkg/0.1:{std14_id} -r=default -c")
+        tc.run(f"upload pkg/0.1:{std17_id} -r=default -c")
+
+        tc.run("remove * -c")
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=11 {update_arg} "
+               "-cc core.graph:compatibility_mode=optimized")
+        assert f"Found compatible package '{std14_id}'" in tc.out
+
+        tc.run("remove * -c")
+        tc.run(f"remove pkg/0.1:{std17_id} -r=default -c")
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=17 {update_arg} "
+               "-cc core.graph:compatibility_mode=optimized")
+        if not update:
+            assert "Found 2 compatible configurations in remotes" in tc.out
+        assert f"Found compatible package '{std14_id}'" in tc.out
+
+        tc.run(f"create . {compiler_args} -s=compiler.cppstd=11")
+        std11_layout = tc.created_layout()
+        std11_id = tc.created_layout().reference.package_id
+        tc.run(f"upload pkg/0.1:{std11_id} -r=default -c")
+        tc.run("remove * -c")
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=17 -vvv {update_arg} "
+               "-cc core.graph:compatibility_mode=optimized")
+        assert f"Found compatible package '{std11_id}'" in tc.out
+        # An HTTP request is made to the server to search for compatible packages
+        if not update:
+            assert "Found 3 compatible configurations in remotes" in tc.out
+            assert f"{std11_layout.reference.ref.revision}/search?list_only=True" in tc.out
+
+    def test_remote_compatible_package_update_cache(self, client):
+        tc = client
+        compiler_args = "-s compiler=foo -s compiler.version=1"
+        tc.save({"conanfile.py": GenConanfile("pkg", "0.1")
+                    .with_settings("compiler")
+                    .with_import("import os, time")
+                    .with_import("from conan.tools.files import save")
+                    .with_package("save(self, os.path.join(self.package_folder, 'data.txt'), str(time.time()))")
+        })
+        tc.run(f"create . {compiler_args} -s=compiler.cppstd=17")
+        std17_old_ref = tc.created_layout().reference
+        std17_id = std17_old_ref.package_id
+        tc.run(f"create . {compiler_args} -s=compiler.cppstd=17")
+        std17_new_ref = tc.created_layout().reference
+        assert std17_old_ref.revision != std17_new_ref.revision
+
+        tc.run(f"upload pkg/0.1:{std17_id}#latest -r=default -c")
+        tc.run(f"remove pkg/0.1:{std17_id}#latest -c")
+
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=11 -r=default -u "
+               "-cc core.graph:compatibility_mode=optimized")
+        assert "Current package revision is older than the remote one "
+        assert f"Found compatible package '{std17_id}'" in tc.out
+        assert std17_old_ref.revision not in tc.out
+        assert std17_new_ref.revision in tc.out
+
+        tc.run("remove * -c")
+        tc.run("remove * -r=default -c")
+
+        tc.run(f"create . {compiler_args} -s=compiler.cppstd=20")
+        std20_old_ref = tc.created_layout().reference
+        std20_id = std20_old_ref.package_id
+        tc.run(f"create . {compiler_args} -s=compiler.cppstd=20")
+        std20_new_ref = tc.created_layout().reference
+        assert std20_old_ref.revision != std20_new_ref.revision
+
+        tc.run(f"upload pkg/0.1:{std20_id}#* -r=default -c")
+        tc.run(f"remove pkg/0.1:{std20_id} -c")
+
+        tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=11 -r=default -u "
+               "-cc core.graph:compatibility_mode=optimized")
+        assert f"Found compatible package '{std20_id}'" in tc.out
+        assert std20_old_ref.revision not in tc.out
+        assert std20_new_ref.revision in tc.out
+
+    @pytest.mark.parametrize("enable", [True, False])
+    @pytest.mark.parametrize("from_remote", [True, False])
+    def test_message_if_not_enabled(self, enable, from_remote):
+        tc = TestClient(default_server_user=True)
+        tc.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("compiler")})
+        tc.run("create . -s=compiler.cppstd=17")
+        if from_remote:
+            tc.run("upload * -r=default -c")
+            tc.run("remove * -c")
+        arg = "-cc core.graph:compatibility_mode=optimized" if enable else ""
+        tc.run(f"install --requires=pkg/0.1 -s=compiler.cppstd=14 {arg}")
+        if not enable and from_remote:
+            assert "A new experimental approach for binary compatibility detection is available" in tc.out
+        else:
+            assert "A new experimental approach for binary compatibility detection is available" not in tc.out
+
+    @pytest.mark.parametrize("from_remote", [True, False])
+    @pytest.mark.parametrize("update", [True, False])
+    def test_compatibility_different_settings_per_context(self, from_remote, update):
+        tc = TestClient(default_server_user=True)
+        tc.save({"protobuf/conanfile.py": GenConanfile("protobuf", "1.0")
+                .with_settings("compiler"),
+                 "conanfile.py": GenConanfile("consumer", "1.0")
+                .with_require("protobuf/1.0")
+                .with_tool_requires("protobuf/1.0")
+                 })
+        tc.run("create protobuf -s=compiler.cppstd=14")
+        if from_remote:
+            tc.run("upload * -r=default -c")
+            tc.run("remove * -c")
+        update_arg = "--update" if update else ""
+        tc.run(
+            f"install . -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 --build=missing {update_arg} "
+            "-cc core.graph:compatibility_mode=optimized")
+
+    @pytest.mark.parametrize("update", [True, False])
+    def test_compatibility_different_settings_per_context_prevs(self, update):
+        tc = TestClient(default_server_user=True)
+        proto = GenConanfile("protobuf", "1.0").with_settings("compiler")
+        proto.with_package_file("file.txt", env_var="MY_VAR")
+        consumer = GenConanfile().with_requires("protobuf/1.0").with_tool_requires("protobuf/1.0")
+        tc.save({"protobuf/conanfile.py": proto,
+                 "conanfile.py": consumer})
+
+        settings = "-s:a compiler=gcc -s:a compiler.version=9 -s:a compiler.libcxx=libstdc++"
+        with environment_update({"MY_VAR": "value"}):
+            tc.run(f"create protobuf {settings} -s=compiler.cppstd=14")
+        tc.run("upload * -r=default -c")
+
+        tc2 = TestClient(servers=tc.servers)
+        tc2.save({"conanfile.py": consumer})
+        update_arg = "--update" if update else ""
+        tc2.run(f"install . {settings} -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 {update_arg} "
+                "-cc core.graph:compatibility_mode=optimized")
+        tc2.assert_listed_binary({"protobuf/1.0": ("36d978cbb4dc35906d0fd438732d5e17cd1e388d",
+                                                   "Download (default)")})
+
+        with environment_update({"MY_VAR": "value2"}):
+            tc.run(f"create protobuf {settings} -s=compiler.cppstd=14")
+        tc.run("upload * -r=default -c")
+        tc2.run(f"install . {settings} -s=compiler.cppstd=14 -s:b=compiler.cppstd=17 {update_arg} "
+                "-cc core.graph:compatibility_mode=optimized")
+        origin = "Cache" if not update else "Update (default)"
+        tc2.assert_listed_binary({"protobuf/1.0": ("36d978cbb4dc35906d0fd438732d5e17cd1e388d",
+                                                   origin)})
+
+    def test_multi_remote(self):
+        # https://github.com/conan-io/conan/issues/19342
+        c = TestClient(servers={"r1": TestServer(), "r2": TestServer()},
+                       inputs=["admin", "password"] * 2)
+
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("compiler")})
+        c.run(f"create . -s=compiler.cppstd=14")
+
+        c.run(f"upload * -r=r1 -c")
+        c.run(f"upload * -r=r2 -c")
+        c.run("remove * -c")
+        c.run(f"install --requires=pkg/0.1 -s=compiler.cppstd=17 "
+              "-cc core.graph:compatibility_mode=optimized")
+        # It doesn't crash
+        assert "pkg/0.1: Found 1 compatible configurations in remotes" in c.out
 
 
 def test_compatibility_remove_cppstd():

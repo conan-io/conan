@@ -7,7 +7,7 @@ from conan.internal.methods import run_configure_method
 from conan.internal.model.lockfile import Lockfile
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
-    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE, RECIPE_CONSUMER
 from conan.internal.graph.graph import RECIPE_PLATFORM
 from conan.internal.graph.graph_error import (GraphLoopError, GraphConflictError, GraphMissingError,
                                               GraphError)
@@ -19,6 +19,7 @@ from conan.internal.model.options import Options, _PackageOptions
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
 from conan.internal.model.requires import Requirement
+from conan.internal.model.version_range import VersionRange
 
 
 class DepsGraphBuilder:
@@ -71,6 +72,10 @@ class DepsGraphBuilder:
         except GraphError as e:
             dep_graph.error = e
         dep_graph.resolved_ranges = self._resolver.resolved_ranges
+        refs = set(n.ref for n in dep_graph.nodes
+                   if n.recipe not in (RECIPE_VIRTUAL, RECIPE_EDITABLE, RECIPE_CONSUMER,
+                                       RECIPE_PLATFORM))
+        self._cache.update_recipes_lru(refs)
         return dep_graph
 
     def _expand_require(self, require, node, graph, profile_host, profile_build, graph_lock):
@@ -335,8 +340,19 @@ class DepsGraphBuilder:
                 continue  # no match in name
             if pattern.version != "*":  # we need to check versions
                 rrange = require.version_range
-                valid = rrange.contains(pattern.version, self._resolve_prereleases) if rrange else \
-                    require.ref.version == pattern.version
+                # Is the version pattern a range itself?
+                pversion = repr(pattern.version)
+                if pversion[0] == "[" and pversion[-1] == "]":
+                    prange = VersionRange(pversion[1:-1])
+                    if rrange:
+                        valid = prange.intersection(rrange) is not None
+                    else:
+                        valid = prange.contains(require.ref.version, self._resolve_prereleases)
+                else:
+                    if rrange:
+                        valid = rrange.contains(pattern.version, self._resolve_prereleases)
+                    else:
+                        valid = require.ref.version == pattern.version
                 if not valid:
                     continue
             if pattern.user != "*" and pattern.user != require.ref.user:

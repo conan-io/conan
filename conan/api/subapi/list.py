@@ -1,4 +1,3 @@
-import copy
 import os
 from collections import OrderedDict
 from typing import Dict
@@ -318,27 +317,50 @@ class ListAPI:
         (Experimental) Find the remotes where the current package lists can be found
         """
         result = MultiPackagesList()
+        app = ConanBasicApp(self._conan_api)
         for r in remotes:
             result_pkg_list = PackagesList()
-            for ref, packages in package_list.items():
-                ref_no_rev = copy.copy(ref)  # TODO: Improve ugly API
-                ref_no_rev.revision = None
+            for ref, ref_contents in package_list.serialize().items():
+                ref = RecipeReference.loads(ref)
                 try:
-                    revs = self.recipe_revisions(ref_no_rev, remote=r)
+                    remote_rrevs = app.remote_manager.get_recipe_revisions(ref, remote=r)
                 except NotFoundException:
                     continue
-                if ref not in revs:  # not found
+                revisions = ref_contents.get("revisions")
+                if revisions is None:  # This is a package list just with name/version
+                    if remote_rrevs:
+                        result_pkg_list.add_ref(ref)
                     continue
-                result_pkg_list.add_ref(ref)
-                for pref, pkg_info in packages.items():
-                    pref_no_rev = copy.copy(pref)  # TODO: Improve ugly API
-                    pref_no_rev.revision = None
-                    try:
-                        prevs = self.package_revisions(pref_no_rev, remote=r)
-                    except NotFoundException:
+
+                for revision, rev_content in revisions.items():
+                    ref.revision = revision
+                    # We look for the value of revision in server, to return timestamp too
+                    found = next((r for r in remote_rrevs if r == ref), None)
+                    if not found:
                         continue
-                    if pref in prevs:
-                        result_pkg_list.add_pref(pref, pkg_info)
+                    result_pkg_list.add_ref(found)
+                    packages = rev_content.get("packages")
+                    if packages is None:
+                        continue
+                    for pkgid, pkgcontent in packages.items():
+                        pref = PkgReference(ref, pkgid)
+                        try:
+                            remote_prefs = app.remote_manager.get_package_revisions(pref, remote=r)
+                        except NotFoundException:
+                            continue
+                        pkg_revisions = pkgcontent.get("revisions")
+                        if pkg_revisions is None:  # This is a package_id, no prevs
+                            if remote_prefs:
+                                result_pkg_list.add_pref(pref, pkgcontent.get("info"))
+                            continue
+                        for pkg_revision, prev_content in pkg_revisions.items():
+                            pref.revision = pkg_revision
+                            # We look for the value of revision in server, to return timestamp too
+                            pfound = next((r for r in remote_prefs if r == pref), None)
+                            if not pfound:
+                                continue
+                            result_pkg_list.add_pref(pfound, pkgcontent.get("info"))
+
             if result_pkg_list:
                 result.add(r.name, result_pkg_list)
         return result

@@ -120,7 +120,7 @@ class _LockRequires:
         self.sort()
 
 
-class Lockfile(object):
+class Lockfile:
 
     def __init__(self, deps_graph=None, lock_packages=False):
         self._requires = _LockRequires()

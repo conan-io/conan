@@ -17,7 +17,7 @@ class TestProvidesTest(GraphManagerTest):
                                            with_requires("libb/0.1"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
         assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -34,7 +34,7 @@ class TestProvidesTest(GraphManagerTest):
                                            with_requires("libb/0.1"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
         assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -60,7 +60,7 @@ class TestProvidesTest(GraphManagerTest):
                                                with_requires("libb/0.1", "libc/0.1"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
         assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -105,7 +105,7 @@ class TestProvidesTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
         assert 5 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -131,7 +131,7 @@ class TestProvidesTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
 
         deps_graph = self.build_consumer(consumer, install=False)
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
         assert 4 == len(deps_graph.nodes)
 
@@ -200,7 +200,7 @@ class TestProvidesBuildRequire(GraphManagerTest):
 
         deps_graph = self.build_consumer(path, install=False)
 
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
         assert 3 == len(deps_graph.nodes)
 
@@ -221,7 +221,7 @@ class TestProvidesBuildRequire(GraphManagerTest):
                                        .with_tool_requires("br1/0.1", "br2/0.1"))
         deps_graph = self.build_consumer(path, install=False)
 
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
         assert 3 == len(deps_graph.nodes)
 
@@ -292,4 +292,5 @@ def test_name_provide_error_message():
 
     tc.run("graph info --requires=mozjpeg/0.1 --requires=libjpeg/0.1", assert_error=True)
     # This used to report that None was provided, but now it reports the name of the provides
-    assert "ERROR: Provide Conflict: Both 'libjpeg/0.1' and 'mozjpeg/0.1' provide '['libjpeg']'" in tc.out
+    assert ("ERROR: Provide Conflict: Both 'libjpeg/0.1' and "
+            "'mozjpeg/0.1' provide '['libjpeg']'") in tc.out

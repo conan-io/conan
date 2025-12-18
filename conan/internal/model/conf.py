@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import numbers
 import platform
 import re
@@ -65,6 +66,8 @@ BUILT_IN_CONFS = {
     # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks
     "core.scm:excluded": "List of excluded patterns for builtin git dirty checks",
     "core.scm:local_url": "By default allows to store local folders as remote url, but not upload them. Use 'allow' for allowing upload and 'block' to completely forbid it",
+    # Compatibility opt-in, to be removed in future versions as optimized behavior becomes default
+    "core.graph:compatibility_mode": "(Experimental) Set this to 'optimized' to enable the improved compatibility behaviour when querying multiple compatible binaries in remotes",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
@@ -94,6 +97,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
+    "tools.cmake:ctest_args": "To inject list of arguments to CMake.ctest() runner",
     "tools.cmake:install_strip": "(Deprecated) Add --strip to cmake.install(). Use tools.build:install_strip instead",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "Number of retries in case of failure when downloading",
@@ -131,6 +135,7 @@ BUILT_IN_CONFS = {
     "tools.system.package_manager:mode": "Mode for package_manager tools: 'check', 'report', 'report-installed' or 'install'",
     "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
+    "tools.system.pipenv:python_interpreter": "Path to the Python interpreter to be used to create the virtualenv",
     "tools.apple:sdk_path": "Path to the SDK to be used",
     "tools.apple:enable_bitcode": "(boolean) Enable/Disable Bitcode Apple Clang flags",
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
@@ -504,13 +509,6 @@ class Conf:
                 existing.compose_conf_value(v)
         return self
 
-    def filter_user_modules(self):
-        result = Conf()
-        for k, v in self._values.items():
-            if _is_profile_module(k):
-                result._values[k] = v
-        return result
-
     def copy_conaninfo_conf(self):
         """
         Get a new `Conf()` object with all the configurations required by the consumer
@@ -760,7 +758,8 @@ def load_global_conf(home_folder):
         content = template.render({"platform": platform, "os": os, "distro": distro,
                                    "conan_version": conan_version,
                                    "conan_home_folder": home_folder,
-                                   "detect_api": detect_api})
+                                   "detect_api": detect_api,
+                                   "hashlib": hashlib})
         new_config.loads(content)
     else:  # creation of a blank global.conf file for user convenience
         default_global_conf = textwrap.dedent("""\

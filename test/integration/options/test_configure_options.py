@@ -53,7 +53,7 @@ class TestConfigureOptions:
         result = f"shared: {result[0]}, fPIC: {result[1]}, header only: {result[2]}"
         assert result in client.out
         if header_only:
-            assert "Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created"in client.out
+            assert "Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created" in client.out
 
     @parameterized.expand([
         ["Linux", False, False, False, [False, False, False]],
@@ -105,7 +105,7 @@ class TestConfigureOptions:
         result = f"shared: {result[0]}, fPIC: {result[1]}, header only: {result[2]}"
         assert result in client.out
         if header_only:
-            assert "Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created"in client.out
+            assert "Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created" in client.out
 
     def test_header_package_type_pid(self):
         """

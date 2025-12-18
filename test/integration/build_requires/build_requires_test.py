@@ -121,14 +121,14 @@ def test_complete(client):
     client.run("install . -s build_type=Debug --build=missing")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command(ConanFileMock(),"conanbuild", client.current_folder,
+    cmd = environment_wrap_command(ConanFileMock(), "conanbuild", client.current_folder,
                                    cmd="mycmake.{}".format(ext))
     client.run_command(cmd)
     assert "MYCMAKE=Release!!" in client.out
     assert "MYOPENSSL=Release!!" in client.out
 
     # Run the RUN environment
-    cmd = environment_wrap_command(ConanFileMock(),"conanrun", client.current_folder,
+    cmd = environment_wrap_command(ConanFileMock(), "conanrun", client.current_folder,
                                    cmd="mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
                                                                                       sep=os.sep))
     client.run_command(cmd)

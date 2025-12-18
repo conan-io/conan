@@ -6,7 +6,7 @@ import textwrap
 from collections import OrderedDict
 
 import pytest
-from mock import patch
+from unittest.mock import patch
 from requests import Response
 
 from conan.errors import ConanException

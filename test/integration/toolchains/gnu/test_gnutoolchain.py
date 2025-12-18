@@ -620,11 +620,11 @@ def test_thread_flags(threads, flags):
         }
     )
     client.run("install . -pr=./profile")
-    os = platform.system()
+    is_win = platform.system() == "Windows"
     toolchain = client.load(
-        "conangnutoolchain{}".format('.bat' if os == "Windows" else '.sh'))
+        "conangnutoolchain{}".format('.bat' if is_win else '.sh'))
 
-    if os == "Windows":
+    if is_win:
         assert f'set "CXXFLAGS=%CXXFLAGS% -stdlib=libc++ {flags}"' in toolchain
         assert f'set "CFLAGS=%CFLAGS% {flags}"' in toolchain
         assert f'set "LDFLAGS=%LDFLAGS% {flags}' in toolchain

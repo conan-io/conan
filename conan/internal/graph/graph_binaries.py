@@ -1,8 +1,6 @@
-import json
 import os
-from collections import OrderedDict
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, Color
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.graph.build_mode import BuildMode
 from conan.internal.graph.compatibility import BinaryCompatibility
@@ -16,11 +14,9 @@ from conan.internal.graph.proxy import should_update_reference
 from conan.internal.errors import (conanfile_exception_formatter, ConanConnectionError,
                                    NotFoundException, PackageNotFoundException)
 from conan.errors import ConanException
+from conan.internal.model.conanconfig import loadconanconfig
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
-from conan.api.model import PkgReference
-from conan.api.model import RecipeReference
 from conan.internal.model.pkg_type import PackageType
-from conan.internal.util.files import load
 
 
 class GraphBinariesAnalyzer:
@@ -42,6 +38,7 @@ class GraphBinariesAnalyzer:
         python_mode = global_conf.get("core.package_id:default_python_mode", default="minor_mode")
         build_mode = global_conf.get("core.package_id:default_build_mode", default=None)
         self._modes = unknown_mode, non_embed, embed_mode, python_mode, build_mode
+        self._warn_about_new_compatibility = False
 
     @staticmethod
     def _evaluate_build(node, build_mode):
@@ -159,75 +156,140 @@ class GraphBinariesAnalyzer:
         original_package_id = node.package_id
         conanfile.output.info(f"Main binary package '{original_package_id}' missing")
         conanfile.output.info(f"Checking {len(compatibles)} compatible configurations")
+        compatibility_mode = self._global_conf.get("core.graph:compatibility_mode",
+                                                   choices=("optimized",))
+        use_compatibility_optimization = compatibility_mode == "optimized"
+
         if not should_update_reference(conanfile.ref, update):
             # First look all in the cache
             for package_id, compatible_package in compatibles.items():
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
-                self._compatible_process_node_cache(node)  # Doesn't check remotes
-                if node.binary == BINARY_CACHE:
+                # Check that this same reference hasn't already been checked
+                if self._evaluate_is_cached(node):
+                    # If we have already processed this compatible pref,
+                    # mark it as usable based on previous evaluation
+                    if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD):
+                        self._compatible_found(conanfile, package_id, compatible_package)
+                    return
+                cache_latest_prev = self._compatible_cache_latest_prev(node)  # not check remotes
+                if cache_latest_prev:
+                    # If we have binary info, it means that the package was already processed,
+                    # and we got a hit from the cache of compatibles
+                    self._binary_in_cache(node, cache_latest_prev)
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
-            # If not found in the cache, then look first one in servers
+            # If not found in the cache, then look for the first one in servers
             conanfile.output.info(f"Compatible configurations not found in cache, checking servers")
-            for package_id, compatible_package in compatibles.items():
+            if use_compatibility_optimization:
+                compatible_packages = self._compatible_get_packages_from_remotes(node.ref, remotes)
+                candidates = {pkg_id: pkg for pkg_id, pkg in compatibles.items()
+                              if pkg_id in compatible_packages}
+                node.conanfile.output.info(f"Found {len(candidates)} compatible configurations "
+                                           f"in remotes")
+            else:
+                candidates = compatibles
+                compatible_packages = {}
+                self._warn_about_new_compatibility = True
+            for package_id, compatible_package in candidates.items():
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
-                self._evaluate_download(node, remotes, update=False)
+                # We already know which remotes have that package_id
+                available_remotes = compatible_packages.get(package_id, remotes)
+                self._evaluate_download(node, available_remotes, update=False)
                 if node.binary == BINARY_DOWNLOAD:
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
         else:  # Need to check in servers too for the latest thing
+            if use_compatibility_optimization:
+                compatible_packages = self._compatible_get_packages_from_remotes(node.ref, remotes)
+            else:
+                compatible_packages = {}
+                self._warn_about_new_compatibility = True
             for package_id, compatible_package in compatibles.items():
                 conanfile.output.info(f"'{package_id}': "
                                       f"{conanfile.info.dump_diff(compatible_package)}")
                 node._package_id = package_id  # Modifying package id under the hood, FIXME
                 node.binary = None  # Invalidate it
-                self._compatible_process_node_cache(node)  # Doesn't check remotes
-                if node.binary == BINARY_CACHE:
-                    self._evaluate_cache_update(node.pref, node, remotes, update)
+
+                if self._evaluate_is_cached(node):
+                    # If we have already processed this compatible pref,
+                    # mark it as usable based on previous evaluation
+                    if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
+                        self._compatible_found(conanfile, package_id, compatible_package)
+                    return
+                cache_latest_prev = self._compatible_cache_latest_prev(node)  # Not check remotes
+                available_remotes = compatible_packages.get(package_id,
+                                                            [] if use_compatibility_optimization
+                                                            else remotes)
+                if cache_latest_prev:
+                    self._evaluate_cache_update(cache_latest_prev, node, available_remotes, update)
                 else:
-                    self._evaluate_download(node, remotes, update)
+                    if available_remotes:
+                        self._evaluate_download(node, available_remotes, update)
+                    else:
+                        # If not in remotes, mark as missing, no need for further checks
+                        node.binary = BINARY_MISSING
                 if node.binary in (BINARY_CACHE, BINARY_UPDATE, BINARY_DOWNLOAD):
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
 
+        node.conanfile.output.info("No compatible configuration found", fg=Color.BRIGHT_CYAN)
         # If no compatible is found, restore original state
         node.binary = original_binary
         node._package_id = original_package_id
 
-    def _compatible_process_node_cache(self, node):
+    def _compatible_cache_latest_prev(self, node):
         """ simplified checking of compatible_packages, that should be found existing, but
         will never be built, for example. They cannot be editable either at this point.
         """
-        # Check that this same reference hasn't already been checked
-        if self._evaluate_is_cached(node):
-            return
-
         # TODO: Test that this works
         if node.conanfile.info.invalid:
             node.binary = BINARY_INVALID
-            return
+            return None
 
         # Obtain the cache_latest valid one, cleaning things if dirty
         while True:
-            cache_latest_prev = self._cache.get_latest_package_revision(node.pref)
+            package_layout = self._cache.pkg_layout_latest(node.pref)
+            cache_latest_prev = package_layout.reference if package_layout else None
             if cache_latest_prev is None:
                 break
-            package_layout = self._cache.pkg_layout(cache_latest_prev)
             if not self._evaluate_clean_pkg_folder_dirty(node, package_layout):
                 break
 
-        if cache_latest_prev is not None:
-            # This binary already exists in the cache, maybe can be updated
-            assert cache_latest_prev.revision
-            assert node.binary is None
-            node.binary = BINARY_CACHE
-            node.binary_remote = None
-            node.prev = cache_latest_prev.revision
-            node.pref_timestamp = cache_latest_prev.timestamp
+        return cache_latest_prev
+
+    @staticmethod
+    def _binary_in_cache(node, cache_latest_prev):
+        assert cache_latest_prev.revision
+        assert node.binary is None
+        node.binary = BINARY_CACHE
+        node.binary_remote = None
+        node.prev = cache_latest_prev.revision
+        node.pref_timestamp = cache_latest_prev.timestamp
+
+    def _compatible_get_packages_from_remotes(self, ref, remotes):
+        """
+        Get available package ids in remotes for the given node reference
+        """
+        results = {}
+        for remote in remotes:
+            try:
+                remote_prefs = self._remote_manager.search_packages(remote, ref, list_only=True)
+                if remote_prefs:
+                    for remote_pref in remote_prefs:
+                        results.setdefault(remote_pref.package_id, []).append(remote)
+            except NotFoundException:
+                # Not finding the reference in the remote is not an error, just continue
+                pass
+            except ConanConnectionError:
+                ConanOutput().error(f"Failed finding for package ids '{ref}' in "
+                                    f"remote '{remote.name}': remote not available")
+                raise
+
+        return results
 
     def _compatible_find_build_binary(self, node, compatibles):
         original_binary = node.binary
@@ -311,10 +373,10 @@ class GraphBinariesAnalyzer:
 
         # Obtain the cache_latest valid one, cleaning things if dirty
         while True:
-            cache_latest_prev = self._cache.get_latest_package_revision(node.pref)
+            package_layout = self._cache.pkg_layout_latest(node.pref)
+            cache_latest_prev = package_layout.reference if package_layout else None
             if cache_latest_prev is None:
                 break
-            package_layout = self._cache.pkg_layout(cache_latest_prev)
             if not self._evaluate_clean_pkg_folder_dirty(node, package_layout):
                 break
 
@@ -400,16 +462,8 @@ class GraphBinariesAnalyzer:
             return
         config_version_file = HomePaths(self._home_folder).config_version_path
         try:
-            config_refs = json.loads(load(config_version_file))["config_version"]
-            result = OrderedDict()
-            for r in config_refs:
-                try:
-                    config_ref = PkgReference.loads(r)
-                    req_info = RequirementInfo(config_ref.ref, config_ref.package_id, config_mode)
-                except ConanException:
-                    config_ref = RecipeReference.loads(r)
-                    req_info = RequirementInfo(config_ref, None, config_mode)
-                result[config_ref] = req_info
+            config_refs = loadconanconfig(config_version_file)
+            result = {r: RequirementInfo(r, None, config_mode) for r in config_refs}
         except Exception as e:
             raise ConanException(f"core.package_id:config_mode defined, but error while loading "
                                  f"'{os.path.basename(config_version_file)}'"
@@ -473,6 +527,14 @@ class GraphBinariesAnalyzer:
             for pref, pref_nodes in nodes.items():
                 for n in pref_nodes[1:]:
                     _evaluate_single(n)
+
+        if self._warn_about_new_compatibility:
+            (ConanOutput().info("\nA new experimental approach for binary compatibility detection "
+                                "is available.\n"
+                                "    Enable it by setting the ", newline=False)
+             .info('core.graph:compatibility_mode=optimized', newline=False, fg=Color.BRIGHT_YELLOW)
+             .info(" conf\n    and get improved performance when querying multiple "
+                   "compatible binaries in remotes.\n"))
 
         # Last level is always necessarily a consumer or a virtual
         assert len(levels[-1]) == 1

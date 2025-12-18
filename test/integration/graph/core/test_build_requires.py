@@ -167,8 +167,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         self._cache_recipe("zlib/0.2", GenConanfile().with_shared_option(False))
         self._cache_recipe("cmake/0.1", GenConanfile().with_require("zlib/0.1"))
         self._cache_recipe("mingw/0.1", GenConanfile().with_require("zlib/0.2"))
-        self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1",
-                                                                              "mingw/0.1"))
+        self._cache_recipe("lib/0.1", GenConanfile().with_tool_requires("cmake/0.1", "mingw/0.1"))
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"))
 
         assert 6 == len(deps_graph.nodes)
@@ -202,7 +201,7 @@ class TestBuildRequiresTransitivityDiamond(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"),
                                       install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
         out = str(deps_graph.error)
         assert "Version conflict: Conflict between zlib/0.2 and zlib/0.1 in the graph." in out
         assert "Conflict originates from lib/0.1" in out
@@ -473,7 +472,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         deps = ("lib_a/0.1", "util/0.2") if not reverse else ("util/0.2", "lib_a/0.1")
         conanfile = GenConanfile("lib_c", "0.1").with_test_requires(*deps)
         deps_graph = self.build_graph(conanfile, install=False)
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
     @parameterized.expand([(True,), (False,)])
     def test_fixed_versions_hybrid(self, reverse):
@@ -507,7 +506,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         else:
             conanfile = conanfile.with_test_requires("lib_a/0.1").with_requires("util/0.2")
         deps_graph = self.build_graph(conanfile, install=False)
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
     @parameterized.expand([(True,), (False,)])
     def test_version_ranges(self, reverse):
@@ -532,7 +531,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         deps = ("lib_a/[>=0]", "util/[>=1]") if not reverse else ("util/[>=1]", "lib_a/[>=0]")
         deps_graph = self.build_graph(GenConanfile("lib_c", "0.1").with_test_requires(*deps),
                                       install=False)
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
     @parameterized.expand([(True,), (False,)])
     def test_version_ranges_hybrid(self, reverse):
@@ -564,7 +563,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         else:
             conanfile = conanfile.with_test_requires("lib_a/[>=0.1]").with_requires("util/[>=1]")
         deps_graph = self.build_graph(conanfile, install=False)
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
 
 class TestBuildRequiresPackageID(GraphManagerTest):
@@ -739,7 +738,7 @@ class TestPublicBuildRequires(GraphManagerTest):
                                                                                "libc/0.1"),
                                       install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
         # Build requires always apply to the consumer
         assert 4 == len(deps_graph.nodes)
@@ -768,7 +767,7 @@ class TestPublicBuildRequires(GraphManagerTest):
                                                                                "libe/0.1"),
                                       install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
         # Build requires always apply to the consumer
         assert 6 == len(deps_graph.nodes)
@@ -882,7 +881,7 @@ class TestLoops(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_build_requires("cmake/0.1"),
                                       install=False)
 
-        assert type(deps_graph.error) == GraphLoopError
+        assert type(deps_graph.error) is GraphLoopError
 
         # Build requires always apply to the consumer
         assert 4 == len(deps_graph.nodes)
@@ -904,7 +903,7 @@ class TestLoops(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile().with_build_requires("cmake/0.1"),
                                       install=False)
 
-        assert type(deps_graph.error) == GraphLoopError
+        assert type(deps_graph.error) is GraphLoopError
 
         # Build requires always apply to the consumer
         assert 6 == len(deps_graph.nodes)

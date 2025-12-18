@@ -78,7 +78,7 @@ class UserInput:
         """Request user to input a boolean"""
         ret = None
         while ret is None:
-            if default_option is True:
+            if default_option:
                 s = self.request_string("%s (YES/no)" % msg)
             elif default_option is False:
                 s = self.request_string("%s (NO/yes)" % msg)

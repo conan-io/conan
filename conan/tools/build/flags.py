@@ -488,43 +488,6 @@ def _cppstd_gcc(gcc_version, cppstd):
     return f'-std={flag}' if flag else None
 
 
-def _cppstd_intel_common(intel_version, cppstd, vgnu98, vgnu0x):
-    # https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-std-qstd
-    # https://software.intel.com/en-us/articles/intel-cpp-compiler-release-notes
-    # NOTE: there are only gnu++98 and gnu++0x, and only for Linux/macOS
-    v98 = v11 = v14 = v17 = v20 = None
-    vgnu11 = vgnu14 = vgnu17 = vgnu20 = None
-
-    if intel_version >= "12":
-        v11 = "c++0x"
-        vgnu11 = vgnu0x
-    if intel_version >= "14":
-        v11 = "c++11"
-        vgnu11 = vgnu0x
-    if intel_version >= "16":
-        v14 = "c++14"
-    if intel_version >= "18":
-        v17 = "c++17"
-    if intel_version >= "19.1":
-        v20 = "c++20"
-
-    return {"98": v98, "gnu98": vgnu98,
-            "11": v11, "gnu11": vgnu11,
-            "14": v14, "gnu14": vgnu14,
-            "17": v17, "gnu17": vgnu17,
-            "20": v20, "gnu20": vgnu20}.get(cppstd)
-
-
-def _cppstd_intel_gcc(intel_version, cppstd):
-    flag = _cppstd_intel_common(intel_version, cppstd, "gnu++98", "gnu++0x")
-    return f'-std={flag}' if flag else None
-
-
-def _cppstd_intel_visualstudio(intel_version, cppstd):
-    flag = _cppstd_intel_common(intel_version, cppstd, None, None)
-    return f'/Qstd={flag}' if flag else None
-
-
 def _cppstd_mcst_lcc(mcst_lcc_version, cppstd):
     v11 = vgnu11 = v14 = vgnu14 = v17 = vgnu17 = v20 = vgnu20 = None
 

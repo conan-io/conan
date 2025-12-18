@@ -57,18 +57,41 @@ def _render_diff(content, template, template_folder, **kwargs):
     def _replace_paths(line):
         return _remove_prefixes(_replace_cache_paths(line))
 
+    def _extract_header(diff_lines):
+        # Header ends at the first occurrence of +++ line,
+        # and it can be at most 10 lines long
+        for i, line in enumerate(diff_lines[:10]):
+            if line.startswith("+++ "):
+                return diff_lines[:i + 1]
+        return diff_lines[:10]
+
+    def _parse_header_is_deleted(header_contents):
+        return ("+++ /dev/null" in header_contents
+                or any("deleted file mode" in line for line in header_contents))
+
+    def _parse_header_rename_to(header_contents):
+        if not any("similarity index" in line for line in header_contents):
+            return None
+        for line in header_contents:
+            if line.startswith("rename to "):
+                return line[len("rename to "):]
+        return None
+
     per_folder = {"folders": {}, "files": {}}
     for file in content:
-        replaced_path = _replace_paths(file)
+        header = _extract_header(content[file])
+        renamed_to = _parse_header_rename_to(header)
+        replaced_path = _replace_paths(renamed_to or file)
         replaced_file = replaced_path.replace("(old)", "").replace("(new)", "").replace("\\", "/")
         bits = replaced_file.split("/")[1:]
         cur = per_folder
         for folder in bits[:-1]:
             cur = cur["folders"].setdefault(folder, {"folders": {}, "files": {}})
-        cur["files"][bits[-1]] = {"filename": file, "is_new": "(new)" in replaced_path,
-                                  "is_deleted": "+++ /dev/null" in content[file][:10]
-                                                or any("deleted file mode" in line
-                                                       for line in content[file][:10]),
+        filename = bits[-1]
+        cur["files"][filename] = {"filename": file,  # This is file so renamed use old name
+                                  "is_new": "(new)" in replaced_path,
+                                  "is_deleted": _parse_header_is_deleted(header),
+                                  "renamed_to": renamed_to,
                                   "relative_path": replaced_path}
 
     def flatten_empty_folders(current_node):

@@ -22,7 +22,7 @@ class TestQueryParse:
 
         import pytest
         with pytest.raises(Exception, match="Invalid expression: 2"):
-            r = _infix_to_postfix("a= 2 OR b=3")
+            _infix_to_postfix("a= 2 OR b=3")
 
     def test_evaluate_postfix(self):
 

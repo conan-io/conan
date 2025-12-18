@@ -4,7 +4,7 @@ from conan.tools.build import build_jobs
 from conan.tools.meson.toolchain import MesonToolchain
 
 
-class Meson(object):
+class Meson:
     """
     This class calls Meson commands when a package is being built. Notice that
     this one should be used together with the ``MesonToolchain`` generator.
@@ -71,9 +71,12 @@ class Meson(object):
         self._conanfile.output.info("Meson build cmd: {}".format(cmd))
         self._conanfile.run(cmd)
 
-    def install(self):
+    def install(self, cli_args=None):
         """
-        Runs ``meson install -C "." --destdir`` in the build folder.
+        Runs ``meson install -C "." --destdir ..`` in the build folder.
+
+        :param cli_args: List of arguments to be added to the command:
+                    ``meson install -C "." --destdir ... arg1 arg2``
         """
         meson_build_folder = self._conanfile.build_folder.replace("\\", "/")
         meson_package_folder = self._conanfile.package_folder.replace("\\", "/")
@@ -84,6 +87,8 @@ class Meson(object):
             cmd += " " + verbosity
         if self._conanfile.conf.get("tools.build:install_strip", check_type=bool):
             cmd += " --strip"
+        if cli_args:
+            cmd += " " + " ".join(cli_args)
         self._conanfile.run(cmd)
 
     def test(self):

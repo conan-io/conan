@@ -68,8 +68,8 @@ class CMake:
         :ref:`CMakeToolchain<conan-cmake-toolchain>` to get:
 
            - The generator, to append ``-G="xxx"``.
-           - The path to the toolchain and append ``-DCMAKE_TOOLCHAIN_FILE=/path/conan_toolchain.cmake``
-           - The declared ``cache variables`` and append ``-Dxxx``.
+           - Toolchain path to append ``-DCMAKE_TOOLCHAIN_FILE=/path/conan_toolchain.cmake``
+           - The declared ``cache variables`` to append ``-Dxxx``.
 
         and call ``cmake``.
 
@@ -83,9 +83,9 @@ class CMake:
                                     ``self.folders.source`` at the ``layout()`` method.
         :param cli_args: List of arguments ``[arg1, arg2, ...]`` that will be passed
                          as extra CLI arguments to pass to cmake invocation
-        :param subfolder: (Experimental): The name of a subfolder to be created inside the ``build_folder``
-                                          and the ``package_folder``. If not provided, files will be placed
-                                          in the ``build_folder`` and the ``package_folder`` root.
+        :param subfolder: (Experimental): subfolder to be created inside the ``build_folder`` and
+                                          the ``package_folder``. If not provided, files will be
+                                          placed in the ``build_folder`` and ``package_folder`` root.
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
         """
@@ -186,23 +186,25 @@ class CMake:
                            for a multi-configuration generator (e.g. Visual Studio, XCode).
                            This value will be ignored for single-configuration generators, they will
                            use the one defined in the toolchain file during the install step.
-        :param target: The name of a single build target as a string, or names of multiple build targets in a
-                       list of strings to be passed to the ``--target`` argument.
+        :param target: The name of a single build target as a string, or names of multiple build
+                       targets in a list of strings to be passed to the ``--target`` argument.
         :param cli_args: A list of arguments ``[arg1, arg2, ...]`` that will be passed to the
                          ``cmake --build ... arg1 arg2`` command directly.
         :param build_tool_args: A list of arguments ``[barg1, barg2, ...]`` for the underlying
                                 build system that will be passed to the command
                                 line after the ``--`` indicator: ``cmake --build ... -- barg1 barg2``
-        :param subfolder: (Experimental): The name of a subfolder to be created inside the ``build_folder``
-                                          and the ``package_folder``. If not provided, files will be placed
-                                          in the ``build_folder`` and the ``package_folder`` root.
+        :param subfolder: (Experimental): subfolder to be created inside the ``build_folder`` and
+                                          the ``package_folder``. If not provided, files will be
+                                          placed in the ``build_folder`` and ``package_folder`` root.
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
         """
         self._conanfile.output.info("Running CMake.build()")
-        self._build(build_type, target, cli_args, build_tool_args, subfolder=subfolder, stdout=stdout, stderr=stderr)
+        self._build(build_type, target, cli_args, build_tool_args, subfolder=subfolder,
+                    stdout=stdout, stderr=stderr)
 
-    def install(self, build_type=None, component=None, cli_args=None, stdout=None, stderr=None, subfolder=None):
+    def install(self, build_type=None, component=None, cli_args=None, stdout=None, stderr=None,
+                subfolder=None):
         """
         Equivalent to running ``cmake --install``
 
@@ -213,9 +215,9 @@ class CMake:
                            not build type.
         :param cli_args: A list of arguments ``[arg1, arg2, ...]`` for the underlying build system
                          that will be passed to the command line: ``cmake --install ... arg1 arg2``
-        :param subfolder: (Experimental): The name of a subfolder to be created inside the ``build_folder``
-                                          and the ``package_folder``. If not provided, files will be placed
-                                          in the ``build_folder`` and the ``package_folder`` root.
+        :param subfolder: (Experimental): subfolder to be created inside the ``build_folder`` and
+                                          the ``package_folder``. If not provided, files will be
+                                          placed in the ``build_folder`` and ``package_folder`` root.
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
         """
@@ -236,10 +238,12 @@ class CMake:
             arg_list.extend(["--component", component])
         arg_list.extend(self._compilation_verbosity_arg)
 
-        deprecated_install_strip = self._conanfile.conf.get("tools.cmake:install_strip", check_type=bool)
+        deprecated_install_strip = self._conanfile.conf.get("tools.cmake:install_strip",
+                                                            check_type=bool)
         if deprecated_install_strip:
-            self._conanfile.output.warning("The 'tools.cmake:install_strip' configuration is deprecated, "
-                                           "use 'tools.build:install_strip' instead.", warn_tag="deprecated")
+            self._conanfile.output.warning("The 'tools.cmake:install_strip' configuration is "
+                                           "deprecated, use 'tools.build:install_strip' instead.",
+                                           warn_tag="deprecated")
 
         do_strip = self._conanfile.conf.get("tools.build:install_strip", check_type=bool)
         if do_strip or deprecated_install_strip:
@@ -287,7 +291,8 @@ class CMake:
         """
         Equivalent to running ctest ...
 
-        :param cli_args: List of arguments ``[arg1, arg2, ...]`` to be passed as extra ctest command line arguments
+        :param cli_args: List of arguments ``[arg1, arg2, ...]`` to be passed as extra ctest
+                         command line arguments
         :param env: the environment files to activate, by default conanbuild + conanrun
         :param stdout: Use it to redirect stdout to this stream
         :param stderr: Use it to redirect stderr to this stream
@@ -304,11 +309,19 @@ class CMake:
         if njobs:
             arg_list.append(f"--parallel {njobs}")
 
+        arg_list.extend(cli_args or [])
+
         verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
         if verbosity:
+            # https://cmake.org/cmake/help/latest/manual/ctest.1.html
+            # Options such as --verbose, --extra-verbose, and --debug are
+            # ignored if --quiet is specified.
             arg_list.append(f"--{verbosity}")
 
-        arg_list.extend(cli_args or [])
+        extra_args = self._conanfile.conf.get("tools.cmake:ctest_args", check_type=list)
+        if extra_args:
+            arg_list.extend(extra_args)
+
         arg_list = " ".join(filter(None, arg_list))
         command = f"ctest {arg_list}"
 

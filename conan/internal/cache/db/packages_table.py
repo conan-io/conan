@@ -13,7 +13,7 @@ class PackagesDBTable(BaseDbTable):
                            ('rrev', str),
                            ('pkgid', str, True),
                            ('prev', str, True),
-                           ('path', str, False, None, True),
+                           ('path', str, False, True),
                            ('timestamp', float),
                            ('build_id', str, True),
                            ('lru', int)]
@@ -100,17 +100,19 @@ class PackagesDBTable(BaseDbTable):
             except sqlite3.IntegrityError:
                 raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
-    def update_lru(self, pref):
-        assert pref.revision is not None
+    def update_lru(self, prefs):
         # TODO: InstallGraph is dropping the pref.timestamp, cannot be checked here yet
         # assert pref.timestamp is not None, f"PREF _TIMESSTAMP IS NONE {repr(pref)}"
-        where_clause = self._where_clause(pref)
+        params = [(str(pref.ref), pref.ref.revision, pref.package_id, pref.revision)
+                  for pref in prefs]
+        where_clause = (f"{self.columns.reference} = ? AND {self.columns.rrev} = ? "
+                        f"AND {self.columns.pkgid} = ? AND {self.columns.prev} = ?")
         lru = timestamp_now()
         query = f"UPDATE {self.table_name} " \
                 f"SET {self.columns.lru} = '{lru}' " \
                 f"WHERE {where_clause};"
         with self.db_connection() as conn:
-            conn.execute(query)
+            conn.executemany(query, params)
 
     def remove_build_id(self, pref):
         where_clause = self._where_clause(pref)
@@ -168,8 +170,8 @@ class PackagesDBTable(BaseDbTable):
                     f'ORDER BY {self.columns.timestamp} DESC'
         with self.db_connection() as conn:
             r = conn.execute(query)
-            for row in r.fetchall():
-                yield self._as_dict(self.row_type(*row))
+            rows = r.fetchall()
+        return [self._as_dict(self.row_type(*row)) for row in rows]
 
     def get_package_revisions_reference_exists(self, pref: PkgReference):
         assert pref.ref.revision, "To check package revision existence you must provide a recipe revision."
@@ -185,7 +187,7 @@ class PackagesDBTable(BaseDbTable):
         with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
-            return bool(row)
+        return bool(row)
 
     def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         # Return the latest revisions
@@ -212,8 +214,8 @@ class PackagesDBTable(BaseDbTable):
                     f'ORDER BY {self.columns.timestamp} DESC'
         with self.db_connection() as conn:
             r = conn.execute(query)
-            for row in r.fetchall():
-                yield self._as_dict(self.row_type(*row))
+            rows = r.fetchall()
+        return [self._as_dict(self.row_type(*row)) for row in rows]
 
     def get_package_references_with_build_id_match(self, ref: RecipeReference, build_id):
         # Return the latest revisions
@@ -237,9 +239,9 @@ class PackagesDBTable(BaseDbTable):
         with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
-            if row:
-                return self._as_dict(self.row_type(*row))
-            return None
+        if row:
+            return self._as_dict(self.row_type(*row))
+        return None
 
     def path_to_ref(self, path):
         query = f'SELECT * FROM {self.table_name} ' \
@@ -247,9 +249,9 @@ class PackagesDBTable(BaseDbTable):
         with self.db_connection() as conn:
             r = conn.execute(query)
             row = r.fetchone()
-            if not row:
-                return None
-            ref = RecipeReference.loads(row[0])
-            ref.revision = row[1]
-            pref = PkgReference(ref, row[2], row[3], row[5])
-            return pref
+        if not row:
+            return None
+        ref = RecipeReference.loads(row[0])
+        ref.revision = row[1]
+        pref = PkgReference(ref, row[2], row[3], row[5])
+        return pref
