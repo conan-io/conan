@@ -266,11 +266,15 @@ class _PathGenerator:
                     build_dir = dep.package_folder
                 pkg_folder = build_dir.replace("\\", "/") if build_dir else None
                 if pkg_folder:
-                    f = self._cmakedeps.get_cmake_filename(dep)
-                    for filename in (f"{f}-config.cmake", f"{f}Config.cmake"):
+                    # prioritize cps if existing as CMake does
+                    for filename in (f"{pkg_name}.cps", f"cps/{pkg_name}.cps",
+                                     f"{pkg_name}-config.cmake", f"{pkg_name}Config.cmake"):
                         if os.path.isfile(os.path.join(pkg_folder, filename)):
-                            pkg_paths[pkg_name] = relativize_path(pkg_folder, self._conanfile,
+                            loc = os.path.dirname(os.path.join(pkg_folder, filename))
+                            loc = loc.replace("\\", "/")
+                            pkg_paths[pkg_name] = relativize_path(loc, self._conanfile,
                                                                   "${CMAKE_CURRENT_LIST_DIR}")
+                            break
 
                     existing_paths = pkg_paths_multi.setdefault(pkg_name, [])
                     if pkg_folder not in existing_paths:
