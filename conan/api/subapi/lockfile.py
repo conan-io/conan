@@ -81,6 +81,7 @@ class LockfileAPI:
     def update_lockfile(lockfile, graph, lock_packages=False, clean=False):
         if lockfile is None or clean:
             lockfile = Lockfile(graph, lock_packages)
+            lockfile.partial = True
         else:
             lockfile.update_lock(graph, lock_packages)
         return lockfile

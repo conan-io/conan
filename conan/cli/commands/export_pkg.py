@@ -58,8 +58,9 @@ def export_pkg(conan_api, parser, *args):
     ref, conanfile = conan_api.export.export(path=path, name=args.name, version=args.version,
                                              user=args.user, channel=args.channel, lockfile=lockfile,
                                              remotes=remotes)
-    lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
-                                                         args.build_require)
+    if lockfile:
+        lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref,
+                                                             args.build_require)
 
     # Compute the dependency graph to prepare the exporting of the package biary
     graph = conan_api.export.export_pkg_graph(path=path, ref=ref, profile_host=profile_host,

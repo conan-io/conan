@@ -158,8 +158,9 @@ def test_pyrequires_test_package_lockfile_error():
     c.run("create utils --version=1.7.1")
     c.run("create utils --version=1.8.0")
     c.run("create bar --lockfile-out=bar.lock")
-    c.run("create foo", assert_error=True)
-    assert "Missing prebuilt package for 'bar/8.0'" in c.out
+    c.run("create foo")
+    assert "utils/1.7.1" in c.out
+    assert "utils/1.8.0" in c.out
 
     c.run("create foo --lockfile=bar.lock --lockfile-partial --lockfile-out=foo.lock")
     c.assert_listed_require({"utils/1.7.1": "Cache",
