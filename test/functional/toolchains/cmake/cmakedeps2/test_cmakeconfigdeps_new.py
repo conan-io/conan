@@ -1529,7 +1529,6 @@ class TestCppInfoChecks:
         assert "dep/0.1 cpp_info incorrect .type shared-library for .exe myexe" in c.out
 
 
-
 def test_multiple_find_package_subfolder():
     c = TestClient()
     conanfile = textwrap.dedent("""
