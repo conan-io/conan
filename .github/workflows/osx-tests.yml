@@ -147,6 +147,18 @@ jobs:
           xcrun --sdk macosx --show-sdk-version
           clang --version
 
+      # Install system dependencies BEFORE setting up the matrix Python.
+      # This prevents Emscripten (which requires Python 3.10+) from crashing
+      # when trying to use Python 3.8 from the matrix.
+      - name: Install homebrew dependencies
+        run: |
+          brew update
+          brew install xcodegen make libtool zlib autoconf automake ninja emscripten
+          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+          emcc --version
+          cmake --version
+          bazel --version
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -159,15 +171,6 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_dev.txt
           pip install meson
-
-      - name: Install homebrew dependencies
-        run: |
-          brew update
-          brew install xcodegen make libtool zlib autoconf automake ninja emscripten
-          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
-          emcc --version
-          cmake --version
-          bazel --version
 
       - name: Run tests
         uses: ./.github/actions/test-coverage
