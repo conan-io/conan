@@ -12,19 +12,18 @@ from conan.api.model import RecipeReference
 
 
 def _get_package_sign_error(pkg_list):
-    signs = []
+    conan_exception = ConanException("There were some errors in the package signing process. "
+                                     "Please check the output.")
     for rref, packages in pkg_list.items():
         recipe_bundle = pkg_list.recipe_dict(rref)
         if recipe_bundle:
-            signs.append(recipe_bundle.get("pkgsign_error"))
+            if recipe_bundle.get("pkgsign_error"):
+                return conan_exception
         for pref in packages:
             pkg_bundle = pkg_list.package_dict(pref)
             if pkg_bundle:
-                signs.append(pkg_bundle.get("pkgsign_error"))
-
-    if any((sign is not None) for sign in signs):
-        return ConanException("There were some errors in the package signing process. "
-                              "Please check the output.")
+                if pkg_bundle.get("pkgsign_error"):
+                    return conan_exception
     return None
 
 
