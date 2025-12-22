@@ -27,7 +27,7 @@ ENV PY37=3.7.9 \
     BAZEL_6=6.5.0 \
     BAZEL_7=7.6.2 \
     BAZEL_8=8.4.2 \
-    EMSDK=4.0.10
+    EMSDK=4.0.22
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -175,6 +175,7 @@ RUN cd /tmp && \
     wget https://github.com/emscripten-core/emsdk/archive/refs/tags/${EMSDK}.tar.gz && \
     tar xzf ${EMSDK}.tar.gz --directory /usr/share && \
     cd /usr/share/emsdk-${EMSDK} && \
+    pyenv local 3.12 && \
     ./emsdk update && \
     ./emsdk install latest && \
     ./emsdk activate latest --permanent && \
