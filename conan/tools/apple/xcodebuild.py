@@ -2,7 +2,7 @@ from conan.tools.apple.apple import to_apple_arch, xcodebuild_deployment_target_
 from conan.tools.build import cmd_args_to_string
 
 
-class XcodeBuild(object):
+class XcodeBuild:
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._build_type = conanfile.settings.get_safe("build_type")

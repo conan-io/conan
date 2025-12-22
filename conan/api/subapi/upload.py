@@ -22,8 +22,8 @@ class UploadAPI:
         self._conan_api = conan_api
         self._api_helpers = api_helpers
 
-    def check_upstream(self, package_list: PackagesList, remote: Remote, enabled_remotes: List[Remote],
-                       force=False):
+    def check_upstream(self, package_list: PackagesList, remote: Remote,
+                       enabled_remotes: List[Remote], force=False):
         """ Checks ``remote`` for the existence of the recipes and packages in ``package_list``.
         Items that are not present in the remote will add an ``upload`` key to the entry
         with the value ``True``.
@@ -34,8 +34,8 @@ class UploadAPI:
         :parameter remote: Remote to check.
         :parameter enabled_remotes: List of enabled remotes. This is used to possibly load
             python_requires from the listed recipes if necessary.
-        :parameter force: If ``True``, it will skip the check and mark that all items need to be uploaded.
-            A ``force_upload`` key will be added to the entries that will be uploaded.
+        :parameter force: If ``True``, it will skip the check and mark that all items need to be
+            uploaded. A ``force_upload`` key will be added to the entries that will be uploaded.
         """
         app = ConanApp(self._conan_api)
         for ref, _ in package_list.items():
@@ -87,7 +87,8 @@ class UploadAPI:
         The steps that this method performs are:
             - calls ``conan_api.cache.check_integrity`` to ensure the packages are not corrupted
             - checks the upload policy of the recipes
-                - (if it is ``"skip"``, it will not upload the binaries, but will still upload the metadata)
+                - (if it is ``"skip"``, it will not upload the binaries, but will still upload
+                  the metadata)
             - checks which revisions already exist in the server so that it can skip the upload
             - prepares the artifacts to upload (compresses the conan_package.tgz)
             - executes the actual upload
@@ -142,7 +143,13 @@ class UploadAPI:
         ConanOutput().success(f"Upload completed in {int(elapsed)}s\n")
         add_urls(package_list, remote)
 
-    def upload_backup_sources(self, files):
+    def upload_backup_sources(self, files: List) -> None:
+        """
+        Upload to the server the backup sources files, that have been typically gathered by
+        CacheAPI.get_backup_sources()
+
+        :param files: The list of files that must be uploaded
+        """
         config = self._api_helpers.global_conf
         url = config.get("core.sources:upload_url", check_type=str)
         if url is None:
@@ -181,4 +188,3 @@ class UploadAPI:
                                          f"/permissions, please provide 'source_credentials.json': {e}")
 
         output.success("Upload backup sources complete\n")
-        return

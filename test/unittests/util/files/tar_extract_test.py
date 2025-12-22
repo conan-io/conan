@@ -41,10 +41,10 @@ class TestTarExtract:
         tmp_folder, tgz_file = setup_files
 
         # Once unpackaged, this is the content of the destination directory
-        def check_files(destination_dir):
-            d = sorted(os.listdir(destination_dir))
+        def check_files(dest_dir):
+            d = sorted(os.listdir(dest_dir))
             assert d == ["file1", "folder"]
-            d_folder = os.listdir(os.path.join(destination_dir, "folder"))
+            d_folder = os.listdir(os.path.join(dest_dir, "folder"))
             assert d_folder == ["file2"]
 
         working_dir = temp_folder()

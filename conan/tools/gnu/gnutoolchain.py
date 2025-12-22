@@ -98,8 +98,13 @@ class GnuToolchain:
                 self.triplets_info["build"] = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
 
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
-        sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
-        self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
+        if sysroot:
+            root = sysroot.replace("\\", "/")
+            compiler = self._conanfile.settings.get_safe("compiler")
+            self.sysroot_flag = f"--sysroot {root}" if compiler != "qcc" else f"-Wc,-isysroot,{root}"
+        else:
+            self.sysroot_flag = None
+
         self.configure_args = {}
         self.autoreconf_args = {"--force": None, "--install": None}
         self.make_args = {}

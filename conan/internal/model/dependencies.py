@@ -6,7 +6,7 @@ from conan.internal.graph.graph import RECIPE_PLATFORM
 from conan.internal.model.conanfile_interface import ConanFileInterface
 
 
-class UserRequirementsDict(object):
+class UserRequirementsDict:
     """ user facing dict to allow access of dependencies by name
     """
     def __init__(self, data, require_filter=None):

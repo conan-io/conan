@@ -150,6 +150,7 @@ def test_components_overrides():
     c.run("create app")
     assert "app/0.1: Created package" in c.out
 
+
 def test_duplication_component_properties():
     """ Regression for PR 17503 - component lists would be incorrectly aggregated """
     tc = TestClient(light=True)

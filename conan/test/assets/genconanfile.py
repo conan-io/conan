@@ -1,7 +1,7 @@
 from conan.api.model import RecipeReference
 
 
-class GenConanfile(object):
+class GenConanfile:
     """
     USAGE:
 

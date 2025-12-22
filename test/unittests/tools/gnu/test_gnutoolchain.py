@@ -166,6 +166,21 @@ def test_linker_scripts():
     assert "-T'path_to_second_linker_script'" in env["LDFLAGS"]
 
 
+def test_sysrootflag_qnx():
+    """Even when no cross building it is adjusted because it could target a Mac version"""
+    conanfile = ConanFileMock()
+    conanfile.conf.define("tools.build:sysroot", "/path/to/sysroot")
+    conanfile.settings = MockSettings(
+        {"compiler": "qcc",
+         "build_type": "Debug",
+         "os": "Linux",
+         "arch": "x86_64"})
+    conanfile.settings_build = conanfile.settings
+    be = GnuToolchain(conanfile)
+    expected = "-Wc,-isysroot,/path/to/sysroot"
+    assert be.sysroot_flag == expected
+
+
 def test_update_or_prune_any_args(cross_building_conanfile):
     # Issue: https://github.com/conan-io/conan/issues/12642
     at = GnuToolchain(cross_building_conanfile)

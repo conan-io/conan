@@ -39,7 +39,7 @@ class _RequesterMock:
 
 class _ConfigMock:
 
-    def get(self, conf_name, default=None, check_type=None):
+    def get(self, conf_name, default=None, check_type=None):  # noqa
         return 0
 
 
@@ -89,14 +89,14 @@ class TestRetryDownload:
             assert counter["Waiting 0 seconds to retry..."] == 0
 
     def test_error_requests(self):
-        class _RequesterMock:
+        class _RequesterExcp:
 
             def put(self, *args, **kwargs):
                 raise Exception("any exception")
 
         output = RedirectedTestOutput()
         with redirect_output(output):
-            uploader = FileUploader(requester=_RequesterMock(), verify=False, config=_ConfigMock())
+            uploader = FileUploader(requester=_RequesterExcp(), verify=False, config=_ConfigMock())
             with pytest.raises(Exception, match="any exception"):
                 uploader.upload(url="fake", abs_path=self.filename, retry=2)
             output_lines = output.getvalue().splitlines()

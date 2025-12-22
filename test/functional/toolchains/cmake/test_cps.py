@@ -1,0 +1,123 @@
+import os
+import shutil
+import textwrap
+
+import pytest
+
+from conan.test.utils.tools import TestClient
+
+
+@pytest.mark.tool("cmake", "4.2")
+def test_cps():
+    c = TestClient()
+    c.run("new cmake_lib")
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+        from conan.cps import CPS
+        import glob
+
+        class mypkgRecipe(ConanFile):
+            name = "mypkg"
+            version = "0.1"
+            package_type = "library"
+
+            settings = "os", "compiler", "build_type", "arch"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": False, "fPIC": True}
+
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
+            implements = ["auto_shared_fpic"]
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+
+            def package_info(self):
+                file_loc = glob.glob("**/mypkg.cps", recursive=True)
+                self.cpp_info = CPS.load(file_loc[0]).to_conan()
+        """)
+
+    cmake = textwrap.dedent("""\
+        cmake_minimum_required(VERSION 4.2)
+        project(mypkg CXX)
+
+        set(CMAKE_EXPERIMENTAL_EXPORT_PACKAGE_INFO "b80be207-778e-46ba-8080-b23bba22639e")
+
+        add_library(mypkg src/mypkg.cpp)
+        target_include_directories(mypkg PUBLIC
+                    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+                    $<INSTALL_INTERFACE:include>)
+
+        set_target_properties(mypkg PROPERTIES PUBLIC_HEADER "include/mypkg.h")
+        install(TARGETS mypkg EXPORT mypkg)
+
+        install(PACKAGE_INFO mypkg EXPORT mypkg)
+        """)
+
+    # First, try with the standard mypkg-config.cmake consumption
+    c.save({"conanfile.py": conanfile,
+            "CMakeLists.txt": cmake})
+    c.run("create")
+    assert "mypkg/0.1: Hello World Release!" in c.out
+
+    # Lets consume directly with CPS
+    test_cmake = textwrap.dedent("""\
+        cmake_minimum_required(VERSION 4.2)
+        project(PackageTest CXX)
+
+        set(CMAKE_EXPERIMENTAL_FIND_CPS_PACKAGES e82e467b-f997-4464-8ace-b00808fff261)
+
+        find_package(mypkg CONFIG REQUIRED)
+
+        add_executable(example src/example.cpp)
+        target_link_libraries(example mypkg::mypkg)
+        """)
+    test_conanfile = textwrap.dedent("""\
+        import os
+
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout, CMakeToolchain, CMakeConfigDeps
+        from conan.tools.build import can_run
+
+
+        class TestConan(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def generate(self):
+                deps = CMakeConfigDeps(self)
+                deps.set_property("mypkg", "cmake_find_mode", "none")
+                deps.generate()
+                tc = CMakeToolchain(self)
+                tc.generate()
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def layout(self):
+                cmake_layout(self)
+
+            def test(self):
+                if can_run(self):
+                    cmd = os.path.join(self.cpp.build.bindir, "example")
+                    self.run(cmd, env="conanrun")
+            """)
+    shutil.rmtree(os.path.join(c.current_folder, "test_package", "build"))
+    c.save({"test_package/conanfile.py": test_conanfile,
+            "test_package/CMakeLists.txt": test_cmake})
+    c.run("create --build=missing -c tools.cmake.cmakedeps:new=will_break_next")
+    assert "mypkg/0.1: Hello World Release!" in c.out

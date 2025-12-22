@@ -359,7 +359,7 @@ class RestV2Methods:
                 package_search_url = self.router.search_packages(ref, list_only=True)
                 if not self._get_json(package_search_url):
                     return
-            except Exception as e:
+            except Exception:
                 pass
         if response.status_code != 200:  # Error message is text
             # To be able to access ret.text (ret.content are bytes)

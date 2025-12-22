@@ -35,7 +35,7 @@ class HookManager:
                 conanfile.display_name = "%s: [HOOK - %s] %s()" % (conanfile.display_name, name,
                                                                    method_name)
                 method(conanfile)
-            except ConanInvalidConfiguration as e:
+            except ConanInvalidConfiguration:
                 raise
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))

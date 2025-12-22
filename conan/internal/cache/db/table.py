@@ -4,6 +4,8 @@ from collections import defaultdict, namedtuple
 from contextlib import contextmanager
 from typing import Tuple, List
 
+from conan.errors import ConanException
+
 
 class BaseDbTable:
     table_name: str = None
@@ -23,7 +25,11 @@ class BaseDbTable:
 
     @contextmanager
     def db_connection(self):
-        assert self._lock.acquire(timeout=20), "Conan failed to acquire database lock"
+        if not self._lock.acquire(timeout=20):
+            raise ConanException("Conan failed to acquire database lock in 20s. Maybe the system is"
+                                 "under very heavy load. Please report it to Github tickets")
+        # isolation_level=None, puts it in regular SQLITE autocommit mode, every
+        # connection.execute() will autocommit
         connection = sqlite3.connect(self.filename, isolation_level=None, timeout=20)
         try:
             yield connection

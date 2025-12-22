@@ -869,9 +869,20 @@ def test_get_safe_none_option_checks():
             .with_package("self.output.info(f'get_safe is None: {self.options.get_safe(\"myoption\") is None}')",
                           "self.output.info(f'get_safe is not None: {self.options.get_safe(\"myoption\") is not None}')",
                           "self.output.info(f'get_safe == None: {self.options.get_safe(\"myoption\") == None}')",
-                          "self.output.info(f'get_safe != None: {self.options.get_safe(\"myoption\") != None}')" )})
+                          "self.output.info(f'get_safe != None: {self.options.get_safe(\"myoption\") != None}')")})
     tc.run("create .")
     assert "get_safe is None: True" in tc.out
     assert "get_safe is not None: False" in tc.out
     assert "get_safe == None: True" in tc.out
     assert "get_safe != None: False" in tc.out
+
+
+def test_option_apply_version_range():
+    c = TestClient(light=True)
+    c.save({"conanfile.py": GenConanfile("dep", "0.1").with_shared_option(False)})
+    c.run("create -o shared=True")
+    c.run("install --requires=dep/0.1 -o shared=True")  # This worked without problem
+    c.run("install --requires=dep/[*] -o shared=True")
+    assert "WARN: risk" not in c.out
+    # This failed because of dep/[*] not matching pattern, now it works
+    assert "Install finished successfully" in c.out
