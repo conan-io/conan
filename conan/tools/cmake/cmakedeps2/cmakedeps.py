@@ -1,3 +1,4 @@
+import glob
 import os
 import re
 import textwrap
@@ -258,6 +259,14 @@ class _PathGenerator:
             pkg_name = self._cmakedeps.get_cmake_filename(dep)
             # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
             if cmake_find_mode == FIND_MODE_NONE:
+                cps = glob.glob(f"**/{pkg_name}.cps", root_dir=dep.package_folder, recursive=True)
+                if cps:
+                    loc = os.path.dirname(os.path.join(dep.package_folder, cps[0]))
+                    loc = loc.replace("\\", "/")
+                    pkg_paths[pkg_name] = relativize_path(loc, self._conanfile,
+                                                          "${CMAKE_CURRENT_LIST_DIR}")
+                    continue
+
                 try:
                     # This is irrespective of the components, it should be in the root cpp_info
                     # To define the location of the pkg-config.cmake file
@@ -266,15 +275,11 @@ class _PathGenerator:
                     build_dir = dep.package_folder
                 pkg_folder = build_dir.replace("\\", "/") if build_dir else None
                 if pkg_folder:
-                    # prioritize cps if existing as CMake does
-                    for filename in (f"{pkg_name}.cps", f"cps/{pkg_name}.cps",
-                                     f"{pkg_name}-config.cmake", f"{pkg_name}Config.cmake"):
+                    f = self._cmakedeps.get_cmake_filename(dep)
+                    for filename in (f"{f}-config.cmake", f"{f}Config.cmake"):
                         if os.path.isfile(os.path.join(pkg_folder, filename)):
-                            loc = os.path.dirname(os.path.join(pkg_folder, filename))
-                            loc = loc.replace("\\", "/")
-                            pkg_paths[pkg_name] = relativize_path(loc, self._conanfile,
+                            pkg_paths[pkg_name] = relativize_path(pkg_folder, self._conanfile,
                                                                   "${CMAKE_CURRENT_LIST_DIR}")
-                            break
 
                     existing_paths = pkg_paths_multi.setdefault(pkg_name, [])
                     if pkg_folder not in existing_paths:

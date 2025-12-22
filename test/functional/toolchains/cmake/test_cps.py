@@ -14,6 +14,8 @@ def test_cps():
     conanfile = textwrap.dedent("""\
         from conan import ConanFile
         from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+        from conan.cps import CPS
+        import glob
 
         class mypkgRecipe(ConanFile):
             name = "mypkg"
@@ -41,8 +43,8 @@ def test_cps():
                 cmake.install()
 
             def package_info(self):
-                from conan.cps import CPS
-                self.cpp_info = CPS.load("cps/mypkg.cps").to_conan()
+                file_loc = glob.glob("**/mypkg.cps", recursive=True)
+                self.cpp_info = CPS.load(file_loc[0]).to_conan()
         """)
 
     cmake = textwrap.dedent("""\
