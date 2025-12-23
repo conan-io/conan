@@ -10,7 +10,7 @@ from conan.errors import ConanException
 from conan.internal.util.files import sha1sum
 
 
-class FileUploader(object):
+class FileUploader:
 
     def __init__(self, requester, verify, config, source_credentials=None):
         self._requester = requester

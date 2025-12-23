@@ -59,7 +59,7 @@ def _add_includes_to_file_or_create(filename, template, files_to_include):
     return content
 
 
-class XcodeDeps(object):
+class XcodeDeps:
     general_name = "conandeps.xcconfig"
 
     _conf_xconfig = textwrap.dedent("""\

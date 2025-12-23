@@ -193,7 +193,7 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                     ws_pkg = all_editables.get(ref)
                     is_editable = package["binary"] in ("Editable", "EditableBuild")
                     if ws_pkg is None:
-                        if is_editable or package["binary"] == "Build": # Build external to Workspace
+                        if is_editable or package["binary"] == "Build":  # Build extern to Workspace
                             cmd = f'install {package["build_args"]} {profile_args}'
                             ConanOutput().box(f"Workspace building external {ref}")
                             ConanOutput().info(f"Command: {cmd}\n")

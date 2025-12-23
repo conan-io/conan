@@ -1,5 +1,4 @@
 import os
-import platform
 import shutil
 import textwrap
 
@@ -279,27 +278,6 @@ def test_standard_names(setup_client_with_greetings):
         """)
 
     create_chat(client, "standard", package_info, cmake_find, test_cmake_find)
-
-    # Test consumer multi-config
-    if platform.system() == "Windows":
-        with client.chdir("test_package"):
-            # FIXME This doesn't work because test_package requires has been disabled
-            return
-            client.run("install . -s build_type=Release")
-            client.run("install . -s build_type=Debug")
-            client.run_command('cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake')
-            client.run_command("cmake --build . --config Debug")
-            client.run_command(r".\Debug\example.exe")
-            assert "sayhellobye: Debug!" in client.out
-            assert "sayhello: Debug!" in client.out
-            assert "hello: Debug!" in client.out
-            assert "bye: Debug!" in client.out
-            client.run_command("cmake --build . --config Release")
-            client.run_command(r".\Release\example.exe")
-            assert "sayhellobye: Release!" in client.out
-            assert "sayhello: Release!" in client.out
-            assert "hello: Release!" in client.out
-            assert "bye: Release!" in client.out
 
 
 @pytest.mark.tool("cmake")
@@ -582,32 +560,6 @@ class TestComponentsCMakeGenerators:
                 settings = "build_type"
             """)
 
-        def test_component_not_found(self):
-            conanfile = textwrap.dedent("""
-                from conan import ConanFile
-                class GreetingsConan(ConanFile):
-                    def package_info(self):
-                        self.cpp_info.components["hello"].libs = ["hello"]
-                        self.cpp_info.components["hello"].libdirs = ["lib"]
-                        self.cpp_info.components["hello"].includedirs = ["include"]
-            """)
-            client = TestClient()
-            client.save({"conanfile.py": conanfile})
-            client.run("create . --name=greetings --version=0.0.1")
-
-            conanfile = textwrap.dedent("""
-                from conan import ConanFile
-                class WorldConan(ConanFile):
-                    requires = "greetings/0.0.1"
-                    def package_info(self):
-                        self.cpp_info.components["helloworld"].requires = ["greetings::non-existent"]
-            """)
-            client.save({"conanfile.py": conanfile})
-            client.run("create . --name=world --version=0.0.1")
-            client.run("install --requires=world/0.0.1@ -g CMakeDeps", assert_error=True)
-            assert ("Component 'greetings::non-existent' not found in 'greetings' "
-                    "package requirement" in client.out)
-
         client = TestClient()
         client.save({"zlib.py": zlib, "mypkg.py": mypkg, "final.py": final, "consumer.py": consumer})
         client.run("create zlib.py")
@@ -820,7 +772,7 @@ def test_targets_declared_in_build_modules(check_components_exist):
     """)
     if check_components_exist is False:
         conanfile = conanfile.format("deps.check_components_exist=False")
-    elif check_components_exist is True:
+    elif check_components_exist:
         conanfile = conanfile.format("deps.check_components_exist=True")
     else:
         conanfile = conanfile.format("")

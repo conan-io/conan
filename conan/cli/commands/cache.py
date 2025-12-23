@@ -2,7 +2,7 @@ import json
 
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write, ConanOutput
+from conan.api.output import cli_out_write
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import print_list_text, print_list_json
@@ -125,6 +125,7 @@ def print_list_check_integrity_json(data):
     myjson = json.dumps(results, indent=4)
     cli_out_write(myjson)
 
+
 @conan_subcommand(formatters={"text": lambda _: (),
                               "json": print_list_check_integrity_json})
 def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
@@ -208,6 +209,6 @@ def cache_backup_upload(conan_api: ConanAPI, parser, subparser, *args):
     """
     Upload all the source backups present in the cache
     """
-    args = parser.parse_args(*args)
+    parser.parse_args(*args)
     files = conan_api.cache.get_backup_sources()
     conan_api.upload.upload_backup_sources(files)

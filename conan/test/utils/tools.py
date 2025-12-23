@@ -81,7 +81,7 @@ default_profiles = {
 }
 
 
-class TestingResponse(object):
+class TestingResponse:
     """Wraps a response from TestApp external tool
     to guarantee the presence of response.ok, response.content
     and response.status_code, as it was a requests library object.

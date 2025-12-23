@@ -1529,7 +1529,6 @@ class TestCppInfoChecks:
         assert "dep/0.1 cpp_info incorrect .type shared-library for .exe myexe" in c.out
 
 
-
 def test_multiple_find_package_subfolder():
     c = TestClient()
     conanfile = textwrap.dedent("""
@@ -1575,3 +1574,32 @@ def test_multiple_find_package_subfolder():
     assert "find_package(matrix)" in c.out
     assert "target_link_libraries(... matrix::matrix)" in c.out
     assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out
+
+
+@pytest.mark.tool("cmake", "3.27")
+def test_find_package_casing():
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(test NONE)
+
+        # As long as the package generates hello-config.cmake lowercase, it works
+        find_package(HellO REQUIRED)  # Casing!!!!!
+    """)
+    consumer = textwrap.dedent("""
+       from conan import ConanFile
+       from conan.tools.cmake import CMake
+       class Pkg(ConanFile):
+           requires = "hello/1.0"
+           generators = "CMakeToolchain", "CMakeDeps"
+           settings = "os", "compiler", "build_type", "arch"
+           def build(self):
+               cmake = CMake(self)
+               cmake.configure()
+       """)
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("hello", "1.0")})
+    client.run(f"create .")
+
+    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+    client.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+    assert "Conan: Configuring Targets for hello/1.0" in client.out

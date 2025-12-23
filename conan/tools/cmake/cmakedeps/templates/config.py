@@ -45,7 +45,6 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                                                                key, value)
         return parsed_extra_variables
 
-
     @property
     def context(self):
         targets_include = "" if not self.generating_module else "module-"

@@ -18,7 +18,7 @@ def _configuration_dict_to_commandlist(name, config_dict):
     return command_list
 
 
-class Qbs(object):
+class Qbs:
     """
     Qbs helper to use together with the QbsDeps feature.
     This class provides helper methods that wraps calls to the Qbs tool.

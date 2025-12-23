@@ -107,8 +107,8 @@ class TestRemoteServer:
         """ check remote name are not duplicated
         """
         self.client.run("remote add remote1 http://otherurl", assert_error=True)
-        assert "ERROR: Remote 'remote1' already exists in remotes (use --force to continue)" \
-                      in self.client.out
+        assert ("ERROR: Remote 'remote1' already exists in remotes (use --force to continue)"
+                in self.client.out)
 
         self.client.run("remote list")
         assert "otherurl" not in self.client.out
@@ -124,19 +124,19 @@ class TestRemoteServer:
 
     def test_invalid_url(self):
         self.client.run("remote add foobar foobar.com")
-        assert "WARN: The URL 'foobar.com' is invalid. It must contain scheme and hostname." \
-                      in self.client.out
+        assert ("WARN: The URL 'foobar.com' is invalid. It must contain scheme and hostname."
+                in self.client.out)
         self.client.run("remote list")
         assert "foobar.com" in self.client.out
 
         self.client.run("remote update foobar --url pepe.org")
-        assert "WARN: The URL 'pepe.org' is invalid. It must contain scheme and hostname." \
-                      in self.client.out
+        assert ("WARN: The URL 'pepe.org' is invalid. It must contain scheme and hostname."
+                in self.client.out)
         self.client.run("remote list")
         assert "pepe.org" in self.client.out
 
     def test_errors(self):
-        self.client.run("remote update origin --url http://foo.com", assert_error=True)
+        self.client.run("remote update origin --url https://foo.com", assert_error=True)
         assert "ERROR: Remote 'origin' doesn't exist" in self.client.out
 
         self.client.run("remote remove origin", assert_error=True)
@@ -205,15 +205,15 @@ class TestRemoteModification:
         data = json.loads(registry)
         assert data["remotes"][0]["name"] == "my-remote"
         assert data["remotes"][0]["url"] == "http://someurl"
-        assert data["remotes"][0]["verify_ssl"] == True
+        assert data["remotes"][0]["verify_ssl"] is True
 
         assert data["remotes"][1]["name"] == "my-remote2"
         assert data["remotes"][1]["url"] == "http://someurl2"
-        assert data["remotes"][1]["verify_ssl"] == False
+        assert data["remotes"][1]["verify_ssl"] is False
 
         assert data["remotes"][2]["name"] == "my-remote3"
         assert data["remotes"][2]["url"] == "http://someurl3"
-        assert data["remotes"][2]["verify_ssl"] == True
+        assert data["remotes"][2]["verify_ssl"] is True
 
     def test_remote_disable(self):
         client = TestClient(light=True)
@@ -231,10 +231,10 @@ class TestRemoteModification:
         data = json.loads(registry)
         assert data["remotes"][0]["name"] == "my-remote0"
         assert data["remotes"][0]["url"] == "http://someurl0"
-        assert data["remotes"][0]["disabled"] == True
+        assert data["remotes"][0]["disabled"] is True
         assert data["remotes"][3]["name"] == "my-remote3"
         assert data["remotes"][3]["url"] == "http://someurl3"
-        assert data["remotes"][3]["disabled"] == True
+        assert data["remotes"][3]["disabled"] is True
 
         # check that they are still listed, as disabled
         client.run("remote list")
@@ -246,7 +246,7 @@ class TestRemoteModification:
         registry = load(client.paths.remotes_path)
         data = json.loads(registry)
         for remote in data["remotes"]:
-            assert remote["disabled"] == True
+            assert remote["disabled"] is True
 
         data = json.loads(client.stdout)
         for remote in data:
@@ -350,25 +350,31 @@ def test_using_frozen_center():
     """
     c = TestClient(light=True)
     c.run("remote add whatever https://center.conan.io")
-    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." in c.out
+    assert ("The remote 'https://center.conan.io' is now frozen and has been "
+            "replaced by 'https://center2.conan.io'.") in c.out
     assert 'conan remote update whatever --url="https://center2.conan.io"' in c.out
 
     c.run("remote list")
-    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." in c.out
+    assert ("The remote 'https://center.conan.io' is now frozen and has been "
+            "replaced by 'https://center2.conan.io'.") in c.out
 
     c.run("remote remove whatever")
 
     c.run("remote add conancenter https://center2.conan.io")
-    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." not in c.out
+    assert ("The remote 'https://center.conan.io' is now frozen and has been "
+            "replaced by 'https://center2.conan.io'.") not in c.out
 
     c.run("remote list")
-    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." not in c.out
+    assert ("The remote 'https://center.conan.io' is now frozen and has been "
+            "replaced by 'https://center2.conan.io'.") not in c.out
 
     c.run("remote update conancenter --url=https://center.conan.io")
-    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." in c.out
+    assert ("The remote 'https://center.conan.io' is now frozen and has been "
+            "replaced by 'https://center2.conan.io'.") in c.out
 
     c.run("remote disable conancenter")
-    assert "The remote 'https://center.conan.io' is now frozen and has been replaced by 'https://center2.conan.io'." not in c.out
+    assert ("The remote 'https://center.conan.io' is now frozen and has been "
+            "replaced by 'https://center2.conan.io'.") not in c.out
 
 
 def test_wrong_remotes_json_file():
@@ -450,4 +456,5 @@ def test_remote_allowed_negation():
     assert "lib/1.0: Downloaded recipe revision" in tc.out
 
     tc.run("install --requires=config/1.0 -r=default", assert_error=True)
-    assert "ERROR: Package 'config/1.0' not resolved: Unable to find 'config/1.0' in remotes" in tc.out
+    assert ("ERROR: Package 'config/1.0' not resolved: Unable to find "
+            "'config/1.0' in remotes") in tc.out

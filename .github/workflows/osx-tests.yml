@@ -51,7 +51,7 @@ jobs:
             ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
             ~/Applications/CMake/3.27.9
-            ~/Applications/CMake/4.0.0-rc3
+            ~/Applications/CMake/4.2.1
             ~/Applications/bazel/6.5.0
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
@@ -80,7 +80,7 @@ jobs:
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
-          CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.5" "3.27.9" "4.0.0-rc3")
+          CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.5" "3.27.9" "4.2.1")
           for version in "${CMAKE_PRECOMP_VERSIONS[@]}"; do
             echo "Downloading and installing precompiled universal CMake version ${version}..."
             wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}-macos-universal.tar.gz
@@ -134,7 +134,7 @@ jobs:
             ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
             ~/Applications/CMake/3.27.9
-            ~/Applications/CMake/4.0.0-rc3
+            ~/Applications/CMake/4.2.1
             ~/Applications/bazel/6.5.0
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
@@ -146,6 +146,18 @@ jobs:
           xcodebuild -version
           xcrun --sdk macosx --show-sdk-version
           clang --version
+
+      # Install system dependencies BEFORE setting up the matrix Python.
+      # This prevents Emscripten (which requires Python 3.10+) from crashing
+      # when trying to use Python 3.8 from the matrix.
+      - name: Install homebrew dependencies
+        run: |
+          brew update
+          brew install xcodegen make libtool zlib autoconf automake ninja emscripten
+          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
+          emcc --version
+          cmake --version
+          bazel --version
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
@@ -159,15 +171,6 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_dev.txt
           pip install meson
-
-      - name: Install homebrew dependencies
-        run: |
-          brew update
-          brew install xcodegen make libtool zlib autoconf automake ninja emscripten
-          export PATH=${HOME}/Applications/CMake/3.15.7/bin:$PATH:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin
-          emcc --version
-          cmake --version
-          bazel --version
 
       - name: Run tests
         uses: ./.github/actions/test-coverage
