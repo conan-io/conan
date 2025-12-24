@@ -259,7 +259,8 @@ class _PathGenerator:
             pkg_name = self._cmakedeps.get_cmake_filename(dep)
             # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
             if cmake_find_mode == FIND_MODE_NONE:
-                cps = glob.glob(f"**/{pkg_name}.cps", root_dir=dep.package_folder, recursive=True)
+                cps = glob.glob(os.path.join(dep.package_folder, f"**/{pkg_name}.cps"),
+                                recursive=True)
                 if cps:
                     loc = os.path.dirname(os.path.join(dep.package_folder, cps[0]))
                     loc = loc.replace("\\", "/")
