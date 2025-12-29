@@ -6,7 +6,7 @@ from conan.cps import CPS
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save_files
+from conan.internal.util.files import save_files
 
 
 def test_cps():
@@ -17,7 +17,7 @@ def test_cps():
 
     settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
     c.run(f"install --requires=pkg/0.1 {settings} -g CPSDeps")
-    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/pkg.cps"))
+    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/cps/pkg.cps"))
     assert pkg["name"] == "pkg"
     assert pkg["version"] == "0.1"
     assert pkg["license"] == "MIT"
@@ -39,7 +39,7 @@ def test_cps_static_lib():
 
     settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
     c.run(f"install --requires=pkg/0.1 {settings} -g CPSDeps")
-    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/pkg.cps"))
+    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/cps/pkg.cps"))
     assert pkg["name"] == "pkg"
     assert pkg["version"] == "0.1"
     assert pkg["configurations"] == ["release"]
@@ -56,7 +56,7 @@ def test_cps_header():
 
     settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
     c.run(f"install --requires=pkg/0.1 {settings} -g CPSDeps")
-    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/pkg.cps"))
+    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/cps/pkg.cps"))
     assert pkg["name"] == "pkg"
     assert pkg["version"] == "0.1"
     assert "configurations" not in "pkg"
@@ -122,38 +122,106 @@ def test_cps_in_pkg():
     assert 'set(zlib_LIBS_RELEASE zlib)' in cmake
 
 
-def test_cps_merge():
-    folder = temp_folder()
-    cps_base = textwrap.dedent("""
+def test_cps_shared_in_pkg():
+    c = TestClient()
+    cps = textwrap.dedent("""\
         {
-          "components" : {
-            "mypkg" : {
+          "components" :
+          {
+            "mypkg" :
+            {
               "includes" : [ "@prefix@/include" ],
-              "type" : "archive"
+              "type" : "dylib"
             }
           },
-          "cps_version" : "0.12.0",
-          "name" : "mypkg",
-          "version" : "1.0"
+          "cps_path" : "@prefix@/cps",
+          "cps_version" : "0.13.0",
+          "name" : "mypkg"
         }
         """)
-    cps_conf = textwrap.dedent("""
+    cps_release = textwrap.dedent("""\
         {
-          "components" : {
-            "mypkg" : {
-              "link_languages" : [ "cpp" ],
-              "location" : "@prefix@/lib/mypkg.lib"
+          "components" :
+          {
+            "mypkg" :
+            {
+              "link_location" : "@prefix@/lib/mypkg.lib",
+              "location" : "@prefix@/bin/mypkg.dll"
             }
           },
           "configuration" : "Release",
           "name" : "mypkg"
         }
         """)
+    cps = "".join(cps.splitlines())
+    cps_release = "".join(cps_release.splitlines())
+    conanfile = textwrap.dedent(f"""
+        import os, json
+        from conan.tools.files import save
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "1.0"
+
+            def package(self):
+                cps = '{cps}'
+                cps_path = os.path.join(self.package_folder, "mypkg.cps")
+                save(self, cps_path, cps)
+                cps = '{cps_release}'
+                cps_path = os.path.join(self.package_folder, "mypkg@release.cps")
+                save(self, cps_path, cps)
+
+            def package_info(self):
+                from conan.cps import CPS
+                self.cpp_info = CPS.load("mypkg.cps").to_conan()
+        """)
+    c.save({"pkg/conanfile.py": conanfile})
+    c.run("create pkg")
+
+    settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
+
+    c.run(f"install --requires=mypkg/1.0 {settings} -g CMakeDeps")
+    cmake = c.load("mypkg-release-x86_64-data.cmake")
+    assert 'set(mypkg_INCLUDE_DIRS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/include")' in cmake
+    assert 'set(mypkg_LIB_DIRS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/lib")'
+    assert 'set(mypkg_LIBS_RELEASE mypkg)' in cmake
+
+
+def test_cps_merge():
+    folder = temp_folder()
+
+    cps_base = textwrap.dedent("""{
+        "components": {
+            "mypkg":{
+                "includes": ["@prefix@/include"],
+                "type": "archive"
+            }
+        },
+        "cps_path": "@prefix@/cps",
+        "cps_version": "0.13.0",
+        "name": "mypkg"
+        }
+        """)
+    cps_conf = textwrap.dedent("""{
+        "components" : {
+            "mypkg" : {
+                "link_languages" : [ "cpp" ],
+                "location" : "@prefix@/lib/mypkg.lib"
+            }
+        },
+        "configuration" : "Release",
+        "name" : "mypkg"
+        }
+        """)
     save_files(folder, {"mypkg.cps": cps_base,
                         "mypkg@release.cps": cps_conf})
     cps = CPS.load(os.path.join(folder, "mypkg.cps"))
     json_cps = cps.serialize()
-    print(json.dumps(json_cps, indent=2))
+    mypkg = json_cps["components"]["mypkg"]
+    assert mypkg["includes"] == ["@prefix@/include"]
+    assert mypkg["location"] == "@prefix@/lib/mypkg.lib"
+    assert mypkg["type"] == "archive"
+    assert mypkg["link_languages"] == ["cpp"]
 
 
 def test_extended_cpp_info():
@@ -173,7 +241,7 @@ def test_extended_cpp_info():
 
     settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
     c.run(f"install --requires=pkg/0.1 {settings} -g CPSDeps")
-    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/pkg.cps"))
+    pkg = json.loads(c.load("build/cps/msvc-191-x86_64-release/cps/pkg.cps"))
     assert pkg["name"] == "pkg"
     assert pkg["version"] == "0.1"
     assert pkg["default_components"] == ["pkg"]

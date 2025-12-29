@@ -1,10 +1,15 @@
+import os
+from unittest.mock import patch, MagicMock
+
 import pytest
 
-from conan.tools.build import cmd_args_to_string
-from conan.tools.gnu import GnuToolchain
 from conan.errors import ConanException
 from conan.internal.model.conf import Conf
 from conan.test.utils.mocks import ConanFileMock, MockSettings
+from conan.test.utils.test_files import temp_folder
+from conan.tools.build import cmd_args_to_string
+from conan.tools.files import save
+from conan.tools.gnu import GnuToolchain
 
 
 @pytest.fixture()
@@ -124,9 +129,8 @@ def test_get_gnu_triplet_for_cross_building_raise_error():
     conanfile.settings_build = MockSettings({"os": "Solaris", "arch": "x86"})
     with pytest.raises(ConanException) as conan_error:
         GnuToolchain(conanfile)
-        msg = "'compiler' parameter for 'get_gnu_triplet()' is not specified and " \
-              "needed for os=Windows"
-        assert msg == str(conan_error.value)
+    msg = "'compiler' parameter for 'get_gnu_triplet()' is not specified and needed for os=Windows"
+    assert msg == str(conan_error.value)
 
 
 def test_compilers_mapping():
@@ -160,6 +164,21 @@ def test_linker_scripts():
     env = at._environment.vars(conanfile)
     assert "-T'path_to_first_linker_script'" in env["LDFLAGS"]
     assert "-T'path_to_second_linker_script'" in env["LDFLAGS"]
+
+
+def test_sysrootflag_qnx():
+    """Even when no cross building it is adjusted because it could target a Mac version"""
+    conanfile = ConanFileMock()
+    conanfile.conf.define("tools.build:sysroot", "/path/to/sysroot")
+    conanfile.settings = MockSettings(
+        {"compiler": "qcc",
+         "build_type": "Debug",
+         "os": "Linux",
+         "arch": "x86_64"})
+    conanfile.settings_build = conanfile.settings
+    be = GnuToolchain(conanfile)
+    expected = "-Wc,-isysroot,/path/to/sysroot"
+    assert be.sysroot_flag == expected
 
 
 def test_update_or_prune_any_args(cross_building_conanfile):
@@ -196,3 +215,53 @@ def test_update_or_prune_any_args(cross_building_conanfile):
     assert "--new-complex-flag=new-value" in new_make_args
     assert "--new-empty-flag=" in new_make_args
     assert "--new-no-value-flag" in new_make_args and "--new-no-value-flag=" not in new_make_args
+
+
+@patch("conan.tools.gnu.gnutoolchain.VirtualBuildEnv")
+def test_crossbuild_to_android(build_env_mock):
+    """
+    Issue related: https://github.com/conan-io/conan/issues/17441
+    """
+    buildvars = MagicMock()
+    # VirtualBuildEnv defines these variables
+    buildvars.vars.return_value = {"CC": "my-clang", "CXX": "my-clang++"}
+    build_env_mock.return_value = buildvars
+
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Android", "arch": "armv8", "os.api_level": "26r"})
+    conanfile.settings_build = MockSettings({"os": "Macos", "arch": "armv8"})
+    gnutc = GnuToolchain(conanfile)
+    env_vars = gnutc.extra_env.vars(conanfile)
+    assert env_vars.get("CC") is None
+    assert env_vars.get("CXX") is None
+    assert gnutc.triplets_info["host"]["triplet"] == "aarch64-linux-android"
+    assert env_vars.get("LD") is None
+    assert env_vars.get("STRIP") is None
+
+    # Defining the ndk_path too
+    ndk_path = temp_folder()
+    ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt", "darwin-x86_64", "bin")
+    save(conanfile, os.path.join(ndk_bin, "ld"), "")
+    conanfile.conf.define("tools.android:ndk_path", ndk_path)
+    gnutc = GnuToolchain(conanfile)
+    env_vars = gnutc.extra_env.vars(conanfile)
+    assert env_vars.get("CC") is None
+    assert env_vars.get("CXX") is None
+    assert gnutc.triplets_info["host"]["triplet"] == "aarch64-linux-android"
+    assert env_vars["LD"] == os.path.join(ndk_bin, "ld")  # exists
+    assert env_vars["STRIP"] == os.path.join(ndk_bin, "llvm-strip")  # does not exist but appears
+
+
+def test_gnu_toolchain_conf_extra_configure_args():
+    """ Validate that tools.gnu:extra_configure_args are passed to the configure_args when
+        building with GnuToolchain.
+        The configure args should be passed as a list-like object.
+    """
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    conanfile.conf = Conf()
+    conanfile.conf.define("tools.gnu:extra_configure_args", ["--foo", "--bar"])
+
+    tc = GnuToolchain(conanfile)
+    assert tc.configure_args["--foo"] is None
+    assert tc.configure_args["--bar"] is None

@@ -1,4 +1,5 @@
 import json
+import datetime
 
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
@@ -7,8 +8,6 @@ from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.formatters.list import list_packages_html
 from conan.errors import ConanException
-from conans.util.dates import timestamp_to_str
-
 
 # Keep them so we don't break other commands that import them, but TODO: Remove later
 remote_color = Color.BRIGHT_BLUE
@@ -18,6 +17,12 @@ reference_color = Color.WHITE
 error_color = Color.BRIGHT_RED
 field_color = Color.BRIGHT_YELLOW
 value_color = Color.CYAN
+
+
+def _format_timestamp_human(timestamp):
+    # used by ref.repr_humantime() to print human readable time
+    return datetime.datetime.fromtimestamp(int(timestamp),
+                                           datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
 
 
 def print_serial(item, indent=None, color_index=None):
@@ -52,7 +57,7 @@ def print_serial(item, indent=None, color_index=None):
 
 def print_list_text(results):
     """ Do a little format modification to serialized
-    list bundle, so it looks prettier on text output
+    package list, so it looks prettier on text output
     """
     info = results["results"]
 
@@ -79,7 +84,7 @@ def print_list_text(results):
             for k, v in item.items():
                 if isinstance(v, dict) and v.get("timestamp"):
                     timestamp = v.pop("timestamp")
-                    k = f"{k} ({timestamp_to_str(timestamp)})"
+                    k = f"{k} ({_format_timestamp_human(timestamp)})"
                 result[k] = format_timestamps(v)
             return result
         return item
@@ -109,7 +114,7 @@ def prepare_pkglist_compact(pkglist):
             new_rrev = f"{ref}#{rrev}"
             timestamp = rrev_info.pop("timestamp", None)
             if timestamp:
-                new_rrev += f"%{timestamp} ({timestamp_to_str(timestamp)})"
+                new_rrev += f"%{timestamp} ({_format_timestamp_human(timestamp)})"
 
             packages = rrev_info.pop("packages", None)
             if packages:
@@ -225,6 +230,9 @@ def list(conan_api: ConanAPI, parser, *args):
     parser.add_argument("-g", "--graph", help="Graph json file")
     parser.add_argument("-gb", "--graph-binaries", help="Which binaries are listed", action="append")
     parser.add_argument("-gr", "--graph-recipes", help="Which recipes are listed", action="append")
+    parser.add_argument("-gc", "--graph-context", help="Filter the results by the given context",
+                        default=None, action=OnceArgument,
+                        choices=["build", "host", "build-only", "host-only"])
     parser.add_argument('--lru', default=None, action=OnceArgument,
                         help="List recipes and binaries that have not been recently used. Use a"
                              " time limit like --lru=5d (days) or --lru=4w (weeks),"
@@ -248,13 +256,21 @@ def list(conan_api: ConanAPI, parser, *args):
 
     if args.graph:
         graphfile = make_abs_path(args.graph)
-        pkglist = MultiPackagesList.load_graph(graphfile, args.graph_recipes, args.graph_binaries)
+        pkglist = MultiPackagesList.load_graph(graphfile, args.graph_recipes, args.graph_binaries,
+                                               context=args.graph_context)
     else:
         ref_pattern = ListPattern(args.pattern, rrev=None, prev=None)
         if not ref_pattern.package_id and (args.package_query or args.filter_profile or
                                            args.filter_settings or args.filter_options):
             raise ConanException("--package-query and --filter-xxx can only be done for binaries, "
                                  "a 'pkgname/version:*' pattern is necessary")
+        if args.lru:
+            if not ref_pattern.rrev and not ref_pattern.package_id:  # If package_id => #latest
+                raise ConanException("'--lru' must be used with recipe revision pattern, "
+                                     "use 'pkg/version#*' argument")
+            if ref_pattern.package_id and not ref_pattern.prev:
+                raise ConanException("'--lru' must be used with package revision pattern, "
+                                     "use 'pkg/version:*#*' argument")
         # If neither remote nor cache are defined, show results only from cache
         pkglist = MultiPackagesList()
         profile = conan_api.profiles.get_profile(args.filter_profile or [],

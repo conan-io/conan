@@ -1,3 +1,4 @@
+import json
 import platform
 import textwrap
 import os
@@ -10,7 +11,9 @@ from conan.test.utils.env import environment_update
 
 def test_profile_template():
     client = TestClient()
-    tpl = textwrap.dedent("""
+    tpl = textwrap.dedent("""\
+        # This is just to check that subprocess is injected in the render and can be used
+        {% set check_output = subprocess.check_output %}
         [settings]
         os = {{ {"Darwin": "Macos"}.get(platform.system(), platform.system()) }}
         build_type = {{ os.getenv("MY_BUILD_TYPE") }}
@@ -229,6 +232,24 @@ def test_profile_template_profile_name():
     assert "conanfile.py: PROFILE NAME: include_default" in client.out
 
 
+def test_profile_root_name():
+    c = TestClient()
+    root = textwrap.dedent("""
+        [conf]
+        user.profile:name = {{ profile_name }}
+        user.profile:root_name = {{ root_profile_name }}
+        """)
+    tpl = textwrap.dedent("""
+        include(myprofile)
+        """)
+
+    c.save({"myprofile": root,
+            "other": tpl})
+    c.run("profile show -pr=other")
+    assert "user.profile:name=myprofile" in c.out
+    assert "user.profile:root_name=other" in c.out
+
+
 class TestProfileDetectAPI:
     def test_profile_detect_os_arch(self):
         """ testing OS & ARCH just to test the UX and interface
@@ -266,9 +287,39 @@ class TestProfileDetectAPI:
 
 def test_profile_jinja_error():
     c = TestClient(light=True)
-    c.save({"profile1": "{% set kk = other() %}"})
+    profile = textwrap.dedent("""
+        {% set arr = [
+            {# comment that triggers the error #}
+            'smth'
+        ] %}""")
+    c.save({"profile1": profile,
+            "profile2": "include(profile1)",
+            "profile3": "include(profile2)",
+            "conanfile.txt": ""})
     c.run("profile show -pr=profile1", assert_error=True)
     assert "ERROR: Error while rendering the profile template file" in c.out
+    c.run("profile show -pr=profile2", assert_error=True)
+    assert "ERROR: Error reading 'profile2' profile: Error while " \
+           "rendering the profile template file " in c.out
+    assert "unexpected char '#' at 21" in c.out
+    c.run("profile show -pr=profile3", assert_error=True)
+    assert "ERROR: Error reading 'profile3' profile: Error reading 'profile2' profile: Error while " \
+           "rendering the profile template file " in c.out
+    assert "unexpected char '#' at 21" in c.out
+
+    # Also install messages
+    c.run("install . -pr=profile1", assert_error=True)
+    assert "ERROR: Error while rendering the profile template file" in c.out
+    assert "unexpected char '#' at 21" in c.out
+
+    c.run("install . -pr=profile2", assert_error=True)
+    assert "ERROR: Error reading 'profile2' profile: Error while " \
+           "rendering the profile template file " in c.out
+    assert "unexpected char '#' at 21" in c.out
+    c.run("install . -pr=profile3", assert_error=True)
+    assert "ERROR: Error reading 'profile3' profile: Error reading 'profile2' profile: Error while " \
+           "rendering the profile template file " in c.out
+    assert "unexpected char '#' at 21" in c.out
 
 
 def test_profile_macro_per_package():
@@ -307,3 +358,57 @@ def test_profile_macro_per_package():
     assert "conanfile.py (mypkg/0.1): user.conf:key=2!!!!" in client.out
     assert "conanfile.py (mypkg/0.1): os=Windows!!" in client.out
     assert "conanfile.py (mypkg/0.1): arch=x86!!" in client.out
+
+
+def test_profile_jinja_context():
+    """
+        Test the ``context=build/host`` injection
+    """
+    c = TestClient()
+    tpl1 = textwrap.dedent("""
+        [conf]
+        {% if context == "host" %}
+        user.profile:common = myhost
+        {% elif context == "build" %}
+        user.profile:common = mybuild
+        {% else %}
+        user.profile:common= nocontext
+        [settings]
+        os = Linux
+        {% endif %}
+        """)
+    tpl2 = textwrap.dedent("""
+        include(common)
+        [conf]
+        {% if context == "host" %}
+        user.profile:base = myhost
+        {% elif context == "build" %}
+        user.profile:base = mybuild
+        {% else %}
+        user.profile:base = nocontext
+        [settings]
+        arch = x86
+        {% endif %}
+        """)
+
+    c.save({"common": tpl1,
+            "base": tpl2})
+
+    c.run("profile show -pr:a=base --format=json")
+    profiles = json.loads(c.stdout)
+    assert profiles["host"]["conf"] == {"user.profile:common": "myhost",
+                                        "user.profile:base": "myhost"}
+    assert profiles["build"]["conf"] == {"user.profile:common": "mybuild",
+                                         "user.profile:base": "mybuild"}
+
+    # Now lets test when profile is neither build/host, like when used in ``conan list``
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os", "arch")})
+    c.run("create . -s os=Linux -s arch=x86")
+    c.run("create . -s os=Windows -s arch=armv8")
+
+    # This will pick the Linux+x86 package binary
+    c.run("list *:* --filter-profile=base")
+    assert "os: Windows" not in c.out
+    assert "arch: armv8" not in c.out
+    assert "os: Linux" in c.out
+    assert "arch: x86" in c.out

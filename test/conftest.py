@@ -48,7 +48,13 @@ windows_choco_root = "C:/ProgramData/chocolatey/lib/"
 msys2_path = os.getenv("MSYS2_PATH", "C:/msys64")
 
 tools_locations = {
-    "clang": {"disabled": True},
+    "clang": {
+        "exe": "clang",
+        "default": "20",
+        "20": {
+            "path": {'Windows': 'C:/Program Files/LLVM/bin'}  # by choco
+        }
+    },
     'visual_studio': {"default": "15",
                       "15": {},
                       "16": {"disabled": True},
@@ -86,6 +92,11 @@ tools_locations = {
             "path": {'Windows': 'C:/tools/cmake/3.27.9/cmake-3.27.9-windows-x86_64/bin',
                      'Darwin': '/Users/runner/Applications/CMake/3.27.9/bin',
                      'Linux': "/usr/share/cmake-3.27.9/bin"}
+        },
+        "4.2": {
+            "path": {'Windows': 'C:/tools/cmake/4.2.1/cmake-4.2.1-windows-x86_64/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/4.2.1/bin',
+                     'Linux': "/usr/share/cmake-4.2.1/bin"}
         }
     },
     'ninja': {
@@ -148,23 +159,24 @@ tools_locations = {
         "system": {"path": {'Windows': "C:/tools/cygwin/bin"}},
     },
     'bazel': {
-        "default": "7",
-        "6.5.0": {"path": {'Linux': '/usr/share/bazel-6.5.0/bin',
+        "default": "7.x",
+        "6.x": {"path": {'Linux': '/usr/share/bazel-6.5.0/bin',
                            'Windows': 'C:/tools/bazel/6.5.0',
                            'Darwin': '/Users/runner/Applications/bazel/6.5.0'}},
-        "7.4.1": {"path": {'Linux': '/usr/share/bazel-7.4.1/bin',
-                           'Windows': 'C:/tools/bazel/7.4.1',
-                           'Darwin': '/Users/runner/Applications/bazel/7.4.1'}},
-        "8.0.0": {"path": {'Linux': '/usr/share/bazel-8.0.0/bin',
-                           'Windows': 'C:/tools/bazel/8.0.0',
-                           'Darwin': '/Users/runner/Applications/bazel/8.0.0'}},
+        "7.x": {"path": {'Linux': '/usr/share/bazel-7.6.2/bin',
+                           'Windows': 'C:/tools/bazel/7.6.2',
+                           'Darwin': '/Users/runner/Applications/bazel/7.6.2'}},
+        "8.x": {"path": {'Linux': '/usr/share/bazel-8.4.2/bin',
+                           'Windows': 'C:/tools/bazel/8.4.2',
+                           'Darwin': '/Users/runner/Applications/bazel/8.4.2'}},
     },
     'premake': {
-        "disabled": True,
         "exe": "premake5",
         "default": "5.0.0",
         "5.0.0": {
-            "path": {'Linux': '/usr/local/bin/premake5'}
+            "path": {'Linux': '/usr/share/premake',
+                     'Windows': 'skip-tests',
+                     'Darwin': 'skip-tests'}
         }
     },
     'xcodegen': {"platform": "Darwin"},
@@ -179,7 +191,15 @@ tools_locations = {
             # 'Windows': os.getenv("ANDROID_NDK_HOME"),
         }
     },
-    "qbs": {"disabled": True},
+    "qbs": {
+        "exe": "qbs",
+        "default": "2.6.0",
+        "2.6.0": {
+            "path": {'Linux': '/usr/share/qbs/bin'}
+        }
+    },
+    "emcc": {},
+    "node": {},
     # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
     # "intel_oneapi": {
     #     "default": "2021.3",

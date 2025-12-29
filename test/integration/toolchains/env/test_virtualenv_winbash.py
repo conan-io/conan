@@ -1,13 +1,10 @@
 import os
 import platform
-import textwrap
 
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
-from test.conftest import tools_locations
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
 
 """
 When we use the VirtualRunEnv and VirtualBuildEnd generators, we take information from the
@@ -31,7 +28,7 @@ def client():
     """
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=foo --version=1.0")
-    save(client.paths.new_config_path, "tools.microsoft.bash:subsystem=cygwin")
+    client.save_home({"global.conf": "tools.microsoft.bash:subsystem=cygwin"})
     return client
 
 

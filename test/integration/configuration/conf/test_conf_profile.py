@@ -40,7 +40,7 @@ def test_cmake_no_config(client):
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
-    assert "/verbosity" not in client.out
+    assert "-verbosity" not in client.out
 
 
 def test_cmake_config(client):
@@ -57,6 +57,8 @@ def test_cmake_config(client):
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
+    assert "-verbosity:Quiet" in client.out
+    client.run("create . --name=pkg --version=0.1 -pr=myprofile -c=tools.env.virtualenv:powershell=powershell.exe")
     assert "/verbosity:Quiet" in client.out
 
 
@@ -91,9 +93,9 @@ def test_cmake_config_package(client):
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
-    assert "/verbosity" not in client.out
+    assert "-verbosity" not in client.out
     client.run("create . --name=dep --version=0.1 -pr=myprofile")
-    assert "/verbosity:Quiet" in client.out
+    assert "-verbosity:Quiet" in client.out
 
 
 def test_cmake_config_package_not_scoped(client):
@@ -110,9 +112,9 @@ def test_cmake_config_package_not_scoped(client):
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
-    assert "/verbosity:Quiet" in client.out
+    assert "-verbosity:Quiet" in client.out
     client.run("create . --name=dep --version=0.1 -pr=myprofile")
-    assert "/verbosity:Quiet" in client.out
+    assert "-verbosity:Quiet" in client.out
 
 
 def test_config_profile_forbidden(client):
@@ -152,7 +154,7 @@ def test_msbuild_config():
         """)
     client.save({"myprofile": profile})
     client.run("create . --name=pkg --version=0.1 -pr=myprofile")
-    assert "/verbosity:Quiet" in client.out
+    assert "-verbosity:Quiet" in client.out
 
 
 def test_msbuild_compile_options():

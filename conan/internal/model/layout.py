@@ -4,7 +4,7 @@ from conan.internal.model.cpp_info import CppInfo
 from conan.internal.model.conf import Conf
 
 
-class Infos(object):
+class Infos:
 
     def __init__(self):
         self.source = CppInfo()
@@ -12,7 +12,7 @@ class Infos(object):
         self.package = CppInfo(set_defaults=True)
 
 
-class PartialLayout(object):
+class PartialLayout:
     def __init__(self):
         from conan.tools.env import Environment
         self.buildenv_info = Environment()
@@ -25,14 +25,14 @@ class PartialLayout(object):
         self.conf_info.set_relative_base_folder(folder)
 
 
-class Layouts(object):
+class Layouts:
     def __init__(self):
         self.source = PartialLayout()
         self.build = PartialLayout()
         self.package = PartialLayout()
 
 
-class Folders(object):
+class Folders:
 
     def __init__(self):
         self._base_source = None
@@ -59,9 +59,6 @@ class Folders(object):
         # start from the subproject again
         self.subproject = None
         self.build_folder_vars = None
-
-    def __repr__(self):
-        return str(self.__dict__)
 
     def set_base_folders(self, conanfile_folder, output_folder):
         """ this methods can be used for defining all the base folders in the

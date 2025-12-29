@@ -13,7 +13,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def test_source_download_password():
@@ -80,7 +80,7 @@ def test_source_credentials_only_download():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     # add_auth should never be called for regular upload/download
-    with mock.patch("conans.client.rest.conan_requester._SourceURLCredentials.add_auth", None):
+    with mock.patch("conan.internal.rest.conan_requester._SourceURLCredentials.add_auth", None):
         c.run("upload * -c -r=default")
         c.run("remove * -c")
         c.run("download pkg/0.1 -r=default")

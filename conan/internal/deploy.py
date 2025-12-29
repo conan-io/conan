@@ -1,13 +1,14 @@
 import filecmp
 import os
 import shutil
+import fnmatch
 
 from conan.internal.cache.home_paths import HomePaths
 from conan.api.output import ConanOutput
-from conans.client.loader import load_python_file
+from conan.internal.loader import load_python_file
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
-from conans.util.files import rmdir, mkdir
+from conan.internal.util.files import rmdir, mkdir
 
 
 def _find_deployer(d, cache_deploy_folder):
@@ -99,6 +100,9 @@ def full_deploy(graph, output_folder):
 def runtime_deploy(graph, output_folder):
     """
     Deploy all the shared libraries and the executables of the dependencies in a flat directory.
+
+    It preserves symlinks in case the configuration tools.deployer:symlinks is True.
+    It preserves the directory structure when having subfolders
     """
     conanfile = graph.root.conanfile
     output = ConanOutput(scope="runtime_deploy")
@@ -125,7 +129,7 @@ def runtime_deploy(graph, output_folder):
             if not os.path.isdir(libdir):
                 output.warning(f"{dep.ref} {libdir} does not exist")
                 continue
-            count += _flatten_directory(dep, libdir, output_folder, symlinks, [".dylib", ".so"])
+            count += _flatten_directory(dep, libdir, output_folder, symlinks, [".dylib*", ".so*"])
 
         output.info(f"Copied {count} files from {dep.ref}")
     conanfile.output.success(f"Runtime deployed to folder: {output_folder}")
@@ -133,7 +137,7 @@ def runtime_deploy(graph, output_folder):
 
 def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None):
     """
-    Copy all the files from the source directory in a flat output directory.
+    Copy all the files from the source directory in a flat output directory, respecting subfolders.
     An optional string, named extension_filter, can be set to copy only the files with
     the listed extensions.
     """
@@ -141,12 +145,20 @@ def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None
 
     output = ConanOutput(scope="runtime_deploy")
     for src_dirpath, _, src_filenames in os.walk(src_dir, followlinks=symlinks):
+        rel_path = os.path.relpath(src_dirpath, src_dir)
         for src_filename in src_filenames:
-            if extension_filter and not any(src_filename.endswith(ext) for ext in extension_filter):
+            if extension_filter and not any(fnmatch.fnmatch(src_filename, f'*{ext}') for ext in extension_filter):
                 continue
 
             src_filepath = os.path.join(src_dirpath, src_filename)
-            dest_filepath = os.path.join(output_dir, src_filename)
+            dest_filepath = os.path.join(output_dir, rel_path, src_filename)
+
+            if not symlinks and os.path.islink(src_filepath):
+                continue
+
+            if not os.path.exists(os.path.dirname(dest_filepath)):
+                os.makedirs(os.path.dirname(dest_filepath))
+
             if os.path.exists(dest_filepath):
                 if filecmp.cmp(src_filepath, dest_filepath):  # Be efficient, do not copy
                     output.verbose(f"{dest_filepath} exists with same contents, skipping copy")
@@ -156,7 +168,9 @@ def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None
 
             try:
                 file_count += 1
-                shutil.copy2(src_filepath, dest_filepath, follow_symlinks=symlinks)
+                # INFO: When follow_symlinks is false, and src is a symbolic link, it tries to
+                # copy all metadata from the src symbolic link to the newly created dst link
+                shutil.copy2(src_filepath, dest_filepath, follow_symlinks=not symlinks)
                 output.verbose(f"Copied {src_filepath} into {output_dir}")
             except Exception as e:
                 if "WinError 1314" in str(e):

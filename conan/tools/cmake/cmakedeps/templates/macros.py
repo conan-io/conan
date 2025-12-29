@@ -41,14 +41,29 @@ class MacrosTemplate(CMakeDepsFileTemplate):
            endif()
        endmacro()
 
-
        function(conan_package_library_targets libraries package_libdir package_bindir library_type
                 is_host_windows deps_target out_libraries_target config_suffix package_name no_soname_mode)
            set(_out_libraries_target "")
 
            foreach(_LIBRARY_NAME ${libraries})
+               if(CMAKE_SYSTEM_NAME MATCHES "Windows" AND NOT DEFINED MINGW AND CMAKE_VERSION VERSION_LESS "3.29")
+                   # Backport logic from https://github.com/Kitware/CMake/commit/c6efbd78d86798573654d1a791f76de0e71bd93f
+                   # which is only needed on versions older than 3.29
+                   # this allows finding static library files created by meson
+                   # We are not affected by PATH-derived folders, because we call find_library with NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH
+                   set(_original_find_library_suffixes "${CMAKE_FIND_LIBRARY_SUFFIXES}")
+                   set(_original_find_library_prefixes "${CMAKE_FIND_LIBRARY_PREFIXES}")
+                   set(CMAKE_FIND_LIBRARY_PREFIXES "" "lib")
+                   set(CMAKE_FIND_LIBRARY_SUFFIXES ".dll.lib" ".lib" ".a")
+               endif()
                find_library(CONAN_FOUND_LIBRARY NAMES ${_LIBRARY_NAME} PATHS ${package_libdir}
-                            NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+                           NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+               if(DEFINED _original_find_library_suffixes)
+                   set(CMAKE_FIND_LIBRARY_SUFFIXES "${_original_find_library_suffixes}")
+                   set(CMAKE_FIND_LIBRARY_PREFIXES "${_original_find_library_prefixes}")
+                   unset(_original_find_library_suffixes)
+                   unset(_original_find_library_prefixes)
+               endif()
                if(CONAN_FOUND_LIBRARY)
                    message(VERBOSE "Conan: Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
 

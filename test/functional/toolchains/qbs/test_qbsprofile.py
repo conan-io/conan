@@ -1,3 +1,4 @@
+import platform
 import textwrap
 import pytest
 
@@ -5,6 +6,7 @@ from conan.test.utils.tools import TestClient
 from conan.test.assets.sources import gen_function_cpp
 
 
+@pytest.mark.skipif(platform.system() != "Linux", reason="QBS only for Linux now")
 @pytest.mark.tool("qbs")
 def test_qbsprofile():
     client = TestClient()

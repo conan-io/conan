@@ -3,7 +3,6 @@ import textwrap
 import pytest
 
 from conan.test.assets.cmake import gen_cmakelists
-from conan.test.assets.pkg_cmake import pkg_cmake
 from conan.test.assets.sources import gen_function_h, gen_function_cpp
 from conan.test.utils.tools import TestClient
 
@@ -62,6 +61,7 @@ def client_weird_lib_name():
 @pytest.mark.tool("cmake")
 def test_cmakedeps(client_weird_lib_name):
     c = client_weird_lib_name
-    c.save(pkg_cmake("chat", "0.1", requires=["hello/0.1"]), clean_first=True)
-    c.run("create . --name=chat --version=0.1")
+    c.save({}, clean_first=True)
+    c.run("new cmake_lib -d name=chat -d version=0.1 -d requires=hello/0.1")
+    c.run("create .")
     assert "chat/0.1: Created package" in c.out

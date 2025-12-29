@@ -2,7 +2,7 @@ import os
 import textwrap
 
 import pytest
-from mock import patch
+from unittest.mock import patch
 
 from conan.tools.build.flags import architecture_flag, cppstd_flag
 from conan.tools.intel import IntelCC

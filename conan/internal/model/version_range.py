@@ -84,7 +84,11 @@ class _ConditionSet:
 
         operator = expression[0]
         if operator not in (">", "<", "^", "~", "="):
-            operator = "="
+            if expression[-1] == "*":  # Handle patterns like "1.2.*"
+                operator = "*"
+                expression = expression[:-1]
+            else:
+                operator = "="
             index = 0
         else:
             index = 1
@@ -141,6 +145,9 @@ class _ConditionSet:
                     return False
             elif condition.operator == "=":
                 if not version == condition.version:
+                    return False
+            elif condition.operator == "*":
+                if not str(version).startswith(str(condition.version)):
                     return False
         return True
 

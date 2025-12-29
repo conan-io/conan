@@ -48,6 +48,8 @@ def test_conditional_build_type(matrix_client_debug):
                     self.requires("matrix/1.0")
         """)
     cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(pkgb CXX)
 

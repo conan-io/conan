@@ -1,5 +1,4 @@
 import os
-import shlex
 import shutil
 import platform
 import textwrap
@@ -11,7 +10,7 @@ from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import msvs_toolset
 from conan.tools.microsoft.visual import vs_installation_path, _vcvars_path, _vcvars_versions
 from conan.tools.qbs import common
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def _find_msvc(conanfile):
@@ -214,7 +213,6 @@ class QbsProfile:
         toolchain = self._get_qbs_toolchain()
         the_os = self._conanfile.settings.get_safe('os')
         vcvars_path = None
-        compiler = None
         if the_os == 'Windows' and toolchain == 'msvc':
             compiler = _find_msvc(self._conanfile)
         elif the_os == 'Windows' and toolchain == 'clang-cl':

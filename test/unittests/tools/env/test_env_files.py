@@ -7,10 +7,10 @@ import textwrap
 import pytest
 
 from conan.tools.env import Environment
-from conans.client.subsystems import WINDOWS
+from conan.internal.subsystems import WINDOWS
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save, chdir, load
+from conan.internal.util.files import save, chdir, load
 
 
 @pytest.fixture
@@ -76,6 +76,8 @@ def check_env_files_output(cmd_, prevenv):
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_env_files_bat(env, prevenv):
+    prevenv.update(dict(os.environ.copy()))  # Necessary from Python 3.12, for SYSTEMROOT var
+
     display = textwrap.dedent("""\
         @echo off
         echo MyVar=%MyVar%!!
@@ -101,7 +103,8 @@ def test_env_files_bat(env, prevenv):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-def test_env_files_ps1(env, prevenv):
+@pytest.mark.parametrize("deactivation_mode", ["function", None])
+def test_env_files_ps1(env, prevenv, deactivation_mode):
     prevenv.update(dict(os.environ.copy()))
 
     display = textwrap.dedent("""\
@@ -119,16 +122,21 @@ def test_env_files_ps1(env, prevenv):
     """)
 
     with chdir(temp_folder()):
-        env = env.vars(ConanFileMock())
+        conanfile = ConanFileMock()
+        if deactivation_mode:
+            conanfile.conf.define("tools.env:deactivation_mode", deactivation_mode)
+        env = env.vars(conanfile)
         env._subsystem = WINDOWS
         env.save_ps1("test.ps1")
         save("display.ps1", display)
-        cmd = "powershell.exe .\\test.ps1 ; .\\display.ps1 ; .\\deactivate_test.ps1 ; .\\display.ps1"
+        deactivate_cmd = "deactivate_test" if deactivation_mode else ".\\deactivate_test.ps1"
+        cmd = f"powershell.exe .\\test.ps1 ; .\\display.ps1 ; {deactivate_cmd} ; .\\display.ps1"
         check_env_files_output(cmd, prevenv)
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Not in Windows")
-def test_env_files_sh(env, prevenv):
+@pytest.mark.parametrize("deactivation_mode", ["function", None])
+def test_env_files_sh(env, prevenv, deactivation_mode):
     display = textwrap.dedent("""\
         echo MyVar=$MyVar!!
         echo MyVar1=$MyVar1!!
@@ -144,12 +152,16 @@ def test_env_files_sh(env, prevenv):
         """)
 
     with chdir(temp_folder()):
-        env = env.vars(ConanFileMock())
+        conanfile = ConanFileMock()
+        if deactivation_mode:
+            conanfile.conf.define("tools.env:deactivation_mode", deactivation_mode)
+        env = env.vars(conanfile)
         env.save_sh("test.sh")
         save("display.sh", display)
         os.chmod("display.sh", 0o777)
         # We include the "set -e" to test it is robust against errors
-        cmd = 'set -e && . ./test.sh && ./display.sh && . ./deactivate_test.sh && ./display.sh'
+        deactivate_cmd = "deactivate_test" if deactivation_mode else ". ./deactivate_test.sh"
+        cmd = f'set -e && . ./test.sh && ./display.sh && {deactivate_cmd} && ./display.sh'
         check_env_files_output(cmd, prevenv)
 
 
@@ -164,13 +176,13 @@ def test_relative_paths():
     os.chmod(os.path.join(scripts_folder, "myhello.sh"), 0o777)
 
     with chdir(folder):
-        env = Environment()
-        env.define_path("PATH", scripts_folder)
+        myenv = Environment()
+        myenv.define_path("PATH", scripts_folder)
         conanfile = ConanFileMock()
         conanfile.folders._base_generators = folder
-        env = env.vars(conanfile)
-        env.save_bat("test.bat")
-        env.save_sh("test.sh")
+        myenv = myenv.vars(conanfile)
+        myenv.save_bat("test.bat")
+        myenv.save_sh("test.sh")
         if platform.system() == "Windows":
             test_bat = load("test.bat")
             assert r'set "PATH=%~dp0\myscripts"' in test_bat
@@ -197,3 +209,30 @@ def test_relative_paths():
                                      shell=True).communicate()
         out = result.decode()
         assert 'Hello MyWorld!!!' in out
+
+
+@pytest.mark.parametrize("values, expected",
+                         [("myscripts", '"$script_folder/myscripts"'),
+                          ("../myscripts", '"$script_folder/../myscripts"'),
+                          ("../my scripts", '"$script_folder/../my scripts"'),
+                          (["../my scripts", "path/other"],
+                           '"$script_folder/../my scripts:$script_folder/path/other"')])
+def test_relativize(values, expected):
+    folder = os.path.join(temp_folder(), "subfolder")
+    os.makedirs(folder)
+    if isinstance(values, str):
+        value = os.path.join(folder, values) if not os.path.isabs(values) else values
+    else:
+        value = [os.path.join(folder, v) for v in values]
+    myenv = Environment()
+    myenv.define_path("PATH", value)
+    myenv.prepend_path("OTHER", value)
+    conanfile = ConanFileMock()
+    conanfile.folders._base_generators = folder
+    myenv = myenv.vars(conanfile)
+    with chdir(folder):
+        myenv.save_sh("test.sh")
+        content = load("test.sh")
+        content = content.replace("\\", "/")
+        assert f'export PATH={expected}' in content
+        assert f'export OTHER="{expected}:$OTHER"'

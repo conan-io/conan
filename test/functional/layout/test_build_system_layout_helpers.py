@@ -6,7 +6,7 @@ import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ def conanfile():
                     .with_import("import os")
                     .with_setting("build_type").with_setting("arch")
                     .with_import("from conan.tools.microsoft import vs_layout")
-                    .with_import("from conan.tools.files import AutoPackager, save"))
+                    .with_import("from conan.tools.files import save, copy"))
 
     conanfile += """
     def source(self):
@@ -28,7 +28,8 @@ def conanfile():
         vs_layout(self)
 
     def package(self):
-        AutoPackager(self).run()
+        copy(self, "*", self.source_folder, self.package_folder)
+        copy(self, "*", self.build_folder, os.path.join(self.package_folder, "lib"), keep_path=False)
     """
     return conanfile
 

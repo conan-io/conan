@@ -2,6 +2,10 @@ name: Linux tests
 
 on:
   workflow_call:
+    inputs:
+      python-versions:
+        required: true
+        type: string
 
 jobs:
   build_container:
@@ -49,7 +53,7 @@ jobs:
       options: --user conan
     strategy:
       matrix:
-        python-version: [3.12.3, 3.9.2, 3.8.6, 3.6.15]
+        python-version: ${{ fromJson(inputs.python-versions) }}
         test-type: [unittests, integration, functional]
         include:
         - test-type: unittests
@@ -88,23 +92,30 @@ jobs:
           python-version: ${{ matrix.python-version }}
           test-type: ${{ matrix.test-type }}
           tests: test/${{ matrix.test-type }}
-          duration: 20
 
-  linux_docker_tests:
+  linux_runner_tests:
     needs: build_container
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.12, 3.9]
-    name: Docker Runner Tests (${{ matrix.python-version }})
+        # Use modern versions due to docker incompatibility with python <3.8
+        python-version: ${{ github.event_name != 'pull_request' && fromJson('["3.13", "3.9"]') || fromJson('["3.10"]') }}
+
+    name: Runner Tests (${{ matrix.python-version }})
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements_runner*.txt') }}
 
       - name: Install dependencies
         run: |
@@ -114,11 +125,10 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install -r conans/requirements_runner.txt
 
-      - name: Run tests
+      - name: Run runner tests
         uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
-          test-type: docker
+          test-type: runners
           tests: '-m docker_runner -rs'
-          duration: 20
           workers: 1

@@ -5,7 +5,7 @@ import pytest
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.scm import git_add_changes_commit
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 @pytest.mark.tool("git")

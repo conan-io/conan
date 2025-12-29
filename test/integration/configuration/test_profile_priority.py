@@ -2,7 +2,7 @@ import os
 import textwrap
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def test_profile_local_folder_priority_cache():

@@ -3,8 +3,8 @@ import textwrap
 from time import sleep
 
 from conan.api.model import RecipeReference
-from conan.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import load
+from conan.test.utils.tools import TestClient, GenConanfile, TestServer
+from conan.internal.util.files import load
 
 
 def test_update_binaries():
@@ -76,7 +76,7 @@ def test_update_not_date():
 
     ref = RecipeReference.loads("hello0/1.0@lasote/stable")
 
-    initial_recipe_timestamp = client.cache.get_latest_recipe_reference(ref).timestamp
+    initial_recipe_timestamp = client.cache.get_latest_recipe_revision(ref).timestamp
     initial_package_timestamp = prev.timestamp
 
     # Change and rebuild package
@@ -85,7 +85,7 @@ def test_update_not_date():
     client.run("export . --user=lasote --channel=stable")
     client.run("install --requires=hello0/1.0@lasote/stable --build='*'")
 
-    rebuild_recipe_timestamp = client.cache.get_latest_recipe_reference(ref).timestamp
+    rebuild_recipe_timestamp = client.cache.get_latest_recipe_revision(ref).timestamp
     rebuild_package_timestamp = client.get_latest_package_reference(ref).timestamp
 
     assert rebuild_recipe_timestamp != initial_recipe_timestamp
@@ -100,7 +100,7 @@ def test_update_not_date():
 
     client.assert_listed_require({"hello0/1.0@lasote/stable": "Newer"})
 
-    failed_update_recipe_timestamp = client.cache.get_latest_recipe_reference(ref).timestamp
+    failed_update_recipe_timestamp = client.cache.get_latest_recipe_revision(ref).timestamp
     failed_update_package_timestamp = client.get_latest_package_reference(ref).timestamp
 
     assert rebuild_recipe_timestamp == failed_update_recipe_timestamp
@@ -165,3 +165,83 @@ def test_install_update_repeated_tool_requires():
     c.run("create libc")
     c.run("install libc --update -pr=profile")
     assert 1 == str(c.out).count("tool/0.1: Checking remote")
+
+
+class TestUpdateOldPolicy:
+    def test_multi_remote_update_resolution(self):
+        c = TestClient(servers={"r1": TestServer(), "r2": TestServer(), "r3": TestServer()},
+                       inputs=["admin", "password"] * 3, light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("export .")
+        rev1 = c.exported_recipe_revision()
+        c.run("upload * -r=r1 -c")
+        # second revision
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("auther = 'me'")})
+        c.run("export .")
+        rev2 = c.exported_recipe_revision()
+        assert rev1 != rev2
+        c.run("upload * -r=r2 -c")  # By default uploads latest revisions only
+        assert rev1 not in c.out
+        assert rev2 in c.out
+        # going back to the previous revision
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("export .")  # Makes it the latest
+        rev3 = c.exported_recipe_revision()
+        assert rev1 == rev3
+        c.run("upload * -r=r3 -c")  # By default uploads latest revisions only
+        assert rev3 in c.out
+        assert rev2 not in c.out
+
+        # now test the --update, it will pick up the latest revision, which is r3
+        c.run("remove * -c")
+        c.run("graph info --requires=pkg/0.1 --update")
+        assert f"pkg/0.1#{rev3} - Downloaded (r3)" in c.out
+
+        # But if we enable order-based first found timestamp, it will pick up r2
+        c.run("remove * -c")
+        c.run("graph info --requires=pkg/0.1 --update -cc core:update_policy=legacy")
+        assert "The 'core:update_policy' conf is deprecated and will be removed" in c.out
+        assert f"pkg/0.1#{rev2} - Downloaded (r2)" in c.out
+
+    def test_multi_remote_update_resolution_2_remotes(self):
+        c = TestClient(servers={"r1": TestServer(), "r2": TestServer()},
+                       inputs=["admin", "password"] * 2, light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("export .")
+        rev1 = c.exported_recipe_revision()
+        c.run("upload * -r=r1 -c")
+        # second revision
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("auther = 'me'")})
+        c.run("export .")
+        rev2 = c.exported_recipe_revision()
+        assert rev1 != rev2
+        c.run("upload * -r=r1 -c")
+        c.run("list *#* -r=r1")
+
+        # Upload the first, old revision to the other remote
+        c.run(f"upload pkg/0.1#{rev1} -r=r2 -c")
+        assert rev1 in c.out
+        assert rev2 not in c.out
+        c.run("list *#* -r=r2")
+
+        # now test the --update, it will pick up the latest revision, which is r3
+        c.run("remove * -c")
+        c.run("graph info --requires=pkg/0.1 --update")
+        assert f"pkg/0.1#{rev1} - Downloaded (r2)" in c.out
+
+        # But if we enable order-based first found timestamp, it will pick up r2
+        c.run("remove * -c")
+        c.run("graph info --requires=pkg/0.1 --update -cc core:update_policy=legacy")
+        assert f"pkg/0.1#{rev2} - Downloaded (r1)" in c.out
+
+    def test_lockfile(self):
+        # https://github.com/conan-io/conan/issues/18006
+        c = TestClient(default_server_user=True, light=True)  # needs server to fail
+        c.save_home({"global.conf": "core:update_policy=legacy"})
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("dep/0.1")})
+        c.run("create dep")
+        c.run("lock create pkg --lockfile-out base.lock --build=* --update")
+        c.run("lock create pkg --lockfile base.lock --lockfile-out full.lock --build=* --update")
+        # it doesn't crash
+        assert "Generated lockfile" in c.out

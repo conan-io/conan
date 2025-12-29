@@ -1,5 +1,6 @@
 from pathlib import Path
-from conans.client.graph.graph import CONTEXT_BUILD
+
+from conan.internal.graph.graph import CONTEXT_BUILD
 
 
 class ConanFileInterface:
@@ -138,3 +139,16 @@ class ConanFileInterface:
     @property
     def url(self):
         return self._conanfile.url
+
+    @property
+    def extension_properties(self):
+        return getattr(self._conanfile, "extension_properties", {})
+
+    @property
+    def recipe(self) -> str:
+        # IMPORTANT: this should be used only for "informational" purposes, see GH#18996.
+        return self._conanfile._conan_node.recipe
+
+    @property
+    def conf(self):
+        return self._conanfile.conf

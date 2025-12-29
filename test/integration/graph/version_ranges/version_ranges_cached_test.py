@@ -1,9 +1,9 @@
 from collections import OrderedDict
 
 import pytest
-from mock import patch
+from unittest.mock import patch
 
-from conans.client.remote_manager import RemoteManager
+from conan.internal.rest.remote_manager import RemoteManager
 from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer

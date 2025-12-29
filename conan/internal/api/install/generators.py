@@ -4,13 +4,14 @@ import traceback
 import importlib
 
 from conan.internal.cache.home_paths import HomePaths
-from conans.client.subsystems import deduce_subsystem, subsystem_path
+from conan.internal.subsystems import deduce_subsystem, subsystem_path
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
-from conans.util.files import save, mkdir, chdir
+from conan.internal.util.files import save, mkdir, chdir
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
                "CMakeDeps": "conan.tools.cmake",
+               "CMakeConfigDeps": "conan.tools.cmake",
                "MesonToolchain": "conan.tools.meson",
                "MSBuildDeps": "conan.tools.microsoft",
                "MSBuildToolchain": "conan.tools.microsoft",
@@ -29,6 +30,7 @@ _generators = {"CMakeToolchain": "conan.tools.cmake",
                "XcodeDeps": "conan.tools.apple",
                "XcodeToolchain": "conan.tools.apple",
                "PremakeDeps": "conan.tools.premake",
+               "PremakeToolchain": "conan.tools.premake",
                "MakeDeps": "conan.tools.gnu",
                "SConsDeps": "conan.tools.scons",
                "QbsDeps": "conan.tools.qbs",
@@ -57,7 +59,7 @@ def _get_generator_class(generator_name):
 
 
 def load_cache_generators(path):
-    from conans.client.loader import load_python_file
+    from conan.internal.loader import load_python_file
     result = {}  # Name of the generator: Class
     if not os.path.isdir(path):
         return result
@@ -166,7 +168,8 @@ def _receive_generators(conanfile):
             names = [c.__name__ if not isinstance(c, str) else c for c in build_req.generator_info]
             conanfile.output.warning(f"Tool-require {build_req} adding generators: {names}",
                                      warn_tag="experimental")
-            conanfile.generators = build_req.generator_info + conanfile.generators
+            # Generators can be defined as a tuple in recipes, ensure we don't break if so
+            conanfile.generators = build_req.generator_info + list(conanfile.generators)
 
 
 def _generate_aggregated_env(conanfile):
@@ -179,6 +182,11 @@ def _generate_aggregated_env(conanfile):
             result.append(os.path.join(folder, "deactivate_{}".format(f)))
         return result
 
+    def deactivate_function_names(filenames):
+        return [os.path.splitext(os.path.basename(s))[0].replace("-", "_")
+                for s in reversed(filenames)]
+
+    deactivation_mode = conanfile.conf.get("tools.env:deactivation_mode", default=None, check_type=str)
     generated = []
     for group, env_scripts in conanfile.env_scripts.items():
         subsystem = deduce_subsystem(conanfile, group)
@@ -199,12 +207,19 @@ def _generate_aggregated_env(conanfile):
                 ps1s.append("$PSScriptRoot/"+path)
         if shs:
             def sh_content(files):
-                return ". " + " && . ".join('"{}"'.format(s) for s in files)
+                content = ". " + " && . ".join('"{}"'.format(s) for s in files)
+                if deactivation_mode == "function":
+                    content += f"\n\ndeactivate_conan{group}() {{\n"
+                    for deactivate_name in deactivate_function_names(shs):
+                        content += f"    deactivate_{deactivate_name}\n"
+                    content += f"    unset -f deactivate_conan{group}\n}}\n"
+                return content
             filename = "conan{}.sh".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
-            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-                 sh_content(deactivates(shs)))
+            if not deactivation_mode:
+                save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                     sh_content(deactivates(shs)))
         if bats:
             def bat_content(files):
                 return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
@@ -215,12 +230,21 @@ def _generate_aggregated_env(conanfile):
                  bat_content(deactivates(bats)))
         if ps1s:
             def ps1_content(files):
-                return "\r\n".join(['& "{}"'.format(b) for b in files])
+                content = "\r\n".join(['& "{}"'.format(b) for b in files])
+                if deactivation_mode == "function":
+                    content += f"\n\nfunction global:deactivate_conan{group} {{\n"
+                    for deactivate_name in deactivate_function_names(ps1s):
+                        content += f"    deactivate_{deactivate_name}\n"
+                    content += (f"    Remove-Item -Path function:deactivate_conan{group} "
+                                "-ErrorAction SilentlyContinue"
+                                "\n}\n")
+                return content
             filename = "conan{}.ps1".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
-            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-                 ps1_content(deactivates(ps1s)))
+            if not deactivation_mode:
+                save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                     ps1_content(deactivates(ps1s)))
     if generated:
         conanfile.output.highlight("Generating aggregated env files")
         conanfile.output.info(f"Generated aggregated env files: {generated}")
@@ -241,15 +265,20 @@ def relativize_paths(conanfile, placeholder):
     return abs_base_path, new_path
 
 
-def relativize_path(path, conanfile, placeholder):
-    abs_base_path, new_path = relativize_paths(conanfile, placeholder)
-    if abs_base_path is None:
+def relativize_path(path, conanfile, placeholder, normalize=True):
+    """
+    relative path from the "generators_folder" to "path", asuming the root file, like
+    conan_toolchain.cmake will be directly in the "generators_folder"
+    """
+    base_common_folder = conanfile.folders._base_generators # noqa
+    if not base_common_folder or not os.path.isabs(base_common_folder):
         return path
-    if path.startswith(abs_base_path):
-        path = path.replace(abs_base_path, new_path, 1)
-    else:
-        abs_base_path = abs_base_path.replace("\\", "/")
-        new_path = new_path.replace("\\", "/")
-        if path.startswith(abs_base_path):
-            path = path.replace(abs_base_path, new_path, 1)
+    try:
+        common_path = os.path.commonpath([path, conanfile.generators_folder, base_common_folder])
+        if common_path.replace("\\", "/") == base_common_folder.replace("\\", "/"):
+            rel_path = os.path.relpath(path, conanfile.generators_folder)
+            new_path = os.path.join(placeholder, rel_path)
+            return new_path.replace("\\", "/") if normalize else new_path
+    except ValueError:  # In case the unit in Windows is different, path cannot be made relative
+        pass
     return path

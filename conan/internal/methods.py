@@ -8,7 +8,7 @@ from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import PkgReference
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.model.requires import BuildRequirements, TestRequirements, ToolRequirements
-from conans.util.files import mkdir, chdir, save
+from conan.internal.util.files import mkdir, chdir, save
 
 
 def run_source_method(conanfile, hook_manager):
@@ -24,6 +24,9 @@ def run_source_method(conanfile, hook_manager):
 
 
 def run_build_method(conanfile, hook_manager):
+    if os.path.isfile(conanfile.build_folder):
+        raise ConanException(f"{conanfile}: Failed to create build folder, there is already a file "
+                             f"named: {conanfile.build_folder}")
     mkdir(conanfile.build_folder)
     mkdir(conanfile.package_metadata_folder)
     with chdir(conanfile.build_folder):

@@ -1,17 +1,19 @@
 import gzip
 import os
+import stat
 import platform
 import shutil
 import subprocess
+from typing import Optional
 from contextlib import contextmanager
 from fnmatch import fnmatch
 from shutil import which
 
 
-from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
+from conan.internal.rest.caching_file_downloader import SourcesCachingDownloader
 from conan.errors import ConanException
-from conans.client.rest.file_uploader import FileProgress
-from conans.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
+from conan.internal.rest.file_uploader import FileProgress
+from conan.internal.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
 
 
 def load(conanfile, path, encoding="utf-8"):
@@ -92,7 +94,7 @@ def rm(conanfile, pattern, folder, recursive=False, excludes=None):
 
 def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filename="",
         keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
-        auth=None, headers=None, strip_root=False, extract_filter=None):
+        auth=None, headers=None, strip_root=False, extract_filter=None, excludes=None):
     """
     High level download and decompressing of a tgz, zip or other compressed format file.
     Just a high level wrapper for download, unzip, and remove the temporary zip file once unzipped.
@@ -116,6 +118,7 @@ def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filen
     :param headers:  forwarded to ``tools.file.download()``.
     :param strip_root: forwarded to ``tools.file.unzip()``.
     :param extract_filter: forwarded to ``tools.file.unzip()``.
+    :param excludes: forwarded to ``tools.file.unzip()``.
     """
 
     if not filename:  # deduce filename from the URL
@@ -129,7 +132,8 @@ def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filen
              retry=retry, retry_wait=retry_wait, auth=auth, headers=headers,
              md5=md5, sha1=sha1, sha256=sha256)
     unzip(conanfile, filename, destination=destination, keep_permissions=keep_permissions,
-          pattern=pattern, strip_root=strip_root, extract_filter=extract_filter)
+          pattern=pattern, strip_root=strip_root, extract_filter=extract_filter,
+          excludes=excludes)
     os.unlink(filename)
 
 
@@ -263,8 +267,87 @@ def chdir(conanfile, newdir):
         os.chdir(old_path)
 
 
+def chmod(conanfile, path: str, read: Optional[bool] = None, write: Optional[bool] = None,
+          execute: Optional[bool] = None, recursive: bool = False):
+    """Change file or directory permissions cross-platform.
+
+    .. versionadded:: 2.15
+
+    This function is a simple wrapper around the chmod Unix command, but it is cross-platform supported.
+    It is indicated to use it instead of os.stat + os.chmod, as it only changes the permissions of the
+    directory or file for the owner and avoids issues with the umask.
+    On Windows is limited to changing write permission only.
+
+    Parameters
+    ----------
+    conanfile : object
+        The current recipe object. Always use ``self``.
+    path : str
+        Path to the file or directory whose permissions will be changed.
+    read : bool, optional
+        If ``True``, the file or directory will be given read permissions for owner user.
+        If ``False``, the read permission will be removed.
+        If ``None``, the read permission will be left unchanged.
+        Defaults to None.
+    write : bool, optional
+        If ``True``, the file or directory will be given write permissions for owner user.
+        If ``False``, the write permission will be removed.
+        If ``None``, the file or directory will not be changed.
+        Defaults to None.
+    execute : bool, optional
+        If ``True``, the file or directory will be given execute permissions for owner user.
+        If ``False``, the execution permission will be removed.
+        If ``None``, the file or directory will not be changed.
+        Defaults to None.
+    recursive : bool
+        If ``True``, the permissions will be applied recursively to all files and directories
+        inside the specified directory. If ``False``, only the specified file or directory will
+        be changed. Defaults to False.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    .. code-block:: python
+        :caption: Add execution permission to a packaged bash script
+
+        from conan.tools.files import chmod
+        chmod(self, os.path.join(self.package_folder, "bin", "script.sh"), execute=True)
+    """
+    if read is None and write is None and execute is None:
+        raise ConanException("Could not change permission: At least one of the permissions should be set.")
+
+    if not os.path.exists(path):
+        raise ConanException(f"Could not change permission: Path \"{path}\" does not exist.")
+
+    def _change_permission(it_path:str):
+        mode = os.stat(it_path).st_mode
+        permissions = [
+            (read, stat.S_IRUSR),
+            (write, stat.S_IWUSR),
+            (execute, stat.S_IXUSR)
+        ]
+        for enabled, mask in permissions:
+            if enabled is None:
+                continue
+            elif enabled:
+                mode |= mask
+            else:
+                mode &= ~mask
+        os.chmod(it_path, mode)
+
+    if recursive:
+        for root, _, files in os.walk(path):
+            for file in files:
+                _change_permission(os.path.join(root, file))
+    else:
+        _change_permission(path)
+
+
 def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=None,
-          strip_root=False, extract_filter=None):
+          strip_root=False, extract_filter=None, excludes=None):
     """
     Extract different compressed formats
 
@@ -282,15 +365,19 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     :param extract_filter: (Optional, defaulted to None). When extracting a tar file,
            use the tar extracting filters define by Python in
            https://docs.python.org/3/library/tarfile.html
+    :param excludes: (Optional, defaulted to None). When extracting a file,
+           exclude paths matching any of the patterns. This should be a Unix shell-style wildcard,
+           see fnmatch documentation for more details.
     """
 
     output = conanfile.output
     extract_filter = conanfile.conf.get("tools.files.unzip:filter") or extract_filter
-    output.info(f"Unzipping {filename} to {destination}")
+    output.info(f"Uncompressing {filename} to {destination}")
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
-        return untargz(filename, destination, pattern, strip_root, extract_filter)
+        return untargz(filename, destination, pattern, strip_root, extract_filter,
+                       excludes=excludes)
     if filename.endswith(".gz"):
         target_name = filename[:-3] if destination == "." else destination
         target_dir = os.path.dirname(target_name)
@@ -301,7 +388,8 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
                 shutil.copyfileobj(fin, fout)
         return
     if filename.endswith(".tar.xz") or filename.endswith(".txz"):
-        return untargz(filename, destination, pattern, strip_root, extract_filter)
+        return untargz(filename, destination, pattern, strip_root, extract_filter,
+                       excludes=excludes)
 
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
@@ -310,6 +398,9 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
         zip_info = z.infolist()
         if pattern:
             zip_info = [zi for zi in zip_info if fnmatch(zi.filename, pattern)]
+        if excludes:
+            zip_info = [zi for zi in zip_info
+                        if not any(fnmatch(zi.filename, pat) for pat in excludes)]
         if strip_root:
             names = [zi.filename.replace("\\", "/") for zi in zip_info]
             common_folder = os.path.commonprefix(names).split("/", 1)[0]
@@ -353,38 +444,50 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
         output.writeln("")
 
 
-def untargz(filename, destination=".", pattern=None, strip_root=False, extract_filter=None):
+def untargz(filename, destination=".", pattern=None, strip_root=False, extract_filter=None,
+            excludes=None):
     # NOT EXPOSED at `conan.tools.files` but used in tests
     import tarfile
-    with FileProgress(filename, msg="Uncompressing") as fileobj, tarfile.TarFile.open(fileobj=fileobj, mode='r:*') as tarredgzippedFile:
+    with tarfile.TarFile.open(filename, mode='r:*') as tarredgzippedFile:
         f = getattr(tarfile, f"{extract_filter}_filter", None) if extract_filter else None
         tarredgzippedFile.extraction_filter = f or (lambda member_, _: member_)
-        if not pattern and not strip_root:
+        # https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=registry
+        # File I/O functions in the Windows API convert "/" to "\" as part of converting
+        # the name to an NT-style name, except when using the "\\?\" prefix
+        using_long_path_prefix = destination.startswith("\\\\?\\")
+        if not pattern and not excludes and not strip_root and not using_long_path_prefix:
             tarredgzippedFile.extractall(destination)
         else:
-            members = tarredgzippedFile.getmembers()
+            common_folder = None
+            members = []
+            for member in tarredgzippedFile:
+                if pattern and not fnmatch(member.name, pattern):
+                    continue  # Skip files that don’t match the pattern
+                if excludes and any(fnmatch(member.name, pat) for pat in excludes):
+                    continue  # Skip files that match the excludes
 
-            if pattern:
-                members = list(filter(lambda m: fnmatch(m.name, pattern),
-                                      tarredgzippedFile.getmembers()))
-            if strip_root:
-                names = [member.name.replace("\\", "/") for member in members]
-                common_folder = os.path.commonprefix(names).split("/", 1)[0]
-                if not common_folder and len(names) > 1:
-                    raise ConanException("The tgz file contains more than 1 folder in the root")
-                if len(names) == 1 and len(names[0].split("/", 1)) == 1:
-                    raise ConanException("The tgz file contains a file in the root")
-                # Remove the directory entry if present
-                members = [m for m in members if m.name != common_folder]
-                for member in members:
+                if strip_root:
                     name = member.name.replace("\\", "/")
-                    member.name = name.split("/", 1)[1]
+                    if not common_folder:
+                        splits = name.split("/", 1)
+                        # First case for a plain folder in the root
+                        if member.isdir() or len(splits) > 1:
+                            common_folder = splits[0]  # Find the root folder
+                        else:
+                            raise ConanException("Can't untar a tgz containing files in the root with strip_root enabled")
+                    if not name.startswith(common_folder):
+                        raise ConanException("The tgz file contains more than 1 folder in the root")
+                    # Adjust the member's name for extraction
+                    member.name = name[len(common_folder) + 1:]
                     member.path = member.name
-                    if member.linkpath.startswith(common_folder):
+                    if member.linkpath and member.linkpath.startswith(common_folder):
                         # https://github.com/conan-io/conan/issues/11065
-                        linkpath = member.linkpath.replace("\\", "/")
-                        member.linkpath = linkpath.split("/", 1)[1]
+                        member.linkpath = member.linkpath[len(common_folder) + 1:].replace("\\", "/")
                         member.linkname = member.linkpath
+                if using_long_path_prefix:
+                    member.name = member.name.replace("/", "\\")
+                # Let's gather each member
+                members.append(member)
             tarredgzippedFile.extractall(destination, members=members)
 
 

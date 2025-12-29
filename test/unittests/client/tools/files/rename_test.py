@@ -1,40 +1,18 @@
 import os
-import unittest
 
 from conan.tools.files import rename
 from conan.test.utils.tools import TestClient
-from conans.util.files import chdir
+from conan.internal.util.files import chdir
 
 
-class RenameTest(unittest.TestCase):
-    def verify_dir(self, basedir):
-        self.assertTrue(os.path.isdir(basedir))
-
-        self.assertTrue(os.path.isfile(os.path.join(basedir, "1.txt")))
-        self.assertTrue(os.path.isfile(os.path.join(basedir, "1.pdb")))
-        self.assertTrue(os.path.isfile(os.path.join(basedir, "1.pdb1")))
-
-        self.assertTrue(os.path.isdir(os.path.join(basedir, "dir.pdb")))
-        self.assertTrue(os.path.isfile(os.path.join(basedir, "dir.pdb", "2.txt")))
-        self.assertTrue(os.path.isfile(os.path.join(basedir, "dir.pdb", "2.pdb")))
-        self.assertTrue(os.path.isfile(os.path.join(basedir, "dir.pdb", "2.pdb1")))
-
-        self.assertTrue(os.path.isdir(os.path.join(basedir, "middir")))
-        self.assertTrue(os.path.isfile(os.path.join(basedir, "middir", "3.txt")))
-        self.assertTrue(os.path.isfile(os.path.join(basedir, "middir", "3.pdb")))
-        self.assertTrue(os.path.isfile(os.path.join(basedir, "middir", "3.pdb1")))
-
-        self.assertTrue(os.path.isdir(os.path.join(basedir, "middir", "deepdir")))
-        self.assertTrue(os.path.isfile(os.path.join(basedir, "middir", "deepdir", "4.txt")))
-        self.assertTrue(os.path.isfile(os.path.join(basedir, "middir", "deepdir", "4.pdb")))
-        self.assertTrue(os.path.isfile(os.path.join(basedir, "middir", "deepdir", "4.pdb1")))
+class TestRename:
 
     def test_rename(self):
         client = TestClient()
-        tmpdir = client.current_folder
+        folder = client.current_folder
 
         sub_space_dir = "sub dir"
-        with chdir(tmpdir):
+        with chdir(folder):
             os.makedirs(sub_space_dir)
             os.makedirs(os.path.join(sub_space_dir, "dir.pdb"))
             os.makedirs(os.path.join(sub_space_dir, "middir"))
@@ -52,19 +30,42 @@ class RenameTest(unittest.TestCase):
                      os.path.join(sub_space_dir, "middir", "deepdir", "4.txt"): "",
                      os.path.join(sub_space_dir, "middir", "deepdir", "4.pdb"): "",
                      os.path.join(sub_space_dir, "middir", "deepdir", "4.pdb1"): ""
-                    })
-        self.verify_dir(os.path.join(tmpdir, sub_space_dir))
+                     })
 
-        with chdir(tmpdir):
+        def verify_dir(basedir):
+            assert os.path.isdir(basedir)
+
+            assert os.path.isfile(os.path.join(basedir, "1.txt"))
+            assert os.path.isfile(os.path.join(basedir, "1.pdb"))
+            assert os.path.isfile(os.path.join(basedir, "1.pdb1"))
+
+            assert os.path.isdir(os.path.join(basedir, "dir.pdb"))
+            assert os.path.isfile(os.path.join(basedir, "dir.pdb", "2.txt"))
+            assert os.path.isfile(os.path.join(basedir, "dir.pdb", "2.pdb"))
+            assert os.path.isfile(os.path.join(basedir, "dir.pdb", "2.pdb1"))
+
+            assert os.path.isdir(os.path.join(basedir, "middir"))
+            assert os.path.isfile(os.path.join(basedir, "middir", "3.txt"))
+            assert os.path.isfile(os.path.join(basedir, "middir", "3.pdb"))
+            assert os.path.isfile(os.path.join(basedir, "middir", "3.pdb1"))
+
+            assert os.path.isdir(os.path.join(basedir, "middir", "deepdir"))
+            assert os.path.isfile(os.path.join(basedir, "middir", "deepdir", "4.txt"))
+            assert os.path.isfile(os.path.join(basedir, "middir", "deepdir", "4.pdb"))
+            assert os.path.isfile(os.path.join(basedir, "middir", "deepdir", "4.pdb1"))
+
+        verify_dir(os.path.join(folder, sub_space_dir))
+
+        with chdir(folder):
             rename(None, sub_space_dir, "dst dir")
-            self.verify_dir(os.path.join(tmpdir, "dst dir"))
+            verify_dir(os.path.join(folder, "dst dir"))
 
-            rename(None,"dst dir", "subdir")
-            self.verify_dir(os.path.join(tmpdir, "subdir"))
+            rename(None, "dst dir", "subdir")
+            verify_dir(os.path.join(folder, "subdir"))
 
             rename(None, os.path.join("subdir", "1.txt"), "t.txt")
-            self.assertTrue(os.path.isfile(os.path.join(tmpdir, "t.txt")))
-            self.assertFalse(os.path.isfile(os.path.join(tmpdir, "subdir", "1.txt")))
+            assert os.path.isfile(os.path.join(folder, "t.txt"))
+            assert not os.path.isfile(os.path.join(folder, "subdir", "1.txt"))
 
     def test_rename_empty_folder(self):
         client = TestClient()
@@ -72,5 +73,5 @@ class RenameTest(unittest.TestCase):
         os.mkdir(old_folder)
         new_folder = os.path.join(client.current_folder, "new_folder")
         rename(None, old_folder, new_folder)
-        self.assertFalse(os.path.exists(old_folder))
-        self.assertTrue(os.path.exists(new_folder))
+        assert not os.path.exists(old_folder)
+        assert os.path.exists(new_folder)

@@ -1,5 +1,8 @@
 import textwrap
+import pytest
+import os
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -62,3 +65,136 @@ def test_premakedeps():
     # Assert package per configuration files
     assert_vars_file(client, 'debug')
     assert_vars_file(client, 'release')
+
+
+def test_premakedeps_link_order():
+    client = TestClient()
+    profile = textwrap.dedent(
+        """
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=9
+        compiler.cppstd=17
+        compiler.libcxx=libstdc++
+        build_type=Release
+        """)
+    client.save(
+        {
+            "liba/conanfile.py": GenConanfile("liba")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_version("1.0")
+            .with_generator("PremakeDeps")
+            .with_generator("PremakeToolchain")
+            .with_package_info(cpp_info={"libs": ["liba"]}),
+
+            "libb/conanfile.py": GenConanfile("libb")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_version("1.0")
+            .with_requires("liba/1.0")
+            .with_generator("PremakeDeps")
+            .with_package_info(
+                cpp_info={
+                    "components": {
+                        "libb1": {"requires": ["liba::liba"]},
+                        "libb2": {"requires": ["libb1"]},
+                    }
+                }
+            ),
+
+            "libc/conanfile.py": GenConanfile("libc")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_version("1.0")
+            .with_requires("libb/1.0")
+            .with_generator("PremakeDeps")
+            .with_package_info(cpp_info={"libs": ["libc"]}),
+
+            "consumer/conanfile.py": GenConanfile("consumer")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_version("1.0")
+            .with_requires("libc/1.0")
+            .with_generator("PremakeDeps"),
+
+            "profile": profile
+        }
+    )
+    client.run("create liba -pr profile")
+    client.run("create libb -pr profile")
+    client.run("create libc -pr profile")
+    client.run("install consumer -pr profile")
+    contents = client.load("consumer/conanconfig.premake5.lua")
+    assert 'include "conanconfig_release_x86_64.premake5.lua"' in contents
+    contents = client.load("consumer/conanconfig_release_x86_64.premake5.lua")
+    # Check correct order of dependencies: more dependent libs should be linked first
+    assert 't_conan_deps_order["release_x86_64"] = {"libc", "libb", "liba"}' in contents
+
+    # Check previous configurations are preserved when installing new configuration
+    client.run("install consumer -pr profile -s build_type=Debug --build=missing")
+    contents = client.load("consumer/conanconfig.premake5.lua")
+    assert 'include "conanconfig_release_x86_64.premake5.lua"' in contents
+    assert 'include "conanconfig_debug_x86_64.premake5.lua"' in contents
+    contents = client.load("consumer/conanconfig_debug_x86_64.premake5.lua")
+    assert 't_conan_deps_order["debug_x86_64"] = {"libc", "libb", "liba"}' in contents
+
+
+@pytest.mark.parametrize("transitive_headers", [True, False])
+@pytest.mark.parametrize("transitive_libs", [True, False])
+@pytest.mark.parametrize("brotli_package_type", ["unknown", "static-library", "shared-library"])
+@pytest.mark.parametrize("lib_package_type", ["unknown", "static-library", "shared-library"])
+def test_premakedeps_traits(transitive_headers, transitive_libs, brotli_package_type,
+                            lib_package_type):
+    client = TestClient()
+    profile = textwrap.dedent(
+        """
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=9
+        compiler.cppstd=17
+        compiler.libcxx=libstdc++
+        build_type=Release
+        """)
+
+    client.save(
+        {
+            "brotli/conanfile.py": GenConanfile("brotli", "1.0")
+            .with_package_type(brotli_package_type)
+            .with_package_info(
+                {"libs": ["brotlienc2"]}
+            ),
+            "lib/conanfile.py": GenConanfile("lib", "1.0")
+            .with_package_type(lib_package_type)
+            .with_requirement(
+                "brotli/1.0",
+                transitive_headers=transitive_headers,
+                transitive_libs=transitive_libs,
+            ),
+            "conanfile.py": GenConanfile("app", "1.0")
+            .with_settings("os", "compiler", "build_type", "arch")
+            .with_require("lib/1.0")
+            .with_generator("PremakeDeps"),
+            "profile": profile,
+        }
+    )
+    client.run("create brotli -pr profile")
+    brotli_layout = client.created_layout()
+    client.run("create lib -pr profile")
+    client.run("install . -pr profile")
+
+    if not transitive_headers and not transitive_libs and brotli_package_type != "shared-library":
+        assert not os.path.exists(os.path.join(client.current_folder, "conan_brotli_vars_release_x86_64.premake5.lua"))
+        return
+
+    brotli_vars = client.load("conan_brotli_vars_release_x86_64.premake5.lua")
+    if transitive_libs:
+        assert 't_conandeps["release_x86_64"]["brotli"]["libs"] = {"brotlienc2"}' in brotli_vars
+    else:
+        assert 't_conandeps["release_x86_64"]["brotli"]["libs"] = {}' in brotli_vars
+
+    if transitive_headers:
+        include_path = os.path.join(brotli_layout.package(), "include").replace("\\", "/")
+        assert f't_conandeps["release_x86_64"]["brotli"]["includedirs"] = {{"{include_path}"}}' in brotli_vars
+    else:
+        assert 't_conandeps["release_x86_64"]["brotli"]["includedirs"] = {}' in brotli_vars

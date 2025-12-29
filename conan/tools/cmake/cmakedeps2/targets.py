@@ -32,6 +32,7 @@ class TargetsTemplate2:
     @property
     def _template(self):
         return textwrap.dedent("""\
+            include_guard()
             message(STATUS "Conan: Configuring Targets for {{ ref }}")
 
             # Load information for each installed configuration.

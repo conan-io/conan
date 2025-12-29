@@ -15,7 +15,6 @@ from conan.api.output import ConanOutput, Color, cli_out_write, LEVEL_TRACE
 from conan.cli.command import ConanSubCommand
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
-from conan.internal.cache.home_paths import HomePaths
 from conan import __version__
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
 
@@ -46,10 +45,12 @@ class Cli:
             Cli._builtin_commands = self._commands.copy()
         else:
             self._commands = Cli._builtin_commands.copy()
+            self._groups = defaultdict(list)
             for k, v in self._commands.items():  # Fill groups data too
                 self._groups[v.group].append(k)
 
-        conan_custom_commands_path = HomePaths(self._conan_api.cache_folder).custom_commands_path
+        conan_custom_commands_path = os.path.join(self._conan_api.cache_folder, "extensions",
+                                                  "commands")
         # Important! This variable should be only used for testing/debugging purpose
         developer_custom_commands_path = os.getenv(_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH)
         # Notice that in case of having same custom commands file names, the developer one has
@@ -94,6 +95,7 @@ class Cli:
             if command_wrapper.doc:
                 name = f"{package}:{command_wrapper.name}" if package else command_wrapper.name
                 self._commands[name] = command_wrapper
+                command_wrapper._prog = name  # set the program name with possible package, if any
                 # Avoiding duplicated command help messages
                 if name not in self._groups[command_wrapper.group]:
                     self._groups[command_wrapper.group].append(name)
@@ -235,17 +237,6 @@ class Cli:
         return ERROR_UNEXPECTED
 
 
-def _warn_python_version():
-    version = sys.version_info
-    if version.minor == 6:
-        ConanOutput().writeln("")
-        ConanOutput().warning("*"*80, warn_tag="deprecated")
-        ConanOutput().warning("Python 3.6 is end-of-life since 2021. "
-                              "Conan future versions will drop support for it, "
-                              "please upgrade Python", warn_tag="deprecated")
-        ConanOutput().warning("*" * 80, warn_tag="deprecated")
-
-
 def _warn_frozen_center(conan_api):
     remotes = conan_api.remotes.list()
     for r in remotes:
@@ -305,7 +296,6 @@ def main(args):
     error = SUCCESS
     try:
         cli.run(args)
-        _warn_python_version()
     except BaseException as e:
         error = cli.exception_exit_error(e)
     sys.exit(error)

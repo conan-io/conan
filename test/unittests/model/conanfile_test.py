@@ -1,21 +1,20 @@
 import textwrap
-import unittest
 
 from conan.internal.model.conan_file import ConanFile
 from conan.test.utils.tools import TestClient
 
 
-class ConanFileTest(unittest.TestCase):
+class TestConanFile:
     def test_conanfile_naming(self):
         for member in vars(ConanFile):
             if member.startswith('_') and not member.startswith("__"):
-                self.assertTrue(member.startswith('_conan'))
+                assert member.startswith('_conan')
 
         conanfile = ConanFile(None)
 
         for member in vars(conanfile):
             if member.startswith('_') and not member.startswith("__"):
-                self.assertTrue(member.startswith('_conan'))
+                assert member.startswith('_conan')
 
     def test_conanfile_naming_complete(self):
         client = TestClient()

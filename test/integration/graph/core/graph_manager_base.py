@@ -1,7 +1,7 @@
 import os
 import textwrap
-import unittest
 
+import pytest
 import yaml
 
 from conan.api.conan_api import ConanAPI
@@ -16,12 +16,13 @@ from conan.api.model import RecipeReference
 from conan.internal.model.settings import Settings
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import GenConanfile
-from conans.util.dates import revision_timestamp_now
-from conans.util.files import save
+from conan.internal.util.dates import revision_timestamp_now
+from conan.internal.util.files import save
 
 
-class GraphManagerTest(unittest.TestCase):
+class GraphManagerTest:
 
+    @pytest.fixture(autouse=True)
     def setUp(self):
         cache_folder = temp_folder()
         cache = PkgCache(cache_folder, ConfDefinition())
@@ -67,7 +68,7 @@ class GraphManagerTest(unittest.TestCase):
         self._cache_recipe(ref, conanfile)
 
     @staticmethod
-    def recipe_consumer(reference=None, requires=None, build_requires=None, tool_requires=None):
+    def recipe_consumer(reference=None, requires=None, build_requires=None):
         path = temp_folder()
         path = os.path.join(path, "conanfile.py")
         conanfile = GenConanfile()
@@ -80,9 +81,6 @@ class GraphManagerTest(unittest.TestCase):
         if build_requires:
             for r in build_requires:
                 conanfile.with_build_requires(r)
-        if tool_requires:
-            for r in tool_requires:
-                conanfile.with_tool_requires(r)
         save(path, str(conanfile))
         return path
 
@@ -127,24 +125,25 @@ class GraphManagerTest(unittest.TestCase):
 
         return deps_graph
 
-    def _check_node(self, node, ref, deps=None, dependents=None, settings=None, options=None):
+    @staticmethod
+    def _check_node(node, ref, deps=None, dependents=None, settings=None, options=None):
         dependents = dependents or []
         deps = deps or []
 
         conanfile = node.conanfile
         ref = RecipeReference.loads(str(ref))
-        self.assertEqual(node.ref, ref)
+        assert node.ref == ref
         if conanfile:
-            self.assertEqual(conanfile.name, ref.name)
+            assert conanfile.name == ref.name
 
-        self.assertEqual(len(node.dependencies), len(deps))
+        assert len(node.edges) == len(deps)
         for d in node.neighbors():
             assert d in deps
 
         dependants = node.inverse_neighbors()
-        self.assertEqual(len(dependants), len(dependents))
+        assert len(dependants) == len(dependents)
         for d in dependents:
-            self.assertIn(d, dependants)
+            assert d in dependants
 
         if settings is not None:
             for k, v in settings.items():

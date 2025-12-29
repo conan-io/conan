@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
@@ -11,7 +9,7 @@ class Requirement:
     """
     def __init__(self, ref, *, headers=None, libs=None, build=False, run=None, visible=None,
                  transitive_headers=None, transitive_libs=None, test=None, package_id_mode=None,
-                 force=None, override=None, direct=None, options=None):
+                 force=None, override=None, direct=None, options=None, no_skip=False):
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
@@ -38,6 +36,7 @@ class Requirement:
         self.is_test = test  # to store that it was a test, even if used as regular requires too
         self.skip = False
         self.required_nodes = set()  # store which intermediate nodes are required, to compute "Skip"
+        self.no_skip = no_skip
 
     @property
     def files(self):  # require needs some files in dependency package
@@ -174,7 +173,7 @@ class Requirement:
         or None if it is not an expression
         """
         version = repr(self.ref.version)
-        if version.startswith("[") and version.endswith("]"):
+        if version[0] == "[" and version[-1] == "]":
             return VersionRange(version[1:-1])
 
     @property
@@ -305,7 +304,9 @@ class Requirement:
             elif pkg_type is PackageType.HEADER:
                 downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
             else:
-                assert pkg_type == PackageType.UNKNOWN
+                if pkg_type != PackageType.UNKNOWN:
+                    raise ConanException(f"Package '{self.ref}' with type '{pkg_type}' cannot have "
+                                         f"a '{dep_pkg_type}' dependency to '{require.ref}'")
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.HEADER:
@@ -438,7 +439,7 @@ class Requirements:
     """
     def __init__(self, declared=None, declared_build=None, declared_test=None,
                  declared_build_tool=None):
-        self._requires = OrderedDict()
+        self._requires = {}
         # Construct from the class definitions
         if declared is not None:
             if isinstance(declared, str):
@@ -489,7 +490,7 @@ class Requirements:
         as a result of an "alternative" replacement of the package name, otherwise the dictionary
         gets broken by modified key
         """
-        result = OrderedDict()
+        result = {}
         for k, v in self._requires.items():
             if k is require:
                 k.ref.name = new_name

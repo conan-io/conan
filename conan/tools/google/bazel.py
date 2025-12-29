@@ -4,7 +4,7 @@ import platform
 from conan.tools.google import BazelToolchain
 
 
-class Bazel(object):
+class Bazel:
 
     def __init__(self, conanfile):
         """

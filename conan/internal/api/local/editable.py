@@ -5,7 +5,7 @@ import os
 from os.path import join, normpath
 
 from conan.api.model import RecipeReference
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 EDITABLE_PACKAGES_FILE = 'editable_packages.json'

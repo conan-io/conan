@@ -2,7 +2,6 @@ import os
 from os.path import join, normpath, relpath
 
 from conan.internal.errors import RecipeNotFoundException, PackageNotFoundException
-from conan.errors import ConanException
 from conan.internal.paths import CONAN_MANIFEST
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
@@ -39,14 +38,6 @@ class ServerStore(object):
 
     def packages(self, ref):
         return join(self.base_folder(ref), SERVER_PACKAGES_FOLDER)
-
-    def package_revisions_root(self, pref):
-        assert pref.revision is None, "BUG: server store doesn't need PREV to " \
-                                      "package_revisions_root"
-        assert pref.ref.revision is not None, "BUG: server store needs RREV to " \
-                                              "package_revisions_root"
-        tmp = join(self.packages(pref.ref), pref.package_id)
-        return tmp
 
     def package(self, pref):
         assert pref.revision is not None, "BUG: server store needs PREV for package"
@@ -117,21 +108,6 @@ class ServerStore(object):
             self._remove_revision_from_index(ref)
         self._delete_empty_dirs(ref)
 
-    def remove_packages(self, ref, package_ids_filter):
-        assert isinstance(ref, RecipeReference)
-        assert isinstance(package_ids_filter, list)
-
-        if not package_ids_filter:  # Remove all packages
-            packages_folder = self.packages(ref)
-            self._storage_adapter.delete_folder(packages_folder)
-        else:
-            for package_id in package_ids_filter:
-                pref = PkgReference(ref, package_id)
-                # Remove all package revisions
-                package_folder = self.package_revisions_root(pref)
-                self._storage_adapter.delete_folder(package_folder)
-        self._delete_empty_dirs(ref)
-
     def remove_package(self, pref):
         assert isinstance(pref, PkgReference)
         assert pref.revision is not None, "BUG: server store needs PREV remove_package"
@@ -145,48 +121,6 @@ class ServerStore(object):
         assert isinstance(ref, RecipeReference)
         packages_folder = self.packages(ref)
         self._storage_adapter.delete_folder(packages_folder)
-
-    def remove_package_files(self, pref, files):
-        subpath = self.package(pref)
-        for filepath in files:
-            path = join(subpath, filepath)
-            self._storage_adapter.delete_file(path)
-
-    def get_upload_package_urls(self, pref, filesizes, user):
-        """
-        :param pref: PkgReference
-        :param filesizes: {filepath: bytes}
-        :return {filepath: url} """
-        assert isinstance(pref, PkgReference)
-        assert isinstance(filesizes, dict)
-
-        return self._get_upload_urls(self.package(pref), filesizes, user)
-
-    def _get_download_urls(self, relative_path, files_subset=None, user=None):
-        """Get the download urls for the whole relative_path or just
-        for a subset of files. files_subset has to be a list with paths
-        relative to relative_path"""
-        relative_snap = self._storage_adapter.get_snapshot(relative_path, files_subset)
-        urls = self._storage_adapter.get_download_urls(list(relative_snap.keys()), user)
-        urls = self._relativize_keys(urls, relative_path)
-        return urls
-
-    def _get_upload_urls(self, relative_path, filesizes, user=None):
-        abs_paths = {}
-        for path, filesize in filesizes.items():
-            abs_paths[join(relative_path, path)] = filesize
-        urls = self._storage_adapter.get_upload_urls(abs_paths, user)
-        urls = self._relativize_keys(urls, relative_path)
-        return urls
-
-    @staticmethod
-    def _relativize_keys(the_dict, basepath):
-        """Relativize the keys in the dict relative to basepath"""
-        ret = {}
-        for old_key, value in the_dict.items():
-            new_key = relpath(old_key, basepath)
-            ret[new_key] = value
-        return ret
 
     # Methods to manage revisions
     def get_last_revision(self, ref):
@@ -231,8 +165,7 @@ class ServerStore(object):
             rev_list = RevisionList.loads(rev_file)
         else:
             rev_list = RevisionList()
-        if ref.revision is None:
-            raise ConanException("Invalid revision for: %s" % repr(ref))
+        assert ref.revision is not None, "Invalid revision for: %s" % repr(ref)
         rev_list.add_revision(ref.revision)
         self._storage_adapter.write_file(rev_file_path, rev_list.dumps(),
                                          lock_file=rev_file_path + ".lock")

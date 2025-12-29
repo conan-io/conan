@@ -29,6 +29,11 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         is_win = self.conanfile.settings.get_safe("os") == "Windows"
         auto_link = self.cmakedeps.get_property("cmake_set_interface_link_directories",
                                                 self.conanfile, check_type=bool)
+        if auto_link:
+            out = self.cmakedeps._conanfile.output # noqa
+            out.warning("CMakeDeps: cmake_set_interface_link_directories is legacy, not necessary",
+                        warn_tag="deprecated")
+
         return {"pkg_name": self.pkg_name,
                 "root_target_name": self.root_target_name,
                 "config_suffix": self.config_suffix,
@@ -119,16 +124,6 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             set_property(TARGET {{root_target_name}}
                          APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
                          $<$<CONFIG:{{configuration}}>:{{ pkg_var(pkg_name, 'COMPILE_OPTIONS', config_suffix) }}>)
-
-            {%- if set_interface_link_directories %}
-
-            # This is only used for '#pragma comment(lib, "foo")' (automatic link)
-            set_property(TARGET {{root_target_name}}
-                         APPEND PROPERTY INTERFACE_LINK_DIRECTORIES
-                         $<$<CONFIG:{{configuration}}>:{{ pkg_var(pkg_name, 'LIB_DIRS', config_suffix) }}>)
-            {%- endif %}
-
-
         {%- else %}
 
         ########## COMPONENTS TARGET PROPERTIES {{ configuration }} ########################################
@@ -188,19 +183,12 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                              $<$<CONFIG:{{ configuration }}>:{{ comp_var(pkg_name, comp_variable_name, 'LINKER_FLAGS', config_suffix) }}>)
                 set_property(TARGET {{ comp_target_name }} APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                              $<$<CONFIG:{{ configuration }}>:{{ comp_var(pkg_name, comp_variable_name, 'INCLUDE_DIRS', config_suffix) }}>)
-                set_property(TARGET {{comp_target_name }} APPEND PROPERTY INTERFACE_LINK_DIRECTORIES
+                set_property(TARGET {{ comp_target_name }} APPEND PROPERTY INTERFACE_LINK_DIRECTORIES
                              $<$<CONFIG:{{ configuration }}>:{{ comp_var(pkg_name, comp_variable_name, 'LIB_DIRS', config_suffix) }}>)
                 set_property(TARGET {{ comp_target_name }} APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS
                              $<$<CONFIG:{{ configuration }}>:{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_DEFINITIONS', config_suffix) }}>)
                 set_property(TARGET {{ comp_target_name }} APPEND PROPERTY INTERFACE_COMPILE_OPTIONS
                              $<$<CONFIG:{{ configuration }}>:{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS', config_suffix) }}>)
-
-                {%- if set_interface_link_directories %}
-                # This is only used for '#pragma comment(lib, "foo")' (automatic link)
-                set_property(TARGET {{ comp_target_name }} APPEND PROPERTY INTERFACE_LINK_DIRECTORIES
-                             $<$<CONFIG:{{ configuration }}>:{{ comp_var(pkg_name, comp_variable_name, 'LIB_DIRS', config_suffix) }}>)
-
-                {%- endif %}
             {%endfor %}
 
 

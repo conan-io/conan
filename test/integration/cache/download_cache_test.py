@@ -5,7 +5,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, set_dirty
+from conan.internal.util.files import save, set_dirty
 
 
 class TestDownloadCache:
@@ -140,7 +140,7 @@ class TestDownloadCache:
         assert "some content 3" in client.load("myfile3.txt")
 
         # disabling cache will make it fail
-        save(client.paths.new_config_path, "")
+        client.save_home({"global.conf": ""})
         client.run("source .", assert_error=True)
         assert "ERROR: conanfile.py: Error in source() method, line 10" in client.out
         assert "Not found" in client.out

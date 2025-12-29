@@ -4,7 +4,7 @@ from conan.api.conan_api import ConanAPI
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.api.model import RecipeReference
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def test_local_api():

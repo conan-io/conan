@@ -1,5 +1,6 @@
 import platform
 import textwrap
+import os
 
 import pytest
 
@@ -7,9 +8,8 @@ from conan.test.assets.autotools import gen_makefile_am, gen_configure_ac
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from test.conftest import tools_locations
-from test.functional.utils import check_exe_run
+from test.functional.utils import check_exe_run, check_vs_runtime
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
@@ -65,6 +65,86 @@ def test_autotools_bash_complete():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.tool("msys2")
+@pytest.mark.tool("clang", "20")
+@pytest.mark.parametrize("frontend", ("clang", "clang-cl"))
+@pytest.mark.parametrize("runtime", ("static", "dynamic"))
+@pytest.mark.parametrize("build_type", ("Debug", "Release"))
+def test_autotools_bash_complete_clang(frontend, runtime, build_type):
+    client = TestClient(path_with_spaces=False)
+    # Problem is that msys2 also has clang in the path, so we need to make it explicit
+    clangpath = tools_locations["clang"]["20"]["path"]["Windows"]
+    # compilers
+    c, cpp = ("clang", "clang++") if frontend == "clang" else ("clang-cl", "clang-cl")
+    comps = f'{{"cpp":"{cpp}", "c":"{c}", "rc":"{c}"}}'
+    profile_win = textwrap.dedent(f"""
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type={build_type}
+        compiler=clang
+        compiler.version=20
+        compiler.cppstd=14
+        compiler.runtime_version=v144
+        compiler.runtime={runtime}
+
+        [conf]
+        tools.build:compiler_executables={comps}
+        tools.microsoft.bash:subsystem=msys2
+        tools.microsoft.bash:path=bash
+        tools.compilation:verbosity=verbose
+
+        [buildenv]
+        PATH=+(path){clangpath}
+        """)
+
+    main = gen_function_cpp(name="main")
+    # The autotools support for "cl" compiler (VS) is very limited, linking with deps doesn't
+    # work but building a simple app do
+    makefile_am = gen_makefile_am(main="main", main_srcs="main.cpp")
+    configure_ac = gen_configure_ac()
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import Autotools
+
+        class TestConan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "configure.ac", "Makefile.am", "main.cpp"
+            generators = "AutotoolsToolchain"
+            win_bash = True
+
+            def build(self):
+                # These commands will run in bash activating first the vcvars and
+                # then inside the bash activating the
+                self.run("aclocal")
+                self.run("autoconf")
+                self.run("automake --add-missing --foreign")
+                autotools = Autotools(self)
+                autotools.configure()
+                autotools.make()
+                autotools.install()
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "configure.ac": configure_ac,
+                 "Makefile.am": makefile_am,
+                 "main.cpp": main,
+                 "profile_win": profile_win})
+    client.run("build . -pr=profile_win")
+    client.run_command("main.exe")
+    assert "__GNUC__" not in client.out
+    assert "main __clang_major__20" in client.out
+    check_exe_run(client.out, "main", "clang", None, build_type, "x86_64", None)
+
+    bat_contents = client.load("conanbuild.bat")
+    assert "conanvcvars.bat" in bat_contents
+
+    static_runtime = runtime == "static"
+    check_vs_runtime("main.exe", client, "17", build_type=build_type, static_runtime=static_runtime)
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_add_msys2_path_automatically():
     """ Check that commands like ar, autoconf, etc, that are in the /usr/bin folder together
     with the bash.exe, can be automaticallly used when running in windows bash, without user
@@ -79,10 +159,10 @@ def test_add_msys2_path_automatically():
     except KeyError:
         pytest.skip("msys2 path not defined")
 
-    save(client.paths.new_config_path, textwrap.dedent("""
+    client.save_home({"global.conf": textwrap.dedent("""
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path={}
-            """.format(bash_path)))
+            """.format(bash_path))})
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -149,3 +229,112 @@ def test_conf_inherited_in_test_package():
     client.run("create . -s:b os=Windows -s:h os=Windows")
     assert "are needed to run commands in a Windows subsystem" not in client.out
     assert "aclocal (GNU automake)" in client.out
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.tool("msys2")
+def test_msys2_and_msbuild():
+    """ Check that msbuild can be executed in msys2 environment
+
+    # https://github.com/conan-io/conan/issues/15627
+    """
+    client = TestClient(path_with_spaces=False)
+    profile_win = textwrap.dedent(f"""
+        include(default)
+        [conf]
+        tools.microsoft.bash:subsystem=msys2
+        tools.microsoft.bash:path=bash
+        """)
+
+    main = gen_function_cpp(name="main")
+    # The autotools support for "cl" compiler (VS) is very limited, linking with deps doesn't
+    # work but building a simple app do
+    makefile_am = gen_makefile_am(main="main", main_srcs="main.cpp")
+    configure_ac = gen_configure_ac()
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import Autotools
+        from conan.tools.microsoft import MSBuild
+
+        class TestConan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "configure.ac", "Makefile.am", "main.cpp", "MyProject.vcxproj"
+            generators = "AutotoolsToolchain"
+            win_bash = True
+
+            def build(self):
+                # These commands will run in bash activating first the vcvars and
+                # then inside the bash activating the
+                self.run("aclocal")
+                self.run("autoconf")
+                self.run("automake --add-missing --foreign")
+                autotools = Autotools(self)
+                autotools.configure()
+                autotools.make()
+                autotools.install()
+                msbuild = MSBuild(self)
+                msbuild.build("MyProject.vcxproj")
+        """)
+
+    # A minimal project is sufficient - here just copy the application file to another directory
+    my_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
+        <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+        <ItemGroup Label="ProjectConfigurations">
+        <ProjectConfiguration Include="Debug|Win32">
+          <Configuration>Debug</Configuration>
+          <Platform>Win32</Platform>
+        </ProjectConfiguration>
+        <ProjectConfiguration Include="Release|Win32">
+          <Configuration>Release</Configuration>
+          <Platform>Win32</Platform>
+        </ProjectConfiguration>
+        <ProjectConfiguration Include="Debug|x64">
+          <Configuration>Debug</Configuration>
+          <Platform>x64</Platform>
+        </ProjectConfiguration>
+        <ProjectConfiguration Include="Release|x64">
+          <Configuration>Release</Configuration>
+          <Platform>x64</Platform>
+        </ProjectConfiguration>
+      </ItemGroup>
+      <PropertyGroup Label="Globals">
+        <ProjectGuid>{B58316C0-C78A-4E9B-AE8F-5D6368CE3840}</ProjectGuid>
+        <Keyword>Win32Proj</Keyword>
+      </PropertyGroup>
+      <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+      <PropertyGroup>
+        <ConfigurationType>Application</ConfigurationType>
+        <PlatformToolset>v141</PlatformToolset>
+      </PropertyGroup>
+      <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+      <ImportGroup Label="PropertySheets">
+        <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
+      </ImportGroup>
+      <PropertyGroup>
+        <OutDir>$(ProjectDir)msbuild_out</OutDir>
+      </PropertyGroup>
+      <ItemDefinitionGroup>
+      </ItemDefinitionGroup>
+      <ItemGroup>
+        <Content Include="$(ProjectDir)main.exe">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+      </ItemGroup>
+      <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+    </Project>
+    """
+
+    client.save({"conanfile.py": conanfile,
+                 "configure.ac": configure_ac,
+                 "Makefile.am": makefile_am,
+                 "main.cpp": main,
+                 "profile_win": profile_win,
+                 "MyProject.vcxproj": my_vcxproj})
+    client.run("build . -pr=profile_win")
+    # Run application in msbuild output directory
+    client.run_command(os.path.join("msbuild_out", "main.exe"))
+    check_exe_run(client.out, "main", "msvc", None, "Release", "x86_64", None)
+
+    bat_contents = client.load("conanbuild.bat")
+    assert "conanvcvars.bat" in bat_contents

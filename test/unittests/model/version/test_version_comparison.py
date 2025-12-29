@@ -1,9 +1,8 @@
 import pytest
 
 from conan.internal.model.version import Version
-from conan.internal.model.version_range import VersionRange
 
-v = [("1", "2"),
+d = [("1", "2"),
      ("1.0", "1.1"),
      ("1.0.2", "1.1.0"),
      ("1.3", "1.22"),
@@ -72,7 +71,7 @@ v = [("1", "2"),
      ]
 
 
-@pytest.mark.parametrize("v1, v2", v)
+@pytest.mark.parametrize("v1, v2", d)
 def test_comparison(v1, v2):
     v1 = Version(v1)
     v2 = Version(v2)
@@ -156,6 +155,7 @@ def test_elem_comparison():
     assert micro > 3
     assert micro < 5
     assert micro == 4
+
 
 def test_version_in_range():
     v = Version("1.0")

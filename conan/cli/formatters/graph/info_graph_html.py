@@ -44,7 +44,7 @@ graph_info_html = r"""
                     <label for="show_package_type">Show package type</label>
                 </div>
                  <div>
-                    <input type="search" placeholder="Search packages..." oninput="searchPackages(this)">
+                    <input type="search" placeholder="Search packages..." oninput="searchPackages(this)" onkeydown="onSearchKeyDown(event)">
                 </div>
                  <div>
                     <input type="search" placeholder="Exclude packages..." title="Add a comma to exclude an additional package" oninput="excludePackages(this)">
@@ -64,6 +64,7 @@ graph_info_html = r"""
             let hide_build = false;
             let hide_test = false;
             let search_pkgs = null;
+            let focus_search = false;
             let excluded_pkgs = null;
             let collapse_packages = false;
             let show_package_type = false;
@@ -86,8 +87,14 @@ graph_info_html = r"""
                 global_edges = {};
                 let edge_counter = 0;
                 let conflict=null;
+                let provide_conflict=null;
+                let missing_error=null;
                 if (graph_data["error"] && graph_data["error"]["type"] == "conflict")
                     conflict = graph_data["error"];
+                else if (graph_data["error"] && graph_data["error"]["type"] == "provide_conflict")
+                    provide_conflict = graph_data["error"];
+                else if (graph_data["error"] && graph_data["error"]["type"] == "missing")
+                    missing_error = graph_data["error"];
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
                     if (node.context == "build" && hide_build) continue;
                     if (node.test && hide_test) continue;
@@ -127,6 +134,11 @@ graph_info_html = r"""
                         color = "Black";
                         shape = "circle";
                     }
+                    if (provide_conflict && provide_conflict.node.id == node_id){
+                        font.color = "white";
+                        color = "Black";
+                        shape = "circle";
+                    }
                     if (search_pkgs) {
                         let patterns = search_pkgs.split(',')
                             .map(pattern => pattern.trim())
@@ -135,6 +147,9 @@ graph_info_html = r"""
                         if (patterns.some(pattern => label.match(pattern))) {
                             borderWidth = 3;
                             borderColor = "Magenta";
+                            if (focus_search) {
+                                focus_search = node_id;
+                            }
                         }
                     }
                     if (node.test) {
@@ -194,6 +209,34 @@ graph_info_html = r"""
                                 color: {color: "Red", highlight: "Red"},
                                 label: conflict.branch2.require.ref});
                     global_edges[edge_counter++] = conflict.branch2.require;
+                }
+                if (provide_conflict) {
+                    // The nodes are already there, we'll just add an edge to the conflict node
+                    edges.push({id: edge_counter,
+                                from: provide_conflict.conflicting_node.id,
+                                to: provide_conflict.node.id,
+                                color: {color: "Red", highlight: "Red"},
+                                label: provide_conflict.provided,
+                                title: "Both nodes provide the same requirement: " + provide_conflict.provided.join(", "),
+                                dashes: true});
+                    global_edges[edge_counter++] = {"provided": provide_conflict.provided};
+                }
+                if(missing_error) {
+                    nodes.push({
+                        id: "missing_node",
+                        font: {multi: 'html', color: "white"},
+                        label: missing_error["require"]["ref"],
+                        shape: "Circle",
+                        color: {background: "Black"},
+                    });
+                    edges.push({id: edge_counter,
+                                from: missing_error["node"]["id"],
+                                to: "missing_node",
+                                color: {color: "Red", highlight: "Red"},
+                                label: "missing",
+                                title: "missing",
+                                dashes: true});
+                    global_edges[edge_counter++] = {"missing": missing_error["error"]};
                 }
                 return {nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges)};
             };
@@ -292,7 +335,7 @@ graph_info_html = r"""
                 while (control.firstChild) {
                     control.removeChild(control.firstChild);
                 }
-                if(ids[0] || ids_edges[0]) {
+                if(ids[0] !== undefined || ids_edges[0] !== undefined) {
                     selected = graph_data["nodes"][ids[0]] || global_edges[ids_edges[0]];
                     let div = document.createElement('div');
                     let f = Object.fromEntries(Object.entries(selected).filter(([_, v]) => v != null));
@@ -312,6 +355,10 @@ graph_info_html = r"""
                 network.setData(data);
                 network.redraw();
                 network.moveTo({position: viewPos, scale: scale});
+                // If we have found a package to focus, we need to move the view
+                if (typeof focus_search === "string") {
+                    network.focus(focus_search, {animation: true, locked: false});
+                }
             }
             function switchBuild() {
                 hide_build = !hide_build;
@@ -325,13 +372,28 @@ graph_info_html = r"""
                 collapse_packages = !collapse_packages;
                 draw();
             }
+            const debounce = (func, delay) => {
+                let timeout;
+                return function(...args) {
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => func.apply(this, args), delay);
+                };
+            };
+            const debouncedDraw = debounce(draw, 300);
             function searchPackages(e) {
                 search_pkgs = e.value;
-                draw();
+                debouncedDraw();
+            }
+            function onSearchKeyDown(event) {
+                if (event.key === "Enter") {
+                    focus_search = true;
+                    draw();
+                    focus_search = false;
+                }
             }
             function excludePackages(e) {
                 excluded_pkgs = e.value;
-                draw();
+                debouncedDraw();
             }
             function showPackageType(e) {
                 show_package_type = !show_package_type;

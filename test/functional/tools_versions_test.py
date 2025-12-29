@@ -33,8 +33,10 @@ class TestToolsCustomVersions:
         assert "cmake version 3.19" in client.out
         main = gen_function_cpp(name="main")
         cmakelist = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
-            project(App C CXX)
+            project(App CXX)
             add_executable(app app.cpp)
             """)
         client.save({"CMakeLists.txt": cmakelist, "app.cpp": main})

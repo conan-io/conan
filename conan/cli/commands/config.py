@@ -1,13 +1,15 @@
-from conan.api.input import UserInput
+import os
+
 from conan.api.model import Remote
 from conan.api.output import cli_out_write
+from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.formatters import default_json_formatter
 from conan.errors import ConanException
 
 
 @conan_command(group='Consumer')
-def config(conan_api, parser, *args):
+def config(conan_api, parser, *args):  # noqa
     """
     Manage the Conan configuration in the Conan home.
     """
@@ -60,8 +62,11 @@ def config_install(conan_api, parser, subparser, *args):
 def config_install_pkg(conan_api, parser, subparser, *args):
     """
     (Experimental) Install the configuration (remotes, profiles, conf), from a Conan package
+    or from a conanconfig.yml file
     """
-    subparser.add_argument("item", help="Conan require")
+    subparser.add_argument("reference", nargs="?",
+                           help="Package reference 'pkg/version' to install configuration from "
+                                "or path to 'conanconfig.yml' file")
     subparser.add_argument("-l", "--lockfile", action=OnceArgument,
                            help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
                                 "existing 'conan.lock' file")
@@ -79,6 +84,13 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     subparser.add_argument("-o", "--options", action="append", help="Options to install config")
     args = parser.parse_args(*args)
 
+    path = make_abs_path(args.reference or ".")
+    if os.path.isdir(path):
+        path = os.path.join(path, "conanconfig.yml")
+    path = path if os.path.exists(path) else None
+    if path is None and args.reference is None:
+        raise ConanException("Must provide a package reference or a path to a conanconfig.yml file")
+
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                partial=args.lockfile_partial)
 
@@ -88,20 +100,26 @@ def config_install_pkg(conan_api, parser, subparser, *args):
         default_profile = None
     profiles = [default_profile] if default_profile else []
     profile = conan_api.profiles.get_profile(profiles, args.settings, args.options)
-    remotes = [Remote("_tmp_conan_config", url=args.url)] if args.url else None
-    config_pref = conan_api.config.install_pkg(args.item, lockfile=lockfile, force=args.force,
-                                               remotes=remotes, profile=profile)
-    lockfile = conan_api.lockfile.add_lockfile(lockfile, config_requires=[config_pref.ref])
+    remotes = [Remote("config_install_url", url=args.url)] if args.url else None
+
+    if path:
+        conanconfig = path
+        refs = conan_api.config.install_conanconfig(conanconfig, lockfile=lockfile, force=args.force,
+                                                    remotes=remotes, profile=profile)
+    else:
+        refs = conan_api.config.install_package(args.reference, lockfile=lockfile, force=args.force,
+                                                remotes=remotes, profile=profile)
+    lockfile = conan_api.lockfile.add_lockfile(lockfile, config_requires=refs)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
 
 
-def list_text_formatter(confs):
+def _list_text_formatter(confs):
     for k, v in confs.items():
         cli_out_write(f"{k}: {v}")
 
 
 @conan_subcommand(formatters={"text": cli_out_write})
-def config_home(conan_api, parser, subparser, *args):
+def config_home(conan_api, parser, subparser, *args):  # noqa
     """
     Show the Conan home folder.
     """
@@ -109,7 +127,7 @@ def config_home(conan_api, parser, subparser, *args):
     return conan_api.config.home()
 
 
-@conan_subcommand(formatters={"text": list_text_formatter, "json": default_json_formatter})
+@conan_subcommand(formatters={"text": _list_text_formatter, "json": default_json_formatter})
 def config_list(conan_api, parser, subparser, *args):
     """
     Show all the Conan available configurations: core and tools.
@@ -117,14 +135,14 @@ def config_list(conan_api, parser, subparser, *args):
     subparser.add_argument('pattern', nargs="?",
                            help="Filter configuration items that matches this pattern")
     args = parser.parse_args(*args)
-    confs = conan_api.config.builtin_confs
+    confs = conan_api.config.conf_list()
     if args.pattern:
         p = args.pattern.lower()
         confs = {k: v for k, v in confs.items() if p in k.lower() or p in v.lower()}
     return confs
 
 
-@conan_subcommand(formatters={"text": list_text_formatter, "json": default_json_formatter})
+@conan_subcommand(formatters={"text": _list_text_formatter, "json": default_json_formatter})
 def config_show(conan_api, parser, subparser, *args):
     """
     Get the value of the specified conf
@@ -136,9 +154,10 @@ def config_show(conan_api, parser, subparser, *args):
 
 
 @conan_subcommand()
-def config_clean(conan_api, parser, subparser, *args):
+def config_clean(conan_api, parser, subparser, *args):  # noqa
     """
-    (Experimental) Clean the configuration files in the Conan home folder, while keeping installed packages
+    (Experimental) Clean the configuration files in the Conan home folder, while keeping
+    installed packages
     """
     parser.parse_args(*args)
     conan_api.config.clean()

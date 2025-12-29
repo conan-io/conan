@@ -8,7 +8,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 from conan.tools.apple.apple import XCRun
 from conan.test.utils.mocks import ConanFileMock, MockSettings
-from conans.util.runners import conan_run
+from conan.internal.util.runners import conan_run
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Xcode")
@@ -107,9 +107,9 @@ def test_xcrun_in_tool_requires():
         include(default)
         [settings]
         os=iOS
-        os.version=15.4
+        os.version=15.5
         os.sdk=iphoneos
-        os.sdk_version=15.0
+        os.sdk_version=15.5
         arch=armv8
     """)
 
@@ -155,9 +155,9 @@ def test_xcrun_in_required_by_tool_requires():
         include(default)
         [settings]
         os=iOS
-        os.version=15.4
+        os.version=15.5
         os.sdk=iphoneos
-        os.sdk_version=15.0
+        os.sdk_version=15.5
         arch=armv8
     """)
 

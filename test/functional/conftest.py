@@ -41,6 +41,14 @@ def matrix_client(_matrix_client):
 
 
 @pytest.fixture()
+def matrix_client_nospace(_matrix_client):
+    c = TestClient(path_with_spaces=False)
+    c.cache_folder = os.path.join(temp_folder(path_with_spaces=False), ".conan2")
+    shutil.copytree(_matrix_client.cache_folder, c.cache_folder)
+    return c
+
+
+@pytest.fixture()
 def matrix_client_shared(_matrix_client_shared):
     c = TestClient()
     c.cache_folder = os.path.join(temp_folder(), ".conan2")
@@ -216,6 +224,8 @@ def _matrix_c_interface_client():
         """)
     # Having here the config.cmake code to be able to manually check what CMake generates
     cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(matrix C CXX)
         add_library(matrix STATIC src/matrix.cpp)
@@ -230,7 +240,7 @@ def _matrix_c_interface_client():
             FILE "${CMAKE_CURRENT_BINARY_DIR}/matrixConfig.cmake"
         )
         install(EXPORT matrixConfig
-            DESTINATION "${CMAKE_INSTALL_PREFIX}/matrix/cmake"
+            DESTINATION "matrix/cmake"
             NAMESPACE matrix::
         )
         """)

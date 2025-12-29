@@ -7,7 +7,7 @@ import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 
 @pytest.mark.parametrize("os_", ["Macos", "Linux", "Windows"])
@@ -436,15 +436,84 @@ def test_conf_build_does_not_exist():
     host = textwrap.dedent("""
     [settings]
     arch=x86_64
-    build_type=Release
-    compiler=gcc
-    compiler.cppstd=gnu17
-    compiler.libcxx=libstdc++11
-    compiler.version=13
+    os=Linux
+    [conf]
+    tools.build:compiler_executables={'c': '/usr/bin/gcc', 'cpp': '/usr/bin/g++'}
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    arch=armv8
     os=Linux
     [conf]
     tools.build:compiler_executables={'c': 'x86_64-linux-gnu-gcc', 'cpp': 'x86_64-linux-gnu-g++'}
     """)
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1"),
+            "host": host,
+            "build": build})
+    c.run("export .")
+    c.run("install --requires=pkg/0.1 --build=pkg/0.1 -g GnuToolchain -pr:h host -pr:b build")
+    tc = c.load("conangnutoolchain.sh")
+    assert 'export CC_FOR_BUILD="x86_64-linux-gnu-gcc"' in tc
+    assert 'export CXX_FOR_BUILD="x86_64-linux-gnu-g++"' in tc
+
+
+@pytest.mark.parametrize("toolchain", ["GnuToolchain", "AutotoolsToolchain"])
+def test_conf_extra_apple_flags(toolchain):
+    host = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    os=Macos
+    [conf]
+    tools.apple:enable_bitcode = True
+    tools.apple:enable_arc = True
+    tools.apple:enable_visibility = True
+    """)
+
+    c = TestClient()
+    c.save({"conanfile.txt": f"[generators]\n{toolchain}",
+            "host": host})
+    c.run("install . -pr:a host")
+    f = "conanautotoolstoolchain.sh" if toolchain == "AutotoolsToolchain" else "conangnutoolchain.sh"
+    tc = c.load(f)
+    assert 'export CXXFLAGS="$CXXFLAGS -fembed-bitcode -fvisibility=default"' in tc
+    assert 'export CFLAGS="$CFLAGS -fembed-bitcode -fvisibility=default"' in tc
+    assert 'export LDFLAGS="$LDFLAGS -fembed-bitcode -fvisibility=default"' in tc
+    assert 'export OBJCFLAGS="$OBJCFLAGS -fobjc-arc"' in tc
+    assert 'export OBJCXXFLAGS="$OBJCXXFLAGS -fobjc-arc"' in tc
+
+    c.run("install . -pr:a host -s build_type=Debug")
+    tc = c.load(f)
+    assert 'export CXXFLAGS="$CXXFLAGS -fembed-bitcode-marker -fvisibility=default"' in tc
+    assert 'export CFLAGS="$CFLAGS -fembed-bitcode-marker -fvisibility=default"' in tc
+    assert 'export LDFLAGS="$LDFLAGS -fembed-bitcode-marker -fvisibility=default"' in tc
+    assert 'export OBJCFLAGS="$OBJCFLAGS -fobjc-arc"' in tc
+    assert 'export OBJCXXFLAGS="$OBJCXXFLAGS -fobjc-arc"' in tc
+
+    host = textwrap.dedent("""
+        [settings]
+        arch=x86_64
+        os=Macos
+        [conf]
+        tools.apple:enable_bitcode = False
+        tools.apple:enable_arc = False
+        tools.apple:enable_visibility = False
+        """)
+
+    c.save({"host": host})
+    c.run("install . -pr:a host")
+    tc = c.load(f)
+    assert 'CXXFLAGS="$CXXFLAGS -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+    assert 'CFLAGS="$CFLAGS -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+    assert 'LDFLAGS="$LDFLAGS -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+    assert 'export OBJCFLAGS="$OBJCFLAGS -fno-objc-arc"' in tc
+    assert 'export OBJCXXFLAGS="$OBJCXXFLAGS -fno-objc-arc"' in tc
+
+
+def test_toolchain_crossbuild_to_android():
+    """
+    Issue related: https://github.com/conan-io/conan/issues/17441
+    """
     build = textwrap.dedent("""
     [settings]
     arch=armv8
@@ -452,14 +521,114 @@ def test_conf_build_does_not_exist():
     compiler=gcc
     compiler.cppstd=gnu17
     compiler.libcxx=libstdc++11
-    compiler.version=13
+    compiler.version=11
     os=Linux
     """)
-    c = TestClient()
-    c.save({
-        "conanfile.py": GenConanfile("pkg", "0.1"),
+    host = textwrap.dedent("""
+    [settings]
+    os = Android
+    os.api_level = 21
+    arch=x86_64
+    compiler=clang
+    compiler.version=12
+    compiler.libcxx=libc++
+    compiler.cppstd=11
+
+    [buildenv]
+    CC=clang
+    CXX=clang++
+
+    [conf]
+    tools.android:ndk_path=/path/to/ndk
+    """)
+    consumer = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.files import load
+
+    class consumerRecipe(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "GnuToolchain"
+
+        def build(self):
+            toolchain = os.path.join(self.generators_folder, "conangnutoolchain.sh")
+            content = load(self, toolchain)
+            assert 'export CC="clang"' not in content
+            assert 'export CXX="clang++"' not in content
+            assert 'export LD="/path/to/ndk' in content
+            assert 'export STRIP="/path/to/ndk' in content
+            assert 'export RANLIB="/path/to/ndk' in content
+            assert 'export AS="/path/to/ndk' in content
+            assert 'export AR="/path/to/ndk' in content
+            assert 'export ADDR2LINE="/path/to/ndk' in content
+            assert 'export NM="/path/to/ndk' in content
+            assert 'export OBJCOPY="/path/to/ndk' in content
+            assert 'export OBJDUMP="/path/to/ndk' in content
+            assert 'export READELF="/path/to/ndk' in content
+            assert 'export ELFEDIT="/path/to/ndk' in content
+
+            build_env = os.path.join(self.generators_folder, "conanbuildenv-x86_64.sh")
+            content = load(self, build_env)
+            assert 'export CC="clang"' in content
+            assert 'export CXX="clang++"' in content
+            assert 'export LD=' not in content
+            assert 'export STRIP="/path/to/ndk' not in content
+            assert 'export RANLIB="/path/to/ndk' not in content
+            assert 'export AS="/path/to/ndk' not in content
+            assert 'export AR="/path/to/ndk' not in content
+            assert 'export ADDR2LINE="/path/to/ndk' not in content
+            assert 'export NM="/path/to/ndk' not in content
+            assert 'export OBJCOPY="/path/to/ndk' not in content
+            assert 'export OBJDUMP="/path/to/ndk' not in content
+            assert 'export READELF="/path/to/ndk' not in content
+            assert 'export ELFEDIT="/path/to/ndk' not in content
+    """)
+    client = TestClient()
+    client.save({
         "host": host,
-        "build": build
+        "build": build,
+        "conanfile.py": consumer
     })
-    c.run("export .")
-    c.run("install --requires=pkg/0.1 --build=pkg/0.1 -g GnuToolchain -pr:h host -pr:b build")
+    client.run("create . -pr:h host -pr:b build")
+
+
+@pytest.mark.parametrize(
+    "threads, flags",
+    [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
+)
+def test_thread_flags(threads, flags):
+    client = TestClient()
+    profile = textwrap.dedent(f"""
+        [settings]
+        arch=wasm
+        build_type=Release
+        compiler=emcc
+        compiler.cppstd=17
+        compiler.threads={threads}
+        compiler.libcxx=libc++
+        compiler.version=4.0.10
+        os=Emscripten
+        """)
+    client.save(
+        {
+            "conanfile.py": GenConanfile("pkg", "1.0")
+            .with_settings("os", "arch", "compiler", "build_type")
+            .with_generator("GnuToolchain"),
+            "profile": profile,
+        }
+    )
+    client.run("install . -pr=./profile")
+    is_win = platform.system() == "Windows"
+    toolchain = client.load(
+        "conangnutoolchain{}".format('.bat' if is_win else '.sh'))
+
+    if is_win:
+        assert f'set "CXXFLAGS=%CXXFLAGS% -stdlib=libc++ {flags}"' in toolchain
+        assert f'set "CFLAGS=%CFLAGS% {flags}"' in toolchain
+        assert f'set "LDFLAGS=%LDFLAGS% {flags}' in toolchain
+    else:
+        assert f'export CXXFLAGS="$CXXFLAGS -stdlib=libc++ {flags}"' in toolchain
+        assert f'export CFLAGS="$CFLAGS {flags}"' in toolchain
+        assert f'export LDFLAGS="$LDFLAGS {flags}"' in toolchain

@@ -10,7 +10,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 @pytest.fixture()
@@ -508,8 +508,113 @@ class TestRuntimeDeployer:
         c.run("install --requires=pkga/1.0 --requires=pkgb/1.0 --deployer=runtime_deploy "
               "--deployer-folder=myruntime -vvv")
 
-        expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
-        assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
+        assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == sorted(["bin", "lib"])
+        assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime", "lib"))) == sorted(['pkga.so', 'pkgb.so'])
+        assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime", "bin"))) == sorted(['pkga.dll'])
+
+
+@pytest.mark.parametrize("symlink, expected",
+                         [(True, ["libfoo.so.0.1.0", "libfoo.so.0", "libfoo.so"]),
+                          (False, ["libfoo.so.0.1.0"])])
+def test_runtime_deploy_symlinks(symlink, expected):
+    """ The deployer runtime_deploy should preserve symlinks when deploying shared libraries
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.files import copy, chdir
+           import os
+           class Pkg(ConanFile):
+               package_type = "shared-library"
+               def package(self):
+                   copy(self, "*.so*", src=self.build_folder, dst=self.package_folder)
+                   with chdir(self, os.path.join(self.package_folder, "lib")):
+                       os.symlink(src="libfoo.so.0.1.0", dst="libfoo.so.0")
+                       os.symlink(src="libfoo.so.0", dst="libfoo.so")
+           """)
+    c.save({"foo/conanfile.py": conanfile,
+            "foo/lib/libfoo.so.0.1.0": ""})
+    c.run("export-pkg foo/ --name=foo --version=0.1.0")
+    c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output -c:a tools.deployer:symlinks={symlink}")
+
+    sorted_expected = sorted(expected)
+    assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == sorted_expected
+    link_so_0 = os.path.join(c.current_folder, "output", "libfoo.so.0")
+    link_so = os.path.join(c.current_folder, "output", "libfoo.so")
+    lib = os.path.join(c.current_folder, "output", "libfoo.so.0.1.0")
+    # INFO: This test requires in Windows to have symlinks enabled, otherwise it will fail
+    if symlink and platform.system() != "Windows":
+        assert os.path.islink(link_so_0)
+        assert os.path.islink(link_so)
+        assert not os.path.isabs(os.readlink(link_so_0))
+        assert not os.path.isabs(os.readlink(os.path.join(link_so)))
+        assert os.path.realpath(link_so) == os.path.realpath(link_so_0)
+        assert os.path.realpath(link_so_0) == os.path.realpath(lib)
+        assert not os.path.islink(lib)
+    else:
+        assert not os.path.islink(lib)
+
+
+def test_runtime_deploy_subfolder():
+    """ The deployer runtime_deploy should preserve subfolder structure when deploying shared libraries
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.files import copy
+           import os
+           class Pkg(ConanFile):
+               package_type = "shared-library"
+               def package(self):
+                   copy(self, "*.so*", src=self.build_folder, dst=self.package_folder, keep_path=True)
+           """)
+    c.save({"foo/conanfile.py": conanfile,
+            "foo/lib/libfoo.so": "",
+            "foo/lib/subfolder/libbar.so": "",
+            "foo/lib/subfolder/subsubfolder/libqux.so": "",})
+    c.run("export-pkg foo/ --name=foo --version=0.1.0")
+    c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output")
+
+    assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == ["libfoo.so", "subfolder"]
+    assert sorted(os.listdir(os.path.join(c.current_folder, "output", "subfolder"))) == ["libbar.so", "subsubfolder"]
+    assert sorted(os.listdir(os.path.join(c.current_folder, "output", "subfolder", "subsubfolder"))) == ["libqux.so"]
+
+
+def test_runtime_deploy_subfolder_symlink():
+    """ The deployer runtime_deploy should preserve subfolder structure when deploying shared
+        libraries with symlinks
+    """
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+           from conan import ConanFile
+           from conan.tools.files import copy, chdir, mkdir
+           import os
+           class Pkg(ConanFile):
+               package_type = "shared-library"
+               def package(self):
+                   copy(self, "*.so*", src=self.build_folder, dst=self.package_folder)
+                   with chdir(self, os.path.join(self.package_folder, "lib")):
+                        os.symlink(src="subfolder/libfoo.so.1.0", dst="libfoo.so.1")
+                        os.symlink(src="libfoo.so.1", dst="libfoo.so")
+           """)
+    c.save({"foo/conanfile.py": conanfile,
+            "foo/lib/subfolder/libfoo.so.1.0": "",})
+    c.run("export-pkg foo/ --name=foo --version=0.1.0")
+    c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output -c:a tools.deployer:symlinks=True")
+
+    assert os.listdir(os.path.join(c.current_folder, "output", "subfolder")) == ["libfoo.so.1.0"]
+    # INFO: This test requires in Windows to have symlinks enabled, otherwise it will fail
+    if platform.system() != "Windows":
+        assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == ["libfoo.so", "libfoo.so.1" , "subfolder"]
+        link_so_0 = os.path.join(c.current_folder, "output", "libfoo.so.1")
+        link_so = os.path.join(c.current_folder, "output", "libfoo.so")
+        lib = os.path.join(c.current_folder, "output", "subfolder", "libfoo.so.1.0")
+        assert os.path.islink(link_so_0)
+        assert os.path.islink(link_so)
+        assert not os.path.isabs(os.readlink(link_so_0))
+        assert not os.path.isabs(os.readlink(os.path.join(link_so)))
+        assert os.path.realpath(link_so) == os.path.realpath(link_so_0)
+        assert os.path.realpath(link_so_0) == os.path.realpath(lib)
 
 
 def test_deployer_errors():
@@ -524,3 +629,56 @@ def test_deployer_errors():
     c.run("install . --deployer=mydeploy2.py", assert_error=True)
     # The error message says conanfile, not a big deal still path to file is shown
     assert "ERROR: Unable to load conanfile" in c.out
+
+
+def test_deploy_relative_paths():
+    c = TestClient()
+    consumer = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            requires = "pkg/0.1"
+            settings = "build_type"
+            os = "build_type"
+            generators = "CMakeDeps"
+            def layout(self):
+                self.folders.build = os.path.join("some/sub/folders")
+                self.folders.generators = os.path.join(self.folders.build, "generators")
+        """)
+    deploy = textwrap.dedent("""
+        import os, shutil
+        def deploy(graph, output_folder):
+            conanfile = graph.root.conanfile
+            output_folder = os.path.join(conanfile.build_folder, "installed")
+            for dep in conanfile.dependencies.values():
+                new_folder = os.path.join(output_folder, dep.ref.name)
+                shutil.copytree(dep.package_folder, new_folder, symlinks=True)
+                dep.set_deploy_folder(new_folder)
+        """)
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+            "consumer/conanfile.py": consumer,
+            "mydeploy.py": deploy})
+    c.run("create pkg")
+
+    # If we don't change to another folder, the full_deploy will be recursive and fail
+    c.run("install consumer --build=missing --deployer=mydeploy.py")
+    data = c.load("consumer/some/sub/folders/generators/pkg-release-data.cmake")
+    assert 'set(pkg_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/../installed/pkg")' in data
+
+
+@pytest.mark.parametrize("absolute_path", [True, False])
+def test_deploy_output_absolute(absolute_path):
+    # https://github.com/conan-io/conan/issues/18560
+    c = TestClient()
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1").with_package_file("myfile.txt", "c"),
+            "consumer/conanfile.txt": "[requires]\npkg/0.1"})
+    c.run("create pkg")
+
+    # It is important to use the forward /myout in Windows, this was the breaking input
+    out_path = f"{c.current_folder}/myout" if absolute_path else "myout"
+    c.run("install consumer/conanfile.txt -s arch=x86_64 --deployer=full_deploy -g CMakeDeps "
+          f'-of="{out_path}"')
+    assert c.load("myout/full_deploy/host/pkg/0.1/myfile.txt") == "c"
+    data = c.load("myout/pkg-release-x86_64-data.cmake")
+    assert ('set(pkg_PACKAGE_FOLDER_RELEASE '
+            '"${CMAKE_CURRENT_LIST_DIR}/full_deploy/host/pkg/0.1")') in data

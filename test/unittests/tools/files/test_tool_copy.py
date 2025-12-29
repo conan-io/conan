@@ -1,16 +1,14 @@
-import mock
+from unittest import mock
 import os
 import platform
-import unittest
-
 import pytest
 
 from conan.tools.files import copy
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import load, save, mkdir, save_files, chdir
+from conan.internal.util.files import load, save, mkdir, save_files, chdir
 
 
-class ToolCopyTest(unittest.TestCase):
+class TestToolCopy:
 
     def test_basic(self):
         folder1 = temp_folder()
@@ -25,16 +23,16 @@ class ToolCopyTest(unittest.TestCase):
 
         folder2 = temp_folder()
         copy(None, "*.txt", folder1, os.path.join(folder2, "texts"))
-        self.assertEqual("hello1", load(os.path.join(folder2, "texts/subdir1/file1.txt")))
-        self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/subdir1/sub1/file1.txt")))
-        self.assertEqual("2 Hello1", load(os.path.join(folder2, "texts/subdir2/file1.txt")))
-        self.assertEqual(['file1.txt'], os.listdir(os.path.join(folder2, "texts/subdir2")))
+        assert "hello1" == load(os.path.join(folder2, "texts/subdir1/file1.txt"))
+        assert "Hello1 sub" == load(os.path.join(folder2, "texts/subdir1/sub1/file1.txt"))
+        assert "2 Hello1" == load(os.path.join(folder2, "texts/subdir2/file1.txt"))
+        assert ['file1.txt'] == os.listdir(os.path.join(folder2, "texts/subdir2"))
 
         folder2 = temp_folder()
         copy(None, "*.txt", os.path.join(folder1, "subdir1"), os.path.join(folder2, "texts"))
-        self.assertEqual("hello1", load(os.path.join(folder2, "texts/file1.txt")))
-        self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/sub1/file1.txt")))
-        self.assertNotIn("subdir2", os.listdir(os.path.join(folder2, "texts")))
+        assert "hello1" == load(os.path.join(folder2, "texts/file1.txt"))
+        assert "Hello1 sub" == load(os.path.join(folder2, "texts/sub1/file1.txt"))
+        assert "subdir2" not in os.listdir(os.path.join(folder2, "texts"))
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_symlinks_folder_behavior(self):
@@ -56,8 +54,8 @@ class ToolCopyTest(unittest.TestCase):
         save(test2, "")
         gen_folder = os.path.join(build_folder, "gen")
         mkdir(gen_folder)
-        bin = os.path.join(gen_folder, "test.bin")
-        save(bin, "")
+        binfile = os.path.join(gen_folder, "test.bin")
+        save(binfile, "")
         sym_folder = os.path.join(build_folder, "sym")
         os.symlink(gen_folder, sym_folder)
 
@@ -93,8 +91,8 @@ class ToolCopyTest(unittest.TestCase):
         folder2 = temp_folder()
         copy(None, "*", folder1, folder2)
         symlink = os.path.join(folder2, "foo", "symlink")
-        self.assertTrue(os.path.islink(symlink))
-        self.assertTrue(load(os.path.join(symlink, "file.txt")), "Hello")
+        assert os.path.islink(symlink)
+        assert load(os.path.join(symlink, "file.txt")) == "Hello"
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_linked_folder_nested(self):
@@ -107,7 +105,7 @@ class ToolCopyTest(unittest.TestCase):
 
         folder2 = temp_folder()
         copied = copy(None, "*.cpp", folder1, folder2)
-        self.assertEqual(copied, [])
+        assert copied == []
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_linked_folder_copy_from_linked_folder(self):
@@ -137,15 +135,15 @@ class ToolCopyTest(unittest.TestCase):
         copied = copy(None, "dir/*", src, dst)
 
         # The pattern "dir/*" doesn't match to the symlink file "dir_link" so it is not copied
-        self.assertEqual(copied, [dst_dir_file])
-        self.assertFalse(os.path.exists(dst_dir_link))
+        assert copied == [dst_dir_file]
+        assert not os.path.exists(dst_dir_link)
 
         # This pattern "dir*" match both the symlink "dir_link" and the folder "dir/"
         copied = copy(None, "dir*", src, dst)
 
-        self.assertEqual(copied, [dst_dir_file, dst_dir_link])
-        self.assertEqual(os.listdir(dst), os.listdir(src))
-        self.assertTrue(os.path.islink(dst_dir_link))
+        assert copied == [dst_dir_file, dst_dir_link]
+        assert os.listdir(dst) == os.listdir(src)
+        assert os.path.islink(dst_dir_link)
 
     def test_excludes(self):
         folder1 = temp_folder()
@@ -155,7 +153,7 @@ class ToolCopyTest(unittest.TestCase):
 
         folder2 = temp_folder()
         copy(None, "*.*", folder1, os.path.join(folder2, "texts"), excludes="*.c")
-        self.assertEqual(['file1.txt'], os.listdir(os.path.join(folder2, "texts/subdir1")))
+        assert ['file1.txt'] == os.listdir(os.path.join(folder2, "texts/subdir1"))
 
         folder1 = temp_folder()
         save(os.path.join(folder1, "MyLib.txt"), "")
@@ -164,11 +162,22 @@ class ToolCopyTest(unittest.TestCase):
 
         folder2 = temp_folder()
         copy(None, "*.txt", folder1, folder2, excludes="*Test*.txt")
-        self.assertEqual({'MyLib.txt', 'MyLibImpl.txt'}, set(os.listdir(folder2)))
+        assert {'MyLib.txt', 'MyLibImpl.txt'} == set(os.listdir(folder2))
 
         folder2 = temp_folder()
         copy(None, "*.txt", folder1, folder2, excludes=("*Test*.txt", "*Impl*"))
-        self.assertEqual(['MyLib.txt'], os.listdir(folder2))
+        assert ['MyLib.txt'] == os.listdir(folder2)
+
+        folder1 = temp_folder()
+        src_dir = os.path.join(folder1, "src_dir")
+        dst_dir = os.path.join(folder1, "dst_dir")
+        os.makedirs(src_dir)
+        os.makedirs(dst_dir)
+        save(os.path.join(src_dir, "file"), "nothing")
+        save(os.path.join(dst_dir, "file"), "nothing")
+        copy(None, "*_dir*", folder1, folder2, excludes=["dst_dir", ])
+        assert os.path.exists(os.path.join(folder2, "src_dir"))
+        assert not os.path.exists(os.path.join(folder2, "dst_dir"))
 
     def test_excludes_hidden_files(self):
         folder1 = temp_folder()
@@ -198,15 +207,47 @@ class ToolCopyTest(unittest.TestCase):
 
         folder2 = temp_folder()
         copy(None, "*", folder1, folder2, excludes=["CamelCaseIgnore", "UPPER.txt"])
-        self.assertFalse(os.path.exists(os.path.join(folder2, "CamelCaseIgnore")))
-        self.assertFalse(os.path.exists(os.path.join(folder2, "UPPER.txt")))
-        self.assertTrue(os.path.exists(os.path.join(folder2, "lower.txt")))
+        assert not os.path.exists(os.path.join(folder2, "CamelCaseIgnore"))
+        assert not os.path.exists(os.path.join(folder2, "UPPER.txt"))
+        assert os.path.exists(os.path.join(folder2, "lower.txt"))
 
         folder2 = temp_folder()
         copy(None, "*", folder1, folder2)
-        self.assertTrue(os.path.exists(os.path.join(folder2, "CamelCaseIgnore")))
-        self.assertTrue(os.path.exists(os.path.join(folder2, "UPPER.txt")))
-        self.assertTrue(os.path.exists(os.path.join(folder2, "lower.txt")))
+        assert os.path.exists(os.path.join(folder2, "CamelCaseIgnore"))
+        assert os.path.exists(os.path.join(folder2, "UPPER.txt"))
+        assert os.path.exists(os.path.join(folder2, "lower.txt"))
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
+    def test_excludes_symlink_folder(self):
+        # https://github.com/conan-io/conan/issues/18296
+        root_folder = temp_folder(path_with_spaces=False)
+        target_folder = os.path.join(root_folder, "target_folder")
+        src_dir = os.path.join(root_folder, "src_dir")
+        os.makedirs(src_dir)
+        save(os.path.join(src_dir, "file"), "nothing")
+        os.symlink(src_dir, os.path.join(root_folder, "link_dir"))
+
+        copied = copy(None, "*_dir*", root_folder, target_folder, excludes=["link_dir",])
+
+        assert os.path.exists(target_folder) and os.path.isdir(target_folder)
+        assert os.path.exists(os.path.join(target_folder, "src_dir", "file"))
+        assert not os.path.exists(os.path.join(target_folder, "link_dir"))
+        assert sorted(copied) == [os.path.join(target_folder, "src_dir", "file"),]
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
+    def test_excludes_symlink_file(self):
+        # https://github.com/conan-io/conan/issues/18296
+        root_folder = temp_folder(path_with_spaces=False)
+        target_folder = os.path.join(root_folder, "target_folder")
+        save(os.path.join(root_folder, "src_file"), "nothing")
+        os.symlink(os.path.join(root_folder, "src_file"), os.path.join(root_folder, "link_file"))
+
+        copied = copy(None, "*_file", root_folder, target_folder, excludes=["link_file", ])
+
+        assert os.path.exists(target_folder) and os.path.isdir(target_folder)
+        assert os.path.exists(os.path.join(target_folder, "src_file"))
+        assert not os.path.exists(os.path.join(target_folder, "link_file"))
+        assert copied == [os.path.join(target_folder, "src_file"),]
 
     def test_multifolder(self):
         src_folder1 = temp_folder()
@@ -217,8 +258,7 @@ class ToolCopyTest(unittest.TestCase):
         dst_folder = temp_folder()
         copy(None, "*", src_folder1, dst_folder)
         copy(None, "*", src_folder2, dst_folder)
-        self.assertEqual(['file1.txt', 'file2.txt'],
-                         sorted(os.listdir(dst_folder)))
+        assert ['file1.txt', 'file2.txt'] == sorted(os.listdir(dst_folder))
 
     @mock.patch('shutil.copy2')
     def test_avoid_repeat_copies(self, copy2_mock):
@@ -232,7 +272,7 @@ class ToolCopyTest(unittest.TestCase):
         for src_folder in src_folders:
             copy(None, "*", os.path.join(src_folder, "sub"), dst_folder)
 
-        self.assertEqual(copy2_mock.call_count, len(src_folders))
+        assert copy2_mock.call_count == len(src_folders)
 
     def test_ignore_case(self):
         src_folder = temp_folder()
@@ -240,15 +280,15 @@ class ToolCopyTest(unittest.TestCase):
 
         dst_folder = temp_folder()
         copy(None, "foobar.txt", src_folder, dst_folder, ignore_case=False)
-        self.assertEqual([], os.listdir(dst_folder))
+        assert [] == os.listdir(dst_folder)
 
         dst_folder = temp_folder()
         copy(None, "FooBar.txt", src_folder, dst_folder, ignore_case=False)
-        self.assertEqual(["FooBar.txt"], os.listdir(dst_folder))
+        assert ["FooBar.txt"] == os.listdir(dst_folder)
 
         dst_folder = temp_folder()
         copy(None, "foobar.txt", src_folder, dst_folder, ignore_case=True)
-        self.assertEqual(["FooBar.txt"], os.listdir(dst_folder))
+        assert ["FooBar.txt"] == os.listdir(dst_folder)
 
     def test_ignore_case_excludes(self):
         src_folder = temp_folder()
@@ -261,20 +301,17 @@ class ToolCopyTest(unittest.TestCase):
         # Exclude pattern will match AttributeStorage
         copy(None, "*.h", src_folder, os.path.join(dst_folder, "include"),
              excludes="*Test*")
-        self.assertEqual(["include"], os.listdir(dst_folder))
-        self.assertEqual(sorted(["file.h", "sub"]),
-                         sorted(os.listdir(os.path.join(dst_folder, "include"))))
-        self.assertEqual(["file.h"], os.listdir(os.path.join(dst_folder, "include", "sub")))
+        assert ["include"] == os.listdir(dst_folder)
+        assert sorted(["file.h", "sub"]) == sorted(os.listdir(os.path.join(dst_folder, "include")))
+        assert ["file.h"] == os.listdir(os.path.join(dst_folder, "include", "sub"))
 
         dst_folder = temp_folder()
         # Exclude pattern will not match AttributeStorage if ignore_case=False
         copy(None, "*.h", src_folder, os.path.join(dst_folder, "include"), excludes="*Test*",
              ignore_case=False)
-        self.assertEqual(["include"], os.listdir(dst_folder))
-        self.assertEqual(sorted(["AttributeStorage.h", "file.h", "sub"]),
-                         sorted(os.listdir(os.path.join(dst_folder, "include"))))
-        self.assertEqual(sorted(["AttributeStorage.h", "file.h"]),
-                         sorted(os.listdir(os.path.join(dst_folder, "include", "sub"))))
+        assert ["include"] == os.listdir(dst_folder)
+        assert sorted(["AttributeStorage.h", "file.h", "sub"]) == sorted(os.listdir(os.path.join(dst_folder, "include")))
+        assert sorted(["AttributeStorage.h", "file.h"]) == sorted(os.listdir(os.path.join(dst_folder, "include", "sub")))
 
     def test_empty_parent_folder_makedirs(self):
         src_folder = temp_folder()

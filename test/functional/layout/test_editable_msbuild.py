@@ -5,17 +5,14 @@ import textwrap
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.assets.pkg_cmake import pkg_cmake_app
 from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 def test_editable_msbuild():
     c = TestClient()
-    with c.chdir("dep"):
-        c.run("new msbuild_lib -d name=dep -d version=0.1")
-    c.save(pkg_cmake_app("pkg", "0.1", requires=["dep/0.1"]),
-           path=os.path.join(c.current_folder, "pkg"))
+    c.run("new msbuild_lib -d name=dep -d version=0.1 -o dep")
+    c.run("new cmake_exe -d name=pkg -d version=0.1 -d requires=dep/0.1 -o pkg")
 
     build_folder = ""
     output_folder = '--output-folder="{}"'.format(build_folder) if build_folder else ""
@@ -35,12 +32,12 @@ def test_editable_msbuild():
         c.run("build . ")
         folder = os.path.join("build", "Release")
         c.run_command(os.sep.join([".", folder, "pkg"]))
-        assert "main: Release!" in c.out
+        assert "pkg/0.1: Hello World Release!" in c.out
         assert "{}: Hello World Release!".format(msg) in c.out
         c.run("build . -s build_type=Debug")
         folder = os.path.join("build", "Debug")
         c.run_command(os.sep.join([".", folder, "pkg"]))
-        assert "main: Debug!" in c.out
+        assert "pkg/0.1: Hello World Debug!" in c.out
         assert "{}: Hello World Debug!".format(msg) in c.out
 
     with c.chdir("pkg"):
