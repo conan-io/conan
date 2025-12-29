@@ -1,6 +1,7 @@
 import os
 import shutil
 
+from conan.internal.methods import run_source_method
 from conan.tools.files import copy
 from conan.api.output import ConanOutput
 from conan.tools.scm import Git
@@ -9,7 +10,7 @@ from conan.errors import ConanException
 from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import RecipeReference
 from conan.internal.paths import DATA_YML
-from conan.internal.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
+from conan.internal.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir, save
 
 
 def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
@@ -65,6 +66,12 @@ def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
     conanfile.folders.set_base_recipe_metadata(recipe_metadata)
     _export_recipe(conanfile, export_folder)
     _export_source(conanfile, export_src_folder)
+    if conanfile._conan_helpers.global_conf.get("core:source_in_export"):  # noqa
+        if hasattr(conanfile, "source"):
+            conanfile.output.info("core:source_in_export: Using source() method as export_sources()")
+            conanfile.folders.set_base_source(export_src_folder)
+            run_source_method(conanfile, hook_manager)
+            save(os.path.join(export_src_folder, ".conan_exported_source"), "")
     shutil.copy2(conanfile_path, recipe_layout.conanfile())
 
     # Execute post-export hook before computing the digest

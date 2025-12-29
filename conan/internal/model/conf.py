@@ -20,6 +20,7 @@ from conan.internal.model.settings import SettingsItem
 from conan.internal.util.files import load, save
 
 BUILT_IN_CONFS = {
+    "core:source_in_export": "run source as export_sources()",
     "core:required_conan_version": "Raise if current version does not match the defined range.",
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core:warnings_as_errors": "Treat warnings matching any of the patterns in this list as errors and then raise an exception. "
