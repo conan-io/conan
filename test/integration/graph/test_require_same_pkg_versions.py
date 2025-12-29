@@ -394,7 +394,8 @@ class TestTransitiveBuild:
                     copy(self, "*", src=self.dependencies["gcc"].cpp_info.bindir,
                          dst=os.path.join(self.package_folder, "bin"))
                     echo_bat = f'@echo off\necho {name}={{self.version}}!!\ncall "%~dp0/mygcc.bat"'
-                    echo_sh = f"@echo off\necho {name}={{self.version}}!!\n./mygcc.sh"
+                    # Trick for cwd in Linux
+                    echo_sh = '@echo off\necho {name}=1.0!!\n"${{0%/*}}/mygcc.sh\"'
                     save(self, os.path.join(self.package_folder, "bin", "{name}.bat"), echo_bat)
                     save(self, os.path.join(self.package_folder, "bin", "{name}.sh"), echo_sh)
                     os.chmod(os.path.join(self.package_folder, "bin", "{name}.sh"), 0o777)
