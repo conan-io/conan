@@ -100,12 +100,11 @@ class CacheAPI:
 
         for rref, packages in package_list.items():
             recipe_bundle = package_list.recipe_dict(rref)
-            if recipe_bundle:
-                rref_folder = cache.recipe_layout(rref).download_export()
-                try:
-                    pkg_signer.sign_pkg(rref, recipe_bundle.get("files", {}), rref_folder)
-                except Exception as e:
-                    recipe_bundle["pkgsign_error"] = str(e)
+            rref_folder = cache.recipe_layout(rref).download_export()
+            try:
+                pkg_signer.sign_pkg(rref, recipe_bundle.get("files", {}), rref_folder)
+            except Exception as e:
+                recipe_bundle["pkgsign_error"] = str(e)
             for pref in packages:
                 pkg_bundle = package_list.package_dict(pref)
                 if pkg_bundle:
@@ -130,14 +129,13 @@ class CacheAPI:
 
         for rref, packages in package_list.items():
             recipe_bundle = package_list.recipe_dict(rref)
-            if recipe_bundle:
-                rref_folder = cache.recipe_layout(rref).download_export()
-                files = {file: os.path.join(rref_folder, file) for file in
-                         os.listdir(rref_folder) if not file.startswith(METADATA)}
-                try:
-                    pkg_signer.verify(rref, rref_folder, files)
-                except Exception as e:
-                    recipe_bundle["pkgsign_error"] = str(e)
+            rref_folder = cache.recipe_layout(rref).download_export()
+            files = {file: os.path.join(rref_folder, file) for file in
+                     os.listdir(rref_folder) if not file.startswith(METADATA)}
+            try:
+                pkg_signer.verify(rref, rref_folder, files)
+            except Exception as e:
+                recipe_bundle["pkgsign_error"] = str(e)
             for pref in packages:
                 pkg_bundle = package_list.package_dict(pref)
                 if pkg_bundle:

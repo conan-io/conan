@@ -16,9 +16,8 @@ def _get_package_sign_error(pkg_list):
                                      "Please check the output.")
     for rref, packages in pkg_list.items():
         recipe_bundle = pkg_list.recipe_dict(rref)
-        if recipe_bundle:
-            if recipe_bundle.get("pkgsign_error"):
-                return conan_exception
+        if recipe_bundle.get("pkgsign_error"):
+            return conan_exception
         for pref in packages:
             pkg_bundle = pkg_list.package_dict(pref)
             if pkg_bundle:
