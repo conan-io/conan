@@ -89,8 +89,6 @@ class CacheAPI:
                 "The sign() function in the package sign plugin is not defined. For more "
                 "information on how to configure the plugin, please read the documentation at "
                 "https://docs.conan.io/2/reference/extensions/package_signing.html.")
-        if not package_list.has_items():
-            raise ConanException("No packages to sign in the pkglist provided.")
 
         app = ConanApp(self._conan_api)
         preparator = PackagePreparator(app, self._api_helpers.global_conf)
@@ -124,8 +122,6 @@ class CacheAPI:
                 "The verify() function in the package sign plugin is not defined. For more "
                 "information on how to configure the plugin, please read the documentation at "
                 "https://docs.conan.io/2/reference/extensions/package_signing.html.")
-        if not package_list.has_items():
-            raise ConanException("No packages to verify in the pkglist provided.")
 
         for rref, packages in package_list.items():
             recipe_bundle = package_list.recipe_dict(rref)

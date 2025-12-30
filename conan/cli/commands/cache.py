@@ -53,7 +53,11 @@ def print_package_sign_text(data):
 
         return cleaned
 
-    items = {ref: clean_inline(item) for ref, item in results_dict.items()}
+    items = {ref: clean_inline(item) for ref, item in results_dict.items() if item}
+
+    if not items:
+        ConanOutput().warning("No packages to process in the pkglist provided")
+        return
 
     # Output
     cli_out_write(f"[Package sign] Results:\n")
