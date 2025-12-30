@@ -73,8 +73,7 @@ def test_pkg_sign_manifest_signatures():
         import os
         from conan.internal.util.files import save  # This is only for test purposes
         from conan.tools.files import load
-        from conan.tools.pkg_signing.plugin import (load_manifest, load_signatures,
-                                                    verify_files_checksums)
+        from conan.tools.pkg_signing.plugin import load_manifest, load_signatures
 
         def sign(ref, artifacts_folder, signature_folder, **kwargs):
             save(os.path.join(signature_folder, "pkgsign-manifest.json.sig"), "")
@@ -86,7 +85,6 @@ def test_pkg_sign_manifest_signatures():
 
         def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
             print(f"Manifest content:\n {load_manifest(signature_folder)}")
-            verify_files_checksums(signature_folder, files)
             signatures_content = load_signatures(signature_folder)
             signatures = signatures_content["signatures"]
             for signature in signatures_content["signatures"]:
@@ -123,8 +121,7 @@ def test_pkg_sign_canonical():
         from conan.errors import ConanException
         from conan.api.output import ConanOutput
         from conan.internal.util.files import save  # This is only for test purposes
-        from conan.tools.pkg_signing.plugin import (get_signatures_filepath, load_signatures,
-            verify_files_checksums)
+        from conan.tools.pkg_signing.plugin import get_signatures_filepath, load_signatures
 
         def sign(ref, artifacts_folder, signature_folder, **kwargs):
             ConanOutput().info(f"Signing reference {ref}")
@@ -157,7 +154,6 @@ def test_pkg_sign_canonical():
             provider = signatures["signatures"][0]["provider"]
             if provider != "conan-client":
                 raise ConanException(f"Failed to verify the package {ref}")
-            verify_files_checksums(signature_folder, files)
             signature = signatures["signatures"][0]["sign_artifacts"]["signature"]
             ConanOutput().info(f"Verification ok for {ref} with signature {signature}")
         """)
@@ -165,38 +161,7 @@ def test_pkg_sign_canonical():
 
     # Cache verify command fails and reports if package is not signed
     c.run("cache verify *", assert_error=True)
-    assert textwrap.dedent("""
-     [Package sign] Results:
-
-     lib1ok/0.1
-       revisions
-         a6a4e799bb673d6e5ca4f904118d672e
-           packages
-             da39a3ee5e6b4b0d3255bfef95601890afd80709
-               revisions
-                 76285bcb59a81071122cba04b2269b52
-                   ERROR: Package is not signed
-           ERROR: Package is not signed
-     lib2fail/0.1
-       revisions
-         70a185be5a95af3dde25b74ae800b2f2
-           packages
-             da39a3ee5e6b4b0d3255bfef95601890afd80709
-               revisions
-                 0ba8627bd47edc3a501e8f0eb9a79e5e
-                   ERROR: Package is not signed
-           ERROR: Package is not signed
-     lib3fail/0.1
-       revisions
-         09ccc766ddd11c96aa78307b3f166fd6
-           packages
-             da39a3ee5e6b4b0d3255bfef95601890afd80709
-               revisions
-                 0ba8627bd47edc3a501e8f0eb9a79e5e
-                   ERROR: Package is not signed
-           ERROR: Package is not signed
-
-     [Package sign] Summary: OK=0, FAILED=6""") in c.out
+    assert "ERROR: Manifest file does not exist in signature folder" in c.out
 
     # Cache sign command fails if a package fails to sign and reports it
     c.run("cache sign *", assert_error=True)

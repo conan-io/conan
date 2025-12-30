@@ -6,7 +6,7 @@ from conan.internal.loader import load_python_file
 from conan.internal.util.files import mkdir
 from conan.tools.pkg_signing.plugin import (get_manifest_filepath, get_signatures_filepath,
                                             _save_manifest, _save_signatures, PKGSIGN_MANIFEST,
-                                            PKGSIGN_SIGNATURES)
+                                            PKGSIGN_SIGNATURES, _verify_files_checksums)
 
 
 class PkgSignaturesPlugin:
@@ -64,5 +64,6 @@ class PkgSignaturesPlugin:
         if not self.is_verify_configured:
             return
         metadata_sign = os.path.join(folder, METADATA, "sign")
+        _verify_files_checksums(metadata_sign, files)  # Verify package files checksums before calling the plugin
         self._plugin_verify_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,
                                      files=files)

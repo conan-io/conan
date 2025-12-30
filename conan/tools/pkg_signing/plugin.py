@@ -111,12 +111,16 @@ def _save_signatures(signature_folder, signatures):
     save(get_signatures_filepath(signature_folder), json.dumps(content, indent=2))
 
 
-def verify_files_checksums(signature_folder, files):
+def _verify_files_checksums(signature_folder, files):
     """
     Verifies that the files' checksums match those stored in the summary.
     :param signature_folder: Signature folder path
     :param files: dict of {filename: filepath} of files in artifact folder to verify
     """
+    if not os.path.isfile(get_manifest_filepath(signature_folder)):
+        raise ConanException(f"Manifest file does not exist in signature folder "
+                             f"{get_manifest_filepath(signature_folder)}")
+
     expected_list = load_manifest(signature_folder).get("files", [])
     expected_files = {item["file"]: item["sha256"] for item in expected_list}
 

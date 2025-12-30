@@ -4,12 +4,14 @@ import textwrap
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
+from conan.internal.util.files import save
+
 PLUGIN_CONTENT = textwrap.dedent("""
     import os
-    from conan.tools.files import save
+    from conan.internal.util.files import save  # Only for testing purposes
 
     def sign(ref, artifacts_folder, signature_folder, **kwargs):
-        save(None, os.path.join(signature_folder, "signature.sig"), "signed-content")
+        save(os.path.join(signature_folder, "signature.sig"), "signed-content")
         return [{
             "method": "dummy-method",
             "provider": "dummy-provider",
@@ -66,7 +68,7 @@ def test_pkg_verify_basic():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.save_home({"extensions/plugins/sign/sign.py": PLUGIN_CONTENT})
     c.run("create .")
-    c.run("cache verify *")
+    c.run("cache verify *", assert_error=True)
     assert textwrap.dedent("""
         [Package sign] Results:
 
@@ -77,8 +79,7 @@ def test_pkg_verify_basic():
                 da39a3ee5e6b4b0d3255bfef95601890afd80709
                   revisions
                     0ba8627bd47edc3a501e8f0eb9a79e5e
-
-        [Package sign] Summary: OK=2, FAILED=0""") in c.out
+                      ERROR: Manifest file does not exist in signature folder""") in c.out
 
 
 def test_pkg_sign_no_packages():
@@ -142,7 +143,18 @@ def test_pkg_sign_exception():
 def test_pkg_verify_exception():
     c = TestClient()
     signer = textwrap.dedent(r"""
+        import os
+        from conan.internal.util.files import save  # Only for testing purposes
         from conan.errors import ConanException
+
+
+        def sign(ref, artifacts_folder, signature_folder, **kwargs):
+            save(os.path.join(signature_folder, "signature.sig"), "signed-content")
+            return [{
+                "method": "dummy-method",
+                "provider": "dummy-provider",
+                "sign_artifacts": {"signature": "signature.sig"}
+            }]
 
         def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
             if "lib" in ref.repr_notime():
@@ -155,6 +167,7 @@ def test_pkg_verify_exception():
     c.run("export .")
     c.save({"conanfile.py": GenConanfile("package", "0.1")})
     c.run("export .")
+    c.run("cache sign" " *")  # First sign all packages to generate manifests
     c.run("cache verify *", assert_error=True)
     assert textwrap.dedent("""\
         [Package sign] Results:
