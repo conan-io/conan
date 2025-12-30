@@ -114,7 +114,7 @@ def _save_signatures(signature_folder, signatures):
 def verify_files_checksums(signature_folder, files):
     """
     Verifies that the files' checksums match those stored in the summary.
-
+    :param signature_folder: Signature folder path
     :param files: dict of {filename: filepath} of files in artifact folder to verify
     """
     expected_list = load_manifest(signature_folder).get("files", [])
