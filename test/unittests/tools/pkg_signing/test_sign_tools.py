@@ -6,7 +6,8 @@ from conan.test.utils.tools import temp_folder, save_files
 
 from conan.tools.pkg_signing.plugin import (_create_manifest_content, get_manifest_filepath,
                                             load_manifest, _save_manifest, get_signatures_filepath,
-                                            load_signatures, _save_signatures, verify_files_checksums)
+                                            load_signatures, _save_signatures,
+                                            _verify_files_checksums)
 from conan.errors import ConanException
 
 
@@ -214,7 +215,7 @@ def test_verify_files_checksums_success(pkg_sign_tools):
         "conanmanifest.txt": os.path.join(artifacts_folder, "conanmanifest.txt")
     }
     # Should not raise an exception
-    verify_files_checksums(signature_folder, files)
+    _verify_files_checksums(signature_folder, files)
 
 
 def test_verify_files_checksums_partial_files(pkg_sign_tools):
@@ -227,7 +228,7 @@ def test_verify_files_checksums_partial_files(pkg_sign_tools):
         "conanmanifest.txt": os.path.join(artifacts_folder, "conanmanifest.txt")
     }
     # Should not raise an exception
-    verify_files_checksums(signature_folder, files)
+    _verify_files_checksums(signature_folder, files)
 
 
 def test_verify_files_checksums_mismatch(pkg_sign_tools):
@@ -246,7 +247,7 @@ def test_verify_files_checksums_mismatch(pkg_sign_tools):
     }
 
     with pytest.raises(ConanException, match="Checksum mismatch for file conan_package.tgz"):
-        verify_files_checksums(signature_folder, files)
+        _verify_files_checksums(signature_folder, files)
 
 
 def test_verify_files_checksums_missing_file_in_manifest(pkg_sign_tools):
@@ -263,4 +264,4 @@ def test_verify_files_checksums_missing_file_in_manifest(pkg_sign_tools):
 
     # Should raise exception because file is not in manifest (expected_checksum is None)
     with pytest.raises(ConanException, match="Checksum mismatch"):
-        verify_files_checksums(signature_folder, files)
+        _verify_files_checksums(signature_folder, files)

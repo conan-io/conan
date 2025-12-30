@@ -124,6 +124,8 @@ def _verify_files_checksums(signature_folder, files):
     expected_list = load_manifest(signature_folder).get("files", [])
     expected_files = {item["file"]: item["sha256"] for item in expected_list}
 
+    # This is checking that the files of the package exist in the manifest instead of the opposite
+    # because some files might be missing such as conan_sources.tgz
     for filename, file_path in files.items():
         expected_checksum = expected_files.get(filename)
         actual_checksum = sha256sum(file_path)

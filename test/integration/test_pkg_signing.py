@@ -64,7 +64,7 @@ def test_pkg_sign():
 def test_pkg_sign_manifest_signatures():
     """Test that the sign function generates the manifest and signatures files
     and the verify function can access them"""
-    c = TestClient(default_server_user=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("export/*")
             .with_exports_sources("export_sources/*").with_package_file("myfile", "mycontents!"),
             "export/file1.txt": "file1!",
@@ -228,3 +228,40 @@ def test_pkg_sign_canonical():
 
         [Package sign] Summary: OK=1, FAILED=0
     """) in c.out
+
+
+def test_pkg_sign_exports_sources():
+    """Test that the sign function generates the manifest and signatures files
+    and the verify function can access them"""
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("export/*")
+            .with_exports_sources("export_sources/*").with_package_file("myfile", "mycontents!"),
+            "export/file1.txt": "file1!",
+            "export_sources/file2.txt": "file2!"})
+    signer = textwrap.dedent(r"""
+        import os
+        from conan.internal.util.files import save  # This is only for test purposes
+        from conan.tools.files import load
+        from conan.tools.pkg_signing.plugin import load_manifest, load_signatures
+
+        def sign(ref, artifacts_folder, signature_folder, **kwargs):
+            save(os.path.join(signature_folder, "pkgsign-manifest.json.sig"), "")
+            print(f"Creating signature pkgsign-manifest.json.sig for {ref}")
+            # Return the pkgsign-signatures.json's content
+            return [{"method": "openssl-dgst",
+                    "provider": "conan-client",
+                    "sign_artifacts": {"signature": "pkgsign-manifest.json.sig"}}]
+
+        def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
+            pass
+        """)
+    c.save_home({"extensions/plugins/sign/sign.py": signer})
+    c.run("create .")
+    c.run("upload pkg/0.1 -r=default -c")
+    assert "Creating signature pkgsign-manifest.json.sig" in c.out
+    c.run("remove * -c")
+    c.run("install --requires=pkg/0.1 -r=default")
+    assert "Checksum verified for file conan_export.tgz" in c.out
+    assert "Checksum verified for file conan_package.tgz" in c.out
+    c.run("install --requires=pkg/0.1 -r=default --build=pkg/0.1")
+    assert "Checksum verified for file conan_sources.tgz" in c.out
