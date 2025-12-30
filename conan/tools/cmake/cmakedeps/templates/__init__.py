@@ -4,7 +4,7 @@ from jinja2 import Template
 from conan.errors import ConanException
 
 
-class CMakeDepsFileTemplate(object):
+class CMakeDepsFileTemplate:
 
     def __init__(self, cmakedeps, require, conanfile, generating_module=False):
         self.cmakedeps = cmakedeps

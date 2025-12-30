@@ -19,7 +19,7 @@ def _check_transitive(node, transitive_deps):
         assert v1.require.headers is v2[1], f"{v1.node}!={v2[0]} headers"
         assert v1.require.libs is v2[2], f"{v1.node}!={v2[0]} libs"
         assert v1.require.build is v2[3], f"{v1.node}!={v2[0]} build"
-        assert v1.require.run is  v2[4], f"{v1.node}!={v2[0]} run"
+        assert v1.require.run is v2[4], f"{v1.node}!={v2[0]} run"
         assert len(v2) <= 5
 
 
@@ -49,7 +49,7 @@ class TestLinear(GraphManagerTest):
         deps_graph = self.build_consumer(consumer, install=False)
 
         # TODO: Better error handling
-        assert type(deps_graph.error) == GraphMissingError
+        assert type(deps_graph.error) is GraphMissingError
 
         assert 1 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -1551,7 +1551,7 @@ class TestDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
         assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -1575,7 +1575,7 @@ class TestDiamond(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
         assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -1604,7 +1604,7 @@ class TestDiamond(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
         assert 5 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -1851,7 +1851,7 @@ class TestDiamondMultiple(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
         # TODO: Better error modeling
-        assert type(deps_graph.error) == GraphLoopError
+        assert type(deps_graph.error) is GraphLoopError
 
         assert 4 == len(deps_graph.nodes)
 
@@ -1901,7 +1901,7 @@ class TestTransitiveOverridesGraph(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
         assert deps_graph.error is not False
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
         assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -1972,7 +1972,7 @@ class TestTransitiveOverridesGraph(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["dep1/2.0", "dep2/1.0"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
         assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -2235,7 +2235,7 @@ class TestProjectApp(GraphManagerTest):
                                                         build=False, run=True),
                                       install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
     def test_project_require_apps_transitive(self):
         # project -> app1 (app type) -> lib
@@ -2284,7 +2284,7 @@ class TestProjectApp(GraphManagerTest):
                                                                                    "app2/0.1"),
                                       install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
     def test_project_require_private(self):
         # project -(!visible)-> app1 -> lib1

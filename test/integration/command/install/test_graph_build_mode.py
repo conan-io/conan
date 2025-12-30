@@ -153,7 +153,6 @@ def test_build_consumer():
     client.run("create dep2")
     client.run("export .")
 
-
     # Still makes little sense, but just to test the logic
     client.run("create . --build=* --build=!&", assert_error=True)
     assert "TEST: Building consumer" not in client.out

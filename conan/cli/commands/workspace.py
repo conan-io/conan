@@ -76,6 +76,29 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
 
 
 @conan_subcommand()
+def workspace_complete(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Complete the workspace, opening or adding intermediate packages to it that have
+    requirements to other packages in the workspace.
+    """
+    add_common_install_arguments(subparser)
+    add_lockfile_args(subparser)
+    args = parser.parse_args(*args)
+    remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
+    # The lockfile by default if not defined will be read from the root workspace folder
+    ws_folder = conan_api.workspace.folder()
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
+                                               cwd=None, partial=args.lockfile_partial,
+                                               overrides=overrides)
+    profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+    print_profiles(profile_host, profile_build)
+
+    ConanOutput().box("Workspace completing intermediate packages")
+    conan_api.workspace.complete(profile_host, profile_build, lockfile, remotes, update=args.update)
+
+
+@conan_subcommand()
 def workspace_remove(conan_api: ConanAPI, parser, subparser, *args):
     """
     Remove packages from the current workspace
@@ -167,14 +190,17 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
             ref = RecipeReference.loads(elem["ref"])
             for package_level in elem["packages"]:
                 for package in package_level:
-                    if package["binary"] == "Build":  # Build external to Workspace
-                        cmd = f'install {package["build_args"]} {profile_args}'
-                        ConanOutput().box(f"Workspace building external {ref}")
-                        ConanOutput().info(f"Command: {cmd}\n")
-                        conan_api.command.run(cmd)
-                    elif package["binary"] in ("Editable", "EditableBuild"):
-                        path = all_editables[ref]["path"]
-                        output_folder = all_editables[ref].get("output_folder")
+                    ws_pkg = all_editables.get(ref)
+                    is_editable = package["binary"] in ("Editable", "EditableBuild")
+                    if ws_pkg is None:
+                        if is_editable or package["binary"] == "Build":  # Build extern to Workspace
+                            cmd = f'install {package["build_args"]} {profile_args}'
+                            ConanOutput().box(f"Workspace building external {ref}")
+                            ConanOutput().info(f"Command: {cmd}\n")
+                            conan_api.command.run(cmd)
+                    else:
+                        path = ws_pkg["path"]
+                        output_folder = ws_pkg.get("output_folder")
                         build_arg = "--build-require" if package["context"] == "build" else ""
                         ref_args = " ".join(f"--{k}={getattr(ref, k)}"
                                             for k in ("name", "version", "user", "channel")
@@ -200,12 +226,13 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
                            help='The root output folder for generated and build files')
     subparser.add_argument("-d", "--deployer", action="append",
                            help="Deploy using the provided deployer to the output folder. "
-                             "Built-in deployers: 'full_deploy', 'direct_deploy', 'runtime_deploy'")
+                                "Built-in deployers: 'full_deploy', 'direct_deploy', "
+                                "'runtime_deploy'")
     subparser.add_argument("--deployer-folder",
                            help="Deployer output folder, base build folder by default if not set")
     subparser.add_argument("--deployer-package", action="append",
                            help="Execute the deploy() method of the packages matching "
-                             "the provided patterns")    
+                                "the provided patterns")
     subparser.add_argument("--envs-generation", default=None, choices=["false"],
                            help="Generation strategy for virtual environment files for the root")
     add_common_install_arguments(subparser)

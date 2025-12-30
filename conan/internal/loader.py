@@ -254,6 +254,7 @@ class ConanFileLoader:
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(display_name="cli")
+        conanfile._conan_helpers = self._conanfile_helpers
 
         if tool_requires:
             for reference in tool_requires:

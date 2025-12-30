@@ -64,7 +64,7 @@ class PyRequires:
             self._pyrequires[name] = transitive_py_require
 
 
-class PyRequireLoader(object):
+class PyRequireLoader:
     def __init__(self, conan_app, global_conf):
         self._proxy = conan_app.proxy
         self._range_resolver = conan_app.range_resolver

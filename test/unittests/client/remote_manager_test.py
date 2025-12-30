@@ -1,5 +1,4 @@
 import os
-import pytest
 
 from conan.internal.api.uploader import compress_files
 from conan.internal.paths import PACKAGE_TGZ_NAME

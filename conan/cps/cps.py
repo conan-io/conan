@@ -40,6 +40,7 @@ class CPSComponent:
         self.requires = []
         self.location = None
         self.link_location = None
+        self.link_languages = None
         self.link_libraries = None  # system libraries
 
     def serialize(self):
@@ -56,6 +57,8 @@ class CPSComponent:
             component["link_location"] = self.link_location
         if self.link_libraries:
             component["link_libraries"] = self.link_libraries
+        if self.link_languages:
+            component["link_languages"] = self.link_languages
         return component
 
     @staticmethod
@@ -68,6 +71,7 @@ class CPSComponent:
         comp.location = data.get("location")
         comp.link_location = data.get("link_location")
         comp.link_libraries = data.get("link_libraries")
+        comp.link_languages = data.get("link_languages")
         return comp
 
     @staticmethod
@@ -90,12 +94,15 @@ class CPSComponent:
         cps_comp.location = cpp_info.location
         cps_comp.link_location = cpp_info.link_location
         cps_comp.link_libraries = cpp_info.system_libs
+        langs = {"C": "c", "C++": "cpp"}
+        cps_comp.link_languages = [langs[lang] for lang in cpp_info.languages or []]
         required = cpp_info.requires
         cps_comp.requires = [f":{c}" if "::" not in c else c.replace("::", ":") for c in required]
         return cps_comp
 
     def update(self, conf, conf_def):
         # TODO: conf not used at the moent
+        self.link_languages = self.link_languages or conf_def.get("link_languages")
         self.location = self.location or conf_def.get("location")
         self.link_location = self.link_location or conf_def.get("link_location")
         self.link_libraries = self.link_libraries or conf_def.get("link_libraries")
@@ -223,6 +230,29 @@ class CPS:
                     basefile = basefile[3:]
                 cpp_info.libs = [basefile]
                 # FIXME: Missing requires
+            elif comp.type is CPSComponentType.DYLIB:
+                if comp.link_location:
+                    link_location = comp.link_location
+                    link_location = link_location.replace("@prefix@/", "")
+                    cpp_info.libdirs = [os.path.dirname(link_location)]
+                    filename = os.path.basename(link_location)
+                    basefile, ext = os.path.splitext(filename)
+                    if basefile.startswith("lib") and ext != ".lib":
+                        basefile = basefile[3:]
+                    cpp_info.libs = [basefile]
+                    location = comp.location
+                    location = location.replace("@prefix@/", "")
+                    cpp_info.bindirs = [os.path.dirname(location)]
+                else:  # TODO: same as archive, refactor
+                    location = comp.location
+                    location = location.replace("@prefix@/", "")
+                    cpp_info.libdirs = [os.path.dirname(location)]
+                    filename = os.path.basename(location)
+                    basefile, ext = os.path.splitext(filename)
+                    if basefile.startswith("lib") and ext != ".lib":
+                        basefile = basefile[3:]
+                    cpp_info.libs = [basefile]
+                    # FIXME: Missing requires
             cpp_info.system_libs = comp.link_libraries
         else:
             for comp_name, comp in self.components.items():

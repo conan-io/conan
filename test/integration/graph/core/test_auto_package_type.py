@@ -47,6 +47,7 @@ def test_auto_package_type(conanfile):
     c.run("graph info . --filter package_type -o header_only=True -o shared=False")
     assert "package_type: header-library" in c.out
 
+
 def test_package_type_and_header_library():
     """ Show that forcing a package_type and header_only=True does not change the package_type"""
     tc = TestClient(light=True)

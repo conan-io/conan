@@ -49,7 +49,6 @@ class TestExportSettings:
         client.run("export . --channel=channel")
         assert "lib/1.0@user/channel: Exported" in client.out
 
-
     def test_export_read_only(self):
         client = TestClient(light=True)
         conanfile = textwrap.dedent("""
