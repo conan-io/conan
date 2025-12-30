@@ -156,6 +156,9 @@ class VCVars:
 
         content = textwrap.dedent(f"""\
             @echo off
+            :: visual studio command environment need only be setup once.
+            IF DEFINED VSCMD_ARG_VCVARS_VER EXIT /B 0
+                                  
             set __VSCMD_ARG_NO_LOGO=1
             set VSCMD_SKIP_SENDTELEMETRY=1
             echo conanvcvars.bat: Activating environment Visual Studio {vs_version} - {vcvarsarch} - winsdk_version={winsdk_version} - vcvars_ver={vcvars_ver}
