@@ -71,12 +71,13 @@ def test_pkg_sign_manifest_signatures():
             "export_sources/file2.txt": "file2!"})
     signer = textwrap.dedent(r"""
         import os
-        from conan.tools.files import load, save
+        from conan.internal.util.files import save  # This is only for test purposes
+        from conan.tools.files import load
         from conan.tools.pkg_signing.plugin import (load_manifest, load_signatures,
                                                     verify_files_checksums)
 
         def sign(ref, artifacts_folder, signature_folder, **kwargs):
-            save(None, os.path.join(signature_folder, "pkgsign-manifest.json.sig"), "")
+            save(os.path.join(signature_folder, "pkgsign-manifest.json.sig"), "")
             print(f"Creating signature pkgsign-manifest.json.sig for {ref}")
             # Return the pkgsign-signatures.json's content
             return [{"method": "openssl-dgst",
@@ -121,7 +122,7 @@ def test_pkg_sign_canonical():
         import os
         from conan.errors import ConanException
         from conan.api.output import ConanOutput
-        from conan.tools.files import save
+        from conan.internal.util.files import save  # This is only for test purposes
         from conan.tools.pkg_signing.plugin import (get_signatures_filepath, load_signatures,
             verify_files_checksums)
 
@@ -136,7 +137,7 @@ def test_pkg_sign_canonical():
             else:
                 provider = "conan-client"
             # Simulate signing the package
-            save(None, os.path.join(signature_folder, "pkgsign-manifest.json.sig"), "")
+            save(os.path.join(signature_folder, "pkgsign-manifest.json.sig"), "")
             ConanOutput().info(f"Signature ok for {ref}")
             return [{"method": "dummy-method",
                      "provider": provider,
