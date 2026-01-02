@@ -215,61 +215,47 @@ class CPS:
         def strip_prefix(dirs):
             return [d.replace("@prefix@/", "") for d in dirs]
 
+        def lib_location(loc, info):
+            loc = loc.replace("@prefix@/", "")
+            info.libdirs = [os.path.dirname(loc)]
+            filename = os.path.basename(loc)
+            basefile, ext = os.path.splitext(filename)
+            if basefile.startswith("lib") and ext != ".lib":
+                basefile = basefile[3:]
+            info.libs = [basefile]
+
         cpp_info = CppInfo()
         if len(self.components) == 1:
             comp = next(iter(self.components.values()))
             cpp_info.includedirs = strip_prefix(comp.includes)
             cpp_info.defines = comp.definitions
-            if comp.type is CPSComponentType.ARCHIVE:
+            cpp_info.system_libs = comp.link_libraries
+            if comp.link_location:
+                link_location = comp.link_location
+                lib_location(link_location, cpp_info)
                 location = comp.location
                 location = location.replace("@prefix@/", "")
-                cpp_info.libdirs = [os.path.dirname(location)]
-                filename = os.path.basename(location)
-                basefile, ext = os.path.splitext(filename)
-                if basefile.startswith("lib") and ext != ".lib":
-                    basefile = basefile[3:]
-                cpp_info.libs = [basefile]
-                # FIXME: Missing requires
-            elif comp.type is CPSComponentType.DYLIB:
-                if comp.link_location:
-                    link_location = comp.link_location
-                    link_location = link_location.replace("@prefix@/", "")
-                    cpp_info.libdirs = [os.path.dirname(link_location)]
-                    filename = os.path.basename(link_location)
-                    basefile, ext = os.path.splitext(filename)
-                    if basefile.startswith("lib") and ext != ".lib":
-                        basefile = basefile[3:]
-                    cpp_info.libs = [basefile]
-                    location = comp.location
-                    location = location.replace("@prefix@/", "")
-                    cpp_info.bindirs = [os.path.dirname(location)]
-                else:  # TODO: same as archive, refactor
-                    location = comp.location
-                    location = location.replace("@prefix@/", "")
-                    cpp_info.libdirs = [os.path.dirname(location)]
-                    filename = os.path.basename(location)
-                    basefile, ext = os.path.splitext(filename)
-                    if basefile.startswith("lib") and ext != ".lib":
-                        basefile = basefile[3:]
-                    cpp_info.libs = [basefile]
-                    # FIXME: Missing requires
-            cpp_info.system_libs = comp.link_libraries
+                cpp_info.bindirs = [os.path.dirname(location)]
+            elif comp.location:
+                location = comp.location
+                lib_location(location, cpp_info)
         else:
             for comp_name, comp in self.components.items():
                 cpp_comp = cpp_info.components[comp_name]
                 cpp_comp.includedirs = strip_prefix(comp.includes)
                 cpp_comp.defines = comp.definitions
-                if comp.type is CPSComponentType.ARCHIVE:
+                if comp.link_location:
+                    link_location = comp.link_location
+                    lib_location(link_location, cpp_comp)
                     location = comp.location
                     location = location.replace("@prefix@/", "")
-                    cpp_comp.libdirs = [os.path.dirname(location)]
-                    filename = os.path.basename(location)
-                    basefile, ext = os.path.splitext(filename)
-                    if basefile.startswith("lib") and ext != ".lib":
-                        basefile = basefile[3:]
-                    cpp_comp.libs = [basefile]
-                for r in comp.requires:
-                    cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
+                    cpp_comp.bindirs = [os.path.dirname(location)]
+                elif comp.location:
+                    location = comp.location
+                    lib_location(location, cpp_comp)
+                # TODO: Requires management
+                #for r in comp.requires:
+                #    cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
                 cpp_comp.system_libs = comp.link_libraries
 
         return cpp_info
