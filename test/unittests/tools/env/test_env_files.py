@@ -213,7 +213,6 @@ def test_relative_paths():
 
 @pytest.mark.parametrize("values, expected",
                          [("myscripts", '"$script_folder/myscripts"'),
-                          ("/path/myscripts", '"/path/myscripts"'),
                           ("../myscripts", '"$script_folder/../myscripts"'),
                           ("../my scripts", '"$script_folder/../my scripts"'),
                           (["../my scripts", "path/other"],

@@ -82,3 +82,21 @@ class TestLRU:
         c.run("remove * --lru=1s -c -f=json", redirect_stdout="removed.json")
         removed = json.loads(c.load("removed.json"))
         assert len(removed["Local Cache"]) == 0
+
+    def test_lru_invalid_time_unit(self):
+        """Test that invalid time units raise appropriate error - covers KeyError in _timelimit()"""
+        c = TestClient(light=True)
+        c.run(f"remove *#* --lru=1x", assert_error=True)
+        assert "ERROR: Unrecognized time unit: 'x'" in c.out
+
+    def test_lru_invalid_time_value_edge_cases(self):
+        """Test edge cases for invalid time values - covers error paths in _timelimit()"""
+        c = TestClient(light=True)
+        # Test with only unit character (no numeric value) - this makes time_value empty string
+        # int("") raises ValueError, which may not be caught by TypeError handler
+        c.run("remove *#* --lru=as", assert_error=True)
+        assert "ERROR: invalid literal for int() with base 10: 'a'" in c.out
+
+        # Test with non-numeric characters before unit
+        c.run("remove *#* --lru=s", assert_error=True)
+        assert "ERROR: invalid literal for int() with base 10: ''" in c.out
