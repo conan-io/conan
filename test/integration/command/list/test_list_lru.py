@@ -84,19 +84,18 @@ class TestLRU:
         assert len(removed["Local Cache"]) == 0
 
     def test_lru_invalid_time_unit(self):
-        """Test that invalid time units raise appropriate error - covers KeyError in _timelimit()"""
         c = TestClient(light=True)
-        c.run(f"remove *#* --lru=1x", assert_error=True)
+        c.run(f"list *#* --lru=1x")
         assert "ERROR: Unrecognized time unit: 'x'" in c.out
 
     def test_lru_invalid_time_value_edge_cases(self):
-        """Test edge cases for invalid time values - covers error paths in _timelimit()"""
         c = TestClient(light=True)
-        # Test with only unit character (no numeric value) - this makes time_value empty string
-        # int("") raises ValueError, which may not be caught by TypeError handler
-        c.run("remove *#* --lru=as", assert_error=True)
+        c.run("list *#* --lru=as")
         assert "ERROR: invalid literal for int() with base 10: 'a'" in c.out
-
-        # Test with non-numeric characters before unit
-        c.run("remove *#* --lru=s", assert_error=True)
+        c.run("list *#* --lru=s")
         assert "ERROR: invalid literal for int() with base 10: ''" in c.out
+
+    def test_lru_not_in_remotes(self):
+        c = TestClient(light=True, default_server_user=True)
+        c.run("list *#* --lru=1s -r=default", assert_error=True)
+        assert "'--lru' cannot be used in remotes, only in cache" in c.out
