@@ -275,6 +275,7 @@ def test_compose_conf_dict_updates():
     assert c.dumps() == ("user.company:mydict={'2': 'b'}\n"
                          "user.company:mydict2={'1': 'a', '2': 'b'}\n")
 
+
 def test_compose_conf_numbers():
     c = ConfDefinition()
     c.loads("user.version:value=8.1\n"
