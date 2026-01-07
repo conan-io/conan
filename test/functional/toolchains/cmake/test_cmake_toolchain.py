@@ -760,11 +760,11 @@ def test_find_program_for_tool_requires(single_profile):
     """)
 
     client.save({"conanfile.py": conanfile,
-                "libfoo.so": "",
-                "foobin": "",
-                "host_profile": host_profile,
-                "build_profile": build_profile
-                })
+                 "libfoo.so": "",
+                 "foobin": "",
+                 "host_profile": host_profile,
+                 "build_profile": build_profile
+                 })
 
     client.run("create . -pr:b build_profile -pr:h build_profile")
     build_context_package_folder = re.search(r"Package folder ([\w\W]+).conan2([\w\W]+)", str(client.out)).group(2).strip()
@@ -1345,7 +1345,7 @@ def test_cmake_toolchain_crossbuild_set_cmake_compiler():
 
     c.save({"android": android,
             "conanfile.py": conanfile,
-            "CMakeLists.txt": cmake,})
+            "CMakeLists.txt": cmake})
     # first run works ok
     c.run('build . --profile:host=android')
     assert 'sdk: 1.0.0' in c.out
@@ -1488,3 +1488,31 @@ def test_cmake_linker_scripts():
     c.run('build . -pr=profile', assert_error=True)
     # This error means the linker script was fonud and loaded, it failed because empty
     assert "PHDR segment not covered by LOAD segment" in c.out
+
+
+def test_cmake_toolchain_verbosity_propagation():
+    t = TestClient(light=True)
+    t.save({"conanfile.py": GenConanfile("mylib", "1.0")})
+    t.run("create .")
+    t.run("install --requires=mylib/1.0 -g CMakeToolchain")
+    toolchain = t.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_VERBOSE_MAKEFILE' not in toolchain
+    assert 'set(CMAKE_MESSAGE_LOG_LEVEL' not in toolchain
+
+    t.run("install --requires=mylib/1.0 -g CMakeToolchain -c tools.build:verbosity=verbose "
+          "-c tools.compilation:verbosity=verbose")
+    toolchain = t.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_VERBOSE_MAKEFILE "ON"' in toolchain
+    assert 'set(CMAKE_MESSAGE_LOG_LEVEL "VERBOSE"' in toolchain
+
+    t.run("install --requires=mylib/1.0 -g CMakeToolchain -c tools.build:verbosity=quiet "
+          "-c tools.compilation:verbosity=quiet")
+    toolchain = t.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_MESSAGE_LOG_LEVEL "ERROR"' in toolchain
+
+    # Extra variables have preference
+    t.run("install --requires=mylib/1.0 -g CMakeToolchain -c tools.compilation:verbosity=quiet "
+          "-c tools.cmake.cmaketoolchain:extra_variables=\"{'CMAKE_MESSAGE_LOG_LEVEL': 'WARNING'}\"")
+    toolchain = t.load("conan_toolchain.cmake")
+    # assert 'set(CMAKE_VERBOSE_MAKEFILE "OFF"' in toolchain
+    assert 'set(CMAKE_MESSAGE_LOG_LEVEL "WARNING"' in toolchain

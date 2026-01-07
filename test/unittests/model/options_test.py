@@ -17,8 +17,8 @@ class TestOptions:
 
     def test_booleans(self):
         assert self.sut.static
-        assert self.sut.static == True
-        assert self.sut.static != False
+        assert self.sut.static == True  # noqa
+        assert self.sut.static != False  # noqa
         assert bool(self.sut.static)
 
         assert self.sut.optimized
@@ -117,17 +117,17 @@ class TestOptions:
         assert self.sut.items() == [("optimized", "3"), ("path", "mypath"), ("static", "True")]
 
     def test_get_safe_options(self):
-        assert True == self.sut.get_safe("static")
+        assert True == self.sut.get_safe("static")  # noqa
         assert 3 == self.sut.get_safe("optimized")
         assert "mypath" == self.sut.get_safe("path")
-        assert None == self.sut.get_safe("unknown")
+        assert None == self.sut.get_safe("unknown")  # noqa
         self.sut.path = "None"
         self.sut.static = False
-        assert False == self.sut.get_safe("static")
+        assert False == self.sut.get_safe("static")  # noqa
         assert "None" == self.sut.get_safe("path")
-        assert False == self.sut.get_safe("static", True)
+        assert False == self.sut.get_safe("static", True)  # noqa
         assert "None" == self.sut.get_safe("path", True)
-        assert True == self.sut.get_safe("unknown", True)
+        assert True == self.sut.get_safe("unknown", True)  # noqa
 
 
 class TestOptionsLoad:
@@ -183,28 +183,28 @@ class TestOptionsNone:
         self.sut = Options(options)
 
     def test_booleans(self):
-        assert self.sut.static == None
+        assert self.sut.static == None  # noqa
         assert not self.sut.static
         assert self.sut.static != 1
         assert self.sut.static != 2
         with pytest.raises(ConanException) as e:
-            self.sut.static == 3
+            self.sut.static == 3  # noqa
         assert "'3' is not a valid 'options.static' value" in str(e.value)
 
         with pytest.raises(ConanException) as e:
-            self.sut.static == "None"
+            self.sut.static == "None"  # noqa
         assert "'None' is not a valid 'options.static' value" in str(e.value)
 
-        assert self.sut.other == None
+        assert self.sut.other == None  # noqa
         assert self.sut.other != "whatever"  # dont raise, ANY
         self.sut.other = None
-        assert self.sut.other == None
+        assert self.sut.other == None  # noqa
 
         assert not self.sut.more
-        assert self.sut.more == None
+        assert self.sut.more == None  # noqa
         assert self.sut.more != 1
         with pytest.raises(ConanException) as e:
-            self.sut.more == 2
+            self.sut.more == 2  # noqa
         assert "'2' is not a valid 'options.more' value" in str(e.value)
         with pytest.raises(ConanException) as e:
             self.sut.more = None
@@ -212,7 +212,7 @@ class TestOptionsNone:
         self.sut.more = "None"
         assert not self.sut.more  # This is still evaluated to false, like OFF, 0, FALSE, etc
         assert self.sut.more == "None"
-        assert self.sut.more != None
+        assert self.sut.more != None  # noqa
 
     def test_assign(self):
         self.sut.static = 1
@@ -228,14 +228,14 @@ class TestOptionsNone:
         assert not (options.static == 1)
         assert options.static != "None"
         assert not (options.static == "None")
-        assert options.static == None
-        assert not (options.static != None)
+        assert options.static == None  # noqa
+        assert not (options.static != None)  # noqa
 
         options.static = "None"
         assert options.static == "None"
         assert not (options.static != "None")
-        assert not (options.static == None)
-        assert options.static != None
+        assert not (options.static == None)  # noqa
+        assert options.static != None  # noqa
 
     def test_undefined_value(self):
         """ Not assigning a value to options will raise an error at validate() step

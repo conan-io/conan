@@ -110,9 +110,23 @@ class PkgCache:
 
     def recipe_layout(self, ref: RecipeReference):
         """ the revision must exists, the folder must exist
+        The regular graph building will use this method if the revision is defined, like
+        when using lockfiles or explicit, or recipe_layout_latest() if not, to do one single DB
+        query
         """
         assert ref.revision is not None
         ref_data = self._db.get_recipe(ref)
+        ref_path = ref_data.get("path")
+        ref = ref_data.get("ref")  # new revision with timestamp
+        return RecipeLayout(ref, os.path.join(self._base_folder, ref_path))
+
+    def recipe_layout_latest(self, ref: RecipeReference):
+        """ the revision must be None, the folder must exist
+        This method was added so the ConanProxy used to resolve the dependency graph
+        avoid doing 2 DB calls when the revision is not defined
+        """
+        assert ref.revision is None
+        ref_data = self._db.get_latest_recipe(ref)
         ref_path = ref_data.get("path")
         ref = ref_data.get("ref")  # new revision with timestamp
         return RecipeLayout(ref, os.path.join(self._base_folder, ref_path))
@@ -129,12 +143,30 @@ class PkgCache:
 
     def pkg_layout(self, pref: PkgReference):
         """ the revision must exists, the folder must exist
+        No longer used by GraphBinariesAnalyzer
         """
         assert pref.ref.revision, "Recipe revision must be known to get the package layout"
         assert pref.package_id, "Package id must be known to get the package layout"
         assert pref.revision, "Package revision must be known to get the package layout"
         pref_data = self._db.try_get_package(pref)
         pref_path = pref_data.get("path")
+        # we use abspath to convert cache forward slash in Windows to backslash
+        return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
+
+    def pkg_layout_latest(self, pref: PkgReference):
+        """
+        GraphBinariesAnalyzer will call this method to avoid doing 2 DB calls, previously
+        it was using pkg_layout() after a get_latest_package_revision()
+        """
+        assert pref.ref.revision, "Recipe revision must be known to get the package layout"
+        assert pref.package_id, "Package id must be known to get the package layout"
+        assert pref.revision is None
+
+        pref_data = self._db.get_latest_package_reference_data(pref)
+        if pref_data is None:
+            return None
+        pref_path = pref_data.get("path")
+        pref = pref_data.get("pref")  # new revision with timestamp
         # we use abspath to convert cache forward slash in Windows to backslash
         return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
 
@@ -184,6 +216,8 @@ class PkgCache:
         return self._db.exists_prev(pref)
 
     def get_latest_package_revision(self, pref: PkgReference) -> PkgReference:
+        # This is no longer needed by the Graph resolution functionality, only by ListAPI
+        # its usage in graph resolution has been replaced by a single call to pkg_layout_latest()
         return self._db.get_latest_package_reference(pref)
 
     def get_package_references(self, ref: RecipeReference,
@@ -269,14 +303,14 @@ class PkgCache:
     def get_recipe_lru(self, ref):
         return self._db.get_recipe_lru(ref)
 
-    def update_recipe_lru(self, ref):
-        self._db.update_recipe_lru(ref)
+    def update_recipes_lru(self, refs):
+        self._db.update_recipes_lru(refs)
 
     def get_package_lru(self, pref):
         return self._db.get_package_lru(pref)
 
-    def update_package_lru(self, pref):
-        self._db.update_package_lru(pref)
+    def update_packages_lru(self, prefs):
+        self._db.update_packages_lru(prefs)
 
     def path_to_ref(self, path):
         try:

@@ -253,12 +253,17 @@ class BinaryInstaller:
         handled_count = 1
 
         self._download_bulk(install_order)
+        prefs_lru = []
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
                     self._install_source(package.nodes[0], remotes)
                     self._handle_package(package, install_reference, handled_count, package_count)
                     handled_count += 1
+                    if package.binary == BINARY_CACHE:
+                        prefs_lru.append(package.nodes[0].pref)
+
+        self._cache.update_packages_lru(prefs_lru)
 
         MockInfoProperty.message()
 
@@ -329,7 +334,6 @@ class BinaryInstaller:
             if package.binary == BINARY_CACHE:
                 node = package.nodes[0]
                 pref = node.pref
-                self._cache.update_package_lru(pref)
                 assert node.prev, "PREV for %s is None" % str(pref)
                 msg = f'Already installed! ({handled_count} of {total_count})'
                 node.conanfile.output.success(msg)
@@ -447,12 +451,20 @@ class BinaryInstaller:
 
                     # Paste the editable cpp_info but prioritizing it, only if a
                     # variable is not declared at build/source, the package will keep the value
-                    conanfile.buildenv_info.compose_env(conanfile.layouts.source.buildenv_info)
-                    conanfile.buildenv_info.compose_env(conanfile.layouts.build.buildenv_info)
-                    conanfile.runenv_info.compose_env(conanfile.layouts.source.runenv_info)
-                    conanfile.runenv_info.compose_env(conanfile.layouts.build.runenv_info)
-                    conanfile.conf_info.compose_conf(conanfile.layouts.source.conf_info)
-                    conanfile.conf_info.compose_conf(conanfile.layouts.build.conf_info)
+                    full_buildenv_info = conanfile.layouts.source.buildenv_info.copy()
+                    full_buildenv_info.compose_env(conanfile.layouts.build.buildenv_info)
+                    full_buildenv_info.compose_env(conanfile.buildenv_info)
+                    conanfile.buildenv_info = full_buildenv_info
+
+                    full_runenv_info = conanfile.layouts.source.runenv_info.copy()
+                    full_runenv_info.compose_env(conanfile.layouts.build.runenv_info)
+                    full_runenv_info.compose_env(conanfile.runenv_info)
+                    conanfile.runenv_info = full_runenv_info
+
+                    full_conf_info = conanfile.layouts.source.conf_info.copy()
+                    full_conf_info.compose_conf(conanfile.layouts.build.conf_info)
+                    full_conf_info.compose_conf(conanfile.conf_info)
+                    conanfile.conf_info = full_conf_info
                 else:
                     conanfile.layouts.package.set_relative_base_folder(conanfile.package_folder)
                     conanfile.buildenv_info.compose_env(conanfile.layouts.package.buildenv_info)

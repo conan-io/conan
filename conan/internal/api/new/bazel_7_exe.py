@@ -70,4 +70,4 @@ bazel_exe_files_7 = {"conanfile.py": conanfile_exe,
                      "MODULE.bazel": _bazel_workspace,
                      ".bazelrc": _bazel_rc,
                      "test_package/conanfile.py": test_conanfile_exe_v2
-                   }
+                     }

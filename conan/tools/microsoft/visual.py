@@ -171,10 +171,10 @@ class VCVars:
             if is_ps1 is not None:
                 ConanOutput().warning(
                     "Boolean values for 'tools.env.virtualenv:powershell' are deprecated. "
-                    "Please specify 'powershell.exe' or 'pwsh' instead, appending arguments if needed "
-                    "(for example: 'powershell.exe -argument'). "
-                    "To unset this configuration, use `tools.env.virtualenv:powershell=!`, which matches "
-                    "the previous 'False' behavior.",
+                    "Please specify 'powershell.exe' or 'pwsh' instead, appending arguments "
+                    "if needed (for example: 'powershell.exe -argument'). "
+                    "To unset this configuration, use `tools.env.virtualenv:powershell=!`, "
+                    "which matches the previous 'False' behavior.",
                     warn_tag="deprecated"
                 )
         except ConanException:
@@ -315,15 +315,18 @@ def _vcvars_versions(conanfile):
                       "v141": "15",
                       "v142": "16",
                       "v143": "17",
-                      "v144": "17"}.get(toolset_version)
+                      "v144": "17",
+                      "v145": "18"}.get(toolset_version)
         if vs_version is None:
-            raise ConanException("Visual Studio Runtime version (v140-v144) not defined. Please, "
-                                 "add the compiler.runtime_version=[v140-v144] setting to your profile.")
+            raise ConanException("Visual Studio Runtime version (v140-v145) not defined. Please, "
+                                 "add the compiler.runtime_version=[v140-v145] setting to your "
+                                 "profile.")
         vcvars_ver = {"v140": "14.0",
                       "v141": "14.1",
                       "v142": "14.2",
                       "v143": "14.3",
-                      "v144": "14.4"}.get(toolset_version)
+                      "v144": "14.4",
+                      "v145": "14.5"}.get(toolset_version)
         if vcvars_ver and msvc_update is not None:
             vcvars_ver += f"{msvc_update}"
     else:

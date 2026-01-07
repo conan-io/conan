@@ -91,8 +91,13 @@ class AutotoolsToolchain:
                 self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)["triplet"]
 
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
-        sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
-        self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
+        if sysroot:
+            root = sysroot.replace("\\", "/")
+            compiler = self._conanfile.settings.get_safe("compiler")
+            self.sysroot_flag = f"--sysroot {root}" if compiler != "qcc" else f"-Wc,-isysroot,{root}"
+        else:
+            self.sysroot_flag = None
+
         extra_configure_args = self._conanfile.conf.get("tools.gnu:extra_configure_args",
                                                         check_type=list,
                                                         default=[])

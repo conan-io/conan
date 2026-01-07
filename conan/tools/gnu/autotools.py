@@ -11,7 +11,7 @@ def join_arguments(args):
     return " ".join(filter(None, args))
 
 
-class Autotools(object):
+class Autotools:
 
     def __init__(self, conanfile, namespace=None):
         """

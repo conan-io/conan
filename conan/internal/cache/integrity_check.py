@@ -1,7 +1,7 @@
 import os
 
+from conan.api.model.list import PackagesList
 from conan.api.output import ConanOutput
-from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 
@@ -20,14 +20,21 @@ class IntegrityChecker:
     def __init__(self, cache):
         self._cache = cache
 
-    def check(self, pkg_list):
-        corrupted = False
+    def check(self, pkg_list) -> PackagesList:
+        corrupted_pkglist = PackagesList()
         for ref, packages in pkg_list.items():
-            corrupted = self._recipe_corrupted(ref) or corrupted
-            for pref in packages:
-                corrupted = self._package_corrupted(pref) or corrupted
-        if corrupted:
-            raise ConanException("There are corrupted artifacts, check the error logs")
+            # Check if any of the packages are corrupted
+            if self._recipe_corrupted(ref):
+                # If the recipe is corrupted, all its packages are considered corrupted
+                corrupted_pkglist.add_ref(ref)
+            else:
+                # Do not check any binary if the recipe is corrupted
+                for pref in packages:
+                    if self._package_corrupted(pref):
+                        corrupted_pkglist.add_ref(ref)
+                        # Cannot add package reference without having the recipe reference already added
+                        corrupted_pkglist.add_pref(pref)
+        return corrupted_pkglist
 
     def _recipe_corrupted(self, ref: RecipeReference):
         layout = self._cache.recipe_layout(ref)

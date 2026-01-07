@@ -53,7 +53,7 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphMissingError
+        assert type(deps_graph.error) is GraphMissingError
 
         assert 1 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -66,7 +66,7 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphMissingError
+        assert type(deps_graph.error) is GraphMissingError
 
         assert 1 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -80,7 +80,7 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphMissingError
+        assert type(deps_graph.error) is GraphMissingError
 
         assert 1 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -94,7 +94,7 @@ class TestVersionRanges(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphMissingError
+        assert type(deps_graph.error) is GraphMissingError
 
         assert 1 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -176,7 +176,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
         assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -199,7 +199,7 @@ class TestVersionRangesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
         assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
@@ -277,7 +277,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "liba/[>1.0]"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphConflictError
+        assert type(deps_graph.error) is GraphConflictError
 
         assert 2 == len(deps_graph.nodes)
         app = deps_graph.root

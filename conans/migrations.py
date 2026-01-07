@@ -10,7 +10,7 @@ from conan.internal.util.files import load, save
 CONAN_VERSION = "version.txt"
 
 
-class Migrator(object):
+class Migrator:
 
     def __init__(self, conf_path, current_version):
         self.conf_path = conf_path

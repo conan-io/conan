@@ -65,25 +65,25 @@ def test_autotools_bash_complete():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.tool("clang", "18")
 @pytest.mark.tool("msys2")
+@pytest.mark.tool("clang", "20")
 @pytest.mark.parametrize("frontend", ("clang", "clang-cl"))
 @pytest.mark.parametrize("runtime", ("static", "dynamic"))
 @pytest.mark.parametrize("build_type", ("Debug", "Release"))
 def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     client = TestClient(path_with_spaces=False)
     # Problem is that msys2 also has clang in the path, so we need to make it explicit
-    clangpath = tools_locations["clang"]["18"]["path"]["Windows"]
+    clangpath = tools_locations["clang"]["20"]["path"]["Windows"]
     # compilers
     c, cpp = ("clang", "clang++") if frontend == "clang" else ("clang-cl", "clang-cl")
-    comps = f'{{"cpp":"{clangpath}/{cpp}", "c":"{clangpath}/{c}", "rc":"{clangpath}/{c}"}}'
+    comps = f'{{"cpp":"{cpp}", "c":"{c}", "rc":"{c}"}}'
     profile_win = textwrap.dedent(f"""
         [settings]
         os=Windows
         arch=x86_64
         build_type={build_type}
         compiler=clang
-        compiler.version=18
+        compiler.version=20
         compiler.cppstd=14
         compiler.runtime_version=v144
         compiler.runtime={runtime}
@@ -93,6 +93,9 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
         tools.microsoft.bash:subsystem=msys2
         tools.microsoft.bash:path=bash
         tools.compilation:verbosity=verbose
+
+        [buildenv]
+        PATH=+(path){clangpath}
         """)
 
     main = gen_function_cpp(name="main")
@@ -131,7 +134,7 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     client.run("build . -pr=profile_win")
     client.run_command("main.exe")
     assert "__GNUC__" not in client.out
-    assert "main __clang_major__18" in client.out
+    assert "main __clang_major__20" in client.out
     check_exe_run(client.out, "main", "clang", None, build_type, "x86_64", None)
 
     bat_contents = client.load("conanbuild.bat")

@@ -6,7 +6,7 @@ from conan.internal.deploy import do_deploys
 
 from conan.internal.graph.install_graph import InstallGraph
 from conan.internal.graph.installer import BinaryInstaller
-from conan.errors import ConanInvalidConfiguration
+from conan.errors import ConanInvalidConfiguration, ConanException
 
 
 class InstallAPI:
@@ -15,10 +15,11 @@ class InstallAPI:
         self._conan_api = conan_api
         self._helpers = helpers
 
-    def install_binaries(self, deps_graph, remotes=None):
+    def install_binaries(self, deps_graph, remotes=None, return_install_error=False):
         """ Install binaries for dependency graph
         :param deps_graph: Dependency graph to intall packages for
         :param remotes:
+        :param return_install_error: If True, do not raise an exception, but return it
         """
         app = ConanBasicApp(self._conan_api)
         installer = BinaryInstaller(app, self._helpers.global_conf, app.editable_packages,
@@ -27,7 +28,14 @@ class InstallAPI:
         install_graph.raise_errors()
         install_order = install_graph.install_order()
         installer.install_system_requires(deps_graph, install_order=install_order)
-        installer.install(deps_graph, remotes, install_order=install_order)
+        try:  # To be able to capture the output, report or save graph.json, then raise later
+            installer.install(deps_graph, remotes, install_order=install_order)
+        except ConanException as e:
+            # If true, allows to return the exception, so progress can be reported like the
+            # already built binaries to upload them
+            if not return_install_error:
+                raise
+            return e
 
     def install_system_requires(self, graph, only_info=False):
         """ Install binaries for dependency graph
@@ -52,7 +60,8 @@ class InstallAPI:
 
     # TODO: Look for a better name
     def install_consumer(self, deps_graph, generators=None, source_folder=None, output_folder=None,
-                         deploy=False, deploy_package=None, deploy_folder=None, envs_generation=None):
+                         deploy=False, deploy_package=None, deploy_folder=None,
+                         envs_generation=None):
         """ Once a dependency graph has been installed, there are things to be done, like invoking
         generators for the root consumer.
         This is necessary for example for conanfile.txt/py, or for "conan install <ref> -g
@@ -93,5 +102,5 @@ class InstallAPI:
                          envs_generation=envs_generation)
 
     def deploy(self, graph, deployer, deploy_package=None, deploy_folder=None):
-        return do_deploys(self._conan_api.home_folder, graph, deployer, deploy_package=deploy_package,
-                          deploy_folder=deploy_folder)
+        return do_deploys(self._conan_api.home_folder, graph, deployer,
+                          deploy_package=deploy_package, deploy_folder=deploy_folder)

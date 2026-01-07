@@ -11,7 +11,7 @@ from conan.internal.util.files import save
 
 @pytest.mark.parametrize("use_pkglist", [True, False])
 def test_cache_clean(use_pkglist):
-    c = TestClient(default_server_user=True)
+    c = TestClient(default_server_user=True, light=True)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("*").with_exports_sources("*"),
             "sorces/file.txt": ""})
     c.run("create .")
@@ -43,7 +43,7 @@ def test_cache_clean(use_pkglist):
 
 
 def test_cache_clean_all():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"pkg1/conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("revision_mode='scm'"),
             "pkg2/conanfile.py": GenConanfile("pkg", "0.2").with_package("error"),
             "pkg3/conanfile.py": GenConanfile("pkg", "0.3")})
@@ -51,12 +51,12 @@ def test_cache_clean_all():
     c.run("create pkg2", assert_error=True)
     c.run("create pkg3")
     pref = c.created_package_reference("pkg/0.3")
-    temp_folder = os.path.join(c.cache_folder, "p", "t")
-    assert len(os.listdir(temp_folder)) == 1  # Failed export was here
+    tmp_folder = os.path.join(c.cache_folder, "p", "t")
+    assert len(os.listdir(tmp_folder)) == 1  # Failed export was here
     builds_folder = os.path.join(c.cache_folder, "p", "b")
     assert len(os.listdir(builds_folder)) == 2  # both builds are here
     c.run('cache clean')
-    assert not os.path.exists(temp_folder)
+    assert not os.path.exists(tmp_folder)
     assert len(os.listdir(builds_folder)) == 1  # only correct pkg/0.3 remains
     # Check correct package removed all
     ref_layout = c.get_latest_ref_layout(pref.ref)
@@ -69,7 +69,7 @@ def test_cache_clean_all():
     # A second clean like this used to crash
     # as it tried to delete a folder that was not there and tripped shutils up
     c.run('cache clean')
-    assert not os.path.exists(temp_folder)
+    assert not os.path.exists(tmp_folder)
 
 
 def test_cache_multiple_builds_same_prev_clean():
@@ -77,7 +77,7 @@ def test_cache_multiple_builds_same_prev_clean():
     Different consecutive builds will create exactly the same folder, for the
     same exact prev, not leaving trailing non-referenced folders
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     create_out = c.out
@@ -104,7 +104,7 @@ def test_cache_multiple_builds_diff_prev_clean():
     Different consecutive builds will create different folders, even if for the
     same exact prev, leaving trailing non-referenced folders
     """
-    c = TestClient()
+    c = TestClient(light=True)
     package_lines = 'save(self, os.path.join(self.package_folder, "foo.txt"), str(time.time()))'
     gen = GenConanfile("pkg", "0.1").with_package(package_lines).with_import("import os, time") \
                                     .with_import("from conan.tools.files import save")
