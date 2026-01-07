@@ -997,6 +997,17 @@ class TestToolRequires:
         assert 'set(tool_INCLUDE_DIR' not in tool_config
         assert 'set(tool_LIBRARIES' not in tool_config
 
+    def test_libs_build_context(self):
+        c = TestClient()
+        c.run("new header_lib -d name=hello -d version=1.0 -o=hello")
+        c.run("create hello -tf=")
+        c.run("new cmake_lib -d name=bye -d version=1.0 -d requires=hello/1.0 -o=bye")
+        # Ninja for same layout in all platforms
+        c.run(f"install bye --build-require -c:a tools.cmake.cmakedeps:new={new_value} "
+              f"-c:a tools.cmake.cmaketoolchain:generator=Ninja")
+        cmake = c.load("bye/build/Release/generators/hello-TargetsBuild-release.cmake")
+        assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
+
 
 @pytest.mark.tool("cmake")
 @pytest.mark.parametrize("tool_requires", [True, False])

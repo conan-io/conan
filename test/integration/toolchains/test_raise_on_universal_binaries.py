@@ -2,13 +2,12 @@ import platform
 import textwrap
 
 import pytest
-from parameterized import parameterized
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-@parameterized.expand(["MesonToolchain", "BazelToolchain"])
+@pytest.mark.parametrize("toolchain", ["MesonToolchain", "BazelToolchain"])
 def test_create_universal_binary(toolchain):
     client = TestClient()
     conanfile = (GenConanfile().with_settings("os", "arch", "compiler", "build_type")
@@ -21,7 +20,7 @@ def test_create_universal_binary(toolchain):
             f"Universal binaries not supported by toolchain.") in client.out
 
 
-@parameterized.expand(["AutotoolsToolchain", "GnuToolchain"])
+@pytest.mark.parametrize("toolchain", ["AutotoolsToolchain", "GnuToolchain"])
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_toolchain_universal_binary_support(toolchain):
     """Test that toolchain now supports universal binaries on macOS"""
@@ -40,7 +39,7 @@ def test_toolchain_universal_binary_support(toolchain):
     assert "-isysroot" not in toolchain_content
 
 
-@parameterized.expand(["AutotoolsToolchain", "GnuToolchain"])
+@pytest.mark.parametrize("toolchain", ["AutotoolsToolchain", "GnuToolchain"])
 def test_toolchain_universal_binary_non_macos(toolchain):
     """Test that toolchain still raises error for universal binaries on non-macOS"""
     client = TestClient()
@@ -54,7 +53,7 @@ def test_toolchain_universal_binary_non_macos(toolchain):
     assert "Universal arch 'armv8|x86_64' is only supported in Apple OSes" in client.out
 
 
-@parameterized.expand(["AutotoolsToolchain", "GnuToolchain"])
+@pytest.mark.parametrize("toolchain", ["AutotoolsToolchain", "GnuToolchain"])
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_toolchain_universal_binary_with_sdk_path(toolchain):
     """Test that toolchain sets isysroot when sdk_path is configured for universal binaries"""

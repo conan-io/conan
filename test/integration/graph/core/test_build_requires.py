@@ -2,8 +2,6 @@ import textwrap
 
 import pytest
 
-from parameterized import parameterized
-
 from conan.internal.graph.graph_error import GraphConflictError, GraphLoopError
 from conan.api.model import RecipeReference
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
@@ -28,7 +26,7 @@ def _check_transitive(node, transitive_deps):
 
 class TestBuildRequiresGraph(GraphManagerTest):
 
-    @parameterized.expand([("recipe", ), ("profile", )])
+    @pytest.mark.parametrize("build_require", ["recipe", "profile"])
     def test_basic(self, build_require):
         # app -(br)-> cmake
         self._cache_recipe("cmake/0.1", GenConanfile())
@@ -69,7 +67,7 @@ class TestBuildRequiresGraph(GraphManagerTest):
         _check_transitive(app, [(lib, True, True, False, False)])
         _check_transitive(lib, [(cmake, False, False, True, True)])
 
-    @parameterized.expand([("shared", ), ("static", ), ("notrun", ), ("run", )])
+    @pytest.mark.parametrize("cmakelib_type", ["shared", "static", "notrun", "run"])
     def test_build_require_transitive(self, cmakelib_type):
         # app -> lib -(br)-> cmake -> cmakelib (cmakelib_type)
 
@@ -331,7 +329,7 @@ class TestTestRequire(GraphManagerTest):
         _check_transitive(app, [(lib, True, True, False, False)])
         _check_transitive(lib, [(gtest, True, True, False, False)])
 
-    @parameterized.expand([("shared",), ("static",), ("notrun",), ("run",)])
+    @pytest.mark.parametrize("gtestlib_type", ["shared", "static", "notrun", "run"])
     def test_test_require_transitive(self, gtestlib_type):
         # app -> lib -(tr)-> gtest -> gtestlib (gtestlib_type)
 
@@ -448,7 +446,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         _check_transitive(lib_c, [(lib_a, True, True, False, True),
                                   (util, True, True, False, True)])
 
-    @parameterized.expand([(True,), (False,)])
+    @pytest.mark.parametrize("reverse", [True, False])
     def test_fixed_versions(self, reverse):
         #  lib_c -(tr)-> lib_a -0.1--> util
         #    \--------(tr)----0.1------/
@@ -460,7 +458,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("lib_c", "0.1").with_test_requires(*deps))
         self._check_graph(deps_graph, reverse)
 
-    @parameterized.expand([(True,), (False,)])
+    @pytest.mark.parametrize("reverse", [True, False])
     def test_fixed_versions_conflict(self, reverse):
         #  lib_c -(tr)-> lib_a -0.1--> util
         #    \--------(tr)----0.2------/
@@ -474,7 +472,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         deps_graph = self.build_graph(conanfile, install=False)
         assert type(deps_graph.error) is GraphConflictError
 
-    @parameterized.expand([(True,), (False,)])
+    @pytest.mark.parametrize("reverse", [True, False])
     def test_fixed_versions_hybrid(self, reverse):
         #  lib_c -----> lib_a--0.1--> util
         #    \--------(tr)----0.1------/
@@ -491,7 +489,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         deps_graph = self.build_graph(conanfile)
         self._check_graph(deps_graph, reverse=reverse)
 
-    @parameterized.expand([(True,), (False,)])
+    @pytest.mark.parametrize("reverse", [True, False])
     def test_fixed_versions_hybrid_conflict(self, reverse):
         #  lib_c -----> lib_a--0.1---> util
         #    \--------(tr)----0.2------/
@@ -508,7 +506,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         deps_graph = self.build_graph(conanfile, install=False)
         assert type(deps_graph.error) is GraphConflictError
 
-    @parameterized.expand([(True,), (False,)])
+    @pytest.mark.parametrize("reverse", [True, False])
     def test_version_ranges(self, reverse):
         #  lib_c -(tr)-> lib_a -> util
         #    \--------(tr)-------/
@@ -520,7 +518,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("lib_c", "0.1").with_test_requires(*deps))
         self._check_graph(deps_graph, reverse)
 
-    @parameterized.expand([(True,), (False,)])
+    @pytest.mark.parametrize("reverse", [True, False])
     def test_version_ranges_conflict(self, reverse):
         #  lib_c -(tr)-> lib_a -> util/0.1
         #    \--------(tr)------> util/1.0
@@ -533,7 +531,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
                                       install=False)
         assert type(deps_graph.error) is GraphConflictError
 
-    @parameterized.expand([(True,), (False,)])
+    @pytest.mark.parametrize("reverse", [True, False])
     def test_version_ranges_hybrid(self, reverse):
         #  lib_c ---> lib_a -> util
         #    \--------(tr)-------/
@@ -549,7 +547,7 @@ class TestTestRequiresProblemsShared(GraphManagerTest):
         deps_graph = self.build_graph(conanfile)
         self._check_graph(deps_graph, reverse)
 
-    @parameterized.expand([(True,), (False,)])
+    @pytest.mark.parametrize("reverse", [True, False])
     def test_version_ranges_hybrid_conflict(self, reverse):
         #  lib_c -(tr)-> lib_a -> util/0.1
         #    \--------(tr)------> util/1.0

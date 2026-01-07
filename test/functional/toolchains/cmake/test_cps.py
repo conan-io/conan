@@ -8,7 +8,8 @@ from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("cmake", "4.2")
-def test_cps():
+@pytest.mark.parametrize("shared", [False, True])
+def test_cps(shared):
     c = TestClient()
     c.run("new cmake_lib")
     conanfile = textwrap.dedent("""\
@@ -67,7 +68,9 @@ def test_cps():
     # First, try with the standard mypkg-config.cmake consumption
     c.save({"conanfile.py": conanfile,
             "CMakeLists.txt": cmake})
-    c.run("create")
+
+    shared_arg = "-o &:shared=True" if shared else ""
+    c.run(f"create {shared_arg}")
     assert "mypkg/0.1: Hello World Release!" in c.out
 
     # Lets consume directly with CPS
@@ -119,5 +122,5 @@ def test_cps():
     shutil.rmtree(os.path.join(c.current_folder, "test_package", "build"))
     c.save({"test_package/conanfile.py": test_conanfile,
             "test_package/CMakeLists.txt": test_cmake})
-    c.run("create --build=missing -c tools.cmake.cmakedeps:new=will_break_next")
+    c.run(f"create {shared_arg} --build=never -c tools.cmake.cmakedeps:new=will_break_next")
     assert "mypkg/0.1: Hello World Release!" in c.out
