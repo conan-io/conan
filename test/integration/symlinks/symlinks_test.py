@@ -279,6 +279,58 @@ def test_exports_does_not_follow_symlink():
     assert not os.path.exists(os.path.join(package_folder, "linked_folder", "source.cpp"))
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks not in Windows")
+def test_exports_with_uppercase_symlink_folder():
+    base_dir_name = "BaseFolder"
+
+    client = TestClient(default_server_user=True)
+    conanfile = GenConanfile("lib", "1.0")\
+        .with_package('copy(self, "*", self.source_folder, self.package_folder, ignore_case=False)')\
+        .with_exports_sources(base_dir_name + "/*")\
+        .with_import("from conan.tools.files import copy")
+
+    base_dir_path = base_dir_name
+
+    folder_dir_name = "Folder"
+    folder_dir_path = os.path.join(base_dir_path, folder_dir_name)
+
+    symlink_target = folder_dir_name
+    symlink_name = "SymLink"
+    symlink_path = os.path.join(base_dir_path, symlink_name)
+
+    dummy_file_name = "source.cpp"
+    dummy_file_path = os.path.join(folder_dir_path, dummy_file_name)
+
+    client.save({
+        "conanfile.py": conanfile,
+        os.path.join(client.current_folder, dummy_file_path): "foo"
+    })
+
+    os.symlink(symlink_target,  os.path.join(client.current_folder, symlink_path))
+
+    client.run("create . ")
+
+    exports_sources_folder = client.exported_layout().export_sources()
+    assert os.path.islink(os.path.join(exports_sources_folder, symlink_path))
+    assert os.path.exists(os.path.join(exports_sources_folder, symlink_path, dummy_file_name))
+
+    # Check files have been copied to the build
+    build_folder = client.created_layout().build()
+    assert os.path.islink(os.path.join(build_folder, symlink_path))
+    assert os.path.exists(os.path.join(build_folder, symlink_path, dummy_file_name))
+
+    # Check package files are there
+    package_folder = client.created_layout().package()
+    assert os.path.islink(os.path.join(package_folder, symlink_path))
+    assert os.path.exists(os.path.join(package_folder, symlink_path, dummy_file_name))
+
+    # Check that the manifest doesn't contain the symlink to the source.cpp
+    contents = load(os.path.join(package_folder, "conanmanifest.txt"))
+    assert symlink_path not in contents
+    assert dummy_file_path in contents
+    assert os.path.join(symlink_path, dummy_file_name) not in contents
+
+
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 def test_package_symlinks_zero_size():
     server = TestServer()
