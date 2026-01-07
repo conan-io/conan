@@ -211,6 +211,10 @@ class Requirement:
             set_if_none("_libs", False)
             set_if_none("_headers", False)
             set_if_none("_visible", False)  # Conflicts might be allowed for this kind of package
+        elif pkg_type is PackageType.MODULE:
+            set_if_none("_run", True)
+            set_if_none("_libs", False)
+            set_if_none("_headers", False)
 
         src_pkg_type = src_node.conanfile.package_type
         if src_pkg_type is PackageType.HEADER:
@@ -295,7 +299,7 @@ class Requirement:
 
         # Regular and test requires
         if dep_pkg_type is PackageType.SHARED or dep_pkg_type is PackageType.STATIC:
-            if pkg_type is PackageType.SHARED:
+            if pkg_type is PackageType.SHARED or pkg_type is PackageType.MODULE:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, run=require.run)
             elif pkg_type is PackageType.STATIC:
                 downstream_require = Requirement(require.ref, headers=False, libs=require.libs, run=require.run)
@@ -397,6 +401,8 @@ class Requirement:
             if self.package_id_mode is None:
                 self.package_id_mode = unknown_mode
 
+        if dep_pkg_type is PackageType.MODULE:
+            self.package_id_mode = non_embed_mode
         # For cases like Application->Application, without headers or libs, package_id_mode=None
         # It will be independent by default
 

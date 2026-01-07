@@ -13,6 +13,7 @@ class PackageType(Enum):
     PYTHON = "python-require"
     CONF = "configuration"
     UNKNOWN = "unknown"
+    MODULE = "module"
 
     def __str__(self):
         return self.value

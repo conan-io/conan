@@ -240,6 +240,11 @@ class TargetConfigurationTemplate2:
             link_languages = info.languages or self._conanfile.languages or []
             link_languages = ["CXX" if c == "C++" else c for c in link_languages]
             target["link_languages"] = link_languages
+
+        if self._conanfile.package_type == PackageType.MODULE:
+            target = {"type": "module"}
+
+
         return target
 
     def _get_aliases(self, comp_name=None):
