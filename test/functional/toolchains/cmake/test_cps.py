@@ -196,9 +196,9 @@ def test_cps_components(shared):
         """)
 
     # Create source files for both libraries
-    core_cpp = gen_function_cpp(name="mypkg_core", includes=["mypkg_core"])
+    core_cpp = gen_function_cpp(name="mypkg_core")
     core_h = gen_function_h(name="mypkg_core")
-    utils_cpp = gen_function_cpp(name="mypkg_utils", includes=["mypkg_utils"])
+    utils_cpp = gen_function_cpp(name="mypkg_utils")
     utils_h = gen_function_h(name="mypkg_utils")
 
     # Create test_package files for the two components
@@ -282,8 +282,8 @@ def test_cps_components(shared):
 
 
 @pytest.mark.tool("cmake", "4.2")
-@pytest.mark.parametrize("shared", [False, True])
-def test_cps_components_requires(shared):
+@pytest.mark.parametrize("kind", ["static_public", "static_private", "shared_private"])
+def test_cps_components_requires(kind):
     c = TestClient()
     c.run("new cmake_lib")
     conanfile = textwrap.dedent("""\
@@ -324,7 +324,8 @@ def test_cps_components_requires(shared):
                 self.cpp_info = cps_data.to_conan()
         """)
 
-    cmake = textwrap.dedent("""\
+    lib_type = "PUBLIC" if "public" in kind else "PRIVATE"
+    cmake = textwrap.dedent(f"""\
         cmake_minimum_required(VERSION 4.2)
         project(mypkg CXX)
 
@@ -333,34 +334,37 @@ def test_cps_components_requires(shared):
         # First library: core
         add_library(mypkg_core src/mypkg_core.cpp)
         target_include_directories(mypkg_core PUBLIC
-                    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-                    $<INSTALL_INTERFACE:include>)
+                    $<BUILD_INTERFACE:${{CMAKE_CURRENT_SOURCE_DIR}}/include>
+                    $<INSTALL_INTERFACE:include/core>)
         set_target_properties(mypkg_core PROPERTIES PUBLIC_HEADER "include/mypkg_core.h")
 
         # Second library: utils (independent from core)
         add_library(mypkg_utils src/mypkg_utils.cpp)
 
-        target_sources(
-          mypkg_utils
-          PUBLIC
-            $<INSTALL_INTERFACE:include/mypkg/utils/mypkg_utils.h>
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
-          PRIVATE
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
-        )
-        target_link_libraries(mypkg_utils PRIVATE mypkg_core)
+        target_include_directories(mypkg_utils PUBLIC
+                    $<BUILD_INTERFACE:${{CMAKE_CURRENT_SOURCE_DIR}}/include>
+                    $<INSTALL_INTERFACE:include/utils>)
+        set_target_properties(mypkg_utils PROPERTIES PUBLIC_HEADER "include/mypkg_utils.h")
 
-        install(TARGETS mypkg_core mypkg_utils EXPORT mypkg FILE_SET publicheaders)
+        target_link_libraries(mypkg_utils {lib_type} mypkg_core)
+
+        install(TARGETS mypkg_core EXPORT mypkg
+                PUBLIC_HEADER DESTINATION ${{CMAKE_INSTALL_INCLUDEDIR}}/core)
+        install(TARGETS mypkg_utils EXPORT mypkg
+                PUBLIC_HEADER DESTINATION ${{CMAKE_INSTALL_INCLUDEDIR}}/utils)
 
         install(PACKAGE_INFO mypkg EXPORT mypkg)
         """)
 
     # Create source files for both libraries
-    core_cpp = gen_function_cpp(name="mypkg_core", includes=["mypkg_core"])
+    core_cpp = gen_function_cpp(name="mypkg_core")
     core_h = gen_function_h(name="mypkg_core")
-    utils_cpp = gen_function_cpp(name="mypkg_utils", includes=["mypkg_utils", "mypkg_core"],
+    utils_cpp = gen_function_cpp(name="mypkg_utils", includes=["mypkg_core"],
                                  calls=["mypkg_core"])
-    utils_h = gen_function_h(name="mypkg_utils")
+    if "public" in kind:
+        utils_h = gen_function_h(name="mypkg_utils", includes=["mypkg_core"])
+    else:
+        utils_h = gen_function_h(name="mypkg_utils")
 
     # Create test_package files for the two components
     test_package_cmake = textwrap.dedent("""\
@@ -376,7 +380,7 @@ def test_cps_components_requires(shared):
         """)
 
     test_package_example = textwrap.dedent("""\
-        #include "mypkg/mypkg_utils.h"
+        #include "mypkg_utils.h"
 
         int main() {
             mypkg_utils();
@@ -388,13 +392,13 @@ def test_cps_components_requires(shared):
     c.save({"conanfile.py": conanfile,
             "CMakeLists.txt": cmake,
             "src/mypkg_core.cpp": core_cpp,
-            "include/mypkg/core/mypkg_core.h": core_h,
+            "include/mypkg_core.h": core_h,
             "src/mypkg_utils.cpp": utils_cpp,
-            "include/mypkg/utils/mypkg_utils.h": utils_h,
+            "include/mypkg_utils.h": utils_h,
             "test_package/CMakeLists.txt": test_package_cmake,
             "test_package/src/example.cpp": test_package_example})
 
-    shared_arg = "-o &:shared=True" if shared else ""
+    shared_arg = "-o &:shared=True" if "shared" in kind else ""
     c.run(f"create {shared_arg}")
     assert "mypkg_core: Release!" in c.out
     assert "mypkg_utils: Release!" in c.out
