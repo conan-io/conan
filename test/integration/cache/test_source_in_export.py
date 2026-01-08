@@ -25,7 +25,7 @@ def test_source_in_export():
     c.run("create")
     assert "Running my SOURCE()!!!" in c.out
     assert "mypkg/1.0: core:source_in_export: Using source() method as export_sources()" in c.out
-    assert "Skipping calling source()" in c.out
+    assert "mypkg/1.0: Skipping calling source() " in c.out
     layout = c.exported_layout()
     assert load(os.path.join(layout.export_sources(), "myfile.h")) == "mycontent"
     assert load(os.path.join(layout.export_sources(), "potato.txt")) == "some potato"
