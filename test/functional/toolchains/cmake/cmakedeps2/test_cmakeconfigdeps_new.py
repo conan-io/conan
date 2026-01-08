@@ -402,6 +402,17 @@ class TestLibsLinkageTraits:
         c.run(f"build . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
         # it works
 
+    @pytest.mark.tool("cmake", "3.27")
+    @pytest.mark.parametrize("shared", [False, True])
+    def test_link_features(self, shared):
+        tc = TestClient()
+        tc.run("new cmake_lib -d name=matrix -d version=0.1")
+        conanfile = tc.load("conanfile.py")
+        conanfile += "        self.cpp_info.set_property('cmake_link_feature', 'WHOLE_ARCHIVE')"
+        tc.save({"conanfile.py": conanfile})
+        tc.run(f"create -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
+        print()
+
 
 @pytest.mark.tool("cmake")
 class TestLibsComponents:

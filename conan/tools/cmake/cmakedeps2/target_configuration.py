@@ -57,8 +57,12 @@ class TargetConfigurationTemplate2:
                     continue
                 dep_target = self._cmakedeps.get_property("cmake_target_name", d)
                 dep_target = dep_target or f"{d.ref.name}::{d.ref.name}"
+                link_feature = self._cmakedeps.get_property("cmake_link_feature", d)
                 link = not (pkg_type is PackageType.SHARED and d.package_type is PackageType.SHARED)
-                result[dep_target] = link
+                result[dep_target] = {
+                    "link": link,
+                    "link_feature": link_feature
+                }
             return result
 
         for required_pkg, required_comp in requires:
@@ -70,7 +74,12 @@ class TargetConfigurationTemplate2:
                 dep_target = dep_target or f"{pkg_name}::{required_comp}"
                 link = not (pkg_type is PackageType.SHARED and
                             dep_comp.type is PackageType.SHARED)
-                result[dep_target] = link
+                link_feature = self._cmakedeps.get_property("cmake_link_feature", self._conanfile,
+                                                              required_comp)
+                result[dep_target] = {
+                    "link": link,
+                    "link_feature": link_feature
+                }
             else:  # Different package
                 try:
                     dep = transitive_reqs[required_pkg]
@@ -102,8 +111,12 @@ class TargetConfigurationTemplate2:
 
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
                     dep_target = dep_target or default_target
+                    link_feature = self._cmakedeps.get_property("cmake_link_feature", dep, comp)
 
-                    result[dep_target] = link
+                    result[dep_target] = {
+                        "link": link,
+                        "link_feature": link_feature
+                    }
         return result
 
     @property
@@ -264,9 +277,12 @@ class TargetConfigurationTemplate2:
                     target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                                defaultc)
                     comp_name = target_name or f"{pkg_name}::{defaultc}"
-                    all_requires[comp_name] = True  # It is an interface, full link
+                    all_requires[comp_name] = {
+                        "link": True,  # It is an interface, full link
+                        "link_feature": None
+                    }
             else:
-                all_requires = {k: True for k in libs.keys()}
+                all_requires = {k: {"link": True, "link_feature": None} for k in libs.keys()}
             # This target might have an alias, so we need to check it
             cmake_target_aliases = self._get_aliases()
             libs[root_target_name] = {"type": "INTERFACE",
@@ -407,13 +423,17 @@ class TargetConfigurationTemplate2:
 
         {% if lib_info.get("requires") %}
         # Information of transitive dependencies
-        {% for require_target, link in lib_info["requires"].items() %}
+        {% for require_target, link_info in lib_info["requires"].items() %}
         # Requirement {{require_target}} => Full link: {{link}}
 
-        {% if link %}
+        {% if link_info["link"] %}
         # set property allows to append, and lib_info[requires] will iterate
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+            {% if link_info["link_feature"] %}
+                     "$<LINK_LIBRARY:{{link_info["link_feature"]}},{{config_wrapper(config, require_target)}}>")
+            {% else %}
                      "{{config_wrapper(config, require_target)}}")
+            {% endif %}
         {% else %}
         if(${CMAKE_VERSION} VERSION_LESS "3.27")
             message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.27")
