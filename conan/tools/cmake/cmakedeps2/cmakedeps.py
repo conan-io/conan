@@ -93,7 +93,11 @@ class CMakeDeps2:
                 msg.append(f"    find_package({self.get_cmake_filename(dep)}){note}")
                 if not require.build and not dep.cpp_info.exe:
                     target_name = self.get_property("cmake_target_name", dep)
-                    link_targets.append(target_name or f"{dep.ref.name}::{dep.ref.name}")
+                    link_target = target_name or f"{dep.ref.name}::{dep.ref.name}"
+                    link_feature = self.get_property("cmake_link_feature", dep)
+                    if link_feature:
+                        link_target = f"$<LINK_LIBRARY:{link_feature},{link_target}>"
+                    link_targets.append(link_target)
             if link_targets:
                 msg.append(f"    target_link_libraries(... {' '.join(link_targets)})")
             self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
