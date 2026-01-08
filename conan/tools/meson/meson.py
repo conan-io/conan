@@ -4,7 +4,7 @@ from conan.tools.build import build_jobs
 from conan.tools.meson.toolchain import MesonToolchain
 
 
-class Meson(object):
+class Meson:
     """
     This class calls Meson commands when a package is being built. Notice that
     this one should be used together with the ``MesonToolchain`` generator.

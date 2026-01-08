@@ -18,7 +18,7 @@ from conan.errors import ConanException
 from conan.internal.model.dependencies import get_transitive_requires
 
 
-class CMakeDeps(object):
+class CMakeDeps:
 
     def __init__(self, conanfile):
         self._conanfile = conanfile

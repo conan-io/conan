@@ -552,3 +552,48 @@ class TestResetRemote:
                 "requested, but it doesn't match the current available revision in source") in c.out
         assert ("ERROR: The 'zlib/1.2.11' package has 'exports_sources' but sources "
                 "not found in local cache") in c.out
+
+    def test_reverting_to_older_revision(self):
+        # https://github.com/conan-io/conan/issues/19313
+        folder = temp_folder()
+        recipes_folder = os.path.join(folder, "recipes")
+        zlib_config = textwrap.dedent("""
+           versions:
+             "1.2.11":
+               folder: all
+               """)
+        zlib = textwrap.dedent("""
+           from conan import ConanFile
+           class Zlib(ConanFile):
+               name = "zlib"
+               exports_sources = "*"
+               """)
+        save_files(recipes_folder,
+                   {"zlib/config.yml": zlib_config,
+                    "zlib/all/conanfile.py": zlib,
+                    "zlib/all/conandata.yml": "",
+                    "zlib/all/file.h": "//myheader"})
+
+        c = TestClient(light=True)
+        c.run(f"remote add local '{folder}'")
+        c.run("install --requires=zlib/[*] --build=missing")
+        rev1 = "169da4321a56b77e8538821613a81f1d"
+        c.assert_listed_require({f"zlib/1.2.11#{rev1}": "Downloaded (local)"})
+
+        # Modify zlib code
+        save_files(recipes_folder, {"zlib/all/file.h": "//myheader 222"})
+        c.run("install --requires=zlib/[*] --build=missing --update")
+        rev2 = "8e9fa314a3fd51ab4c930f7e4972f3e7"
+        c.assert_listed_require({f"zlib/1.2.11#{rev2}": "Updated (local)"})
+
+        # Modify zlib code again to a new one
+        save_files(recipes_folder, {"zlib/all/file.h": "//myheader 333"})
+        c.run("install --requires=zlib/[*] --update --build=missing")
+        rev3 = "dd54aebe11b96b3661d8360c68619a72"
+        c.assert_listed_require({f"zlib/1.2.11#{rev3}": "Updated (local)"})
+
+        # Revert to previous one
+        save_files(recipes_folder, {"zlib/all/file.h": "//myheader"})
+        c.run("install --requires=zlib/[*] --update --build=missing")
+        # This crashed https://github.com/conan-io/conan/issues/19313
+        c.assert_listed_require({f"zlib/1.2.11#{rev1}": "Updated (local)"})

@@ -267,7 +267,8 @@ def chdir(conanfile, newdir):
         os.chdir(old_path)
 
 
-def chmod(conanfile, path:str, read:Optional[bool]=None, write:Optional[bool]=None, execute:Optional[bool]=None, recursive:bool=False):
+def chmod(conanfile, path: str, read: Optional[bool] = None, write: Optional[bool] = None,
+          execute: Optional[bool] = None, recursive: bool = False):
     """Change file or directory permissions cross-platform.
 
     .. versionadded:: 2.15

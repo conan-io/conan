@@ -194,6 +194,7 @@ def _clang_supported_cstd(version):
         return ["99", "gnu99", "11", "gnu11", "17", "gnu17"]
     return ["99", "gnu99", "11", "gnu11", "17", "gnu17", "23", "gnu23"]
 
+
 def _emcc_supported_cstd(version):
     """
     emcc is based on clang but follow different versioning scheme.

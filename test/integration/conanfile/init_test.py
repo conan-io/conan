@@ -49,3 +49,36 @@ class TestInit:
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         assert "description: MyDescription" in client.out
         assert "license: MIT" in client.out
+
+    def test_options_from_yml(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class Lib(ConanFile):
+                name = "pkg"
+                version = "0.1"
+
+                def init(self):
+                    self.options.update(self.conan_data["options"],
+                                        self.conan_data["default_options"])
+            """)
+        conandata = textwrap.dedent("""\
+            options:
+                myopt1: [1, 2, 3]
+                myopt2: [null, potato]
+                myopt3: [null, ANY]
+            default_options:
+                myopt1: 2
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "conandata.yml": conandata})
+
+        client.run("create . ")
+        client.run("create . -o &:myopt1=1 -o &:myopt2=potato -o &:myopt3=whatever")
+        client.run("list *:*")
+
+        assert "myopt1: 2" in client.out
+        assert "myopt1: 1" in client.out
+        assert "myopt2: potato" in client.out
+        assert "myopt3: whatever" in client.out

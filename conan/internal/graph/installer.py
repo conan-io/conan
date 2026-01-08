@@ -253,12 +253,17 @@ class BinaryInstaller:
         handled_count = 1
 
         self._download_bulk(install_order)
+        prefs_lru = []
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
                     self._install_source(package.nodes[0], remotes)
                     self._handle_package(package, install_reference, handled_count, package_count)
                     handled_count += 1
+                    if package.binary == BINARY_CACHE:
+                        prefs_lru.append(package.nodes[0].pref)
+
+        self._cache.update_packages_lru(prefs_lru)
 
         MockInfoProperty.message()
 
@@ -329,7 +334,6 @@ class BinaryInstaller:
             if package.binary == BINARY_CACHE:
                 node = package.nodes[0]
                 pref = node.pref
-                self._cache.update_package_lru(pref)
                 assert node.prev, "PREV for %s is None" % str(pref)
                 msg = f'Already installed! ({handled_count} of {total_count})'
                 node.conanfile.output.success(msg)

@@ -6,7 +6,7 @@ from conan.internal.util.dates import timestamp_now, timestamp_to_str
 from conan.internal.util.files import load, md5, md5sum, save, gather_files
 
 
-class FileTreeManifest(object):
+class FileTreeManifest:
 
     def __init__(self, the_time, file_sums):
         """file_sums is a dict with filepaths and md5's: {filepath/to/file.txt: md5}"""
