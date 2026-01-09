@@ -507,9 +507,25 @@ class TestMultipleOptionsPatterns:
 
     def test_pattern_version_range_warn(self):
         c = TestClient(light=True)
-        c.save({"conanfile.py": GenConanfile("foo", "1.0")})
-        c.run("create -o=foo/[>1]:shared=True")
-        assert "WARN: risk: Pattern foo/[>1] contains a version range" in c.out
+        profile = textwrap.dedent("""
+        include(default)
+
+        [tool_requires]
+        fmt/[*]:cmake/3.31.0
+
+        [options]
+        fmt/[*]:shared=True
+
+        [settings]
+        fmt/[*]:compiler.cppstd=17
+        """)
+        c.save({
+            "profile": profile,
+            "conanfile.py": GenConanfile("fmt", "1.0")})
+        c.run("create -pr=profile")
+        assert "WARN: risk: Settings pattern fmt/[*] contains a version range" in c.out
+        assert "WARN: risk: Options pattern fmt/[*] contains a version range" in c.out
+        assert "WARN: risk: Tool requires pattern fmt/[*] contains a version range" in c.out
 
     def test_pattern_version_range_wrong_split(self):
         c = TestClient(light=True)
