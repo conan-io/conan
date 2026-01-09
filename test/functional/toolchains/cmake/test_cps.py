@@ -1,4 +1,5 @@
 import os
+import platform
 import shutil
 import textwrap
 
@@ -285,6 +286,8 @@ def test_cps_components(shared):
 @pytest.mark.tool("cmake", "4.2")
 @pytest.mark.parametrize("kind", ["static_public", "static_private", "shared_private"])
 def test_cps_components_requires(kind):
+    if kind == "shared_private" and platform.system() == "Linux":
+        pytest.skip("CPS still doesn't support this case")
     c = TestClient()
     conanfile = textwrap.dedent("""\
         from conan import ConanFile
@@ -488,13 +491,13 @@ def test_cps_components_requires(kind):
 
     c.save({"test_package/conanfile.py": test_conanfile_cps})
     c.run(f"create {shared_arg} --build=never")
-    print(c.out)
     assert "libb_core: Release!" in c.out
     assert "libb_utils: Release!" in c.out
     assert "liba_core: Release!" in c.out
     assert "liba_utils: Release!" in c.out
 
 
+@pytest.mark.skip(reason="Just to report to CMake upstream, and CPS feature request")
 @pytest.mark.tool("cmake", "4.2")
 def test_pure_cmake_shared():
     c = TestClient()
@@ -554,4 +557,3 @@ def test_pure_cmake_shared():
     print(cps)
     cps_release = c.load("mypkginstall/cps/mypkg@release.cps")
     print(cps_release)
-
