@@ -10,10 +10,10 @@ from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
-from conan.tools.cmake.cmakedeps2.config import ConfigTemplate2
-from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
-from conan.tools.cmake.cmakedeps2.target_configuration import TargetConfigurationTemplate2
-from conan.tools.cmake.cmakedeps2.targets import TargetsTemplate2
+from conan.tools.cmake.cmakeconfigdeps.config import ConfigTemplate2
+from conan.tools.cmake.cmakeconfigdeps.config_version import ConfigVersionTemplate2
+from conan.tools.cmake.cmakeconfigdeps.target_configuration import TargetConfigurationTemplate2
+from conan.tools.cmake.cmakeconfigdeps.targets import TargetsTemplate2
 from conan.tools.files import save
 from conan.internal.util.files import load
 
@@ -23,7 +23,7 @@ FIND_MODE_NONE = "none"
 FIND_MODE_BOTH = "both"
 
 
-class CMakeDeps2:
+class CMakeConfigDeps:
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -39,6 +39,9 @@ class CMakeDeps2:
         self._properties = {}
 
     def generate(self):
+        self._conanfile.output.warning("CMakeConfigDeps is experimental, and might get "
+                                       "breaking changes in future releases",
+                                       warn_tag="experimental")
         check_duplicated_generator(self, self._conanfile)
         # Current directory is the generators_folder
         generator_files = self._content()
