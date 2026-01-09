@@ -1,4 +1,4 @@
-class RestRoutes(object):
+class RestRoutes:
     ping = "ping"
     common_search = "conans/search"
     common_authenticate = "users/authenticate"

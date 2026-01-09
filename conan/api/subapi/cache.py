@@ -6,13 +6,14 @@ import tempfile
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
-from conan.internal.api.uploader import compress_files
+from conan.internal.api.uploader import compress_files, get_compress_level
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.conan_reference_layout import (EXPORT_SRC_FOLDER, EXPORT_FOLDER,
                                                          SRC_FOLDER, METADATA,
                                                          DOWNLOAD_EXPORT_FOLDER)
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.cache.integrity_check import IntegrityChecker
+from conan.internal.paths import COMPRESSIONS
 from conan.internal.rest.download_cache import DownloadCache
 from conan.errors import ConanException
 from conan.api.model import PkgReference
@@ -22,6 +23,8 @@ from conan.internal.util.files import rmdir, mkdir, remove, save
 
 
 class CacheAPI:
+    """ This CacheAPI is used to interact with the packages storage cache
+    """
 
     def __init__(self, conan_api, api_helpers):
         self._conan_api = conan_api
@@ -74,8 +77,9 @@ class CacheAPI:
     def check_integrity(self, package_list, return_pkg_list=False):
         """
         Check if the recipes and packages are corrupted
-        :parameter package_list: PackagesList to check
-        :parameter return_pkg_list: If True, return a PackagesList with corrupted artifacts
+
+        :param package_list: PackagesList to check
+        :param return_pkg_list: If True, return a PackagesList with corrupted artifacts
         :return: PackagesList with corrupted artifacts if return_pkg_list is True
         :raises: ConanExcepcion if there are corrupted artifacts and return_pkg_list is False
         """
@@ -92,6 +96,7 @@ class CacheAPI:
         """
         Remove non critical folders from the cache, like source, build and download (.tgz store)
         folders.
+
         :param package_list: the package lists that should be cleaned
         :param source: boolean, remove the "source" folder if True
         :param build: boolean, remove the "build" folder if True
@@ -138,13 +143,16 @@ class CacheAPI:
                 if download:
                     rmdir(pref_layout.download_package())
 
-    def save(self, package_list, tgz_path, no_source=False):
+    def save(self, package_list: PackagesList, tgz_path, no_source=False) -> None:
         global_conf = self._api_helpers.global_conf
         cache = PkgCache(self._conan_api.cache_folder, global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
         out = ConanOutput()
         mkdir(os.path.dirname(tgz_path))
-        compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
+        compressformat = next((e for e in COMPRESSIONS if tgz_path.endswith(e)), None)
+        if not compressformat:
+            raise ConanException(f"Unsupported compression format for {tgz_path}")
+        compresslevel = get_compress_level(compressformat, global_conf)
         tar_files: dict[str, str] = {}  # {path_in_tar: abs_path}
 
         for ref, packages in package_list.items():
@@ -190,8 +198,9 @@ class CacheAPI:
         compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path),
                        compresslevel, recursive=True)
         remove(pkglist_path)
+        ConanOutput().success(f"Created cache save file: {tgz_path}")
 
-    def restore(self, path):
+    def restore(self, path) -> PackagesList:
         if not os.path.isfile(path):
             raise ConanException(f"Restore archive doesn't exist in {path}")
 
@@ -263,11 +272,14 @@ class CacheAPI:
 
     def get_backup_sources(self, package_list=None, exclude=True, only_upload=True):
         """Get list of backup source files currently present in the cache,
-        either all of them if no argument, or filtered by those belonging to the references in the package_list
+        either all of them if no argument, or filtered by those belonging to the references
+        in the package_list
 
-        @param package_list: a PackagesList object to filter backup files from (The files should have been downloaded form any of the references in the package_list)
-        @param exclude: if True, exclude the sources that come from URLs present the core.sources:exclude_urls global conf
-        @param only_upload: if True, only return the files for packages that are set to be uploaded
+        :param package_list: a PackagesList object to filter backup files from (The files should
+          have been downloaded form any of the references in the package_list)
+        :param exclude: if True, exclude the sources that come from URLs present the
+          core.sources:exclude_urls global conf
+        :param only_upload: if True, only return the files for packages that are set to be uploaded
         """
         config = self._api_helpers.global_conf
         download_cache_path = config.get("core.sources:download_cache")

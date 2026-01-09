@@ -12,7 +12,7 @@ ARTIFACTORY_DEFAULT_PASSWORD = os.getenv("ARTIFACTORY_DEFAULT_PASSWORD", "passwo
 ARTIFACTORY_DEFAULT_URL = os.getenv("ARTIFACTORY_DEFAULT_URL", "http://localhost:8090/artifactory")
 
 
-class _ArtifactoryServerStore(object):
+class _ArtifactoryServerStore:
 
     def __init__(self, repo_url, user, password):
         self._user = user or ARTIFACTORY_DEFAULT_USER
@@ -67,7 +67,7 @@ class _ArtifactoryServerStore(object):
         return revisions[0]
 
 
-class ArtifactoryServer(object):
+class ArtifactoryServer:
 
     def __init__(self, *args, **kwargs):
         self._user = ARTIFACTORY_DEFAULT_USER

@@ -7,8 +7,12 @@ import textwrap
 import pytest
 from unittest.mock import patch
 
-from conan.api.model import Remote
+import yaml
+
+from conan.api.model import Remote, RecipeReference
 from conan.internal.api.config.config_installer import _hide_password
+
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.rest.file_downloader import FileDownloader
 from conan.internal.paths import DEFAULT_CONAN_HOME
 from conan.test.assets.genconanfile import GenConanfile
@@ -589,67 +593,119 @@ class TestConfigInstall2:
 
 
 class TestConfigInstallPkg:
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-        from conan.tools.files import copy
-        class Conf(ConanFile):
-            name = "myconf"
-            version = "0.1"
-            package_type = "configuration"
-            def package(self):
-                copy(self, "*.conf", src=self.build_folder, dst=self.package_folder)
-            """)
 
-    @pytest.fixture()
-    def client(self):
-        c = TestClient(default_server_user=True)
-        c.save({"conanfile.py": self.conanfile,
-                "global.conf": "user.myteam:myconf=myvalue"})
-        c.run("export-pkg .")
+    @pytest.fixture(scope="class")
+    def servers(self):
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import copy
+            class Conf(ConanFile):
+                package_type = "configuration"
+                def package(self):
+                    copy(self, "*.conf", src=self.build_folder, dst=self.package_folder)
+            """)
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"conanfile.py": conanfile})
+        for pkg in ("myconf_a", "myconf_b", "myconf_c"):
+            for version in ("0.1", "0.2"):
+                c.save({"global.conf": f"user.myteam:myconf=my_{pkg}/{version}_value"})
+                c.run(f"export-pkg . --name={pkg} --version={version}")
         c.run("upload * -r=default -c")
         c.run("remove * -c")
-        return c
+        return c.servers
 
-    def test_config_install_from_pkg(self, client):
-        # Now install it
-        c = client
-        c.run("config install-pkg myconf/[*]")
-        assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+    @staticmethod
+    def _check_conf(c, pkg):
         c.run("config show *")
-        assert "user.myteam:myconf: myvalue" in c.out
+        assert f"user.myteam:myconf: my_{pkg}_value" in c.out
 
-        # Just to make sure it doesn't crash in the update
-        c.run("config install-pkg myconf/[*]")
-        # Conan will not re-download fromthe server the same revision
-        assert "myconf/0.1: Downloaded package revision" not in c.out
-        # It doesn't re-install either
-        assert "Copying file global.conf" not in c.out
-        c.run("config show *")
-        assert "user.myteam:myconf: myvalue" in c.out
+    @staticmethod
+    def _check_conf_file(c, refs):
+        content = json.loads(c.load_home("config_version.json"))["config_version"]
+        for a, b in zip(refs, content):
+            assert a in b
 
-        # We can force the re-installation
-        c.run("config install-pkg myconf/[*] --force")
-        assert "Copying file global.conf" in c.out
-        c.run("config show *")
-        assert "user.myteam:myconf: myvalue" in c.out
+    def test_install_pkg(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("config install-pkg myconf_a/0.1")
+        assert "Installing new or updating configuration packages" in c.out
+        self._check_conf(c, "myconf_a/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1"])
+        cache_files = os.listdir(c.cache_folder)
+        assert "conaninfo.txt" not in cache_files
+        assert "conanmanifest.txt" not in cache_files
 
-    def test_update_flow(self, client):
-        # Now try the update flow
-        c = client
-        c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
-        c2.save({"conanfile.py": self.conanfile,
-                 "global.conf": "user.myteam:myconf=othervalue"})
-        c2.run("export-pkg .")
-        c2.run("upload * -r=default -c")
+        # skip reinstall
+        c.run("config install-pkg myconf_a/0.1")
+        assert ("The requested configurations are identical to the already installed ones, "
+                "skipping re-installation") in c.out
+        self._check_conf(c, "myconf_a/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1"])
 
-        c.run("config install-pkg myconf/[*]")
-        assert "myconf/0.1: Downloaded package revision" in c.out
-        c.run("config show *")
-        assert "user.myteam:myconf: othervalue" in c.out
+        # forced reinstall
+        c.save_home({"global.conf": ""})
+        c.run("config install-pkg myconf_a/0.1 --force")
+        assert "forcing re-installation because --force" in c.out
+        self._check_conf(c, "myconf_a/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1"])
 
-    def test_cant_use_as_dependency(self):
-        c = TestClient()
+    def test_with_url(self, servers):
+        c = TestClient(servers=servers, light=True)
+        url = servers["default"].fake_url
+        c.run("remote remove default")
+        c.run(f"config install-pkg myconf_a/0.1 --url={url}")
+        assert "Installing new or updating configuration packages" in c.out
+        self._check_conf(c, "myconf_a/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1"])
+
+    def test_update(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("config install-pkg myconf_a/0.1")
+        c.run("config install-pkg myconf_a/0.2")
+        assert "Installing new or updating configuration packages" in c.out
+        self._check_conf(c, "myconf_a/0.2")
+        self._check_conf_file(c, ["myconf_a/0.2"])
+
+    def test_addition(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("config install-pkg myconf_a/0.1")
+        c.run("config install-pkg myconf_b/0.1")
+        assert "Installing new or updating configuration packages" in c.out
+        self._check_conf(c, "myconf_b/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
+
+    def test_update_first(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("config install-pkg myconf_a/0.1")
+        c.run("config install-pkg myconf_b/0.1")
+
+        # update of the first fail
+        c.run("config install-pkg myconf_a/[*]", assert_error=True)
+        assert "ERROR: Installing these configuration packages will break" in c.out
+        assert "use 'conan config install-pkg --force' to force" in c.out
+        assert "Use 'conan config clean' first to fully reset your configuration" in c.out
+        self._check_conf(c, "myconf_b/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
+
+        # Now force the first
+        c.run("config install-pkg myconf_a/[*] --force")
+        assert "Forcing the installation because --force was defined" in c.out
+        self._check_conf(c, "myconf_a/0.2")
+        self._check_conf_file(c, ["myconf_b/0.1", "myconf_a/0.2"])
+
+    def test_update_second(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("config install-pkg myconf_a/0.1")
+        c.run("config install-pkg myconf_b/0.1")
+
+        # update of the second works without problem
+        c.run("config install-pkg myconf_b/[*]")
+        assert "Installing new or updating configuration packages" in c.out
+        self._check_conf(c, "myconf_b/0.2")
+        self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.2"])
+
+    def test_error_cant_use_as_dependency(self):
+        c = TestClient(light=True)
         conanfile = GenConanfile("myconf", "0.1").with_package_type("configuration")
         c.save({"myconf/conanfile.py": conanfile,
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("myconf/0.1")})
@@ -658,30 +714,12 @@ class TestConfigInstallPkg:
         assert "ERROR: Configuration package myconf/0.1 cannot be used as requirement, " \
                "but pkg/0.1 is requiring it" in c.out
 
-    def test_cant_use_without_type(self):
-        c = TestClient()
-        conanfile = GenConanfile("myconf", "0.1")
-        c.save({"myconf/conanfile.py": conanfile})
+    def test_error_cant_use_without_type(self):
+        c = TestClient(light=True)
+        c.save({"myconf/conanfile.py": GenConanfile("myconf", "0.1")})
         c.run("create myconf")
         c.run("config install-pkg myconf/[*]", assert_error=True)
         assert 'ERROR: myconf/0.1 is not of package_type="configuration"' in c.out
-
-    def test_lockfile(self, client):
-        """ it should be able to install the config using a lockfile
-        """
-        c = client
-        c.run("config install-pkg myconf/[*] --lockfile-out=config.lock")
-
-        c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
-        # Make sure we bump the version, otherwise only a package revision will be created
-        c2.save({"conanfile.py": self.conanfile.replace("0.1", "0.2"),
-                 "global.conf": "user.myteam:myconf=othervalue"})
-        c2.run("export-pkg .")
-        c2.run("upload * -r=default -c")
-
-        c.run("config install-pkg myconf/[*] --lockfile=config.lock")
-        c.run("config show *")
-        assert "user.myteam:myconf: myvalue" in c.out
 
     def test_create_also(self):
         conanfile = textwrap.dedent("""
@@ -696,36 +734,147 @@ class TestConfigInstallPkg:
                    copy(self, "*.conf", src=self.build_folder, dst=self.package_folder)
                """)
 
-        c = TestClient(default_server_user=True)
+        c = TestClient(default_server_user=True, light=True)
         c.save({"conanfile.py": conanfile,
-                "global.conf": "user.myteam:myconf=myvalue"})
+                "global.conf": "user.myteam:myconf=my_myconf/0.1_value"})
         c.run("create .")
         c.run("upload * -r=default -c")
         c.run("remove * -c")
 
         c.run("config install-pkg myconf/[*]")
-        c.run("config show *")
-        assert "user.myteam:myconf: myvalue" in c.out
+        self._check_conf(c, "myconf/0.1")
+        self._check_conf_file(c, ["myconf/0.1"])
 
-    def test_without_initial_remote(self):
-        c = TestClient(default_server_user=True)
-        c.save({"conanfile.py": self.conanfile,
-                "global.conf": "user.myteam:myconf=myvalue"})
-        c.run("export-pkg .")
-        c.run("upload * -r=default -c")
-        c.run("remove * -c")
-        c.run("remote list --format=json")
-        list_remotes = json.loads(c.stdout)
-        remote_url = list_remotes[0]["url"]
+    def test_lockfile(self, servers):
+        """ it should be able to install the config older version using a lockfile
+        """
+        c = TestClient(servers=servers, light=True)
+        c.run("config install-pkg myconf_a/0.1 --lockfile-out=config.lock")
+        c.run("config install-pkg myconf_a/[*] --lockfile=config.lock")
+        assert ("The requested configurations are identical to the already installed ones, "
+                "skipping re-installation") in c.out
+        self._check_conf(c, "myconf_a/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1"])
 
-        # This uses the same server and URL, because the TestClient+TestServer
-        # does not allow atm to test this, as it requires the remote to be defined
-        c.run(f"config install-pkg myconf/[*] --url={remote_url}")
-        assert "Connecting to remote 'config_install_url' with user 'admin'" in c.out
-        assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
-        c.run("config show *")
-        assert "user.myteam:myconf: myvalue" in c.out
+        # Without the lockfile, it is free to update
+        c.run("config install-pkg myconf_a/[*] --lockfile-out=config.lock")
+        assert "Installing new or updating configuration packages"
+        self._check_conf(c, "myconf_a/0.2")
+        self._check_conf_file(c, ["myconf_a/0.2"])
+        result = json.loads(c.load("config.lock"))
+        assert "myconf_a/0.2" in result["config_requires"][0]
+
+    def test_install_from_file(self, servers):
+        c = TestClient(servers=servers, light=True)
+        # To make explicit the format of the conanconfig file
+        conanconfig = textwrap.dedent("""\
+            packages:
+                - myconf_a/0.1
+                - myconf_b/0.1
+            """)
+        c.save({"conanconfig.yml": conanconfig})
+        # Admits the default location .
+        c.run("config install-pkg")
+        self._check_conf(c, "myconf_b/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
+
+        # install same file again:
+        c.run("config install-pkg .")
+        assert ("The requested configurations are identical to the already installed ones, "
+                "skipping re-installation") in c.out
+        self._check_conf(c, "myconf_b/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
+
+        # Forced re-install
+        c.save_home({"global.conf": ""})
+        c.run("config install-pkg . --force")
+        assert "forcing re-installation because --force" in c.out
+        self._check_conf(c, "myconf_b/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
+
+    def test_install_from_file_with_url(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("remote remove default")
+        server_url = servers["default"].fake_url
+        conanconfig = yaml.dump({"packages": ["myconf_a/0.1"], "urls": [server_url]})
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg .")
+        self._check_conf(c, "myconf_a/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1"])
+
+    def test_update_with_file(self, servers):
+        c = TestClient(servers=servers, light=True)
+        conanconfig = yaml.dump({"packages": ["myconf_a/0.1", "myconf_b/0.1"]})
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg .")
+
+        # Now installing "updates" without disrupting the order
+        c.run("config install-pkg myconf_c/0.1")
+        assert "Installing new or updating configuration packages"
+        self._check_conf(c, "myconf_c/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1", "myconf_c/0.1"])
+
+        # Now installing "updates" without disrupting the order
+        conanconfig = textwrap.dedent("""\
+            packages:
+                - myconf_a/0.1
+                - myconf_b/0.1
+                - myconf_c/[*]
+            """)
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg .")
+        assert "Installing new or updating configuration packages" in c.out
+        self._check_conf(c, "myconf_c/0.2")
+        self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1", "myconf_c/0.2"])
+
+        # This is also an update of the existing ones, keeping the order
+        conanconfig = textwrap.dedent("""\
+            packages:
+                - myconf_a/[*]
+                - myconf_b/0.1
+                - myconf_c/[*]
+            """)
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg .")
+        assert "Installing new or updating configuration packages" in c.out
+        self._check_conf(c, "myconf_c/0.2")
+        self._check_conf_file(c, ["myconf_a/0.2", "myconf_b/0.1", "myconf_c/0.2"])
+
+    def test_failed_update_force(self, servers):
+        c = TestClient(servers=servers, light=True)
+        conanconfig = yaml.dump({"packages": ["myconf_a/0.1", "myconf_b/0.1"]})
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg .")
+
+        # Now installing "updates" without disrupting the order
+        conanconfig = textwrap.dedent("""\
+            packages:
+                - myconf_a/0.2
+            """)
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg .", assert_error=True)
+        assert "use 'conan config install-pkg --force' to force" in c.out
+        assert "Use 'conan config clean' first to fully reset" in c.out
+        self._check_conf(c, "myconf_b/0.1")
+        self._check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
+
+        c.run("config install-pkg . --force")
+        assert "Forcing the installation because --force was defined" in c.out
+        self._check_conf(c, "myconf_a/0.2")
+        self._check_conf_file(c, ["myconf_b/0.1", "myconf_a/0.2"])
+
+    def test_install_from_file_with_lockfile(self, servers):
+        # it should stay in version 0.1
+        c = TestClient(servers=servers)
+        c.run("config install-pkg myconf_a/0.1 --lockfile-out=conan.lock")
+        conanconfig = yaml.dump({"packages": ["myconf_a/[>=0.1 <1.0]"]})
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg .")
+        path = HomePaths(c.cache_folder).config_version_path
+        # First are the newest installed
+        configs = json.loads(load(path))["config_version"]
+        configs = [str(RecipeReference.loads(r)) for r in configs]
+        assert configs == ["myconf_a/0.1"]
 
 
 class TestConfigInstallPkgSettings:
@@ -768,7 +917,7 @@ class TestConfigInstallPkgSettings:
         c.run("config show *")
         assert "user.myteam:myconf: mywinvalue" in c.out
 
-        c.run("config install-pkg myconf/[*] -s os=Linux")
+        c.run("config install-pkg myconf/[*] -s os=Linux --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -792,7 +941,7 @@ class TestConfigInstallPkgSettings:
         c.run("config show *")
         assert "user.myteam:myconf: mywinvalue" in c.out
 
-        c.run("config install-pkg myconf/[*] -pr=nix.profile")
+        c.run("config install-pkg myconf/[*] -pr=nix.profile --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -809,7 +958,7 @@ class TestConfigInstallPkgSettings:
         assert "user.myteam:myconf: mywinvalue" in c.out
 
         c.save_home({"profiles/default": "[settings]\nos=Linux"})
-        c.run("config install-pkg myconf/[*]")
+        c.run("config install-pkg myconf/[*] --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -857,7 +1006,7 @@ class TestConfigInstallPkgOptions:
         c.run("config show *")
         assert "user.myteam:myconf: my1value" in c.out
 
-        c.run("config install-pkg myconf/[*] -o &:project=project2")
+        c.run("config install-pkg myconf/[*] -o &:project=project2 --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -882,7 +1031,7 @@ class TestConfigInstallPkgOptions:
         c.run("config show *")
         assert "user.myteam:myconf: my1value" in c.out
 
-        c.run("config install-pkg myconf/[*] -pr=nix.profile")
+        c.run("config install-pkg myconf/[*] -pr=nix.profile --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")
@@ -899,7 +1048,7 @@ class TestConfigInstallPkgOptions:
         assert "user.myteam:myconf: my1value" in c.out
 
         c.save_home({"profiles/default": "[options]\n&:project=project2"})
-        c.run("config install-pkg myconf/[*]")
+        c.run("config install-pkg myconf/[*] --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
         assert "Copying file global.conf" in c.out
         c.run("config show *")

@@ -88,7 +88,7 @@ class RemoteManager:
             self._cache.remove_recipe_layout(layout)
             raise
         export_folder = layout.export()
-        export_file = next((f for f in zipped_files if EXPORT_FILE_NAME in f), None)
+        export_file = next((f for f in zipped_files if f.startswith(EXPORT_FILE_NAME)), None)
         tgz_file = zipped_files.pop(export_file, None)
 
         if tgz_file:
@@ -344,7 +344,7 @@ class RemoteManager:
 
 
 def uncompress_file(src_path, dest_folder, scope=None):
-    if sys.version_info.minor < 14 and src_path.endswith(".tzst"):
+    if sys.version_info.minor < 14 and src_path.endswith("zst"):
         raise ConanException(f"File {os.path.basename(src_path)} compressed with 'zst', "
                              f"unsupported for Python<3.14 ")
     try:

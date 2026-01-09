@@ -179,7 +179,7 @@ class _CMakePresets:
             ret["binaryDir"] = conanfile.build_folder
 
         def _format_val(val):
-            return f'"{val}"' if type(val) == str and " " in val else f"{val}"
+            return f'"{val}"' if type(val) is str and " " in val else f"{val}"
 
         # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
         cache_variables_info = " ".join(

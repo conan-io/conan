@@ -2,7 +2,7 @@ import json
 
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write, ConanOutput
+from conan.api.output import cli_out_write
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import print_list_text, print_list_json
@@ -125,6 +125,7 @@ def print_list_check_integrity_json(data):
     myjson = json.dumps(results, indent=4)
     cli_out_write(myjson)
 
+
 @conan_subcommand(formatters={"text": lambda _: (),
                               "json": print_list_check_integrity_json})
 def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
@@ -185,9 +186,6 @@ def cache_save(conan_api: ConanAPI, parser, subparser, *args):
     else:
         ref_pattern = ListPattern(args.pattern)
         package_list = conan_api.list.select(ref_pattern)
-    if args.file and not args.file.endswith(".tgz"):
-        ConanOutput().warning("Compression using other than .tgz is experimental. Use .tzx or "
-                              ".tzst (Python>=3.14 only) extensions for other formats")
     tgz_path = make_abs_path(args.file or "conan_cache_save.tgz")
     conan_api.cache.save(package_list, tgz_path, args.no_source)
     return {"results": {"Local Cache": package_list.serialize()}}
@@ -211,6 +209,6 @@ def cache_backup_upload(conan_api: ConanAPI, parser, subparser, *args):
     """
     Upload all the source backups present in the cache
     """
-    args = parser.parse_args(*args)
+    parser.parse_args(*args)
     files = conan_api.cache.get_backup_sources()
     conan_api.upload.upload_backup_sources(files)

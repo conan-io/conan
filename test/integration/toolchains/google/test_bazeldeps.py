@@ -1093,7 +1093,6 @@ class TestBazelGenerationBuildContext:
         assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
 
 
-
 def test_shared_windows_find_libraries():
     """
     Testing the ``_get_libs`` mechanism in Windows, the shared libraries and their
@@ -1199,8 +1198,8 @@ def test_shared_windows_find_libraries():
             "zlib/conanfile.py": zlib,
             "openssl/conanfile.py": openssl,
             "libcurl/conanfile.py": libcurl,
-            "libiconv/conanfile.py": libiconv,
-    })
+            "libiconv/conanfile.py": libiconv
+            })
     c.run("export-pkg zlib -o:a shared=True")
     c.run("export-pkg openssl -o:a shared=True")
     c.run("export-pkg libcurl -o:a shared=True")

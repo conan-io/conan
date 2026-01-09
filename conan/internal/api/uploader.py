@@ -81,28 +81,37 @@ class UploadUpstreamChecker:
                 prev_bundle["upload"] = False
 
 
+def get_compress_level(compressformat, global_conf):
+    if compressformat == "xz":
+        msg = ("The 'xz' compression is experimental. "
+               "Consumers using older Conan versions will not be able to install these packages. "
+               "Feedback is welcome, please report any issues as GitHub tickets.")
+        ConanOutput().warning(msg, warn_tag="risk")
+    elif compressformat == "zst":
+        msg = ("The 'zst' compression is experimental. "
+               "Consumers installing packages created with this format must use Python >= 3.14. "
+               "Consumers using older Conan or Python versions will not be able to install these "
+               "packages. Feedback is welcome, please report any issues as GitHub tickets.")
+        ConanOutput().warning(msg, warn_tag="risk")
+
+    if compressformat == "zst" and sys.version_info.minor < 14:
+        raise ConanException("The 'core.upload:compression_format=zst' is only for Python>=3.14")
+    compresslevel = global_conf.get("core:compresslevel", check_type=int)
+    if compresslevel is None and compressformat == "gz":
+        compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
+        if compresslevel is not None:
+            ConanOutput().warning("core.gzip:compresslevel is deprecated, "
+                                  "use core.compresslevel instead", warn_tag="deprecated")
+    return compresslevel
+
+
 class PackagePreparator:
     def __init__(self, app: ConanApp, global_conf):
         self._app = app
         self._global_conf = global_conf
-
-        # No compressed file exists, need to compress
-        compressformat = self._global_conf.get("core.upload:compression_format",
-                                               default="gz", choices=COMPRESSIONS)
-        if compressformat in ("xz", "zst"):
-            ConanOutput().warning(f"The {compressformat} compression is highly experimental, "
-                                  f"use it at your own risk and expect issues. Feedback welcome, "
-                                  f"please report it as Github tickets",
-                                  warn_tag="risk")
-        if compressformat == "zst" and sys.version_info.minor < 14:
-            raise ConanException("The 'core.upload:compression_format=zst' is only for Python>=3.14")
-        compresslevel = self._global_conf.get("core:compresslevel", check_type=int)
-        if compresslevel is None and compressformat == "gz":
-            compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
-            if compresslevel is not None:
-                ConanOutput().warning("core.gzip:compresslevel is deprecated, "
-                                      "use core.compresslevel instead", warn_tag="deprecated")
-
+        compressformat = self._global_conf.get("core.upload:compression_format", default="gz",
+                                               choices=COMPRESSIONS)
+        compresslevel = get_compress_level(compressformat, global_conf)
         self._compressformat = compressformat
         self._compresslevel = compresslevel
 

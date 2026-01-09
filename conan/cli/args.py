@@ -133,7 +133,7 @@ def common_graph_args(subparser):
     subparser.add_argument("--requires", action="append",
                            help='Directly provide requires instead of a conanfile')
     subparser.add_argument("--tool-requires", action='append',
-                                                  help='Directly provide tool-requires instead of a conanfile')
+                           help='Directly provide tool-requires instead of a conanfile')
     add_reference_args(subparser)
     add_lockfile_args(subparser)
 

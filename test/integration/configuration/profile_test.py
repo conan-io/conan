@@ -636,6 +636,7 @@ def test_consumer_invalid_profile_multiple_groups():
     assert ("ERROR: Error reading 'myprofs/myprofile' profile: ConfigParser: "
             "Duplicated section: [settings]") in client.out
 
+
 def test_compose_numeric_values_scoped_pkg():
     tc = TestClient(light=True)
     tc.save({"conanfile.py": GenConanfile("hello", "0.1")
