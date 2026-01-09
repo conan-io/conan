@@ -280,8 +280,13 @@ def test_exports_does_not_follow_symlink():
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="Symlinks not in Windows")
-def test_exports_with_uppercase_symlink_folder():
-    base_dir_name = "BaseFolder"
+@pytest.mark.parametrize("uppercase", [False, True])
+def test_exports_with_uppercase_symlink_folder(uppercase):
+    # BaseFolder
+    #     |- Folder
+    #           |- source.cpp
+    #     |- Symlink (Points to "./Folder")
+    base_dir_name = "BaseFolder" if uppercase else "basefolder"
 
     client = TestClient(default_server_user=True)
     conanfile = GenConanfile("lib", "1.0")\
@@ -289,24 +294,19 @@ def test_exports_with_uppercase_symlink_folder():
         .with_exports_sources(base_dir_name + "/*")\
         .with_import("from conan.tools.files import copy")
 
-    base_dir_path = base_dir_name
+    folder_dir_name = "Folder" if uppercase else "folder"
+    folder_dir_path = os.path.join(base_dir_name, folder_dir_name)
 
-    folder_dir_name = "Folder"
-    folder_dir_path = os.path.join(base_dir_path, folder_dir_name)
-
-    symlink_target = folder_dir_name
-    symlink_name = "SymLink"
-    symlink_path = os.path.join(base_dir_path, symlink_name)
+    symlink_name = "SymLink" if uppercase else "symlink"
+    symlink_path = os.path.join(base_dir_name, symlink_name)
 
     dummy_file_name = "source.cpp"
     dummy_file_path = os.path.join(folder_dir_path, dummy_file_name)
 
-    client.save({
-        "conanfile.py": conanfile,
-        os.path.join(client.current_folder, dummy_file_path): "foo"
-    })
+    client.save({"conanfile.py": conanfile,
+                 dummy_file_path: "foo"})
 
-    os.symlink(symlink_target,  os.path.join(client.current_folder, symlink_path))
+    os.symlink(folder_dir_name,  os.path.join(client.current_folder, symlink_path))
 
     client.run("create . ")
 
