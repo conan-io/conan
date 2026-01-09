@@ -149,9 +149,10 @@ class CacheAPI:
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
         out = ConanOutput()
         mkdir(os.path.dirname(tgz_path))
-        compressformat = next((e for e in COMPRESSIONS if tgz_path.endswith(e)), None)
+        tgz_name = os.path.basename(tgz_path)
+        compressformat = next((e for e in COMPRESSIONS if tgz_name.endswith(e)), None)
         if not compressformat:
-            raise ConanException(f"Unsupported compression format for {tgz_path}")
+            raise ConanException(f"Unsupported compression format for {tgz_name}")
         compresslevel = get_compress_level(compressformat, global_conf)
         tar_files: dict[str, str] = {}  # {path_in_tar: abs_path}
 
@@ -195,8 +196,7 @@ class CacheAPI:
         pkglist_path = os.path.join(tempfile.gettempdir(), "pkglist.json")
         save(pkglist_path, serialized)
         tar_files["pkglist.json"] = pkglist_path
-        compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path),
-                       compresslevel, recursive=True)
+        compress_files(tar_files, tgz_name, os.path.dirname(tgz_path), compresslevel, recursive=True)
         remove(pkglist_path)
         ConanOutput().success(f"Created cache save file: {tgz_path}")
 

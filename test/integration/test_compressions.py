@@ -106,8 +106,7 @@ class TestDuplicatedInServerErrors:
         c.run("remove * -c")
         c.run("export")
         c.run("upload * -r=default -c -cc core.upload:compression_format=xz --force")
-        assert ("WARN: risk: The xz compression is highly experimental, use it at your "
-                "own risk and expect issues" in c.out)
+        assert "WARN: risk: The 'xz' compression is experimental" in c.out
 
         c.run("remove * -c")
         c.run("install --requires=pkg/0.1", assert_error=True)
