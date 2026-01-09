@@ -242,6 +242,11 @@ class Options:
                                   "deprecated, use a pattern like `{}/*:{}` " \
                                   "instead".format(k, package, option)
                             raise ConanException(msg)
+                        if "[" in package:
+                            msg = (f"Options pattern {package} contains a version range, which has no effect. "
+                                   f"Only '&' for consumer and '*' as wildcard are supported in this context.")
+                            from conan.api.output import ConanOutput
+                            ConanOutput().warning(msg, warn_tag="risk")
                         self._deps_package_options.setdefault(package, _PackageOptions())[option] = v
                     else:
                         self._package_options[k] = v
