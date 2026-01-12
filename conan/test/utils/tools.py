@@ -399,8 +399,8 @@ class TestClient:
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
         if default_server_user is not None:
-            assert isinstance(default_server_user, bool), \
-                "default_server_user has to be True or False"
+            assert isinstance(default_server_user, (bool, int)), \
+                "default_server_user has to be boolean or integer"
             if servers is not None:
                 raise Exception("Cannot define both 'servers' and 'default_server_user'")
             if inputs is not None:

@@ -5,6 +5,7 @@ from conan.api.output import init_colorama
 from conan.api.subapi.audit import AuditAPI
 from conan.api.subapi.cache import CacheAPI
 from conan.api.subapi.command import CommandAPI
+from conan.api.subapi.init import InitAPI
 from conan.api.subapi.local import LocalAPI
 from conan.api.subapi.lockfile import LockfileAPI
 from conan.api.subapi.report import ReportAPI
@@ -70,6 +71,7 @@ class ConanAPI:
         self.export: ExportAPI = ExportAPI(self, self._api_helpers)
         self.remove = RemoveAPI(self)
         self.new = NewAPI(self)
+        self.init = InitAPI(self)
         #: Used to upload recipes and packages to remotes
         self.upload: UploadAPI = UploadAPI(self, self._api_helpers)
         #: Used to download recipes and packages from remotes
