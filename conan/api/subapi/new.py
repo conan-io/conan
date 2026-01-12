@@ -31,7 +31,7 @@ class NewAPI:
             try:
                 k, v = u.split("=", 1)
             except ValueError:
-                raise ConanException(f"Template definitions must be 'key=value', received {u}")
+                raise ConanException(f"Template definitions must be 'key=value', received '{u}'")
             k = k.replace("-", "")  # Remove possible "--name=value"
             # For variables that only show up once, no need for list to keep compatible behaviour
             if k in definitions:
