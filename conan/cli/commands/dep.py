@@ -18,9 +18,9 @@ def dep_remove(conan_api, parser, subparser, *args):
                              "Defaults to current directory")
     subparser.add_argument("name", help="Dependency name.")
     subparser.add_argument("-to", "--tool-requires", action="store_true",
-                           help="Add the requirement as a tool requires.")
+                           help="It is a tool requirement.")
     subparser.add_argument("-te", "--test-requires", action="store_true",
-                           help="Add the requirement as a test requires.")
+                           help="It is a test requirement.")
     args = parser.parse_args(*args)
     name = args.name
     path = conan_api.local.get_conanfile_path(args.path, os.getcwd(), py=None)
@@ -57,9 +57,9 @@ def dep_add(conan_api, parser, subparser, *args):
                              "Defaults to current directory",)
     subparser.add_argument("name", help="Dependency name.")
     subparser.add_argument("-to", "--tool-requires", action="store_true",
-                           help="Add the requirement as a tool requires.")
+                           help="It is a tool requirement.")
     subparser.add_argument("-te", "--test-requires", action="store_true",
-                           help="Add the requirement as a test requires.")
+                           help="It is a test requirement.")
     group = subparser.add_mutually_exclusive_group()
     group.add_argument("-r", "--remote", default=None, action="append",
                        help="Remote names. Accepts wildcards ('*' means all the remotes available)")
