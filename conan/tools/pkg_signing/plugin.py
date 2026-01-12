@@ -94,8 +94,6 @@ def _save_signatures(signature_folder, signatures):
     :param signature_folder: Signature folder path
     :param signatures: dict of {filename: signature_value}
     """
-    assert isinstance(signatures, list),\
-        "The signature plugin function must return a list of signatures values"
     for signature in signatures:
         assert signature.get("method"), "Signature 'method' must be set"
         assert signature.get("provider"), "Signature 'provider' must be set"

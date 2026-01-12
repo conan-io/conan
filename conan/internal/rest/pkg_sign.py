@@ -1,5 +1,6 @@
 import os
 
+from conan.errors import ConanException
 from conan.internal.cache.conan_reference_layout import METADATA
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.loader import load_python_file
@@ -36,6 +37,9 @@ class PkgSignaturesPlugin:
         signatures = self._plugin_sign_function(ref, artifacts_folder=folder,
                                                 signature_folder=metadata_sign)
         # Save signatures file with the plugin's returned signatures data
+        if not isinstance(signatures, list):
+            raise ConanException("The signature plugin function must return"
+                                 "a list of signature dicts")
         _save_signatures(metadata_sign, signatures)
         # Add files to package bundle so they get uploaded
         files[f"{METADATA}/sign/{PKGSIGN_MANIFEST}"] = get_manifest_filepath(metadata_sign)
