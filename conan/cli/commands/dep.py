@@ -15,7 +15,7 @@ def dep_remove(conan_api, parser, subparser, *args):
     """
     subparser.add_argument("path", default=".", nargs="?",
                         help="Path to a folder containing a recipe (conanfile.py). "
-                             "Defaults to current directory")
+                             "Defaults to the current directory")
     subparser.add_argument("name", help="Dependency name.")
     subparser.add_argument("-to", "--tool-requires", action="store_true",
                            help="It is a tool requirement.")
@@ -54,7 +54,7 @@ def dep_add(conan_api, parser, subparser, *args):
     """
     subparser.add_argument("path", default=".", nargs="?",
                         help="Path to a folder containing a recipe (conanfile.py). "
-                             "Defaults to current directory",)
+                             "Defaults to the current directory",)
     subparser.add_argument("name", help="Dependency name.")
     subparser.add_argument("-to", "--tool-requires", action="store_true",
                            help="It is a tool requirement.")
