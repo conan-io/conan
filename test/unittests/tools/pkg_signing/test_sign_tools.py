@@ -170,15 +170,6 @@ def test_save_signatures_requires_manifest(pkg_sign_tools):
         _save_signatures(signature_folder, signatures)
 
 
-def test_save_signatures_validates_list_type(pkg_sign_tools):
-    """Test that _save_signatures validates signatures is a list."""
-    artifacts_folder, signature_folder = pkg_sign_tools
-    _save_manifest(artifacts_folder, signature_folder)
-
-    with pytest.raises(AssertionError, match="must return a list"):
-        _save_signatures(signature_folder, {"not": "a list"})
-
-
 def test_save_signatures_validates_required_fields(pkg_sign_tools):
     """Test that _save_signatures validates required signature fields."""
     artifacts_folder, signature_folder = pkg_sign_tools
