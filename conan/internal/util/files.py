@@ -1,10 +1,4 @@
 import errno
-<<<<<<< HEAD
-from pathlib import Path
-import tempfile
-import gzip
-=======
->>>>>>> feature/builtin_compression
 import hashlib
 import os
 import platform
@@ -16,13 +10,10 @@ import time
 
 from contextlib import contextmanager
 
-from conan.api.output import ConanOutput
 from conan.errors import ConanException
 
 _DIRTY_FOLDER = ".dirty"
 
-# Name (without extension) of the tar file to be created by the compression plugin
-COMPRESSED_PLUGIN_TAR_NAME = "__conan_plugin_compressed_contents__"
 
 def set_dirty(folder):
     dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
@@ -264,11 +255,7 @@ def mkdir(path):
     os.makedirs(path)
 
 
-def tar_extract(fileobj, destination_dir, compression_plugin=None, conf=None):
-    if compression_plugin:
-        _tar_extract_with_plugin(fileobj, destination_dir, compression_plugin, conf)
-        return
-
+def tar_extract(fileobj, destination_dir):
     the_tar = tarfile.open(fileobj=fileobj)
     # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
     # "could not change modification time", with time=0
@@ -276,38 +263,7 @@ def tar_extract(fileobj, destination_dir, compression_plugin=None, conf=None):
     the_tar.extraction_filter = (lambda member, path: member)  # fully_trusted, avoid Py3.14 break
     the_tar.extractall(path=destination_dir)
     the_tar.close()
-    if list(Path(destination_dir).glob(f"{COMPRESSED_PLUGIN_TAR_NAME}.*")):
-        raise ConanException(f"Error while extracting {os.path.basename(fileobj.name)}.\n"
-                             "This file has been compressed using a `compression` plugin.\n"
-                             "If your organization uses this plugin, ensure it is correctly installed on your environment.")
 
-
-def _tar_extract_with_plugin(fileobj, destination_dir, compression_plugin, conf):
-    """First remove tar.gz wrapper and then call the plugin to extract"""
-    t1 = time.time()
-    the_tar = tarfile.open(fileobj=fileobj)
-    the_tar.extraction_filter = (lambda member, path: member)  # fully_trusted, avoid Py3.14 break
-    the_tar.extractall(path=destination_dir)
-    extracted_files = the_tar.getnames()
-    the_tar.close()
-    # Check if the tar was compressed with the compression plugin by checking the existence of
-    # our constant COMPRESSED_PLUGIN_TAR_NAME (without extension as extension is added by the plugin)
-    ConanOutput().success(f"{time.time() - t1}")
-    for path in extracted_files:
-        if os.path.basename(path).startswith(COMPRESSED_PLUGIN_TAR_NAME):
-            # Extract the actual contents from the plugin tar (ignore other files present).
-            ConanOutput().debug(f"Unwrapped in {time.time() - t1}")
-            t1 = time.time()
-            compression_plugin.tar_extract(
-                archive_path=os.path.join(destination_dir, path),
-                dest_dir=destination_dir,
-                conf=conf,
-            )
-            # Remove extracted files from tar
-            for f in extracted_files:
-                remove(os.path.join(destination_dir, f))
-            break
-    ConanOutput().debug(f"Extracted in {time.time() - t1}")
 
 def merge_directories(src, dst):
     from conan.tools.files import copy

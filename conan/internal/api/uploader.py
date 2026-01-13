@@ -112,6 +112,8 @@ class PackagePreparator:
         compresslevel = get_compress_level(compressformat, global_conf)
         self._compressformat = compressformat
         self._compresslevel = compresslevel
+        plugin = app.conan_api._api_helpers.compression_plugin  # noqa
+        self._compress_plugin = getattr(plugin, "tar_compress", None) if plugin else None
 
     def prepare(self, pkg_list, enabled_remotes):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
@@ -221,9 +223,9 @@ class PackagePreparator:
 
         file_name = filename + self._compressformat
         package_file = os.path.join(download_folder, file_name)
-        compression_plugin = self._app.conan_api.cache.compression_plugin
         compressed_path = compress_files(files, file_name, download_folder,
-                                         compresslevel=self._compresslevel, ref=ref, plugin=compression_plugin)
+                                         compresslevel=self._compresslevel, ref=ref,
+                                         compress_plugin=self._compress_plugin)
         assert compressed_path == package_file
         assert os.path.exists(package_file)
         return file_name
@@ -316,26 +318,23 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     return t
 
 
-def compress_files(files, name, dest_dir, conf=None, ref=None, recursive=False,
-                   compression_plugin=None):
-    tgz_path = os.path.join(dest_dir, name)
+def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursive=False,
+                   compress_plugin=None):
     t1 = time.time()
+    tgz_path = os.path.join(dest_dir, name)
+    ConanOutput(scope=str(ref) if ref else None).info(f"Compressing {name}")
 
-    ConanOutput(scope=str(ref or "")).info(f"Compressing {name}")
-
-    if ref:
-        ConanOutput(scope=str(ref) if ref else None).info(f"Compressing {name}")
-
-    if compression_plugin:
+    if compress_plugin is not None:
         ConanOutput(scope=str(ref or "")).info(f"Compressing {name} using compression plugin")
-        compressed_extension = compression_plugin.tar_compress(
-            archive_path=abs_path_without_extension,
+        compressed = compress_plugin(
+            archive_path=tgz_path,
             files=files,
             recursive=recursive,
-            conf=conf,
-            ref=ref,
+            compresslevel=compresslevel,
+            scope=str(ref or "")
         )
-        return tgz_path
+        if compressed is not False:
+            return tgz_path
 
     if name.endswith("zst"):
         with tarfile.open(tgz_path, "w:zst", level=compresslevel) as tar:  # noqa Py314 only
@@ -353,7 +352,6 @@ def compress_files(files, name, dest_dir, conf=None, ref=None, recursive=False,
         return tgz_path
 
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
-        compresslevel = conf.get("core.gzip:compresslevel", check_type=int) if conf else None
         tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
         for filename, abs_path in sorted(files.items()):
             # recursive is False by default in case it is a symlink to a folder
@@ -362,11 +360,6 @@ def compress_files(files, name, dest_dir, conf=None, ref=None, recursive=False,
 
     ConanOutput().debug(f"{name} compressed in {time.time() - t1} time")
     return tgz_path
-
-def _compress_files_with_plugin(files, name, dest_dir, conf, ref, recursive, compression_plugin):
-    t1 = time.time()
-    abs_path_without_extension = os.path.join(dest_dir, COMPRESSED_PLUGIN_TAR_NAME)
-
 
 
 def _total_size(cache_files):

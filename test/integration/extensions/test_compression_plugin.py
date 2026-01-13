@@ -1,65 +1,67 @@
 import os
 import textwrap
-import tarfile
 
-from conan.internal.util.files import COMPRESSED_PLUGIN_TAR_NAME, mkdir
+
+from conan.internal.util.files import load
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
 def test_compression_plugin_not_valid():
     """Test an error is raised if the compression plugin is not valid"""
+    c = TestClient(light=True)
+    c.save_home({"extensions/plugins/compression.py": ""})
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+    c.run("create .", assert_error=True)
+    assert "ERROR: The 'compression.py' plugin does not contain" in c.out
 
-    c = TestClient()
-    compression_plugin = textwrap.dedent(
-        """
-        def tar_compress(archive_path, files, recursive, conf=None, *args, **kwargs):
-            pass
-    """
-    )
 
-    c.save(
-        {
-            os.path.join(
-                c.cache_folder, "extensions", "plugins", "compression.py"
-            ): compression_plugin,
-            "conanfile.py": GenConanfile("pkg", "1.0"),
-        }
-    )
+def test_compression_plugin_fallbacks():
+    """If the plugin methods returns False, fallback to Conan behavior"""
+
+    c = TestClient(default_server_user=True, light=True)
+    compression_plugin = textwrap.dedent("""\
+        import os
+        from conan.api.output import ConanOutput
+
+        def tar_compress(archive_path, files, recursive, scope=None, compresslevel=None,
+                         *args, **kwargs):
+            name = os.path.basename(archive_path)
+            ConanOutput(scope=scope).info(f"Falling back to compress {name} with Conan!")
+            return False
+
+        def tar_extract(archive_path, dest_dir, scope=None, *args, **kwargs):
+            name = os.path.basename(archive_path)
+            ConanOutput(scope=scope).info(f"Falling back to extract {name} with Conan!")
+            return False
+    """)
+    c.save_home({"extensions/plugins/compression.py": compression_plugin})
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_exports("*.txt")
+                                                      .with_package_file("some.lib", "lib"),
+            "myexportfile.txt": "something"})
+
     c.run("create .")
-    c.run("cache save 'pkg/*:*'", assert_error=True)
-    assert (
-        "ERROR: The 'compression.py' plugin does not contain required `tar_extract` or `tar_compress` functions"
-        in c.out
-    )
+    c.run("upload * -r=default -c")
+    assert "pkg/1.0: Falling back to compress conan_export.tgz with Conan!" in c.out
+    assert "Falling back to compress conan_package.tgz with Conan!" in c.out
+    c.run("remove * -c")
+    c.run("install --requires=pkg/1.0")
+    assert "pkg/1.0: Falling back to extract conan_export.tgz with Conan!" in c.out
+    assert "pkg/1.0: Falling back to extract conan_package.tgz with Conan!" in c.out
 
-def test_compression_plugin_returning_invalid_path():
-    """Test an error is raised if the compression plugin does not return expected path"""
+    # same for cache save/restore
+    c.run("cache save *:*")
+    assert "Falling back to compress conan_cache_save.tgz with Conan!" in c.out
 
-    c = TestClient()
-    compression_plugin = textwrap.dedent(
-        """
-        def tar_compress(archive_path, files, recursive, conf=None, *args, **kwargs):
-            return
-        def tar_extract(archive_path, dest_dir, conf=None, *args, **kwargs):
-            pass
-    """
-    )
-
-    c.save(
-        {
-            os.path.join(
-                c.cache_folder, "extensions", "plugins", "compression.py"
-            ): compression_plugin,
-            "conanfile.py": GenConanfile("pkg", "1.0"),
-        }
-    )
-    c.run("create .")
-    c.run("cache save 'pkg/*:*'", assert_error=True)
-    assert (
-        "ERROR: The 'compression.py' did not return the compressed extension."
-        in c.out
-    )
+    c.run("remove * -c")
+    c.run("cache restore conan_cache_save.tgz")
+    assert "Restore: Falling back to extract conan_cache_save.tgz with Conan!" in c.out
+    c.run("cache path pkg/1.0")
+    path = str(c.stdout).strip()
+    assert load(os.path.join(path, "myexportfile.txt")) == "something"
+    c.run(f"cache path pkg/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709")
+    path = str(c.stdout).strip()
+    assert load(os.path.join(path, "some.lib")) == "lib"
 
 
 def test_compression_plugin_correctly_load():
@@ -67,203 +69,108 @@ def test_compression_plugin_correctly_load():
     - cache save/restore
     - remote upload/download
     """
-    c = TestClient(default_server_user=True)
+    c = TestClient(default_server_user=True, light=True)
 
-    compression_plugin = textwrap.dedent(
-        """
-        import os
-        import tarfile
+    compression_plugin = textwrap.dedent("""\
+        import os, tarfile
         from conan.api.output import ConanOutput
 
-        # xz compression
-        def tar_compress(archive_path, files, recursive, conf=None, ref=None, *args, **kwargs):
-            extension = ".xz"
-            archive_path += extension
+        def tar_compress(archive_path, files, recursive, scope=None, compresslevel=None,
+                         *args, **kwargs):
             name = os.path.basename(archive_path)
-            ConanOutput(scope=ref).info(f"Compressing {name} using compression plugin (xz)")
-            compresslevel = conf.get("core.gzip:compresslevel", check_type=int) if conf else None
-            kwargs = {"preset": compresslevel} if compresslevel else {}
-            with tarfile.open(archive_path, f"w:xz", **kwargs) as tgz:
+            assert name.endswith("xz")
+            ConanOutput(scope=scope).info(f"Compressing {name} with my Plugin!")
+            with tarfile.open(archive_path, f"w:xz", preset=compresslevel,
+                              format=tarfile.PAX_FORMAT) as tgz:
                 for filename, abs_path in sorted(files.items()):
-                    tgz.add(abs_path, filename, recursive=True)
-            return extension
+                    tgz.add(abs_path, filename, recursive=recursive)
 
-        def tar_extract(archive_path, dest_dir, conf=None, *args, **kwargs):
-            ConanOutput().info(f"Decompressing {os.path.basename(archive_path)} using compression plugin (xz)")
+        def tar_extract(archive_path, dest_dir, scope=None, *args, **kwargs):
+            name = os.path.basename(archive_path)
+            ConanOutput(scope=scope).info(f"Extracting {name} with my Plugin!")
             with open(archive_path, mode='rb') as file_handler:
                 the_tar = tarfile.open(fileobj=file_handler)
                 the_tar.extraction_filter = (lambda member, path: member)
                 the_tar.extractall(path=dest_dir)
                 the_tar.close()
-    """
-    )
+        """)
 
-    c.save(
-        {
-            os.path.join(
-                c.cache_folder, "extensions", "plugins", "compression.py"
-            ): compression_plugin,
-            "conanfile.py": GenConanfile("pkg", "1.0"),
-        }
-    )
+    c.save_home({"extensions/plugins/compression.py": compression_plugin})
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_exports("*.txt")
+                                                      .with_package_file("some.lib", "lib"),
+            "myexportfile.txt": "something"})
+
     c.run("create .")
-    c.run("cache save 'pkg/*:*'")
-    assert f"Compressing {COMPRESSED_PLUGIN_TAR_NAME}.xz using compression plugin (xz)" in c.out
-    c.run("remove pkg/* -c")
-    c.run("cache restore conan_cache_save.tgz")
-    assert f"Decompressing {COMPRESSED_PLUGIN_TAR_NAME}.xz using compression plugin (xz)" in c.out
-    c.run("list pkg/1.0")
-    assert "Found 1 pkg/version recipes matching pkg/1.0 in local cache" in c.out
+    c.run("upload * -r=default -c -cc core.upload:compression_format=xz")
+    assert "pkg/1.0: Compressing conan_export.txz with my Plugin!" in c.out
+    assert "Compressing conan_package.txz with my Plugin!" in c.out
 
-    # Remove pre existing tgz to force a recompression
-    c.run("remove pkg/* -c")
-    c.run("create .")
-    # Check the plugin is also used on remote interactions
-    c.run("upload *:* -r=default -c")
-    assert f"Compressing {COMPRESSED_PLUGIN_TAR_NAME}.xz using compression plugin (xz)" in c.out
-    assert "pkg/1.0: Uploading recipe" in c.out
-    c.run("remove pkg/* -c")
-    c.run("download 'pkg/*' -r=default")
-    assert f"Decompressing {COMPRESSED_PLUGIN_TAR_NAME}.xz using compression plugin (xz)" in c.out
+    c.run("remove * -c")
+    c.run("install --requires=pkg/1.0")
+    assert "pkg/1.0: Extracting conan_export.txz with my Plugin!" in c.out
+    assert "pkg/1.0: Extracting conan_package.txz with my Plugin!" in c.out
 
+    # same for cache save/restore
+    c.run("cache save *:* --file=save.txz")
+    assert "Compressing save.txz with my Plugin!" in c.out
 
-def test_compression_plugin_tar_not_compatible_with_builtin():
-    """
-    Test that built in tar_extract function fails when uncompressing a non compatible file (a file
-    which has been compressed using the compression plugin with a different algorithm than the built-in one).
-    """
-    c = TestClient(default_server_user=True)
+    c.run("remove * -c")
+    c.run("cache restore save.txz")
+    assert "Restore: Extracting save.txz with my Plugin!" in c.out
 
-    compression_plugin = textwrap.dedent(
-        """
-        import os
-        import zipfile
-        from conan.api.output import ConanOutput
-
-        # zip compression
-        def tar_compress(archive_path, files, recursive, conf=None, *args, **kwargs):
-            # compress files using zipfile library taking into account recursive
-            extension = ".zip"
-            archive_path += extension
-            name = os.path.basename(archive_path)
-            compresslevel = conf.get("core.gzip:compresslevel", check_type=int) if conf else None
-            ConanOutput().info(f"Compressing {name} using compression plugin (zip)")
-            with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED, compresslevel=compresslevel) as zipf:
-                for filename, abs_path in sorted(files.items()):
-                    if recursive:
-                        arcname = os.path.relpath(abs_path, start=os.path.dirname(abs_path))
-                        zipf.write(abs_path, arcname)
-                    else:
-                        zipf.write(abs_path, filename)
-            return extension
-
-        def tar_extract(archive_path, dest_dir, conf=None, *args, **kwargs):
-            # extract tar using zipfile library
-            ConanOutput().info(f"Decompressing {os.path.basename(archive_path)} using compression plugin (zip)")
-            with zipfile.ZipFile(archive_path, 'r') as zip_ref:
-                zip_ref.extractall(dest_dir)
-    """
-    )
-
-    c.save(
-        {
-            os.path.join(
-                c.cache_folder, "extensions", "plugins", "compression.py"
-            ): compression_plugin,
-            "conanfile.py": GenConanfile("pkg", "1.0"),
-        }
-    )
-    c.run("create .")
-    c.run("cache save 'pkg/*:*'")
-    c.run("remove pkg/* -c")
-    os.unlink(os.path.join(c.cache_folder, "extensions", "plugins", "compression.py"))
-    c.run("cache restore conan_cache_save.tgz", assert_error=True)
-    assert (
-        "Error while extracting conan_cache_save.tgz.\n"
-        "This file has been compressed using a `compression` plugin.\n"
-        "If your organization uses this plugin, ensure it is correctly installed on your environment."
-    ) in c.out
+    c.run("cache path pkg/1.0")
+    path = str(c.stdout).strip()
+    assert load(os.path.join(path, "myexportfile.txt")) == "something"
+    c.run(f"cache path pkg/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709")
+    path = str(c.stdout).strip()
+    assert load(os.path.join(path, "some.lib")) == "lib"
 
 
-# https://github.com/conan-io/conan/issues/18259
 def test_compress_in_subdirectory():
-    c = TestClient(default_server_user=True)
-    compression_plugin = textwrap.dedent(
-        """
-        import os
-        import tarfile
+    # https://github.com/conan-io/conan/issues/18259
+    c = TestClient(light=True)
+
+    compression_plugin = textwrap.dedent("""\
+        import os, tarfile
         from conan.api.output import ConanOutput
-        def tar_compress(archive_path, files, recursive, *args, **kwargs):
-            # compress files using tarfile putting all content in a `conan/` subfolder
-            extension = ".tgz"
-            archive_path += extension
+
+        def tar_compress(archive_path, files, recursive, scope=None, compresslevel=None,
+                        *args, **kwargs):
             name = os.path.basename(archive_path)
-            ConanOutput().info(f"Compressing {os.path.basename(name)} in conan subfolder")
-            with open(archive_path, "wb") as tgz_handle:
-                tgz = tarfile.open(name, "w", fileobj=tgz_handle)
+            assert name.endswith("xz")
+            ConanOutput(scope=scope).info(f"Compressing {name} with my Plugin!")
+            with tarfile.open(archive_path, f"w:xz", preset=compresslevel,
+                         format=tarfile.PAX_FORMAT) as tgz:
                 for filename, abs_path in sorted(files.items()):
                     tgz.add(abs_path, os.path.join("conan", filename), recursive=recursive)
-                tgz.close()
-            return extension
 
-        def tar_extract(archive_path, dest_dir, *args, **kwargs):
-            ConanOutput().info(f"Decompressing {archive_path} in conan subfolder")
-            with open(archive_path, mode="rb") as file_handler:
+        def tar_extract(archive_path, dest_dir, scope=None, *args, **kwargs):
+            name = os.path.basename(archive_path)
+            ConanOutput(scope=scope).info(f"Extracting {name} with my Plugin!")
+            with open(archive_path, mode='rb') as file_handler:
                 the_tar = tarfile.open(fileobj=file_handler)
                 the_tar.extraction_filter = (lambda member, path: member)
+
                 for member in the_tar.getmembers():
                     if member.name.startswith("conan/"):
                         member.name = member.name[len("conan/"):]  # Strip 'conan/' prefix
-                        the_tar.extract(member, path=dest_dir)
+                    the_tar.extract(member, path=dest_dir)
                 the_tar.close()
-    """
-    )
-    c.save(
-        {
-            os.path.join(
-                c.cache_folder, "extensions", "plugins", "compression.py"
-            ): compression_plugin,
-            "conanfile.py": GenConanfile("pkg", "1.0"),
-        }
-    )
+           """)
+
+    c.save_home({"extensions/plugins/compression.py": compression_plugin})
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_exports("*.txt"),
+            "myexportfile.txt": "something"})
+
     c.run("create .")
-    c.run("cache save 'pkg/*:*'")
-    tgz = os.path.join(c.current_folder, "conan_cache_save.tgz")
-    assert os.path.exists(tgz)
 
-    mkdir("extract_folder")
-    destination_dir = os.path.join(c.current_folder, "extract_folder")
-    extracted_files = _tar_extract(tgz, destination_dir)
-    assert extracted_files == [COMPRESSED_PLUGIN_TAR_NAME + ".tgz"]
-    # Create example files
-    c.save({os.path.join(destination_dir, "README.md"): "This is a readme file.",
-            os.path.join(destination_dir, "Cache-contents-graph-report.html"): "<html>Cache contents graph report</html>",
-            os.path.join(destination_dir, "Cache-contents-graph-report.exe"): "executable file...",
-            os.path.join(destination_dir, "conan_cache_save.tgz"): "this should also be ignored",
-            })
-    # Recompress the file with metadata
-    _tar_compress(os.path.join(c.current_folder, "conan_cache_save_rearchived.tgz"), destination_dir)
+    c.run("cache save *:* --file=save.txz")
+    assert "Compressing save.txz with my Plugin!" in c.out
 
-    c.run("remove pkg/* -c")
-    c.run("cache restore conan_cache_save_rearchived.tgz")
+    c.run("remove * -c")
+    c.run("cache restore save.txz")
+    assert "Restore: Extracting save.txz with my Plugin!" in c.out
 
-    # Check any of the metadata are present in the cache
-    assert any(item not in os.listdir(os.path.join(c.cache_folder, "p")) for item in ("README.md",
-                                                                                  "Cache-contents-graph-report.html",
-                                                                                  "Cache-contents-graph-report.exe"))
-
-
-def _tar_extract(tgz_path, destination_dir):
-    with open(tgz_path, "rb") as fileobj:
-        the_tar = tarfile.open(fileobj=fileobj)
-        the_tar.extraction_filter = (lambda member, path: member)
-        the_tar.extractall(path=destination_dir)
-        return the_tar.getnames()
-
-
-def _tar_compress(archive_path, folder):
-    with open(archive_path, "wb") as tgz_handle:
-        tgz = tarfile.open(os.path.basename(archive_path), "w", fileobj=tgz_handle)
-        for filename in os.listdir(folder):
-            tgz.add(os.path.join(folder, filename), filename, recursive=True)
-        tgz.close()
+    c.run("cache path pkg/1.0")
+    path = str(c.stdout).strip()
+    assert load(os.path.join(path, "myexportfile.txt")) == "something"

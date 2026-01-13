@@ -122,6 +122,8 @@ class ConanAPI:
 
         @property
         def compression_plugin(self):
+            # NOTE: Users cannot store a reference to this plugin, otherwise it will not
+            # be updated after a "conan config install/install-pkg"
             if self._compression_plugin is None:
                 compression_plugin_path = HomePaths(
                     self._conan_api.home_folder).compression_plugin_path
