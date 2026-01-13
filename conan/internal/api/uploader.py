@@ -86,22 +86,20 @@ def get_compress_level(compressformat, global_conf):
         msg = ("The 'xz' compression is experimental. "
                "Consumers using older Conan versions will not be able to install these packages. "
                "Feedback is welcome, please report any issues as GitHub tickets.")
-        ConanOutput().warning(msg, warn_tag="risk")
+        ConanOutput().warning(msg, warn_tag="experimental")
     elif compressformat == "zst":
         msg = ("The 'zst' compression is experimental. "
                "Consumers installing packages created with this format must use Python >= 3.14. "
                "Consumers using older Conan or Python versions will not be able to install these "
                "packages. Feedback is welcome, please report any issues as GitHub tickets.")
-        ConanOutput().warning(msg, warn_tag="risk")
+        ConanOutput().warning(msg, warn_tag="experimental")
 
     if compressformat == "zst" and sys.version_info.minor < 14:
         raise ConanException("The 'core.upload:compression_format=zst' is only for Python>=3.14")
     compresslevel = global_conf.get("core:compresslevel", check_type=int)
     if compresslevel is None and compressformat == "gz":
         compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
-        if compresslevel is not None:
-            ConanOutput().warning("core.gzip:compresslevel is deprecated, "
-                                  "use core.compresslevel instead", warn_tag="deprecated")
+        # do not deprecate yet core.gzip:compresslevel, wait a bit to stabilize core:compresslevel
     return compresslevel
 
 
@@ -215,7 +213,11 @@ class PackagePreparator:
         if len(matches) > 1:
             raise ConanException(f"{ref}: Multiple package files found for {filename}: {matches}")
         if len(matches) == 1:
-            return matches[0]
+            existing = matches[0]
+            if not existing.endswith(self._compressformat):
+                output.info(f"Existing {existing} compressed file, "
+                            f"keeping it, not using '{self._compressformat}' format")
+            return existing
 
         file_name = filename + self._compressformat
         package_file = os.path.join(download_folder, file_name)
@@ -315,7 +317,6 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
 
 def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursive=False):
     t1 = time.time()
-    # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
     if ref:
         ConanOutput(scope=str(ref) if ref else None).info(f"Compressing {name}")
@@ -324,12 +325,15 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursiv
         with tarfile.open(tgz_path, "w:zst", level=compresslevel) as tar:  # noqa Py314 only
             for filename, abs_path in sorted(files.items()):
                 tar.add(abs_path, filename, recursive=recursive)
+        ConanOutput().debug(f"{name} compressed in {time.time() - t1} time")
         return tgz_path
 
     if name.endswith("xz"):
+        # The default to PAX_FORMAT in case of Python 3.7
         with tarfile.open(tgz_path, "w:xz", preset=compresslevel, format=tarfile.PAX_FORMAT) as tar:
             for filename, abs_path in sorted(files.items()):
                 tar.add(abs_path, filename, recursive=recursive)
+        ConanOutput().debug(f"{name} compressed in {time.time() - t1} time")
         return tgz_path
 
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
@@ -339,8 +343,7 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursiv
             tgz.add(abs_path, filename, recursive=recursive)
         tgz.close()
 
-    duration = time.time() - t1
-    ConanOutput().debug(f"{name} compressed in {duration} time")
+    ConanOutput().debug(f"{name} compressed in {time.time() - t1} time")
     return tgz_path
 
 

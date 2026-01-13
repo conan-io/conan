@@ -63,7 +63,7 @@ BUILT_IN_CONFS = {
     # Compression for `conan upload`
     "core.upload:compression_format": "The compression format used when uploading Conan packages. "
                                       "Possible values: 'zst', 'xz', 'gz' (default=gz)",
-    "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9). Deprecated, use core:compresslevel",
+    "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9)",
     "core:compresslevel": "The compression level for Conan artifacts (default zstd=3, gz=9)",
     # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks
     "core.scm:excluded": "List of excluded patterns for builtin git dirty checks",
