@@ -125,21 +125,33 @@ class ConanOutput:
         cls._warnings_as_errors = value
 
     @classmethod
+    def get_output_level(cls):
+        return cls._conan_output_level
+
+    @classmethod
+    def set_output_level(cls, level):
+        cls._conan_output_level = level
+
+    @classmethod
+    def valid_log_levels(cls):
+        return {"quiet": LEVEL_QUIET,  # -vquiet 80
+                "error": LEVEL_ERROR,  # -verror 70
+                "warning": LEVEL_WARNING,  # -vwaring 60
+                "notice": LEVEL_NOTICE,  # -vnotice 50
+                "status": LEVEL_STATUS,  # -vstatus 40
+                None: LEVEL_VERBOSE,  # -v 30
+                "verbose": LEVEL_VERBOSE,  # -vverbose 30
+                "debug": LEVEL_DEBUG,  # -vdebug 20
+                "v": LEVEL_DEBUG,  # -vv 20
+                "trace": LEVEL_TRACE,  # -vtrace 10
+                "vv": LEVEL_TRACE  # -vvv 10
+                }
+
+    @classmethod
     def define_log_level(cls, v):
         env_level = os.getenv("CONAN_LOG_LEVEL")
         v = env_level or v
-        levels = {"quiet": LEVEL_QUIET,  # -vquiet 80
-                  "error": LEVEL_ERROR,  # -verror 70
-                  "warning": LEVEL_WARNING,  # -vwaring 60
-                  "notice": LEVEL_NOTICE,  # -vnotice 50
-                  "status": LEVEL_STATUS,  # -vstatus 40
-                  None: LEVEL_VERBOSE,  # -v 30
-                  "verbose": LEVEL_VERBOSE,  # -vverbose 30
-                  "debug": LEVEL_DEBUG,  # -vdebug 20
-                  "v": LEVEL_DEBUG,  # -vv 20
-                  "trace": LEVEL_TRACE,  # -vtrace 10
-                  "vv": LEVEL_TRACE  # -vvv 10
-                  }
+        levels = cls.valid_log_levels()
         try:
             level = levels[v]
         except KeyError:
@@ -147,7 +159,7 @@ class ConanOutput:
             vals = "quiet, error, warning, notice, status, verbose, debug(v), trace(vv)"
             raise ConanException(f"Invalid argument '-v{v}'{msg}.\nAllowed values: {vals}")
         else:
-            cls._conan_output_level = level
+            cls.set_output_level(level)
 
     @classmethod
     def level_allowed(cls, level):
@@ -266,13 +278,13 @@ class ConanOutput:
             self._write_message(msg, fg=fg, bg=bg)
         return self
 
-    def status(self, msg: str, fg: str = None, bg: str = None):
+    def status(self, msg: str, fg: str = None, bg: str = None, newline: bool = True):
         """ Provides general information about the system or ongoing operations.
 
         Info messages are basic and used to inform about common events,
         like the start or completion of processes, without implying specific problems or achievements."""
         if self._conan_output_level <= LEVEL_STATUS:
-            self._write_message(msg, fg=fg, bg=bg)
+            self._write_message(msg, fg=fg, bg=bg, newline=newline)
         return self
 
     info = status

@@ -4,19 +4,20 @@ LABEL maintainer="Conan.io <info@conan.io>"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-ENV PY36=3.6.15 \
+ENV PY37=3.7.9 \
     PY38=3.8.6 \
     PY39=3.9.2 \
     PY310=3.10.16 \
     PY312=3.12.3 \
     PY313=3.13.0 \
+    PY314=3.14.0 \
     CMAKE_3_15=/usr/share/cmake-3.15.7/bin/cmake \
     CMAKE_3_16=/usr/share/cmake-3.16.9/bin/cmake \
     CMAKE_3_17=/usr/share/cmake-3.17.5/bin/cmake \
     CMAKE_3_19=/usr/share/cmake-3.19.7/bin/cmake \
     CMAKE_3_23=/usr/share/cmake-3.23.5/bin/cmake \
     CMAKE_3_27=/usr/share/cmake-3.27.9/bin/cmake \
-    CMAKE_4_0=/usr/share/cmake-4.0.0-rc3/bin/cmake \
+    CMAKE_4_2=/usr/share/cmake-4.2.1/bin/cmake \
     GCC_9=/usr/bin/gcc-9 \
     GXX_9=/usr/bin/g++-9 \
     GCC_11=/usr/bin/gcc-11 \
@@ -24,9 +25,9 @@ ENV PY36=3.6.15 \
     CLANG_14=/usr/bin/clang-14 \
     CLANGXX_14=/usr/bin/clang++-14 \
     BAZEL_6=6.5.0 \
-    BAZEL_7=7.4.1 \
-    BAZEL_8=8.0.0 \
-    EMSDK=4.0.10
+    BAZEL_7=7.6.2 \
+    BAZEL_8=8.4.2 \
+    EMSDK=4.0.22
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -95,12 +96,12 @@ ENV PYENV_ROOT $HOME/.pyenv
 ENV PATH $PYENV_ROOT/bin:$PYENV_ROOT/shims:/usr/bin:/bin:$PATH
 
 RUN curl https://pyenv.run | bash && \
-    pyenv install $PY36 && \
+    pyenv install $PY37 && \
     pyenv install $PY38 && \
     pyenv install $PY39 && \
     pyenv install $PY310 && \
     pyenv install $PY312 && \
-    pyenv install $PY313 && \
+    pyenv install $PY314 && \
     pyenv global $PY39 && \
     curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
     python get-pip.py && \
@@ -122,15 +123,15 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.7/cmake-3.15.7
     tar -xvzf cmake-3.23.5-Linux-x86_64.tar.gz && mv cmake-3.23.5-linux-x86_64/ /usr/share/cmake-3.23.5 && \
     wget https://github.com/Kitware/CMake/releases/download/v3.27.9/cmake-3.27.9-Linux-x86_64.tar.gz   && \
     tar -xvzf cmake-3.27.9-Linux-x86_64.tar.gz && mv cmake-3.27.9-linux-x86_64/ /usr/share/cmake-3.27.9 && \
-    wget https://cmake.org/files/v4.0/cmake-4.0.0-rc3-linux-x86_64.tar.gz   && \
-    tar -xvzf cmake-4.0.0-rc3-linux-x86_64.tar.gz && mv cmake-4.0.0-rc3-linux-x86_64/ /usr/share/cmake-4.0.0-rc3 && \
+    wget https://cmake.org/files/v4.2/cmake-4.2.1-linux-x86_64.tar.gz   && \
+    tar -xvzf cmake-4.2.1-linux-x86_64.tar.gz && mv cmake-4.2.1-linux-x86_64/ /usr/share/cmake-4.2.1 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_15 10 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_16 20 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_17 30 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_19 40 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_23 50 && \
     update-alternatives --install /usr/bin/cmake cmake $CMAKE_3_27 60 && \
-    update-alternatives --install /usr/bin/cmake cmake $CMAKE_4_0 70 && \
+    update-alternatives --install /usr/bin/cmake cmake $CMAKE_4_2 70 && \
     # set CMake 3.15 as default
     update-alternatives --set cmake $CMAKE_3_15
 
@@ -174,6 +175,7 @@ RUN cd /tmp && \
     wget https://github.com/emscripten-core/emsdk/archive/refs/tags/${EMSDK}.tar.gz && \
     tar xzf ${EMSDK}.tar.gz --directory /usr/share && \
     cd /usr/share/emsdk-${EMSDK} && \
+    pyenv local 3.12 && \
     ./emsdk update && \
     ./emsdk install latest && \
     ./emsdk activate latest --permanent && \

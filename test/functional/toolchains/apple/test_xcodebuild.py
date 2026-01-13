@@ -1,4 +1,5 @@
 import platform
+import re
 import textwrap
 
 import pytest
@@ -17,6 +18,17 @@ xcode_project = textwrap.dedent("""
           Debug: conan_config.xcconfig
           Release: conan_config.xcconfig
     """)
+
+xcode_project_bare = textwrap.dedent("""
+    name: app
+    targets:
+      app:
+        type: tool
+        platform: macOS
+        sources:
+          - app
+    """)
+
 
 main = textwrap.dedent("""
     #include <iostream>
@@ -165,3 +177,57 @@ def test_missing_sdk(client):
     client.run_command("xcodegen generate")
     client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=12.0 "
                "-c tools.apple:sdk_path=notexistingsdk", assert_error=True)
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool("xcodebuild")
+@pytest.mark.tool("xcodegen")
+@pytest.mark.parametrize("no_copy_source", [True, False])
+def test_project_xcodebuild_cli_args(client, no_copy_source):
+
+    conanfile = textwrap.dedent(f"""
+        import os
+        from conan import ConanFile
+        from conan.tools.apple import XcodeBuild
+        from conan.tools.files import copy
+        class MyApplicationConan(ConanFile):
+            name = "myapplication"
+            version = "1.0"
+            requires = "hello/0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "XcodeDeps"
+            exports_sources = "app.xcodeproj/*", "app/*"
+            package_type = "application"
+            no_copy_source = {str(no_copy_source)}
+            def build(self):
+                xb = XcodeBuild(self)
+                proj = os.path.join(self.source_folder, "app.xcodeproj")
+                xc = os.path.join(self.build_folder, "conan_config.xcconfig")
+                xb.build(proj, cli_args=["-xcconfig", xc,
+                                        f"SYMROOT={{self.build_folder}}",
+                                        f"OBJROOT={{self.build_folder}}"])
+
+            def package(self):
+                copy(self, "{{}}/app".format(self.settings.build_type), self.build_folder,
+                     os.path.join(self.package_folder, "bin"), keep_path=False)
+
+            def package_info(self):
+                self.cpp_info.bindirs = ["bin"]
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                      "test_package/conanfile.py": test,
+                      "app/main.cpp": main,
+                      "project.yml": xcode_project_bare}, clean_first=True)
+
+    client.run_command("xcodegen generate")
+
+    for build_type in ["Release", "Debug"]:
+        client.run(f"create . --build=missing -s build_type={build_type} -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
+
+        build_folder = re.search(r"Building your package in (/.+)", client.out).group(1)
+
+        assert f"OBJROOT = {build_folder}"
+        assert f"SYMROOT = {build_folder}"
+        assert "-xcconfig" in client.out
+        assert f"App {build_type}!" in client.out

@@ -29,8 +29,8 @@ class TestFilterProfile:
             """)
         assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 --missing=lib/1.0 -s os=Windows --format=json")
-        cache = json.loads(c.stdout)["closest_binaries"]
-        revisions = cache["lib/1.0"]["revisions"]
+        closest = json.loads(c.stdout)["closest_binaries"]
+        revisions = closest["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
         assert len(pkgs) == 1
         pkg1 = pkgs["3d714b452400b3c3d6a964f42d5ec5004a6f22dc"]
@@ -55,8 +55,8 @@ class TestFilterProfile:
             """)
         assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 -pr windows --format=json")
-        cache = json.loads(c.stdout)["closest_binaries"]
-        revisions = cache["lib/1.0"]["revisions"]
+        closest = json.loads(c.stdout)["closest_binaries"]
+        revisions = closest["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
         assert len(pkgs) == 1
         pkg1 = pkgs["3d714b452400b3c3d6a964f42d5ec5004a6f22dc"]
@@ -99,8 +99,8 @@ class TestFilterProfile:
             """)
         assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 -pr linux --format=json")
-        cache = json.loads(c.stdout)["closest_binaries"]
-        revisions = cache["lib/1.0"]["revisions"]
+        closest = json.loads(c.stdout)["closest_binaries"]
+        revisions = closest["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
         assert len(pkgs) == 1
         pkg1 = pkgs["499989797d9192081b8f16f7d797b107a2edd8da"]
@@ -158,8 +158,8 @@ class TestFilterProfile:
             """)
         assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 -pr windows --format=json")
-        cache = json.loads(c.stdout)["closest_binaries"]
-        revisions = cache["lib/1.0"]["revisions"]
+        closest = json.loads(c.stdout)["closest_binaries"]
+        revisions = closest["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
         assert len(pkgs) == 1
         pkg1 = pkgs["c2dd2d51b5074bdb5b7d717929372de09830017b"]
@@ -196,8 +196,8 @@ class TestFilterProfile:
             """)
         assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --tool-requires=tool/1.0 -s:b os=Windows -s:h os=Macos --format=json")
-        cache = json.loads(c.stdout)["closest_binaries"]
-        revisions = cache["tool/1.0"]["revisions"]
+        closest = json.loads(c.stdout)["closest_binaries"]
+        revisions = closest["tool/1.0"]["revisions"]
         pkgs = revisions["4cc4b286a46dc2ed188d8c417eadb4e6"]["packages"]
         assert len(pkgs) == 1
         pkg1 = pkgs["d66135125c07cc240b8d6adda090b76d60341205"]
@@ -225,8 +225,8 @@ class TestFilterProfile:
             """)
         assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 -pr macos --format=json")
-        cache = json.loads(c.stdout)["closest_binaries"]
-        revisions = cache["lib/1.0"]["revisions"]
+        closest = json.loads(c.stdout)["closest_binaries"]
+        revisions = closest["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
         assert len(pkgs) == 1
         pkg1 = pkgs["c2dd2d51b5074bdb5b7d717929372de09830017b"]
@@ -254,8 +254,8 @@ class TestFilterProfile:
             """)
         assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 -c user.foo:bar=42 -s os=Linux -f=json")
-        cache = json.loads(c.stdout)["closest_binaries"]
-        revisions = cache["lib/1.0"]["revisions"]
+        closest = json.loads(c.stdout)["closest_binaries"]
+        revisions = closest["lib/1.0"]["revisions"]
         pkgs = revisions["5313a980ea0c56baeb582c510d6d9fbc"]["packages"]
         assert len(pkgs) == 1
         pkg1 = pkgs["499989797d9192081b8f16f7d797b107a2edd8da"]
@@ -336,8 +336,8 @@ class TestMissingBinaryDeps:
             """)
         assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 -s os=Linux --format=json")
-        cache = json.loads(c.stdout)["closest_binaries"]
-        revisions = cache["lib/1.0"]["revisions"]
+        closest = json.loads(c.stdout)["closest_binaries"]
+        revisions = closest["lib/1.0"]["revisions"]
         pkgs = revisions["7bf17caa5bf9d2ed1dd8b337e9623fc0"]["packages"]
         assert len(pkgs) == 1
         pkg1 = pkgs["5ccdb706197ca94edc0ecee9ef0d0b11b887d937"]
@@ -370,8 +370,8 @@ class TestMissingBinaryDeps:
             """)
         assert textwrap.indent(expected, "      ") in c.out
         c.run("graph explain --requires=lib/1.0 -s os=Linux --format=json")
-        cache = json.loads(c.stdout)["closest_binaries"]
-        revisions = cache["lib/1.0"]["revisions"]
+        closest = json.loads(c.stdout)["closest_binaries"]
+        revisions = closest["lib/1.0"]["revisions"]
         pkgs = revisions["4790f7f1561b52be5d39f0bc8e9acbed"]["packages"]
         assert len(pkgs) == 1
         pkg1 = pkgs["c9d96a611b8c819f35728d58d743f6a78a1b5942"]

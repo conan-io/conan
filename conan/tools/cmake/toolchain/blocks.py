@@ -266,7 +266,9 @@ class ArchitectureBlock(Block):
         thread_flags_list = " ".join(threads_flags(self._conanfile))
         if not arch_flag and not arch_link_flag and not thread_flags_list:
             return
-        return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag, "thread_flags_list": thread_flags_list}
+        return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag,
+                "thread_flags_list": thread_flags_list}
+
 
 class LinkerScriptsBlock(Block):
     template = textwrap.dedent("""\
@@ -834,7 +836,7 @@ class ExtraFlagsBlock(Block):
             "cflags": cflags,
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags,
-            "defines": [define.replace('"', '\\"') for define in defines]
+            "defines": [define.replace('"', '\\"') for define in defines],
         }
 
 
@@ -1003,11 +1005,11 @@ class GenericSystemBlock(Block):
                     toolset += ",version=14.{}{}".format(compiler_version[-1], compiler_update)
         elif compiler == "clang":
             if generator and "Visual" in generator:
-                if "Visual Studio 16" in generator or "Visual Studio 17" in generator:
+                if any(f"Visual Studio {v}" in generator for v in ("16", "17", "18")):
                     toolset = "ClangCL"
                 else:
                     raise ConanException("CMakeToolchain with compiler=clang and a CMake "
-                                         "'Visual Studio' generator requires VS16 or VS17")
+                                         "'Visual Studio' generator requires VS16, VS17 or VS18")
         toolset_arch = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
         if toolset_arch is not None:
             toolset_arch = "host={}".format(toolset_arch)
@@ -1199,44 +1201,32 @@ class ExtraVariablesBlock(Block):
         {% endif %}
     """)
 
-    CMAKE_CACHE_TYPES = ["BOOL", "FILEPATH", "PATH", "STRING", "INTERNAL"]
-
-    def get_exact_type(self, key, value):
-        if isinstance(value, str):
-            return f"\"{value}\""
-        elif isinstance(value, (int, float)):
-            return value
-        elif isinstance(value, dict):
-            var_value = self.get_exact_type(key, value.get("value"))
-            is_force = value.get("force")
-            if is_force:
-                if not isinstance(is_force, bool):
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "force" must be a boolean')
-            is_cache = value.get("cache")
-            if is_cache:
-                if not isinstance(is_cache, bool):
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "cache" must be a boolean')
-                var_type = value.get("type")
-                if not var_type:
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" needs "type" defined for cache variable')
-                if var_type not in self.CMAKE_CACHE_TYPES:
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" invalid type "{var_type}" for cache variable. Possible types: {", ".join(self.CMAKE_CACHE_TYPES)}')
-                # Set docstring as variable name if not defined
-                docstring = value.get("docstring") or key
-                force_str = " FORCE" if is_force else ""  # Support python < 3.11
-                return f"{var_value} CACHE {var_type} \"{docstring}\"{force_str}"
-            else:
-                if is_force:
-                    raise ConanException(f'tools.cmake.cmaketoolchain:extra_variables "{key}" "force" is only allowed for cache variables')
-                return var_value
-
     def context(self):
+        from conan.tools.cmake.utils import parse_extra_variable
         # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
         extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
                                                    default={}, check_type=dict)
+        compilation_verbosity = self._conanfile.conf.get("tools.compilation:verbosity",
+                                                         choices=("quiet", "verbose"))
+        build_verbosity = self._conanfile.conf.get("tools.build:verbosity",
+                                                   choices=("quiet", "verbose"))
+        if build_verbosity == "quiet":
+            build_verbosity = "error"
+
+        if compilation_verbosity == "verbose":
+            extra_variables.setdefault("CMAKE_VERBOSE_MAKEFILE",
+                                       {"cache": True, "type": "BOOL",
+                                        "value": "ON"})
+
+        if build_verbosity:
+            extra_variables.setdefault("CMAKE_MESSAGE_LOG_LEVEL",
+                                       {"cache": True, "type": "STRING",
+                                        "value": build_verbosity.upper()})
+
         parsed_extra_variables = {}
         for key, value in extra_variables.items():
-            parsed_extra_variables[key] = self.get_exact_type(key, value)
+            parsed_extra_variables[key] = parse_extra_variable("tools.cmake.cmaketoolchain:extra_variables",
+                                                               key, value)
         return {"extra_variables": parsed_extra_variables}
 
 

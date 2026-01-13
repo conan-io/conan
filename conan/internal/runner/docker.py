@@ -18,6 +18,7 @@ from conan.internal.model.version import Version
 from conan.internal.runner.output import RunnerOutput
 from conan.internal.conan_app import ConanApp
 
+
 class _ContainerConfig(NamedTuple):
     class Build(NamedTuple):
         dockerfile: Optional[str] = None
@@ -74,6 +75,7 @@ class _ContainerConfig(NamedTuple):
             )
         )
 
+
 class DockerRunner:
     def __init__(self, conan_api: ConanAPI, command: str, host_profile: Profile, build_profile: Profile, args: Namespace, raw_args: list[str]):
         self.logger = ConanOutput()
@@ -118,7 +120,7 @@ class DockerRunner:
             raise ConanException(f'"{e.command}" inside docker fail')
         finally:
             if self.container:
-                error = sys.exc_info()[0] is not None # Check if error has been raised
+                error = sys.exc_info()[0] is not None  # Check if error has been raised
                 log = self.logger.error if error else self.logger.status
                 log('Stopping container')
                 self.container.stop()
@@ -242,7 +244,7 @@ class DockerRunner:
             raise RunnerException(command=command, stdout_log=stdout_log, stderr_log=stderr_log)
         return stdout_log, stderr_log
 
-    def _get_volumes_and_docker_path(self) -> tuple[dict,str]:
+    def _get_volumes_and_docker_path(self) -> tuple[dict, str]:
         app = ConanApp(self.conan_api)
         remotes = self.conan_api.remotes.list(self.args.remote) if not self.args.no_remote else []
         conanfile = app.loader.load_consumer(self.abs_host_path / "conanfile.py", remotes=remotes)

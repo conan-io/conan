@@ -12,7 +12,7 @@ RECIPE_INCACHE_DATE_UPDATED = "Cache (Updated date)"
 RECIPE_NEWER = "Newer"  # The local recipe is  modified and newer timestamp than server
 RECIPE_NOT_IN_REMOTE = "Not in remote"
 RECIPE_UPDATEABLE = "Update available"  # The update of recipe is available (only in conan info)
-RECIPE_NO_REMOTE = "No remote"
+# These recipes do not have a full reference, not in the cache
 RECIPE_EDITABLE = "Editable"
 RECIPE_CONSUMER = "Consumer"  # A conanfile from the user
 RECIPE_VIRTUAL = "Cli"  # A virtual conanfile (dynamic in memory conanfile)
@@ -120,7 +120,7 @@ class Node:
         # Take into account that while propagating we can find RUNTIME shared conflicts we
         # didn't find at check_downstream_exist, because we didn't know the shared/static
         existing = self.transitive_deps.get(require)
-        ill_formed = False
+
         if existing is not None and existing.require is not require:
             if existing.node is not None and existing.node.ref != node.ref:
                 # print("  +++++Runtime conflict!", require, "with", node.ref)
@@ -138,11 +138,13 @@ class Node:
 
         assert not require.version_range  # No ranges slip into transitive_deps definitions
         # TODO: Might need to move to an update() for performance
-        self.transitive_deps.pop(require, None)
+        poped = self.transitive_deps.pop(require, None)
         self.transitive_deps[require] = TransitiveRequirement(require, node)
-        if ill_formed:  # remove dead .edges, to avoid orphans
-            direct_nodes = set(t.node for t in self.transitive_deps.values() if t.require.direct)
-            self.edges = [e for e in self.edges if e.dst in direct_nodes]
+        if poped is not None:  # adjust .edges, to avoid orphans
+            for e in self.edges:
+                if e.dst is poped.node:  # check for identity, pointing to that node
+                    e.dst = node
+                    break
 
         if self.conanfile.vendor:
             return

@@ -27,7 +27,7 @@ class RedirectedInputStream:
         return ret
 
 
-class MockSettings(object):
+class MockSettings:
 
     def __init__(self, values):
         self.values = values

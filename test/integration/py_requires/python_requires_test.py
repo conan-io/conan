@@ -438,7 +438,7 @@ class TestPyRequiresExtend:
         client = TestClient()
         base = textwrap.dedent("""
             from conan import ConanFile
-            class MyBase(object):
+            class MyBase:
                 settings = "os", "build_type", "arch"
                 options = {"base_option": [1, 2, 3]}
                 default_options = {"base_option": 2}

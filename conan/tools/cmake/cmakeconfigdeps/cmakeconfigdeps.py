@@ -1,3 +1,4 @@
+import glob
 import os
 import re
 import textwrap
@@ -9,10 +10,10 @@ from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
-from conan.tools.cmake.cmakedeps2.config import ConfigTemplate2
-from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
-from conan.tools.cmake.cmakedeps2.target_configuration import TargetConfigurationTemplate2
-from conan.tools.cmake.cmakedeps2.targets import TargetsTemplate2
+from conan.tools.cmake.cmakeconfigdeps.config import ConfigTemplate2
+from conan.tools.cmake.cmakeconfigdeps.config_version import ConfigVersionTemplate2
+from conan.tools.cmake.cmakeconfigdeps.target_configuration import TargetConfigurationTemplate2
+from conan.tools.cmake.cmakeconfigdeps.targets import TargetsTemplate2
 from conan.tools.files import save
 from conan.internal.util.files import load
 
@@ -22,7 +23,7 @@ FIND_MODE_NONE = "none"
 FIND_MODE_BOTH = "both"
 
 
-class CMakeDeps2:
+class CMakeConfigDeps:
 
     def __init__(self, conanfile):
         self._conanfile = conanfile
@@ -38,6 +39,9 @@ class CMakeDeps2:
         self._properties = {}
 
     def generate(self):
+        self._conanfile.output.warning("CMakeConfigDeps is experimental, and might get "
+                                       "breaking changes in future releases",
+                                       warn_tag="experimental")
         check_duplicated_generator(self, self._conanfile)
         # Current directory is the generators_folder
         generator_files = self._content()
@@ -68,14 +72,15 @@ class CMakeDeps2:
 
             if require.direct:
                 direct_deps.append((require, dep))
-            config = ConfigTemplate2(self, dep)
+            full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
+            config = ConfigTemplate2(self, require, dep, full_cpp_info)
             ret[config.filename] = config.content()
             config_version = ConfigVersionTemplate2(self, dep)
             ret[config_version.filename] = config_version.content()
 
             targets = TargetsTemplate2(self, dep)
             ret[targets.filename] = targets.content()
-            target_configuration = TargetConfigurationTemplate2(self, dep, require)
+            target_configuration = TargetConfigurationTemplate2(self, dep, require, full_cpp_info)
             ret[target_configuration.filename] = target_configuration.content()
 
         self._print_help(direct_deps)
@@ -197,8 +202,15 @@ class _PathGenerator:
 
     def generate(self):
         template = textwrap.dedent("""\
+        set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+
         {% for pkg_name, folder in pkg_paths.items() %}
         set({{pkg_name}}_DIR "{{folder}}")
+        {% endfor %}
+        {% for pkg_name, folders in pkg_paths_multi.items() %}
+        {% for folder in folders %}
+        list(APPEND CONAN_{{pkg_name}}_DIR_MULTI "{{folder}}")
+        {% endfor %}
         {% endfor %}
         {% if host_runtime_dirs %}
         set(CONAN_RUNTIME_LIB_DIRS {{ host_runtime_dirs }} )
@@ -231,6 +243,17 @@ class _PathGenerator:
         # if not, test_cmake_add_subdirectory test fails
         # content.append('set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)')
         pkg_paths = {}
+
+        pkg_paths_multi = {}
+        if os.path.exists(self._conan_cmakedeps_paths):
+            existing_toolchain = load(self._conan_cmakedeps_paths)
+            pattern_paths = r"list\(APPEND CONAN_([A-Za-z0-9-_]*)_DIR_MULTI \"([^)]*)\"\)"
+            variable_match = re.findall(pattern_paths, existing_toolchain)
+            for (captured_name, captured_path) in variable_match:
+                path_list = pkg_paths_multi.setdefault(captured_name, [])
+                if captured_path not in path_list:
+                    path_list.append(captured_path)
+
         for req, dep in all_reqs:
             cmake_find_mode = self._cmakedeps.get_property("cmake_find_mode", dep)
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
@@ -239,6 +262,15 @@ class _PathGenerator:
             pkg_name = self._cmakedeps.get_cmake_filename(dep)
             # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
             if cmake_find_mode == FIND_MODE_NONE:
+                cps = glob.glob(os.path.join(dep.package_folder, f"**/{pkg_name}.cps"),
+                                recursive=True)
+                if cps:
+                    loc = os.path.dirname(os.path.join(dep.package_folder, cps[0]))
+                    loc = loc.replace("\\", "/")
+                    pkg_paths[pkg_name] = relativize_path(loc, self._conanfile,
+                                                          "${CMAKE_CURRENT_LIST_DIR}")
+                    continue
+
                 try:
                     # This is irrespective of the components, it should be in the root cpp_info
                     # To define the location of the pkg-config.cmake file
@@ -252,6 +284,10 @@ class _PathGenerator:
                         if os.path.isfile(os.path.join(pkg_folder, filename)):
                             pkg_paths[pkg_name] = relativize_path(pkg_folder, self._conanfile,
                                                                   "${CMAKE_CURRENT_LIST_DIR}")
+
+                    existing_paths = pkg_paths_multi.setdefault(pkg_name, [])
+                    if pkg_folder not in existing_paths:
+                        existing_paths.append(pkg_folder)
                 continue
 
             # If CMakeDeps generated, the folder is this one
@@ -266,6 +302,7 @@ class _PathGenerator:
         cmake_module_path = self._get_cmake_paths(all_reqs, "builddirs")
         context = {"host_runtime_dirs": self._get_host_runtime_dirs(),
                    "pkg_paths": pkg_paths,
+                   "pkg_paths_multi": pkg_paths_multi,
                    "cmake_program_path": _join_paths(self._conanfile, cmake_program_path),
                    "cmake_library_path": _join_paths(self._conanfile, cmake_library_path),
                    "cmake_include_path": _join_paths(self._conanfile, cmake_include_path),

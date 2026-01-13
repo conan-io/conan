@@ -19,6 +19,8 @@ class _ConanIgnoreMatcher:
     def __init__(self, conanignore_path, ignore=None):
         self._ignored_entries = {".conanignore"}
         self._included_entries = set()
+        if ignore:
+            self._ignored_entries.update(ignore)
         if conanignore_path is None or not os.path.exists(conanignore_path):
             return
         with open(conanignore_path, 'r') as conanignore:
@@ -29,8 +31,6 @@ class _ConanIgnoreMatcher:
                         self._included_entries.add(line_content[1:])
                     else:
                         self._ignored_entries.add(line_content)
-        if ignore:
-            self._ignored_entries.update(ignore)
 
     def matches(self, path):
         """Returns whether the path should be ignored
@@ -143,6 +143,7 @@ def _process_file(directory, filename, config, cache_folder, folder):
         output.info("Copying file %s to %s" % (filename, target_folder))
         _filecopy(directory, filename, target_folder)
 
+
 def _process_folder(config, folder, cache_folder, ignore=None):
     if not os.path.isdir(folder):
         raise ConanException("No such directory: '%s'" % str(folder))
@@ -176,7 +177,7 @@ def _process_download(config, cache_folder, requester):
             raise ConanException("Error while installing config from %s\n%s" % (config.uri, str(e)))
 
 
-class _ConfigOrigin(object):
+class _ConfigOrigin:
     def __init__(self, uri, config_type, verify_ssl, args, source_folder, target_folder):
         if config_type:
             self.type = config_type

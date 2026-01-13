@@ -8,7 +8,8 @@ from conan.internal.util.files import save
 
 
 @pytest.mark.parametrize("use_pkglist", [True, False])
-def test_cache_integrity(use_pkglist):
+@pytest.mark.parametrize("output_pkglist", [True, False])
+def test_cache_integrity(use_pkglist, output_pkglist):
     t = TestClient()
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name pkg1 --version 1.0")
@@ -29,7 +30,14 @@ def test_cache_integrity(use_pkglist):
         t.run("list *:*#* -f=json", redirect_stdout="pkglist.json")
     arg = "--list=pkglist.json" if use_pkglist else "*"
 
-    t.run(f"cache check-integrity {arg}", assert_error=True)
+    if output_pkglist:
+        arg += " --format=json"
+
+    t.run(
+        f"cache check-integrity {arg}",
+        assert_error=True,
+        redirect_stdout="pkglist.json" if output_pkglist else None,
+    )
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: Integrity check: ok" in t.out
@@ -40,9 +48,12 @@ def test_cache_integrity(use_pkglist):
     assert "pkg4/4.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: \nManifest mismatch" in t.out
 
-    t.run("remove pkg2/2.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
-    t.run("remove pkg3/3.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
-    t.run("remove pkg4/4.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
+    if output_pkglist:
+        t.run("remove --list=pkglist.json -c")
+    else:
+        t.run("remove pkg2/2.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
+        t.run("remove pkg3/3.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
+        t.run("remove pkg4/4.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
     t.run("cache check-integrity *")
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
@@ -50,7 +61,8 @@ def test_cache_integrity(use_pkglist):
     assert "pkg4/4.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
 
 
-def test_cache_integrity_missing_recipe_manifest():
+@pytest.mark.parametrize("output_pkglist", [True, False])
+def test_cache_integrity_missing_recipe_manifest(output_pkglist):
     t = TestClient()
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name pkg1 --version 1.0")
@@ -60,13 +72,16 @@ def test_cache_integrity_missing_recipe_manifest():
     os.remove(manifest)
     t.run("create . --name pkg3 --version=3.0")
 
-    t.run("cache check-integrity *", assert_error=True)
+    if output_pkglist:
+        t.run("cache check-integrity * -f json", assert_error=True, redirect_stdout="pkglist.json")
+    else:
+        t.run("cache check-integrity *", assert_error=True)
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd: ERROR: Manifest missing" in t.out
     assert "pkg3/3.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "ERROR: There are corrupted artifacts, check the error logs" in t.out
 
-    t.run("remove pkg2* -c")
+    t.run(f"remove {'--list pkglist.json' if output_pkglist else 'pkg2*'}  -c")
     t.run("cache check-integrity *")
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: Integrity check: ok" in t.out
@@ -74,7 +89,8 @@ def test_cache_integrity_missing_recipe_manifest():
     assert "Integrity check: ok" in t.out
 
 
-def test_cache_integrity_missing_package_manifest():
+@pytest.mark.parametrize("output_pkglist", [True, False])
+def test_cache_integrity_missing_package_manifest(output_pkglist):
     t = TestClient()
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name pkg1 --version 1.0")
@@ -84,14 +100,17 @@ def test_cache_integrity_missing_package_manifest():
     os.remove(manifest)
     t.run("create . --name pkg3 --version=3.0")
 
-    t.run("cache check-integrity *", assert_error=True)
+    if output_pkglist:
+        t.run("cache check-integrity * -f json", assert_error=True, redirect_stdout="pkglist.json")
+    else:
+        t.run("cache check-integrity *", assert_error=True)
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: Manifest missing" in t.out
     assert "pkg3/3.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "ERROR: There are corrupted artifacts, check the error logs" in t.out
 
-    t.run("remove pkg2* -c")
+    t.run(f"remove {'--list pkglist.json' if output_pkglist else 'pkg2*'}  -c")
     t.run("cache check-integrity *")
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: Integrity check: ok" in t.out
@@ -99,7 +118,8 @@ def test_cache_integrity_missing_package_manifest():
     assert "Integrity check: ok" in t.out
 
 
-def test_cache_integrity_missing_package_conaninfo():
+@pytest.mark.parametrize("output_pkglist", [True, False])
+def test_cache_integrity_missing_package_conaninfo(output_pkglist):
     t = TestClient()
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name pkg1 --version 1.0")
@@ -108,12 +128,15 @@ def test_cache_integrity_missing_package_conaninfo():
     conaninfo = os.path.join(layout.package(), "conaninfo.txt")
     os.remove(conaninfo)
 
-    t.run("cache check-integrity *", assert_error=True)
+    if output_pkglist:
+        t.run("cache check-integrity * -f json", assert_error=True, redirect_stdout="pkglist.json")
+    else:
+        t.run("cache check-integrity *", assert_error=True)
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: \nManifest mismatch" in t.out
 
-    t.run("remove pkg2* -c")
+    t.run(f"remove {'--list pkglist.json' if output_pkglist else 'pkg2*'}  -c")
     t.run("cache check-integrity *")
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: Integrity check: ok" in t.out

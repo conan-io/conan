@@ -1,6 +1,7 @@
 def inject_get_or_else(variable, default):
     return variable + ' = "{% if ' + variable + " is defined %}{{ " + variable + " }}{% else %}" + default + '{% endif %}"'
 
+
 _conanfile_header = f'''\
     {inject_get_or_else("name", "pkg")}
     {inject_get_or_else("version", "1.0")}

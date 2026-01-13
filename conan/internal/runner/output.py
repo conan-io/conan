@@ -1,5 +1,6 @@
 from conan.api.output import Color, ConanOutput
 
+
 class RunnerOutput(ConanOutput):
     def __init__(self, runner_info: str):
         super().__init__()

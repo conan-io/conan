@@ -462,14 +462,14 @@ def detect_default_compiler():
 
 
 def default_msvc_ide_version(version):
-    version = {"194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
+    version = {"195": "18", "194": "17", "193": "17", "192": "16", "191": "15"}.get(str(version))
     if version:
         return Version(version)
 
 
 def _detect_vs_ide_version():
     from conan.internal.api.detect.detect_vs import vs_installation_path
-    msvc_versions = "17", "16", "15"
+    msvc_versions = "18", "17", "16", "15"
     for version in msvc_versions:
         vs_path = os.getenv('vs%s0comntools' % version)
         path = vs_path or vs_installation_path(version)
@@ -488,7 +488,8 @@ def _cc_compiler(compiler_exe="cc"):
         compiler = "clang" if "clang" in out else "gcc"
         # clang and gcc have version after a space, first try to find that to skip extra numbers
         # that might appear in the first line of the output before the version
-        # There might also be a leading parenthesis that contains build information, so we try to skip it
+        # There might also be a leading parenthesis that contains build information,
+        # so we try to skip it
         installed_version = re.search(r"(?:\(.*\))? ([0-9]+(\.[0-9]+)*)", out)
         # Fallback to the first number we find optionally followed by other version fields
         installed_version = installed_version or re.search(r"([0-9]+(\.[0-9]+)*)", out)
@@ -532,7 +533,7 @@ def detect_intel_compiler(compiler_exe="icx"):
     try:
         ret, out = detect_runner(f'"{compiler_exe}" --version')
         if ret != 0:
-            return None, None
+            return None, None, None
         compiler = "intel-cc"
         installed_version = re.search(r"(202[0-9]+(\.[0-9])?)", out).group()
         if installed_version:
@@ -579,7 +580,8 @@ def detect_clang_compiler(compiler_exe="clang"):
 
 def detect_msvc_compiler():
     ide_version = _detect_vs_ide_version()
-    version = {"17": "193", "16": "192", "15": "191"}.get(str(ide_version))  # Map to compiler
+    # Map to compiler
+    version = {"18": "195", "17": "193", "16": "192", "15": "191"}.get(str(ide_version))
     if ide_version == "17":
         update = detect_msvc_update(version)  # FIXME weird passing here the 193 compiler version
         if update and int(update) >= 10:

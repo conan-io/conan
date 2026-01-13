@@ -213,6 +213,10 @@ def test_replace_requires_consumer_references(name, version):
     assert f"zlib/0.1: {name}/{version}" in c.out
     assert f"app/0.1: DEP ZLIB generate: {name}!" in c.out
     assert f"app/0.1: DEP ZLIB build: {name}!" in c.out
+    if name == "zlib-ng":
+        # CMakeDeps can not be used to consume replaced requires for different packages
+        # only CMakeConfigDeps has this capability
+        c.run("install --requires=app/0.1 -pr=profile -g CMakeDeps", assert_error=True)
 
 
 def test_replace_requires_consumer_references_error_multiple():
@@ -728,3 +732,29 @@ class TestReplaceRequiresTransitiveGenerators:
         else:
             assert "<Import Condition=\"'$(conan_zlib-ng_myzlib_props_imported)' != 'True'\"" \
                    " Project=\"conan_zlib-ng_myzlib.props\"/>" in props
+
+
+@pytest.mark.parametrize("require, pattern, alternative, expected", [
+     # Version range as pattern
+     # PINNED REQUIRE VERSION
+     ("dep/1.0", "dep/[>=1.0 <2]", "dep/1.3", "dep/1.3"),
+     ("dep/1.0", "dep/[>=1.5 <2]", "dep/1.3", False),
+     # RANGE REQUIRE VERSION
+     ("dep/[>=1.2 <2]", "dep/[>=1.0 <2]", "dep/1.3", "dep/1.3"),
+     ("dep/[>=1.0 <1.5]", "dep/[>=1.2 <2]", "dep/1.3", "dep/1.3"),
+     ("dep/[>=1.0 <1.5]", "dep/[>=1.5 <2]", "dep/1.3", False)
+    ]
+ )
+def test_replace_requires_ranges(require, pattern, alternative, expected):
+    c = TestClient(light=True)
+    c.save({"dep/conanfile.py": GenConanfile("dep"),
+            "app/conanfile.py": GenConanfile().with_requires(require),
+            "profile": f"[replace_requires]\n{pattern}: {alternative}"})
+    c.run("create dep --version=1.0")
+    c.run("create dep --version=1.3")
+    c.run("graph info app -pr=profile")
+    if expected:
+        assert "Replaced requires" in c.out
+        assert f"{require}: {expected}" in c.out
+    else:
+        assert "Replaced requires" not in c.out

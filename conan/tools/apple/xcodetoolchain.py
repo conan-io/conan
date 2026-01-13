@@ -7,7 +7,7 @@ from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFI
 from conan.internal.util.files import save
 
 
-class XcodeToolchain(object):
+class XcodeToolchain:
     filename = "conantoolchain"
     extension = ".xcconfig"
 
@@ -71,17 +71,20 @@ class XcodeToolchain(object):
 
     @property
     def _clang_cxx_library(self):
-        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile.settings, self.configuration),
+        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile.settings,
+                                                                     self.configuration),
                                                self.libcxx) if self.libcxx else ""
 
     @property
     def _clang_cxx_language_standard(self):
         return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(_xcconfig_conditional(self._conanfile.settings, self.configuration),
                                                          self._cppstd) if self._cppstd else ""
+
     @property
     def _vars_xconfig_filename(self):
-        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings, self.configuration),
-                                                                       self.extension)
+        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings,
+                                                                       self.configuration),
+                                           self.extension)
 
     @property
     def _vars_xconfig_content(self):

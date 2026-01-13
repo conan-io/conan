@@ -4,10 +4,11 @@ import textwrap
 import pytest
 
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
-from test.functional.toolchains.meson._base import TestMesonBase
+from conan.test.utils.tools import TestClient
+from test.functional.toolchains.meson._base import check_binary
 
 
-class MesonInstall(TestMesonBase):
+class TestMesonInstall:
     _conanfile_py = textwrap.dedent("""
         import os
         import shutil
@@ -98,21 +99,23 @@ class MesonInstall(TestMesonBase):
         target_link_libraries(${PROJECT_NAME} hello::hello)
         """)
 
+    @pytest.mark.tool("ninja")
     @pytest.mark.tool("meson")
     @pytest.mark.tool("cmake")
     def test_install(self):
+        t = TestClient()
         hello_cpp = gen_function_cpp(name="hello")
         hello_h = gen_function_h(name="hello")
         test_package_cpp = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
-        self.t.save({"conanfile.py": self._conanfile_py,
-                     "meson.build": self._meson_build,
-                     "hello.cpp": hello_cpp,
-                     "hello.h": hello_h,
-                     os.path.join("test_package", "conanfile.py"): self._test_package_conanfile_py,
-                     os.path.join("test_package", "CMakeLists.txt"): self._test_package_cmake_lists,
-                     os.path.join("test_package", "src", "test_package.cpp"): test_package_cpp})
+        t.save({"conanfile.py": self._conanfile_py,
+                "meson.build": self._meson_build,
+                "hello.cpp": hello_cpp,
+                "hello.h": hello_h,
+                os.path.join("test_package", "conanfile.py"): self._test_package_conanfile_py,
+                os.path.join("test_package", "CMakeLists.txt"): self._test_package_cmake_lists,
+                os.path.join("test_package", "src", "test_package.cpp"): test_package_cpp})
 
-        self.t.run("create . --name=hello --version=0.1 -c tools.compilation:verbosity=verbose")
-        assert "--verbose" in self.t.out
-        self._check_binary()
+        t.run("create . --name=hello --version=0.1 -c tools.compilation:verbosity=verbose")
+        assert "--verbose" in t.out
+        check_binary(t)

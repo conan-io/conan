@@ -23,6 +23,7 @@ from conan.api.subapi.upload import UploadAPI
 from conan.errors import ConanException
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.hook_manager import HookManager
+from conan.internal.loader import load_python_file
 from conan.internal.model.conf import load_global_conf, ConfDefinition, CORE_CONF_PATTERN
 from conan.internal.model.settings import load_settings_yml
 from conan.internal.paths import get_conan_user_home
@@ -40,12 +41,12 @@ class ConanAPI:
     def __init__(self, cache_folder=None):
         """
         :param cache_folder: Conan cache/home folder. It will have less priority than the
-                             "home_folder" defined in a Workspace.
+                             ``"home_folder"`` defined in a Workspace.
         """
 
         version = sys.version_info
-        if version.major == 2 or version.minor < 6:
-            raise ConanException("Conan needs Python >= 3.6")
+        if version.major == 2 or version.minor < 7:
+            raise ConanException("Conan needs Python >= 3.7")
         if cache_folder is not None and not os.path.isabs(cache_folder):
             raise ConanException("cache_folder has to be an absolute path")
 
@@ -66,21 +67,27 @@ class ConanAPI:
         self.profiles = ProfilesAPI(self, self._api_helpers)
         self.install = InstallAPI(self, self._api_helpers)
         self.graph = GraphAPI(self, self._api_helpers)
-        self.export = ExportAPI(self, self._api_helpers)
+        #: Used to export recipes and pre-compiled package binaries to the Conan cache
+        self.export: ExportAPI = ExportAPI(self, self._api_helpers)
         self.remove = RemoveAPI(self)
         self.new = NewAPI(self)
-        self.upload = UploadAPI(self, self._api_helpers)
-        self.download = DownloadAPI(self)
-        self.cache = CacheAPI(self, self._api_helpers)
-        self.lockfile = LockfileAPI(self)
+        #: Used to upload recipes and packages to remotes
+        self.upload: UploadAPI = UploadAPI(self, self._api_helpers)
+        #: Used to download recipes and packages from remotes
+        self.download: DownloadAPI = DownloadAPI(self)
+        #: Used to interact wit the packages storage cache
+        self.cache: CacheAPI = CacheAPI(self, self._api_helpers)
+        #: Used to read and manage lockfile files
+        self.lockfile: LockfileAPI = LockfileAPI(self)
         self.local = LocalAPI(self, self._api_helpers)
-        self.audit = AuditAPI(self)
+        #: Used to check vulnerabilities of dependencies
+        self.audit: AuditAPI = AuditAPI(self)
         # Now, lazy loading of editables
         self.workspace = WorkspaceAPI(self)
-        self.report = ReportAPI(self, self._api_helpers)
+        self.report: ReportAPI = ReportAPI(self, self._api_helpers)
 
     @property
-    def home_folder(self):
+    def home_folder(self) -> str:
         """ Where the Conan user home is located. Read only.
         Can be modified by the ``CONAN_HOME`` environment variable or by the
         ``.conanrc`` file in the current directory or any parent directory
@@ -93,7 +100,6 @@ class ConanAPI:
         Reinitialize the Conan API. This is useful when the configuration changes.
         """
         self._api_helpers.reinit()
-        self.remotes.reinit()
         self.local.reinit()
 
     def migrate(self):
@@ -109,6 +115,26 @@ class ConanAPI:
             self._cli_core_confs = None
             self._init_global_conf()
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+            # Wraps an http_requester to inject proxies, certs, etc
+            self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
+            self._settings_yml = None
+            self._compression_plugin = None
+
+        @property
+        def compression_plugin(self):
+            if self._compression_plugin is None:
+                compression_plugin_path = HomePaths(
+                    self._conan_api.home_folder).compression_plugin_path
+                if not os.path.exists(compression_plugin_path):
+                    self._compression_plugin = False  # Avoid FS re-check
+                    return None
+                mod, _ = load_python_file(compression_plugin_path)
+                # A plugin can provide just 1 of them
+                if not hasattr(mod, "tar_extract") and not hasattr(mod, "tar_compress"):
+                    raise ConanException("The 'compression.py' plugin does not contain "
+                                         "required `tar_extract` or `tar_compress` functions")
+                self._compression_plugin = mod
+            return self._compression_plugin
 
         def set_core_confs(self, core_confs):
             confs = ConfDefinition()
@@ -133,7 +159,16 @@ class ConanAPI:
         def reinit(self):
             self._init_global_conf()
             self.hook_manager.reinit()
+            self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
+            self._settings_yml = None
+            self._compression_plugin = None
 
         @property
         def settings_yml(self):
-            return load_settings_yml(self._conan_api.home_folder)
+            if self._settings_yml is None:
+                self._settings_yml = load_settings_yml(self._conan_api.home_folder)
+            return self._settings_yml
+
+        @property
+        def requester(self):
+            return self._requester

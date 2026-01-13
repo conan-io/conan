@@ -159,3 +159,14 @@ def test_graph_conflict_diamond():
     c.run("graph info game --format=html", assert_error=True, redirect_stdout="graph.html")
     # check that it doesn't crash
     assert "ERROR: Version conflict: Conflict between math/1.0.1 and math/1.0 in the graph." in c.out
+
+
+def test_graph_missing_error():
+    c = TestClient()
+    c.save({"engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("math/1.0"),
+            "game/conanfile.py": GenConanfile("game", "1.0").with_requires("engine/1.0"),
+            })
+    c.run("export engine")
+    c.run("graph info game --format=html", assert_error=True, redirect_stdout="graph.html")
+    # check that it doesn't crash, tested manually
+    assert "ERROR: Package 'math/1.0' not resolved: No remote defined" in c.out

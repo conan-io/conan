@@ -24,8 +24,14 @@ class CacheDatabase:
     def exists_prev(self, ref):
         return self._packages.get_package_revisions_reference_exists(ref)
 
-    def get_latest_package_reference(self, ref):
-        prevs = self.get_package_revisions_references(ref, True)
+    def get_latest_package_reference(self, pref):
+        prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
+        return prevs[0]["pref"] if prevs else None
+
+    def get_latest_package_reference_data(self, pref):
+        # Used just for PkgCache.pkg_layout_latest()
+        # TODO: This can be refactored, unified with get_latest_package_reference()
+        prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
         return prevs[0] if prevs else None
 
     def update_recipe_timestamp(self, ref):
@@ -40,11 +46,11 @@ class CacheDatabase:
     def get_package_lru(self, pref: PkgReference):
         return self._packages.get(pref)["lru"]
 
-    def update_recipe_lru(self, ref):
-        self._recipes.update_lru(ref)
+    def update_recipes_lru(self, refs):
+        self._recipes.update_lru(refs)
 
-    def update_package_lru(self, pref):
-        self._packages.update_lru(pref)
+    def update_packages_lru(self, prefs):
+        self._packages.update_lru(prefs)
 
     def remove_recipe(self, ref: RecipeReference):
         # Removing the recipe must remove all the package binaries too from DB
@@ -92,9 +98,10 @@ class CacheDatabase:
         return [ref for ref in self._recipes.all_references()
                 if pattern is None or ref.partial_match(pattern)]
 
-    def get_package_revisions_references(self, pref: PkgReference, only_latest_prev=False):
+    def get_package_revisions_references(self, pref: PkgReference):
         return [d["pref"]
-                for d in self._packages.get_package_revisions_references(pref, only_latest_prev)]
+                for d in self._packages.get_package_revisions_references(pref,
+                                                                         only_latest_prev=False)]
 
     def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         return [d["pref"]

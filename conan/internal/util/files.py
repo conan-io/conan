@@ -1,7 +1,10 @@
 import errno
+<<<<<<< HEAD
 from pathlib import Path
 import tempfile
 import gzip
+=======
+>>>>>>> feature/builtin_compression
 import hashlib
 import os
 import platform

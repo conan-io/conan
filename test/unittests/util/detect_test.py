@@ -1,9 +1,9 @@
-import mock
+from unittest import mock
 from unittest.mock import patch
 import pytest
 
-from conan.internal.api.detect.detect_api import _cc_compiler, detect_suncc_compiler, \
-    detect_intel_compiler
+from conan.internal.api.detect.detect_api import detect_suncc_compiler, \
+    detect_intel_compiler, detect_default_compiler
 from conan.internal.api.profile.detect import detect_defaults_settings
 from conan.internal.model.version import Version
 from conan.test.utils.mocks import RedirectedTestOutput
@@ -27,7 +27,8 @@ class TestDetect:
         with mock.patch("platform.machine", mock.MagicMock(return_value='XXXXXXXXXXXX')), \
                 mock.patch("platform.processor", mock.MagicMock(return_value=processor)), \
                 mock.patch("platform.system", mock.MagicMock(return_value='AIX')), \
-                mock.patch("conan.internal.api.detect.detect_api._get_aix_conf", mock.MagicMock(return_value=bitness)), \
+                mock.patch("conan.internal.api.detect.detect_api._get_aix_conf",
+                           mock.MagicMock(return_value=bitness)), \
                 mock.patch('subprocess.check_output', mock.MagicMock(return_value=version)):
             result = detect_defaults_settings()
             result = dict(result)
@@ -54,7 +55,7 @@ class TestDetect:
     def test_detect_clang_gcc_toolchain(self, _):
         output = RedirectedTestOutput()
         with redirect_output(output):
-            with environment_update({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu/9"}):
+            with environment_update({"CC": "clang-9 --gcc-toolchain=/usr/lib/gcc/x86_64-linux-gnu"}):
                 detect_defaults_settings()
                 assert "CC and CXX: clang-9 --gcc-toolchain" in output
 
@@ -67,9 +68,9 @@ class TestDetect:
     ["gcc (crosstool-NG 1.27.0) 13.3.0", "13.3.0"],
     ["gcc (crosstool-NG 1.27.0) 13.3", "13.3"],
     ["gcc (GCC) 4.8.1", "4.8.1"],
-    ["clang version 18.1.0rc (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18.1.0"],
+    ["clang version 18.1.0rc (https://github.com/llvm/llvm-project.git 4612...a09e)", "18.1.0"],
     ["cc.exe (Rev3, Built by MSYS2 project) 14.0", "14.0"],
-    ["clang version 18 (https://github.com/llvm/llvm-project.git 461274b81d8641eab64d494accddc81d7db8a09e)", "18"],
+    ["clang version 18 (https://github.com/llvm/llvm-project.git 4612...8a09e)", "18"],
     ["cc.exe (Rev3, Built by MSYS2 project) 14", "14"],
     ["cc.exe 14.2", "14.2"],
     ["cc1 14.2", "14.2"],
@@ -77,16 +78,22 @@ class TestDetect:
 @patch("conan.internal.api.detect.detect_api.detect_runner")
 def test_detect_cc_versioning(detect_runner_mock, version_return, expected_version):
     detect_runner_mock.return_value = 0, version_return
-    compiler, installed_version, compiler_exe = _cc_compiler()
+    with environment_update({"CC": "/usr/bin/cc"}):
+        compiler, installed_version, compiler_exe = detect_default_compiler()
     # Using private _value attribute to compare the str that reaches it, so no space issues arise
     assert installed_version._value == Version(expected_version)._value
     assert installed_version == Version(expected_version)
+
 
 @pytest.mark.parametrize("function,version_return,expected_version", [
     [detect_suncc_compiler, "Sun C 5.13", ('sun-cc', Version("5.13"), 'cc')],
     [detect_intel_compiler, "Intel C++ Compiler 2025.0", ('intel-cc', Version("2025.0"), 'icx')],
 ])
 def test_detect_compiler(function, version_return, expected_version):
-    with mock.patch("conan.internal.api.detect.detect_api.detect_runner", mock.MagicMock(return_value=(0, version_return))):
+    """
+    :type function: Callable
+    """
+    with mock.patch("conan.internal.api.detect.detect_api.detect_runner",
+                    mock.MagicMock(return_value=(0, version_return))):
         ret = function()
         assert ret == expected_version

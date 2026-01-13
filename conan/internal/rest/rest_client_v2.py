@@ -9,7 +9,8 @@ from requests.auth import AuthBase, HTTPBasicAuth
 from uuid import getnode as get_mac
 
 from conan.api.output import ConanOutput
-
+from conan.internal.paths import EXPORT_SOURCES_FILE_NAME, CONANINFO, CONAN_MANIFEST, \
+    EXPORT_FILE_NAME, PACKAGE_FILE_NAME
 from conan.internal.rest.caching_file_downloader import ConanInternalCacheDownloader
 from conan.internal.rest import response_to_str
 from conan.internal.rest.client_routes import ClientV2Router
@@ -18,7 +19,6 @@ from conan.internal.errors import AuthenticationException, ForbiddenException, N
     RecipeNotFoundException, PackageNotFoundException, EXCEPTION_CODE_MAPPING
 from conan.errors import ConanException
 from conan.api.model import PkgReference
-from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import from_iso8601_to_timestamp
 
@@ -219,9 +219,9 @@ class RestV2Methods:
             ret.append(ref)
         return ret
 
-    def search_packages(self, ref):
+    def search_packages(self, ref, list_only):
         """Client is filtering by the query"""
-        url = self.router.search_packages(ref)
+        url = self.router.search_packages(ref, list_only)
         package_infos = self._get_json(url)
         return package_infos
 
@@ -239,9 +239,11 @@ class RestV2Methods:
         result = {}
 
         if not only_metadata:
-            accepted_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt",
-                              "metadata/sign"]
+            accepted_files = ["conanfile.py", CONAN_MANIFEST,  "metadata/sign"]
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
+            export_file = self._find_compressed_file(ref, server_files, EXPORT_FILE_NAME)
+            if export_file is not None:
+                files.append(export_file)
             # If we didn't indicated reference, server got the latest, use absolute now, it's safer
             urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
             self._download_and_save_files(urls, dest_folder, files, parallel=True)
@@ -260,15 +262,29 @@ class RestV2Methods:
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        if EXPORT_SOURCES_TGZ_NAME not in files:
+        src_file = self._find_compressed_file(ref, files, EXPORT_SOURCES_FILE_NAME)
+        if src_file is None:
             return None
-        files = [EXPORT_SOURCES_TGZ_NAME, ]
+        files = [src_file, ]
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
         urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
         self._download_and_save_files(urls, dest_folder, files, scope=str(ref))
         ret = {fn: os.path.join(dest_folder, fn) for fn in files}
         return ret
+
+    @staticmethod
+    def _find_compressed_file(ref, server_files, artifact, exists=False):
+        pkg_files = [f for f in server_files if f.startswith(artifact)]
+        if len(pkg_files) > 1:
+            raise ConanException(f"{ref} is corrupted in the server, it contains "
+                                 f"more than one compressed file: {sorted(pkg_files)}")
+        if not pkg_files:
+            if not exists:
+                return None
+            raise ConanException(f"Recipe {ref} is corrupted in the server, it doesn't contain "
+                                 f"a {artifact} file")
+        return pkg_files[0]
 
     def get_package(self, pref, dest_folder, metadata, only_metadata):
         url = self.router.package_snapshot(pref)
@@ -277,8 +293,8 @@ class RestV2Methods:
         result = {}
         # Download only known files, but not metadata (except sign)
         if not only_metadata:  # Retrieve package first, then metadata
-            accepted_files = ["conaninfo.txt", "conan_package.tgz", "conanmanifest.txt",
-                              "metadata/sign"]
+            pkg_file = self._find_compressed_file(pref, server_files, PACKAGE_FILE_NAME, exists=True)
+            accepted_files = [CONANINFO, pkg_file, CONAN_MANIFEST, "metadata/sign"]
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
             # If we didn't indicated reference, server got the latest, use absolute now, it's safer
             urls = {fn: self.router.package_file(pref, fn) for fn in files}
@@ -356,10 +372,10 @@ class RestV2Methods:
         if response.status_code == 404:
             # Double check if it is a 404 because there are no packages
             try:
-                package_search_url = self.router.search_packages(ref)
+                package_search_url = self.router.search_packages(ref, list_only=True)
                 if not self._get_json(package_search_url):
                     return
-            except Exception as e:
+            except Exception:
                 pass
         if response.status_code != 200:  # Error message is text
             # To be able to access ret.text (ret.content are bytes)
@@ -433,6 +449,7 @@ class RestV2Methods:
         raise PackageNotFoundException(pref)
 
     def get_recipe_revisions_references(self, ref):
+        assert ref.revision is None
         url = self.router.recipe_revisions(ref)
         tmp = self._get_json(url)["revisions"]
         remote_refs = []
@@ -441,9 +458,6 @@ class RestV2Methods:
             _tmp.revision = item.get("revision")
             _tmp.timestamp = from_iso8601_to_timestamp(item.get("time"))
             remote_refs.append(_tmp)
-
-        if ref.revision:  # FIXME: This is a bit messy, is it checking the existance? or getting the time? or both?
-            assert "This shoudln't be happening, get_recipe_revisions_references"
         return remote_refs
 
     def get_latest_recipe_reference(self, ref):
@@ -454,17 +468,12 @@ class RestV2Methods:
         remote_ref.timestamp = from_iso8601_to_timestamp(data.get("time"))
         return remote_ref
 
-    def get_package_revisions_references(self, pref, headers=None):
+    def get_package_revisions_references(self, pref):
+        assert pref.revision is None
         url = self.router.package_revisions(pref)
-        tmp = self._get_json(url, headers=headers)["revisions"]
+        tmp = self._get_json(url)["revisions"]
         remote_prefs = [PkgReference(pref.ref, pref.package_id, item.get("revision"),
                         from_iso8601_to_timestamp(item.get("time"))) for item in tmp]
-
-        if pref.revision:  # FIXME: This is a bit messy, is it checking the existance? or getting the time? or both?
-            for _pref in remote_prefs:
-                if _pref.revision == pref.revision:
-                    return [_pref]
-            raise PackageNotFoundException(pref)
         return remote_prefs
 
     def get_latest_package_reference(self, pref: PkgReference, headers):

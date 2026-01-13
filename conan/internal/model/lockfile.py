@@ -115,7 +115,7 @@ class _LockRequires:
         self.sort()
 
 
-class Lockfile(object):
+class Lockfile:
 
     def __init__(self, deps_graph=None, lock_packages=False):
         self._requires = _LockRequires()
@@ -176,7 +176,7 @@ class Lockfile(object):
         return json.dumps(self.serialize(), indent=4)
 
     def save(self, path):
-        save(path, self.dumps())
+        save(path, self.dumps() + "\n")
 
     def merge(self, other):
         """

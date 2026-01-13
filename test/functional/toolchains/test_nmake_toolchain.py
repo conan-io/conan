@@ -79,41 +79,37 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
         """)
     client.save({"conanfile.py": conanfile,
                  "makefile": makefile,
-                 "simple.cpp": gen_function_cpp(name="main", includes=["dep"], calls=["dep"], preprocessor=conf_preprocessors.keys())},
+                 "simple.cpp": gen_function_cpp(name="main", includes=["dep"], calls=["dep"],
+                                                preprocessor=conf_preprocessors.keys())},
                 clean_first=True)
     client.run(f"build . {settings} {conf}")
     client.run_command("simple.exe")
     assert "dep/1.0" in client.out
-    check_exe_run(client.out, "main", "msvc", version, build_type, "x86_64", cppstd, conf_preprocessors)
+    check_exe_run(client.out, "main", "msvc", version, build_type, "x86_64", cppstd,
+                  conf_preprocessors)
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.tool("clang", "18")
+@pytest.mark.tool("cmake", "3.23")
+# This test uses clang inside Visual Studio, not managed by mark.tool
+@pytest.mark.tool("visual_studio")
 def test_toolchain_nmake_clang():
-    compiler = "clang"
-    version = "18"
-    runtime = "dynamic"
     cppstd = "14"
     build_type = "Debug"
-    defines = ["TEST_DEFINITION1", "TEST_DEFINITION2=0", "TEST_DEFINITION3=", "TEST_DEFINITION4=TestPpdValue4",
-          "TEST_DEFINITION5=__declspec(dllexport)", "TEST_DEFINITION6=foo bar"]
-    cflags = cxxflags = sharedlinkflags = exelinkflags = []
+    defines = ["TEST_DEFINITION1", "TEST_DEFINITION2=0", "TEST_DEFINITION3=",
+               "TEST_DEFINITION4=TestPpdValue4", "TEST_DEFINITION5=__declspec(dllexport)",
+               "TEST_DEFINITION6=foo bar"]
     client = TestClient(path_with_spaces=False)
-    settings = {"compiler": compiler,
-                "compiler.version": version,
-                "compiler.cppstd": cppstd,
-                "compiler.runtime": runtime,
+    settings = {"compiler": "clang",
+                "compiler.version": "20",
+                "compiler.cppstd": "14",
+                "compiler.runtime": "dynamic",
                 "build_type": build_type,
                 "compiler.runtime_version": "v144",
                 "arch": "x86_64"}
 
-    serialize_array = lambda arr: "[{}]".format(",".join([f"'{v}'" for v in arr]))
     conf = {
-        "tools.build:defines": serialize_array(defines) if defines else "",
-        "tools.build:cflags": serialize_array(cflags) if cflags else "",
-        "tools.build:cxxflags": serialize_array(cxxflags) if cxxflags else "",
-        "tools.build:sharedlinkflags": serialize_array(sharedlinkflags) if sharedlinkflags else "",
-        "tools.build:exelinkflags": serialize_array(exelinkflags) if exelinkflags else "",
+        "tools.build:defines": "[{}]".format(",".join([f"'{v}'" for v in defines])),
         "tools.build:compiler_executables": r'{\"c\": \"clang-cl\", \"cpp\": \"clang-cl\"}',
         "tools.cmake.cmaketoolchain:generator": "Visual Studio 17",
     }
@@ -154,9 +150,11 @@ def test_toolchain_nmake_clang():
         """)
     client.save({"conanfile.py": conanfile,
                  "makefile": makefile,
-                 "simple.cpp": gen_function_cpp(name="main", includes=["dep"], calls=["dep"], preprocessor=conf_preprocessors.keys())},
+                 "simple.cpp": gen_function_cpp(name="main", includes=["dep"], calls=["dep"],
+                                                preprocessor=conf_preprocessors.keys())},
                 clean_first=True)
     client.run(f"build . {settings} {conf}")
     client.run_command("simple.exe")
     assert "dep/1.0" in client.out
-    check_exe_run(client.out, "main", "clang", "19.1", build_type, "x86_64", cppstd, conf_preprocessors)
+    check_exe_run(client.out, "main", "clang", "19.1", build_type, "x86_64", cppstd,
+                  conf_preprocessors)

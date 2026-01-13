@@ -95,6 +95,7 @@ class Cli:
             if command_wrapper.doc:
                 name = f"{package}:{command_wrapper.name}" if package else command_wrapper.name
                 self._commands[name] = command_wrapper
+                command_wrapper._prog = name  # set the program name with possible package, if any
                 # Avoiding duplicated command help messages
                 if name not in self._groups[command_wrapper.group]:
                     self._groups[command_wrapper.group].append(name)
@@ -236,17 +237,6 @@ class Cli:
         return ERROR_UNEXPECTED
 
 
-def _warn_python_version():
-    version = sys.version_info
-    if version.minor == 6:
-        ConanOutput().writeln("")
-        ConanOutput().warning("*"*80, warn_tag="deprecated")
-        ConanOutput().warning("Python 3.6 is end-of-life since 2021. "
-                              "Conan future versions will drop support for it, "
-                              "please upgrade Python", warn_tag="deprecated")
-        ConanOutput().warning("*" * 80, warn_tag="deprecated")
-
-
 def _warn_frozen_center(conan_api):
     remotes = conan_api.remotes.list()
     for r in remotes:
@@ -306,7 +296,6 @@ def main(args):
     error = SUCCESS
     try:
         cli.run(args)
-        _warn_python_version()
     except BaseException as e:
         error = cli.exception_exit_error(e)
     sys.exit(error)

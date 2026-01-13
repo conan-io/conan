@@ -8,7 +8,7 @@ from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
     resolve_apple_flags, apple_extra_flags
-from conan.tools.build.cross_building import cross_building
+from conan.tools.build.cross_building import cross_building, can_run
 from conan.tools.build.flags import (architecture_link_flag, libcxx_flags, architecture_flag,
                                      threads_flags)
 from conan.tools.env import VirtualBuildEnv
@@ -201,9 +201,9 @@ class MesonToolchain:
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         cstd = self._conanfile.settings.get_safe("compiler.cstd")
         #: C++ language standard to use. Defined by ``to_cppstd_flag()`` by default.
-        self.cpp_std = to_cppstd_flag(compiler, compiler_version, cppstd)
+        self.cpp_std = to_cppstd_flag(self._conanfile, compiler, compiler_version, cppstd)
         #: C language standard to use. Defined by ``to_cstd_flag()`` by default.
-        self.c_std = to_cstd_flag(cstd)
+        self.c_std = to_cstd_flag(self._conanfile, cstd)
         #: VS runtime library to use. Defined by ``msvc_runtime_flag()`` by default.
         self.b_vscrt = None
         if compiler in ("msvc", "clang"):
@@ -266,7 +266,8 @@ class MesonToolchain:
                 sdk_host = conanfile.settings.get_safe("os.sdk")
                 self.cross_build["host"]["subsystem"] = get_apple_subsystem(sdk_host)
                 self.cross_build["build"]["subsystem"] = get_apple_subsystem(sdk_build)
-            self.properties["needs_exe_wrapper"] = True
+            # Issue: https://github.com/conan-io/conan/issues/19217
+            self.properties["needs_exe_wrapper"] = not can_run(self._conanfile)
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target
                 os_target = settings_target.get_safe("os")
@@ -289,8 +290,6 @@ class MesonToolchain:
 
         # Read configuration for sys_root property (honoring existing conf)
         self._sys_root = self._conanfile_conf.get("tools.build:sysroot", check_type=str)
-        if self._sys_root:
-            self.properties["sys_root"] = self._sys_root
 
         # Read configuration for compilers
         compilers_by_conf = self._conanfile_conf.get("tools.build:compiler_executables", default={},
@@ -414,7 +413,6 @@ class MesonToolchain:
         self.apple_isysroot_flag = isysroot_flag.split() if isysroot_flag else []
         self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]
         # Objective C/C++ ones
-        flags = []
         self.objc = compilers_by_conf.get("objc", "clang")
         self.objcpp = compilers_by_conf.get("objcpp", "clang++")
         enable_arc = self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
@@ -463,7 +461,7 @@ class MesonToolchain:
                                                 check_type=list)
         linker_scripts = self._conanfile_conf.get("tools.build:linker_scripts", default=[],
                                                   check_type=list)
-        linker_script_flags = ['-T"' + linker_script + '"' for linker_script in linker_scripts]
+        linker_script_flags = ['-T' + linker_script for linker_script in linker_scripts]
         defines = self._conanfile_conf.get("tools.build:defines", default=[], check_type=list)
         sys_root = [f"--sysroot={self._sys_root}"] if self._sys_root else [""]
         ld = (sharedlinkflags + exelinkflags + linker_script_flags + sys_root + self.extra_ldflags

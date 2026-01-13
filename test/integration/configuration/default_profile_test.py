@@ -18,8 +18,7 @@ class TestDefaultProfile:
 
         client.save({CONANFILE: conanfile})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=stable")
-        assert "pkg/0.1@lasote/stable: Package '%s' created" % NO_SETTINGS_PACKAGE_ID \
-                      in client.out
+        assert "pkg/0.1@lasote/stable: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
 
         client.save({"conanfile.txt": "[requires]\npkg/0.1@lasote/stable"}, clean_first=True)
         client.run('install .')
@@ -142,6 +141,16 @@ class MyConanfile(ConanFile):
             client.run("create . --name=name --version=version --user=user --channel=channel",
                        assert_error=True)
             assert "You need to create a default profile" in client.out
+
+    def test_default_profile(self):
+        c = TestClient()
+        # Test with a profile set using and environment variable
+        tmp = temp_folder()
+        profile = os.path.join(tmp, 'myprofile')
+        save(profile, "[settings]\nos=FreeBSD\n")
+        with environment_update({'CONAN_DEFAULT_BUILD_PROFILE': profile}):
+            c.run("profile show")
+            assert "os=FreeBSD" in c.out  # build profiles
 
 
 def test_conf_default_two_profiles():

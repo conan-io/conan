@@ -5,7 +5,7 @@ from conan.api.model import RecipeReference
 from conan.internal.model.requires import Requirement
 
 
-class PyRequire(object):
+class PyRequire:
     def __init__(self, module, conanfile, ref, path, recipe_status, remote):
         self.module = module
         self.conanfile = conanfile
@@ -64,7 +64,7 @@ class PyRequires:
             self._pyrequires[name] = transitive_py_require
 
 
-class PyRequireLoader(object):
+class PyRequireLoader:
     def __init__(self, conan_app, global_conf):
         self._proxy = conan_app.proxy
         self._range_resolver = conan_app.range_resolver

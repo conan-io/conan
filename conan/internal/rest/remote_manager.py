@@ -1,11 +1,14 @@
 import os
 import shutil
+import sys
+
 from collections import namedtuple
 from typing import List
 
 from requests.exceptions import ConnectionError
 
 from conan.api.model import LOCAL_RECIPES_INDEX
+from conan.internal.paths import CONANINFO, CONAN_MANIFEST, PACKAGE_FILE_NAME, EXPORT_FILE_NAME
 from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
@@ -17,7 +20,6 @@ from conan.internal.model.info import load_binary_info
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.files import rmdir, human_size
-from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.internal.util.files import mkdir, tar_extract
 
 
@@ -62,6 +64,7 @@ class RemoteManager:
         local_folder_remote = self._local_folder_remote(remote)
         if local_folder_remote is not None:
             local_folder_remote.get_recipe(ref, export_folder)
+            mkdir(layout.metadata())
             return layout
 
         download_export = layout.download_export()
@@ -81,11 +84,13 @@ class RemoteManager:
                                      f"no conanmanifest.txt")
             self._signer.verify(ref, download_export, files=zipped_files)
         except BaseException:  # So KeyboardInterrupt also cleans things
-            ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'", error_type="exception")
+            ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'",
+                                              error_type="exception")
             self._cache.remove_recipe_layout(layout)
             raise
         export_folder = layout.export()
-        tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
+        export_file = next((f for f in zipped_files if f.startswith(EXPORT_FILE_NAME)), None)
+        tgz_file = zipped_files.pop(export_file, None)
 
         if tgz_file:
             uncompress_file(tgz_file, export_folder, scope=str(ref), conan_api=self._conan_api)
@@ -95,6 +100,7 @@ class RemoteManager:
 
         # Make sure that the source dir is deleted
         rmdir(layout.source())
+        mkdir(layout.metadata())
         return layout
 
     def get_recipe_metadata(self, ref, remote, metadata):
@@ -110,7 +116,8 @@ class RemoteManager:
             self._call_remote(remote, "get_recipe", ref, download_export, metadata,
                               only_metadata=True)
         except BaseException:  # So KeyboardInterrupt also cleans things
-            output.error(f"Error downloading metadata from remote '{remote.name}'", error_type="exception")
+            output.error(f"Error downloading metadata from remote '{remote.name}'",
+                         error_type="exception")
             raise
 
     def get_recipe_sources(self, ref, layout, remote):
@@ -129,8 +136,14 @@ class RemoteManager:
             return
 
         self._signer.verify(ref, download_folder, files=zipped_files)
+<<<<<<< HEAD
         tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
         uncompress_file(tgz_file, export_sources_folder, scope=str(ref), conan_api=self._conan_api)
+=======
+        # Only 1 file is guaranteed
+        tgz_file = next(iter(zipped_files.values()))
+        uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
+>>>>>>> feature/builtin_compression
 
     def get_package(self, pref, remote, metadata=None):
         output = ConanOutput(scope=str(pref.ref))
@@ -140,6 +153,7 @@ class RemoteManager:
 
         pkg_layout = self._cache.create_pkg_layout(pref)
         with pkg_layout.set_dirty_context_manager():
+            mkdir(pkg_layout.metadata())
             self._get_package(pkg_layout, pref, remote, output, metadata)
 
     def get_package_metadata(self, pref, remote, metadata):
@@ -157,13 +171,16 @@ class RemoteManager:
             self._call_remote(remote, "get_package", pref, download_pkg_folder,
                               metadata, only_metadata=True)
         except BaseException as e:  # So KeyboardInterrupt also cleans things
-            output.error(f"Exception while getting package metadata: {str(pref.package_id)}", error_type="exception")
+            output.error(f"Exception while getting package metadata: {str(pref.package_id)}",
+                         error_type="exception")
             output.error(f"Exception: {type(e)} {str(e)}", error_type="exception")
             raise
 
     def _get_package(self, layout, pref, remote, scoped_output, metadata):
         try:
             assert pref.revision is not None
+            if remote.recipes_only:
+                raise NotFoundException(f"Remote '{remote.name}' doesn't allow binary downloads")
 
             download_pkg_folder = layout.download_package()
             # Download files to the pkg_tgz folder, not to the final one
@@ -171,12 +188,15 @@ class RemoteManager:
                                              metadata, only_metadata=False)
             zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
             # quick server package integrity check:
-            for f in ("conaninfo.txt", "conanmanifest.txt", "conan_package.tgz"):
+            for f in (CONANINFO, CONAN_MANIFEST):
                 if f not in zipped_files:
                     raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: no {f}")
+
+            # This is guaranteed to exists, otherwise RestClient would have raised already
+            package_file = next(f for f in zipped_files if PACKAGE_FILE_NAME in f)
             self._signer.verify(pref, download_pkg_folder, zipped_files)
 
-            tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
+            tgz_file = zipped_files.pop(package_file)
             package_folder = layout.package()
             uncompress_file(tgz_file, package_folder, scope=str(pref.ref), conan_api=self._conan_api)
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
@@ -189,11 +209,13 @@ class RemoteManager:
             raise PackageNotFoundException(pref)
         except BaseException as e:  # So KeyboardInterrupt also cleans things
             self._cache.remove_package_layout(layout)
-            scoped_output.error(f"Exception while getting package: {str(pref.package_id)}", error_type="exception")
+            scoped_output.error(f"Exception while getting package: {str(pref.package_id)}",
+                                error_type="exception")
             scoped_output.error(f"Exception: {type(e)} {str(e)}", error_type="exception")
             raise
 
     def search_recipes(self, remote, pattern):
+        # Used by ListAPI to "conan list *" recipes, and by RangeResolver to resolve version-ranges
         cached_method = remote._caching.setdefault("search_recipes", {})
         try:
             return cached_method[pattern]
@@ -202,12 +224,18 @@ class RemoteManager:
             cached_method[pattern] = result
             return result
 
-    def search_packages(self, remote, ref):
-        packages = self._call_remote(remote, "search_packages", ref)
-        # Avoid serializing conaninfo in server side
-        packages = {PkgReference(ref, pid): load_binary_info(data["content"])
-                    if "content" in data else data
-                    for pid, data in packages.items() if not data.get("recipe_hash")}
+    def search_packages(self, remote, ref, list_only=False):
+        # Used only by ListAPI to list the different package_ids for a reference
+        if remote.recipes_only:
+            return {}
+        packages = self._call_remote(remote, "search_packages", ref, list_only)
+        if list_only:
+            packages = {PkgReference(ref, pid): None for pid, data in packages.items()}
+        else:
+            # Avoid serializing conaninfo in server side
+            packages = {PkgReference(ref, pid): load_binary_info(data["content"])
+                        if "content" in data else data
+                        for pid, data in packages.items() if not data.get("recipe_hash")}
         return packages
 
     def remove_recipe(self, ref, remote):
@@ -225,20 +253,45 @@ class RemoteManager:
     def authenticate(self, remote, name, password):
         return self._call_remote(remote, 'authenticate', name, password, enforce_disabled=False)
 
-    def get_recipe_revisions_references(self, ref, remote):
+    def get_recipe_revisions(self, ref: RecipeReference, remote: Remote) -> List[RecipeReference]:
+        # Used by ListAPI to list recipe revisions for a ref without revision
+        # and by ConanProxy resolving legacy_update Conan 1 logic
         assert ref.revision is None, "get_recipe_revisions_references of a reference with revision"
         return self._call_remote(remote, "get_recipe_revisions_references", ref)
 
-    def get_package_revisions_references(self, pref, remote, headers=None) -> List[PkgReference]:
-        assert pref.revision is None, "get_package_revisions_references of a reference with revision"
-        return self._call_remote(remote, "get_package_revisions_references", pref, headers=headers)
+    def get_recipe_revision(self, ref: RecipeReference, remote: Remote) -> RecipeReference:
+        # Used by UploadUpstreamChecker to see if the revision exist in the server
+        # Used by Download, to get timestamp from server and respect it
+        # Used by ConanProxy to confirm existence of specific revision
+        assert ref.revision is not None, "recipe_exists needs a revision"
+        return self._call_remote(remote, "get_recipe_revision_reference", ref)
 
-    def get_latest_recipe_reference(self, ref, remote):
+    def get_latest_recipe_revision(self, ref: RecipeReference, remote: Remote) -> RecipeReference:
+        # Used by ListAPI to retrieve the latest revision
+        # Used by ConanProxy to resolve to the latest revision
         assert ref.revision is None, "get_latest_recipe_reference of a reference with revision"
         return self._call_remote(remote, "get_latest_recipe_reference", ref)
 
-    def get_latest_package_reference(self, pref, remote, info=None) -> PkgReference:
+    def get_package_revisions(self, pref: PkgReference, remote: Remote) -> List[PkgReference]:
+        # Used by ListAPI to retrieve multiple package revisions
+        assert pref.revision is None, "get_package_revisions_references of a reference with revision"
+        if remote.recipes_only:
+            return []
+        return self._call_remote(remote, "get_package_revisions_references", pref)
+
+    def get_package_revision(self, pref: PkgReference, remote: Remote) -> PkgReference:
+        # Used by UploadUpstreamChecker to see if the revision exist in the server
+        # Used by Download, to get timestamp from server and respect it
+        assert pref.revision is not None, "get_package_revision_reference needs a revision"
+        return self._call_remote(remote, "get_package_revision_reference", pref)
+
+    def get_latest_package_revision(self, pref: PkgReference, remote: Remote,
+                                    info=None) -> PkgReference:
+        # Used by List to resolve the latest package revision
+        # Used by GraphBinariesAnalyzer to resolve to latest package revision
         assert pref.revision is None, "get_latest_package_reference of a reference with revision"
+        if remote.recipes_only:
+            raise NotFoundException(f"Remote '{remote.name}' doesn't allow binary downloads")
         # These headers are useful to know what configurations are being requested in the server
         headers = None
         if info:
@@ -272,14 +325,6 @@ class RemoteManager:
                 raise NotFoundException(result.message)
             return result
 
-    def get_recipe_revision_reference(self, ref, remote) -> bool:
-        assert ref.revision is not None, "recipe_exists needs a revision"
-        return self._call_remote(remote, "get_recipe_revision_reference", ref)
-
-    def get_package_revision_reference(self, pref, remote) -> bool:
-        assert pref.revision is not None, "get_package_revision_reference needs a revision"
-        return self._call_remote(remote, "get_package_revision_reference", pref)
-
     def _call_remote(self, remote, method, *args, **kwargs):
         assert (isinstance(remote, Remote))
         enforce_disabled = kwargs.pop("enforce_disabled", True)
@@ -304,7 +349,14 @@ class RemoteManager:
             raise ConanException(exc, remote=remote)
 
 
+<<<<<<< HEAD
 def uncompress_file(src_path, dest_folder, scope="", conan_api=None):
+=======
+def uncompress_file(src_path, dest_folder, scope=None):
+    if sys.version_info.minor < 14 and src_path.endswith("zst"):
+        raise ConanException(f"File {os.path.basename(src_path)} compressed with 'zst', "
+                             f"unsupported for Python<3.14 ")
+>>>>>>> feature/builtin_compression
     try:
         filesize = os.path.getsize(src_path)
         big_file = filesize > 10000000  # 10 MB
