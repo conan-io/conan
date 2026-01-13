@@ -29,7 +29,7 @@ class LocalAPI:
         if os.path.isdir(path):  # Can be a folder
             path_py = os.path.join(path, "conanfile.py")
             if py:
-                    path = path_py
+                path = path_py
             else:
                 path_txt = os.path.join(path, "conanfile.txt")
                 if os.path.isfile(path_py) and os.path.isfile(path_txt):
