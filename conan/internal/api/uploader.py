@@ -222,7 +222,7 @@ class PackagePreparator:
         file_name = filename + self._compressformat
         package_file = os.path.join(download_folder, file_name)
         compressed_path = compress_files(files, file_name, download_folder,
-                                         compresslevel=self._compresslevel, ref=ref)
+                                         compresslevel=self._compresslevel, scope=str(ref))
         assert compressed_path == package_file
         assert os.path.exists(package_file)
         return file_name
@@ -315,17 +315,18 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     return t
 
 
-def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursive=False):
+def compress_files(files, name, dest_dir, compresslevel=None, scope=None, recursive=False):
     t1 = time.time()
     tgz_path = os.path.join(dest_dir, name)
-    if ref:
-        ConanOutput(scope=str(ref) if ref else None).info(f"Compressing {name}")
+
+    out = ConanOutput(scope=scope)
+    out.info(f"Compressing {name}")
 
     if name.endswith("zst"):
         with tarfile.open(tgz_path, "w:zst", level=compresslevel) as tar:  # noqa Py314 only
             for filename, abs_path in sorted(files.items()):
                 tar.add(abs_path, filename, recursive=recursive)
-        ConanOutput().debug(f"{name} compressed in {time.time() - t1} time")
+        out.debug(f"{name} compressed in {time.time() - t1} time")
         return tgz_path
 
     if name.endswith("xz"):
@@ -333,7 +334,7 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursiv
         with tarfile.open(tgz_path, "w:xz", preset=compresslevel, format=tarfile.PAX_FORMAT) as tar:
             for filename, abs_path in sorted(files.items()):
                 tar.add(abs_path, filename, recursive=recursive)
-        ConanOutput().debug(f"{name} compressed in {time.time() - t1} time")
+        out.debug(f"{name} compressed in {time.time() - t1} time")
         return tgz_path
 
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
@@ -343,7 +344,7 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursiv
             tgz.add(abs_path, filename, recursive=recursive)
         tgz.close()
 
-    ConanOutput().debug(f"{name} compressed in {time.time() - t1} time")
+    out.debug(f"{name} compressed in {time.time() - t1} time")
     return tgz_path
 
 
