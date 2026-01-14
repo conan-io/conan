@@ -85,10 +85,10 @@ def test_pkg_verify_basic():
 def test_pkg_sign_no_packages():
     c = TestClient()
     c.save_home({"extensions/plugins/sign/sign.py": PLUGIN_CONTENT})
-    c.run("cache sign other-pkg/*")
-    assert "WARN: No packages to process in the pkglist provided" in c.out
-    c.run("cache verify other-pkg/*")
-    assert "WARN: No packages to process in the pkglist provided" in c.out
+    c.run("cache sign other-pkg/*", assert_error=True)
+    assert "ERROR: No packages to process in the pkglist provided" in c.out
+    c.run("cache verify other-pkg/*", assert_error=True)
+    assert "ERROR: No packages to process in the pkglist provided" in c.out
 
 
 def test_pkg_sign_exception():
@@ -200,17 +200,17 @@ def test_pkg_sign_verify_pkglist():
     c.run("create .")
     # test empty package list
     c.run("list no-exist/* -f json", redirect_stdout="pkglist.json")
-    c.run("cache sign -l pkglist.json")
-    assert "WARN: No packages to process in the pkglist provided" in c.out
-    c.run("cache verify -l pkglist.json")
-    assert "WARN: No packages to process in the pkglist provided" in c.out
+    c.run("cache sign -l pkglist.json", assert_error=True)
+    assert "ERROR: No packages to process in the pkglist provided" in c.out
+    c.run("cache verify -l pkglist.json", assert_error=True)
+    assert "ERROR: No packages to process in the pkglist provided" in c.out
 
     # test incomplete package list
     c.run("list */* -f json", redirect_stdout="pkglist.json")
-    c.run("cache sign -l pkglist.json")
-    assert "WARN: No packages to process in the pkglist provided" in c.out
-    c.run("cache verify -l pkglist.json")
-    assert "WARN: No packages to process in the pkglist provided" in c.out
+    c.run("cache sign -l pkglist.json", assert_error=True)
+    assert "ERROR: No packages to process in the pkglist provided" in c.out
+    c.run("cache verify -l pkglist.json", assert_error=True)
+    assert "ERROR: No packages to process in the pkglist provided" in c.out
 
     # test recipe latest package list
     c.run("list */*#latest -f json", redirect_stdout="pkglist.json")
@@ -229,7 +229,7 @@ def test_pkg_sign_verify_pkglist():
 
     # test packages without prev package list
     c.run("list */*:* -f json", redirect_stdout="pkglist.json")
-    # FIXME: list command is renturning packages without package revision, so packages are not signed
+    # FIXME: list command is returning packages without package revision, so packages are not signed
     c.run("cache sign -l pkglist.json")
     expected = textwrap.dedent("""\
         [Package sign] Results:

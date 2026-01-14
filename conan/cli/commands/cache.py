@@ -55,10 +55,6 @@ def print_package_sign_text(data):
 
     items = {ref: clean_inline(item) for ref, item in results_dict.items() if item}
 
-    if not items:
-        ConanOutput().warning("No packages to process in the pkglist provided")
-        return
-
     # Output
     cli_out_write(f"[Package sign] Results:\n")
     print_serial(items)
@@ -244,6 +240,9 @@ def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
         ref_pattern = ListPattern(args.pattern, package_id="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
 
+    if not dict(package_list.items()):
+        raise ConanException("No packages to process in the pkglist provided")
+
     conan_api.cache.sign(package_list)
     return {
         "conan_error": _get_package_sign_error(package_list),
@@ -278,6 +277,9 @@ def cache_verify(conan_api: ConanAPI, parser, subparser, *args):
     else:
         ref_pattern = ListPattern(args.pattern, package_id="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+
+    if not dict(package_list.items()):
+        raise ConanException("No packages to process in the pkglist provided")
 
     conan_api.cache.verify(package_list)
     return {
