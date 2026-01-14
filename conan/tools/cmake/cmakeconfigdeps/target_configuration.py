@@ -208,6 +208,7 @@ class TargetConfigurationTemplate2:
                                                   comp_name=comp_name, check_type=list) or []
         sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
         target = {"type": "INTERFACE",
+                  "comp_name": comp_name,
                   "includedirs": includedirs,
                   "defines": defines,
                   "requires": requires,
@@ -284,7 +285,12 @@ class TargetConfigurationTemplate2:
                         "link_feature": link_feature
                     }
             else:
-                all_requires = {k: {"link": True, "link_feature": None} for k in libs.keys()}
+                all_requires = {k: {
+                    "link": True,
+                    "link_feature": self._cmakedeps.get_property("cmake_link_feature", self._conanfile,
+                                                                 v.get("comp_name"))
+                }
+                    for k, v in libs.items()}
             # This target might have an alias, so we need to check it
             cmake_target_aliases = self._get_aliases()
             libs[root_target_name] = {"type": "INTERFACE",
@@ -426,10 +432,11 @@ class TargetConfigurationTemplate2:
         {% if lib_info.get("requires") %}
         # Information of transitive dependencies
         {% for require_target, link_info in lib_info["requires"].items() %}
+
         # Requirement {{require_target}} => Full link: {{link_info["link"]}}
-        {%- if link_info["link_feature"] %}
+        {% if link_info["link_feature"] %}
         # Link feature: {{link_info["link_feature"]}}
-        {%- endif %}
+        {% endif %}
 
         {%- if link_info["link"] %}
         # set property allows to append, and lib_info[requires] will iterate
