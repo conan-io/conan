@@ -38,6 +38,8 @@ def test_pkg_sign():
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.run("create .")
     c.run("upload * -r=default -c")
+    assert ("WARN: deprecated: [Package sign] Implicitly signing packages in the upload command "
+            "will be removed. Use 'conan cache sign' command before uploading instead") in c.out
     assert "Signing ref:  pkg/0.1" in c.out
     assert "Signing ref:  pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
     # Make sure it is signing the sources too

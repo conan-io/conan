@@ -70,6 +70,10 @@ class UploadAPI:
         if metadata != ['']:
             gather_metadata(package_list, app.cache, metadata)
         signer = PkgSignaturesPlugin(app.cache, app.cache_folder)
+        if signer.is_sign_configured:
+            ConanOutput().warning("[Package sign] Implicitly signing packages in the upload "
+                                  "command will be removed. Use 'conan cache sign' command before "
+                                  "uploading instead", warn_tag="deprecated")
         # This might add files entries to package_list with signatures
         signer.sign(package_list)
 
