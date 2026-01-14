@@ -139,3 +139,40 @@ def test_create_pip_manager():
 
     assert "RUN: hello-world" in client.out
     assert "Hello Test World!" in client.out
+
+
+def test_pip_manager_env_path_order():
+
+    conanfile_pip = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.system import PipEnv
+        from conan.tools.layout import basic_layout
+        import platform
+        import os
+
+
+        class PipPackage(ConanFile):
+            name = "pip_hello_test"
+            version = "0.1"
+
+            def layout(self):
+                basic_layout(self)
+
+            def generate(self):
+                PipEnv(self).generate()
+        """)
+
+    profile = textwrap.dedent("""
+        [buildenv]
+        PATH=+(path)/opt/profile/test/path/
+        """)
+
+    client = TestClient(path_with_spaces=False)
+    # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
+    client.save({"pip/conanfile.py": conanfile_pip,
+                 "profile": profile})
+    client.run("install pip/conanfile.py -pr:a default -pr:a profile")
+
+    content = client.load("pip/build/conan/conanbuild.sh").split(" && ")
+    assert "conanbuildenv" in content[0]
+    assert "conan_pipenv" in content[1]
