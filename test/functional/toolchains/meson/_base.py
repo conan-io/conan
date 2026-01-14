@@ -20,6 +20,5 @@ def check_binary(t):
         assert "main _MSC_VER19" in t.out
         assert "main _MSVC_LANG2014" in t.out
     elif platform.system() == "Linux":
-        return
         assert f"main {arch_macro['gcc'][host_arch]} defined" in t.out
         assert "main __GNUC__9" in t.out
