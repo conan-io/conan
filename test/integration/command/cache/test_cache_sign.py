@@ -68,7 +68,8 @@ def test_pkg_verify_basic():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.save_home({"extensions/plugins/sign/sign.py": PLUGIN_CONTENT})
     c.run("create .")
-    c.run("cache verify *", assert_error=True)
+    c.run("cache verify *")
+    assert "WARN: [Package sign] Manifest file does not exist in signature folder" in c.out
     assert textwrap.dedent("""
         [Package sign] Results:
 
@@ -79,7 +80,7 @@ def test_pkg_verify_basic():
                 da39a3ee5e6b4b0d3255bfef95601890afd80709
                   revisions
                     0ba8627bd47edc3a501e8f0eb9a79e5e
-                      ERROR: Manifest file does not exist in signature folder""") in c.out
+        """) in c.out
 
 
 def test_pkg_sign_no_packages():
