@@ -1,4 +1,8 @@
+import platform
 import textwrap
+
+import pytest
+
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save_files
 from conan.test.utils.test_files import temp_folder
@@ -141,6 +145,7 @@ def test_create_pip_manager():
     assert "Hello Test World!" in client.out
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Unix paths only")
 def test_pip_manager_env_path_order():
 
     conanfile_pip = textwrap.dedent("""
