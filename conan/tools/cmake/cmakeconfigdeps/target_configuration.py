@@ -433,7 +433,7 @@ class TargetConfigurationTemplate2:
         # Information of transitive dependencies
         {% for require_target, link_info in lib_info["requires"].items() %}
 
-        # Requirement {{require_target}} => Full link: {{link_info["link"]}}
+        # Requirement {{lib}} -> {{require_target}} (Full link: {{link_info["link"]}})
         {% if link_info["link_feature"] %}
         # Link feature: {{link_info["link_feature"]}}
         {% endif %}
