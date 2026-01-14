@@ -70,10 +70,9 @@ def test_pkg_sign_manifest_signatures():
             "export/file1.txt": "file1!",
             "export_sources/file2.txt": "file2!"})
     signer = textwrap.dedent(r"""
+        import json
         import os
-        from conan.internal.util.files import save  # This is only for test purposes
-        from conan.tools.files import load
-        from conan.tools.pkg_signing.plugin import load_manifest, load_signatures
+        from conan.internal.util.files import load, save  # This is only for test purposes
 
         def sign(ref, artifacts_folder, signature_folder, **kwargs):
             save(os.path.join(signature_folder, "pkgsign-manifest.json.sig"), "")
@@ -84,8 +83,11 @@ def test_pkg_sign_manifest_signatures():
                     "sign_artifacts": {"signature": "pkgsign-manifest.json.sig"}}]
 
         def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
-            print(f"Manifest content:\n {load_manifest(signature_folder)}")
-            signatures_content = load_signatures(signature_folder)
+            manifest = load(os.path.join(signature_folder, "pkgsign-manifest.json"))
+            manifest_content = json.loads(manifest)
+            print(f"Manifest content:\n {manifest_content}")
+            signatures = load(os.path.join(signature_folder, "pkgsign-signatures.json"))
+            signatures_content = json.loads(signatures)
             signatures = signatures_content["signatures"]
             for signature in signatures_content["signatures"]:
                 provider = signature.get("provider")
@@ -117,11 +119,11 @@ def test_pkg_sign_canonical():
     c.run("create conanfile2.py")
     c.run("create conanfile3.py")
     signer = textwrap.dedent(r"""
+        import json
         import os
         from conan.errors import ConanException
         from conan.api.output import ConanOutput
-        from conan.internal.util.files import save  # This is only for test purposes
-        from conan.tools.pkg_signing.plugin import get_signatures_filepath, load_signatures
+        from conan.internal.util.files import load, save  # This is only for test purposes
 
         def sign(ref, artifacts_folder, signature_folder, **kwargs):
             ConanOutput().info(f"Signing reference {ref}")
@@ -143,14 +145,14 @@ def test_pkg_sign_canonical():
 
         def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
             ConanOutput().info(f"Verifying reference {ref}")
-            signatures_file_path = get_signatures_filepath(signature_folder)
+            signatures_file_path = os.path.join(signature_folder, "pkgsign-signatures.json")
             if not os.path.isfile(signatures_file_path):
                 raise ConanException("Package is not signed")
 
             if "lib3fail" in str(ref):
                 raise ConanException(f"verify failed for {ref}")
             # Simulate verification
-            signatures = load_signatures(signature_folder)
+            signatures = json.loads(load(os.path.join(signature_folder, "pkgsign-signatures.json")))
             provider = signatures["signatures"][0]["provider"]
             if provider != "conan-client":
                 raise ConanException(f"Failed to verify the package {ref}")
@@ -242,7 +244,6 @@ def test_pkg_sign_exports_sources():
         import os
         from conan.internal.util.files import save  # This is only for test purposes
         from conan.tools.files import load
-        from conan.tools.pkg_signing.plugin import load_manifest, load_signatures
 
         def sign(ref, artifacts_folder, signature_folder, **kwargs):
             save(os.path.join(signature_folder, "pkgsign-manifest.json.sig"), "")

@@ -1,13 +1,11 @@
+import json
 import os
 
 import pytest
 
-from conan.test.utils.tools import temp_folder, save_files
+from conan.test.utils.tools import temp_folder, save_files, load
 
-from conan.tools.pkg_signing.plugin import (_create_manifest_content, get_manifest_filepath,
-                                            load_manifest, _save_manifest, get_signatures_filepath,
-                                            load_signatures, _save_signatures,
-                                            _verify_files_checksums)
+from conan.internal.rest.pkg_sign import _save_manifest, _save_signatures, _verify_files_checksums
 from conan.errors import ConanException
 
 
@@ -22,17 +20,11 @@ def pkg_sign_tools():
     return artifacts_folder, signature_folder
 
 
-def test_get_manifest_filepath(pkg_sign_tools):
-    """Test that get_manifest_filepath returns the correct path for the manifest file."""
-    _, signature_folder = pkg_sign_tools
-    manifest_path = get_manifest_filepath(signature_folder)
-    assert manifest_path == os.path.join(signature_folder, "pkgsign-manifest.json")
-
-
-def test_create_manifest_content_with_empty_files(pkg_sign_tools):
+def test_save_manifest_content_with_empty_files(pkg_sign_tools):
     """Test that _create_manifest_content correctly creates manifest for empty files."""
-    artifacts_folder, _ = pkg_sign_tools
-    content = _create_manifest_content(artifacts_folder)
+    artifacts_folder, signature_folder = pkg_sign_tools
+    _save_manifest(artifacts_folder, signature_folder)
+    content = json.loads(load(os.path.join(signature_folder, "pkgsign-manifest.json")))
 
     # Verify structure
     assert "files" in content
@@ -51,13 +43,14 @@ def test_create_manifest_content_with_empty_files(pkg_sign_tools):
 
 
 def test_create_manifest_content_ignores_directories(pkg_sign_tools):
-    """Test that _create_manifest_content only includes files, not directories."""
-    artifacts_folder, _ = pkg_sign_tools
+    """Test that _save_manifest creates a json file that only includes files, not directories."""
+    artifacts_folder, signature_folder = pkg_sign_tools
     # Create a subdirectory
     subdir = os.path.join(artifacts_folder, "subdir")
     os.mkdir(subdir)
 
-    content = _create_manifest_content(artifacts_folder)
+    _save_manifest(artifacts_folder, signature_folder)
+    content = json.loads(load(os.path.join(signature_folder, "pkgsign-manifest.json")))
     filenames = [f["file"] for f in content["files"]]
 
     # Should not include the directory
@@ -71,11 +64,11 @@ def test_save_load_manifest(pkg_sign_tools):
     _save_manifest(artifacts_folder, signature_folder)
 
     # Verify file exists
-    manifest_path = get_manifest_filepath(signature_folder)
-    assert os.path.exists(manifest_path)
+    manifest_path = os.path.join(signature_folder, "pkgsign-manifest.json")
+    assert os.path.isfile(manifest_path)
 
     # Load and verify content
-    manifest = load_manifest(signature_folder)
+    manifest = json.loads(load(manifest_path))
     assert "files" in manifest
     assert isinstance(manifest["files"], list)
     assert len(manifest["files"]) == 2
@@ -89,13 +82,6 @@ def test_save_load_manifest(pkg_sign_tools):
         assert "file" in file_entry
         assert "sha256" in file_entry
         assert len(file_entry["sha256"]) == 64
-
-
-def test_get_signatures_filepath(pkg_sign_tools):
-    """Test that get_signatures_filepath returns the correct path for the signatures file."""
-    _, signature_folder = pkg_sign_tools
-    signatures_path = get_signatures_filepath(signature_folder)
-    assert signatures_path == os.path.join(signature_folder, "pkgsign-signatures.json")
 
 
 def test_save_load_signatures(pkg_sign_tools):
@@ -115,10 +101,11 @@ def test_save_load_signatures(pkg_sign_tools):
     _save_signatures(signature_folder, signatures)
 
     # Verify file exists
-    assert os.path.exists(get_signatures_filepath(signature_folder))
+    signatures_path = os.path.join(signature_folder, "pkgsign-signatures.json")
+    assert os.path.isfile(signatures_path)
 
     # Load and verify content
-    loaded = load_signatures(signature_folder)
+    loaded = json.loads(load(signatures_path))
     assert loaded["manifest"] == "pkgsign-manifest.json"
     assert len(loaded["signatures"]) == 1
 
@@ -148,7 +135,8 @@ def test_save_signatures_with_multiple_signatures(pkg_sign_tools):
     ]
     _save_signatures(signature_folder, signatures)
 
-    loaded = load_signatures(signature_folder)
+    signatures_path = os.path.join(signature_folder, "pkgsign-signatures.json")
+    loaded = json.loads(load(signatures_path))
     assert len(loaded["signatures"]) == 2
     assert loaded["signatures"][0]["method"] == "gpg"
     assert loaded["signatures"][0]["sign_artifacts"]["signature"] == "pkgsign-manifest.json.gpg"
