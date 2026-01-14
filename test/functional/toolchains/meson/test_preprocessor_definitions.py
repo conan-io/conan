@@ -58,7 +58,7 @@ class TestMesonPreprocessorDefinitionsTest:
     def test_build(self, defines):
         hello_h = gen_function_h(name="hello")
         hello_cpp = gen_function_cpp(name="hello",
-                                     preprocessor=defines.keys())
+                                     preprocessor=defines)
         app = gen_function_cpp(name="main", includes=["hello"], calls=["hello"])
 
         conanfile = self._inject_definitions(self._conanfile_py, defines)
