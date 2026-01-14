@@ -98,8 +98,8 @@ class TestMesonPreprocessorDefinitionsTest:
             if value is None:
                 assert f"{define}" in t.out
             elif isinstance(value, bool):
-                expected_value = "1" if value else "0"
-                assert f"{define}={expected_value}" in t.out
+                value = "1" if value else "0"
+                assert f"{define}: {value}" in t.out
             elif isinstance(value, str):
                 value = value.replace('"', '')
                 assert f"{define}: {value}" in t.out

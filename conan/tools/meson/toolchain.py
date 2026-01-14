@@ -33,7 +33,16 @@ class MesonToolchain:
 
     [constants]
     preprocessor_definitions = [{% for it, value in preprocessor_definitions.items() -%}
-    '-D{{ it }}="{{ value}}"'{%- if not loop.last %}, {% endif %}{% endfor %}]
+    {%- if value is none -%}
+    '-D{{ it }}'
+    {%- elif value is boolean -%}
+    '-D{{ it }}={{ value | int }}'
+    {%- elif value is number -%}
+    '-D{{ it }}={{ value }}'
+    {%- else -%}
+    '-D{{ it }}="{{ value }}"'
+    {%- endif -%}
+    {%- if not loop.last %}, {% endif %}{% endfor %}]
 
     [project options]
     {% for it, value in project_options.items() -%}
