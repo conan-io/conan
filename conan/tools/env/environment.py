@@ -509,7 +509,7 @@ class EnvVars:
         content = f'script_folder="{os.path.abspath(filepath)}"\n' + content
         save(file_location, content)
 
-    def save_script(self, filename):
+    def save_script(self, filename, important=False):
         """
         Saves a script file (bat, sh, ps1) with a launcher to set the environment.
         If the conf "tools.env.virtualenv:powershell" is not an empty string
@@ -519,6 +519,7 @@ class EnvVars:
         :param filename: Name of the file to generate. If the extension is provided, it will generate
                          the launcher script for that extension, otherwise the format will be deduced
                          checking if we are running inside Windows (checking also the subsystem) or not.
+        :param important (boolean): It will be applied after the other scripts to ensure that it has priority.
         """
         name, ext = os.path.splitext(filename)
         if ext:
@@ -565,7 +566,7 @@ class EnvVars:
             self.save_dotenv(f"{name}.env")
 
         if self._scope:
-            register_env_script(self._conanfile, path, self._scope)
+            register_env_script(self._conanfile, path, self._scope, important)
 
 
 def _deactivate_func_name(filename):
@@ -760,7 +761,7 @@ class ProfileEnvironment:
         return result
 
 
-def create_env_script(conanfile, content, filename, scope="build"):
+def create_env_script(conanfile, content, filename, scope="build", important=False):
     """
     Create a file with any content which will be registered as a new script for the defined "scope".
 
@@ -769,15 +770,16 @@ def create_env_script(conanfile, content, filename, scope="build"):
         content (str): The content of the script to write into the file.
         filename (str): The name of the file to be created in the generators folder.
         scope (str): The scope or environment group for which the script will be registered.
+        important (boolean): It will be applied after the other scripts to ensure that it has priority.
     """
     path = os.path.join(conanfile.generators_folder, filename)
     save(path, content)
 
     if scope:
-        register_env_script(conanfile, path, scope)
+        register_env_script(conanfile, path, scope, important)
 
 
-def register_env_script(conanfile, env_script_path, scope="build"):
+def register_env_script(conanfile, env_script_path, scope="build", important=False):
     """
     Add the "env_script_path" to the current list of registered scripts for defined "scope"
     These will be mapped to files:
@@ -787,7 +789,11 @@ def register_env_script(conanfile, env_script_path, scope="build"):
         conanfile: The Conanfile instance.
         env_script_path (str): The full path of the script to register.
         scope (str): The scope ('build' or 'host') for which the script will be registered.
+        important (boolean): It will be applied after the other scripts to ensure that it has priority.
     """
     existing = conanfile.env_scripts.setdefault(scope, [])
     if env_script_path not in existing:
-        existing.append(env_script_path)
+        if important:
+            existing.append(env_script_path)
+        else:
+            existing.insert(0, env_script_path)

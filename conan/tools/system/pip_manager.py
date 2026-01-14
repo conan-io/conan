@@ -31,7 +31,7 @@ class PipEnv:
         """
         env = Environment()
         env.prepend_path("PATH", self.bin_dir)
-        env.vars(self._conanfile).save_script(self.env_name)
+        env.vars(self._conanfile).save_script(self.env_name, important=True)
 
     @staticmethod
     def _default_python():
