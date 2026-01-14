@@ -220,8 +220,6 @@ class CacheAPI:
         if extracted is False:
             with open(path, mode='rb') as file_handler:
                 the_tar = tarfile.open(fileobj=file_handler)
-                fileobj = the_tar.extractfile("pkglist.json")
-                pkglist = fileobj.read()
                 the_tar.extraction_filter = (lambda member, _: member)  # fully_trusted (Py 3.14)
                 the_tar.extractall(path=cache_folder)
                 the_tar.close()
