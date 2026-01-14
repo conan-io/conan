@@ -24,7 +24,11 @@ def set_dirty(folder):
 
 def clean_dirty(folder):
     dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
-    os.remove(dirty_file)
+    try:
+        os.remove(dirty_file)
+    except FileNotFoundError:
+        # File already removed (possibly by another process) - this is fine
+        pass
 
 
 def is_dirty(folder):
@@ -130,6 +134,35 @@ def save(path, content, encoding="utf-8"):
         os.makedirs(dir_path, exist_ok=True)
     with open(path, "w", encoding=encoding, newline="") as handle:
         handle.write(content)
+
+
+def save_if_not_exists(path, content, encoding="utf-8"):
+    """
+    Atomically create a file only if it doesn't exist.
+
+    Uses O_CREAT | O_EXCL to ensure atomic "create if not exists" semantics,
+    avoiding TOCTOU race conditions with check-then-create patterns.
+
+    Params:
+        path: path to write file to
+        content: contents to save in the file
+        encoding: target file text encoding
+
+    Returns:
+        True if file was created, False if it already existed
+    """
+    dir_path = os.path.dirname(path)
+    if dir_path:
+        os.makedirs(dir_path, exist_ok=True)
+    try:
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+        try:
+            os.write(fd, content.encode(encoding))
+        finally:
+            os.close(fd)
+        return True
+    except FileExistsError:
+        return False
 
 
 def save_files(path, files, encoding="utf-8"):
@@ -267,21 +300,30 @@ else:
 
 def remove(path):
     try:
-        assert os.path.isfile(path)
+        # Validate this isn't a directory, but allow file to already be deleted (concurrent operations)
+        if os.path.isdir(path):
+            raise AssertionError(f"remove() called on directory: {path}")
+        if not os.path.exists(path):
+            return  # Already deleted, nothing to do
         os.remove(path)
+    except FileNotFoundError:
+        # File was deleted between the exists check and os.remove() call (concurrent operations)
+        return
     except (IOError, OSError) as e:  # for py3, handle just PermissionError
         if e.errno == errno.EPERM or e.errno == errno.EACCES:
-            os.chmod(path, stat.S_IRWXU)
-            os.remove(path)
+            try:
+                os.chmod(path, stat.S_IRWXU)
+                os.remove(path)
+            except FileNotFoundError:
+                # File deleted after permission error (concurrent operations)
+                pass
             return
         raise
 
 
 def mkdir(path):
     """Recursive mkdir, doesnt fail if already existing"""
-    if os.path.exists(path):
-        return
-    os.makedirs(path)
+    os.makedirs(path, exist_ok=True)
 
 
 def tar_extract(fileobj, destination_dir):

@@ -2,20 +2,202 @@ import hashlib
 import os
 import re
 import shutil
+import sqlite3
 import uuid
 from fnmatch import translate
 from typing import List
 
-from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
-# TODO: Random folders are no longer accessible, how to get rid of them asap?
-# TODO: We need the workflow to remove existing references.
-from conan.internal.cache.db.cache_database import CacheDatabase
-from conan.internal.errors import ConanReferenceAlreadyExistsInDB
+from conan.api.model import PkgReference, RecipeReference
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conan.api.model import PkgReference
-from conan.api.model import RecipeReference
+from conan.internal.cache.concurrency_lock import ConcurrencyLock
+from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
+from conan.internal.cache.db.cache_database import CacheDatabase
+from conan.internal.errors import ConanReferenceAlreadyExistsInDB, ConanReferenceDoesNotExistInDB
 from conan.internal.util.dates import revision_timestamp_now
 from conan.internal.util.files import rmdir, renamedir, mkdir, atomic_replace
+
+
+class CacheOperations:
+    """
+    Encapsulates atomic cache operations with proper locking.
+
+    This class provides a clean separation between locking concerns and cache
+    operations. All methods that modify the cache (DB + filesystem) are atomic
+    and properly synchronized for multi-process/multi-thread access.
+
+    The PkgCache class delegates to this class for operations that require
+    locking, keeping locking logic centralized and testable.
+    """
+
+    def __init__(self, lock, db, base_folder, create_path_fn, full_path_fn):
+        """
+        Args:
+            lock: ConcurrencyLock instance for synchronization
+            db: CacheDatabase instance for DB operations
+            base_folder: Base folder path for the cache
+            create_path_fn: Function to create a path (relative_path, remove_contents) -> None
+            full_path_fn: Function to get full path from relative path
+        """
+        self._lock = lock
+        self._db = db
+        self._base_folder = base_folder
+        self._create_path = create_path_fn
+        self._full_path = full_path_fn
+
+    def create_recipe(self, ref, reference_path):
+        """
+        Atomically create a recipe entry in DB and filesystem.
+
+        Args:
+            ref: RecipeReference with revision set
+            reference_path: Relative path for the recipe
+
+        Raises:
+            ConanReferenceAlreadyExistsInDB: If recipe already exists
+        """
+        with self._lock.recipe_lock(ref):
+            self._db.create_recipe(reference_path, ref)
+            self._create_path(reference_path, remove_contents=False)
+
+    def create_package(self, pref, package_path):
+        """
+        Atomically create a package entry in DB and filesystem.
+
+        Args:
+            pref: PkgReference with revision set
+            package_path: Relative path for the package
+
+        Returns:
+            True if created, False if already exists (another process created it)
+        """
+        with self._lock.package_lock(pref):
+            try:
+                self._db.create_package(package_path, pref, None)
+            except ConanReferenceAlreadyExistsInDB:
+                return False
+            self._create_path(package_path, remove_contents=False)
+            return True
+
+    def remove_recipe(self, layout):
+        """
+        Atomically remove a recipe from filesystem and DB.
+
+        This removes the recipe folder, all associated package folders,
+        and cleans up corresponding DB entries.
+
+        Args:
+            layout: RecipeLayout to remove
+        """
+        with self._lock.recipe_lock(layout.reference):
+            # First, get all package paths for this recipe before removing from DB
+            ref = layout.reference
+            pkg_refs_data = self._db.get_package_references_with_paths(ref)
+
+            # Remove all package folders from disk
+            for pkg_data in pkg_refs_data:
+                pkg_path = pkg_data.get("path")
+                if pkg_path:
+                    full_pkg_path = self._full_path(pkg_path)
+                    rmdir(full_pkg_path)
+
+            # Remove the recipe folder
+            layout.remove()
+
+            # Remove recipe and all packages from DB
+            self._db.remove_recipe(ref)
+
+    def remove_package(self, layout):
+        """
+        Atomically remove a package from filesystem and DB.
+
+        Args:
+            layout: PackageLayout to remove
+        """
+        with self._lock.package_lock(layout.reference):
+            layout.remove()
+            self._db.remove_package(layout.reference)
+
+    def assign_rrev(self, layout, new_path_relative, get_pkg_layout_fn):
+        """
+        Atomically assign a recipe revision by moving temp folder and updating DB.
+
+        Called at export, once the exported recipe revision has been computed.
+
+        Args:
+            layout: RecipeLayout with the temporary folder
+            new_path_relative: Destination relative path based on recipe revision
+            get_pkg_layout_fn: Function to get PackageLayout for a pref (for existing packages)
+
+        Note:
+            This calls layout.relocate() to update the base folder path.
+        """
+        ref = layout.reference
+        new_path_absolute = self._full_path(new_path_relative)
+
+        with self._lock.recipe_lock(ref):
+            if os.path.exists(new_path_absolute):
+                # If the folder exists, export and export_sources
+                # folders are already copied so we can remove the tmp ones
+                rmdir(self._full_path(layout.base_folder))
+            else:
+                # Destination folder is empty, move all the tmp contents
+                renamedir(self._full_path(layout.base_folder), new_path_absolute)
+
+            layout.relocate(os.path.join(self._base_folder, new_path_relative))
+
+            # Update the DB
+            try:
+                self._db.create_recipe(new_path_relative, ref)
+            except ConanReferenceAlreadyExistsInDB:
+                # This was exported before, making it latest again, update timestamp
+                ref = layout.reference
+                self._db.update_recipe_timestamp(ref)
+
+    def assign_prev(self, layout, get_pkg_layout_fn):
+        """
+        Atomically assign a package revision by moving build folder and updating DB.
+
+        Args:
+            layout: PackageLayout with the build folder
+            get_pkg_layout_fn: Function to get PackageLayout for a pref (for existing packages)
+
+        Note:
+            This calls layout.relocate() if package already exists.
+        """
+        pref = layout.reference
+        build_id = layout.build_id
+
+        with self._lock.package_lock(pref):
+            relpath = os.path.relpath(layout.base_folder, self._base_folder)
+            relpath = relpath.replace("\\", "/")  # Uniform for Windows and Linux
+            try:
+                self._db.create_package(relpath, pref, build_id)
+            except ConanReferenceAlreadyExistsInDB:
+                # There was a previous package folder for this same package reference (and prev)
+                pkg_layout = get_pkg_layout_fn(pref)
+                # We remove the old one and move the new one to the path of the previous one
+                # this can be necessary in case of new metadata or build-folder due to build_id()
+                pkg_layout.remove()
+                shutil.move(layout.base_folder, pkg_layout.base_folder)  # clean temp build
+                layout.relocate(pkg_layout.base_folder)  # reuse existing one
+                # Path is unchanged (same pref hash), only update timestamp and build_id
+                self._db.update_package_timestamp(pref, build_id=build_id)
+
+    def source_lock(self, ref):
+        """
+        Get a context manager for source operations requiring locking.
+
+        This is used by external callers (like BinaryInstaller) that need to
+        protect source folder operations.
+
+        Args:
+            ref: RecipeReference to lock source operations for
+
+        Returns:
+            Context manager that holds the source lock
+        """
+        return self._lock.source_lock(ref)
 
 
 class PkgCache:
@@ -32,12 +214,88 @@ class PkgCache:
             db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
             self._base_folder = os.path.abspath(self._store_folder)
             self._db = CacheDatabase(filename=db_filename)
+            self._lock = ConcurrencyLock(self._store_folder)
+            # Create the operations layer that encapsulates locking + DB + filesystem
+            self._ops = CacheOperations(
+                lock=self._lock,
+                db=self._db,
+                base_folder=self._base_folder,
+                create_path_fn=self._create_path,
+                full_path_fn=self._full_path
+            )
         except Exception as e:
             raise ConanException(f"Couldn't initialize storage in {self._store_folder}: {e}")
 
     @property
     def store(self):
         return self._base_folder
+
+    def source_operation(self, ref):
+        """
+        Context manager for source operations requiring locking.
+
+        Use this when performing source folder operations (source() method,
+        exports_sources retrieval) to prevent race conditions.
+
+        Args:
+            ref: RecipeReference to lock source operations for
+
+        Returns:
+            Context manager that holds the source lock
+
+        Example:
+            with cache.source_operation(ref):
+                # Perform source operations safely
+                retrieve_exports_sources(...)
+                config_source(...)
+        """
+        return self._ops.source_lock(ref)
+
+    def package_lock(self, pref):
+        """
+        Context manager for package build operations requiring locking.
+
+        Use this when performing package-specific operations (source copying,
+        build operations, packaging) to prevent race conditions when multiple
+        processes build the same package simultaneously.
+
+        Args:
+            pref: PkgReference to lock package operations for
+
+        Returns:
+            Context manager that holds the package lock
+
+        Example:
+            with cache.package_lock(pref):
+                # Perform package operations safely
+                copy_sources(...)
+                build(...)
+                package(...)
+        """
+        return self._lock.package_lock(pref)
+
+    def recipe_lock(self, ref):
+        """
+        Context manager for recipe update operations requiring locking.
+
+        Use this when performing recipe-specific operations (downloading,
+        timestamp updates, checking for updates) to prevent race conditions
+        when multiple processes update/download the same recipe simultaneously.
+
+        Args:
+            ref: RecipeReference to lock recipe operations for
+
+        Returns:
+            Context manager that holds the recipe lock
+
+        Example:
+            with cache.recipe_lock(ref):
+                # Check for updates and download safely
+                if needs_update():
+                    download_recipe(...)
+                    update_timestamp(...)
+        """
+        return self._lock.recipe_lock(ref)
 
     @property
     def temp_folder(self):
@@ -90,10 +348,12 @@ class PkgCache:
         """
         assert ref.revision is None, "Recipe revision should be None"
         assert ref.timestamp is None
-        h = ref.name[:5] + PkgCache._short_hash_path(ref.repr_notime())
+        # Use UUID to ensure unique temp folder for concurrent exports of the same ref
+        random_id = str(uuid.uuid4())
+        h = ref.name[:5] + PkgCache._short_hash_path(ref.repr_notime() + random_id)
         reference_path = os.path.join("t", h)
         self._create_path(reference_path)
-        return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
+        return RecipeLayout(ref, os.path.join(self._base_folder, reference_path), self._lock)
 
     def create_build_pkg_layout(self, pref: PkgReference):
         # Temporary layout to build a new package, when we don't know the package revision yet
@@ -106,7 +366,7 @@ class PkgCache:
         h = pref.ref.name[:5] + PkgCache._short_hash_path(pref.repr_notime() + random_id)
         package_path = os.path.join("b", h)
         self._create_path(package_path)
-        return PackageLayout(pref, os.path.join(self._base_folder, package_path))
+        return PackageLayout(pref, os.path.join(self._base_folder, package_path), self._lock)
 
     def recipe_layout(self, ref: RecipeReference):
         """ the revision must exists, the folder must exist
@@ -118,7 +378,7 @@ class PkgCache:
         ref_data = self._db.get_recipe(ref)
         ref_path = ref_data.get("path")
         ref = ref_data.get("ref")  # new revision with timestamp
-        return RecipeLayout(ref, os.path.join(self._base_folder, ref_path))
+        return RecipeLayout(ref, os.path.join(self._base_folder, ref_path), self._lock)
 
     def recipe_layout_latest(self, ref: RecipeReference):
         """ the revision must be None, the folder must exist
@@ -129,7 +389,7 @@ class PkgCache:
         ref_data = self._db.get_latest_recipe(ref)
         ref_path = ref_data.get("path")
         ref = ref_data.get("ref")  # new revision with timestamp
-        return RecipeLayout(ref, os.path.join(self._base_folder, ref_path))
+        return RecipeLayout(ref, os.path.join(self._base_folder, ref_path), self._lock)
 
     def get_latest_recipe_revision(self, ref: RecipeReference) -> RecipeReference:
         assert ref.revision is None
@@ -151,7 +411,8 @@ class PkgCache:
         pref_data = self._db.try_get_package(pref)
         pref_path = pref_data.get("path")
         # we use abspath to convert cache forward slash in Windows to backslash
-        return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
+        return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)),
+                           self._lock)
 
     def pkg_layout_latest(self, pref: PkgReference):
         """
@@ -168,30 +429,42 @@ class PkgCache:
         pref_path = pref_data.get("path")
         pref = pref_data.get("pref")  # new revision with timestamp
         # we use abspath to convert cache forward slash in Windows to backslash
-        return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
+        base_path = os.path.abspath(os.path.join(self._base_folder, pref_path))
+        # Verify the package folder actually exists on disk
+        # This handles the case where a previous download was interrupted
+        pkg_folder = os.path.join(base_path, "p")
+        if not os.path.isdir(pkg_folder):
+            # DB entry exists but folder doesn't - treat as missing
+            return None
+        return PackageLayout(pref, base_path, self._lock)
 
     def create_ref_layout(self, ref: RecipeReference):
         """ called exclusively by:
         - RemoteManager.get_recipe()
         - cache restore
+
+        Raises:
+            ConanReferenceAlreadyExistsInDB: If recipe already exists (caught by proxy for updates)
         """
         assert ref.revision, "Recipe revision must be known to create the package layout"
         reference_path = self._get_path(ref)
-        self._db.create_recipe(reference_path, ref)
-        self._create_path(reference_path, remove_contents=False)
-        return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
+        self._ops.create_recipe(ref, reference_path)
+        return RecipeLayout(ref, os.path.join(self._base_folder, reference_path), self._lock)
 
     def create_pkg_layout(self, pref: PkgReference):
         """ called by:
+         - RemoteManager.get_package()
          - cache restore
+        Returns None if the package already exists (another process created it)
         """
         assert pref.ref.revision, "Recipe revision must be known to create the package layout"
         assert pref.package_id, "Package id must be known to create the package layout"
         assert pref.revision, "Package revision should be known to create the package layout"
         package_path = self._get_path_pref(pref)
-        self._db.create_package(package_path, pref, None)
-        self._create_path(package_path, remove_contents=False)
-        return PackageLayout(pref, os.path.join(self._base_folder, package_path))
+        if not self._ops.create_package(pref, package_path):
+            # Another process already created this package, skip
+            return None
+        return PackageLayout(pref, os.path.join(self._base_folder, package_path), self._lock)
 
     def get_random_path(self):
         random_id = str(uuid.uuid4())
@@ -207,8 +480,28 @@ class PkgCache:
         assert pref.revision, "Package revision should be known to create the package layout"
         package_path = self._get_path_pref(pref)
         path = self._full_path(package_path)
-        atomic_replace(current_folder, path, f"{pref.repr_notime()} package")
-        self._db.create_package(package_path, pref, None)
+
+        # Hold package lock during the entire operation
+        # This ensures waiting processes don't return until both DB and folder are ready
+        # Note: We must release lock quickly to avoid blocking other operations like LRU updates
+        with self.package_lock(pref):
+            # Create DB entry first, BEFORE moving folder
+            # This prevents the race where folder exists but DB doesn't
+            # If another process already created the DB entry, this will raise
+            # and we'll handle it in the caller's exception handler
+            self._db.create_package(package_path, pref, None)
+
+            try:
+                # atomic_replace is atomic at filesystem level
+                # If it fails (destination exists), we need to clean up the DB entry
+                atomic_replace(current_folder, path, f"{pref.repr_notime()} package")
+            except Exception:
+                # atomic_replace failed, remove the DB entry we just created
+                try:
+                    self._db.remove_package(pref)
+                except Exception:
+                    pass  # Best effort cleanup
+                raise
 
     def update_recipe_timestamp(self, ref: RecipeReference):
         """ when the recipe already exists in cache, but we get a new timestamp from a server
@@ -229,7 +522,36 @@ class PkgCache:
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache
-        return self._db.exists_prev(pref)
+        # Also verify the package folder actually exists on disk
+        if not self._db.exists_prev(pref):
+            return False
+        # DB entry exists, verify the folder also exists
+        # This handles the case where a previous download was interrupted after
+        # creating the DB entry but before completing the folder creation
+        try:
+            pref_data = self._db.try_get_package(pref)
+            pref_path = pref_data.get("path")
+            pkg_folder = os.path.join(self._base_folder, pref_path, "p")
+            if os.path.isdir(pkg_folder):
+                return True
+            # Folder doesn't exist, this is an orphaned DB entry
+            # Don't clean it up here (might cause race conditions), just return False
+            # so the package gets re-downloaded
+            return False
+        except ConanReferenceDoesNotExistInDB as e:
+            # Expected race condition - another process deleted the entry between
+            # exists_prev check and try_get_package call
+            ConanOutput().debug(f"Package entry removed during check for {pref!r}: {e}")
+            return False
+        except sqlite3.OperationalError as e:
+            # Transient database issues (locked, busy, etc.) - expected in concurrent scenarios
+            ConanOutput().debug(f"Database busy checking package {pref!r}: {e}")
+            return False
+        except sqlite3.Error as e:
+            # Unexpected database error (corruption, programming error, etc.)
+            # Log at warning level as this indicates a serious issue
+            ConanOutput().warning(f"Database error checking package {pref!r}: {e}")
+            return False
 
     def get_latest_package_revision(self, pref: PkgReference) -> PkgReference:
         # This is no longer needed by the Graph resolution functionality, only by ListAPI
@@ -248,40 +570,18 @@ class PkgCache:
         return self._db.get_matching_build_id(ref, build_id)
 
     def remove_recipe_layout(self, layout: RecipeLayout):
-        layout.remove()
-        # FIXME: This is clearing package binaries from DB, but not from disk/layout
-        self._db.remove_recipe(layout.reference)
+        self._ops.remove_recipe(layout)
 
     def remove_package_layout(self, layout: PackageLayout):
-        layout.remove()
-        self._db.remove_package(layout.reference)
+        self._ops.remove_package(layout)
 
     def remove_build_id(self, pref):
         self._db.remove_build_id(pref)
 
     def assign_prev(self, layout: PackageLayout):
         pref = layout.reference
-
-        build_id = layout.build_id
         pref.timestamp = revision_timestamp_now()
-        # Wait until it finish to really update the DB
-        relpath = os.path.relpath(layout.base_folder, self._base_folder)
-        relpath = relpath.replace("\\", "/")  # Uniform for Windows and Linux
-        try:
-            self._db.create_package(relpath, pref, build_id)
-        except ConanReferenceAlreadyExistsInDB:
-            # TODO: Optimize this into 1 single UPSERT operation
-            # There was a previous package folder for this same package reference (and prev)
-            pkg_layout = self.pkg_layout(pref)
-            # We remove the old one and move the new one to the path of the previous one
-            # this can be necessary in case of new metadata or build-folder because of "build_id()"
-            pkg_layout.remove()
-            shutil.move(layout.base_folder, pkg_layout.base_folder)  # clean unused temporary build
-            layout._base_folder = pkg_layout.base_folder  # reuse existing one
-            # TODO: The relpath would be the same as the previous one, it shouldn't be ncessary to
-            #  update it, the update_package_timestamp() can be simplified and path dropped
-            relpath = os.path.relpath(layout.base_folder, self._base_folder)
-            self._db.update_package_timestamp(pref, path=relpath, build_id=build_id)
+        self._ops.assign_prev(layout, self.pkg_layout)
 
     def assign_rrev(self, layout: RecipeLayout):
         """ called at export, once the exported recipe revision has been computed, it
@@ -291,30 +591,10 @@ class PkgCache:
         assert ref.timestamp is None, "Timestamp no defined yet"
         ref.timestamp = revision_timestamp_now()
 
-        # TODO: here maybe we should block the recipe and all the packages too
         # This is the destination path for the temporary created export and export_sources folders
         # with the hash created based on the recipe revision
         new_path_relative = self._get_path(ref)
-
-        new_path_absolute = self._full_path(new_path_relative)
-
-        if os.path.exists(new_path_absolute):
-            # If there source folder exists, export and export_sources
-            # folders are already copied so we can remove the tmp ones
-            rmdir(self._full_path(layout.base_folder))
-        else:
-            # Destination folder is empty, move all the tmp contents
-            renamedir(self._full_path(layout.base_folder), new_path_absolute)
-
-        layout._base_folder = os.path.join(self._base_folder, new_path_relative)
-
-        # Wait until it finish to really update the DB
-        try:
-            self._db.create_recipe(new_path_relative, ref)
-        except ConanReferenceAlreadyExistsInDB:
-            # This was exported before, making it latest again, update timestamp
-            ref = layout.reference
-            self._db.update_recipe_timestamp(ref)
+        self._ops.assign_rrev(layout, new_path_relative, self.pkg_layout)
 
     def get_recipe_lru(self, ref):
         return self._db.get_recipe_lru(ref)

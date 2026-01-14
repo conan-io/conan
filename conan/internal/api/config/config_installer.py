@@ -7,6 +7,7 @@ from urllib.parse import urlparse, urlsplit
 from contextlib import contextmanager
 
 from conan.api.output import ConanOutput
+from conan.internal.cache.concurrency_lock import ConcurrencyLock
 from conan.internal.paths import find_file_walk_up
 from conan.internal.rest.file_downloader import FileDownloader
 from conan.errors import ConanException
@@ -110,22 +111,34 @@ def _filecopy(src, filename, dst):
     # https://github.com/conan-io/conan/issues/6556
     # This is just a local convenience for "conan config install", using copyfile to avoid
     # copying with permissions that later cause bugs
-    src = os.path.join(src, filename)
-    dst = os.path.join(dst, filename)
-    # Clear the destination file
-    if os.path.exists(dst):
-        if os.path.isdir(dst):  # dst was a directory and now src is a file
-            rmdir(dst)
-        else:
-            remove(dst)
-    shutil.copyfile(src, dst)
+    # Uses atomic write pattern (tmp + replace) to prevent partial corruption
+    src_path = os.path.join(src, filename)
+    dst_path = os.path.join(dst, filename)
+
+    # Clear the destination file if it's a directory
+    if os.path.exists(dst_path) and os.path.isdir(dst_path):
+        rmdir(dst_path)
+
+    # Atomic copy: write to .tmp then replace
+    tmp_path = dst_path + ".tmp"
+    shutil.copyfile(src_path, tmp_path)
+    os.replace(tmp_path, dst_path)
 
 
 def _process_file(directory, filename, config, cache_folder, folder):
     output = ConanOutput()
     if filename == "settings.yml":
         output.info("Installing settings.yml")
-        _filecopy(directory, filename, cache_folder)
+        # Lock settings.yml during config install to prevent concurrent read races
+        lock_manager = ConcurrencyLock(cache_folder)
+        with lock_manager.config_lock("settings.yml"):
+            _filecopy(directory, filename, cache_folder)
+    elif filename == "global.conf":
+        output.info("Installing global.conf")
+        # Lock global.conf during config install to prevent concurrent read/write races
+        lock_manager = ConcurrencyLock(cache_folder)
+        with lock_manager.config_lock("global.conf"):
+            _filecopy(directory, filename, cache_folder)
     elif filename == "remotes.json":
         output.info("Defining remotes from remotes.json")
         _filecopy(directory, filename, cache_folder)
@@ -212,6 +225,17 @@ def _is_compressed_file(filename):
 
 def configuration_install(cache_folder, requester, uri, verify_ssl, config_type=None,
                           args=None, source_folder=None, target_folder=None, ignore=None):
+    # Protect entire config install operation with inter-process and thread-safe locking
+    # This prevents concurrent config install operations from corrupting config files
+    lock_manager = ConcurrencyLock(cache_folder)
+    with lock_manager.config_lock("config_install"):
+        _configuration_install_unlocked(cache_folder, requester, uri, verify_ssl,
+                                       config_type, args, source_folder, target_folder, ignore)
+
+
+def _configuration_install_unlocked(cache_folder, requester, uri, verify_ssl, config_type=None,
+                                    args=None, source_folder=None, target_folder=None, ignore=None):
+    """Internal config install without locking - caller must hold config_install lock"""
     config = _ConfigOrigin(uri, config_type, verify_ssl, args, source_folder, target_folder)
     try:
         if config.type == "git":

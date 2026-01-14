@@ -4,6 +4,7 @@ import os
 import base64
 
 from conan.internal.api.audit.providers import ConanCenterProvider, PrivateProvider
+from conan.internal.cache.concurrency_lock import ConcurrencyLock
 from conan.errors import ConanException
 from conan.internal.api.remotes.encrypt import encode, decode
 from conan.internal.model.recipe_ref import RecipeReference
@@ -22,6 +23,7 @@ class AuditAPI:
         self._conan_api = conan_api
         self._home_folder = conan_api.home_folder
         self._providers_path = os.path.join(self._home_folder, "audit_providers.json")
+        self._lock = ConcurrencyLock(self._home_folder)
         self._provider_cls = {
             "conan-center-proxy": ConanCenterProvider,
             "private": PrivateProvider,
@@ -107,32 +109,34 @@ class AuditAPI:
         """
         Add a provider.
         """
-        providers = _load_providers(self._providers_path)
-        if name in providers:
-            raise ConanException(f"Provider '{name}' already exists")
-
         if provider_type not in self._provider_cls:
             raise ConanException(f"Provider type '{provider_type}' not found")
 
-        providers[name] = {
-            "name": name,
-            "url": url,
-            "type": provider_type
-        }
+        with self._lock.config_lock("audit_providers.json"):
+            providers = _load_providers_unlocked(self._providers_path)
+            if name in providers:
+                raise ConanException(f"Provider '{name}' already exists")
 
-        _save_providers(self._providers_path, providers)
+            providers[name] = {
+                "name": name,
+                "url": url,
+                "type": provider_type
+            }
+
+            _save_providers_unlocked(self._providers_path, providers)
 
     def remove_provider(self, provider_name):
         """
         Remove a provider.
         """
-        providers = _load_providers(self._providers_path)
-        if provider_name not in providers:
-            raise ConanException(f"Provider '{provider_name}' not found")
+        with self._lock.config_lock("audit_providers.json"):
+            providers = _load_providers_unlocked(self._providers_path)
+            if provider_name not in providers:
+                raise ConanException(f"Provider '{provider_name}' not found")
 
-        del providers[provider_name]
+            del providers[provider_name]
 
-        _save_providers(self._providers_path, providers)
+            _save_providers_unlocked(self._providers_path, providers)
 
     def auth_provider(self, provider, token):
         """
@@ -141,16 +145,24 @@ class AuditAPI:
         if not provider:
             raise ConanException("Provider not found")
 
-        providers = _load_providers(self._providers_path)
+        with self._lock.config_lock("audit_providers.json"):
+            providers = _load_providers_unlocked(self._providers_path)
 
-        assert provider.name in providers
-        encode_token = encode(token, CYPHER_KEY).encode()
-        providers[provider.name]["token"] = base64.standard_b64encode(encode_token).decode()
+            assert provider.name in providers
+            encode_token = encode(token, CYPHER_KEY).encode()
+            providers[provider.name]["token"] = base64.standard_b64encode(encode_token).decode()
+            _save_providers_unlocked(self._providers_path, providers)
+
         setattr(provider, "token", token)
-        _save_providers(self._providers_path, providers)
 
 
 def _load_providers(providers_path):
+    """Load providers from file, creating defaults if file doesn't exist.
+
+    Note: This function is used for read-only operations (get_provider, list_providers)
+    and may create the file if it doesn't exist. For write operations that need
+    atomicity, use _load_providers_unlocked inside a config_lock.
+    """
     if not os.path.exists(providers_path):
         default_providers = {
             CONAN_CENTER_AUDIT_PROVIDER_NAME: {
@@ -159,11 +171,52 @@ def _load_providers(providers_path):
             }
         }
         save(providers_path, json.dumps(default_providers, indent=4))
+        os.chmod(providers_path, 0o600)
+
+    return json.loads(load(providers_path))
+
+
+def _load_providers_unlocked(providers_path):
+    """Load providers without locking - caller must hold the config lock.
+
+    Creates default providers file if it doesn't exist.
+    """
+    if not os.path.exists(providers_path):
+        default_providers = {
+            CONAN_CENTER_AUDIT_PROVIDER_NAME: {
+                "url": "https://audit.conan.io/",
+                "type": "conan-center-proxy"
+            }
+        }
+        _save_providers_unlocked(providers_path, default_providers)
 
     return json.loads(load(providers_path))
 
 
 def _save_providers(providers_path, providers):
+    """Save providers to file (legacy, non-atomic)."""
     save(providers_path, json.dumps(providers, indent=4))
     # Make readable & writeable only by current user
-    os.chmod(providers_path, 0o600)
+    # Handle race condition where file might be deleted by another process
+    try:
+        os.chmod(providers_path, 0o600)
+    except FileNotFoundError:
+        # File was deleted by another process (e.g., config clean), which is OK
+        pass
+
+
+def _save_providers_unlocked(providers_path, providers):
+    """Save providers atomically without locking - caller must hold the config lock.
+
+    Uses atomic file replacement to avoid corruption if interrupted.
+    """
+    tmp_path = providers_path + ".tmp"
+    save(tmp_path, json.dumps(providers, indent=4))
+    os.replace(tmp_path, providers_path)
+    # Make readable & writeable only by current user
+    # Handle race condition where file might be deleted by another process
+    try:
+        os.chmod(providers_path, 0o600)
+    except FileNotFoundError:
+        # File was deleted by another process (e.g., config clean), which is OK
+        pass

@@ -1,4 +1,5 @@
 import json
+import os
 
 import yaml
 
@@ -29,8 +30,14 @@ def loadconanconfig_yml(filename):
 
 
 def saveconanconfig(filename, config_versions):
+    """Save config versions to file atomically.
+
+    Uses atomic file replacement to avoid corruption if interrupted.
+    """
     try:
         config_versions = [r.repr_notime() for r in config_versions]
-        save(filename, json.dumps({"config_version": config_versions}, indent=4))
+        tmp_file = filename + ".tmp"
+        save(tmp_file, json.dumps({"config_version": config_versions}, indent=4))
+        os.replace(tmp_file, filename)
     except Exception as e:
         raise ConanException(f"Error while saving config file {filename}: {str(e)}")

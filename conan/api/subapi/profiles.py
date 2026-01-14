@@ -1,6 +1,7 @@
 import os
 
 from conan.api.output import ConanOutput
+from conan.internal.cache.concurrency_lock import ConcurrencyLock
 from conan.internal.cache.home_paths import HomePaths
 
 from conan.internal.loader import load_python_file
@@ -8,6 +9,7 @@ from conan.internal.api.profile.profile_loader import ProfileLoader
 from conan.internal.errors import scoped_traceback
 from conan.errors import ConanException
 from conan.internal.model.profile import Profile
+from conan.internal.util.files import save
 
 DEFAULT_PROFILE_NAME = "default"
 
@@ -18,6 +20,7 @@ class ProfilesAPI:
         self._conan_api = conan_api
         self._api_helpers = api_helpers
         self._home_paths = HomePaths(conan_api.home_folder)
+        self._lock = ConcurrencyLock(conan_api.home_folder)
 
     def get_default_host(self):
         """
@@ -161,6 +164,53 @@ class ProfilesAPI:
         # TODO: This profile is very incomplete, it doesn't have the processed_settings
         #  good enough at the moment for designing the API interface, but to improve
         return profile
+
+    def detect_and_save(self, profile_name="default", force=False, exist_ok=False):
+        """
+        Detect and save a profile atomically with proper locking.
+
+        This method provides thread-safe and process-safe profile detection and saving.
+        It protects against race conditions when multiple processes try to create or
+        overwrite the same profile simultaneously.
+
+        :param profile_name: Name of the profile to create (default: "default")
+        :param force: If True, overwrite existing profile
+        :param exist_ok: If True, do nothing if profile already exists
+        :return: The detected Profile object if created, None if skipped (exist_ok=True)
+        :raises ConanException: If profile already exists and neither force nor exist_ok is True
+        """
+        profile_pathname = self.get_path(profile_name, os.getcwd(), exists=False)
+
+        # Use config_lock to serialize access to this profile file
+        # Lock name is per-profile to allow concurrent detection of different profiles
+        lock_name = f"profile_{profile_name.replace(os.sep, '_')}"
+
+        with self._lock.config_lock(lock_name):
+            # Check existence inside lock to avoid TOCTOU race
+            if os.path.exists(profile_pathname):
+                if exist_ok:
+                    ConanOutput().info(f"Profile '{profile_name}' already exists, skipping detection")
+                    return None
+                if not force:
+                    raise ConanException(f"Profile '{profile_pathname}' already exists")
+
+            # Detect profile
+            detected_profile = self.detect()
+            contents = detected_profile.dumps()
+
+            # Create directory if needed (inside lock)
+            dir_path = os.path.dirname(profile_pathname)
+            if dir_path:
+                os.makedirs(dir_path, exist_ok=True)
+
+            # Write file atomically using temp file + rename pattern
+            # This prevents other processes from seeing partial file contents
+            # Same pattern used in remotes.py:340-341
+            tmp_path = profile_pathname + ".tmp"
+            save(tmp_path, contents)
+            os.replace(tmp_path, profile_pathname)
+
+            return detected_profile
 
     def _load_profile_plugin(self):
         profile_plugin = self._home_paths.profile_plugin_path

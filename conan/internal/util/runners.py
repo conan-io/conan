@@ -48,7 +48,12 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
 
     with pyinstaller_bundle_env_cleaned():
         try:
-            proc = subprocess.Popen(command, shell=shell, stdout=out, stderr=err, cwd=cwd)
+            # close_fds=True prevents file descriptors (including lock files) from being inherited
+            # by the subprocess, which can cause hangs if locks use file descriptors
+            # stdin=subprocess.DEVNULL prevents subprocess from reading stdin, which can hang
+            # when running in environments without proper stdin (like pytest-xdist workers)
+            proc = subprocess.Popen(command, shell=shell, stdin=subprocess.DEVNULL,
+                                   stdout=out, stderr=err, cwd=cwd, close_fds=True)
         except Exception as e:
             raise ConanException("Error while running cmd\nError: %s" % (str(e)))
 
@@ -65,7 +70,8 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
 def detect_runner(command):
     # Running detect.py automatic detection of profile
     proc = subprocess.Popen(command, shell=True, bufsize=1, universal_newlines=True,
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
 
     output_buffer = []
     while True:
@@ -88,7 +94,7 @@ def check_output_runner(cmd, stderr=None, ignore_error=False):
         # We don't want stderr to print warnings that will mess the pristine outputs
         stderr = stderr or subprocess.PIPE
         command = '{} > "{}"'.format(cmd, tmp_file)
-        process = subprocess.Popen(command, shell=True, stderr=stderr)
+        process = subprocess.Popen(command, shell=True, stdin=subprocess.DEVNULL, stderr=stderr)
         stdout, stderr = process.communicate()
 
         if process.returncode and not ignore_error:

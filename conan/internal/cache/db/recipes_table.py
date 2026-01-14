@@ -41,7 +41,8 @@ class RecipesDBTable(BaseDbTable):
         assert ref.revision is not None
         assert ref.timestamp is not None
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
-        lru = timestamp_now()
+        # Convert to int to match column type and avoid float comparison issues
+        lru = int(timestamp_now())
         with self.db_connection() as conn:
             try:
                 conn.execute(f'INSERT INTO {self.table_name} '
@@ -61,14 +62,26 @@ class RecipesDBTable(BaseDbTable):
             conn.execute(query)
 
     def update_lru(self, refs):
-        params = [(str(ref), ref.revision) for ref in refs]
+        if not refs:
+            return
+        # Filter out refs without revisions - they cannot be updated
+        params = [(str(ref), ref.revision) for ref in refs if ref.revision is not None]
+        if not params:
+            return
         where_clause = f"{self.columns.reference} = ? AND {self.columns.rrev} = ?"
-        lru = timestamp_now()
+        # Convert to int to match column type and avoid float comparison issues
+        lru = int(timestamp_now())
         query = f"UPDATE {self.table_name} " \
-                f"SET {self.columns.lru} = '{lru}' " \
+                f"SET {self.columns.lru} = {lru} " \
                 f"WHERE {where_clause};"
         with self.db_connection() as conn:
-            conn.executemany(query, params)
+            cursor = conn.executemany(query, params)
+            # In SQLite, executemany doesn't return rowcount in autocommit mode,
+            # but we can at least ensure the query executed without error
+            # Force WAL checkpoint to ensure changes are immediately visible to other processes
+            # Under heavy parallel load, this prevents race conditions where one process
+            # updates LRU but another process immediately queries and doesn't see the update
+            conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
 
     def remove(self, ref: RecipeReference):
         where_clause = self._where_clause(ref)

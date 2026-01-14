@@ -187,6 +187,10 @@ class CacheAPI:
         Remove non critical folders from the cache, like source, build and download (.tgz store)
         folders.
 
+        This method uses proper locking to prevent race conditions when multiple processes
+        access the cache concurrently. Each operation acquires the appropriate lock before
+        modifying filesystem or database state.
+
         :param package_list: the package lists that should be cleaned
         :param source: boolean, remove the "source" folder if True
         :param build: boolean, remove the "build" folder if True
@@ -197,6 +201,10 @@ class CacheAPI:
         """
 
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
+
+        # Temp folder cleaning: No lock needed
+        # Rationale: UUID-based folder names make collisions extremely unlikely
+        # These are orphaned/failed operations, safe to clean opportunistically
         if temp:
             rmdir(cache.temp_folder)
             # Clean those build folders that didn't succeed to create a package and wont be in DB
@@ -208,6 +216,7 @@ class CacheAPI:
                     manifest = os.path.join(folder, "p", "conanmanifest.txt")
                     info = os.path.join(folder, "p", "conaninfo.txt")
                     if not os.path.exists(manifest) or not os.path.exists(info):
+                        # These are failed builds, orphaned, safe to delete
                         rmdir(folder)
 
         # Temporary name (not named) until we have clarity if this is the same as the "t"
@@ -215,6 +224,8 @@ class CacheAPI:
         if os.path.exists(os.path.join(cache.store, "d")):
             rmdir(os.path.join(cache.store, "d"))
 
+        # Backup sources cleaning: No lock needed
+        # Rationale: These are in a separate download cache folder
         if backup_sources:
             backup_files = self._conan_api.cache.get_backup_sources(package_list, exclude=False,
                                                                     only_upload=False)
@@ -225,19 +236,35 @@ class CacheAPI:
         for ref, packages in package_list.items():
             ConanOutput(ref.repr_notime()).verbose("Cleaning recipe cache contents")
             ref_layout = cache.recipe_layout(ref)
+
+            # Source folder: Use source_lock to prevent concurrent source operations
+            # Lock level: SOURCE (30) - protects source() method and exports_sources retrieval
             if source:
-                rmdir(ref_layout.source())
+                with cache._lock.source_lock(ref):
+                    rmdir(ref_layout.source())
+
+            # Download export folder: Use recipe_lock for recipe-level download folder
+            # Lock level: RECIPE (20) - protects recipe-level resources
             if download:
-                rmdir(ref_layout.download_export())
+                with cache._lock.recipe_lock(ref):
+                    rmdir(ref_layout.download_export())
+
+            # Package-level operations: Each package locked independently
             for pref in packages:
                 ConanOutput(pref).verbose("Cleaning package cache contents")
                 pref_layout = cache.pkg_layout(pref)
-                if build:
-                    rmdir(pref_layout.build())
-                    # It is important to remove the "build_id" identifier if build-folder is removed
-                    cache.remove_build_id(pref)
-                if download:
-                    rmdir(pref_layout.download_package())
+
+                # Package lock protects both filesystem AND database operations
+                # Lock level: PACKAGE (40) - highest level lock
+                # CRITICAL: build folder deletion and remove_build_id() must be atomic
+                with cache._lock.package_lock(pref):
+                    if build:
+                        rmdir(pref_layout.build())
+                        # It is important to remove the "build_id" identifier if build-folder is removed
+                        # This DB write MUST be under the same lock as the folder deletion
+                        cache.remove_build_id(pref)
+                    if download:
+                        rmdir(pref_layout.download_package())
 
     def save(self, package_list: PackagesList, path, no_source=False) -> None:
         """Create a compressed archive with recipes and packages from the Conan cache that
@@ -302,12 +329,17 @@ class CacheAPI:
                     tar_files[metadata_folder] = os.path.join(cache_folder, metadata_folder)
 
         # Create a temporary file in order to reuse compress_files functionality
+        # Use a unique temp file to avoid race conditions when running in parallel
         serialized = json.dumps(package_list.serialize(), indent=2)
-        pkglist_path = os.path.join(tempfile.gettempdir(), "pkglist.json")
-        save(pkglist_path, serialized)
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', prefix='pkglist_',
+                                         delete=False) as tmp_file:
+            pkglist_path = tmp_file.name
+            tmp_file.write(serialized)
         tar_files["pkglist.json"] = pkglist_path
-        compress_files(tar_files, tgz_name, os.path.dirname(path), compresslevel, recursive=True)
-        remove(pkglist_path)
+        try:
+            compress_files(tar_files, tgz_name, os.path.dirname(path), compresslevel, recursive=True)
+        finally:
+            remove(pkglist_path)
         ConanOutput().success(f"Created cache save file: {path}")
 
     def restore(self, path) -> PackagesList:
@@ -324,66 +356,112 @@ class CacheAPI:
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
 
-        with open(path, mode='rb') as file_handler:
-            the_tar = tarfile.open(fileobj=file_handler)
-            fileobj = the_tar.extractfile("pkglist.json")
-            pkglist = fileobj.read()
-            the_tar.extraction_filter = (lambda member, _: member)  # fully_trusted (Py 3.14)
-            the_tar.extractall(path=cache_folder)
-            the_tar.close()
+        # Extract to a temporary directory first to avoid concurrent extraction conflicts
+        # Multiple processes restoring the same package would otherwise overwrite each other's files
+        with tempfile.TemporaryDirectory(prefix="conan_restore_") as temp_extract_dir:
+            with open(path, mode='rb') as file_handler:
+                the_tar = tarfile.open(fileobj=file_handler)
+                fileobj = the_tar.extractfile("pkglist.json")
+                pkglist = fileobj.read()
+                the_tar.extraction_filter = (lambda member, _: member)  # fully_trusted (Py 3.14)
+                # Extract to temp dir instead of directly to cache
+                the_tar.extractall(path=temp_extract_dir)
+                the_tar.close()
 
-        # After unzipping the files, we need to update the DB that references these files
-        out = ConanOutput()
-        package_list = PackagesList.deserialize(json.loads(pkglist))
+            # After unzipping the files, we need to update the DB that references these files
+            out = ConanOutput()
+            package_list = PackagesList.deserialize(json.loads(pkglist))
+            self._restore_from_extracted(cache, cache_folder, temp_extract_dir,
+                                        package_list, out)
+
+        return package_list
+
+    def _restore_from_extracted(self, cache, cache_folder, temp_extract_dir,
+                               package_list, out):
+        """Restore packages from extracted tarball in temp dir to cache with proper locking."""
         for ref, packages in package_list.items():
             ref_bundle = package_list.recipe_dict(ref)
             ref.timestamp = revision_timestamp_now()
             ref_bundle["timestamp"] = ref.timestamp
+
+            # Create or get recipe layout
+            # Handle concurrent creation - if another process creates it, just use that
             try:
                 recipe_layout = cache.recipe_layout(ref)
             except ConanException:
-                recipe_layout = cache.create_ref_layout(ref)  # new DB folder entry
+                try:
+                    recipe_layout = cache.create_ref_layout(ref)  # new DB folder entry
+                except ConanException:
+                    # Another process created it concurrently, get the existing one
+                    recipe_layout = cache.recipe_layout(ref)
+
             recipe_folder = ref_bundle["recipe_folder"]
-            rel_path = os.path.relpath(recipe_layout.base_folder, cache_folder)
-            rel_path = rel_path.replace("\\", "/")
-            # In the case of recipes, they are always "in place", so just checking it
-            assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
+
+            # Copy recipe files from temp dir to cache under recipe lock
+            # This prevents concurrent processes from racing on recipe file operations
+            with cache._lock.recipe_lock(ref):
+                temp_recipe_path = os.path.join(temp_extract_dir, recipe_folder)
+                if os.path.exists(temp_recipe_path):
+                    # Copy recipe folders (export, export_sources, etc.) if not already present
+                    for item in os.listdir(temp_recipe_path):
+                        src = os.path.join(temp_recipe_path, item)
+                        dst = os.path.join(recipe_layout.base_folder, item)
+                        if not os.path.exists(dst):
+                            if os.path.isdir(src):
+                                shutil.copytree(src, dst)
+                            else:
+                                mkdir(os.path.dirname(dst))
+                                shutil.copy2(src, dst)
+
             out.info(f"Restore: {ref} in {recipe_folder}")
             for pref in packages:
                 pref.timestamp = revision_timestamp_now()
                 pref_bundle = package_list.package_dict(pref)
                 pref_bundle["timestamp"] = pref.timestamp
+
+                # First, create or get the package layout
+                # This creates the DB entry if needed (with internal locking)
+                # Handle concurrent creation gracefully
                 try:
                     pkg_layout = cache.pkg_layout(pref)
                 except ConanException:
-                    pkg_layout = cache.create_pkg_layout(pref)  # DB Folder entry
-                # FIXME: This is not taking into account the existence of previous package
+                    try:
+                        pkg_layout = cache.create_pkg_layout(pref)  # DB Folder entry
+                        # If another process created it concurrently, create_pkg_layout returns None
+                        if pkg_layout is None:
+                            # Another process created it, get the existing layout
+                            pkg_layout = cache.pkg_layout(pref)
+                    except ConanException:
+                        # Another process created it, get the existing layout
+                        pkg_layout = cache.pkg_layout(pref)
+
                 unzipped_pkg_folder = pref_bundle["package_folder"]
                 out.info(f"Restore: {pref} in {unzipped_pkg_folder}")
-                # If the DB folder entry is different to the disk unzipped one, we need to move it
-                # This happens for built (not downloaded) packages in the source "conan cache save"
-                db_pkg_folder = os.path.relpath(pkg_layout.package(), cache_folder)
-                db_pkg_folder = db_pkg_folder.replace("\\", "/")
-                if db_pkg_folder != unzipped_pkg_folder:
-                    # If a previous package exists, like a previous restore, then remove it
-                    if os.path.exists(pkg_layout.package()):
-                        shutil.rmtree(pkg_layout.package())
-                    shutil.move(os.path.join(cache_folder, unzipped_pkg_folder),
-                                pkg_layout.package())
-                    pref_bundle["package_folder"] = db_pkg_folder
-                unzipped_metadata_folder = pref_bundle.get("metadata_folder")
-                if unzipped_metadata_folder:
-                    # FIXME: Restore metadata is not incremental, but destructive
-                    out.info(f"Restore: {pref} metadata in {unzipped_metadata_folder}")
-                    db_metadata_folder = os.path.relpath(pkg_layout.metadata(), cache_folder)
-                    db_metadata_folder = db_metadata_folder.replace("\\", "/")
-                    if db_metadata_folder != unzipped_metadata_folder:
-                        # We need to put the package in the final location in the cache
-                        if os.path.exists(pkg_layout.metadata()):
-                            shutil.rmtree(pkg_layout.metadata())
-                        shutil.move(os.path.join(cache_folder, unzipped_metadata_folder),
-                                    pkg_layout.metadata())
-                        pref_bundle["metadata_folder"] = db_metadata_folder
+
+                # Now acquire the package lock to do all folder operations atomically
+                # This prevents concurrent restores from racing on folder copies
+                with cache._lock.package_lock(pref):
+                    # Copy package files from temp extraction dir to final location
+                    temp_pkg_path = os.path.join(temp_extract_dir, unzipped_pkg_folder)
+
+                    if os.path.exists(temp_pkg_path):
+                        # Package is in temp dir, copy to final location if not already there
+                        if not os.path.exists(pkg_layout.package()):
+                            # First time this package is being restored
+                            shutil.copytree(temp_pkg_path, pkg_layout.package())
+                        # else: another concurrent process already restored it, skip
+
+                    # Handle metadata folder
+                    unzipped_metadata_folder = pref_bundle.get("metadata_folder")
+                    if unzipped_metadata_folder:
+                        out.info(f"Restore: {pref} metadata in {unzipped_metadata_folder}")
+                        temp_meta_path = os.path.join(temp_extract_dir, unzipped_metadata_folder)
+
+                        if os.path.exists(temp_meta_path):
+                            if not os.path.exists(pkg_layout.metadata()):
+                                # Copy metadata from temp dir
+                                shutil.copytree(temp_meta_path, pkg_layout.metadata())
+                            # else: another concurrent process already restored it, skip
 
         return package_list
 

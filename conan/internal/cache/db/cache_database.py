@@ -17,9 +17,11 @@ class CacheDatabase:
             ConanOutput().error(f"Your sqlite3 '{version} < 3.7.11' version is not supported")
         self._recipes = RecipesDBTable(filename)
         self._packages = PackagesDBTable(filename)
-        if not os.path.isfile(filename):
-            self._recipes.create_table()
-            self._packages.create_table()
+        # Always try to create tables (uses CREATE TABLE IF NOT EXISTS)
+        # This handles the race where multiple processes start simultaneously:
+        # Process A creates the file, Process B sees file exists but tables aren't created yet
+        self._recipes.create_table()
+        self._packages.create_table()
 
     def exists_prev(self, ref):
         return self._packages.get_package_revisions_reference_exists(ref)
@@ -37,8 +39,8 @@ class CacheDatabase:
     def update_recipe_timestamp(self, ref):
         self._recipes.update_timestamp(ref)
 
-    def update_package_timestamp(self, pref: PkgReference, path: str, build_id: str):
-        self._packages.update_timestamp(pref, path=path, build_id=build_id)
+    def update_package_timestamp(self, pref: PkgReference, build_id: str, path: str = None):
+        self._packages.update_timestamp(pref, build_id=build_id, path=path)
 
     def get_recipe_lru(self, ref):
         return self._recipes.get_recipe(ref)["lru"]
@@ -106,6 +108,14 @@ class CacheDatabase:
     def get_package_references(self, ref: RecipeReference, only_latest_prev=True):
         return [d["pref"]
                 for d in self._packages.get_package_references(ref, only_latest_prev)]
+
+    def get_package_references_with_paths(self, ref: RecipeReference):
+        """Get all package references for a recipe including their paths.
+
+        Used by remove_recipe to find all package folders that need to be deleted.
+        Returns all package revisions (not just latest) to ensure complete cleanup.
+        """
+        return self._packages.get_package_references(ref, only_latest_prev=False)
 
     def path_to_ref(self, path):
         ref = self._recipes.path_to_ref(path)

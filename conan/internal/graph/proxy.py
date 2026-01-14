@@ -20,8 +20,6 @@ class ConanProxy:
         """
         :return: Tuple (layout, status, remote)
         """
-        # TODO: cache2.0 Check with new locks
-        # with layout.conanfile_write_lock(self._out):
         resolved = self._resolved.get(ref)
         if resolved is None:
             resolved = self._get_recipe(ref, remotes, update, check_update)
@@ -51,53 +49,144 @@ class ConanProxy:
             status = RECIPE_DOWNLOADED
             return layout, status, remote
 
-        # TODO: cache2.0: check with new --update flows
-        # TODO: If the revision is given, then we don't need to check for updates?
+        # If the revision is given, then we don't need to check for updates
         if not (check_update or should_update_reference(reference, update)):
+            # Wait for extraction to complete in case another process is extracting
+            with recipe_layout.conanfile_write_lock(output):
+                pass  # Lock released, extraction complete
             status = RECIPE_INCACHE
             return recipe_layout, status, None
 
-        # Need to check updates
+        # PERFORMANCE OPTIMIZATION: Double-checked locking pattern
+        # Instead of holding the lock while querying remotes (slow network I/O),
+        # we query remotes first without the lock, then only lock if update is needed.
+        #
+        # Benefits:
+        # - Processes that don't need updates can query remotes in parallel
+        # - Only processes that actually download updates serialize on the lock
+        # - Reduces lock contention with many concurrent processes
+        #
+        # Pattern:
+        # 1. Query remotes WITHOUT lock (parallel remote queries)
+        # 2. Check if update needed WITHOUT lock
+        # 3. If no update needed, return early (no lock acquired)
+        # 4. If update needed, acquire lock and double-check
+
+        # Step 1: Query remotes without holding the lock (allows parallel queries)
         remote, remote_ref = self._find_newest_recipe_in_remotes(reference, remotes,
                                                                  update, check_update)
         if remote_ref is None:  # Nothing found in remotes
+            # Wait for extraction to complete in case another process is extracting
+            with recipe_layout.conanfile_write_lock(output):
+                pass  # Lock released, extraction complete
             status = RECIPE_NOT_IN_REMOTE
             return recipe_layout, status, None
 
-        # Something found in remotes, check if we already have the latest in local cache
+        # Step 2: Check if update is needed (without lock, using cached state)
         assert ref.timestamp
         cache_time = ref.timestamp
+        update_needed = False
+
         if remote_ref.revision != ref.revision:
             if cache_time < remote_ref.timestamp:
-                # the remote one is newer
+                # Remote one is newer, check if we should update
                 if should_update_reference(remote_ref, update):
-                    output.info(f"Updating to latest from remote '{remote.name}'...")
-                    try:
-                        new_recipe_layout = self._download(remote_ref, remote)
-                    except ConanReferenceAlreadyExistsInDB:
-                        # When updating to a newer revision in the server, but it already exists
-                        # in the cache with an older timestamp
-                        output.info(f"Latest from '{remote.name}' was found in "
-                                    "the cache, using it and updating its timestamp")
-                        new_recipe_layout = self._cache.recipe_layout(remote_ref)
-                        self._cache.update_recipe_timestamp(remote_ref)  # make it latest
-                    status = RECIPE_UPDATED
-                    return new_recipe_layout, status, remote
+                    update_needed = True
                 else:
+                    # Update available but not requested
+                    # Wait for extraction to complete in case another process is extracting
+                    with recipe_layout.conanfile_write_lock(output):
+                        pass  # Lock released, extraction complete
                     status = RECIPE_UPDATEABLE
+                    return recipe_layout, status, remote
             else:
+                # Cache is newer than remote
+                # Wait for extraction to complete in case another process is extracting
+                with recipe_layout.conanfile_write_lock(output):
+                    pass  # Lock released, extraction complete
                 status = RECIPE_NEWER
-                # If your recipe in cache is newer it does not make sense to return a remote?
-                remote = None
+                return recipe_layout, status, None
         else:
-            # TODO: cache2.0 we are returning RECIPE_UPDATED just because we are updating
-            #  the date
+            # Same revision, just check timestamp
             if cache_time >= remote_ref.timestamp:
+                # Wait for extraction to complete in case another process is extracting
+                with recipe_layout.conanfile_write_lock(output):
+                    pass  # Lock released, extraction complete
                 status = RECIPE_INCACHE
+                return recipe_layout, status, None
+            # Need to update timestamp
+            update_needed = True
+
+        # Step 3: Update is needed, acquire lock for actual update
+        # This serializes only the processes that actually need to download/update
+        with self._cache.recipe_lock(ref):
+            # Step 4: Double-check inside the lock to handle race conditions
+            # Another process might have updated while we were waiting for the lock
+            try:
+                if reference.revision is None:
+                    recipe_layout_recheck = self._cache.recipe_layout_latest(reference)
+                else:
+                    recipe_layout_recheck = self._cache.recipe_layout(reference)
+                ref_recheck = recipe_layout_recheck.reference
+                # CRITICAL: Wait for file extraction to complete before using this layout
+                # Another process might be extracting files for this recipe right now
+                with recipe_layout_recheck.conanfile_write_lock(output):
+                    pass  # Lock released, extraction complete
+            except ConanException:
+                # Recipe was removed by another process, fall through to download
+                ref_recheck = ref
+                recipe_layout_recheck = recipe_layout
+
+            # Re-check if we still need to update
+            if ref_recheck.timestamp != ref.timestamp:
+                # Another process updated the cache while we waited for the lock
+                # Re-evaluate if we still need to update
+                cache_time_recheck = ref_recheck.timestamp
+
+                if remote_ref.revision != ref_recheck.revision:
+                    if cache_time_recheck < remote_ref.timestamp:
+                        # Still need to update
+                        pass  # Continue to download
+                    else:
+                        # Another process updated to same or newer version
+                        if cache_time_recheck > remote_ref.timestamp:
+                            status = RECIPE_NEWER
+                        else:
+                            status = RECIPE_INCACHE
+                        return recipe_layout_recheck, status, None
+                else:
+                    # Same revision now, just check timestamp
+                    if cache_time_recheck >= remote_ref.timestamp:
+                        status = RECIPE_INCACHE
+                        return recipe_layout_recheck, status, None
+                    # Need to update timestamp only
+                    self._cache.update_recipe_timestamp(remote_ref)
+                    status = RECIPE_INCACHE_DATE_UPDATED
+                    return recipe_layout_recheck, status, remote
+
+            # Actually perform the update
+            if remote_ref.revision != ref_recheck.revision:
+                output.info(f"Updating to latest from remote '{remote.name}'...")
+                try:
+                    new_recipe_layout = self._download(remote_ref, remote)
+                except ConanReferenceAlreadyExistsInDB:
+                    # When updating to a newer revision in the server, but it already exists
+                    # in the cache with an older timestamp (another process might be extracting it)
+                    output.info(f"Latest from '{remote.name}' was found in "
+                                "the cache, using it and updating its timestamp")
+                    new_recipe_layout = self._cache.recipe_layout(remote_ref)
+                    # Wait for extraction to complete if another process is extracting files
+                    # This prevents "conanfile.py not found" errors in concurrent updates
+                    with new_recipe_layout.conanfile_write_lock(output):
+                        pass  # Lock released, extraction complete
+                    self._cache.update_recipe_timestamp(remote_ref)  # make it latest
+                status = RECIPE_UPDATED
+                return new_recipe_layout, status, remote
             else:
+                # Just update the timestamp
                 self._cache.update_recipe_timestamp(remote_ref)
                 status = RECIPE_INCACHE_DATE_UPDATED
-        return recipe_layout, status, remote
+                return recipe_layout_recheck, status, remote
 
     def _find_newest_recipe_in_remotes(self, reference, remotes, update, check_update):
         output = ConanOutput(scope=str(reference))
@@ -149,7 +238,7 @@ class ConanProxy:
         return found_rrev.get("remote"), found_rrev.get("ref")
 
     def _download_recipe(self, ref, remotes, scoped_output, update, check_update):
-        # When a recipe doesn't existin local cache, it is retrieved from servers
+        # When a recipe doesn't exist in local cache, it is retrieved from servers
         scoped_output.info("Not found in local cache, looking in remotes...")
         if not remotes:
             raise ConanException("No remote defined")
@@ -159,8 +248,36 @@ class ConanProxy:
             msg = "Unable to find '%s' in remotes" % repr(ref)
             raise NotFoundException(msg)
 
-        recipe_layout = self._download(latest_rref, remote)
-        return recipe_layout, remote
+        # Acquire lock to prevent concurrent downloads of the same recipe
+        # This prevents "conanfile.py not found" errors when multiple processes
+        # try to download the same new recipe simultaneously
+        from conan.internal.errors import ConanReferenceAlreadyExistsInDB
+        with self._cache.recipe_lock(latest_rref):
+            # Double-check if another process downloaded it while we waited for the lock
+            try:
+                if ref.revision is None:
+                    recipe_layout = self._cache.recipe_layout_latest(ref)
+                else:
+                    recipe_layout = self._cache.recipe_layout(latest_rref)
+                # Recipe was downloaded by another process, use it
+                # Wait for extraction to complete if still in progress
+                with recipe_layout.conanfile_write_lock(scoped_output):
+                    pass  # Lock released, extraction complete
+                return recipe_layout, remote
+            except ConanException:
+                # Recipe still not in cache, we need to download it
+                try:
+                    recipe_layout = self._download(latest_rref, remote)
+                except ConanReferenceAlreadyExistsInDB:
+                    # Another process created DB entry while we were preparing to download
+                    # Get the layout and wait for extraction to complete
+                    if ref.revision is None:
+                        recipe_layout = self._cache.recipe_layout_latest(ref)
+                    else:
+                        recipe_layout = self._cache.recipe_layout(latest_rref)
+                    with recipe_layout.conanfile_write_lock(scoped_output):
+                        pass  # Lock released, extraction complete
+                return recipe_layout, remote
 
     def _download(self, ref, remote):
         assert ref.revision

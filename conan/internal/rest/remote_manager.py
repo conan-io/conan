@@ -14,7 +14,7 @@ from conan.api.model import Remote
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA, PackageLayout
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
-from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException
+from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException, ConanReferenceAlreadyExistsInDB
 from conan.errors import ConanException
 from conan.internal.model.info import load_binary_info
 from conan.api.model import PkgReference
@@ -54,23 +54,37 @@ class RemoteManager:
         self._call_remote(remote, "upload_package", pref, files_to_upload)
 
     def get_recipe(self, ref, remote, metadata=None):
+        from conan.internal.errors import ConanReferenceAlreadyExistsInDB
         assert ref.revision, "get_recipe without revision specified"
         assert ref.timestamp, "get_recipe without ref.timestamp specified"
 
-        # This fails if there is a DB entry for this ref
-        layout = self._cache.create_ref_layout(ref)
+        try:
+            # This fails if there is a DB entry for this ref
+            layout = self._cache.create_ref_layout(ref)
+        except ConanReferenceAlreadyExistsInDB:
+            # Recipe already exists (another process is downloading it, or it's an update scenario)
+            # Get the existing layout and acquire lock to wait for extraction to complete
+            layout = self._cache.recipe_layout(ref)
+            output = ConanOutput(scope=str(ref))
+            with layout.conanfile_write_lock(output):
+                # Lock released - extraction is complete, recipe is ready to use
+                # Re-raise so proxy can handle update logic
+                raise
 
-        export_folder = layout.export()
-        local_folder_remote = self._local_folder_remote(remote)
-        if local_folder_remote is not None:
-            local_folder_remote.get_recipe(ref, export_folder)
-        else:
-            self._download_recipe(layout, ref, remote, metadata)
-        # Make sure that the source dir is deleted, but it seems unnecessary
-        rmdir(layout.source())
-        mkdir(layout.metadata())
+        # CRITICAL: Acquire lock immediately after creating DB entry, before downloading
+        # This ensures other processes will wait until extraction is complete
+        output = ConanOutput(scope=str(ref))
+        with layout.conanfile_write_lock(output):
+            export_folder = layout.export()
+            local_folder_remote = self._local_folder_remote(remote)
+            if local_folder_remote is not None:
+                local_folder_remote.get_recipe(ref, export_folder)
+            else:
+                self._download_recipe(layout, ref, remote, metadata)
+            # Make sure that the source dir is deleted, but it seems unnecessary
+            mkdir(layout.metadata())
 
-        return layout
+            return layout
 
     def _download_recipe(self, layout, ref, remote, metadata):
         download_export = layout.download_export()
@@ -94,6 +108,8 @@ class RemoteManager:
                                               error_type="exception")
             self._cache.remove_recipe_layout(layout)
             raise
+
+        # Extract files while still holding the lock
         export_folder = layout.export()
         export_file = next((f for f in zipped_files if f.startswith(EXPORT_FILE_NAME)), None)
         tgz_file = zipped_files.pop(export_file, None)
@@ -144,10 +160,44 @@ class RemoteManager:
 
         assert pref.revision is not None
 
+        # Check if package already exists (handles concurrent downloads)
+        if self._cache.exists_prev(pref):
+            # Package already exists (another process downloaded it)
+            # Get the existing layout and acquire lock to wait for any ongoing extraction
+            pkg_layout = self._cache.pkg_layout(pref)
+            with pkg_layout.package_lock():
+                # Lock released - extraction is complete, package is ready to use
+                output.info(f"Package {pref.package_id} already in cache")
+            return
+
+        # Download to temporary location
         pkg_layout = PackageLayout(pref, self._cache.get_random_path())
         mkdir(pkg_layout.metadata())
         self._get_package(pkg_layout, pref, remote, output, metadata)
-        self._cache.create_atomic_pkg_layout(pref, pkg_layout.base_folder)
+
+        # Atomically create DB entry and move folder to final location
+        # create_atomic_pkg_layout holds a lock during the operation, so concurrent
+        # processes will block when trying to create the DB entry (which is done first)
+        try:
+            self._cache.create_atomic_pkg_layout(pref, pkg_layout.base_folder)
+        except ConanReferenceAlreadyExistsInDB:
+            # Another process created the DB entry while we were downloading
+            # Clean up our temp folder
+            try:
+                rmdir(pkg_layout.base_folder)
+            except Exception:
+                pass  # Best effort cleanup
+
+            # Wait for the other process to finish by acquiring the same lock
+            # When we get the lock, the other process has completed both DB entry and folder move
+            final_pkg_layout = self._cache.pkg_layout(pref)
+            with final_pkg_layout.package_lock():
+                # Lock released - package is fully ready (DB entry + folder)
+                output.info(f"Package {pref.package_id} was downloaded by another process")
+            return
+        except ConanException:
+            # Some other error occurred
+            raise
 
     def get_package_metadata(self, pref, remote, metadata):
         """
@@ -189,6 +239,7 @@ class RemoteManager:
             package_file = next(f for f in zipped_files if PACKAGE_FILE_NAME in f)
             self._signer.verify(pref, download_pkg_folder, layout.metadata(), zipped_files)
 
+            # Extract package files (lock is already held by caller)
             tgz_file = zipped_files.pop(package_file)
             package_folder = layout.package()
             uncompress_file(tgz_file, package_folder, scope=str(pref.ref))

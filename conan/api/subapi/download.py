@@ -23,29 +23,43 @@ class DownloadAPI:
         output = ConanOutput()
         app = ConanBasicApp(self._conan_api)
         assert ref.revision, f"Reference '{ref}' must have revision"
-        try:
-            recipe_layout = app.cache.recipe_layout(ref)  # raises if not found
-        except ConanException:
-            pass
-        else:
-            output.info(f"Skip recipe {ref.repr_notime()} download, already in cache")
-            if metadata:
-                app.remote_manager.get_recipe_metadata(recipe_layout, ref, remote, metadata)
-            return False
 
-        output.info(f"Downloading recipe '{ref.repr_notime()}'")
-        if ref.timestamp is None:  # we didnt obtain the timestamp before (in general it should be)
-            # Respect the timestamp of the server, the ``get_recipe()`` doesn't do it internally
-            # Best would be that ``get_recipe()`` returns the timestamp in the same call
-            server_ref = app.remote_manager.get_recipe_revision(ref, remote)
-            assert server_ref == ref
-            ref.timestamp = server_ref.timestamp
-        recipe_layout = app.remote_manager.get_recipe(ref, remote, metadata)
+        # CONCURRENCY PROTECTION: Acquire recipe lock to prevent TOCTOU race when multiple
+        # processes try to download the same recipe simultaneously.
+        #
+        # Without this lock, the race is:
+        # - Process A: Checks if recipe exists (line 27) → No
+        # - Process B: Checks if recipe exists (line 27) → No
+        # - Process A: Downloads recipe (line 43)
+        # - Process B: Downloads recipe (line 43) → gets exception, cleans up
+        # - Both processes do redundant download work
+        #
+        # With the lock, operations are serialized: first process downloads,
+        # second process waits, then sees recipe already exists and skips.
+        with app.cache.recipe_lock(ref):
+            try:
+                recipe_layout = app.cache.recipe_layout(ref)  # raises if not found
+            except ConanException:
+                pass
+            else:
+                output.info(f"Skip recipe {ref.repr_notime()} download, already in cache")
+                if metadata:
+                    app.remote_manager.get_recipe_metadata(recipe_layout, ref, remote, metadata)
+                return False
 
-        # Download the sources too, don't be lazy
-        output.info(f"Downloading '{str(ref)}' sources")
-        app.remote_manager.get_recipe_sources(ref, recipe_layout, remote)
-        return True
+            output.info(f"Downloading recipe '{ref.repr_notime()}'")
+            if ref.timestamp is None:  # we didnt obtain the timestamp before (in general it should be)
+                # Respect the timestamp of the server, the ``get_recipe()`` doesn't do it internally
+                # Best would be that ``get_recipe()`` returns the timestamp in the same call
+                server_ref = app.remote_manager.get_recipe_revision(ref, remote)
+                assert server_ref == ref
+                ref.timestamp = server_ref.timestamp
+            recipe_layout = app.remote_manager.get_recipe(ref, remote, metadata)
+
+            # Download the sources too, don't be lazy
+            output.info(f"Downloading '{str(ref)}' sources")
+            app.remote_manager.get_recipe_sources(ref, recipe_layout, remote)
+            return True
 
     def package(self, pref: PkgReference, remote: Remote, metadata: Optional[List[str]] = None):
         """Download the package specified in the pref from the remote.
@@ -60,22 +74,35 @@ class DownloadAPI:
             raise ConanException("The recipe of the specified package "
                                  "doesn't exist, download it first")
 
-        skip_download = app.cache.exists_prev(pref)
-        if skip_download:
-            output.info(f"Skip package {pref.repr_notime()} download, already in cache")
-            if metadata:
-                app.remote_manager.get_package_metadata(pref, remote, metadata)
-            return False
+        # CONCURRENCY PROTECTION: Acquire package lock to prevent TOCTOU race when multiple
+        # processes try to download the same package simultaneously.
+        #
+        # Without this lock, the race is:
+        # - Process A: Checks if package exists (line 63) → No
+        # - Process B: Checks if package exists (line 63) → No
+        # - Process A: Downloads package (line 77)
+        # - Process B: Downloads package (line 77) → get_package returns early (better than recipe)
+        # - Both processes do redundant download work
+        #
+        # With the lock, operations are serialized: first process downloads,
+        # second process waits, then sees package already exists and skips.
+        with app.cache.package_lock(pref):
+            skip_download = app.cache.exists_prev(pref)
+            if skip_download:
+                output.info(f"Skip package {pref.repr_notime()} download, already in cache")
+                if metadata:
+                    app.remote_manager.get_package_metadata(pref, remote, metadata)
+                return False
 
-        if pref.timestamp is None:  # we didn't obtain the timestamp before (in general it should be)
-            # Respect the timestamp of the server
-            server_pref = app.remote_manager.get_package_revision(pref, remote)
-            assert server_pref == pref
-            pref.timestamp = server_pref.timestamp
+            if pref.timestamp is None:  # we didn't obtain the timestamp before (in general it should be)
+                # Respect the timestamp of the server
+                server_pref = app.remote_manager.get_package_revision(pref, remote)
+                assert server_pref == pref
+                pref.timestamp = server_pref.timestamp
 
-        output.info(f"Downloading package '{pref.repr_notime()}'")
-        app.remote_manager.get_package(pref, remote, metadata)
-        return True
+            output.info(f"Downloading package '{pref.repr_notime()}'")
+            app.remote_manager.get_package(pref, remote, metadata)
+            return True
 
     def download_full(self, package_list: PackagesList, remote: Remote,
                       metadata: Optional[List[str]] = None):

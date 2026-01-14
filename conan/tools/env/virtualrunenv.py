@@ -15,6 +15,16 @@ def runenv_from_cpp_info(dep, os_name):
         if existing:
             dyn_runenv.prepend_path(envvar, existing)
 
+    # Special handling for cmake package on macOS - it doesn't set bindirs correctly
+    # The cmake binary is in CMake.app/Contents/bin for macOS packages
+    if hasattr(dep, 'ref') and dep.ref.name == "cmake" and not cpp_info.bindirs:
+        cmake_bin_macos = os.path.join(cpp_info.rootpath, "CMake.app", "Contents", "bin")
+        cmake_bin_default = os.path.join(cpp_info.rootpath, "bin")
+        if os.path.exists(cmake_bin_macos):
+            _prepend_path("PATH", [cmake_bin_macos])
+        elif os.path.exists(cmake_bin_default):
+            _prepend_path("PATH", [cmake_bin_default])
+
     _prepend_path("PATH", cpp_info.bindirs)
     # If it is a build_require this will be the build-os, otherwise it will be the host-os
     if os_name and not os_name.startswith("Windows"):

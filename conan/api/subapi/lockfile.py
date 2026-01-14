@@ -5,6 +5,8 @@ from conan.cli import make_abs_path
 from conan.internal.graph.graph import Overrides
 from conan.errors import ConanException
 from conan.internal.model.lockfile import Lockfile, LOCKFILE
+from conan.internal.cache.concurrency_lock import ConcurrencyLock
+from conan.internal.util.files import save
 
 
 class LockfileAPI:
@@ -52,7 +54,15 @@ class LockfileAPI:
             if not os.path.isfile(lockfile_path):
                 raise ConanException("Lockfile doesn't exist: {}".format(lockfile_path))
 
-        graph_lock = Lockfile.load(lockfile_path)
+        # Create lock manager for the lockfile's directory
+        lock_dir = os.path.dirname(lockfile_path) or os.getcwd()
+        lock_manager = ConcurrencyLock(lock_dir)
+        lock_name = os.path.basename(lockfile_path)
+
+        # Load lockfile with inter-process and thread-safe locking
+        with lock_manager.config_lock(lock_name):
+            graph_lock = Lockfile.load(lockfile_path)
+
         graph_lock.partial = partial
 
         if overrides:
@@ -90,6 +100,9 @@ class LockfileAPI:
         result = Lockfile()
         for lockfile in lockfiles:
             lockfile = make_abs_path(lockfile)
+            # Skip lockfiles that don't exist (e.g., output file on first run)
+            if not os.path.isfile(lockfile):
+                continue
             graph_lock = Lockfile.load(lockfile)
             result.merge(graph_lock)
         return result
@@ -115,5 +128,42 @@ class LockfileAPI:
     def save_lockfile(lockfile, lockfile_out, path=None):
         if lockfile_out is not None:
             lockfile_out = make_abs_path(lockfile_out, path)
-            lockfile.save(lockfile_out)
+
+            # Create lock manager for the lockfile's directory
+            lock_dir = os.path.dirname(lockfile_out) or os.getcwd()
+            lock_manager = ConcurrencyLock(lock_dir)
+
+            # Use config_lock for the specific lockfile with atomic write
+            lock_name = os.path.basename(lockfile_out)
+            with lock_manager.config_lock(lock_name):
+                _save_lockfile_unlocked(lockfile, lockfile_out)
+
             ConanOutput().info(f"Generated lockfile: {lockfile_out}")
+
+
+def _save_lockfile_unlocked(lockfile, lockfile_path):
+    """Save lockfile atomically without locking - caller must hold lock.
+
+    Uses atomic file replacement to avoid corruption if interrupted.
+    Follows the same pattern as _save_remotes_unlocked and _save_providers_unlocked.
+
+    Args:
+        lockfile: Lockfile object to save
+        lockfile_path: Absolute path where to save the lockfile
+    """
+    import uuid
+    # Write to temporary file first with unique suffix to avoid collisions
+    # even if lock isn't held properly
+    tmp_suffix = f".tmp.{os.getpid()}.{uuid.uuid4().hex[:8]}"
+    tmp_path = lockfile_path + tmp_suffix
+    try:
+        save(tmp_path, lockfile.dumps() + "\n")
+        # Atomic replace - if interrupted before this, original file is unchanged
+        os.replace(tmp_path, lockfile_path)
+    finally:
+        # Clean up temp file if replace failed
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass

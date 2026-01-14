@@ -26,6 +26,19 @@ class LayoutBase:
     def base_folder(self):
         return self._base_folder
 
+    def relocate(self, new_base_folder):
+        """
+        Update the layout's base folder after moving to a new location.
+
+        Called when a temporary layout is moved to its final revision-based
+        location (e.g., during assign_rrev/assign_prev). This makes the
+        mutation explicit rather than directly modifying _base_folder.
+
+        Args:
+            new_base_folder: The new absolute path for this layout
+        """
+        self._base_folder = new_base_folder
+
     def remove(self):
         rmdir(self._base_folder)
 
@@ -45,9 +58,23 @@ class BasicLayout(LayoutBase):
 
 class RecipeLayout(LayoutBase):
 
+    def __init__(self, ref, base_folder, lock_manager=None):
+        super().__init__(ref, base_folder)
+        self._lock_manager = lock_manager
+
     @contextmanager
     def conanfile_write_lock(self, output):
-        yield
+        """
+        Acquire a lock for recipe file operations (extraction, updates).
+
+        This prevents race conditions where one process extracts recipe files
+        while another tries to read them (e.g., concurrent updates).
+        """
+        if self._lock_manager:
+            with self._lock_manager.recipe_lock(self.reference):
+                yield
+        else:
+            yield
 
     def export(self):
         return os.path.join(self._base_folder, EXPORT_FOLDER)
@@ -85,14 +112,24 @@ class RecipeLayout(LayoutBase):
 
 class PackageLayout(LayoutBase):
 
-    def __init__(self, ref, base_folder):
+    def __init__(self, ref, base_folder, lock_manager=None):
         super().__init__(ref, base_folder)
         self.build_id = None
+        self._lock_manager = lock_manager
 
-    # TODO: cache2.0 locks implementation
     @contextmanager
     def package_lock(self):
-        yield
+        """
+        Acquire a lock for package operations.
+
+        If a lock manager was provided, this acquires a package-level lock.
+        Otherwise, it's a no-op (for backwards compatibility or tests).
+        """
+        if self._lock_manager:
+            with self._lock_manager.package_lock(self.reference):
+                yield
+        else:
+            yield
 
     def build(self):
         return os.path.join(self._base_folder, BUILD_FOLDER)

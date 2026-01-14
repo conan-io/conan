@@ -8,6 +8,7 @@ import pytest
 
 from conan.internal.api.detect.detect_vs import vswhere
 
+
 """
 To override these locations with your own in your dev machine:
 1. Create a conftest_user.py just besides this conftest.py file

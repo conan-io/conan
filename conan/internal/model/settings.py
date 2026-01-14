@@ -6,7 +6,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.default_settings import default_settings_yml
 from conan.internal.internal_tools import is_universal_arch
 from conan.errors import ConanException
-from conan.internal.util.files import save, load
+from conan.internal.util.files import save, load, save_if_not_exists
 
 
 def bad_value_msg(name, value, value_range):
@@ -371,9 +371,6 @@ def load_settings_yml(home_folder):
                settings without values"""
     _home_paths = HomePaths(home_folder)
     settings_path = _home_paths.settings_path
-    if not os.path.exists(settings_path):
-        save(settings_path, default_settings_yml)
-        save(settings_path + ".orig", default_settings_yml)  # stores a copy, to check migrations
 
     def _load_settings(path):
         try:
@@ -381,26 +378,40 @@ def load_settings_yml(home_folder):
         except yaml.YAMLError as ye:
             raise ConanException("Invalid settings.yml format: {}".format(ye))
 
-    settings = _load_settings(settings_path)
-    user_settings_file = _home_paths.settings_path_user
-    if os.path.exists(user_settings_file):
-        settings_user = _load_settings(user_settings_file)
+    # Always acquire lock to prevent TOCTOU races with migrations or config installs
+    # Multiple processes may be reading/writing settings.yml concurrently during:
+    # - Migrations (update_file modifies settings.yml)
+    # - Config install operations (replaces settings.yml)
+    # - Config clean operations (deletes settings.yml)
+    # - Normal conan operations that load settings
+    from conan.internal.cache.concurrency_lock import ConcurrencyLock
+    lock_manager = ConcurrencyLock(home_folder)
+    with lock_manager.config_lock("settings.yml"):
+        # Create settings files if they don't exist (inside lock to prevent TOCTOU)
+        # This prevents race where another process deletes file between check and read
+        save_if_not_exists(settings_path, default_settings_yml)
+        save_if_not_exists(settings_path + ".orig", default_settings_yml)  # stores a copy, to check migrations
 
-        def appending_recursive_dict_update(d, u):
-            # Not the same behavior as conandata_update, because this append lists
-            for k, v in u.items():
-                if isinstance(v, list):
-                    current = d.get(k) or []
-                    d[k] = current + [value for value in v if value not in current]
-                elif isinstance(v, dict):
-                    current = d.get(k) or {}
-                    if isinstance(current, list):  # convert to dict lists
-                        current = {k: None for k in current}
-                    d[k] = appending_recursive_dict_update(current, v)
-                else:
-                    d[k] = v
-            return d
+        settings = _load_settings(settings_path)
+        user_settings_file = _home_paths.settings_path_user
+        if os.path.exists(user_settings_file):
+            settings_user = _load_settings(user_settings_file)
 
-        appending_recursive_dict_update(settings, settings_user)
+            def appending_recursive_dict_update(d, u):
+                # Not the same behavior as conandata_update, because this append lists
+                for k, v in u.items():
+                    if isinstance(v, list):
+                        current = d.get(k) or []
+                        d[k] = current + [value for value in v if value not in current]
+                    elif isinstance(v, dict):
+                        current = d.get(k) or {}
+                        if isinstance(current, list):  # convert to dict lists
+                            current = {k: None for k in current}
+                        d[k] = appending_recursive_dict_update(current, v)
+                    else:
+                        d[k] = v
+                return d
+
+            appending_recursive_dict_update(settings, settings_user)
 
     return Settings(settings)

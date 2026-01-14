@@ -76,7 +76,8 @@ class PackagesDBTable(BaseDbTable):
         # are saved with the temporary uuid one, we don't want to consider these
         # not yet built packages for search and so on
         placeholders = ', '.join(['?' for _ in range(len(self.columns))])
-        lru = timestamp_now()
+        # Convert to int to match column type and avoid float comparison issues
+        lru = int(timestamp_now())
         with self.db_connection() as conn:
             try:
                 conn.execute(f'INSERT INTO {self.table_name} '
@@ -86,7 +87,7 @@ class PackagesDBTable(BaseDbTable):
             except sqlite3.IntegrityError:
                 raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
 
-    def update_timestamp(self, pref: PkgReference, path: str, build_id: str):
+    def update_timestamp(self, pref: PkgReference, build_id: str, path: str = None):
         assert pref.revision
         assert pref.timestamp
         where_clause = self._where_clause(pref)
@@ -103,16 +104,27 @@ class PackagesDBTable(BaseDbTable):
     def update_lru(self, prefs):
         # TODO: InstallGraph is dropping the pref.timestamp, cannot be checked here yet
         # assert pref.timestamp is not None, f"PREF _TIMESSTAMP IS NONE {repr(pref)}"
+        if not prefs:
+            return
+        # Filter out prefs with missing required fields
         params = [(str(pref.ref), pref.ref.revision, pref.package_id, pref.revision)
-                  for pref in prefs]
+                  for pref in prefs
+                  if pref.ref.revision is not None and pref.package_id is not None and pref.revision is not None]
+        if not params:
+            return
         where_clause = (f"{self.columns.reference} = ? AND {self.columns.rrev} = ? "
                         f"AND {self.columns.pkgid} = ? AND {self.columns.prev} = ?")
-        lru = timestamp_now()
+        # Convert to int to match column type and avoid float comparison issues
+        lru = int(timestamp_now())
         query = f"UPDATE {self.table_name} " \
-                f"SET {self.columns.lru} = '{lru}' " \
+                f"SET {self.columns.lru} = {lru} " \
                 f"WHERE {where_clause};"
         with self.db_connection() as conn:
             conn.executemany(query, params)
+            # Force WAL checkpoint to ensure changes are immediately visible to other processes
+            # Under heavy parallel load, this prevents race conditions where one process
+            # updates LRU but another process immediately queries and doesn't see the update
+            conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
 
     def remove_build_id(self, pref):
         where_clause = self._where_clause(pref)

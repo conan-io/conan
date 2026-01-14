@@ -26,6 +26,10 @@ class RedirectedInputStream:
         ret = self.answers.pop(0)
         return ret
 
+    def close(self):
+        """No-op close method for compatibility with multiprocessing"""
+        pass
+
 
 class MockSettings:
 

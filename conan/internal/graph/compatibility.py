@@ -1,6 +1,8 @@
 import os
 from collections import OrderedDict
 
+import fasteners
+
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.graph.compute_pid import run_validate_package_id
@@ -96,15 +98,25 @@ def migrate_compatibility_files(cache_folder):
         first_line = content.lstrip().split("\n", 1)[0]
         return CONAN_GENERATED_COMMENT in first_line
 
-    if _is_migratable(compatibility_file) and _is_migratable(cppstd_compat_file):
-        compatibility_exists = os.path.exists(compatibility_file)
-        needs_update = not compatibility_exists or load(compatibility_file) != _default_compat
-        if needs_update:
-            save(compatibility_file, _default_compat)
-            if compatibility_exists:
-                ConanOutput().success("Migration: Successfully updated compatibility.py")
-        if os.path.exists(cppstd_compat_file):
-            os.remove(cppstd_compat_file)
+    # Lock the migration to prevent concurrent processes from racing during first-time setup
+    # This protects against:
+    # 1. Multiple processes writing to compatibility_file simultaneously
+    # 2. TOCTOU races where file state changes between check and write
+    # 3. Concurrent removal of cppstd_compat_file
+    lock_file = os.path.join(compatible_folder, ".compatibility_migration.lock")
+    lock = fasteners.InterProcessLock(lock_file)
+
+    with lock:
+        # Re-check conditions inside the lock to avoid TOCTOU races
+        if _is_migratable(compatibility_file) and _is_migratable(cppstd_compat_file):
+            compatibility_exists = os.path.exists(compatibility_file)
+            needs_update = not compatibility_exists or load(compatibility_file) != _default_compat
+            if needs_update:
+                save(compatibility_file, _default_compat)
+                if compatibility_exists:
+                    ConanOutput().success("Migration: Successfully updated compatibility.py")
+            if os.path.exists(cppstd_compat_file):
+                os.remove(cppstd_compat_file)
 
 
 class BinaryCompatibility:

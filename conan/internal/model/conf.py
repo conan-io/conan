@@ -17,7 +17,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.model.options import _PackageOption
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.model.settings import SettingsItem
-from conan.internal.util.files import load, save
+from conan.internal.util.files import load, save, save_if_not_exists
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -750,27 +750,44 @@ def load_global_conf(home_folder):
     home_paths = HomePaths(home_folder)
     global_conf_path = home_paths.global_conf_path
     new_config = ConfDefinition()
-    if os.path.exists(global_conf_path):
-        text = load(global_conf_path)
-        distro = None
-        if platform.system() in ["Linux", "FreeBSD"]:
-            import distro
-        template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
-        home_folder = home_folder.replace("\\", "/")
-        from conan import conan_version
-        content = template.render({"platform": platform, "os": os, "distro": distro,
-                                   "conan_version": conan_version,
-                                   "conan_home_folder": home_folder,
-                                   "detect_api": detect_api,
-                                   "hashlib": hashlib})
-        new_config.loads(content)
-    else:  # creation of a blank global.conf file for user convenience
-        default_global_conf = textwrap.dedent("""\
-            # Core configuration (type 'conan config list' to list possible values)
-            # e.g, for CI systems, to raise if user input would block
-            # core:non_interactive = True
-            # some tools.xxx config also possible, though generally better in profiles
-            # tools.android:ndk_path = my/path/to/android/ndk
-            """)
-        save(global_conf_path, default_global_conf)
+
+    default_global_conf = textwrap.dedent("""\
+        # Core configuration (type 'conan config list' to list possible values)
+        # e.g, for CI systems, to raise if user input would block
+        # core:non_interactive = True
+        # some tools.xxx config also possible, though generally better in profiles
+        # tools.android:ndk_path = my/path/to/android/ndk
+        """)
+
+    # Always acquire lock to prevent TOCTOU races (e.g., config clean deleting file)
+    from conan.internal.cache.concurrency_lock import ConcurrencyLock
+    lock_manager = ConcurrencyLock(home_folder)
+    with lock_manager.config_lock("global.conf"):
+        # Try to create default global.conf atomically inside lock
+        # This prevents race where another process deletes file between check and read
+        if not save_if_not_exists(global_conf_path, default_global_conf):
+            # File already exists, load and process it
+            try:
+                text = load(global_conf_path)
+            except FileNotFoundError:
+                # File was deleted between save_if_not_exists and load (e.g., by config clean)
+                # This is safe - just recreate with defaults
+                save_if_not_exists(global_conf_path, default_global_conf)
+                # File was just created with defaults, new_config stays empty
+                return new_config
+
+            distro = None
+            if platform.system() in ["Linux", "FreeBSD"]:
+                import distro
+            template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
+            home_folder_normalized = home_folder.replace("\\", "/")
+            from conan import conan_version
+            content = template.render({"platform": platform, "os": os, "distro": distro,
+                                       "conan_version": conan_version,
+                                       "conan_home_folder": home_folder_normalized,
+                                       "detect_api": detect_api,
+                                       "hashlib": hashlib})
+            new_config.loads(content)
+    # If file was just created with defaults, new_config stays empty (default conf)
+
     return new_config

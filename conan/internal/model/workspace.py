@@ -1,6 +1,8 @@
 import os
 import shutil
+from contextlib import contextmanager
 
+import fasteners
 import yaml
 
 from conan.api.output import ConanOutput
@@ -56,6 +58,24 @@ class Workspace:
             raise ConanException("Invalid yml format at {}: {}".format(WORKSPACE_YML, e))
         return data or {}
 
+    @contextmanager
+    def _workspace_lock(self):
+        """
+        Context manager for workspace YAML file operations requiring locking.
+
+        This protects the conanws.yml file from concurrent modifications by
+        multiple processes, preventing lost updates and file corruption in
+        add() and remove() operations.
+        """
+        lock_file = os.path.join(self.folder, WORKSPACE_YML + ".lock")
+        lock = fasteners.InterProcessLock(lock_file)
+        with lock:
+            # Reload data inside the lock to get the most recent state
+            # This handles TOCTOU races where another process modified the file
+            self.conan_data = self._conan_load_data()
+            yield
+            # Data will be saved by the caller while still holding the lock
+
     def add(self, ref, path, output_folder):
         if not path or not os.path.isfile(path):
             raise ConanException(f"Cannot add to workspace. File not found: {path}")
@@ -66,24 +86,30 @@ class Workspace:
         }
         if output_folder:
             editable["output_folder"] = self._conan_rel_path(output_folder)
-        packages = self.conan_data.setdefault("packages", [])
-        for p in packages:
-            if p["path"] == path:
-                self.output.warning(f"Package {path} already exists, updating its reference")
-                p["ref"] = editable["ref"]
-                break
-        else:
-            packages.append(editable)
-        save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
+
+        # Lock the workspace file to prevent concurrent modifications
+        with self._workspace_lock():
+            packages = self.conan_data.setdefault("packages", [])
+            for p in packages:
+                if p["path"] == path:
+                    self.output.warning(f"Package {path} already exists, updating its reference")
+                    p["ref"] = editable["ref"]
+                    break
+            else:
+                packages.append(editable)
+            save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
 
     def remove(self, path):
         path = self._conan_rel_path(path)
-        package_found = next((package_info for package_info in self.conan_data.get("packages", [])
-                              if package_info["path"].replace("\\", "/") == path), None)
-        if not package_found:
-            raise ConanException(f"No editable package to remove from this path: {path}")
-        self.conan_data["packages"].remove(package_found)
-        save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
+
+        # Lock the workspace file to prevent concurrent modifications
+        with self._workspace_lock():
+            package_found = next((package_info for package_info in self.conan_data.get("packages", [])
+                                  if package_info["path"].replace("\\", "/") == path), None)
+            if not package_found:
+                raise ConanException(f"No editable package to remove from this path: {path}")
+            self.conan_data["packages"].remove(package_found)
+            save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
         return path
 
     def clean(self):

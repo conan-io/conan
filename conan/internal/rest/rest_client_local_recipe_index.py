@@ -143,31 +143,45 @@ class RestApiClientLocalRecipesIndex:
 
     # Helper methods to implement the interface
     def _export_recipe(self, ref):
-        folder = self._layout.get_recipe_folder(ref)
-        conanfile_path = os.path.join(folder, "conanfile.py")
-        original_stderr = sys.stderr
-        sys.stderr = StringIO()
-        try:
-            global_conf = ConfDefinition()
-            new_ref, _ = cmd_export(self._app.loader, self._app.cache, self._hook_manager,
-                                    global_conf, conanfile_path,
-                                    ref.name, str(ref.version), None, None, remotes=[self._remote])
-        except Exception as e:
-            raise ConanException(f"Error while exporting recipe from remote: {self._remote.name}\n"
-                                 f"{str(e)}")
-        finally:
-            export_err = sys.stderr.getvalue()
-            sys.stderr = original_stderr
-            ConanOutput(scope="local-recipes-index").debug(f"Internal export for {ref}:\n"
-                                                           f"{textwrap.indent(export_err, '    ')}")
-        if new_ref.user != ref.user or new_ref.channel != ref.channel:
-            raise RecipeNotFoundException(ref)
-        if ref.revision is not None and new_ref.revision != ref.revision:
-            ConanOutput().warning(f"A specific revision '{ref.repr_notime()}' was requested, but it "
-                                  "doesn't match the current available revision in source. The "
-                                  "local-recipes-index can't provide a specific revision")
-            raise RecipeNotFoundException(ref)
-        return new_ref
+        # Serialize exports of the same recipe to prevent concurrent write corruption
+        # Use recipe-specific lock so different recipes can export concurrently
+        from conan.internal.cache.concurrency_lock import ConcurrencyLock
+        import hashlib
+
+        lock_manager = ConcurrencyLock(self._app.cache._base_folder)
+        # Create lock ID based on recipe ref (name/version/user/channel)
+        lock_id = f"local_index_export_{hashlib.sha256(ref.repr_notime().encode()).hexdigest()[:16]}"
+
+        with lock_manager.lock(lock_id,
+                              wait_msg=f"Waiting for export of '{ref.repr_notime()}' to complete...",
+                              level=None):  # Don't participate in hierarchy, independent operation
+            # Always export to ensure timestamps are updated correctly
+            # This is important for --update checks to work properly
+            folder = self._layout.get_recipe_folder(ref)
+            conanfile_path = os.path.join(folder, "conanfile.py")
+            original_stderr = sys.stderr
+            sys.stderr = StringIO()
+            try:
+                global_conf = ConfDefinition()
+                new_ref, _ = cmd_export(self._app.loader, self._app.cache, self._hook_manager,
+                                        global_conf, conanfile_path,
+                                        ref.name, str(ref.version), None, None, remotes=[self._remote])
+            except Exception as e:
+                raise ConanException(f"Error while exporting recipe from remote: {self._remote.name}\n"
+                                     f"{str(e)}")
+            finally:
+                export_err = sys.stderr.getvalue()
+                sys.stderr = original_stderr
+                ConanOutput(scope="local-recipes-index").debug(f"Internal export for {ref}:\n"
+                                                               f"{textwrap.indent(export_err, '    ')}")
+            if new_ref.user != ref.user or new_ref.channel != ref.channel:
+                raise RecipeNotFoundException(ref)
+            if ref.revision is not None and new_ref.revision != ref.revision:
+                ConanOutput().warning(f"A specific revision '{ref.repr_notime()}' was requested, but it "
+                                      "doesn't match the current available revision in source. The "
+                                      "local-recipes-index can't provide a specific revision")
+                raise RecipeNotFoundException(ref)
+            return new_ref
 
     @staticmethod
     def _copy_files(source_folder, dest_folder):

@@ -71,9 +71,29 @@ def lock_merge(conan_api, parser, subparser, *args): # noqa
                            help="Filename of the created lockfile")
 
     args = parser.parse_args(*args)
-    result = conan_api.lockfile.merge_lockfiles(args.lockfile)
     lockfile_out = make_abs_path(args.lockfile_out)
-    result.save(lockfile_out)
+
+    # Always include output file first in merge for concurrent safety
+    # This allows multiple processes to safely merge to the same output file
+    # The merge_lockfiles method will skip files that don't exist
+    lockfiles_to_merge = [lockfile_out]
+    if args.lockfile:
+        lockfiles_to_merge.extend(args.lockfile)
+
+    # Perform the entire read-modify-write under a single lock to prevent lost updates
+    # when multiple processes concurrently merge to the same output file
+    from conan.internal.cache.concurrency_lock import ConcurrencyLock
+    lock_dir = os.path.dirname(lockfile_out) or os.getcwd()
+    lock_manager = ConcurrencyLock(lock_dir)
+    lock_name = os.path.basename(lockfile_out)
+
+    with lock_manager.config_lock(lock_name):
+        # Read the current state INSIDE the lock to ensure we're seeing the latest
+        result = conan_api.lockfile.merge_lockfiles(lockfiles_to_merge)
+        # Use the internal save method that doesn't acquire the lock again (already held)
+        from conan.api.subapi.lockfile import _save_lockfile_unlocked
+        _save_lockfile_unlocked(result, lockfile_out)
+
     ConanOutput().info("Generated lockfile: %s" % lockfile_out)
 
 

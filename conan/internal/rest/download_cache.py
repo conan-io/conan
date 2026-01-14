@@ -2,11 +2,9 @@ import hashlib
 import json
 import os
 from contextlib import contextmanager
-from threading import Lock
-
-import fasteners
 
 from conan.errors import ConanException
+from conan.internal.cache.concurrency_lock import ConcurrencyLock
 from conan.internal.util.dates import timestamp_now
 from conan.internal.util.files import load, save, remove_if_dirty
 
@@ -23,6 +21,7 @@ class DownloadCache:
 
     def __init__(self, path: str):
         self._path: str = path
+        self._lock_manager = ConcurrencyLock(path)
 
     def source_path(self, sha256):
         return os.path.join(self._path, self._SOURCE_BACKUP, sha256)
@@ -33,20 +32,17 @@ class DownloadCache:
         h = md.hexdigest()
         return os.path.join(self._path, self._CONAN_CACHE, h), h
 
-    _thread_locks = {}  # Needs to be shared among all instances
-
     @contextmanager
     def lock(self, lock_id):
-        lock = os.path.join(self._path, self._LOCKS, lock_id)
-        with fasteners.InterProcessLock(lock):  # TODO: Abstract away when necessary for concurrency
-            # Once the process has access, make sure multithread is locked too
-            # as SimpleLock doesn't work multithread
-            thread_lock = self._thread_locks.setdefault(lock, Lock())
-            thread_lock.acquire()
-            try:
-                yield
-            finally:
-                thread_lock.release()
+        """
+        Acquire an exclusive lock for download cache operations.
+
+        Uses ConcurrencyLock for inter-process and thread-safe locking.
+        Lock level is None (no hierarchy enforcement) since download cache
+        operations are independent and don't interact with recipe/package locks.
+        """
+        with self._lock_manager.lock(lock_id, level=None):
+            yield
 
     def get_backup_sources_files(self, excluded_urls, package_list=None, only_upload=True):
         """Get list of backup source files currently present in the cache,
@@ -110,36 +106,54 @@ class DownloadCache:
                     break
         return files_to_upload
 
-    @staticmethod
-    def update_backup_sources_json(cached_path, conanfile, urls):
-        """ create or update the sha256.json file with the references and new urls used
+    def update_backup_sources_json(self, cached_path, conanfile, urls):
+        """Update backup sources JSON with concurrency protection and atomic write.
+
+        Creates or updates the sha256.json file with the references and new urls used.
+        Uses locking to prevent race conditions when multiple processes download the
+        same source file concurrently.
         """
         summary_path = cached_path + ".json"
-        if os.path.exists(summary_path):
-            summary = json.loads(load(summary_path))
-        else:
-            summary = {"references": {}, "timestamp": timestamp_now()}
 
-        try:
-            summary_key = str(conanfile.ref)
-        except AttributeError:
-            # If there's no node associated with the conanfile,
-            # try to construct a reference from the conanfile itself.
-            # We accept it if we have a name and a version at least.
-            if conanfile.name and conanfile.version:
-                user = f"@{conanfile.user}" if conanfile.user else ""
-                channel = f"/{conanfile.channel}" if conanfile.channel else ""
-                summary_key = f"{conanfile.name}/{conanfile.version}{user}{channel}"
+        # Extract lock ID from cached_path (the sha256 hash)
+        lock_id = os.path.basename(cached_path)
+
+        # Protect read-modify-write with lock
+        with self._lock_manager.lock(lock_id):
+            # Read existing metadata or create new
+            if os.path.exists(summary_path):
+                summary = json.loads(load(summary_path))
             else:
-                # The recipe path would be different between machines
-                # So best we can do is to set this as unknown
-                summary_key = "unknown"
+                summary = {"references": {}, "timestamp": timestamp_now()}
 
-        if not isinstance(urls, (list, tuple)):
-            urls = [urls]
-        existing_urls = summary["references"].setdefault(summary_key, [])
-        existing_urls.extend(url for url in urls if url not in existing_urls)
-        conanfile.output.verbose(f"Updating ${summary_path} summary file")
-        summary_dump = json.dumps(summary)
-        conanfile.output.debug(f"New summary: ${summary_dump}")
-        save(summary_path, json.dumps(summary))
+            # Determine the summary key (package reference)
+            try:
+                summary_key = str(conanfile.ref)
+            except AttributeError:
+                # If there's no node associated with the conanfile,
+                # try to construct a reference from the conanfile itself.
+                # We accept it if we have a name and a version at least.
+                if conanfile.name and conanfile.version:
+                    user = f"@{conanfile.user}" if conanfile.user else ""
+                    channel = f"/{conanfile.channel}" if conanfile.channel else ""
+                    summary_key = f"{conanfile.name}/{conanfile.version}{user}{channel}"
+                else:
+                    # The recipe path would be different between machines
+                    # So best we can do is to set this as unknown
+                    summary_key = "unknown"
+
+            # Modify: add new URLs if not already present
+            if not isinstance(urls, (list, tuple)):
+                urls = [urls]
+            existing_urls = summary["references"].setdefault(summary_key, [])
+            existing_urls.extend(url for url in urls if url not in existing_urls)
+
+            conanfile.output.verbose(f"Updating ${summary_path} summary file")
+            summary_dump = json.dumps(summary)
+            conanfile.output.debug(f"New summary: ${summary_dump}")
+
+            # Write atomically: temp file + os.replace()
+            # This ensures that if interrupted, the original file is unchanged
+            tmp_path = summary_path + ".tmp"
+            save(tmp_path, json.dumps(summary))
+            os.replace(tmp_path, summary_path)

@@ -128,21 +128,27 @@ class ExportAPI:
         assert package_id is not None
         out.info("Packaging to %s" % package_id)
         pref = PkgReference(ref, package_id)
-        pkg_layout = cache.create_build_pkg_layout(pref)
 
-        conanfile.folders.set_base_folders(source_folder, output_folder)
-        dest_package_folder = pkg_layout.package()
-        conanfile.folders.set_base_package(dest_package_folder)
-        mkdir(pkg_layout.metadata())
-        conanfile.folders.set_base_pkg_metadata(pkg_layout.metadata())
+        # Acquire package lock for the entire export-pkg operation to prevent race conditions
+        # when multiple processes export-pkg the same package simultaneously.
+        # Without this lock, both would create separate build layouts, run package() concurrently,
+        # then race at assign_prev() where the second one would overwrite the first's work.
+        with cache.package_lock(pref):
+            pkg_layout = cache.create_build_pkg_layout(pref)
 
-        with pkg_layout.set_dirty_context_manager():
-            prev = run_package_method(conanfile, package_id, hook_manager, ref)
+            conanfile.folders.set_base_folders(source_folder, output_folder)
+            dest_package_folder = pkg_layout.package()
+            conanfile.folders.set_base_package(dest_package_folder)
+            mkdir(pkg_layout.metadata())
+            conanfile.folders.set_base_pkg_metadata(pkg_layout.metadata())
 
-        pref = PkgReference(pref.ref, pref.package_id, prev)
-        pkg_layout.reference = pref
-        cache.assign_prev(pkg_layout)
-        pkg_node.prev = prev
+            with pkg_layout.set_dirty_context_manager():
+                prev = run_package_method(conanfile, package_id, hook_manager, ref)
+
+            pref = PkgReference(pref.ref, pref.package_id, prev)
+            pkg_layout.reference = pref
+            cache.assign_prev(pkg_layout)
+            pkg_node.prev = prev
         pkg_node.pref_timestamp = pref.timestamp  # assigned by assign_prev
         pkg_node.recipe = RECIPE_INCACHE
         pkg_node.binary = BINARY_BUILD

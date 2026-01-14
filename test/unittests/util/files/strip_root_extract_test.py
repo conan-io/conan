@@ -312,12 +312,19 @@ def test_decompressing_folders_with_different_modes():
     tmp_folder = temp_folder()
     tgz_folder = temp_folder()
     tgz_file = os.path.join(tgz_folder, "file.tar.gz")
-    with chdir(tmp_folder):
-        save("root/parent/bin/file1", "contentsfile1")
-        save("root/parent/bin/file2", "contentsfile2")
-        os.chmod(os.path.join("root", "parent"), mode=0o555)
-        os.chmod(os.path.join("root", "parent", "bin"), mode=0o700)
-        _compress_root_folder(tmp_folder, tgz_file, root_folder_name="root")
+    try:
+        with chdir(tmp_folder):
+            save("root/parent/bin/file1", "contentsfile1")
+            save("root/parent/bin/file2", "contentsfile2")
+            os.chmod(os.path.join("root", "parent"), mode=0o555)
+            os.chmod(os.path.join("root", "parent", "bin"), mode=0o700)
+            _compress_root_folder(tmp_folder, tgz_file, root_folder_name="root")
+    finally:
+        # Restore permissions so cleanup can delete the temp folder
+        try:
+            os.chmod(os.path.join(tmp_folder, "root", "parent"), mode=0o755)
+        except (OSError, FileNotFoundError):
+            pass  # Best effort - folder might not exist or already be accessible
 
     # Tgz unzipped regularly
     extract_folder = temp_folder()

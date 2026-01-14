@@ -71,31 +71,33 @@ def profile_detect(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     profile_name = args.name or "default"
-    profile_pathname = conan_api.profiles.get_path(profile_name, os.getcwd(), exists=False)
-    if os.path.exists(profile_pathname):
-        if args.exist_ok:
-            ConanOutput().info(f"Profile '{profile_name}' already exists, skipping detection")
-            return
-        if not args.force:
-            raise ConanException(f"Profile '{profile_pathname}' already exists")
 
-    detected_profile = conan_api.profiles.detect()
+    # Use the new detect_and_save method which handles locking and atomic writes
+    detected_profile = conan_api.profiles.detect_and_save(
+        profile_name=profile_name,
+        force=args.force,
+        exist_ok=args.exist_ok
+    )
+
+    # If profile was skipped (exist_ok=True and file existed), detected_profile is None
+    if detected_profile is None:
+        return
+
+    # Show detected profile to user
     ConanOutput().success("\nDetected profile:")
     cli_out_write(detected_profile.dumps())
 
-    contents = detected_profile.dumps()
+    # Show warnings
     ConanOutput().warning("This profile is a guess of your environment, please check it.")
     if detected_profile.settings.get("os") == "Macos":
         ConanOutput().warning("Defaulted to cppstd='gnu17' for apple-clang.")
     ConanOutput().warning("The output of this command is not guaranteed to be stable and can "
                           "change in future Conan versions.")
     ConanOutput().warning("Use your own profile files for stability.")
-    ConanOutput().success(f"Saving detected profile to {profile_pathname}")
-    dir_path = os.path.dirname(profile_pathname)
-    if dir_path:
-        os.makedirs(dir_path, exist_ok=True)
-    with open(profile_pathname, "w", encoding="utf-8", newline="") as f:
-        f.write(contents)
+
+    # Show success message with path
+    profile_pathname = conan_api.profiles.get_path(profile_name, os.getcwd())
+    ConanOutput().success(f"Saved detected profile to {profile_pathname}")
 
 
 @conan_subcommand(formatters={"text": profiles_list_cli_output, "json": default_json_formatter})

@@ -24,7 +24,7 @@ from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
-from conan.api.subapi.remotes import _save
+from conan.api.subapi.remotes import _save_remotes_unlocked
 from conan.cli.exit_codes import SUCCESS
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
@@ -409,7 +409,9 @@ class TestClient:
             servers = {"default": server}
 
         # Adding the .conan2, so we know clearly while debugging this is a cache folder
-        self.cache_folder = cache_folder or os.path.join(temp_folder(path_with_spaces), ".conan2")
+        # Don't register TestClient folders with test-level cleanup - they may be shared across
+        # multiple tests via module/session-scoped fixtures
+        self.cache_folder = cache_folder or os.path.join(temp_folder(path_with_spaces, register_for_test_cleanup=False), ".conan2")
 
         self.requester_class = requester_class
         self.servers = servers or {}
@@ -417,7 +419,7 @@ class TestClient:
             self.update_servers()
 
         self.update_providers()
-        self.current_folder = current_folder or temp_folder(path_with_spaces)
+        self.current_folder = current_folder or temp_folder(path_with_spaces, register_for_test_cleanup=False)
 
         # Once the client is ready, modify the configuration
         mkdir(self.current_folder)
@@ -434,7 +436,86 @@ class TestClient:
             save(self.paths.settings_path, "os: [Linux, Windows]")
         else:
             text = default_profiles[platform.system()]
-        save(os.path.join(self.cache_folder, "profiles", "default"), text)
+
+        # Ensure profile directory exists before any operations
+        profile_dir = os.path.join(self.cache_folder, "profiles")
+        profile_path = os.path.join(profile_dir, "default")
+
+        # Use file locking for ALL profile operations to prevent races
+        import fcntl
+        lock_path = profile_path + ".lock"
+
+        # Retry loop to handle TOCTOU race: directory deleted after makedirs but before open
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Ensure directory exists immediately before opening lock file
+                os.makedirs(profile_dir, exist_ok=True)
+                lock_file = open(lock_path, 'w')
+                break  # Success
+            except FileNotFoundError:
+                if attempt == max_retries - 1:
+                    raise  # Give up after max retries
+                # Directory was deleted between makedirs and open, retry
+                continue
+
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+
+            # Check if we need to write the profile
+            should_write = False
+            if not os.path.exists(profile_path):
+                should_write = True
+            elif light:
+                # Light profiles should NEVER overwrite existing profiles
+                should_write = False
+            else:
+                # Normal (full) profiles should overwrite light/incomplete profiles
+                try:
+                    with open(profile_path, 'r') as f:
+                        content = f.read()
+                        # If existing profile doesn't have arch or compiler, it's light/incomplete
+                        if len(content) < 20 or "arch=" not in content or "compiler=" not in content:
+                            should_write = True
+                except (IOError, OSError):
+                    should_write = True
+
+            if should_write:
+                # Write atomically using temp file + rename
+                import tempfile
+                # Retry loop to handle TOCTOU race: directory deleted after makedirs but before mkstemp
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        # Ensure directory exists immediately before creating temp file
+                        os.makedirs(profile_dir, exist_ok=True)
+                        fd, temp_path = tempfile.mkstemp(dir=profile_dir, prefix=".default.tmp")
+                        break  # Success
+                    except FileNotFoundError:
+                        if attempt == max_retries - 1:
+                            raise  # Give up after max retries
+                        # Directory was deleted between makedirs and mkstemp, retry
+                        continue
+
+                try:
+                    with os.fdopen(fd, 'w') as f:
+                        f.write(text)
+                    # Atomic rename
+                    os.replace(temp_path, profile_path)
+                except Exception:
+                    try:
+                        os.unlink(temp_path)
+                    except (OSError, FileNotFoundError):
+                        pass
+                    raise
+
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            lock_file.close()
+        finally:
+            try:
+                os.remove(lock_path)
+            except (OSError, FileNotFoundError):
+                pass
         # Using internal env variable to add another custom commands folder
         self._custom_commands_folder = custom_commands_folder
 
@@ -482,15 +563,18 @@ class TestClient:
         return self.cache.store
 
     def update_servers(self):
+        from test.utils.multiprocess import RealTestServer
         remotes = []
         for name, server in self.servers.items():
             if isinstance(server, ArtifactoryServer):
                 remotes.append(Remote(name, server.repo_api_url))
             elif isinstance(server, TestServer):
                 remotes.append(Remote(name, server.fake_url))
+            elif isinstance(server, RealTestServer):
+                remotes.append(Remote(name, server.url))
             else:
                 remotes.append(Remote(name, server))
-        _save(HomePaths(self.cache_folder).remotes_path, remotes)
+        _save_remotes_unlocked(HomePaths(self.cache_folder).remotes_path, remotes)
 
 
     def update_providers(self):

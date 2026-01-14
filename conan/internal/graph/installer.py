@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput, Color
@@ -83,8 +84,28 @@ class _PackageBuilder:
         rmdir(build_folder)
         if not getattr(conanfile, 'no_copy_source', False):
             conanfile.output.info('Copying sources to build folder')
+
+            # Ignore function to skip special files that can't be copied
+            def ignore_uncopyable(src, names):
+                ignored = []
+                for name in names:
+                    path = os.path.join(src, name)
+                    try:
+                        st_mode = os.lstat(path).st_mode
+                        # Skip sockets, FIFOs, and device files - they can't be copied
+                        # and cause errors (especially sockets on macOS with errno 102)
+                        if (stat.S_ISSOCK(st_mode) or
+                            stat.S_ISFIFO(st_mode) or
+                            stat.S_ISCHR(st_mode) or
+                            stat.S_ISBLK(st_mode)):
+                            ignored.append(name)
+                    except (OSError, IOError):
+                        # If we can't stat the file, skip it to avoid errors
+                        pass
+                return ignored
+
             try:
-                shutil.copytree(source_folder, build_folder, symlinks=True)
+                shutil.copytree(source_folder, build_folder, symlinks=True, ignore=ignore_uncopyable)
             except Exception as e:
                 raise ConanException(f"{e}\nError copying sources to build folder")
 
@@ -124,38 +145,42 @@ class _PackageBuilder:
 
         base_build, skip_build = self._get_build_folder(conanfile, package_layout)
 
-        # PREPARE SOURCES
-        if not skip_build:
-            # TODO: cache2.0 check locks
-            # with package_layout.conanfile_write_lock(self._output):
-            set_dirty(base_build)
-            self._copy_sources(conanfile, base_source, base_build)
-            mkdir(base_build)
+        # Lock package operations to prevent race conditions when multiple processes
+        # build the same package simultaneously. This protects:
+        # - Source copying to build folder
+        # - set_dirty/clean_dirty operations
+        # - Build operations in the build folder
+        # - Package operations
+        # Lock level: PACKAGE
+        with self._cache.package_lock(pref):
+            # PREPARE SOURCES
+            if not skip_build:
+                set_dirty(base_build)
+                self._copy_sources(conanfile, base_source, base_build)
+                mkdir(base_build)
 
-        # BUILD & PACKAGE
-        # TODO: cache2.0 check locks
-        # with package_layout.conanfile_read_lock(self._output):
-        with chdir(base_build):
-            try:
-                src = base_source if getattr(conanfile, 'no_copy_source', False) else base_build
-                conanfile.folders.set_base_source(src)
-                conanfile.folders.set_base_build(base_build)
-                conanfile.folders.set_base_package(base_package)
-                # In local cache, generators folder always in build_folder
-                conanfile.folders.set_base_generators(base_build)
-                conanfile.folders.set_base_pkg_metadata(package_layout.metadata())
+            # BUILD & PACKAGE
+            with chdir(base_build):
+                try:
+                    src = base_source if getattr(conanfile, 'no_copy_source', False) else base_build
+                    conanfile.folders.set_base_source(src)
+                    conanfile.folders.set_base_build(base_build)
+                    conanfile.folders.set_base_package(base_package)
+                    # In local cache, generators folder always in build_folder
+                    conanfile.folders.set_base_generators(base_build)
+                    conanfile.folders.set_base_pkg_metadata(package_layout.metadata())
 
-                if not skip_build:
-                    conanfile.output.info('Building your package in %s' % base_build)
-                    # In local cache, install folder always is build_folder
-                    self._build(conanfile, pref)
-                    clean_dirty(base_build)
+                    if not skip_build:
+                        conanfile.output.info('Building your package in %s' % base_build)
+                        # In local cache, install folder always is build_folder
+                        self._build(conanfile, pref)
+                        clean_dirty(base_build)
 
-                prev = self._package(conanfile, pref)
-                assert prev
-                node.prev = prev
-            except ConanException as exc:  # TODO: Remove this? unnecessary?
-                raise exc
+                    prev = self._package(conanfile, pref)
+                    assert prev
+                    node.prev = prev
+                except ConanException as exc:  # TODO: Remove this? unnecessary?
+                    raise exc
 
         return node.pref
 
@@ -189,12 +214,17 @@ class BinaryInstaller:
         export_source_folder = recipe_layout.export_sources()
         source_folder = recipe_layout.source()
 
-        retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, node.ref, remotes)
+        # Lock source operations to prevent race conditions when multiple processes
+        # try to run source() for the same recipe simultaneously
+        with self._cache.source_operation(node.ref):
+            retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile,
+                                     node.ref, remotes)
 
-        conanfile.folders.set_base_source(source_folder)
-        conanfile.folders.set_base_export_sources(source_folder)
-        conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
-        config_source(export_source_folder, conanfile, self._hook_manager)
+            conanfile.folders.set_base_source(source_folder)
+            conanfile.folders.set_base_export_sources(source_folder)
+            conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
+            config_source(export_source_folder, conanfile, self._hook_manager)
+        
         return recipe_layout
 
     @staticmethod
@@ -298,6 +328,12 @@ class BinaryInstaller:
         node = package.nodes[0]
         assert node.pref.revision is not None
         assert node.pref.timestamp is not None
+        # Check if another process/thread already downloaded this package
+        # This can happen when multiple processes are installing simultaneously
+        if self._cache.exists_prev(node.pref):
+            ConanOutput(scope=str(node.pref.ref)).info(
+                f"Package {node.pref.package_id} already downloaded by another process")
+            return
         self._remote_manager.get_package(node.pref, node.binary_remote)
 
     def _handle_package(self, recipe_layout, package, install_reference, handled_count, total_count):
@@ -330,6 +366,13 @@ class BinaryInstaller:
         else:
             assert pref.revision is not None
             package_layout = self._cache.pkg_layout(pref)
+
+            # Wait for any ongoing download/extraction to complete before using the package
+            # This prevents "folder must exist" errors when another process is still extracting
+            if package.binary in (BINARY_DOWNLOAD, BINARY_UPDATE):
+                with package_layout.package_lock():
+                    pass  # Lock released, extraction is complete
+
             if package.binary == BINARY_CACHE:
                 node = package.nodes[0]
                 pref = node.pref
@@ -347,7 +390,7 @@ class BinaryInstaller:
             # Call the info method
             conanfile.folders.set_base_package(pkg_folder)
             conanfile.folders.set_base_pkg_metadata(pkg_metadata)
-            self._call_finalize_method(conanfile, package_layout.finalize())
+            self._call_finalize_method(conanfile, package_layout.finalize(), self._cache, pref)
             # Use package_folder which has been updated previously by install_method if necessary
             self._call_package_info(conanfile, conanfile.package_folder, is_editable=False)
 
@@ -479,15 +522,20 @@ class BinaryInstaller:
             raise ConanException(f"{conanfile}: Error in package_info() method:\n\t{str(e)}")
 
     @staticmethod
-    def _call_finalize_method(conanfile, finalize_folder):
+    def _call_finalize_method(conanfile, finalize_folder, cache, pref):
         if hasattr(conanfile, "finalize"):
             conanfile.folders.set_finalize_folder(finalize_folder)
-            if not os.path.exists(finalize_folder):
-                mkdir(finalize_folder)
-                conanfile.output.highlight("Calling finalize()")
-                with conanfile_exception_formatter(conanfile, "finalize"):
-                    with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'],
-                                               'finalize'):
-                        conanfile.finalize()
+
+            # Use package-level lock to prevent concurrent finalize() races
+            # Multiple processes might all see the finalize folder doesn't exist and try to create it
+            # The lock ensures only one process creates the folder and runs finalize()
+            with cache._lock.package_lock(pref):
+                if not os.path.exists(finalize_folder):
+                    mkdir(finalize_folder)
+                    conanfile.output.highlight("Calling finalize()")
+                    with conanfile_exception_formatter(conanfile, "finalize"):
+                        with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'],
+                                                   'finalize'):
+                            conanfile.finalize()
 
             conanfile.output.success(f"Finalized folder {finalize_folder}")

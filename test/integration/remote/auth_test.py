@@ -166,7 +166,6 @@ class TestAuthenticationTest:
         assert "ERROR: Recipe 'pkg' not found" in client.out
 
 
-@pytest.mark.xfail(reason="This test is randomly failing")
 def test_token_expired():
     server_folder = temp_folder()
     server_conf = textwrap.dedent("""
@@ -186,7 +185,13 @@ def test_token_expired():
     save(os.path.join(server_folder, ".conan_server", "server.conf"), server_conf)
     server = TestServer(base_path=server_folder, users={"admin": "password", "other": "pass"})
 
-    c = TestClient(servers={"default": server}, inputs=["admin", "password", "other", "pass"])
+    # Provide extra inputs in case token expires multiple times during parallel operations
+    # With very short JWT expiration (0.02 min = 1.2s) and parallel downloads,
+    # token can expire several times requiring multiple re-authentications
+    # First 2: initial create/upload (admin, password)
+    # Remaining: re-authentications as token expires (other, pass) repeated 10 times for safety
+    c = TestClient(servers={"default": server},
+                   inputs=["admin", "password"] + 10*["other", "pass"])
     c.save({"conanfile.py": GenConanfile()})
     c.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
     c.run("upload * -r=default -c")

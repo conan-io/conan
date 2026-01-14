@@ -2,6 +2,7 @@ import os
 
 from conan.api.output import ConanOutput
 
+from conan.internal.cache.concurrency_lock import ConcurrencyLock
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanApp
 from conan.internal.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
@@ -26,6 +27,7 @@ class ConfigAPI:
     def __init__(self, conan_api, helpers):
         self._conan_api = conan_api
         self._helpers = helpers
+        self._lock = ConcurrencyLock(conan_api.home_folder)
 
     def home(self):
         """ return the current Conan home folder containing the configuration files like
@@ -133,73 +135,77 @@ class ConfigAPI:
         return installed_refs
 
     def _install_pkgs(self, required_pkgs, force):
-        out = ConanOutput()
-        out.title("Configuration packages to install")
-        config_version_file = HomePaths(self._conan_api.home_folder).config_version_path
-        if not os.path.exists(config_version_file):
-            config_versions = []
-        else:
-            ConanOutput().info(f"Reading existing config-versions file: {config_version_file}")
-            config_versions = loadconanconfig(config_version_file)
-        config_versions_dict = {r.name: r for r in config_versions}
-        if len(config_versions_dict) < len(config_versions):
-            raise ConanException("There are multiple requirements for the same package "
-                                 f"with different versions: {config_version_file}")
+        # Lock the entire operation to prevent race conditions when multiple
+        # processes run 'conan config install-pkg' concurrently. This protects
+        # the read-modify-write cycle on config_version.json.
+        with self._lock.config_lock("config_version.json"):
+            out = ConanOutput()
+            out.title("Configuration packages to install")
+            config_version_file = HomePaths(self._conan_api.home_folder).config_version_path
+            if not os.path.exists(config_version_file):
+                config_versions = []
+            else:
+                ConanOutput().info(f"Reading existing config-versions file: {config_version_file}")
+                config_versions = loadconanconfig(config_version_file)
+            config_versions_dict = {r.name: r for r in config_versions}
+            if len(config_versions_dict) < len(config_versions):
+                raise ConanException("There are multiple requirements for the same package "
+                                     f"with different versions: {config_version_file}")
 
-        new_config = config_versions_dict.copy()
-        for required_pkg in required_pkgs:
-            new_config.pop(required_pkg.ref.name, None)  # To ensure new order
-            new_config[required_pkg.ref.name] = required_pkg.ref
-        final_config_refs = [r for r in new_config.values()]
+            new_config = config_versions_dict.copy()
+            for required_pkg in required_pkgs:
+                new_config.pop(required_pkg.ref.name, None)  # To ensure new order
+                new_config[required_pkg.ref.name] = required_pkg.ref
+            final_config_refs = [r for r in new_config.values()]
 
-        prev_refs = "\n\t".join(repr(r) for r in config_versions)
-        out.info(f"Previously installed configuration packages:\n\t{prev_refs}")
+            prev_refs = "\n\t".join(repr(r) for r in config_versions)
+            out.info(f"Previously installed configuration packages:\n\t{prev_refs}")
 
-        new_refs = "\n\t".join(r.repr_notime() for r in final_config_refs)
-        out.info(f"New configuration packages to install:\n\t{new_refs}")
+            new_refs = "\n\t".join(r.repr_notime() for r in final_config_refs)
+            out.info(f"New configuration packages to install:\n\t{new_refs}")
 
-        if list(config_versions_dict) == list(new_config)[:len(config_versions_dict)]:
-            # There is no conflict in order, can be done safely
-            if final_config_refs == config_versions:
+            if list(config_versions_dict) == list(new_config)[:len(config_versions_dict)]:
+                # There is no conflict in order, can be done safely
+                if final_config_refs == config_versions:
+                    if force:
+                        out.warning("The requested configurations are identical to the already "
+                                    "installed ones, but forcing re-installation because --force")
+                        to_install = required_pkgs
+                    else:
+                        out.info("The requested configurations are identical to the already "
+                                 "installed ones, skipping re-installation")
+                        to_install = []
+                else:
+                    out.info("Installing new or updating configuration packages")
+                    to_install = required_pkgs
+            else:
+                # Change in order of existing configuration
                 if force:
-                    out.warning("The requested configurations are identical to the already "
-                                "installed ones, but forcing re-installation because --force")
+                    out.warning("Installing these configuration packages will break the "
+                                "existing order, with possible side effects. "
+                                "Forcing the installation because --force was defined", warn_tag="risk")
                     to_install = required_pkgs
                 else:
-                    out.info("The requested configurations are identical to the already "
-                             "installed ones, skipping re-installation")
-                    to_install = []
-            else:
-                out.info("Installing new or updating configuration packages")
-                to_install = required_pkgs
-        else:
-            # Change in order of existing configuration
-            if force:
-                out.warning("Installing these configuration packages will break the "
-                            "existing order, with possible side effects. "
-                            "Forcing the installation because --force was defined", warn_tag="risk")
-                to_install = required_pkgs
-            else:
-                msg = ("Installing these configuration packages will break the "
-                       "existing order, with possible side effects, like breaking 'package_ids'.\n"
-                       "If you still want to enforce this configuration you can:\n"
-                       "   Use 'conan config clean' first to fully reset your configuration.\n"
-                       "   Or use 'conan config install-pkg --force' to force installation.")
-                raise ConanException(msg)
+                    msg = ("Installing these configuration packages will break the "
+                           "existing order, with possible side effects, like breaking 'package_ids'.\n"
+                           "If you still want to enforce this configuration you can:\n"
+                           "   Use 'conan config clean' first to fully reset your configuration.\n"
+                           "   Or use 'conan config install-pkg --force' to force installation.")
+                    raise ConanException(msg)
 
-        out.title("Installing configuration from packages")
-        # install things and update the Conan cache "config_versions.json" file
-        from conan.internal.api.config.config_installer import configuration_install
-        cache_folder = self._conan_api.cache_folder
-        requester = self._helpers.requester
-        for pkg in to_install:
-            out.info(f"Installing configuration from {pkg.ref}")
-            configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder,
-                                  verify_ssl=False, config_type="dir",
-                                  ignore=["conaninfo.txt", "conanmanifest.txt"])
+            out.title("Installing configuration from packages")
+            # install things and update the Conan cache "config_versions.json" file
+            from conan.internal.api.config.config_installer import configuration_install
+            cache_folder = self._conan_api.cache_folder
+            requester = self._helpers.requester
+            for pkg in to_install:
+                out.info(f"Installing configuration from {pkg.ref}")
+                configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder,
+                                      verify_ssl=False, config_type="dir",
+                                      ignore=["conaninfo.txt", "conanmanifest.txt"])
 
-        saveconanconfig(config_version_file, final_config_refs)
-        return final_config_refs
+            saveconanconfig(config_version_file, final_config_refs)
+            return final_config_refs
 
     def fetch_packages(self, requires, lockfile=None, remotes=None, profile=None):
         """ get and download configuration packages into the Conan cache, without installing
@@ -282,15 +288,35 @@ class ConfigAPI:
         contents = os.listdir(self.home())
         packages_folder = (self._helpers.global_conf.get("core.cache:storage_path") or
                            os.path.join(self.home(), "p"))
+        locks_folder = os.path.join(self.home(), "locks")
         for content in contents:
             content_path = os.path.join(self.home(), content)
+            # Skip packages folder (contains user packages)
             if content_path == packages_folder:
                 continue
+            # Skip locks folder (concurrency infrastructure, not user config)
+            # Lock files are automatically cleaned up when released
+            if content_path == locks_folder:
+                continue
             ConanOutput().debug(f"Removing {content_path}")
-            if os.path.isdir(content_path):
-                rmdir(content_path)
-            else:
-                remove(content_path)
+            # Handle concurrent clean operations - another process may have already deleted
+            try:
+                if os.path.isdir(content_path):
+                    rmdir(content_path)
+                elif os.path.isfile(content_path):
+                    remove(content_path)
+                # else: already deleted by another process, skip
+            except (FileNotFoundError, AssertionError, ConanException) as e:
+                # File/dir deleted or partially deleted by concurrent process
+                # ConanException includes cases like "Directory not empty" from rmdir
+                error_msg = str(e).lower()
+                if ("not empty" in error_msg or
+                    "not found" in error_msg or
+                    "no such file" in error_msg):
+                    ConanOutput().debug(f"Skipping {content_path} - concurrent deletion in progress")
+                else:
+                    # Re-raise unexpected errors
+                    raise
         self._conan_api.reinit()
         # CHECK: This also generates a remotes.json that is not there after a conan profile show?
         self._conan_api.migrate()

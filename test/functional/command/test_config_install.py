@@ -516,10 +516,10 @@ class TestConfigInstallSched:
         save_files(folder, {"global.conf": "core.download:parallel=0"})
         c = TestClient(light=True)
         c.run('config install "%s"' % folder)
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
 
         c.run('config install "%s"' % folder)
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
 
     @pytest.mark.tool("git")
     def test_config_install_remove_git_repo(self):
@@ -535,7 +535,7 @@ class TestConfigInstallSched:
             c.run_command('git config user.email myname@mycompany.com')
             c.run_command('git commit -m "mymsg"')
         c.run('config install "%s/.git" --type git' % folder)
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         assert "Repo cloned!" in c.out  # git clone executed by scheduled task
 
     def test_config_fails_git_folder(self):

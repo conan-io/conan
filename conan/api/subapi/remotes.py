@@ -1,11 +1,13 @@
 import fnmatch
 import json
 import os
+import uuid
 from collections import OrderedDict
 from urllib.parse import urlparse
 
 from conan.api.model import Remote, LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
+from conan.internal.cache.concurrency_lock import ConcurrencyLock
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanBasicApp
 from conan.internal.rest.remote_credentials import RemoteCredentials
@@ -34,6 +36,7 @@ class RemotesAPI:
         self._api_helpers = api_helpers
         self._home_folder = conan_api.home_folder
         self._remotes_file = HomePaths(self._home_folder).remotes_path
+        self._lock = ConcurrencyLock(self._home_folder)
 
     def list(self, pattern=None, only_enabled=True):
         """
@@ -45,7 +48,7 @@ class RemotesAPI:
         :return: A list of :ref:`Remote <conan.api.model.Remote>` objects
 
         """
-        remotes = _load(self._remotes_file)
+        remotes = self._load_remotes()
         if only_enabled:
             remotes = [r for r in remotes if not r.disabled]
         if pattern:
@@ -61,15 +64,16 @@ class RemotesAPI:
         :return: the list of disabled :ref:`Remote <conan.api.model.Remote>` objects  (even if they
           were already disabled)
         """
-        remotes = _load(self._remotes_file)
-        disabled = _filter(remotes, pattern, only_enabled=False)
-        result = []
-        if disabled:
-            for r in disabled:
-                r.disabled = True
-                result.append(r)
-            _save(self._remotes_file, remotes)
-        return result
+        with self._lock.config_lock("remotes.json"):
+            remotes = self._load_remotes_unlocked()
+            disabled = _filter(remotes, pattern, only_enabled=False)
+            result = []
+            if disabled:
+                for r in disabled:
+                    r.disabled = True
+                    result.append(r)
+                _save_remotes_unlocked(self._remotes_file, remotes)
+            return result
 
     def enable(self, pattern):
         """
@@ -80,15 +84,16 @@ class RemotesAPI:
         :return: the list of enabled :ref:`Remote <conan.api.model.Remote>` objects (even if they
           were already enabled)
         """
-        remotes = _load(self._remotes_file)
-        enabled = _filter(remotes, pattern, only_enabled=False)
-        result = []
-        if enabled:
-            for r in enabled:
-                r.disabled = False
-                result.append(r)
-            _save(self._remotes_file, remotes)
-        return result
+        with self._lock.config_lock("remotes.json"):
+            remotes = self._load_remotes_unlocked()
+            enabled = _filter(remotes, pattern, only_enabled=False)
+            result = []
+            if enabled:
+                for r in enabled:
+                    r.disabled = False
+                    result.append(r)
+                _save_remotes_unlocked(self._remotes_file, remotes)
+            return result
 
     def get(self, remote_name):
         """
@@ -98,7 +103,7 @@ class RemotesAPI:
         :return: the :ref:`Remote <conan.api.model.Remote>` object, or raise an Exception if the
           remote does not exist.
         """
-        remotes = _load(self._remotes_file)
+        remotes = self._load_remotes()
         try:
             return {r.name: r for r in remotes}[remote_name]
         except KeyError:
@@ -115,27 +120,28 @@ class RemotesAPI:
           the remote in that position instead of the last one
         """
         add_local_recipes_index_remote(self._home_folder, remote)
-        remotes = _load(self._remotes_file)
         if remote.remote_type != LOCAL_RECIPES_INDEX:
             _validate_url(remote.url)
-        current = {r.name: r for r in remotes}.get(remote.name)
-        if current:  # same name remote existing!
-            if not force:
-                raise ConanException(f"Remote '{remote.name}' already exists in remotes "
-                                     "(use --force to continue)")
-            ConanOutput().warning(f"Remote '{remote.name}' already exists in remotes")
-            if current.url != remote.url:
-                ConanOutput().warning("Updating existing remote with new url")
+        with self._lock.config_lock("remotes.json"):
+            remotes = self._load_remotes_unlocked()
+            current = {r.name: r for r in remotes}.get(remote.name)
+            if current:  # same name remote existing!
+                if not force:
+                    raise ConanException(f"Remote '{remote.name}' already exists in remotes "
+                                         "(use --force to continue)")
+                ConanOutput().warning(f"Remote '{remote.name}' already exists in remotes")
+                if current.url != remote.url:
+                    ConanOutput().warning("Updating existing remote with new url")
 
-        _check_urls(remotes, remote.url, force, current)
-        if index is None:  # append or replace in place
-            d = {r.name: r for r in remotes}
-            d[remote.name] = remote
-            remotes = list(d.values())
-        else:
-            remotes = [r for r in remotes if r.name != remote.name]
-            remotes.insert(index, remote)
-        _save(self._remotes_file, remotes)
+            _check_urls(remotes, remote.url, force, current)
+            if index is None:  # append or replace in place
+                d = {r.name: r for r in remotes}
+                d[remote.name] = remote
+                remotes = list(d.values())
+            else:
+                remotes = [r for r in remotes if r.name != remote.name]
+                remotes.insert(index, remote)
+            _save_remotes_unlocked(self._remotes_file, remotes)
 
     def remove(self, pattern):
         """
@@ -145,10 +151,12 @@ class RemotesAPI:
           wildcards like "*" and no remote is found matching that exact name, it will raise an error.
         :return: The list of removed :ref:`Remote <conan.api.model.Remote>` objects
         """
-        remotes = _load(self._remotes_file)
-        removed = _filter(remotes, pattern, only_enabled=False)
-        remotes = [r for r in remotes if r not in removed]
-        _save(self._remotes_file, remotes)
+        with self._lock.config_lock("remotes.json"):
+            remotes = self._load_remotes_unlocked()
+            removed = _filter(remotes, pattern, only_enabled=False)
+            remotes = [r for r in remotes if r not in removed]
+            _save_remotes_unlocked(self._remotes_file, remotes)
+        # Cleanup operations can happen outside the lock
         localdb = LocalDB(self._home_folder)
         for remote in removed:
             remove_local_recipes_index_remote(self._home_folder, remote)
@@ -169,29 +177,30 @@ class RemotesAPI:
         :param recipes_only: optional boolean to only allow recipe downloads from this remote,
             never package binaries
         """
-        remotes = _load(self._remotes_file)
-        try:
-            remote = {r.name: r for r in remotes}[remote_name]
-        except KeyError:
-            raise ConanException(f"Remote '{remote_name}' doesn't exist")
-        if url is not None:
-            if remote.remote_type != LOCAL_RECIPES_INDEX:
-                _validate_url(url)
-            _check_urls(remotes, url, force=False, current=remote)
-            remote.url = url
-        if secure is not None:
-            remote.verify_ssl = secure
-        if disabled is not None:
-            remote.disabled = disabled
-        if allowed_packages is not None:
-            remote.allowed_packages = allowed_packages
-        if recipes_only is not None:
-            remote.recipes_only = recipes_only
+        with self._lock.config_lock("remotes.json"):
+            remotes = self._load_remotes_unlocked()
+            try:
+                remote = {r.name: r for r in remotes}[remote_name]
+            except KeyError:
+                raise ConanException(f"Remote '{remote_name}' doesn't exist")
+            if url is not None:
+                if remote.remote_type != LOCAL_RECIPES_INDEX:
+                    _validate_url(url)
+                _check_urls(remotes, url, force=False, current=remote)
+                remote.url = url
+            if secure is not None:
+                remote.verify_ssl = secure
+            if disabled is not None:
+                remote.disabled = disabled
+            if allowed_packages is not None:
+                remote.allowed_packages = allowed_packages
+            if recipes_only is not None:
+                remote.recipes_only = recipes_only
 
-        if index is not None:
-            remotes = [r for r in remotes if r.name != remote.name]
-            remotes.insert(index, remote)
-        _save(self._remotes_file, remotes)
+            if index is not None:
+                remotes = [r for r in remotes if r.name != remote.name]
+                remotes.insert(index, remote)
+            _save_remotes_unlocked(self._remotes_file, remotes)
 
     def rename(self, remote_name: str, new_name: str):
         """
@@ -200,15 +209,16 @@ class RemotesAPI:
         :param remote_name: The previous existing name
         :param new_name: The new name
         """
-        remotes = _load(self._remotes_file)
-        d = {r.name: r for r in remotes}
-        if new_name in d:
-            raise ConanException(f"Remote '{new_name}' already exists")
-        try:
-            d[remote_name].name = new_name
-        except KeyError:
-            raise ConanException(f"Remote '{remote_name}' doesn't exist")
-        _save(self._remotes_file, remotes)
+        with self._lock.config_lock("remotes.json"):
+            remotes = self._load_remotes_unlocked()
+            d = {r.name: r for r in remotes}
+            if new_name in d:
+                raise ConanException(f"Remote '{new_name}' already exists")
+            try:
+                d[remote_name].name = new_name
+            except KeyError:
+                raise ConanException(f"Remote '{remote_name}' doesn't exist")
+            _save_remotes_unlocked(self._remotes_file, remotes)
 
     def user_info(self, remote: Remote):
         # TODO: Review
@@ -283,27 +293,38 @@ class RemotesAPI:
         user, token, _ = localdb.get_login(remote.url)
         return user
 
+    def _load_remotes(self):
+        """Load remotes from file with inter-process and thread-safe locking"""
+        with self._lock.config_lock("remotes.json"):
+            return self._load_remotes_unlocked()
 
-def _load(remotes_file):
-    if not os.path.exists(remotes_file):
-        remote = Remote(CONAN_CENTER_REMOTE_NAME, "https://center2.conan.io", True, False)
-        _save(remotes_file, [remote])
-        return [remote]
+    def _load_remotes_unlocked(self):
+        """Load remotes without locking - caller must hold the config lock"""
+        if not os.path.exists(self._remotes_file):
+            remote = Remote(CONAN_CENTER_REMOTE_NAME, "https://center2.conan.io", True, False)
+            _save_remotes_unlocked(self._remotes_file, [remote])
+            return [remote]
 
-    try:
-        data = json.loads(load(remotes_file))
-    except Exception as e:
-        raise ConanException(f"Error loading JSON remotes file '{remotes_file}': {e}")
-    result = []
-    for r in data.get("remotes", []):
-        remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False),
-                        r.get("allowed_packages"), r.get("remote_type"),
-                        r.get("recipes_only", False))
-        result.append(remote)
-    return result
+        try:
+            data = json.loads(load(self._remotes_file))
+        except Exception as e:
+            raise ConanException(f"Error loading JSON remotes file '{self._remotes_file}': {e}")
+        result = []
+        for r in data.get("remotes", []):
+            remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False),
+                            r.get("allowed_packages"), r.get("remote_type"),
+                            r.get("recipes_only", False))
+            result.append(remote)
+        return result
+
+    def _save_remotes(self, remotes):
+        """Save remotes to file with inter-process and thread-safe locking"""
+        with self._lock.config_lock("remotes.json"):
+            _save_remotes_unlocked(self._remotes_file, remotes)
 
 
-def _save(remotes_file, remotes):
+def _save_remotes_unlocked(remotes_file, remotes):
+    """Internal save without locking - caller must hold lock"""
     remote_list = []
     for r in remotes:
         remote = {"name": r.name, "url": r.url, "verify_ssl": r.verify_ssl}
@@ -316,9 +337,23 @@ def _save(remotes_file, remotes):
         if r.recipes_only:
             remote["recipes_only"] = r.recipes_only
         remote_list.append(remote)
-    # This atomic replace avoids a corrupted remotes.json file if this is killed during the process
-    save(remotes_file + ".tmp", json.dumps({"remotes": remote_list}, indent=True))
-    os.replace(remotes_file + ".tmp", remotes_file)
+
+    # Use unique temp file to avoid race conditions with concurrent saves
+    # Even though caller holds config_lock, the temp file needs to be unique per process
+    temp_suffix = f".tmp.{os.getpid()}.{uuid.uuid4().hex[:8]}"
+    temp_file = remotes_file + temp_suffix
+
+    try:
+        # This atomic replace avoids a corrupted remotes.json file if this is killed during the process
+        save(temp_file, json.dumps({"remotes": remote_list}, indent=True))
+        os.replace(temp_file, remotes_file)
+    finally:
+        # Clean up temp file if replace failed
+        if os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+            except OSError:
+                pass
 
 
 def _filter(remotes, pattern, only_enabled=True):

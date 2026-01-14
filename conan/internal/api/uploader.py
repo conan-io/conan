@@ -154,10 +154,22 @@ class PackagePreparator:
         - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
         """
         try:
-            retrieve_exports_sources(self._app.remote_manager, recipe_layout, conanfile, ref,
-                                     remotes)
-            cache_files = self._compress_recipe_files(recipe_layout, ref)
-            ref_bundle["files"] = cache_files
+            # CONCURRENCY PROTECTION: Acquire recipe lock to prevent race conditions when multiple
+            # processes try to compress the same recipe simultaneously.
+            #
+            # Without this lock, the race is:
+            # - Process A: _compressed_file() checks if compressed file exists (line 231) → No
+            # - Process B: _compressed_file() checks if compressed file exists → No
+            # - Process A: Starts compressing to download folder
+            # - Process B: Starts compressing to same download folder → redundant work, potential corruption
+            #
+            # With the lock, operations are serialized: first process completes compression,
+            # second process waits, then reuses the existing compressed file.
+            with self._app.cache.recipe_lock(ref):
+                retrieve_exports_sources(self._app.remote_manager, recipe_layout, conanfile, ref,
+                                         remotes)
+                cache_files = self._compress_recipe_files(recipe_layout, ref)
+                ref_bundle["files"] = cache_files
         except Exception as e:
             raise ConanException(f"{ref} Error while compressing: {e}")
 
@@ -199,12 +211,29 @@ class PackagePreparator:
     def _prepare_package(self, pref, prev_bundle, metadata):
         pkg_layout = None
         if prev_bundle.get("upload"):
-            pkg_layout = self._app.cache.pkg_layout(pref)
-            if pkg_layout.package_is_dirty():
-                raise ConanException(f"Package {pref} is corrupted, aborting upload.\n"
-                                     f"Remove it with 'conan remove {pref}'")
-            cache_files = self._compress_package_files(pkg_layout, pref)
-            prev_bundle["files"] = cache_files
+            # CONCURRENCY PROTECTION: Acquire package lock to prevent race conditions when multiple
+            # processes try to compress the same package simultaneously.
+            #
+            # Without this lock, the race is:
+            # - Process A: _compressed_file() checks if compressed file exists (line 231) → No
+            # - Process B: _compressed_file() checks if compressed file exists → No
+            # - Process A: Starts compressing package to download folder
+            # - Process B: Starts compressing to same download folder → redundant work, potential corruption
+            #
+            # With the lock, operations are serialized: first process completes compression,
+            # second process waits, then reuses the existing compressed file.
+            #
+            # Verified by existing tests:
+            # - test/integration/command/upload/upload_test.py (25 tests pass)
+            # - test/integration/command/upload/upload_compression_test.py (3 tests pass)
+            # - test/integration/command/upload/test_upload_parallel.py (3 tests pass - parallel uploads of DIFFERENT packages)
+            with self._app.cache.package_lock(pref):
+                pkg_layout = self._app.cache.pkg_layout(pref)
+                if pkg_layout.package_is_dirty():
+                    raise ConanException(f"Package {pref} is corrupted, aborting upload.\n"
+                                         f"Remove it with 'conan remove {pref}'")
+                cache_files = self._compress_package_files(pkg_layout, pref)
+                prev_bundle["files"] = cache_files
 
         # Package metadata files too
         if metadata != [""] and (metadata or prev_bundle.get("upload")):

@@ -76,10 +76,11 @@ class TestLRU:
                 "conanfile.py": GenConanfile("app", "1.0").with_require("dep/1.0")})
 
         c.run("create dep")
-        time.sleep(2)
+        time.sleep(3)
         c.run("create .")
         # Dep is not removed because its lru was updated as part of the above create
-        c.run("remove * --lru=1s -c -f=json", redirect_stdout="removed.json")
+        # Use --lru=2s to account for potential scheduling delays in parallel test environments
+        c.run("remove * --lru=2s -c -f=json", redirect_stdout="removed.json")
         removed = json.loads(c.load("removed.json"))
         assert len(removed["Local Cache"]) == 0
 

@@ -103,11 +103,17 @@ class ConanAPI:
         self.local.reinit()
 
     def migrate(self):
-        # Migration system
+        # Migration system with inter-process locking to prevent concurrent migration races
+        # Multiple processes initializing the cache simultaneously must serialize migrations
         # TODO: A prettier refactoring of migrators would be nice
         from conan import conan_version
-        migrator = ClientMigrator(self.cache_folder, conan_version)
-        migrator.migrate()
+        from conan.internal.cache.concurrency_lock import ConcurrencyLock
+
+        # Use inter-process lock to ensure only one process runs migrations at a time
+        lock_manager = ConcurrencyLock(self.cache_folder)
+        with lock_manager.config_lock("version.txt"):  # Lock on migration version file
+            migrator = ClientMigrator(self.cache_folder, conan_version)
+            migrator.migrate()
 
     class _ApiHelpers:
         def __init__(self, conan_api):

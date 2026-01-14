@@ -79,6 +79,29 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
     _receive_conf(conanfile)
     _receive_generators(conanfile)
 
+    # Protect concurrent writes to the same generators folder
+    # Multiple processes generating to the same folder must be serialized to prevent:
+    # 1. File content corruption when processes interleave writes
+    # 2. Partial file reads when one process reads while another writes
+    # 3. Inconsistent state when generators create multiple related files
+    from conan.internal.cache.concurrency_lock import ConcurrencyLock
+    import hashlib
+
+    # Lock based on absolute path of generators folder
+    # Different generators folders can proceed in parallel
+    gen_folder_abs = os.path.abspath(new_gen_folder)
+    lock_id = f"generators_{hashlib.sha256(gen_folder_abs.encode()).hexdigest()[:16]}"
+    lock_manager = ConcurrencyLock(home_folder)
+
+    # Use the lock to protect all generator operations
+    with lock_manager.lock(lock_id,
+                          wait_msg=f"Waiting for generator operations to '{new_gen_folder}' to complete...",
+                          level=None):  # Don't participate in hierarchy, independent operation
+        _write_generators_locked(conanfile, hook_manager, home_folder, new_gen_folder, envs_generation)
+
+
+def _write_generators_locked(conanfile, hook_manager, home_folder, new_gen_folder, envs_generation):
+
     # TODO: Optimize this, so the global generators are not loaded every call to write_generators
     global_generators = load_cache_generators(HomePaths(home_folder).custom_generators_path)
     hook_manager.execute("pre_generate", conanfile=conanfile)

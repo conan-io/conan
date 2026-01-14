@@ -39,7 +39,8 @@ def _timelimit(expression):
     except KeyError:
         raise ConanException(f"Unrecognized time unit: '{time_units}'. Use: {list(units)}")
 
-    limit = timestamp_now() - lru_value
+    # Convert to int to match LRU column type and avoid float comparison issues
+    limit = int(timestamp_now()) - lru_value
     return limit
 
 
@@ -527,26 +528,35 @@ def _get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
     """
     param package_layout: Layout for the given reference
     """
+    from conan.internal.errors import ConanReferenceDoesNotExistInDB
 
     result = OrderedDict()
 
     for pref in prefs:
-        latest_prev = cache.get_latest_package_revision(pref)
-        pkg_layout = cache.pkg_layout(latest_prev)
+        try:
+            latest_prev = cache.get_latest_package_revision(pref)
+            # Handle concurrent removal: package may have been removed by another process
+            if latest_prev is None:
+                continue
+            pkg_layout = cache.pkg_layout(latest_prev)
 
-        # Read conaninfo
-        info_path = os.path.join(pkg_layout.package(), CONANINFO)
-        if not os.path.exists(info_path):
-            ConanOutput().error(f"Corrupted package '{pkg_layout.reference}' "
-                                f"without conaninfo.txt in: {info_path}")
-            info = {}
-        else:
-            conan_info_content = load(info_path)
-            info = load_binary_info(conan_info_content)
-        pref = pkg_layout.reference
-        # The key shoudln't have the latest package revision, we are asking for package configs
-        pref.revision = None
-        result[pkg_layout.reference] = info
+            # Read conaninfo
+            info_path = os.path.join(pkg_layout.package(), CONANINFO)
+            if not os.path.exists(info_path):
+                ConanOutput().error(f"Corrupted package '{pkg_layout.reference}' "
+                                    f"without conaninfo.txt in: {info_path}")
+                info = {}
+            else:
+                conan_info_content = load(info_path)
+                info = load_binary_info(conan_info_content)
+            pref = pkg_layout.reference
+            # The key shoudln't have the latest package revision, we are asking for package configs
+            pref.revision = None
+            result[pkg_layout.reference] = info
+        except ConanReferenceDoesNotExistInDB:
+            # Package was removed by another concurrent process - this is fine
+            # Just skip this package and continue with the rest
+            pass
 
     return result
 

@@ -159,11 +159,19 @@ class Lockfile:
             raise IOError("Invalid path")
         if not os.path.isfile(path):
             raise ConanException("Missing lockfile in: %s" % path)
-        content = load(path)
-        try:
-            return Lockfile.loads(content)
-        except Exception as e:
-            raise ConanException("Error parsing lockfile '{}': {}".format(path, e))
+
+        # Add locking at model layer for concurrent safety
+        from conan.internal.cache.concurrency_lock import ConcurrencyLock
+        lock_dir = os.path.dirname(path) or os.getcwd()
+        lock_manager = ConcurrencyLock(lock_dir)
+        lock_name = os.path.basename(path)
+
+        with lock_manager.config_lock(lock_name):
+            content = load(path)
+            try:
+                return Lockfile.loads(content)
+            except Exception as e:
+                raise ConanException("Error parsing lockfile '{}': {}".format(path, e))
 
     @staticmethod
     def loads(content):
@@ -173,7 +181,18 @@ class Lockfile:
         return json.dumps(self.serialize(), indent=4)
 
     def save(self, path):
-        save(path, self.dumps() + "\n")
+        """Save lockfile with concurrency protection and atomic write."""
+        from conan.internal.cache.concurrency_lock import ConcurrencyLock
+        lock_dir = os.path.dirname(path) or os.getcwd()
+        lock_manager = ConcurrencyLock(lock_dir)
+        lock_name = os.path.basename(path)
+
+        with lock_manager.config_lock(lock_name):
+            # Atomic write pattern: temp file + os.replace()
+            # This ensures that if interrupted, the original file is unchanged
+            tmp_path = path + ".tmp"
+            save(tmp_path, self.dumps() + "\n")
+            os.replace(tmp_path, path)
 
     def merge(self, other):
         """

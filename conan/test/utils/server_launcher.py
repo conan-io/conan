@@ -25,7 +25,9 @@ class TestServerLauncher:
 
         plugins = plugins or []
         if not base_path:
-            base_path = temp_folder()
+            # Don't register server folders with test-level cleanup - servers may be shared
+            # across multiple tests via module/session-scoped fixtures
+            base_path = temp_folder(register_for_test_cleanup=False)
 
         if not os.path.exists(base_path):
             raise Exception("Base path not exist! %s")

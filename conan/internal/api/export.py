@@ -89,19 +89,24 @@ def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
     cache.assign_rrev(recipe_layout)
     scoped_output.info('Exported to cache folder: %s' % recipe_layout.export())
 
-    # TODO: cache2.0: check this part
-    source_folder = recipe_layout.source()
-    if os.path.exists(source_folder):
-        try:
-            if is_dirty(source_folder):
-                scoped_output.info("Source folder is corrupted, forcing removal")
-                rmdir(source_folder)
-                clean_dirty(source_folder)
-        except BaseException as e:
-            scoped_output.error("Unable to delete source folder. Will be marked as corrupted "
-                                "for deletion", error_type="exception")
-            scoped_output.warning(str(e))
-            set_dirty(source_folder)
+    # Protect source folder corruption check and removal with source lock
+    # to prevent races with concurrent builds that are using the source folder
+    from conan.internal.cache.concurrency_lock import ConcurrencyLock
+    lock_manager = ConcurrencyLock(cache._base_folder)
+
+    with lock_manager.source_lock(ref):
+        source_folder = recipe_layout.source()
+        if os.path.exists(source_folder):
+            try:
+                if is_dirty(source_folder):
+                    scoped_output.info("Source folder is corrupted, forcing removal")
+                    rmdir(source_folder)
+                    clean_dirty(source_folder)
+            except BaseException as e:
+                scoped_output.error("Unable to delete source folder. Will be marked as corrupted "
+                                    "for deletion", error_type="exception")
+                scoped_output.warning(str(e))
+                set_dirty(source_folder)
 
     scoped_output.success(f"Exported: {ref.repr_humantime()}")
     return ref, conanfile

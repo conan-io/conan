@@ -364,13 +364,13 @@ class TestConfigInstallPkgSettings:
             os.remove(os.path.join(c.cache_folder, "profiles", "default"))
         c.run("config install-pkg myconf/[*] -s os=Windows")
         assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: mywinvalue" in c.out
 
         c.run("config install-pkg myconf/[*] -s os=Linux --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: mynixvalue" in c.out
 
@@ -388,13 +388,13 @@ class TestConfigInstallPkgSettings:
                 "nix.profile": "[settings]\nos=Linux"})
         c.run("config install-pkg myconf/[*] -pr=win.profile")
         assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: mywinvalue" in c.out
 
         c.run("config install-pkg myconf/[*] -pr=nix.profile --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: mynixvalue" in c.out
 
@@ -404,14 +404,14 @@ class TestConfigInstallPkgSettings:
         c.save_home({"profiles/default": "[settings]\nos=Windows"})
         c.run("config install-pkg myconf/[*]")
         assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: mywinvalue" in c.out
 
         c.save_home({"profiles/default": "[settings]\nos=Linux"})
         c.run("config install-pkg myconf/[*] --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: mynixvalue" in c.out
 
@@ -453,13 +453,13 @@ class TestConfigInstallPkgOptions:
             os.remove(os.path.join(c.cache_folder, "profiles", "default"))
         c.run("config install-pkg myconf/[*] -o &:project=project1")
         assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my1value" in c.out
 
         c.run("config install-pkg myconf/[*] -o &:project=project2 --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my2value" in c.out
 
@@ -467,7 +467,7 @@ class TestConfigInstallPkgOptions:
         c = client
         os.remove(os.path.join(c.cache_folder, "profiles", "default"))
         c.run("config install-pkg myconf/[*]")
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my1value" in c.out
 
@@ -478,13 +478,13 @@ class TestConfigInstallPkgOptions:
                 "nix.profile": "[options]\n&:project=project2"})
         c.run("config install-pkg myconf/[*] -pr=win.profile")
         assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my1value" in c.out
 
         c.run("config install-pkg myconf/[*] -pr=nix.profile --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my2value" in c.out
 
@@ -494,13 +494,13 @@ class TestConfigInstallPkgOptions:
         c.save_home({"profiles/default": "[options]\n&:project=project1"})
         c.run("config install-pkg myconf/[*]")
         assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my1value" in c.out
 
         c.save_home({"profiles/default": "[options]\n&:project=project2"})
         c.run("config install-pkg myconf/[*] --force")
         assert "myconf/0.1: Downloaded package revision" in c.out
-        assert "Copying file global.conf" in c.out
+        assert "Installing global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my2value" in c.out
