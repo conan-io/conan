@@ -403,30 +403,28 @@ class TestLibsLinkageTraits:
         # it works
 
     @pytest.mark.tool("cmake", "3.27")
-    @pytest.mark.parametrize("shared", [False, True])
-    def test_link_features(self, shared):
+    def test_link_features(self):
         tc = TestClient()
         tc.run("new cmake_lib -d name=matrix -d version=0.1")
         conanfile = tc.load("conanfile.py")
-        conanfile += "        self.cpp_info.set_property('cmake_link_feature', 'WHOLE_ARCHIVE')"
+        # So that the custom link feature works
+        conanfile += ("        self.cpp_info.set_property('cmake_extra_variables', "
+                      "{'CMAKE_LINK_LIBRARY_USING_MYFET_SUPPORTED': True,"
+                      "'CMAKE_LINK_LIBRARY_USING_MYFET': '<LIBRARY>'})\n")
+        # And set this library to use the custom link feature
+        conanfile += "        self.cpp_info.set_property('cmake_link_feature', 'MYFET')"
         tc.save({"conanfile.py": conanfile})
-        tc.run(f"create -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
+        tc.run(f"create -c tools.cmake.cmakedeps:new={new_value}")
 
         tc.save({}, clean_first=True)
         tc.run("new cmake_lib -d name=lib -d version=0.1 -d requires=matrix/0.1")
-        tc.run(f"create -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
+        tc.run(f"create -c tools.cmake.cmakedeps:new={new_value}")
         # When compiling app, it asks you to link with WHOLE_ARCHIVE
-        assert "target_link_libraries(... $<LINK_LIBRARY:WHOLE_ARCHIVE,matrix::matrix>)"
+        assert "target_link_libraries(... $<LINK_LIBRARY:MYFET,matrix::matrix>)"
         test_build_folder = tc.created_test_build_folder("lib/0.1")
         test_generators_folder = os.path.join("test_package", test_build_folder, "generators")
         libs_targets = tc.load(os.path.join(test_generators_folder, "lib-Targets-release.cmake"))
-        if not shared:
-            assert '"$<LINK_LIBRARY:WHOLE_ARCHIVE,$<$<CONFIG:RELEASE>:matrix::matrix>>"' in libs_targets
-        else:
-            # Should we ignore? Should the user control it?
-            # Nevertheless note that CMakeConfigDeps uses a different codepath for shared
-            # so we don't do anything special here right now in this specific case
-            pass
+        assert '"$<LINK_LIBRARY:MYFET,$<$<CONFIG:RELEASE>:matrix::matrix>>"' in libs_targets
 
 
 @pytest.mark.tool("cmake")
