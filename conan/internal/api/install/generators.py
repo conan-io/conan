@@ -190,6 +190,7 @@ def _generate_aggregated_env(conanfile):
     generated = []
     for group, env_scripts in conanfile.env_scripts.items():
         subsystem = deduce_subsystem(conanfile, group)
+        env_scripts = [env_script[0] for env_script in sorted(env_scripts, key=lambda x: x[1])]
         bats = []
         shs = []
         ps1s = []

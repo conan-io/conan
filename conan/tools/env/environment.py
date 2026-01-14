@@ -793,7 +793,4 @@ def register_env_script(conanfile, env_script_path, scope="build", important=Fal
     """
     existing = conanfile.env_scripts.setdefault(scope, [])
     if env_script_path not in existing:
-        if important:
-            existing.append(env_script_path)
-        else:
-            existing.insert(0, env_script_path)
+        existing.append((env_script_path, important))
