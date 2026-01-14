@@ -90,9 +90,9 @@ def test_virtualenv_test_package(powershell):
             def generate(self):
                 # Emulates vcvars.bat behavior
                 save(self, "myenv.bat", "echo MYENV!!!\nset MYVC_CUSTOMVAR1=PATATA1")
-                self.env_scripts.setdefault("build", []).append("myenv.bat")
+                self.env_scripts.setdefault("build", []).append(("myenv.bat", False))
                 save(self, "myps.ps1", "echo MYPS1!!!!\n$env:MYVC_CUSTOMVAR2=\"PATATA2\"")
-                self.env_scripts.setdefault("build", []).append("myps.ps1")
+                self.env_scripts.setdefault("build", []).append(("myps.ps1", False))
             def layout(self):
                 self.folders.build = "mybuild"
                 self.folders.generators = "mybuild"
