@@ -77,7 +77,8 @@ def test_pkg_sign_manifest_signatures():
             # Return the pkgsign-signatures.json's content
             return [{"method": "openssl-dgst",
                     "provider": "conan-client",
-                    "sign_artifacts": {"signature": "pkgsign-manifest.json.sig"}}]
+                    "sign_artifacts": {"manifest": "pkgsign-manifest.json",
+                                       "signature": "pkgsign-manifest.json.sig"}}]
 
         def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
             manifest = load(os.path.join(signature_folder, "pkgsign-manifest.json"))
@@ -137,7 +138,8 @@ def test_pkg_sign_canonical():
             ConanOutput().info(f"Signature ok for {ref}")
             return [{"method": "dummy-method",
                      "provider": provider,
-                     "sign_artifacts": {"signature": "pkgsign-manifest.json.sig"}
+                     "sign_artifacts": {"manifest": "pkgsign-manifest.json",
+                                        "signature": "pkgsign-manifest.json.sig"}
             }]
 
         def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
@@ -249,7 +251,8 @@ def test_pkg_sign_exports_sources():
             # Return the pkgsign-signatures.json's content
             return [{"method": "openssl-dgst",
                     "provider": "conan-client",
-                    "sign_artifacts": {"signature": "pkgsign-manifest.json.sig"}}]
+                    "sign_artifacts": {"manifest": "pkgsign-manifest.json",
+                                       "signature": "pkgsign-manifest.json.sig"}}]
 
         def verify(ref, artifacts_folder, signature_folder, files, **kwargs):
             pass

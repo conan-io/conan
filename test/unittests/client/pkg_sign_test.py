@@ -94,8 +94,9 @@ def test_save_load_signatures(pkg_sign_tools):
         "method": "openssl-dgst",
         "provider": "my-organization",
         "sign_artifacts": {
-            "conan_package signature": "conan_package.tgz.sig",
-            "conanmanifest signature": "conanmanifest.txt.sig"
+            "manifest": "pkgsign-manifest.json",
+            "conan_package.tgz": "conan_package.tgz.sig",
+            "conanmanifest.txt": "conanmanifest.txt.sig"
         }
     }]
     _save_signatures(signature_folder, signatures)
@@ -106,14 +107,14 @@ def test_save_load_signatures(pkg_sign_tools):
 
     # Load and verify content
     loaded = json.loads(load(signatures_path))
-    assert loaded["manifest"] == "pkgsign-manifest.json"
     assert len(loaded["signatures"]) == 1
 
     signature = loaded["signatures"][0]
     assert signature["method"] == "openssl-dgst"
     assert signature["provider"] == "my-organization"
-    assert signature["sign_artifacts"]["conan_package signature"] == "conan_package.tgz.sig"
-    assert signature["sign_artifacts"]["conanmanifest signature"] == "conanmanifest.txt.sig"
+    assert signature["sign_artifacts"]["manifest"] == "pkgsign-manifest.json"
+    assert signature["sign_artifacts"]["conan_package.tgz"] == "conan_package.tgz.sig"
+    assert signature["sign_artifacts"]["conanmanifest.txt"] == "conanmanifest.txt.sig"
 
 
 def test_save_signatures_with_multiple_signatures(pkg_sign_tools):
@@ -144,41 +145,27 @@ def test_save_signatures_with_multiple_signatures(pkg_sign_tools):
     assert loaded["signatures"][1]["sign_artifacts"]["signature"] == "pkgsign-manifest.json.sig"
 
 
-def test_save_signatures_requires_manifest(pkg_sign_tools):
-    """Test that _save_signatures raises an error if manifest doesn't exist."""
-    _, signature_folder = pkg_sign_tools
-
-    signatures = [{
-        "method": "gpg",
-        "provider": "my-organization",
-        "sign_artifacts": {"file signature": "file.txt.gpg"}
-    }]
-
-    with pytest.raises(AssertionError, match="Manifest file must exist"):
-        _save_signatures(signature_folder, signatures)
-
-
 def test_save_signatures_validates_required_fields(pkg_sign_tools):
     """Test that _save_signatures validates required signature fields."""
     artifacts_folder, signature_folder = pkg_sign_tools
     _save_manifest(artifacts_folder, signature_folder)
 
     # Missing method
-    with pytest.raises(AssertionError, match="'method' must be set"):
+    with pytest.raises(ConanException, match="'method' is missing in signature data"):
         _save_signatures(signature_folder,
                          [{"provider": "my-organization","sign_artifacts": {}}])
 
     # Missing provider
-    with pytest.raises(AssertionError, match="'provider' must be set"):
+    with pytest.raises(ConanException, match="'provider' is missing in signature data"):
         _save_signatures(signature_folder, [{"method": "gpg", "sign_artifacts": {}}])
 
     # Missing sign_artifacts
-    with pytest.raises(AssertionError, match="'sign_artifacts' must be set"):
+    with pytest.raises(ConanException, match="'sign_artifacts' is missing in signature data"):
         _save_signatures(signature_folder,
                          [{"method": "gpg", "provider": "my-organization"}])
 
     # sign_artifacts not a dict
-    with pytest.raises(AssertionError, match="must be a dict"):
+    with pytest.raises(ConanException, match="'sign_artifacts' must be a dict"):
         _save_signatures(signature_folder,
                          [{"method": "gpg", "provider": "my-organization",
                                     "sign_artifacts": "not a dict"}])

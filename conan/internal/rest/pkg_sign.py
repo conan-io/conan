@@ -51,15 +51,13 @@ def _save_signatures(signature_folder, signatures):
     :param signatures: dict of {filename: signature_value}
     """
     for signature in signatures:
-        assert signature.get("method"), "Signature 'method' must be set"
-        assert signature.get("provider"), "Signature 'provider' must be set"
-        assert signature.get("sign_artifacts"), "Signature 'sign_artifacts' must be set"
-        assert isinstance(signature.get("sign_artifacts"), dict), \
-            "'sign_artifacts' must be a dict of {name: signature_filename}"
-    assert os.path.isfile(os.path.join(signature_folder, PKGSIGN_MANIFEST)),\
-        "Manifest file must exist before saving signatures"
+        for key in ["method", "provider", "sign_artifacts"]:
+            if not signature.get(key):
+                raise ConanException(f"[Package sign] Signature '{key}' is missing in signature data")
+        if not isinstance(signature.get("sign_artifacts"), dict):
+            raise ConanException("[Package sign] Signature 'sign_artifacts' must be a dict of "
+                                 "{filename: signature_file}")
     content = {
-        "manifest": PKGSIGN_MANIFEST,
         "signatures": signatures
     }
     save(os.path.join(signature_folder, PKGSIGN_SIGNATURES), json.dumps(content, indent=2))
@@ -89,11 +87,11 @@ def _verify_files_checksums(signature_folder, files):
 
         if actual_checksum != expected_checksum:
             raise ConanException(
-                f"Checksum mismatch for file {filename}: "
+                f"[Package sign] Checksum mismatch for file {filename}: "
                 f"expected {expected_checksum}, got {actual_checksum}."
             )
         else:
-            ConanOutput().info(f"Checksum verified for file {filename} ({actual_checksum}).")
+            ConanOutput().info(f"[Package sign] Checksum verified for file {filename} ({actual_checksum}).")
 
 
 class PkgSignaturesPlugin:
@@ -126,7 +124,6 @@ class PkgSignaturesPlugin:
             # Save signatures file with the plugin's returned signatures data
             _save_signatures(metadata_sign, signatures)
             # Add files to package bundle so they get uploaded
-            files[f"{METADATA}/sign/{PKGSIGN_MANIFEST}"] = os.path.join(metadata_sign, PKGSIGN_MANIFEST)
             files[f"{METADATA}/sign/{PKGSIGN_SIGNATURES}"] = os.path.join(metadata_sign, PKGSIGN_SIGNATURES)
             for sig in signatures:
                 for name, file in sig.get("sign_artifacts", {}).items():
@@ -134,7 +131,8 @@ class PkgSignaturesPlugin:
         else:
             # Fallback to old behavior (plugin sign() returns None)
             for f in os.listdir(metadata_sign):
-                files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
+                if os.path.isfile(os.path.join(metadata_sign, f)) and f != PKGSIGN_MANIFEST:
+                    files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
             ConanOutput().warning("[Package sign] The signature plugin sign() function must return "
                                   "a list of signature dicts. See the documentation at "
                                   "https://docs.conan.io/2/reference/extensions/package_signing.html")
