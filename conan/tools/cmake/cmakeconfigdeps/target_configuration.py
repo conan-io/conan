@@ -277,9 +277,11 @@ class TargetConfigurationTemplate2:
                     target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                                defaultc)
                     comp_name = target_name or f"{pkg_name}::{defaultc}"
+                    link_feature = self._cmakedeps.get_property("cmake_link_feature", self._conanfile,
+                                                                defaultc)
                     all_requires[comp_name] = {
                         "link": True,  # It is an interface, full link
-                        "link_feature": None
+                        "link_feature": link_feature
                     }
             else:
                 all_requires = {k: {"link": True, "link_feature": None} for k in libs.keys()}
@@ -425,11 +427,11 @@ class TargetConfigurationTemplate2:
         # Information of transitive dependencies
         {% for require_target, link_info in lib_info["requires"].items() %}
         # Requirement {{require_target}} => Full link: {{link_info["link"]}}
-        {% if link_info["link_feature"] %}
+        {%- if link_info["link_feature"] %}
         # Link feature: {{link_info["link_feature"]}}
-        {% endif %}
+        {%- endif %}
 
-        {% if link_info["link"] %}
+        {%- if link_info["link"] %}
         # set property allows to append, and lib_info[requires] will iterate
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
             {% if link_info["link_feature"] %}
