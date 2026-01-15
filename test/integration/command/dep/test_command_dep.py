@@ -8,11 +8,11 @@ def test_add_dep():
     Testing the "conan dep add" command which should always use the highest version
     found in the first remote server or the local cache
     """
-    client = TestClient(default_server_user=True)
+    client = TestClient(default_server_user=True, light=True)
     # No conanfile is present - error
     client.run("dep add hello", assert_error=True)
     assert "ERROR: Conanfile not found at" in client.out
-    client.run("new")  # creates a simple conanfile.py
+    client.save({"conanfile.py": GenConanfile(name="app")})
     # No requirements define
     client.run("dep add", assert_error=True)
     assert "ERROR: You need to add any requires, tool_requires or test_requires." in client.out
