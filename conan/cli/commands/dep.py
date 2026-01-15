@@ -14,17 +14,16 @@ def dep_remove(conan_api, parser, subparser, *args):
     """
     Removes a requirement from your local conanfile.
     """
-    subparser.add_argument("path", default=".", nargs="?",
-                        help="Path to a folder containing a recipe (conanfile.py). "
-                             "Defaults to the current directory")
-    subparser.add_argument("-req", "--requires", action="append", default=[],
-                           help="Requirement name.")
+    subparser.add_argument("--folder",
+                           help="Path to a folder containing a recipe (conanfile.py). "
+                                "Defaults to the current directory",)
+    subparser.add_argument("requires", nargs="*", help="Requirement name.")
     subparser.add_argument("-tor", "--tool-requires", action="append", default=[],
                            help="Tool requirement name.")
     subparser.add_argument("-ter", "--test-requires", action="append", default=[],
                            help="Test requirement name.")
     args = parser.parse_args(*args)
-    path = conan_api.local.get_conanfile_path(args.path, os.getcwd(), py=True)
+    path = conan_api.local.get_conanfile_path(args.folder or '.', os.getcwd(), py=True)
     # Check if that requirement exists in the conanfile. If yes, abort.
     conanfile = load(path)
     ConanOutput().debug(f"Loaded conanfile from {path}.")
@@ -50,11 +49,10 @@ def dep_add(conan_api, parser, subparser, *args):
     Add a new requirement to your local conanfile as a version range.
     By default, it will look for the requirement versions remotely.
     """
-    subparser.add_argument("path", default=".", nargs="?",
+    subparser.add_argument("--folder",
                            help="Path to a folder containing a recipe (conanfile.py). "
                                 "Defaults to the current directory",)
-    subparser.add_argument("-req", "--requires", action="append", default=[],
-                           help="Requirement name.")
+    subparser.add_argument("requires", nargs="*", help="Requirement name.")
     subparser.add_argument("-tor", "--tool-requires", action="append", default=[],
                            help="Tool requirement name.")
     subparser.add_argument("-ter", "--test-requires", action="append", default=[],
@@ -70,7 +68,7 @@ def dep_add(conan_api, parser, subparser, *args):
     test_requires = [(r, "test_requires", "build_requirements") for r in args.test_requires]
     if not any(requires + tool_requires + test_requires):
         raise ConanException("You need to add any requires, tool_requires or test_requires.")
-    path = conan_api.local.get_conanfile_path(args.path, os.getcwd(), py=True)
+    path = conan_api.local.get_conanfile_path(args.folder or ".", os.getcwd(), py=True)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else [None]
     conanfile = load(path)
     ConanOutput().debug(f"Loaded conanfile from {path}.")
