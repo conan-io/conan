@@ -574,6 +574,7 @@ class MesonToolchain:
             "objcpp_link_args": to_meson_value(self._filter_list_empty_fields(self.objcpp_link_args)),
             "pkg_config_path": self.pkg_config_path,
             "build_pkg_config_path": self.build_pkg_config_path,
+            #: Deprecated: Dict-like object that defines Meson ``preprocessor definitions``. Use the extra_defines attribute instead.
             "preprocessor_definitions": self.preprocessor_definitions,
             "cross_build": self.cross_build,
             "is_apple_system": self._is_apple_system
