@@ -2,6 +2,7 @@ import json
 import os
 import platform
 import shutil
+import sys
 import tarfile
 import time
 
@@ -291,4 +292,30 @@ def test_cache_save_restore_custom_storage_path(src_store, dst_store):
     shutil.copy2(cache_path, c2.current_folder)
     c2.run("cache restore conan_cache_save.tgz")
     c2.run("list *:*")
+    assert "pkg/1.0" in c2.out
+
+
+@pytest.mark.parametrize("compress", ["gz", "xz", "zst"])
+def test_cache_save_restore_compressions(compress):
+    """ we accept different compressions formats"""
+    if compress == "zst" and sys.version_info.minor < 14:
+        pytest.skip("Skipping zst compression tests")
+
+    conan_file = GenConanfile() \
+        .with_settings("os") \
+        .with_package_file("bin/file.txt", "content!!")
+
+    client = TestClient()
+    client.save({"conanfile.py": conan_file})
+    client.run("create . --name=pkg --version=1.0 -s os=Linux")
+    client.run(f"cache save pkg/*:* --file=mysave.t{compress}")
+    if compress in ("xz", "zst"):
+        assert f"WARN: experimental: The '{compress}' compression is experimental." in client.out
+    cache_path = os.path.join(client.current_folder, f"mysave.t{compress}")
+    assert os.path.exists(cache_path)
+
+    c2 = TestClient()
+    shutil.copy2(cache_path, c2.current_folder)
+    c2.run(f"cache restore mysave.t{compress}")
+    c2.run("list *:*#*")
     assert "pkg/1.0" in c2.out

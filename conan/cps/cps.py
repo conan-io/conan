@@ -38,15 +38,18 @@ class CPSComponent:
         self.type = component_type or "unknown"
         self.definitions = []
         self.requires = []
+        self.link_requires = []
         self.location = None
         self.link_location = None
-        self.link_languages = None
-        self.link_libraries = None  # system libraries
+        self.link_languages = []
+        self.link_libraries = []  # system libraries
 
     def serialize(self):
         component = {"type": str(self.type)}
         if self.requires:
             component["requires"] = self.requires
+        if self.link_requires:
+            component["link_requires"] = self.link_requires
         if self.includes:
             component["includes"] = [x.replace("\\", "/") for x in self.includes]
         if self.definitions:
@@ -65,13 +68,14 @@ class CPSComponent:
     def deserialize(data):
         comp = CPSComponent()
         comp.type = CPSComponentType(data.get("type"))
-        comp.requires = data.get("requires")
-        comp.includes = data.get("includes")
-        comp.definitions = data.get("definitions")
+        comp.requires = data.get("requires", [])
+        comp.link_requires = data.get("link_requires", [])
+        comp.includes = data.get("includes", [])
+        comp.definitions = data.get("definitions", [])
         comp.location = data.get("location")
         comp.link_location = data.get("link_location")
-        comp.link_libraries = data.get("link_libraries")
-        comp.link_languages = data.get("link_languages")
+        comp.link_libraries = data.get("link_libraries", [])
+        comp.link_languages = data.get("link_languages", [])
         return comp
 
     @staticmethod
@@ -230,6 +234,7 @@ class CPS:
             cpp_info.includedirs = strip_prefix(comp.includes)
             cpp_info.defines = comp.definitions
             cpp_info.system_libs = comp.link_libraries
+            # requires for 1 component packages are automatic in Conan with self.requires()
             if comp.link_location:
                 link_location = comp.link_location
                 lib_location(link_location, cpp_info)
@@ -253,9 +258,10 @@ class CPS:
                 elif comp.location:
                     location = comp.location
                     lib_location(location, cpp_comp)
-                # TODO: Requires management
-                #for r in comp.requires:
-                #    cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
+                # all requires are the same for Conan, it uses its traits information
+                requires = comp.link_requires + comp.requires
+                for r in requires:
+                    cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
                 cpp_comp.system_libs = comp.link_libraries
 
         return cpp_info

@@ -6,7 +6,6 @@ import pytest
 
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conan.internal.paths import PACKAGE_TGZ_NAME
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, TestServer
@@ -358,7 +357,7 @@ class HelloConan(ConanFile):
     client.run("upload * -r=default -c")
 
     # We can uncompress it without warns
-    tgz = os.path.join(p_folder, PACKAGE_TGZ_NAME)
+    tgz = os.path.join(p_folder, "conan_package.tgz")
     client.run_command('gzip -d "{}"'.format(tgz))
     client.run_command('tar tvf "{}"'.format(os.path.join(p_folder, "conan_package.tar")))
     lines = str(client.out).splitlines()
