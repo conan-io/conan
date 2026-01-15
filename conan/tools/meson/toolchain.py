@@ -512,6 +512,11 @@ class MesonToolchain:
         self.objc_link_args.extend(self.c_link_args)
         self.objcpp_link_args.extend(self.cpp_link_args)
 
+        if self.preprocessor_definitions:
+            self._conanfile.output.warning(
+                "Use 'extra_defines' attribute for compiler preprocessor definitions instead " +
+                "of 'preprocessor_definitions'", warn_tag="deprecated")
+
         if self.libcxx:
             self.cpp_args.append(self.libcxx)
             self.cpp_link_args.append(self.libcxx)
