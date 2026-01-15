@@ -12,7 +12,7 @@ def test_add_dep():
     # No conanfile is present - error
     client.run("dep add hello", assert_error=True)
     assert "ERROR: Conanfile not found at" in client.out
-    client.run("new demo")  # creates a simple conanfile.py
+    client.run("new")  # creates a simple conanfile.py
     # No requirements define
     client.run("dep add", assert_error=True)
     assert "ERROR: You need to add any requires, tool_requires or test_requires." in client.out
