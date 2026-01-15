@@ -38,11 +38,11 @@ def test_add_dep():
     """)
     assert expected in client.out
     # Let's add the same "hello" but now as tool_requires and test_requires
-    client.run("dep add --tool-requires=hello --test-requires=hello")  # [tool|test]_requires
+    client.run("dep add --tool=hello --test=hello")  # [tool|test]_requires
     assert "Added 'hello/[>=3.0 <4]' as a new tool_requires." in client.out
     assert "Added 'hello/[>=3.0 <4]' as a new test_requires." in client.out
     # Try to add them again - does nothing and shows a warning
-    client.run("dep add hello --tool-requires=hello --test-requires=hello")
+    client.run("dep add hello --tool=hello --test=hello")
     assert "The requires hello is already in use." in client.out
     assert "The tool_requires hello is already in use." in client.out
     assert "The test_requires hello is already in use." in client.out
@@ -77,7 +77,7 @@ def test_remove_dep():
                 .with_requirement("hello/1.2")
                 .with_tool_requirement("hello/1.2")
                 .with_test_requirement("hello/1.2")})
-    client.run("dep remove hello --tool-requires=hello --test-requires=hello")
+    client.run("dep remove hello --tool=hello --test=hello")
     assert "Removed hello dependency as requires." in client.out
     assert "Removed hello dependency as tool_requires." in client.out
     assert "Removed hello dependency as test_requires." in client.out
@@ -85,7 +85,7 @@ def test_remove_dep():
     assert 'self.requires("hello/1.2"' not in content
     assert 'self.tool_requires("hello/1.2"' not in content
     assert 'self.test_requires("hello/1.2"' not in content
-    client.run("dep remove hello --tool-requires=hello --test-requires=hello")
+    client.run("dep remove hello --tool=hello --test=hello")
     assert "WARN: The requires hello is not declared in your conanfile." in client.out
     assert "WARN: The tool_requires hello is not declared in your conanfile." in client.out
     assert "WARN: The test_requires hello is not declared in your conanfile." in client.out

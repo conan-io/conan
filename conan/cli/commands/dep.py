@@ -18,9 +18,9 @@ def dep_remove(conan_api, parser, subparser, *args):
                            help="Path to a folder containing a recipe (conanfile.py). "
                                 "Defaults to the current directory",)
     subparser.add_argument("requires", nargs="*", help="Requirement name.")
-    subparser.add_argument("-tor", "--tool-requires", action="append", default=[],
+    subparser.add_argument("-tor", "--tool", action="append", default=[],
                            help="Tool requirement name.")
-    subparser.add_argument("-ter", "--test-requires", action="append", default=[],
+    subparser.add_argument("-ter", "--test", action="append", default=[],
                            help="Test requirement name.")
     args = parser.parse_args(*args)
     path = conan_api.local.get_conanfile_path(args.folder or '.', os.getcwd(), py=True)
@@ -28,8 +28,8 @@ def dep_remove(conan_api, parser, subparser, *args):
     conanfile = load(path)
     ConanOutput().debug(f"Loaded conanfile from {path}.")
     requires = [(r, "requires") for r in args.requires]
-    tool_requires = [(r, "tool_requires") for r in args.tool_requires]
-    test_requires = [(r, "test_requires") for r in args.test_requires]
+    tool_requires = [(r, "tool_requires") for r in args.tool]
+    test_requires = [(r, "test_requires") for r in args.test]
     success_msgs = []
     for (name, req_attr) in requires + tool_requires + test_requires:
         if not re.search(rf"self\.{req_attr}\([\"']{name}", conanfile):
@@ -53,9 +53,9 @@ def dep_add(conan_api, parser, subparser, *args):
                            help="Path to a folder containing a recipe (conanfile.py). "
                                 "Defaults to the current directory",)
     subparser.add_argument("requires", nargs="*", help="Requirement name.")
-    subparser.add_argument("-tor", "--tool-requires", action="append", default=[],
+    subparser.add_argument("-tor", "--tool", action="append", default=[],
                            help="Tool requirement name.")
-    subparser.add_argument("-ter", "--test-requires", action="append", default=[],
+    subparser.add_argument("-ter", "--test", action="append", default=[],
                            help="Test requirement name.")
     group = subparser.add_mutually_exclusive_group()
     group.add_argument("-r", "--remote", default=None, action="append",
@@ -64,8 +64,8 @@ def dep_add(conan_api, parser, subparser, *args):
                        help='Do not use remote, resolve exclusively in the cache')
     args = parser.parse_args(*args)
     requires = [(r, "requires", "requirements") for r in args.requires]
-    tool_requires = [(r, "tool_requires", "build_requirements") for r in args.tool_requires]
-    test_requires = [(r, "test_requires", "build_requirements") for r in args.test_requires]
+    tool_requires = [(r, "tool_requires", "build_requirements") for r in args.tool]
+    test_requires = [(r, "test_requires", "build_requirements") for r in args.test]
     if not any(requires + tool_requires + test_requires):
         raise ConanException("You need to add any requires, tool_requires or test_requires.")
     path = conan_api.local.get_conanfile_path(args.folder or ".", os.getcwd(), py=True)
