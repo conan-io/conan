@@ -1,5 +1,6 @@
 import inspect
 import os
+import textwrap
 import traceback
 import importlib
 
@@ -222,12 +223,17 @@ def _generate_aggregated_env(conanfile):
                      sh_content(deactivates(shs)))
         if bats:
             def bat_content(files):
-                return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
+                content = "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
+                if deactivation_mode == "function":
+                    content += "\r\n" + _bat_global_deactivate_content(files, group) + "\r\n"
+                return content
+
             filename = "conan{}.bat".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), bat_content(bats))
-            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-                 bat_content(deactivates(bats)))
+            if not deactivation_mode:
+                save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                     bat_content(deactivates(bats)))
         if ps1s:
             def ps1_content(files):
                 content = "\r\n".join(['& "{}"'.format(b) for b in files])
@@ -248,6 +254,49 @@ def _generate_aggregated_env(conanfile):
     if generated:
         conanfile.output.highlight("Generating aggregated env files")
         conanfile.output.info(f"Generated aggregated env files: {generated}")
+
+
+def _deactivate_function_names(filenames):
+    return [os.path.splitext(os.path.basename(s))[0].replace("-", "_")
+            for s in reversed(filenames)]
+
+def _bat_global_deactivate_content(files, group):
+    macros = ""
+    for file in _deactivate_function_names(files):
+        macros += f"deactivate_{file} "
+
+    return textwrap.dedent(f"""\
+        setlocal enabledelayedexpansion
+
+        rem === Macros to combine ===
+        set macros_to_combine={macros}
+        set combined_macro=deactivate_conan{group}
+
+        rem === Build combined macro ===
+        set "combined_cmd="
+
+        for %%M in (%macros_to_combine%) do (
+            for /f "delims=" %%L in ('doskey /macros ^| findstr /b "%%M="') do (
+                set "line=%%L"
+                rem Remove "macro_name=" prefix
+                call set "line=%%line:*%%M==%%%"
+                if defined combined_cmd (
+                    set "combined_cmd=!combined_cmd!$T!line!"
+                ) else (
+                    set "combined_cmd=!line!"
+                )
+            )
+        )
+
+        rem === Add self-removal ===
+        set "combined_cmd=!combined_cmd!$Tdoskey %combined_macro%="
+
+        rem === Define the combined macro ===
+        doskey %combined_macro%=!combined_cmd!
+        endlocal
+
+        echo Environment activated. Run "deactivate_conan{group}" to restore.
+        """)
 
 
 def relativize_paths(conanfile, placeholder):
