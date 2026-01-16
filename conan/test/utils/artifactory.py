@@ -89,13 +89,6 @@ class ArtifactoryServer:
     def repo_api_url(self):
         return "{}/api/conan/{}".format(self._url, self._repo_name)
 
-    def recipe_revision_time(self, ref):
-        revs = self.server_store.get_recipe_revisions_references(ref)
-        for r in revs:
-            if r.revision == ref.revision:
-                return r.time
-        return None
-
     def package_revision_time(self, pref):
         revs = self.server_store.get_package_revisions_references(pref)
         for r in revs:
