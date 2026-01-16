@@ -42,11 +42,10 @@ class PipEnv:
             _python = os.path.realpath(default_python) if default_python else None
         if _python:
             return _python
-        else:
-            raise ConanException("Conan could not find a Python executable path. Please, install "
-                                 "Python system-wide or set the "
-                                 "'tools.system.pipenv:python_interpreter' "
-                                 "conf to the full path of a Python executable")
+        raise ConanException("Conan could not find a Python executable path. Please, install "
+                             "Python system-wide or set the "
+                             "'tools.system.pipenv:python_interpreter' "
+                             "conf to the full path of a Python executable")
 
     @staticmethod
     def _get_env_python(env_dir):
