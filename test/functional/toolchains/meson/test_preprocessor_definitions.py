@@ -67,8 +67,10 @@ class TestMesonPreprocessorDefinitionsTest:
         assert "buildtype = 'release'" in content
 
         t.run("build .")
-        t.run_command(os.path.join("build", "demo"))
+        assert "WARN: deprecated: Use 'extra_defines' attribute for compiler preprocessor " \
+               "definitions instead of 'preprocessor_definitions'" in t.out
 
+        t.run_command(os.path.join("build", "demo"))
         assert "hello: Release!" in t.out
         assert "TEST_DEFINITION1: TestPpdValue1" in t.out
         assert "TEST_DEFINITION2: TestPpdValue2" in t.out
