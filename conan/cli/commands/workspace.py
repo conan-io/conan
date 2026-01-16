@@ -271,6 +271,13 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
                                        deploy=args.deployer, deploy_package=args.deployer_package,
                                        deploy_folder=args.deployer_folder,
                                        envs_generation=args.envs_generation)
+
+    # Update and save lockfile if requested
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, ws_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
+    cwd = os.getcwd()
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
+
     ConanOutput().success("Install finished successfully")
 
     return {"graph": ws_graph,
