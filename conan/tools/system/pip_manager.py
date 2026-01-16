@@ -106,7 +106,7 @@ class UVEnv(PythonVirtualEnv):
         :param py_version: Optional python version for the virtualenv using UV
         """
         super().__init__(conanfile, folder, name)
-        self._base_env_dir = os.path.abspath(os.path.join(folder or conanfile.build_folder))
+        self._base_env_dir = os.path.abspath(folder or conanfile.build_folder)
         self._uv_env_dir = os.path.join(self._base_env_dir, f"uv_{self.env_name}")
         self._create_uv_venv(py_version)
 
