@@ -12,14 +12,7 @@ def test_pipenv_conf(mock_shutil_which):
     conanfile.settings = Settings()
     conanfile.conf.define("tools.system.pipenv:python_interpreter",
                           "/python/interpreter/from/config")
-    result = "/python/interpreter/from/config -m venv"
     PipEnv(conanfile, "testenv")
-
-    def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,   # noqa
-                 quiet=False):  # noqa
-        assert result in command
-        return 100
-    conanfile.run = fake_run
     mock_shutil_which.assert_not_called()
 
 
