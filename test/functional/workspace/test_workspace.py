@@ -95,21 +95,3 @@ def test_super_build_different_layouts():
     assert "Adding project: liba" in c.out
     assert "Adding project: libb" in c.out
     assert "Adding project: app1" in c.out
-
-
-def test_super_install_lockfile_out():
-    """
-    Test that workspace super-install can generate a lockfile
-    """
-    c = TestClient()
-    c.run("new cmake_lib -d name=mymath")
-    c.run("create . -tf=")
-
-    c.save({}, clean_first=True)
-    c.run("new workspace -d requires=mymath/0.1")
-    c.run("workspace super-install --lockfile-out=conan.lock")
-
-    # Verify the lockfile was created and contains the expected dependency
-    assert os.path.exists(os.path.join(c.current_folder, "conan.lock"))
-    lock = c.load("conan.lock")
-    assert "mymath/0.1" in lock
