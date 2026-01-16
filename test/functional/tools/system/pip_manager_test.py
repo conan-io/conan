@@ -1,4 +1,5 @@
 import textwrap
+import platform
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save_files
 from conan.test.utils.test_files import temp_folder
@@ -139,3 +140,88 @@ def test_create_pip_manager():
 
     assert "RUN: hello-world" in client.out
     assert "Hello Test World!" in client.out
+
+
+def test_build_uv_manager():
+
+    pip_package_folder = temp_folder(path_with_spaces=True)
+    _create_py_hello_world(pip_package_folder)
+    pip_package_folder = pip_package_folder.replace('\\', '/')
+
+    conanfile_pip = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.system import PipEnv
+        from conan.tools.layout import basic_layout
+        import platform
+        import os
+
+
+        class PipPackage(ConanFile):
+            name = "pip_hello_test"
+            version = "0.1"
+
+            def layout(self):
+                basic_layout(self)
+
+            def generate(self):
+                pip_env = PipEnv(self, py_version="3.11.6")
+                pip_env.install(["{pip_package_folder}"])
+                pip_env.generate()
+                pip_env.run(["--version"])
+
+            def build(self):
+                self.run("hello-world")
+        """)
+
+    client = TestClient(path_with_spaces=False)
+    # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
+    client.save({"pip/conanfile.py": conanfile_pip})
+    client.run("build pip/conanfile.py")
+    print(client.out)
+    assert "Using CPython 3.11.6" in client.out
+    assert "Creating virtual environment with seed packages" in client.out
+    assert "Virtual environment for Python 3.11.6 created successfully using UV." in client.out
+    if platform.system() == "Windows":
+        assert "python.exe --version\nPython 3.11.6" in client.out
+    else:
+        assert "python --version\nPython 3.11.6" in client.out
+    assert "RUN: hello-world" in client.out
+    assert "Hello Test World!" in client.out
+
+
+def test_fail_build_uv_manager():
+
+    pip_package_folder = temp_folder(path_with_spaces=True)
+    _create_py_hello_world(pip_package_folder)
+    pip_package_folder = pip_package_folder.replace('\\', '/')
+
+    conanfile_pip = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.system import PipEnv
+        from conan.tools.layout import basic_layout
+        import platform
+        import os
+
+
+        class PipPackage(ConanFile):
+            name = "pip_hello_test"
+            version = "0.1"
+
+            def layout(self):
+                basic_layout(self)
+
+            def generate(self):
+                pip_env = PipEnv(self, py_version="3.11.86")
+                pip_env.install(["{pip_package_folder}"])
+                pip_env.generate()
+
+            def build(self):
+                self.run("hello-world")
+        """)
+
+    client = TestClient(path_with_spaces=False)
+    # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
+    client.save({"pip/conanfile.py": conanfile_pip})
+    client.run("build pip/conanfile.py", assert_error=True)
+    print(client.out)
+    assert "UVEnv could not create a Python 3.11.86 virtual environment using UV" in client.out
