@@ -102,15 +102,14 @@ class RemoteManager:
         mkdir(layout.metadata())
         return layout
 
-    def get_recipe_metadata(self, ref, remote, metadata):
+    def get_recipe_metadata(self, recipe_layout, ref, remote, metadata):
         """
         Get only the metadata for a locally existing recipe in Cache
         """
         assert ref.revision, "get_recipe without revision specified"
         output = ConanOutput(scope=str(ref))
         output.info("Retrieving recipe metadata from remote '%s' " % remote.name)
-        layout = self._cache.recipe_layout(ref)
-        download_export = layout.download_export()
+        download_export = recipe_layout.download_export()
         try:
             self._call_remote(remote, "get_recipe", ref, download_export, metadata,
                               only_metadata=True)
