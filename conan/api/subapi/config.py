@@ -259,7 +259,8 @@ class ConfigAPI:
         """ get the values of global.conf for those configurations that matches the pattern
         that have an actual user definition.
 
-        It wont return anything not even the defaults, for not defined values
+        Values with no user definitions will be skipped from the returned value,
+        defaults for those confs won't be shown.
 
         :param pattern: pattern to match against
         :return: dict of configuration values
