@@ -1,11 +1,14 @@
 import os
 import shutil
+import sys
+
 from collections import namedtuple
 from typing import List
 
 from requests.exceptions import ConnectionError
 
 from conan.api.model import LOCAL_RECIPES_INDEX
+from conan.internal.paths import CONANINFO, CONAN_MANIFEST, PACKAGE_FILE_NAME, EXPORT_FILE_NAME
 from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
@@ -17,7 +20,6 @@ from conan.internal.model.info import load_binary_info
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.files import rmdir, human_size
-from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.internal.util.files import mkdir, tar_extract
 
 
@@ -86,7 +88,8 @@ class RemoteManager:
             self._cache.remove_recipe_layout(layout)
             raise
         export_folder = layout.export()
-        tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
+        export_file = next((f for f in zipped_files if f.startswith(EXPORT_FILE_NAME)), None)
+        tgz_file = zipped_files.pop(export_file, None)
 
         if tgz_file:
             uncompress_file(tgz_file, export_folder, scope=str(ref))
@@ -132,7 +135,8 @@ class RemoteManager:
             return
 
         self._signer.verify(ref, download_folder, files=zipped_files)
-        tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
+        # Only 1 file is guaranteed
+        tgz_file = next(iter(zipped_files.values()))
         uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
 
     def get_package(self, pref, remote, metadata=None):
@@ -178,12 +182,15 @@ class RemoteManager:
                                              metadata, only_metadata=False)
             zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
             # quick server package integrity check:
-            for f in ("conaninfo.txt", "conanmanifest.txt", "conan_package.tgz"):
+            for f in (CONANINFO, CONAN_MANIFEST):
                 if f not in zipped_files:
                     raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: no {f}")
+
+            # This is guaranteed to exists, otherwise RestClient would have raised already
+            package_file = next(f for f in zipped_files if PACKAGE_FILE_NAME in f)
             self._signer.verify(pref, download_pkg_folder, zipped_files)
 
-            tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
+            tgz_file = zipped_files.pop(package_file)
             package_folder = layout.package()
             uncompress_file(tgz_file, package_folder, scope=str(pref.ref))
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
@@ -337,6 +344,9 @@ class RemoteManager:
 
 
 def uncompress_file(src_path, dest_folder, scope=None):
+    if sys.version_info.minor < 14 and src_path.endswith("zst"):
+        raise ConanException(f"File {os.path.basename(src_path)} compressed with 'zst', "
+                             f"unsupported for Python<3.14 ")
     try:
         filesize = os.path.getsize(src_path)
         big_file = filesize > 10000000  # 10 MB

@@ -67,7 +67,7 @@ class PipEnv:
         """
         args = [self._python_exe, "-m", "pip", "install", "--disable-pip-version-check"]
         if pip_args:
-            args += list(pip_args)
-        args += list(packages)
-        command = cmd_args_to_string(args)
+            args.extend(pip_args)
+        args += [f'"{p}"' for p in packages]
+        command = " ".join(args)
         return self._conanfile.run(command)

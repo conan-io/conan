@@ -277,3 +277,145 @@ def test_require_different_versions_transitive():
     c.run("remove * -c")
     c.run("install --requires=consumer/1.0")
     assert re.search(r"Skipped binaries(\s*)myqemu/1.0, myqemu/2.0, snippy/1.0, valgrind/1.0", c.out)
+
+
+class TestTransitiveBuild:
+    # project --(tool-requires)--> wrapper_a -(requires)-> gcc/X
+    #     \-----(tool-requires)--> wrapper_b -(requires)-> gcc/Y
+    gcc = textwrap.dedent(r"""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Pkg(ConanFile):
+            name = "gcc"
+            package_type = "application"
+            def package(self):
+                echo = f"@echo off\necho MYGCC={self.version}!!"
+                save(self, os.path.join(self.package_folder, "bin", "mygcc.bat"), echo)
+                save(self, os.path.join(self.package_folder, "bin", "mygcc.sh"), echo)
+                os.chmod(os.path.join(self.package_folder, "bin", "mygcc.sh"), 0o777)
+            """)
+
+    project = textwrap.dedent("""
+        import platform
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def build_requirements(self):
+                self.tool_requires("wrappera/1.0")
+                self.tool_requires("wrapperb/1.0")
+            def build(self):
+                ext = "bat" if platform.system() == "Windows" else "sh"
+            """)
+
+    def test_require_different_versions_transitive_noconflict(self):
+        """ Same dependency to gcc/1.0, no conflict
+        """
+        c = TestClient()
+        project = r"self.run(f'mygcc.{ext}')"
+        c.save({"gcc/conanfile.py": self.gcc,
+                "wrappera/conanfile.py": GenConanfile("wrappera", "1.0").with_requires("gcc/1.0"),
+                "wrapperb/conanfile.py": GenConanfile("wrapperb", "1.0").with_requires("gcc/1.0"),
+                "project/conanfile.py": self.project + textwrap.indent(project, "        ")})
+
+        c.run("create gcc --version=1.0")
+        c.run("create wrappera")
+        c.run("create wrapperb")
+
+        c.run("build project")
+        assert "MYGCC=1.0!!" in c.out
+
+    def test_require_different_versions_transitive_conflict(self):
+        c = TestClient()
+        project = textwrap.dedent(r"""
+            self.run(f'wrappera.{ext}')
+            self.run(f'wrapperb.{ext}')
+            """)
+        c.save({"gcc/conanfile.py": self.gcc,
+                "wrappera/conanfile.py": GenConanfile("wrappera", "1.0").with_requires("gcc/1.0"),
+                "wrapperb/conanfile.py": GenConanfile("wrapperb", "1.0").with_requires("gcc/2.0"),
+                "project/conanfile.py": self.project + textwrap.indent(project, "        ")})
+
+        c.run("create gcc --version=1.0")
+        c.run("create gcc --version=2.0")
+        c.run("create wrappera")
+        c.run("create wrapperb")
+        c.run("install project", assert_error=True)
+        assert "Version conflict: Conflict between gcc/2.0 and gcc/1.0 in the graph" in c.out
+
+        # disabling ``run=False`` trait
+        c.save({"wrapa/conanfile.py": GenConanfile("wrappera", "1.0").with_requirement("gcc/1.0",
+                                                                                       run=False),
+                "wrapb/conanfile.py": GenConanfile("wrapperb", "1.0").with_requirement("gcc/2.0",
+                                                                                       run=False)})
+        c.run("create wrapa")
+        c.run("create wrapb")
+        c.run("install project")  # Now it works!
+
+        # If the run is not propagated, the consumer must do it explicitly to differentiate:
+        project = textwrap.dedent(r"""
+            import os, platform
+            from conan import ConanFile
+            from conan.tools.files import save, chdir
+            class Pkg(ConanFile):
+                name = "project"
+                version = "1.0"
+                def build_requirements(self):
+                    self.tool_requires("wrappera/1.0")
+                    self.tool_requires("wrapperb/1.0")
+                    self.tool_requires("gcc/1.0", run=False)
+                    self.tool_requires("gcc/2.0", run=False)
+                def build(self):
+                    ext = "bat" if platform.system() == "Windows" else "sh"
+                    path_a = self.dependencies.build["gcc/1.0"].cpp_info.bindir
+                    path_b = self.dependencies.build["gcc/2.0"].cpp_info.bindir
+                    self.run(f'"{path_a}/mygcc.{ext}"')
+                    self.run(f'"{path_b}/mygcc.{ext}"')
+            """)
+        c.save({"project/conanfile.py": project})
+        c.run("build project")
+        assert "MYGCC=1.0!!" in c.out
+        assert "MYGCC=2.0!!" in c.out
+
+    def test_require_different_versions_transitive_vendored(self):
+        c = TestClient()
+        wrapper = textwrap.dedent(r"""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import save, copy
+            class Pkg(ConanFile):
+                name = "{name}"
+                version = "1.0"
+                package_type = "application"
+
+                def requirements(self):
+                    self.requires("gcc/{gcc_version}", visible=False, run=False)
+
+                def package(self):
+                    copy(self, "*", src=self.dependencies["gcc"].cpp_info.bindir,
+                         dst=os.path.join(self.package_folder, "bin"))
+                    echo_bat = f'@echo off\necho {name}={{self.version}}!!\ncall "%~dp0/mygcc.bat"'
+                    # Trick for cwd in Linux
+                    echo_sh = '@echo off\necho {name}=1.0!!\n"${{0%/*}}/mygcc.sh\"'
+                    save(self, os.path.join(self.package_folder, "bin", "{name}.bat"), echo_bat)
+                    save(self, os.path.join(self.package_folder, "bin", "{name}.sh"), echo_sh)
+                    os.chmod(os.path.join(self.package_folder, "bin", "{name}.sh"), 0o777)
+            """)
+
+        project = textwrap.dedent(r"""
+            self.run(f'wrappera.{ext}')
+            self.run(f'wrapperb.{ext}')
+            """)
+        c.save({"gcc/conanfile.py": self.gcc,
+                "wrappera/conanfile.py": wrapper.format(name="wrappera", gcc_version="1.0"),
+                "wrapperb/conanfile.py": wrapper.format(name="wrapperb", gcc_version="2.0"),
+                "project/conanfile.py": self.project + textwrap.indent(project, "        ")})
+
+        c.run("create gcc --version=1.0")
+        c.run("create gcc --version=2.0")
+        c.run("create wrappera")
+        c.run("create wrapperb")
+        c.run("build project")
+        assert "wrappera=1.0!!" in c.out
+        assert "MYGCC=1.0!!" in c.out
+        assert "wrapperb=1.0!!" in c.out
+        assert "MYGCC=2.0!!" in c.out

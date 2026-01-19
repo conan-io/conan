@@ -6,13 +6,14 @@ import tempfile
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
-from conan.internal.api.uploader import compress_files
+from conan.internal.api.uploader import compress_files, get_compress_level
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.conan_reference_layout import (EXPORT_SRC_FOLDER, EXPORT_FOLDER,
                                                          SRC_FOLDER, METADATA,
                                                          DOWNLOAD_EXPORT_FOLDER)
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.cache.integrity_check import IntegrityChecker
+from conan.internal.paths import COMPRESSIONS
 from conan.internal.rest.download_cache import DownloadCache
 from conan.errors import ConanException
 from conan.api.model import PkgReference
@@ -148,7 +149,11 @@ class CacheAPI:
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
         out = ConanOutput()
         mkdir(os.path.dirname(tgz_path))
-        compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
+        tgz_name = os.path.basename(tgz_path)
+        compressformat = next((e for e in COMPRESSIONS if tgz_name.endswith(e)), None)
+        if not compressformat:
+            raise ConanException(f"Unsupported compression format for {tgz_name}")
+        compresslevel = get_compress_level(compressformat, global_conf)
         tar_files: dict[str, str] = {}  # {path_in_tar: abs_path}
 
         for ref, packages in package_list.items():
@@ -191,9 +196,9 @@ class CacheAPI:
         pkglist_path = os.path.join(tempfile.gettempdir(), "pkglist.json")
         save(pkglist_path, serialized)
         tar_files["pkglist.json"] = pkglist_path
-        compress_files(tar_files, os.path.basename(tgz_path), os.path.dirname(tgz_path),
-                       compresslevel, recursive=True)
+        compress_files(tar_files, tgz_name, os.path.dirname(tgz_path), compresslevel, recursive=True)
         remove(pkglist_path)
+        ConanOutput().success(f"Created cache save file: {tgz_path}")
 
     def restore(self, path) -> PackagesList:
         if not os.path.isfile(path):

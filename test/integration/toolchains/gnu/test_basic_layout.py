@@ -6,6 +6,7 @@ import pytest
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
+
 @pytest.mark.parametrize("basic_layout, expected_path", [
     ('basic_layout(self)', 'build-release'),
     ('basic_layout(self, build_folder="custom_build_folder")', 'custom_build_folder')])

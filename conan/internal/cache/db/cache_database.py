@@ -28,6 +28,12 @@ class CacheDatabase:
         prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
         return prevs[0]["pref"] if prevs else None
 
+    def get_latest_package_reference_data(self, pref):
+        # Used just for PkgCache.pkg_layout_latest()
+        # TODO: This can be refactored, unified with get_latest_package_reference()
+        prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
+        return prevs[0] if prevs else None
+
     def update_recipe_timestamp(self, ref):
         self._recipes.update_timestamp(ref)
 
@@ -40,11 +46,11 @@ class CacheDatabase:
     def get_package_lru(self, pref: PkgReference):
         return self._packages.get(pref)["lru"]
 
-    def update_recipe_lru(self, ref):
-        self._recipes.update_lru(ref)
+    def update_recipes_lru(self, refs):
+        self._recipes.update_lru(refs)
 
-    def update_package_lru(self, pref):
-        self._packages.update_lru(pref)
+    def update_packages_lru(self, prefs):
+        self._packages.update_lru(prefs)
 
     def remove_recipe(self, ref: RecipeReference):
         # Removing the recipe must remove all the package binaries too from DB

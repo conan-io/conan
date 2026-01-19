@@ -1,7 +1,6 @@
 import textwrap
 import pytest
 
-from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 new_value = "will_break_next"
 
@@ -34,7 +33,6 @@ def test_package_info_extra_variables(generator):
     message(STATUS "FOO=${FOO}")
     """)
 
-
     conanfile = textwrap.dedent(f"""
     from conan import ConanFile
     from conan.tools.cmake import CMake
@@ -54,4 +52,3 @@ def test_package_info_extra_variables(generator):
                """-c tools.cmake.cmaketoolchain:extra_variables="{'FOO': '9'}" """)
 
     assert "-- FOO=9" in client.out
-

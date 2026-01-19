@@ -369,12 +369,13 @@ def test_conf_build_does_not_exist():
     assert 'export CC_FOR_BUILD="x86_64-linux-gnu-gcc"' in tc
     assert 'export CXX_FOR_BUILD="x86_64-linux-gnu-g++"' in tc
 
+
 @pytest.mark.parametrize(
     "threads, flags",
     [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
 )
 def test_thread_flags(threads, flags):
-    os = platform.system()
+    is_win = platform.system() == "Windows"
     client = TestClient()
     profile = textwrap.dedent(f"""
         [settings]
@@ -396,8 +397,8 @@ def test_thread_flags(threads, flags):
         }
     )
     client.run("install . -pr=./profile")
-    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if os == "Windows" else '.sh'))
-    if os == "Windows":
+    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if is_win else '.sh'))
+    if is_win:
         assert f'set "CXXFLAGS=%CXXFLAGS% -stdlib=libc++ {flags}"' in toolchain
         assert f'set "CFLAGS=%CFLAGS% {flags}"' in toolchain
         assert f'set "LDFLAGS=%LDFLAGS% {flags}' in toolchain

@@ -232,6 +232,24 @@ def test_profile_template_profile_name():
     assert "conanfile.py: PROFILE NAME: include_default" in client.out
 
 
+def test_profile_root_name():
+    c = TestClient()
+    root = textwrap.dedent("""
+        [conf]
+        user.profile:name = {{ profile_name }}
+        user.profile:root_name = {{ root_profile_name }}
+        """)
+    tpl = textwrap.dedent("""
+        include(myprofile)
+        """)
+
+    c.save({"myprofile": root,
+            "other": tpl})
+    c.run("profile show -pr=other")
+    assert "user.profile:name=myprofile" in c.out
+    assert "user.profile:root_name=other" in c.out
+
+
 class TestProfileDetectAPI:
     def test_profile_detect_os_arch(self):
         """ testing OS & ARCH just to test the UX and interface

@@ -47,6 +47,14 @@ class TestNewCommand:
         assert 'self.requires("ai/1.0")' in conanfile
         assert 'name = "mygame"' in conanfile
 
+    def test_new_basic_template_multi_arg(self):
+        tc = TestClient(light=True)
+        tc.run("new basic -d name=mygame -d requires=d1/1.0 -d requires=d2/1.0 -d requires=d3/1.0")
+        conanfile = tc.load("conanfile.py")
+        assert 'self.requires("d1/1.0")' in conanfile
+        assert 'self.requires("d2/1.0")' in conanfile
+        assert 'self.requires("d3/1.0")' in conanfile
+
     def test_new_defaults(self):
         c = TestClient(light=True)
         for t in ("cmake_lib", "cmake_exe", "meson_lib", "meson_exe", "msbuild_lib", "msbuild_exe",
@@ -142,6 +150,22 @@ class TestNewCommandUserTemplate:
         assert myimage == png
         assert not os.path.exists(os.path.join(client.current_folder, "not_templates"))
 
+        client.run("new t_dir -d name=hello -d version=0.1", assert_error=True)
+        assert "File 'myimage.png' already exists, and --force not defined, aborting" in client.out
+
+    def test_wrong_argument(self):
+        c = TestClient(light=True)
+        save(os.path.join(c.cache_folder, f"templates/command/new/mytpl/conanfile.py"), "")
+        c.run(f"new mytpl -d version", assert_error=True)
+        assert "ERROR: Template definitions must be 'key=value', received 'version'" in c.out
+
+    def test_missing_argument(self):
+        c = TestClient(light=True)
+        save(os.path.join(c.cache_folder, f"templates/command/new/mytpl/file.txt"), "{{myarg}}")
+        c.run(f"new mytpl", assert_error=True)
+        assert ("ERROR: Missing definitions for the template. "
+                "Required definitions are: 'myarg'") in c.out
+
 
 class TestNewErrors:
     def test_template_errors(self):
@@ -153,6 +177,7 @@ class TestNewErrors:
         client = TestClient(light=True)
         client.run("new cmake_lib -d name=hello -d version=0.1")
         client.run("new cmake_lib -d name=hello -d version=0.1", assert_error=True)
+        assert "ERROR: File 'CMakeLists.txt' already exists, and --force not defined" in client.out
         client.run("new cmake_lib -d name=bye -d version=0.2 --force")
         conanfile = client.load("conanfile.py")
         assert 'name = "bye"' in conanfile

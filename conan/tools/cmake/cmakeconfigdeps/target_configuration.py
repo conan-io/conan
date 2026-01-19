@@ -121,7 +121,7 @@ class TargetConfigurationTemplate2:
 
         libs = {}
         # The BUILD context does not generate libraries targets atm
-        if self._conanfile.context == CONTEXT_HOST:
+        if not self._require.build:
             libs = self._get_libs(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
             self._add_root_lib_target(libs, pkg_name, cpp_info)
         exes = self._get_exes(cpp_info, pkg_name, pkg_folder, pkg_folder_var)

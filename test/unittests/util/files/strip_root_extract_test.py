@@ -21,7 +21,8 @@ from conan.internal.util.files import rmdir
 
 class TestZipExtractPlain:
 
-    def _zipdir(self, path, zipfilename, folder_entry=None):
+    @staticmethod
+    def _zipdir(path, zipfilename, folder_entry=None):
         with zipfile.ZipFile(zipfilename, 'w', zipfile.ZIP_DEFLATED) as z:
             if folder_entry:
                 zif = zipfile.ZipInfo(folder_entry + "/")
@@ -116,7 +117,8 @@ class TestZipExtractPlain:
 
 class TestTarExtractPlain:
 
-    def _compress_folder(self, folder, tgz_path, folder_entry=None):
+    @staticmethod
+    def _compress_folder(folder, tgz_path, folder_entry=None):
         # Create a tar.gz file with the files in the folder and an additional TarInfo entry
         # for the folder_entry (the gather files doesn't return empty dirs)
         with open(tgz_path, "wb") as tgz_handle:

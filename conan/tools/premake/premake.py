@@ -20,6 +20,7 @@ PREMAKE_VS_VERSION = {
     '195': '2026'
 }
 
+
 class Premake:
     """
     This class calls Premake commands when a package is being built. Notice that
@@ -53,7 +54,7 @@ class Premake:
             msvc_version = PREMAKE_VS_VERSION.get(str(self._conanfile.settings.compiler.version))
             self.action = f'vs{msvc_version}'
         else:
-            self.action = "gmake" # New generator (old gmakelegacy is deprecated)
+            self.action = "gmake"  # New generator (old gmakelegacy is deprecated)
 
         self._premake_conan_toolchain = Path(self._conanfile.generators_folder) / PremakeToolchain.filename
 
