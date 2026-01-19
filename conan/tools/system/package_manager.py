@@ -212,7 +212,7 @@ class _SystemPackageManagerTool:
                                                       **kwargs)
                 return self._conanfile_run(command, self.accepted_install_codes, quiet=False)
         else:
-            self._conanfile.output.info(f"System requirements: {" ".join(orig_packages)} already installed")
+            self._conanfile.output.info(f"System requirements: {' '.join(orig_packages)} already installed")
 
     def _update(self):
         # we just update the package manager database in case we are in 'install mode'
