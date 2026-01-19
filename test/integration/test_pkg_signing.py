@@ -45,8 +45,8 @@ def test_pkg_sign():
     # Make sure it is signing the sources too
     assert "Signing files:  ['conan_export.tgz', 'conan_sources.tgz', " \
            "'conanfile.py', 'conanmanifest.txt']" in c.out
-    assert ("WARN: [Package sign] The signature plugin sign() function must return a list of "
-            "signature dicts") in c.out
+    assert ("WARN: deprecated: [Package sign] The signature plugin sign() function must return a list "
+            "of signature dicts") in c.out
     c.run("remove * -c")
     c.run("install --requires=pkg/0.1")
     assert "Verifying ref:  pkg/0.1" in c.out
@@ -164,7 +164,8 @@ def test_pkg_sign_canonical():
 
     # Cache verify command fails and reports if package is not signed
     c.run("cache verify *", assert_error=True)
-    assert "WARN: [Package sign] Manifest file does not exist in signature folder" in c.out
+    assert ("WARN: deprecated: [Package sign] Manifest file 'pkgsign-manifest.json' does not exist "
+            "in signature folder") in c.out
     assert "ERROR: Package is not signed" in c.out
 
     # Cache sign command fails if a package fails to sign and reports it

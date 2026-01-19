@@ -28,7 +28,8 @@ def _save_manifest(artifacts_folder, signature_folder):
     """
     files_list = []
 
-    for fname in os.listdir(artifacts_folder):
+    # Sort files by filename to ensure consistent order
+    for fname in sorted(os.listdir(artifacts_folder)):
         file_path = os.path.join(artifacts_folder, fname)
 
         if os.path.isfile(file_path):
@@ -38,8 +39,6 @@ def _save_manifest(artifacts_folder, signature_folder):
             }
             files_list.append(entry)
 
-    # Sort files by filename to ensure consistent order
-    files_list.sort(key=lambda x: x["file"])
     save(os.path.join(signature_folder, PKGSIGN_MANIFEST),
          json.dumps({"files": files_list}, indent=2))
 
@@ -70,14 +69,23 @@ def _verify_files_checksums(signature_folder, files):
     :param files: dict of {filename: filepath} of files in artifact folder to verify
     """
     if not os.path.isfile(os.path.join(signature_folder, PKGSIGN_MANIFEST)):
-        ConanOutput().warning(f"[Package sign] Manifest file does not exist in signature folder "
-                              f"{os.path.join(signature_folder, PKGSIGN_MANIFEST)}. "
-                              f"Skipping checksum verification.")
+        ConanOutput().warning(f"[Package sign] Manifest file '{PKGSIGN_MANIFEST}' does not exist in "
+                              f"signature folder '{signature_folder}'. Please update your plugin "
+                              f"according to the docs at https://docs.conan.io/2/reference/extensions/package_signing.html"
+                              f". Skipping checksum verification!", warn_tag="deprecated")
         return
 
     manifest_content = load(os.path.join(signature_folder, PKGSIGN_MANIFEST))
     expected_list = json.loads(manifest_content).get("files", [])
     expected_files = {item["file"]: item["sha256"] for item in expected_list}
+
+    # Warn in case there are missing files (like conan_sources.tgz not being downloaded)
+    manifest_files = set(expected_files.keys())
+    package_files = set(files.keys())
+    missing_files = manifest_files - package_files
+    if missing_files:
+        ConanOutput().warning("[Package sign] The following files are missing in the cache and "
+                              f"will not be verified: {', '.join(missing_files)}",)
 
     # This is checking that the files of the package exist in the manifest instead of the opposite
     # because some files might be missing such as conan_sources.tgz
@@ -135,7 +143,8 @@ class PkgSignaturesPlugin:
                     files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
             ConanOutput().warning("[Package sign] The signature plugin sign() function must return "
                                   "a list of signature dicts. See the documentation at "
-                                  "https://docs.conan.io/2/reference/extensions/package_signing.html")
+                                  "https://docs.conan.io/2/reference/extensions/package_signing.html",
+                                  warn_tag="deprecated")
 
     def sign(self, upload_data):
         if not self.is_sign_configured:

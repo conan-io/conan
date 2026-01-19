@@ -69,7 +69,8 @@ def test_pkg_verify_basic():
     c.save_home({"extensions/plugins/sign/sign.py": PLUGIN_CONTENT})
     c.run("create .")
     c.run("cache verify *")
-    assert "WARN: [Package sign] Manifest file does not exist in signature folder" in c.out
+    assert ("deprecated: [Package sign] Manifest file 'pkgsign-manifest.json' does not exist in "
+            "signature folder") in c.out
     assert textwrap.dedent("""
         [Package sign] Results:
 
