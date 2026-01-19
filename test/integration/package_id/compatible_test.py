@@ -1001,9 +1001,11 @@ class TestCompatibleFlags:
             conanfile = conanfile.replace(".cpp_info.", ".cpp_info.components['mycomp'].")
 
         c.save({"pkg/conanfile.py": conanfile,
-                "consumer/conanfile.txt": "[requires]\npkg/0.1\n[generators]\nCMakeDeps"})
+                "consumer/conanfile.txt": "[requires]\npkg/0.1\n[generators]\nCMakeConfigDeps"})
 
-        c.run("create pkg --name=pkg --version=0.1 -s os=Linux")
+        c.run("create pkg --name=pkg --version=0.1 -s os=Linux --format=json")
+        pkg_json = json.loads(c.stdout)
+        assert pkg_json["graph"]["nodes"]["1"]["cpp_info"]["root"]["cflags"] is None
 
         def _check(flag, cmake_file):
             assert f"$<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:RELEASE>:{flag}>>" in cmake_file
@@ -1013,20 +1015,22 @@ class TestCompatibleFlags:
             assert (f"$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:"
                     f"$<$<CONFIG:RELEASE>:{flag}>>") in cmake_file
 
-        c.run("install consumer -s os=Linux -c tools.cmake.cmakedeps:new=will_break_next")
+        c.run("install consumer -s os=Linux")
         cmake = c.load("consumer/pkg-Targets-release.cmake")
         _check("-mylinuxflag", cmake)
 
-        c.run("install consumer -s os=Windows -c tools.cmake.cmakedeps:new=will_break_next")
+        c.run("install consumer -s os=Windows --format=json")
+        pkg_json = json.loads(c.stdout)
+        assert pkg_json["graph"]["nodes"]["1"]["cpp_info"]["root"]["cflags"] is None
         cmake = c.load("consumer/pkg-Targets-release.cmake")
         _check("-mywinflag", cmake)
 
-        c.run("install consumer -s os=Macos -c tools.cmake.cmakedeps:new=will_break_next")
+        c.run("install consumer -s os=Macos")
         cmake = c.load("consumer/pkg-Targets-release.cmake")
         _check("-other-os-flag", cmake)
 
         # Check old CMakeDeps generator
-        c.run("install consumer -s os=Linux -s arch=x86_64")
+        c.run("install consumer -s os=Linux -s arch=x86_64 -g CMakeDeps")
         cmake = c.load("consumer/pkg-release-x86_64-data.cmake")
         assert "-mylinuxflag" in cmake
 

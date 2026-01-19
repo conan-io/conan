@@ -72,6 +72,7 @@ class ConanFileInterface:
 
     @property
     def cpp_info(self):
+        # At the moment, not doing a full copy, not necessary as access is not concurrent
         self._conanfile.cpp_info.set_consumer(self._consumer)
         return self._conanfile.cpp_info
 
