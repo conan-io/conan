@@ -1,5 +1,4 @@
 import pytest
-from parameterized import parameterized
 
 from conan.internal.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
 from conan.errors import ConanException
@@ -342,8 +341,8 @@ class TestLinear(GraphManagerTest):
         _check_transitive(app, [(libb, True, True, False, False)])
         _check_transitive(libb, [(liba, False, False, True, True)])
 
-    @parameterized.expand([("application",), ("shared-library",), ("static-library",),
-                           ("header-library",), ("build-scripts",), (None,)])
+    @pytest.mark.parametrize("package_type", ["application", "shared-library", "static-library",
+                             "header-library", "build-scripts", None])
     def test_generic_build_require_adjust_run_with_package_type(self, package_type):
         # app --br-> cmake (app)
         self.recipe_conanfile("cmake/0.1", GenConanfile().with_package_type(package_type))
@@ -588,8 +587,7 @@ class TestLinearFourLevels(GraphManagerTest):
                                 (libb, True, True, False, False),
                                 (liba, False, True, False, False)])
 
-    @parameterized.expand([("static-library", ),
-                           ("shared-library", )])
+    @pytest.mark.parametrize("library_type", ["static-library", "shared-library"])
     def test_libraries_transitive_headers(self, library_type):
         # app -> libc/0.1 -> libb0.1  -> liba0.1
         # All with transitive_headers, the final application shoud get all headers
@@ -798,8 +796,7 @@ class TestLinearFourLevels(GraphManagerTest):
                                 (libb, False, True, False, False),
                                 (liba, False, True, False, True)])
 
-    @parameterized.expand([(True,),
-                           (False,)])
+    @pytest.mark.parametrize("run", [True, False])
     def test_header_only_run(self, run):
         # app -> libc/0.1 -> libb0.1  -> liba0.1
         # many header-onlys
@@ -1353,7 +1350,7 @@ class TestDiamond(GraphManagerTest):
                                 (libc, True, True, False, False),
                                 (liba, True, True, False, False)])
 
-    @parameterized.expand([(True, ), (False, )])
+    @pytest.mark.parametrize("order", [True, False])
     def test_diamond_additive(self, order):
         # app -> libb0.1 ---------> liba0.1
         #    \-> libc0.1 (run=True)->/

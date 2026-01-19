@@ -1,10 +1,10 @@
-from parameterized import parameterized
+import pytest
 
 from conan.internal.api.detect.detect_api import _parse_gnu_libc, _parse_musl_libc
 
 
 class TestDetectLibc:
-    @parameterized.expand(
+    @pytest.mark.parametrize("ldd_output,expected_glibc_version",
         [
             [
                 """ldd (Debian GLIBC 2.36-9+rpt2+deb12u4) 2.36
@@ -43,7 +43,7 @@ Usage: /lib/ld-musl-x86_64.so.1 [options] [--] pathname""",
         parsed_glibc_version = _parse_gnu_libc(ldd_output)
         assert expected_glibc_version == parsed_glibc_version
 
-    @parameterized.expand(
+    @pytest.mark.parametrize("ldd_output,expected_musl_libc_version",
         [
             [
                 """musl libc (x86_64)
