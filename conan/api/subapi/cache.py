@@ -275,7 +275,7 @@ class CacheAPI:
                 if os.path.exists(cachepath):
                     tar_files[f"{recipe_folder}/{f}"] = cachepath
             cachepath = os.path.join(cache_folder, recipe_folder, DOWNLOAD_EXPORT_FOLDER, METADATA)
-            if os.path.exists(path):
+            if os.path.exists(cachepath):
                 tar_files[f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}"] = cachepath
 
             for pref in packages:
