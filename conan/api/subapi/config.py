@@ -113,7 +113,7 @@ class ConfigAPI:
         become dangling or outdated.
 
         :param path: Path to the conanconfig.yml file containing the configuration packages
-            requirement efinitions
+            requirement definitions
         :param lockfile: Lockfile to be used to constrain and lock the versions and recipe-revisions
             from the input requirements, to the exact versions and revisions specified in the
             lockfile
