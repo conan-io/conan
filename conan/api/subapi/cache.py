@@ -130,7 +130,7 @@ class CacheAPI:
     def package_metadata_path(self, pref: PkgReference):
         """Returns the path of the package metadata folder in the Conan cache
 
-        This is the exception that allows adding or modifying the files within this folder, as
+        Exceptionally, adding or modifying the files within this folder is allowed, as
         the metadata files are not taken into account into the computation of the package hash
         (package revision).
 
