@@ -271,12 +271,12 @@ class CacheAPI:
             for f in (EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER):
                 if f == SRC_FOLDER and no_source:
                     continue
-                path = os.path.join(cache_folder, recipe_folder, f)
-                if os.path.exists(path):
-                    tar_files[f"{recipe_folder}/{f}"] = path
-            path = os.path.join(cache_folder, recipe_folder, DOWNLOAD_EXPORT_FOLDER, METADATA)
+                cachepath = os.path.join(cache_folder, recipe_folder, f)
+                if os.path.exists(cachepath):
+                    tar_files[f"{recipe_folder}/{f}"] = cachepath
+            cachepath = os.path.join(cache_folder, recipe_folder, DOWNLOAD_EXPORT_FOLDER, METADATA)
             if os.path.exists(path):
-                tar_files[f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}"] = path
+                tar_files[f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}"] = cachepath
 
             for pref in packages:
                 pref_layout = cache.pkg_layout(pref)
