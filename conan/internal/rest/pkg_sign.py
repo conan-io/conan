@@ -55,7 +55,7 @@ def _save_signatures(signature_folder, signatures):
                 raise ConanException(f"[Package sign] Signature '{key}' is missing in signature data")
         if not isinstance(signature.get("sign_artifacts"), dict):
             raise ConanException("[Package sign] Signature 'sign_artifacts' must be a dict of "
-                                 "{filename: signature_file}")
+                                 "{name: filename}")
     content = {
         "signatures": signatures
     }
@@ -131,16 +131,8 @@ class PkgSignaturesPlugin:
         if isinstance(signatures, list):
             # Save signatures file with the plugin's returned signatures data
             _save_signatures(metadata_sign, signatures)
-            # Add files to package bundle so they get uploaded
-            files[f"{METADATA}/sign/{PKGSIGN_SIGNATURES}"] = os.path.join(metadata_sign, PKGSIGN_SIGNATURES)
-            for sig in signatures:
-                for name, file in sig.get("sign_artifacts", {}).items():
-                    files[f"{METADATA}/sign/{file}"] = os.path.join(metadata_sign, file)
         else:
             # Fallback to old behavior (plugin sign() returns None)
-            for f in os.listdir(metadata_sign):
-                if os.path.isfile(os.path.join(metadata_sign, f)) and f != PKGSIGN_MANIFEST:
-                    files[f"{METADATA}/sign/{f}"] = os.path.join(metadata_sign, f)
             ConanOutput().warning("[Package sign] The signature plugin sign() function must return "
                                   "a list of signature dicts. See the documentation at "
                                   "https://docs.conan.io/2/reference/extensions/package_signing.html",

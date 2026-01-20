@@ -37,16 +37,17 @@ def test_pkg_sign():
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.run("create .")
-    c.run("upload * -r=default -c")
-    assert ("WARN: deprecated: [Package sign] Implicitly signing packages in the upload command "
-            "will be removed. Use 'conan cache sign' command before uploading instead") in c.out
+    c.run("cache sign pkg/0.1")
     assert "Signing ref:  pkg/0.1" in c.out
     assert "Signing ref:  pkg/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
     # Make sure it is signing the sources too
     assert "Signing files:  ['conan_export.tgz', 'conan_sources.tgz', " \
            "'conanfile.py', 'conanmanifest.txt']" in c.out
-    assert ("WARN: deprecated: [Package sign] The signature plugin sign() function must return a list "
-            "of signature dicts") in c.out
+    assert ("WARN: deprecated: [Package sign] The signature plugin sign() function must return a "
+            "list of signature dicts") in c.out
+    c.run("upload * -r=default -c")
+    assert ("WARN: deprecated: [Package sign] Implicitly signing packages in the upload command "
+            "has been removed. Use 'conan cache sign' command before uploading instead") in c.out
     c.run("remove * -c")
     c.run("install --requires=pkg/0.1")
     assert "Verifying ref:  pkg/0.1" in c.out
@@ -200,15 +201,11 @@ def test_pkg_sign_canonical():
         [Package sign] Summary: OK=4, FAILED=2
         """) in c.out
 
-    # Upload sign fails if package signing fails
-    c.run("upload * -c -r default", assert_error=True)
+    # cache sign fails if package signing fails
+    c.run("cache sign *", assert_error=True)
     assert "ERROR: sign failed" in c.out
 
-    # If upload sign failed, no packages should be uploaded
-    c.run("list * -r default")
-    assert "WARN: There are no matching recipe references" in c.out
-
-    # Upload packages individually to avoid previous failure
+    # Upload packages individually
     c.run("upload lib1ok* -c -r default")
     c.run("upload lib2fail* -c -r default")
     c.run("remove * -c")
@@ -262,8 +259,9 @@ def test_pkg_sign_exports_sources():
         """)
     c.save_home({"extensions/plugins/sign/sign.py": signer})
     c.run("create .")
-    c.run("upload pkg/0.1 -r=default -c")
+    c.run("cache sign pkg/0.1")
     assert "Creating signature pkgsign-manifest.json.sig" in c.out
+    c.run("upload pkg/0.1 -r=default -c")
     c.run("remove * -c")
     c.run("install --requires=pkg/0.1 -r=default")
     assert "Checksum verified for file conan_export.tgz" in c.out
