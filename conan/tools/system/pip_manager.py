@@ -75,9 +75,10 @@ class PipEnv:
         """
         args = ["-m", "pip", "install", "--disable-pip-version-check"]
         if pip_args:
-            args += list(pip_args)
-        args += list(packages)
-        return self.run(args)
+            args.extend(pip_args)
+        args += [f'"{p}"' for p in packages]
+        command = " ".join(args)
+        return self._conanfile.run(command)
 
     def _create_venv(self):
         try:

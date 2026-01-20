@@ -177,6 +177,7 @@ class _SystemPackageManagerTool:
         raise ConanException("None of the installs for the package substitutes succeeded.")
 
     def _install(self, packages, update=False, check=True, host_package=True, **kwargs):
+        orig_packages = packages
         pkgs = self._conanfile.system_requires.setdefault(self._active_tool, {})
         install_pkgs = pkgs.setdefault("install", [])
         install_pkgs.extend(p for p in packages if p not in install_pkgs)
@@ -211,8 +212,7 @@ class _SystemPackageManagerTool:
                                                       **kwargs)
                 return self._conanfile_run(command, self.accepted_install_codes, quiet=False)
         else:
-            self._conanfile.output.info("System requirements: {} already "
-                                        "installed".format(" ".join(packages)))
+            self._conanfile.output.info(f"System requirements: {' '.join(orig_packages)} already installed")
 
     def _update(self):
         # we just update the package manager database in case we are in 'install mode'
