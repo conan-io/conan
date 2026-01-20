@@ -241,7 +241,7 @@ def cache_sign(conan_api: ConanAPI, parser, subparser, *args):
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
 
     if not dict(package_list.items()):
-        raise ConanException("No packages to process in the pkglist provided")
+        raise ConanException("No packages to process in the package list provided")
 
     conan_api.cache.sign(package_list)
     return {
