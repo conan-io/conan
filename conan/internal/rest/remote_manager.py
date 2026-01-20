@@ -12,14 +12,14 @@ from conan.internal.paths import CONANINFO, CONAN_MANIFEST, PACKAGE_FILE_NAME, E
 from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
-from conan.internal.cache.conan_reference_layout import METADATA
+from conan.internal.cache.conan_reference_layout import METADATA, RecipeLayout
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException
 from conan.errors import ConanException
 from conan.internal.model.info import load_binary_info
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conan.internal.util.files import rmdir, human_size
+from conan.internal.util.files import human_size
 from conan.internal.util.files import mkdir, tar_extract
 
 
@@ -57,16 +57,23 @@ class RemoteManager:
         assert ref.revision, "get_recipe without revision specified"
         assert ref.timestamp, "get_recipe without ref.timestamp specified"
 
-        layout = self._cache.create_ref_layout(ref)
+        temp_folder = self._cache.get_random_path()
+        layout = RecipeLayout(ref, temp_folder)
 
         export_folder = layout.export()
         local_folder_remote = self._local_folder_remote(remote)
         if local_folder_remote is not None:
             local_folder_remote.get_recipe(ref, export_folder)
-            mkdir(layout.metadata())
-            return layout
+        else:
+            self._download_recipe(layout, ref, remote, metadata)
+        mkdir(layout.metadata())
 
+        final_layout = self._cache.create_ref_layout(ref, layout.base_folder)
+        return final_layout
+
+    def _download_recipe(self, layout, ref, remote, metadata):
         download_export = layout.download_export()
+
         try:
             zipped_files = self._call_remote(remote, "get_recipe", ref, download_export, metadata,
                                              only_metadata=False)
@@ -85,7 +92,6 @@ class RemoteManager:
         except BaseException:  # So KeyboardInterrupt also cleans things
             ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'",
                                               error_type="exception")
-            self._cache.remove_recipe_layout(layout)
             raise
         export_folder = layout.export()
         export_file = next((f for f in zipped_files if f.startswith(EXPORT_FILE_NAME)), None)
@@ -96,11 +102,6 @@ class RemoteManager:
         mkdir(export_folder)
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
-
-        # Make sure that the source dir is deleted
-        rmdir(layout.source())
-        mkdir(layout.metadata())
-        return layout
 
     def get_recipe_metadata(self, ref, remote, metadata):
         """

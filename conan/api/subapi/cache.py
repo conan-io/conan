@@ -10,7 +10,7 @@ from conan.internal.api.uploader import compress_files, get_compress_level
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.conan_reference_layout import (EXPORT_SRC_FOLDER, EXPORT_FOLDER,
                                                          SRC_FOLDER, METADATA,
-                                                         DOWNLOAD_EXPORT_FOLDER)
+                                                         DOWNLOAD_EXPORT_FOLDER, RecipeLayout)
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.cache.integrity_check import IntegrityChecker
 from conan.internal.paths import COMPRESSIONS
@@ -316,14 +316,14 @@ class CacheAPI:
             raise ConanException(f"Restore archive doesn't exist in {path}")
 
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
-        cache_folder = cache.store  # Note, this is not the home, but the actual package cache
 
+        temp_extract_folder = cache.get_random_path()
         with open(path, mode='rb') as file_handler:
             the_tar = tarfile.open(fileobj=file_handler)
             fileobj = the_tar.extractfile("pkglist.json")
             pkglist = fileobj.read()
             the_tar.extraction_filter = (lambda member, _: member)  # fully_trusted (Py 3.14)
-            the_tar.extractall(path=cache_folder)
+            the_tar.extractall(path=temp_extract_folder)
             the_tar.close()
 
         # After unzipping the files, we need to update the DB that references these files
@@ -333,16 +333,13 @@ class CacheAPI:
             ref_bundle = package_list.recipe_dict(ref)
             ref.timestamp = revision_timestamp_now()
             ref_bundle["timestamp"] = ref.timestamp
+            recipe_layout = RecipeLayout(ref, os.path.join(temp_extract_folder,
+                                                           ref_bundle["recipe_folder"]))
             try:
-                recipe_layout = cache.recipe_layout(ref)
+                recipe_layout = cache.create_ref_layout(ref, recipe_layout.base_folder)  # new DB folder entry
+                out.info(f"Restore: {ref} in {recipe_layout.base_folder}")
             except ConanException:
-                recipe_layout = cache.create_ref_layout(ref)  # new DB folder entry
-            recipe_folder = ref_bundle["recipe_folder"]
-            rel_path = os.path.relpath(recipe_layout.base_folder, cache_folder)
-            rel_path = rel_path.replace("\\", "/")
-            # In the case of recipes, they are always "in place", so just checking it
-            assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
-            out.info(f"Restore: {ref} in {recipe_folder}")
+                pass  # If restoring the previously existing one, to let it not fail
             for pref in packages:
                 pref.timestamp = revision_timestamp_now()
                 pref_bundle = package_list.package_dict(pref)
@@ -356,29 +353,30 @@ class CacheAPI:
                 out.info(f"Restore: {pref} in {unzipped_pkg_folder}")
                 # If the DB folder entry is different to the disk unzipped one, we need to move it
                 # This happens for built (not downloaded) packages in the source "conan cache save"
-                db_pkg_folder = os.path.relpath(pkg_layout.package(), cache_folder)
+                db_pkg_folder = os.path.relpath(pkg_layout.package(), temp_extract_folder)
                 db_pkg_folder = db_pkg_folder.replace("\\", "/")
                 if db_pkg_folder != unzipped_pkg_folder:
                     # If a previous package exists, like a previous restore, then remove it
                     if os.path.exists(pkg_layout.package()):
                         shutil.rmtree(pkg_layout.package())
-                    shutil.move(os.path.join(cache_folder, unzipped_pkg_folder),
+                    shutil.move(os.path.join(temp_extract_folder, unzipped_pkg_folder),
                                 pkg_layout.package())
                     pref_bundle["package_folder"] = db_pkg_folder
                 unzipped_metadata_folder = pref_bundle.get("metadata_folder")
                 if unzipped_metadata_folder:
                     # FIXME: Restore metadata is not incremental, but destructive
                     out.info(f"Restore: {pref} metadata in {unzipped_metadata_folder}")
-                    db_metadata_folder = os.path.relpath(pkg_layout.metadata(), cache_folder)
+                    db_metadata_folder = os.path.relpath(pkg_layout.metadata(), temp_extract_folder)
                     db_metadata_folder = db_metadata_folder.replace("\\", "/")
                     if db_metadata_folder != unzipped_metadata_folder:
                         # We need to put the package in the final location in the cache
                         if os.path.exists(pkg_layout.metadata()):
                             shutil.rmtree(pkg_layout.metadata())
-                        shutil.move(os.path.join(cache_folder, unzipped_metadata_folder),
+                        shutil.move(os.path.join(temp_extract_folder, unzipped_metadata_folder),
                                     pkg_layout.metadata())
                         pref_bundle["metadata_folder"] = db_metadata_folder
 
+        shutil.rmtree(temp_extract_folder)
         return package_list
 
     def get_backup_sources(self, package_list=None, exclude=True, only_upload=True):

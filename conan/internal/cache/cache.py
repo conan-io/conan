@@ -73,6 +73,10 @@ class PkgCache:
         # Reduce length in 3 characters 16 - 3 = 13
         return sha_bytes[0:13]
 
+    def get_random_path(self):
+        random_id = str(uuid.uuid4())
+        return os.path.join(self._base_folder, "x", self._short_hash_path(random_id))
+
     @staticmethod
     def _get_path(ref):
         return ref.name[:5] + PkgCache._short_hash_path(ref.repr_notime())
@@ -170,15 +174,19 @@ class PkgCache:
         # we use abspath to convert cache forward slash in Windows to backslash
         return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
 
-    def create_ref_layout(self, ref: RecipeReference):
+    def create_ref_layout(self, ref: RecipeReference, current_folder):
         """ called exclusively by:
         - RemoteManager.get_recipe()
         - cache restore
         """
         assert ref.revision, "Recipe revision must be known to create the package layout"
         reference_path = self._get_path(ref)
+        path = self._full_path(reference_path)
+        if not os.path.exists(path):
+            os.replace(current_folder, path)
+        else:
+            pass # TODO: Maybe remove the temporary?
         self._db.create_recipe(reference_path, ref)
-        self._create_path(reference_path, remove_contents=False)
         return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
 
     def create_pkg_layout(self, pref: PkgReference):
