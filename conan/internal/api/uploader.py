@@ -146,8 +146,7 @@ class PackagePreparator:
                 prev_bundle = pkg_list.package_dict(pref)
                 prev_bundle.pop("files", None)  # If defined from a previous upload
                 prev_bundle.pop("upload-urls", None)
-                if prev_bundle.get("upload"):
-                    self._prepare_package(pref, prev_bundle, metadata)
+                self._prepare_package(pref, prev_bundle, metadata)
 
     def _prepare_recipe(self, recipe_layout, ref, ref_bundle, conanfile, remotes):
         """ do a bunch of things that are necessary before actually executing the upload:
@@ -198,15 +197,18 @@ class PackagePreparator:
         return result
 
     def _prepare_package(self, pref, prev_bundle, metadata):
-        pkg_layout = self._app.cache.pkg_layout(pref)
-        if pkg_layout.package_is_dirty():
-            raise ConanException(f"Package {pref} is corrupted, aborting upload.\n"
-                                 f"Remove it with 'conan remove {pref}'")
-        cache_files = self._compress_package_files(pkg_layout, pref)
-        prev_bundle["files"] = cache_files
+        pkg_layout = None
+        if prev_bundle.get("upload"):
+            pkg_layout = self._app.cache.pkg_layout(pref)
+            if pkg_layout.package_is_dirty():
+                raise ConanException(f"Package {pref} is corrupted, aborting upload.\n"
+                                     f"Remove it with 'conan remove {pref}'")
+            cache_files = self._compress_package_files(pkg_layout, pref)
+            prev_bundle["files"] = cache_files
 
         # Package metadata files too
-        if metadata != [""] and (metadata or prev_bundle["upload"]):
+        if metadata != [""] and (metadata or prev_bundle.get("upload")):
+            pkg_layout = pkg_layout or self._app.cache.pkg_layout(pref)
             metadata_folder = pkg_layout.metadata()
             files = _metadata_files(metadata_folder, metadata)
             if files:
