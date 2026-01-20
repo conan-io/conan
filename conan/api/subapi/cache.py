@@ -141,7 +141,8 @@ class CacheAPI:
             recipe_bundle = package_list.recipe_dict(rref)
             rref_folder = cache.recipe_layout(rref).download_export()
             files = {file: os.path.join(rref_folder, file) for file in
-                     os.listdir(rref_folder) if not file.startswith(METADATA)}
+                     sorted(os.listdir(rref_folder)) if not file.startswith(METADATA)}
+            recipe_bundle["files"] = files
             try:
                 pkg_signer.verify(rref, rref_folder, files)
             except Exception as e:
@@ -151,7 +152,8 @@ class CacheAPI:
                 if pkg_bundle:
                     pref_folder = cache.pkg_layout(pref).download_package()
                     files = {file: os.path.join(pref_folder, file) for file in
-                             os.listdir(pref_folder) if not file.startswith(METADATA)}
+                             sorted(os.listdir(pref_folder)) if not file.startswith(METADATA)}
+                    pkg_bundle["files"] = files
                     try:
                         pkg_signer.verify(pref, pref_folder, files)
                     except Exception as e:
