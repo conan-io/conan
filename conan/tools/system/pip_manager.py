@@ -73,7 +73,7 @@ class PipEnv:
                          Defaults to ``None``.
         :return: the return code of the executed pip command.
         """
-        args = ["-m", "pip", "install", "--disable-pip-version-check"]
+        args = [self.python, "-m", "pip", "install", "--disable-pip-version-check"]
         if pip_args:
             args.extend(pip_args)
         args += [f'"{p}"' for p in packages]
