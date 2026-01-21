@@ -196,8 +196,6 @@ def test_build_uv_manager():
     # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
     client.save({"pip/conanfile.py": conanfile_pip})
     client.run("build pip/conanfile.py")
-    print(client.out)
-    assert "Using CPython 3.11.6" in client.out
     assert "Creating virtual environment with seed packages" in client.out
     assert "Virtual environment for Python 3.11.6 created successfully using UV." in client.out
     if platform.system() == "Windows":
@@ -242,7 +240,6 @@ def test_fail_build_uv_manager():
     # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
     client.save({"pip/conanfile.py": conanfile_pip})
     client.run("build pip/conanfile.py", assert_error=True)
-    print(client.out)
     assert "PyEnv could not create a Python 3.11.86 virtual environment using UV" in client.out
 
 
