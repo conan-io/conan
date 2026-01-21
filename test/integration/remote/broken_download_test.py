@@ -33,6 +33,7 @@ class TestBrokenDownload:
         save(tgz, "contents")  # dummy content to break it, so the download decompress will fail
         client.run("install --requires=hello/0.1", assert_error=True)
         assert "Error while extracting downloaded file" in client.out
+        # It doesn't have an entry in the DB at all, as it failed to unzip
         with pytest.raises(ConanReferenceDoesNotExistInDB):
             client.cache.recipe_layout(pref.ref)
 

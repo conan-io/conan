@@ -6,6 +6,7 @@ import uuid
 from fnmatch import translate
 from typing import List
 
+from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: We need the workflow to remove existing references.
@@ -15,7 +16,7 @@ from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, renamedir, mkdir
+from conan.internal.util.files import rmdir, renamedir, mkdir, atomic_replace
 
 
 class PkgCache:
@@ -75,7 +76,8 @@ class PkgCache:
 
     def get_random_path(self):
         random_id = str(uuid.uuid4())
-        return os.path.join(self._base_folder, "x", self._short_hash_path(random_id))
+        # d=downloading area. Using short hashes to avoid lengthy paths with hyphens
+        return os.path.join(self._base_folder, "d", self._short_hash_path(random_id))
 
     @staticmethod
     def _get_path(ref):
@@ -182,24 +184,22 @@ class PkgCache:
         assert ref.revision, "Recipe revision must be known to create the package layout"
         reference_path = self._get_path(ref)
         path = self._full_path(reference_path)
-        if not os.path.exists(path):
-            os.replace(current_folder, path)
-        else:
-            pass # TODO: Maybe remove the temporary?
+        atomic_replace(current_folder, path, f"{ref.repr_notime()} recipe")
         self._db.create_recipe(reference_path, ref)
         return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
 
-    def create_pkg_layout(self, pref: PkgReference):
+    def create_pkg_layout(self, pref: PkgReference, current_folder):
         """ called by:
          - RemoteManager.get_package()
-         - cacje restpre
+         - cache restore
         """
         assert pref.ref.revision, "Recipe revision must be known to create the package layout"
         assert pref.package_id, "Package id must be known to create the package layout"
         assert pref.revision, "Package revision should be known to create the package layout"
         package_path = self._get_path_pref(pref)
+        path = self._full_path(package_path)
+        atomic_replace(current_folder, path, f"{pref.repr_notime()} package")
         self._db.create_package(package_path, pref, None)
-        self._create_path(package_path, remove_contents=False)
         return PackageLayout(pref, os.path.join(self._base_folder, package_path))
 
     def update_recipe_timestamp(self, ref: RecipeReference):

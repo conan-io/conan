@@ -10,9 +10,19 @@ import time
 
 from contextlib import contextmanager
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 
 _DIRTY_FOLDER = ".dirty"
+
+
+def atomic_replace(src, dst, item):
+    try:
+        os.replace(src, dst)  # ATOMIC!!!
+    except OSError as e:
+        msg = ("The os.replace() to put this item in the package storage has failed. Maybe"
+               f"there was a concurrent process that did it first.\n    Item: {item}\n    Msg: {e}")
+        ConanOutput().warning(msg)
 
 
 def set_dirty(folder):

@@ -42,11 +42,12 @@ class _SystemPackageManagerTool:
             os_name = distro.id() or os_name
         elif os_name == "Windows" and self._conanfile.settings.get_safe("os.subsystem") == "msys2":
             os_name = "msys2"
-        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian", "linuxmint", 'astra', 'elbrus', 'altlinux', 'pop'],
+        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian", "linuxmint",
+                                       'astra', 'elbrus', 'altlinux', 'pop'],
                            "apk": ["alpine"],
-                           "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
-                                   "almalinux", "rocky"],
-                           "dnf": ["fedora", "rhel", "centos", "mageia", "nobara"],
+                           "yum": ["pidora", "scientific", "xenserver", "amazon", "amzn"],
+                           "dnf": ["fedora", "rhel", "centos", "mageia", "nobara", "almalinux",
+                                   "rocky", "oracle"],
                            "brew": ["Darwin"],
                            "pacman": ["arch", "manjaro", "msys2", "endeavouros"],
                            "choco": ["Windows"],
