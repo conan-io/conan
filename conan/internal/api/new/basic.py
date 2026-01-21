@@ -70,4 +70,42 @@ class BasicConanfile(ConanFile):
 '''
 
 
+_conanfile_default = '''from conan import ConanFile
+from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
+
+
+class {{package_name}}Recipe(ConanFile):
+    name = "{{name}}"
+    version = "{{version}}"
+    settings = "os", "compiler", "build_type", "arch"
+
+    def layout(self):
+        cmake_layout(self)
+    {% if requires is defined %}
+    def requirements(self):
+        {% for require in requires -%}
+        self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
+    {%- if tool_requires is defined %}
+    def build_requirements(self):
+        {% for require in tool_requires -%}
+        self.tool_requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
+    def generate(self):
+        deps = CMakeDeps(self)
+        deps.generate()
+        tc = CMakeToolchain(self)
+        tc.generate()
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.build()
+
+'''
+
+
 basic_file = {"conanfile.py": _conanfile}
+basic_default_file = {"conanfile.py": _conanfile_default}
