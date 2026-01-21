@@ -6,18 +6,31 @@ from conan.tools.build import cmd_args_to_string
 from conan.tools.env.environment import Environment
 from conan.errors import ConanException
 
+from conan.api.output import ConanOutput
 
-class PipEnv:
+
+class PyEnv:
 
     def __init__(self, conanfile, folder=None, name="", py_version=None):
         """
         :param conanfile: The current conanfile "self"
         :param folder: Optional folder, by default the "build_folder"
-        :param name: Optional name for the virtualenv, by default "conan_pipenv"
+        :param name: Optional name for the virtualenv, by default "conan_pyenv"
         :param py_version: Optional python version to create the virtualenv using UV
         """
         self._conanfile = conanfile
-        self.env_name = f"conan_pipenv{f'_{name}' if name else ''}"
+
+        self._default_python = self._conanfile.conf.get("tools.system.pyenv:python_interpreter")
+        if not self._default_python:
+            python = "python" if platform.system() == "Windows" else "python3"
+            default_python = shutil.which(python)
+            self._default_python = os.path.realpath(default_python) if default_python else None
+        if not self._default_python:
+            raise ConanException("Conan could not find a Python executable path. Please, install "
+                                 "Python system-wide or set the "
+                                 "'tools.system.pyenv:python_interpreter' "
+                                 "conf to the full path of a Python executable")
+        self.env_name = f"conan_pyenv{f'_{name}' if name else ''}"
         base_env_dir = os.path.abspath(folder or conanfile.build_folder)
         self._env_dir = os.path.join(base_env_dir, self.env_name)
         bins = "Scripts" if platform.system() == "Windows" else "bin"
@@ -33,9 +46,8 @@ class PipEnv:
     def python(self):
         return self._get_env_python(self._env_dir)
 
-    @property
-    def _default_python(self):
-        _python = self._conanfile.conf.get("tools.system.pipenv:python_interpreter")
+    def _get_default_python(self):
+        _python = self._conanfile.conf.get("tools.system.pyenv:python_interpreter")
         if not _python:
             python = "python" if platform.system() == "Windows" else "python3"
             default_python = shutil.which(python)
@@ -44,7 +56,7 @@ class PipEnv:
             return _python
         raise ConanException("Conan could not find a Python executable path. Please, install "
                              "Python system-wide or set the "
-                             "'tools.system.pipenv:python_interpreter' "
+                             "'tools.system.pyenv:python_interpreter' "
                              "conf to the full path of a Python executable")
 
     @staticmethod
@@ -85,7 +97,7 @@ class PipEnv:
             self._conanfile.run(cmd_args_to_string([self._default_python, '-m', 'venv',
                                                     self._env_dir]))
         except ConanException as e:
-            raise ConanException(f"PipEnv could not create a Python virtual "
+            raise ConanException(f"PyEnv could not create a Python virtual "
                                  f"environment using '{self._default_python}': {e}")
 
     def _create_uv_venv(self, base_env_dir, py_version):
@@ -104,5 +116,11 @@ class PipEnv:
             self._conanfile.output.info(f"Virtual environment for Python "
                                         f"{py_version} created successfully using UV.")
         except Exception as e:
-            raise ConanException(f"UVEnv could not create a Python {py_version} virtual "
+            raise ConanException(f"PyEnv could not create a Python {py_version} virtual "
                                  f"environment using UV and '{self._default_python}': {e}")
+
+
+class PipEnv(PyEnv):
+    def __init__(self, conanfile, folder=None, name="", py_version=None):
+        super().__init__(conanfile, folder, name, py_version)
+        ConanOutput().warning("'PipEnv()' is deprecated, use 'PyEnv()'", warn_tag="deprecated")

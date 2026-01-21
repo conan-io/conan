@@ -24,15 +24,15 @@ def _create_py_hello_world(folder):
     save_files(folder, {"setup.py": setup_py, "hello/__init__.py": hello_py})
 
 
-def test_empty_pipenv():
-    conanfile = textwrap.dedent(f"""
+def test_empty_pyenv():
+    conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.system import PipEnv
+        from conan.tools.system import PyEnv
 
         class PipPackage(ConanFile):
 
             def generate(self):
-                PipEnv(self).generate()
+                PyEnv(self).generate()
 
             def build(self):
                 self.run("python -m pip list")
@@ -48,14 +48,14 @@ def test_empty_pipenv():
     assert "PyJWT" not in c.out
 
 
-def test_build_pip_manager():
+def test_build_py_manager():
     pip_package_folder = temp_folder(path_with_spaces=True)
     _create_py_hello_world(pip_package_folder)
     pip_package_folder = pip_package_folder.replace('\\', '/')
 
     conanfile_pip = textwrap.dedent(f"""
         from conan import ConanFile
-        from conan.tools.system import PipEnv
+        from conan.tools.system import PyEnv
         from conan.tools.layout import basic_layout
 
         class PipPackage(ConanFile):
@@ -63,7 +63,7 @@ def test_build_pip_manager():
                 basic_layout(self)
 
             def generate(self):
-                pip = PipEnv(self)
+                pip = PyEnv(self)
                 pip.install(["{pip_package_folder}"])
                 pip.generate()
 
@@ -86,13 +86,13 @@ def test_install_version_range():
     # TODO: Maybe we want a pip.run("-m pip install .") that automatically handles python.exe path
     conanfile_pip = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.system import PipEnv
+        from conan.tools.system import PyEnv
         from conan.tools.layout import basic_layout
 
         class PipPackage(ConanFile):
 
             def generate(self):
-                pip = PipEnv(self)
+                pip = PyEnv(self)
                 self.run(f"{pip.bin_dir}/python -m pip install .")
                 pip.install(["hello>=0.0,<1.0"])
                 pip.generate()
@@ -111,7 +111,7 @@ def test_install_version_range():
     assert "Hello Test World!" in c.out
 
 
-def test_create_pip_manager():
+def test_create_py_manager():
 
     pip_package_folder = temp_folder(path_with_spaces=True)
     _create_py_hello_world(pip_package_folder)
@@ -119,7 +119,7 @@ def test_create_pip_manager():
 
     conanfile_pip = textwrap.dedent(f"""
         from conan import ConanFile
-        from conan.tools.system import PipEnv
+        from conan.tools.system import PyEnv
         from conan.tools.layout import basic_layout
 
         class PipPackage(ConanFile):
@@ -132,10 +132,10 @@ def test_create_pip_manager():
                 basic_layout(self)
 
             def finalize(self):
-                PipEnv(self, self.package_folder).install(["{pip_package_folder}"])
+                PyEnv(self, self.package_folder).install(["{pip_package_folder}"])
 
             def package_info(self):
-                python_env_bin = PipEnv(self, self.package_folder).bin_dir
+                python_env_bin = PyEnv(self, self.package_folder).bin_dir
                 self.buildenv_info.prepend_path("PATH", python_env_bin)
         """)
 
@@ -169,7 +169,7 @@ def test_build_uv_manager():
 
     conanfile_pip = textwrap.dedent(f"""
         from conan import ConanFile
-        from conan.tools.system import PipEnv
+        from conan.tools.system import PyEnv
         from conan.tools.layout import basic_layout
         import platform
         import os
@@ -183,7 +183,7 @@ def test_build_uv_manager():
                 basic_layout(self)
 
             def generate(self):
-                pip_env = PipEnv(self, py_version="3.11.6")
+                pip_env = PyEnv(self, py_version="3.11.6")
                 pip_env.install(["{pip_package_folder}"])
                 pip_env.generate()
                 pip_env.run(["--version"])
@@ -216,7 +216,7 @@ def test_fail_build_uv_manager():
 
     conanfile_pip = textwrap.dedent(f"""
         from conan import ConanFile
-        from conan.tools.system import PipEnv
+        from conan.tools.system import PyEnv
         from conan.tools.layout import basic_layout
         import platform
         import os
@@ -230,7 +230,7 @@ def test_fail_build_uv_manager():
                 basic_layout(self)
 
             def generate(self):
-                pip_env = PipEnv(self, py_version="3.11.86")
+                pip_env = PyEnv(self, py_version="3.11.86")
                 pip_env.install(["{pip_package_folder}"])
                 pip_env.generate()
 
@@ -243,4 +243,37 @@ def test_fail_build_uv_manager():
     client.save({"pip/conanfile.py": conanfile_pip})
     client.run("build pip/conanfile.py", assert_error=True)
     print(client.out)
-    assert "UVEnv could not create a Python 3.11.86 virtual environment using UV" in client.out
+    assert "PyEnv could not create a Python 3.11.86 virtual environment using UV" in client.out
+
+
+def test_build_pip_manager():
+    pip_package_folder = temp_folder(path_with_spaces=True)
+    _create_py_hello_world(pip_package_folder)
+    pip_package_folder = pip_package_folder.replace('\\', '/')
+
+    conanfile_pip = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.system import PipEnv
+        from conan.tools.layout import basic_layout
+
+        class PipPackage(ConanFile):
+            def layout(self):
+                basic_layout(self)
+
+            def generate(self):
+                pip = PipEnv(self)
+                pip.install(["{pip_package_folder}"])
+                pip.generate()
+
+            def build(self):
+                self.run("hello-world")
+        """)
+
+    client = TestClient(path_with_spaces=False)
+    # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
+    client.save({"pip/conanfile.py": conanfile_pip})
+    client.run("build pip")
+
+    assert "WARN: deprecated: 'PipEnv()' is deprecated, use 'PyEnv()'" in client.out
+    assert "RUN: hello-world" in client.out
+    assert "Hello Test World!" in client.out
