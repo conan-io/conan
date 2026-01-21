@@ -46,19 +46,6 @@ class PyEnv:
     def python(self):
         return self._get_env_python(self._env_dir)
 
-    def _get_default_python(self):
-        _python = self._conanfile.conf.get("tools.system.pyenv:python_interpreter")
-        if not _python:
-            python = "python" if platform.system() == "Windows" else "python3"
-            default_python = shutil.which(python)
-            _python = os.path.realpath(default_python) if default_python else None
-        if _python:
-            return _python
-        raise ConanException("Conan could not find a Python executable path. Please, install "
-                             "Python system-wide or set the "
-                             "'tools.system.pyenv:python_interpreter' "
-                             "conf to the full path of a Python executable")
-
     @staticmethod
     def _get_env_python(env_dir):
         _env_bin_dir = os.path.join(env_dir, "Scripts" if platform.system() == "Windows" else "bin")
