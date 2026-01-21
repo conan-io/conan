@@ -10,7 +10,7 @@ from conan.internal.util.files import save, load
 
 
 @conan_subcommand()
-def dep_remove(conan_api, parser, subparser, *args):
+def require_remove(conan_api, parser, subparser, *args):
     """
     Removes a requirement from your local conanfile.
     """
@@ -44,7 +44,7 @@ def dep_remove(conan_api, parser, subparser, *args):
 
 
 @conan_subcommand()
-def dep_add(conan_api, parser, subparser, *args):
+def require_add(conan_api, parser, subparser, *args):
     """
     Add a new requirement to your local conanfile as a version range.
     By default, it will look for the requirement versions remotely.
@@ -124,7 +124,7 @@ def dep_add(conan_api, parser, subparser, *args):
 
 
 @conan_command(group="Consumer")
-def dep(conan_api: ConanAPI, parser, *args):
+def require(conan_api: ConanAPI, parser, *args):
     """
     Adds/removes requirements to/from your local conanfile.
     """
