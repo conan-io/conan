@@ -47,7 +47,8 @@ class ExportAPI:
         app = ConanApp(self._conan_api)
         hook_manager = self._helpers.hook_manager
         return cmd_export(app.loader, app.cache, hook_manager, self._helpers.global_conf, path,
-                          name, version, user, channel, graph_lock=lockfile, remotes=remotes)
+                          name, version, user, channel, graph_lock=lockfile, remotes=remotes,
+                          cache_settings=self._helpers.settings_yml)
 
     def export_pkg_graph(self, path, ref: RecipeReference, profile_host, profile_build,
                          remotes: List[Remote], lockfile=None, is_build_require=False,

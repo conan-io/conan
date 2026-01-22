@@ -1,7 +1,10 @@
 import os
 import shutil
 
+from conan.internal.graph.graph import CONTEXT_HOST
+from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.methods import run_source_method
+from conan.internal.model.profile import Profile
 from conan.tools.files import copy
 from conan.api.output import ConanOutput
 from conan.tools.scm import Git
@@ -15,7 +18,7 @@ from conan.internal.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_d
 
 def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
                name, version, user, channel,
-               graph_lock=None, remotes=None):
+               graph_lock=None, remotes=None, cache_settings=None):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
@@ -69,8 +72,18 @@ def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
     if conanfile._conan_helpers.global_conf.get("core:source_in_export"):  # noqa
         if hasattr(conanfile, "source"):
             conanfile.output.info("core:source_in_export: Using source() method as export_sources()")
+            # This profile is empty, but with the conf from global.conf
+            profile = Profile()
+            profile.process_settings(cache_settings)
+            initialize_conanfile_profile(conanfile, profile, profile, CONTEXT_HOST, False)
+            # This is important, otherwise the ``conan source`` doesn't define layout and fails
+            if hasattr(conanfile, "layout"):
+                with conanfile_exception_formatter(conanfile, "layout"):
+                    conanfile.layout()
+
             conanfile.folders.set_base_source(export_src_folder)
             run_source_method(conanfile, hook_manager)
+            # we need an indicator that this was already executed, to avoid it being executed later
             save(os.path.join(export_src_folder, ".conan_exported_source"), "")
     shutil.copy2(conanfile_path, recipe_layout.conanfile())
 
