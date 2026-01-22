@@ -4,9 +4,11 @@ import textwrap
 import pytest
 
 from conan import __version__
+from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save
+from conan.tools.files import replace_in_file
 
 
 class TestNewCommand:
@@ -76,6 +78,32 @@ class TestNewCommand:
             conanfile = c.load("conanfile.py")
             assert 'name = "mylib"' in conanfile
             assert 'version = "0.1"' in conanfile
+
+    def test_new_empty(self):
+        c = TestClient()
+        c.run("new")
+        cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(PackageTest CXX)
+        add_executable(example main.cpp)
+        """)
+        main = textwrap.dedent(r"""
+        #include <iostream>
+
+        int main() {
+            std::cout << "Hello World!\n";
+        }
+        """)
+        c.save({
+            "CMakeLists.txt": cmakelists,
+            "main.cpp": main,
+        })
+        replace_in_file(ConanFileMock(),
+                        os.path.join(c.current_folder, "conanfile.py"),
+                        'class mypkgRecipe(ConanFile):\n',
+                        'class mypkgRecipe(ConanFile):\n    exports_sources = "CMakelists.txt", "main.cpp"\n')
+        c.run("create")
+        assert "mypkg/0.1: Package folder" in c.out
 
 
 class TestNewCommandUserTemplate:

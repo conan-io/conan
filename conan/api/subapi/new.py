@@ -101,6 +101,8 @@ class NewAPI:
         from conan.internal.api.new.local_recipes_index import local_recipes_index_files
         from conan.internal.api.new.qbs_lib import qbs_lib_files
         from conan.internal.api.new.workspace import workspace_files
+        if not template_name:
+            return basic_default_file
         new_templates = {"basic": basic_file,
                          "cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
@@ -122,7 +124,7 @@ class NewAPI:
                          "local_recipes_index": local_recipes_index_files,
                          "qbs_lib": qbs_lib_files,
                          "workspace": workspace_files}
-        template_files = new_templates.get(template_name, basic_default_file)
+        template_files = new_templates.get(template_name)
         return template_files
 
     def get_template(self, template_folder):
