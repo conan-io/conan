@@ -20,7 +20,6 @@ class InstallAPI:
     """
 
     def __init__(self, conan_api, helpers):
-        """ Do not instantiate directly, use the ``ConanAPI.install`` property instead"""
         self._conan_api = conan_api
         self._helpers = helpers
 
@@ -28,9 +27,13 @@ class InstallAPI:
         """ Install binaries of a dependency graph.
 
         This is the equivalent to the ``conan install`` command, but working with an already
-        resolved dependency graph, uusually obtained from the corresponding ``GraphAPI`` methods,
-        and as such, it will first check the remotes for the requested binaries, and if not found,
-        it will build from sources if possible.
+        resolved dependency graph, usually obtained from the corresponding ``GraphAPI`` methods.
+
+        It will download the available packages from the given remotes,
+        and then build the ones that were marked for build from source.
+
+        System requirements will be installed as well, taking into account the
+        ``tools.system.package_manager:mode`` conf to determine whether to install, check or skip them.
 
         :param deps_graph: Dependency graph to install packages for
         :param remotes: List of remotes to fetch packages from if necessary.
@@ -55,14 +58,15 @@ class InstallAPI:
     def install_system_requires(self, graph, only_info=False):
         """ Install only the system requirements of a dependency graph.
 
-        This is a subset of install_binaries which only deals with system requirements
+        This is a subset of ``install_binaries`` which only deals with system requirements
         of an already resolved dependency graph,
-        usually obtained from the corresponding ``GraphAPI`` methods, but which only installs
-        system requirements if ``only_info`` is ``False``,
-        or reporting/checking them if ``only_info`` is ``True``.
+        usually obtained from the corresponding ``GraphAPI`` methods.
+
+        The ``tools.system.package_manager:mode`` conf will be taken into account to
+        determine whether to install, check or skip system requirements.
 
         :param graph: Dependency graph to install system requirements for
-        :param only_info: Only allow reporting and checking, but never install
+        :param only_info: If ``True``, only reporting and checking of whether the system requirements are installed is performed.
         """
         app = ConanBasicApp(self._conan_api)
         installer = BinaryInstaller(app, self._helpers.global_conf, app.editable_packages,
@@ -80,7 +84,7 @@ class InstallAPI:
         of all dependencies, even the ones that are not built from source.
 
         After this method, the ``conanfile.source_folder`` on each node of the dependency graph
-        will be set to the folder where sources have been downloaded.
+        for which the sources have been downloaded will be set to the folder where sources have been downloaded.
 
         :param remotes: List of remotes where the ``exports_sources`` of the packages might be located
         :param graph: Dependency graph to download sources from
@@ -99,14 +103,12 @@ class InstallAPI:
         This ensures that the requested generators are created in the consumer folder,
         and also handles deployment if requested.
 
-        This is necessary for example for ``conanfile.txt/py``, or for ``conan install -g ...``.
-
         :param deps_graph: Dependency graph whose root is the consumer we want to prepare
         :param generators: List of generators to be used in addition to the ones defined in the root conanfile, if any
         :param source_folder: Source folder of the consumer
         :param output_folder: Output folder of the consumer
         :param deploy: Deployer or list of deployers to be used for deployment
-        :param deploy_package: Only deploy the packages matching these patterns (Empty for all)
+        :param deploy_package: Only deploy the packages matching these patterns (``None`` or empty for all)
         :param deploy_folder: Folder where to deploy, by default the build folder
         :param envs_generation: Anything other than ``None`` will activate the generation of virtual environment files for the root conanfile
         """
@@ -154,7 +156,7 @@ class InstallAPI:
 
         :param graph: The dependency graph to deploy
         :param deployer: List of deployers to be used
-        :param deploy_package: Only deploy the packages matching these patterns (Empty for all)
+        :param deploy_package: Only deploy the packages matching these patterns (``None`` or empty for all)
         :param deploy_folder: Folder where to deploy, by default the build folder
         """
         return do_deploys(self._conan_api.home_folder, graph, deployer,
