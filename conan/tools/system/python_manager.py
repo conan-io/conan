@@ -19,8 +19,14 @@ class PyEnv:
         :param py_version: Optional python version to create the virtualenv using UV
         """
         self._conanfile = conanfile
-
         self._default_python = self._conanfile.conf.get("tools.system.pyenv:python_interpreter")
+        # tools.system.pipenv deprecated warning message.
+        if not self._default_python and self._conanfile.conf.get("tools.system.pipenv:python_interpreter"):
+            self._default_python = self._conanfile.conf.get("tools.system.pipenv:python_interpreter")
+            ConanOutput().warning("'tools.system.pipenv:python_interpreter' "
+                                  "is deprecated, use 'tools.system.pyenv:python_interpreter'",
+                                  warn_tag="deprecated")
+
         if not self._default_python:
             python = "python" if platform.system() == "Windows" else "python3"
             default_python = shutil.which(python)
