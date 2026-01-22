@@ -393,28 +393,12 @@ def test_cmake_extra_dependencies():
 
 def test_cmake_different_component_type_package_type_regression():
     tc = TestClient()
-    dep = textwrap.dedent("""
-    from conan import ConanFile
-    from conan.tools.files import save
-    import os
-
-    class Pkg(ConanFile):
-        name = "dep"
-        version = "0.1"
-
-        def package(self):
-            save(self, os.path.join(self.package_folder, "lib", "libutils.a"), "content")
-            save(self, os.path.join(self.package_folder, "lib", "libmain.dylib"), "content")
-
-        def package_info(self):
-            self.cpp_info.components["utils"].libs = ["utils"]
-            self.cpp_info.components["utils"].type = "static-library"
-            self.cpp_info.components["main"].libs = ["main"]
-            self.cpp_info.components["main"].type = "shared-library"
-    """)
+    dep = (GenConanfile("dep", "0.1")
+           .with_package_file("libmain.so", "dynamic library")
+           .with_package_info({"components": {"main": {"libs": ["libmain.so"], "type": "'shared-library'"}}}))
     tc.save({"conanfile.py": dep})
     tc.run("create")
-    tc.run("install --requires=dep/0.1 -g CMakeConfigDeps")
+    tc.run("install --requires=dep/0.1 -g CMakeConfigDeps", assert_error=True)
     assert "None is not a valid PackageType" not in tc.out
 
 
