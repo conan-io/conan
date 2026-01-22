@@ -34,7 +34,7 @@ def test_package_info_extra_variables(generator):
     message(STATUS "BAR=${BAR}")
     message(STATUS "BAZ=${BAZ}")
     message(STATUS "BAR_CACHE=${BAR_CACHE}")
-    message(STATUS "BAR_CACHE=${BAR_CACHE}")
+    message(STATUS "BAZ_CACHE=${BAZ_CACHE}")
     """)
 
     conanfile = textwrap.dedent(f"""
