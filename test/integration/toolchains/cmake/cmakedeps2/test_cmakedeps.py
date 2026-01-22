@@ -394,11 +394,11 @@ def test_cmake_extra_dependencies():
 def test_cmake_component_type_none_check():
     tc = TestClient()
     dep = (GenConanfile("dep", "0.1")
-           .with_package_file("libmain.so", "dynamic library")
+           .with_package_file("lib/libmain.so", "dynamic library")
            .with_package_info({"components": {"main": {"libs": ["libmain.so"], "type": "'shared-library'"}}}))
     tc.save({"conanfile.py": dep})
     tc.run("create")
-    tc.run("install --requires=dep/0.1 -g CMakeConfigDeps", assert_error=True)
+    tc.run("install --requires=dep/0.1 -g CMakeConfigDeps")
     assert "None is not a valid PackageType" not in tc.out
 
 
