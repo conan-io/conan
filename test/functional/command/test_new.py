@@ -4,9 +4,7 @@ import textwrap
 
 import pytest
 
-from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.tools import TestClient
-from conan.tools.files import replace_in_file
 
 
 @pytest.mark.tool("cmake")
@@ -40,11 +38,6 @@ def test_conan_new_empty():
         "CMakeLists.txt": cmakelists,
         "main.cpp": main,
     })
-    replace_in_file(ConanFileMock(),
-                    os.path.join(c.current_folder, "conanfile.py"),
-                    'class mypkgRecipe(ConanFile):\n',
-                    'class mypkgRecipe(ConanFile):\n    exports_sources = "CMakelists.txt", "main.cpp"\n')
     c.run("build")
-
     suffix = ".exe" if platform.system() == "Windows" else ""
     assert os.path.exists(os.path.join(c.current_folder, "build", "Release", f"example{suffix}"))
