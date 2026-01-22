@@ -147,6 +147,9 @@ def test_conan_audit_proxy():
         tc.run("audit scan . --requires=zlib/1.2.11", assert_error=True)
         assert "--requires and --tool-requires arguments are incompatible with [path] '.' argument" in tc.out
 
+        tc.run("audit list zlib/1.2.11 -f=html")
+        assert "CVE-2023-45853" in tc.out
+
     # Now some common errors, like rate limited or missing lib, but it should not fail!
     with proxy_response(429, {"error": "Rate limit exceeded"}):
         tc.run("audit list zlib/1.2.11", assert_error=True)
@@ -271,6 +274,9 @@ def test_conan_audit_private():
         tc.run("audit scan --requires=zlib/1.2.11  -p=myprivate")
         assert "zlib/1.2.11 1 vulnerability found" in tc.out
 
+        tc.run("audit list zlib/1.2.11 -p=myprivate -f=html")
+        assert "CVE-2023-45853" in tc.out
+
     # Now some common errors, like rate limited or missing lib, but it should not fail!
     with proxy_response(400, {"errors": [{"message": "Ref not found"}]}):
         # Not finding a package should not be an error
@@ -292,7 +298,6 @@ def test_conan_audit_private():
     with proxy_response(404, {"errors": [{"message": "Not found"}]}):
         tc.run("audit list zlib/1.2.11 -p=myprivate")
         assert "An error occurred while connecting to the 'myprivate' provider" in tc.out
-
 
 
 @pytest.mark.skipif(sys.version_info < (3, 10),
@@ -552,7 +557,7 @@ class TestAuditProviderBranchouts:
     def test_provider_json_format(self):
         tc = TestClient(light=True)
         tc.run("audit provider list -f=json", redirect_stdout="out.json")
-        out = tc.load("out.json")
+        out = json.loads(tc.load("out.json"))
         assert len(out) == 1
 
     def test_provider_add_spaces_in_name(self):
