@@ -76,7 +76,7 @@ def test_conan_audit_proxy():
                         {
                             "node": {
                                 "name": "CVE-2023-45853",
-                                "description": "Zip vulnerability",
+                                "description": "Zip vulnerability" + "a" * 90,  # Force wrapping
                                 "severity": "Critical",
                                 "cvss": {
                                     "preferredBaseScore": 8.9
@@ -219,17 +219,33 @@ def test_conan_audit_private():
                                     "CVE-2023-45853",
                                     "JFSA-2023-000272529"
                                 ],
+                                "withdrawn": True,
+                                "publishedAt": "Yesterday",
                                 "advisories": [
                                     {
-                                        "name": "CVE-2023-45853"
+                                        "name": "CVE-2023-45853",
+                                        "shortDescription": "Zip vulnerability (CVE)",
+                                        "severity": "Critical"
                                     },
                                     {
-                                        "name": "JFSA-2023-000272529"
+                                        "name": "JFSA-2023-000272529",
+                                        "shortDescription": "Zip vulnerability (JFSA)",
+                                        "severity": "Moderate",
+                                        "impactReasons": [
+                                            {"name": "Reason 1", "isPositive": True},
+                                            {"name": "Reason 2", "isPositive": False}
+                                        ]
                                     }
                                 ],
                                 "references": [
                                     "https://pypi.org/project/pyminizip/#history",
-                                ]
+                                ],
+                                "vulnerablePackages": {
+                                    "totalCount": 1,
+                                    "edges": [{
+                                        "node": {"fixVersions": [{"version": "1.2.12"}]}
+                                    }]
+                                }
                             }
                         }
                     ]
@@ -276,6 +292,13 @@ def test_conan_audit_private():
 
         tc.run("audit list zlib/1.2.11 -p=myprivate -f=html")
         assert "CVE-2023-45853" in tc.out
+        assert "Yesterday" in tc.out
+        assert "[WITHDRAWN]" in tc.out
+        # Fixed version
+        assert "1.2.12" in tc.out
+        assert "Zip vulnerability (JFSA)" in tc.out
+        assert 'inherit;">Reason 1</li>' in tc.out  # Positive impact
+        assert 'red;">Reason 2</li>' in tc.out  # Negative impact
 
     # Now some common errors, like rate limited or missing lib, but it should not fail!
     with proxy_response(400, {"errors": [{"message": "Ref not found"}]}):
