@@ -35,6 +35,7 @@ def test_package_info_extra_variables(generator):
     message(STATUS "BAZ=${BAZ}")
     message(STATUS "BAR_CACHE=${BAR_CACHE}")
     message(STATUS "BAZ_CACHE=${BAZ_CACHE}")
+    message(STATUS "BAR_CACHE_FORCE=${BAR_CACHE_FORCE}")
     """)
 
     conanfile = textwrap.dedent(f"""
@@ -53,6 +54,7 @@ def test_package_info_extra_variables(generator):
             tc.variables["BAZ"] = "42"
             tc.cache_variables["BAR_CACHE"] = "42"
             tc.variables["BAZ_CACHE"] = "42"
+            tc.cache_variables["BAR_CACHE_FORCE"] = "42"
             tc.generate()
 
         def build(self):
@@ -63,7 +65,7 @@ def test_package_info_extra_variables(generator):
                  "conanfile.py": conanfile})
     conf = f"-c tools.cmake.cmakedeps:new={new_value}" if generator == "CMakeConfigDeps" else ""
     client.run(f"build . {conf} "
-               """-c tools.cmake.cmaketoolchain:extra_variables="{'FOO': '9', 'BAR': '9', 'BAZ': '9', 'BAR_CACHE': {'value': '9', 'cache': True, 'type': 'STRING'}, 'BAZ_CACHE': {'value': '9', 'cache': True, 'type': 'STRING'}}" """)
+               """-c tools.cmake.cmaketoolchain:extra_variables="{'FOO': '9', 'BAR': '9', 'BAZ': '9', 'BAR_CACHE': {'value': '9', 'cache': True, 'type': 'STRING'}, 'BAZ_CACHE': {'value': '9', 'cache': True, 'type': 'STRING'}, 'BAR_CACHE_FORCE': {'value': '9', 'cache': True, 'type': 'STRING', 'force': True}}" """)
 
     assert "-- FOO=9" in client.out
     assert "-- BAR=9" in client.out
@@ -72,3 +74,5 @@ def test_package_info_extra_variables(generator):
     # from the profile
     assert "-- BAR_CACHE=42" in client.out
     assert "-- BAZ_CACHE=9" in client.out
+    assert "-- BAR_CACHE_FORCE=9" in client.out
+
