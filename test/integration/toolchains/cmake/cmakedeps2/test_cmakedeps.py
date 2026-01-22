@@ -391,7 +391,7 @@ def test_cmake_extra_dependencies():
            "             $<$<CONFIG:RELEASE>:MyOpenMPILib>)" in dep
 
 
-def test_cmake_different_component_type_package_type_regression():
+def test_cmake_component_type_none_check():
     tc = TestClient()
     dep = (GenConanfile("dep", "0.1")
            .with_package_file("libmain.so", "dynamic library")
