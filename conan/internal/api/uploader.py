@@ -2,6 +2,7 @@ import fnmatch
 import gzip
 import os
 import shutil
+import sys
 import tarfile
 import time
 
@@ -10,8 +11,8 @@ from conan.api.output import ConanOutput
 from conan.internal.source import retrieve_exports_sources
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
-from conan.internal.paths import (CONAN_MANIFEST, CONANFILE, EXPORT_SOURCES_TGZ_NAME,
-                                  EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME, CONANINFO)
+from conan.internal.paths import CONAN_MANIFEST, CONANFILE, CONANINFO, COMPRESSIONS, \
+    EXPORT_SOURCES_FILE_NAME, EXPORT_FILE_NAME, PACKAGE_FILE_NAME
 from conan.internal.util.files import (clean_dirty, is_dirty, gather_files,
                                        set_dirty_context_manager, mkdir, human_size)
 
@@ -80,16 +81,43 @@ class UploadUpstreamChecker:
                 prev_bundle["upload"] = False
 
 
+def get_compress_level(compressformat, global_conf):
+    if compressformat == "xz":
+        msg = ("The 'xz' compression is experimental. "
+               "Consumers using older Conan versions will not be able to install these packages. "
+               "Feedback is welcome, please report any issues as GitHub tickets.")
+        ConanOutput().warning(msg, warn_tag="experimental")
+    elif compressformat == "zst":
+        msg = ("The 'zst' compression is experimental. "
+               "Consumers installing packages created with this format must use Python >= 3.14. "
+               "Consumers using older Conan or Python versions will not be able to install these "
+               "packages. Feedback is welcome, please report any issues as GitHub tickets.")
+        ConanOutput().warning(msg, warn_tag="experimental")
+
+    if compressformat == "zst" and sys.version_info.minor < 14:
+        raise ConanException("The 'core.upload:compression_format=zst' is only for Python>=3.14")
+    compresslevel = global_conf.get("core:compresslevel", check_type=int)
+    if compresslevel is None and compressformat == "gz":
+        compresslevel = global_conf.get("core.gzip:compresslevel", check_type=int)
+        # do not deprecate yet core.gzip:compresslevel, wait a bit to stabilize core:compresslevel
+    return compresslevel
+
+
 class PackagePreparator:
     def __init__(self, app: ConanApp, global_conf):
         self._app = app
         self._global_conf = global_conf
+        compressformat = self._global_conf.get("core.upload:compression_format", default="gz",
+                                               choices=COMPRESSIONS)
+        compresslevel = get_compress_level(compressformat, global_conf)
+        self._compressformat = compressformat
+        self._compresslevel = compresslevel
 
-    def prepare(self, pkg_list, enabled_remotes):
+    def prepare(self, pkg_list, enabled_remotes, metadata):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
         for ref, packages in pkg_list.items():
-            layout = self._app.cache.recipe_layout(ref)
-            conanfile_path = layout.conanfile()
+            recipe_layout = self._app.cache.recipe_layout(ref)
+            conanfile_path = recipe_layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
             url = conanfile.conan_data.get("scm", {}).get("url") if conanfile.conan_data else None
             if local_url != "allow" and url is not None:
@@ -103,21 +131,29 @@ class PackagePreparator:
             bundle.pop("files", None)
             bundle.pop("upload-urls", None)
             if bundle.get("upload"):
-                self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
+                self._prepare_recipe(recipe_layout, ref, bundle, conanfile, enabled_remotes)
+
+            # Package metadata files too
+            if metadata != [""] and (metadata or bundle.get("upload")):
+                metadata_folder = recipe_layout.metadata()
+                files = _metadata_files(metadata_folder, metadata)
+                if files:
+                    ConanOutput(scope=str(ref)).info(f"Recipe metadata: {len(files)} files")
+                    bundle.setdefault("files", {}).update(files)
+                    bundle["upload"] = True
+
             for pref in packages:
                 prev_bundle = pkg_list.package_dict(pref)
                 prev_bundle.pop("files", None)  # If defined from a previous upload
                 prev_bundle.pop("upload-urls", None)
-                if prev_bundle.get("upload"):
-                    self._prepare_package(pref, prev_bundle)
+                self._prepare_package(pref, prev_bundle, metadata)
 
-    def _prepare_recipe(self, ref, ref_bundle, conanfile, remotes):
+    def _prepare_recipe(self, recipe_layout, ref, ref_bundle, conanfile, remotes):
         """ do a bunch of things that are necessary before actually executing the upload:
         - retrieve exports_sources to complete the recipe if necessary
         - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
         """
         try:
-            recipe_layout = self._app.cache.recipe_layout(ref)
             retrieve_exports_sources(self._app.remote_manager, recipe_layout, conanfile, ref,
                                      remotes)
             cache_files = self._compress_recipe_files(recipe_layout, ref)
@@ -127,14 +163,6 @@ class PackagePreparator:
 
     def _compress_recipe_files(self, layout, ref):
         download_export_folder = layout.download_export()
-
-        output = ConanOutput(scope=str(ref))
-        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME):
-            tgz_path = os.path.join(download_export_folder, f)
-            if is_dirty(tgz_path):
-                output.warning("Removing %s, marked as dirty" % f)
-                os.remove(tgz_path)
-                clean_dirty(tgz_path)
 
         export_folder = layout.export()
         files, symlinked_folders = gather_files(export_folder)
@@ -159,36 +187,68 @@ class PackagePreparator:
         files.pop(CONANFILE)
         files.pop(CONAN_MANIFEST)
 
-        def add_tgz(tgz_name, tgz_files):
-            tgz = os.path.join(download_export_folder, tgz_name)
-            if os.path.isfile(tgz):
-                result[tgz_name] = tgz
-            elif tgz_files:
-                compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
-                tgz = compress_files(tgz_files, tgz_name, download_export_folder,
-                                     compresslevel=compresslevel, ref=ref)
-                result[tgz_name] = tgz
-
-        add_tgz(EXPORT_TGZ_NAME, files)
-        add_tgz(EXPORT_SOURCES_TGZ_NAME, src_files)
+        if files:
+            comp = self._compressed_file(EXPORT_FILE_NAME, files, download_export_folder, ref)
+            result[comp] = os.path.join(download_export_folder, comp)
+        if src_files:
+            comp = self._compressed_file(EXPORT_SOURCES_FILE_NAME, src_files,
+                                         download_export_folder, ref)
+            result[comp] = os.path.join(download_export_folder, comp)
         return result
 
-    def _prepare_package(self, pref, prev_bundle):
-        pkg_layout = self._app.cache.pkg_layout(pref)
-        if pkg_layout.package_is_dirty():
-            raise ConanException(f"Package {pref} is corrupted, aborting upload.\n"
-                                 f"Remove it with 'conan remove {pref}'")
-        cache_files = self._compress_package_files(pkg_layout, pref)
-        prev_bundle["files"] = cache_files
+    def _prepare_package(self, pref, prev_bundle, metadata):
+        pkg_layout = None
+        if prev_bundle.get("upload"):
+            pkg_layout = self._app.cache.pkg_layout(pref)
+            if pkg_layout.package_is_dirty():
+                raise ConanException(f"Package {pref} is corrupted, aborting upload.\n"
+                                     f"Remove it with 'conan remove {pref}'")
+            cache_files = self._compress_package_files(pkg_layout, pref)
+            prev_bundle["files"] = cache_files
+
+        # Package metadata files too
+        if metadata != [""] and (metadata or prev_bundle.get("upload")):
+            pkg_layout = pkg_layout or self._app.cache.pkg_layout(pref)
+            metadata_folder = pkg_layout.metadata()
+            files = _metadata_files(metadata_folder, metadata)
+            if files:
+                ConanOutput(scope=str(pref)).info(f"Package metadata: {len(files)} files")
+                prev_bundle.setdefault("files", {}).update(files)
+                prev_bundle["upload"] = True
+
+    def _compressed_file(self, filename, files, download_folder, ref):
+        output = ConanOutput(scope=str(ref))
+
+        # Check if there is some existing compressed file already
+        matches = []
+        for extension in COMPRESSIONS:
+            file_name = filename + extension
+            package_file = os.path.join(download_folder, file_name)
+            if is_dirty(package_file):
+                output.warning(f"Removing {file_name}, marked as dirty")
+                os.remove(package_file)
+                clean_dirty(package_file)
+            if os.path.isfile(package_file):
+                matches.append(file_name)
+        if len(matches) > 1:
+            raise ConanException(f"{ref}: Multiple package files found for {filename}: {matches}")
+        if len(matches) == 1:
+            existing = matches[0]
+            if not existing.endswith(self._compressformat):
+                output.info(f"Existing {existing} compressed file, "
+                            f"keeping it, not using '{self._compressformat}' format")
+            return existing
+
+        file_name = filename + self._compressformat
+        package_file = os.path.join(download_folder, file_name)
+        compressed_path = compress_files(files, file_name, download_folder,
+                                         compresslevel=self._compresslevel, scope=str(ref))
+        assert compressed_path == package_file
+        assert os.path.exists(package_file)
+        return file_name
 
     def _compress_package_files(self, layout, pref):
-        output = ConanOutput(scope=str(pref))
         download_pkg_folder = layout.download_package()
-        package_tgz = os.path.join(download_pkg_folder, PACKAGE_TGZ_NAME)
-        if is_dirty(package_tgz):
-            output.warning("Removing %s, marked as dirty" % PACKAGE_TGZ_NAME)
-            os.remove(package_tgz)
-            clean_dirty(package_tgz)
 
         # Get all the files in that directory
         # existing package
@@ -209,15 +269,8 @@ class PackagePreparator:
         files.pop(CONANINFO)
         files.pop(CONAN_MANIFEST)
 
-        if not os.path.isfile(package_tgz):
-            tgz_files = {f: path for f, path in files.items()}
-            compresslevel = self._global_conf.get("core.gzip:compresslevel", check_type=int)
-            tgz_path = compress_files(tgz_files, PACKAGE_TGZ_NAME, download_pkg_folder,
-                                      compresslevel=compresslevel, ref=pref)
-            assert tgz_path == package_tgz
-            assert os.path.exists(package_tgz)
-
-        return {PACKAGE_TGZ_NAME: package_tgz,
+        compressed_file = self._compressed_file(PACKAGE_FILE_NAME, files, download_pkg_folder, pref)
+        return {compressed_file: os.path.join(download_pkg_folder, compressed_file),
                 CONANINFO: os.path.join(download_pkg_folder, CONANINFO),
                 CONAN_MANIFEST: os.path.join(download_pkg_folder, CONAN_MANIFEST)}
 
@@ -282,12 +335,28 @@ def gzopen_without_timestamps(name, fileobj, compresslevel=None):
     return t
 
 
-def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursive=False):
+def compress_files(files, name, dest_dir, compresslevel=None, scope=None, recursive=False):
     t1 = time.time()
-    # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
-    if ref:
-        ConanOutput(scope=str(ref) if ref else None).info(f"Compressing {name}")
+
+    out = ConanOutput(scope=scope)
+    out.info(f"Compressing {name}")
+
+    if name.endswith("zst"):
+        with tarfile.open(tgz_path, "w:zst", level=compresslevel) as tar:  # noqa Py314 only
+            for filename, abs_path in sorted(files.items()):
+                tar.add(abs_path, filename, recursive=recursive)
+        out.debug(f"{name} compressed in {time.time() - t1} time")
+        return tgz_path
+
+    if name.endswith("xz"):
+        # The default to PAX_FORMAT in case of Python 3.7
+        with tarfile.open(tgz_path, "w:xz", preset=compresslevel, format=tarfile.PAX_FORMAT) as tar:
+            for filename, abs_path in sorted(files.items()):
+                tar.add(abs_path, filename, recursive=recursive)
+        out.debug(f"{name} compressed in {time.time() - t1} time")
+        return tgz_path
+
     with set_dirty_context_manager(tgz_path), open(tgz_path, "wb") as tgz_handle:
         tgz = gzopen_without_timestamps(name, fileobj=tgz_handle, compresslevel=compresslevel)
         for filename, abs_path in sorted(files.items()):
@@ -295,8 +364,7 @@ def compress_files(files, name, dest_dir, compresslevel=None, ref=None, recursiv
             tgz.add(abs_path, filename, recursive=recursive)
         tgz.close()
 
-    duration = time.time() - t1
-    ConanOutput().debug(f"{name} compressed in {duration} time")
+    out.debug(f"{name} compressed in {time.time() - t1} time")
     return tgz_path
 
 
@@ -320,25 +388,3 @@ def _metadata_files(folder, metadata):
             path = os.path.join("metadata", relpath).replace("\\", "/")
             result[path] = abs_path
     return result
-
-
-def gather_metadata(package_list, cache, metadata):
-    for rref, packages in package_list.items():
-        recipe_bundle = package_list.recipe_dict(rref)
-        if metadata or recipe_bundle["upload"]:
-            metadata_folder = cache.recipe_layout(rref).metadata()
-            files = _metadata_files(metadata_folder, metadata)
-            if files:
-                ConanOutput(scope=str(rref)).info(f"Recipe metadata: {len(files)} files")
-                recipe_bundle.setdefault("files", {}).update(files)
-                recipe_bundle["upload"] = True
-
-        for pref in packages:
-            pkg_bundle = package_list.package_dict(pref)
-            if metadata or pkg_bundle["upload"]:
-                metadata_folder = cache.pkg_layout(pref).metadata()
-                files = _metadata_files(metadata_folder, metadata)
-                if files:
-                    ConanOutput(scope=str(pref)).info(f"Package metadata: {len(files)} files")
-                    pkg_bundle.setdefault("files", {}).update(files)
-                    pkg_bundle["upload"] = True

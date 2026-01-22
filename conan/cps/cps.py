@@ -38,15 +38,18 @@ class CPSComponent:
         self.type = component_type or "unknown"
         self.definitions = []
         self.requires = []
+        self.link_requires = []
         self.location = None
         self.link_location = None
-        self.link_languages = None
-        self.link_libraries = None  # system libraries
+        self.link_languages = []
+        self.link_libraries = []  # system libraries
 
     def serialize(self):
         component = {"type": str(self.type)}
         if self.requires:
             component["requires"] = self.requires
+        if self.link_requires:
+            component["link_requires"] = self.link_requires
         if self.includes:
             component["includes"] = [x.replace("\\", "/") for x in self.includes]
         if self.definitions:
@@ -65,13 +68,14 @@ class CPSComponent:
     def deserialize(data):
         comp = CPSComponent()
         comp.type = CPSComponentType(data.get("type"))
-        comp.requires = data.get("requires")
-        comp.includes = data.get("includes")
-        comp.definitions = data.get("definitions")
+        comp.requires = data.get("requires", [])
+        comp.link_requires = data.get("link_requires", [])
+        comp.includes = data.get("includes", [])
+        comp.definitions = data.get("definitions", [])
         comp.location = data.get("location")
         comp.link_location = data.get("link_location")
-        comp.link_libraries = data.get("link_libraries")
-        comp.link_languages = data.get("link_languages")
+        comp.link_libraries = data.get("link_libraries", [])
+        comp.link_languages = data.get("link_languages", [])
         return comp
 
     @staticmethod
@@ -215,60 +219,48 @@ class CPS:
         def strip_prefix(dirs):
             return [d.replace("@prefix@/", "") for d in dirs]
 
+        def lib_location(loc, info):
+            loc = loc.replace("@prefix@/", "")
+            info.libdirs = [os.path.dirname(loc)]
+            filename = os.path.basename(loc)
+            basefile, ext = os.path.splitext(filename)
+            if basefile.startswith("lib") and ext != ".lib":
+                basefile = basefile[3:]
+            info.libs = [basefile]
+
         cpp_info = CppInfo()
         if len(self.components) == 1:
             comp = next(iter(self.components.values()))
             cpp_info.includedirs = strip_prefix(comp.includes)
             cpp_info.defines = comp.definitions
-            if comp.type is CPSComponentType.ARCHIVE:
+            cpp_info.system_libs = comp.link_libraries
+            # requires for 1 component packages are automatic in Conan with self.requires()
+            if comp.link_location:
+                link_location = comp.link_location
+                lib_location(link_location, cpp_info)
                 location = comp.location
                 location = location.replace("@prefix@/", "")
-                cpp_info.libdirs = [os.path.dirname(location)]
-                filename = os.path.basename(location)
-                basefile, ext = os.path.splitext(filename)
-                if basefile.startswith("lib") and ext != ".lib":
-                    basefile = basefile[3:]
-                cpp_info.libs = [basefile]
-                # FIXME: Missing requires
-            elif comp.type is CPSComponentType.DYLIB:
-                if comp.link_location:
-                    link_location = comp.link_location
-                    link_location = link_location.replace("@prefix@/", "")
-                    cpp_info.libdirs = [os.path.dirname(link_location)]
-                    filename = os.path.basename(link_location)
-                    basefile, ext = os.path.splitext(filename)
-                    if basefile.startswith("lib") and ext != ".lib":
-                        basefile = basefile[3:]
-                    cpp_info.libs = [basefile]
-                    location = comp.location
-                    location = location.replace("@prefix@/", "")
-                    cpp_info.bindirs = [os.path.dirname(location)]
-                else:  # TODO: same as archive, refactor
-                    location = comp.location
-                    location = location.replace("@prefix@/", "")
-                    cpp_info.libdirs = [os.path.dirname(location)]
-                    filename = os.path.basename(location)
-                    basefile, ext = os.path.splitext(filename)
-                    if basefile.startswith("lib") and ext != ".lib":
-                        basefile = basefile[3:]
-                    cpp_info.libs = [basefile]
-                    # FIXME: Missing requires
-            cpp_info.system_libs = comp.link_libraries
+                cpp_info.bindirs = [os.path.dirname(location)]
+            elif comp.location:
+                location = comp.location
+                lib_location(location, cpp_info)
         else:
             for comp_name, comp in self.components.items():
                 cpp_comp = cpp_info.components[comp_name]
                 cpp_comp.includedirs = strip_prefix(comp.includes)
                 cpp_comp.defines = comp.definitions
-                if comp.type is CPSComponentType.ARCHIVE:
+                if comp.link_location:
+                    link_location = comp.link_location
+                    lib_location(link_location, cpp_comp)
                     location = comp.location
                     location = location.replace("@prefix@/", "")
-                    cpp_comp.libdirs = [os.path.dirname(location)]
-                    filename = os.path.basename(location)
-                    basefile, ext = os.path.splitext(filename)
-                    if basefile.startswith("lib") and ext != ".lib":
-                        basefile = basefile[3:]
-                    cpp_comp.libs = [basefile]
-                for r in comp.requires:
+                    cpp_comp.bindirs = [os.path.dirname(location)]
+                elif comp.location:
+                    location = comp.location
+                    lib_location(location, cpp_comp)
+                # all requires are the same for Conan, it uses its traits information
+                requires = comp.link_requires + comp.requires
+                for r in requires:
                     cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
                 cpp_comp.system_libs = comp.link_libraries
 

@@ -167,16 +167,8 @@ def test_cmakeconfigdeps_recipe():
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
             "app/conanfile.py": conanfile})
     c.run("create dep")
-    c.run("install app", assert_error=True)
-    assert "CMakeConfigDeps is being used in conanfile, but the conf " \
-           "'tools.cmake.cmakedeps:new' is not enabled" in c.out
-    c.run("install app -c tools.cmake.cmakedeps:new=will_break_next")
-    # will not fail, still warn
-    assert "WARN: Using the new CMakeConfigDeps generator" in c.out
-    # The only-recipe also not fails
-    c.run("install app -c tools.cmake.cmakedeps:new=recipe_will_break")
-    # will not fail
-    assert "WARN: Using the new CMakeConfigDeps generator" in c.out
+    c.run("install app")
+    assert "WARN: experimental: CMakeConfigDeps is experimental" in c.out
 
     # attribute generator
     conanfile = textwrap.dedent("""
@@ -188,13 +180,8 @@ def test_cmakeconfigdeps_recipe():
             generators = "CMakeConfigDeps"
         """)
     c.save({"app/conanfile.py": conanfile}, clean_first=True)
-    c.run("install app", assert_error=True)
-    assert "CMakeConfigDeps is being used in conanfile, but the conf " \
-           "'tools.cmake.cmakedeps:new' is not enabled" in c.out
-    c.run("install app -c tools.cmake.cmakedeps:new=will_break_next")
-    assert "WARN: Using the new CMakeConfigDeps generator" in c.out
-    c.run("install app -c tools.cmake.cmakedeps:new=recipe_will_break")
-    assert "WARN: Using the new CMakeConfigDeps generator" in c.out
+    c.run("install app")
+    assert "WARN: experimental: CMakeConfigDeps is experimental" in c.out
 
     # conanfile.txt
     conanfile = textwrap.dedent("""
@@ -204,13 +191,8 @@ def test_cmakeconfigdeps_recipe():
         CMakeConfigDeps
         """)
     c.save({"app/conanfile.txt": conanfile}, clean_first=True)
-    c.run("install app", assert_error=True)
-    assert "CMakeConfigDeps is being used in conanfile, but the conf " \
-           "'tools.cmake.cmakedeps:new' is not enabled" in c.out
-    c.run("install app -c tools.cmake.cmakedeps:new=will_break_next")
-    assert "WARN: Using the new CMakeConfigDeps generator" in c.out
-    c.run("install app -c tools.cmake.cmakedeps:new=recipe_will_break")
-    assert "WARN: Using the new CMakeConfigDeps generator" in c.out
+    c.run("install app")
+    assert "WARN: experimental: CMakeConfigDeps is experimental" in c.out
 
 
 def test_system_wrappers():
