@@ -1,7 +1,7 @@
 from conan import conan_version
 
 
-def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwargs):
+def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, namespace=None, qualifiers=None, **kwargs):
     """
     (Experimental) Generate cyclone 1.4 SBOM with JSON format
 
@@ -14,6 +14,8 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
         name (str, optional): Custom name for the metadata field.
         add_build (bool, optional, default=False): Include build dependencies.
         add_tests (bool, optional, default=False): Include test dependencies.
+        namespace (str, optional): Custom namespace show in PURL.
+        qualifiers (list[str], optional): Qualifiers show in PURL.
 
     Returns:
         The generated CycloneDX 1.4 document as a string.
@@ -28,6 +30,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
     import time
     from datetime import datetime, timezone
     graph = conanfile.subgraph
+    qualifiers = qualifiers or []
 
     has_special_root_node = not (getattr(graph.root.ref, "name", False)
                                  and getattr(graph.root.ref, "version", False)
@@ -44,14 +47,14 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
     dependencies = []
     if has_special_root_node:
         deps = {"ref": special_id,
-                "dependsOn": [_calculate_bomref(d.dst) for d in graph.root.edges
+                "dependsOn": [_calculate_bomref(d.dst, namespace, qualifiers) for d in graph.root.edges
                               if should_add_node(d.dst, add_build, add_tests)]}
         dependencies.append(deps)
     for c in nodes:
-        deps = {"ref": _calculate_bomref(c)}
+        deps = {"ref": _calculate_bomref(c, namespace, qualifiers)}
         dep = [d for d in c.edges if should_add_node(d.dst, add_build, add_tests)]
 
-        depends_on = [_calculate_bomref(d.dst) for d in dep
+        depends_on = [_calculate_bomref(d.dst, namespace, qualifiers) for d in dep
                       if should_add_node(d.dst, add_build, add_tests)]
         if depends_on:
             deps["dependsOn"] = depends_on
@@ -60,7 +63,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
     sbom_cyclonedx_1_4 = {
         **({"components": [{
             "author": node.conanfile.author or "Unknown",
-            "bom-ref": _calculate_bomref(node),
+            "bom-ref": _calculate_bomref(node, namespace, qualifiers),
             "description": node.conanfile.description,
             **({"externalReferences": [{
                 "type": "website",
@@ -68,7 +71,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
             }]} if node.conanfile.homepage else {}),
             **({"licenses": _calculate_licenses(node)} if node.conanfile.license else {}),
             "name": node.name,
-            "purl": f"pkg:conan/{node.name}@{node.ref.version}",
+            "purl": _calculate_bomref(node, namespace, qualifiers),
             "type": "application" if node.conanfile.package_type == "application" else "library",
             "version": str(node.ref.version),
         } for node in nodes]} if nodes else {}),
@@ -76,7 +79,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
         "metadata": {
             "component": {
                 "author": conanfile.author or "Unknown",
-                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile),
+                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile, namespace, qualifiers),
                 "name": name if name else name_default,
                 "type": "application" if conanfile.package_type == "application" else "library",
             },
@@ -97,7 +100,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
     return sbom_cyclonedx_1_4
 
 
-def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwargs):
+def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, namespace=None, qualifiers=None, **kwargs):
     """
     (Experimental) Generate cyclone 1.6 SBOM with JSON format
 
@@ -110,6 +113,8 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
         name (str, optional): Custom name for the metadata field.
         add_build (bool, optional, default=False): Include build dependencies.
         add_tests (bool, optional, default=False): Include test dependencies.
+        namespace (str, optional): Custom namespace show in PURL.
+        qualifiers (list[str], optional): Qualifiers show in PURL.
 
     Returns:
         The generated CycloneDX 1.6 document as a string.
@@ -124,6 +129,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
     import time
     from datetime import datetime, timezone
     graph = conanfile.subgraph
+    qualifiers = qualifiers or []
 
     has_special_root_node = not (getattr(graph.root.ref, "name", False)
                                  and getattr(graph.root.ref, "version", False)
@@ -140,15 +146,15 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
     dependencies = []
     if has_special_root_node:
         deps = {"ref": special_id,
-                "dependsOn": [_calculate_bomref(d.dst)
+                "dependsOn": [_calculate_bomref(d.dst, namespace, qualifiers)
                               for d in graph.root.edges
                               if should_add_node(d.dst, add_build, add_tests)]}
         dependencies.append(deps)
     for c in nodes:
-        deps = {"ref": _calculate_bomref(c)}
+        deps = {"ref": _calculate_bomref(c, namespace, qualifiers)}
         dep = [d for d in c.edges if should_add_node(d.dst, add_build, add_tests)]
 
-        depends_on = [_calculate_bomref(d.dst) for d in dep
+        depends_on = [_calculate_bomref(d.dst, namespace, qualifiers) for d in dep
                       if should_add_node(d.dst, add_build, add_tests)]
         if depends_on:
             deps["dependsOn"] = depends_on
@@ -157,7 +163,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
     sbom_cyclonedx_1_6 = {
         **({"components": [{
             **({"authors": [{"name": node.conanfile.author}]} if node.conanfile.author else {}),
-            "bom-ref": _calculate_bomref(node),
+            "bom-ref": _calculate_bomref(node, namespace, qualifiers),
             "description": node.conanfile.description,
             **({"externalReferences": [{
                 "type": "website",
@@ -165,7 +171,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
             }]} if node.conanfile.homepage else {}),
             **({"licenses": _calculate_licenses(node)} if node.conanfile.license else {}),
             "name": node.name,
-            "purl": f"pkg:conan/{node.name}@{node.ref.version}",
+            "purl": _calculate_bomref(node, namespace, qualifiers),
             "type": "application" if node.conanfile.package_type == "application" else "library",
             "version": str(node.ref.version),
         } for node in nodes]} if nodes else {}),
@@ -173,7 +179,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
         "metadata": {
             "component": {
                 **({"authors": [{"name": conanfile.author}]} if conanfile.author else {}),
-                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile),
+                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile, namespace, qualifiers),
                 "name": name if name else name_default,
                 "type": "application" if conanfile.package_type == "application" else "library"
             },
@@ -211,10 +217,16 @@ def _calculate_licenses(component):
     ]
 
 
-def _calculate_bomref(component):
+def _calculate_bomref(component, namespace, qualifiers):
+    namespace = f"{namespace}/" if namespace else ""
     user = f"&user={component.ref.user}" if component.ref.user else ""
     channel = f"&channel={component.ref.channel}" if component.ref.channel else ""
-    return f"pkg:conan/{component.name}@{component.ref.version}?rref={component.ref.revision}{user}{channel}"
+    purl_qualifier = ""
+    if hasattr(component, "conanfile"):
+        purl_qualifier = "".join(f"&{qualifier}={component.conanfile.settings.get_safe(qualifier)}" for qualifier in qualifiers)
+    return (f"pkg:conan/{namespace}{component.name}@{component.ref.version}"
+            f"?rref={component.ref.revision}&pref={component.pref.package_id}"
+            f"{user}{channel}{purl_qualifier}")
 
 
 def should_add_node(node, add_build, add_tests):
