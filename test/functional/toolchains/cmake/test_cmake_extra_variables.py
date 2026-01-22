@@ -33,8 +33,8 @@ def test_package_info_extra_variables(generator):
     message(STATUS "FOO=${FOO}")
     message(STATUS "BAR=${BAR}")
     message(STATUS "BAZ=${BAZ}")
-    message(STATUS "BAR_C=${BAR_C}")
-    message(STATUS "BAZ_C=${BAZ_C}")
+    message(STATUS "BAR_CACHE=${BAR_CACHE}")
+    message(STATUS "BAR_CACHE=${BAR_CACHE}")
     """)
 
     conanfile = textwrap.dedent(f"""
