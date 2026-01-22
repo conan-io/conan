@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 
 import pytest
@@ -44,4 +45,6 @@ def test_conan_new_empty():
                     'class mypkgRecipe(ConanFile):\n',
                     'class mypkgRecipe(ConanFile):\n    exports_sources = "CMakelists.txt", "main.cpp"\n')
     c.run("build")
-    assert "[100%] Built target example" in c.out
+
+    suffix = ".exe" if platform.system() == "Windows" else ""
+    assert os.path.exists(os.path.join(c.current_folder, "build", "Release", f"example{suffix}"))
