@@ -1,6 +1,11 @@
+import os
+import textwrap
+
 import pytest
 
+from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.tools import TestClient
+from conan.tools.files import replace_in_file
 
 
 @pytest.mark.tool("cmake")
@@ -12,3 +17,31 @@ def test_conan_new_compiles():
 
     tc.run("create hello -tf=")
     tc.run("create bye")
+
+
+@pytest.mark.tool("cmake")
+def test_conan_new_empty():
+    c = TestClient()
+    c.run("new")
+    cmakelists = textwrap.dedent("""
+    cmake_minimum_required(VERSION 3.15)
+    project(PackageTest CXX)
+    add_executable(example main.cpp)
+    """)
+    main = textwrap.dedent(r"""
+    #include <iostream>
+
+    int main() {
+        std::cout << "Hello World!\n";
+    }
+    """)
+    c.save({
+        "CMakeLists.txt": cmakelists,
+        "main.cpp": main,
+    })
+    replace_in_file(ConanFileMock(),
+                    os.path.join(c.current_folder, "conanfile.py"),
+                    'class mypkgRecipe(ConanFile):\n',
+                    'class mypkgRecipe(ConanFile):\n    exports_sources = "CMakelists.txt", "main.cpp"\n')
+    c.run("build")
+    assert "[100%] Built target example" in c.out
