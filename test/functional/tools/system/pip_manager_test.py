@@ -48,7 +48,6 @@ def test_empty_pipenv():
 
 
 def test_build_pip_manager():
-
     pip_package_folder = temp_folder(path_with_spaces=True)
     _create_py_hello_world(pip_package_folder)
     pip_package_folder = pip_package_folder.replace('\\', '/')
@@ -57,20 +56,15 @@ def test_build_pip_manager():
         from conan import ConanFile
         from conan.tools.system import PipEnv
         from conan.tools.layout import basic_layout
-        import platform
-        import os
-
 
         class PipPackage(ConanFile):
-            name = "pip_hello_test"
-            version = "0.1"
-
             def layout(self):
                 basic_layout(self)
 
             def generate(self):
-                PipEnv(self).install(["{pip_package_folder}"])
-                PipEnv(self).generate()
+                pip = PipEnv(self)
+                pip.install(["{pip_package_folder}"])
+                pip.generate()
 
             def build(self):
                 self.run("hello-world")
@@ -79,10 +73,41 @@ def test_build_pip_manager():
     client = TestClient(path_with_spaces=False)
     # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
     client.save({"pip/conanfile.py": conanfile_pip})
-    client.run("build pip/conanfile.py")
+    client.run("build pip")
 
     assert "RUN: hello-world" in client.out
     assert "Hello Test World!" in client.out
+
+
+def test_install_version_range():
+    c = TestClient(path_with_spaces=False)
+
+    # TODO: Maybe we want a pip.run("-m pip install .") that automatically handles python.exe path
+    conanfile_pip = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.system import PipEnv
+        from conan.tools.layout import basic_layout
+
+        class PipPackage(ConanFile):
+
+            def generate(self):
+                pip = PipEnv(self)
+                self.run(f"{pip.bin_dir}/python -m pip install .")
+                pip.install(["hello>=0.0,<1.0"])
+                pip.generate()
+
+            def build(self):
+                self.run("hello-world")
+        """)
+
+    # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
+    c.save({"conanfile.py": conanfile_pip})
+    _create_py_hello_world(c.current_folder)
+
+    c.run("build")
+
+    assert "RUN: hello-world" in c.out
+    assert "Hello Test World!" in c.out
 
 
 def test_create_pip_manager():
@@ -95,9 +120,6 @@ def test_create_pip_manager():
         from conan import ConanFile
         from conan.tools.system import PipEnv
         from conan.tools.layout import basic_layout
-        import platform
-        import os
-
 
         class PipPackage(ConanFile):
             name = "pip_hello_test"
@@ -119,10 +141,7 @@ def test_create_pip_manager():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
 
-
         class Recipe(ConanFile):
-            name = "pip_test"
-            version = "0.1"
 
             def requirements(self):
                 self.tool_requires("pip_hello_test/0.1")
@@ -134,8 +153,8 @@ def test_create_pip_manager():
     client = TestClient(path_with_spaces=False)
     # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
     client.save({"pip/conanfile.py": conanfile_pip, "consumer/conanfile.py": conanfile})
-    client.run("create pip/conanfile.py --version=0.1")
-    client.run("build consumer/conanfile.py")
+    client.run("create pip --version=0.1")
+    client.run("build consumer")
 
     assert "RUN: hello-world" in client.out
     assert "Hello Test World!" in client.out

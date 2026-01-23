@@ -7,8 +7,7 @@ from conan.api.model import PackagesList, Remote
 from conan.api.output import ConanOutput
 from conan.internal.api.upload import add_urls
 from conan.internal.conan_app import ConanApp
-from conan.internal.api.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker, \
-    gather_metadata
+from conan.internal.api.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.rest.file_uploader import FileUploader
 from conan.internal.errors import AuthenticationException, ForbiddenException
@@ -66,9 +65,7 @@ class UploadAPI:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
         app = ConanApp(self._conan_api)
         preparator = PackagePreparator(app, self._api_helpers.global_conf)
-        preparator.prepare(package_list, enabled_remotes)
-        if metadata != ['']:
-            gather_metadata(package_list, app.cache, metadata)
+        preparator.prepare(package_list, enabled_remotes, metadata)
         signer = PkgSignaturesPlugin(app.cache, app.cache_folder)
         # This might add files entries to package_list with signatures
         signer.sign(package_list)

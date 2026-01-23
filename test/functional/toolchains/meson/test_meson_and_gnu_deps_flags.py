@@ -108,6 +108,8 @@ class TestMesonToolchainAndGnuFlags:
                     clean_first=True)
 
         client.run("build . -c 'tools.build:cxxflags=[%s]'" % flags)
+        assert "WARN: deprecated: Use 'extra_defines' attribute for compiler preprocessor " \
+               "definitions instead of 'preprocessor_definitions'" in client.out
 
         app_name = "demo.exe" if platform.system() == "Windows" else "demo"
         client.run_command(os.path.join("build", app_name))
