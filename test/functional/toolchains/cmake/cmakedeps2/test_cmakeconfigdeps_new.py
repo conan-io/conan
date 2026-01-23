@@ -419,8 +419,6 @@ class TestLibsLinkageTraits:
         tc.save({}, clean_first=True)
         tc.run("new cmake_lib -d name=lib -d version=0.1 -d requires=matrix/0.1")
         tc.run(f"create -c tools.cmake.cmakedeps:new={new_value}")
-        # When compiling app, it asks you to link with WHOLE_ARCHIVE
-        assert "target_link_libraries(... $<LINK_LIBRARY:MYFET,matrix::matrix>)"
         test_build_folder = tc.created_test_build_folder("lib/0.1")
         test_generators_folder = os.path.join("test_package", test_build_folder, "generators")
         libs_targets = tc.load(os.path.join(test_generators_folder, "lib-Targets-release.cmake"))
