@@ -57,15 +57,22 @@ class RemoteManager:
         assert ref.revision, "get_recipe without revision specified"
         assert ref.timestamp, "get_recipe without ref.timestamp specified"
 
+        # This fails if there is a DB entry for this ref
         layout = self._cache.create_ref_layout(ref)
 
         export_folder = layout.export()
         local_folder_remote = self._local_folder_remote(remote)
         if local_folder_remote is not None:
             local_folder_remote.get_recipe(ref, export_folder)
-            mkdir(layout.metadata())
-            return layout
+        else:
+            self._download_recipe(layout, ref, remote, metadata)
+        # Make sure that the source dir is deleted, but it seems unnecessary
+        rmdir(layout.source())
+        mkdir(layout.metadata())
 
+        return layout
+
+    def _download_recipe(self, layout, ref, remote, metadata):
         download_export = layout.download_export()
         try:
             zipped_files = self._call_remote(remote, "get_recipe", ref, download_export, metadata,
@@ -97,11 +104,6 @@ class RemoteManager:
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
 
-        # Make sure that the source dir is deleted
-        rmdir(layout.source())
-        mkdir(layout.metadata())
-        return layout
-
     def get_recipe_metadata(self, recipe_layout, ref, remote, metadata):
         """
         Get only the metadata for a locally existing recipe in Cache
@@ -126,17 +128,15 @@ class RemoteManager:
         local_folder_remote = self._local_folder_remote(remote)
         if local_folder_remote is not None:
             local_folder_remote.get_recipe_sources(ref, export_sources_folder)
-            return
-
-        zipped_files = self._call_remote(remote, "get_recipe_sources", ref, download_folder)
-        if not zipped_files:
-            mkdir(export_sources_folder)  # create the folder even if no source files
-            return
-
-        self._signer.verify(ref, download_folder, files=zipped_files)
-        # Only 1 file is guaranteed
-        tgz_file = next(iter(zipped_files.values()))
-        uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
+        else:
+            zipped_files = self._call_remote(remote, "get_recipe_sources", ref, download_folder)
+            if not zipped_files:
+                mkdir(export_sources_folder)  # create the folder even if no source files
+            else:
+                self._signer.verify(ref, download_folder, files=zipped_files)
+                # Only 1 file is guaranteed
+                tgz_file = next(iter(zipped_files.values()))
+                uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
 
     def get_package(self, pref, remote, metadata=None):
         output = ConanOutput(scope=str(pref.ref))
