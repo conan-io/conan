@@ -138,8 +138,8 @@ class RemoteManager:
             if not zipped_files:
                 mkdir(export_sources_folder)  # create the folder even if no source files
             else:
-                # Only 1 file is guaranteed
                 self._signer.verify(ref, download_folder, layout.metadata(), files=zipped_files)
+                # Only 1 file is guaranteed
                 tgz_file = next(iter(zipped_files.values()))
                 uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
                 dst_tgz = os.path.join(layout.download_export(), os.path.basename(tgz_file))
