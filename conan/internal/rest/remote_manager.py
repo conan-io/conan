@@ -88,7 +88,7 @@ class RemoteManager:
             if "conanmanifest.txt" not in zipped_files:
                 raise ConanException(f"Corrupted {ref} in '{remote.name}' remote: "
                                      f"no conanmanifest.txt")
-            self._signer.verify(ref, download_export, files=zipped_files)
+            self._signer.verify(ref, download_export, layout.metadata(), files=zipped_files)
         except BaseException:  # So KeyboardInterrupt also cleans things
             ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'",
                                               error_type="exception")
@@ -133,7 +133,7 @@ class RemoteManager:
             if not zipped_files:
                 mkdir(export_sources_folder)  # create the folder even if no source files
             else:
-                self._signer.verify(ref, download_folder, files=zipped_files)
+                self._signer.verify(ref, download_folder, layout.metadata(), files=zipped_files)
                 # Only 1 file is guaranteed
                 tgz_file = next(iter(zipped_files.values()))
                 uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
@@ -187,7 +187,7 @@ class RemoteManager:
 
             # This is guaranteed to exists, otherwise RestClient would have raised already
             package_file = next(f for f in zipped_files if PACKAGE_FILE_NAME in f)
-            self._signer.verify(pref, download_pkg_folder, zipped_files)
+            self._signer.verify(pref, download_pkg_folder, layout.metadata(), zipped_files)
 
             tgz_file = zipped_files.pop(package_file)
             package_folder = layout.package()
