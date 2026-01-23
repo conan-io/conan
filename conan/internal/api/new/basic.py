@@ -104,6 +104,12 @@ class {{package_name}}Recipe(ConanFile):
         cmake.configure()
         cmake.build()
 
+    This recipe is aimed at a consumer scenario. If you want to create
+    a package, then you should add the following attributes/methods:
+    * exports_sources attribute (https://docs.conan.io/2/reference/conanfile/attributes.html#exports-sources)
+    * package method (https://docs.conan.io/2/reference/conanfile/methods/package.html)
+    * package_info method (https://docs.conan.io/2/reference/conanfile/methods/package_info.html)
+
 '''
 
 
