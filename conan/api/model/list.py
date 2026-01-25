@@ -108,6 +108,7 @@ class MultiPackagesList:
 
             mpkglist = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
                                                        context=base_context)
+            MultiPackagesList._filter_exclusive_context(mpkglist, graph, context)
             if context == "build-only":
                 host = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
                                                        context="host")
@@ -190,6 +191,34 @@ class MultiPackagesList:
                 cache_list.add_ref(ref)  # Binary listed forces recipe listed
                 cache_list.add_pref(pref, node["info"])
         return pkglist
+
+    @staticmethod
+    def _filter_exclusive_context(mpkglist, graph, context):
+        if context not in ("host-only", "build-only"):
+            return
+
+        rref_contexts = {}
+        pref_contexts = {}
+        for node in graph["graph"]["nodes"].values():
+            rref = node["ref"]
+            node_context = node['context']
+            rref_contexts.setdefault(rref, set()).add(node_context)
+            if node["package_id"] is not None:
+                pref = rref + ":" + node["package_id"]
+                if node["prev"] is not None:
+                    pref += "#" + node["prev"]
+                pref_contexts.setdefault(pref, set()).add(node_context)
+
+        opposite_context = "build" if context == "host-only" else "host"
+        for remote, pkglist in mpkglist.lists.items():
+            for pref, contexts in pref_contexts.items():
+                if opposite_context in contexts:
+                    pref = PkgReference.loads(pref)
+                    if pkglist.has_rref(pref.ref):
+                        rev_dict = pkglist.recipe_dict(pref.ref)
+                        rev_dict.get("packages", {}).pop(pref.package_id, None)
+                        if len(rev_dict.get("packages", {})) == 0:
+                            pkglist._data.pop(str(pref.ref), None)
 
 
 class PackagesList:
@@ -334,6 +363,10 @@ class PackagesList:
         information.
         """
         return self._data[str(ref)]["revisions"][ref.revision]
+
+    def has_rref(self, ref: RecipeReference) -> bool:
+        """ Checks if the PackagesList contains the given RecipeReference. """
+        return str(ref) in self._data and ref.revision in self._data[str(ref)].get("revisions", {})
 
     def package_dict(self, pref: PkgReference):
         """ Gives read/write access to the dictionary containing a specific PkgReference
