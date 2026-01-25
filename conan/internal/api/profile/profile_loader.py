@@ -333,6 +333,11 @@ class _ProfileValueParser:
                     pattern, req_list = "*", br_line
                 else:
                     pattern, req_list = tokens
+                if "[" in pattern:
+                    ConanOutput().warning(
+                        f"Tool requires pattern {pattern} contains a version range, which has no effect. "
+                        f"Only '&' for consumer and '*' as wildcard are supported in this context.",
+                        warn_tag="risk")
                 refs = [RecipeReference.loads(r.strip()) for r in req_list.split(",")]
                 result.setdefault(pattern, []).extend(refs)
         return result
@@ -345,6 +350,10 @@ class _ProfileValueParser:
             if ":" in item:
                 tmp = item.split(":", 1)
                 packagename, item = tmp
+                if "[" in packagename:
+                    ConanOutput().warning(f"Settings pattern {packagename} contains a version range, which has no effect. "
+                                          f"Only '&' for consumer and '*' as wildcard are supported in this context.",
+                                          warn_tag="risk")
 
             result_name, result_value = item.split("=", 1)
             result_name = result_name.strip()
@@ -397,6 +406,11 @@ def _profile_parse_args(settings, options, conf):
                 tmp = name.split(":", 1)
                 ref_name = tmp[0]
                 name = tmp[1]
+                if "[" in ref_name:
+                    ConanOutput().warning(
+                        f"Pattern {ref_name} contains a version range, which has no effect. "
+                        f"Only '&' for consumer and '*' as wildcard are supported in this context.",
+                        warn_tag="risk")
                 package_items[ref_name].append((name, value))
             else:
                 simple_items.append((name, value))

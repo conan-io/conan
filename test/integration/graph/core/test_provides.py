@@ -1,6 +1,6 @@
 import textwrap
 
-from parameterized import parameterized
+import pytest
 
 from conan.internal.graph.graph_error import GraphProvidesError
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
@@ -45,7 +45,7 @@ class TestProvidesTest(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[libc], dependents=[app])
         self._check_node(libc, "libc/0.1#123", deps=[], dependents=[libb])
 
-    @parameterized.expand([(True,), (False,)])
+    @pytest.mark.parametrize("private", [True, False])
     def test_branches_conflict(self, private):
         # app -> libb/0.1 (provides feature)
         #  \  -> libc/0.1 (provides feature)

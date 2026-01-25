@@ -5,7 +5,6 @@ import stat
 import textwrap
 
 import pytest
-from parameterized import parameterized
 
 from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import RecipeReference
@@ -190,7 +189,7 @@ class TestConan(ConanFile):
         export_path = layout.export_sources()
         assert sorted(['file.txt', 'file.cpp', 'file.h']) == sorted(os.listdir(export_path))
 
-    @parameterized.expand([("myconanfile.py", ), ("Conanfile.py", )])
+    @pytest.mark.parametrize("filename", ["myconanfile.py", "Conanfile.py"])
     def test_filename(self, filename):
         client = TestClient(light=True)
         client.save({filename: GenConanfile("hello", "1.2")})
