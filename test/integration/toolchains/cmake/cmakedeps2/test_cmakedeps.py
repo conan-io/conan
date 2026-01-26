@@ -370,6 +370,29 @@ def test_cmake_find_mode_deprecated():
     assert "CMakeConfigDeps does not support module find mode"
 
 
+def test_build_context_deprecated():
+    tc = TestClient()
+    conanfile = textwrap.dedent("""
+           from conan.tools.cmake import CMakeConfigDeps
+           from conan import ConanFile
+           class TestConan(ConanFile):
+               settings = "build_type"
+               def generate(self):
+                   deps = CMakeConfigDeps(self)
+                   deps.build_context_activated = ["bar"]
+                   deps.build_context_suffix = {"bar": "_BUILD"}
+                   deps.build_context_build_modules = ["myfunctions"]
+                   deps.check_components_exist = True
+                   deps.generate()
+       """)
+    tc.save({"conanfile.py": conanfile})
+    tc.run("install .")
+    assert "WARN: deprecated: CMakeConfigDeps.build_context_activated is deprecated" in tc.out
+    assert "WARN: deprecated: CMakeConfigDeps.build_context_suffix is deprecated" in tc.out
+    assert "WARN: deprecated: CMakeConfigDeps.build_context_build_modules is deprecated" in tc.out
+    assert "WARN: deprecated: CMakeConfigDeps.check_components_exist is deprecated" in tc.out
+
+
 def test_cmake_extra_dependencies():
     tc = TestClient()
     dep = textwrap.dedent("""
