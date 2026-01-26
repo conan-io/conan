@@ -437,7 +437,7 @@ class TargetConfigurationTemplate2:
         {% if link_info["link"] %}
         {% if link_info["link_feature"] %}
         # Link feature: {{link_info["link_feature"]}}
-        if(${CMAKE_VERSION} VERSION_LESS "3.24")
+        if(CMAKE_VERSION VERSION_LESS "3.24")
             message(FATAL_ERROR "The 'CMakeConfigDeps' generator LINK_FEATURE property only works with CMake >= 3.24")
         endif()
         {% endif %}
