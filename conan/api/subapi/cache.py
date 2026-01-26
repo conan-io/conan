@@ -209,6 +209,12 @@ class CacheAPI:
                     info = os.path.join(folder, "p", "conaninfo.txt")
                     if not os.path.exists(manifest) or not os.path.exists(info):
                         rmdir(folder)
+
+        # Temporary name (not named) until we have clarity if this is the same as the "t"
+        # temporary (for exports) or not
+        if os.path.exists(os.path.join(cache.store, "d")):
+            rmdir(os.path.join(cache.store, "d"))
+
         if backup_sources:
             backup_files = self._conan_api.cache.get_backup_sources(package_list, exclude=False,
                                                                     only_upload=False)
