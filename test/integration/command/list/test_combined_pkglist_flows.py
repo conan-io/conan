@@ -609,13 +609,16 @@ class TestListGraphContext:
 
         tc.run("create protobuf")
         tc.run("create onnx")
+        # Note that here, the protobuf from tool_requires is skipped!
         tc.run("graph info --requires=onnx/1.0 -f=json", redirect_stdout="graph.json")
         tc.run(f"list --graph=graph.json --graph-context={context} --format=json")
         # We removed both protobuf binaries, not even the recipe is still there
         assert "protobuf/1.0" not in tc.out
 
     @pytest.mark.parametrize("context", ["build-only", "host-only"])
-    def test_context_only_binary_different_pkg_id(self, context):
+    # We're building onnx to ensure the build context protobuf binary is not skipped
+    @pytest.mark.parametrize("build_onnx", [True, False])
+    def test_context_only_binary_different_pkg_id(self, context, build_onnx):
         tc = TestClient(light=True)
         tc.save({
             "protobuf/conanfile.py": GenConanfile("protobuf", "1.0")
@@ -625,19 +628,24 @@ class TestListGraphContext:
             .with_tool_requires("protobuf/1.0")})
 
         tc.run("create protobuf -o &:shared=True")
-        protobuf_shared_pkgid = tc.created_layout().reference.package_id
+        protobuf_host_shared_pkgid = tc.created_layout().reference.package_id
         tc.run("create protobuf -o &:shared=False")
-        protobuf_static_pkgid = tc.created_layout().reference.package_id
+        protobuf_build_static_pkgid = tc.created_layout().reference.package_id
 
         tc.run("create onnx")
-        tc.run("graph info --requires=onnx/1.0 -f=json", redirect_stdout="graph.json")
+        build_arg = "-b=&" if build_onnx else ""
+        tc.run(f"graph info --requires=onnx/1.0 {build_arg} -f=json", redirect_stdout="graph.json")
         tc.run(f"list --graph=graph.json --graph-context={context} --format=json")
-
-        # But there's always 1 binary for protobuf/1.0, so we keep it alongside its rrev entry
-        assert "protobuf/1.0" in tc.out
         if context == "build-only":
-            assert protobuf_static_pkgid in tc.out
-            assert protobuf_shared_pkgid not in tc.out
+            if not build_onnx:
+                # If we have skipped the protobuf build binary, the recipe is gone too
+                # because we have no protobuf packages being used
+                assert "protobuf/1.0" not in tc.out
+            else:
+                assert "protobuf/1.0" in tc.out
+                assert protobuf_build_static_pkgid in tc.out
+                assert protobuf_host_shared_pkgid not in tc.out
         else:
-            assert protobuf_static_pkgid not in tc.out
-            assert protobuf_shared_pkgid in tc.out
+            assert "protobuf/1.0" in tc.out
+            assert protobuf_build_static_pkgid not in tc.out
+            assert protobuf_host_shared_pkgid in tc.out
