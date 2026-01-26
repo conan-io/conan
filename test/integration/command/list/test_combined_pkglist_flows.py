@@ -611,4 +611,33 @@ class TestListGraphContext:
         tc.run("create onnx")
         tc.run("graph info --requires=onnx/1.0 -f=json", redirect_stdout="graph.json")
         tc.run(f"list --graph=graph.json --graph-context={context} --format=json")
+        # We removed both protobuf binaries, not even the recipe is still there
         assert "protobuf/1.0" not in tc.out
+
+    @pytest.mark.parametrize("context", ["build-only", "host-only"])
+    def test_context_only_binary_different_pkg_id(self, context):
+        tc = TestClient(light=True)
+        tc.save({
+            "protobuf/conanfile.py": GenConanfile("protobuf", "1.0")
+            .with_shared_option(),
+            "onnx/conanfile.py": GenConanfile("onnx", "1.0")
+            .with_requirement("protobuf/1.0", options={"shared": True})
+            .with_tool_requires("protobuf/1.0")})
+
+        tc.run("create protobuf -o &:shared=True")
+        protobuf_shared_pkgid = tc.created_layout().reference.package_id
+        tc.run("create protobuf -o &:shared=False")
+        protobuf_static_pkgid = tc.created_layout().reference.package_id
+
+        tc.run("create onnx")
+        tc.run("graph info --requires=onnx/1.0 -f=json", redirect_stdout="graph.json")
+        tc.run(f"list --graph=graph.json --graph-context={context} --format=json")
+
+        # But there's always 1 binary for protobuf/1.0, so we keep it alongside its rrev entry
+        assert "protobuf/1.0" in tc.out
+        if context == "build-only":
+            assert protobuf_static_pkgid in tc.out
+            assert protobuf_shared_pkgid not in tc.out
+        else:
+            assert protobuf_static_pkgid not in tc.out
+            assert protobuf_shared_pkgid in tc.out
