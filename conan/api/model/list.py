@@ -109,14 +109,6 @@ class MultiPackagesList:
             mpkglist = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
                                                        context=base_context)
             MultiPackagesList._filter_exclusive_context(mpkglist, graph, context)
-            if context == "build-only":
-                host = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
-                                                       context="host")
-                mpkglist.keep_outer(host)
-            elif context == "host-only":
-                build = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
-                                                        context="build")
-                mpkglist.keep_outer(build)
             return mpkglist
         except JSONDecodeError as e:
             raise ConanException(f"Graph file invalid JSON: {graphfile}\n{e}")
