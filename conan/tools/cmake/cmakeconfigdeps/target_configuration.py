@@ -449,7 +449,7 @@ class TargetConfigurationTemplate2:
                      "{{config_wrapper(config, require_target)}}")
             {% endif %}
         {% else %}
-        if(${CMAKE_VERSION} VERSION_LESS "3.27")
+        if(CMAKE_VERSION VERSION_LESS "3.27")
             message(FATAL_ERROR "The 'CMakeConfigDeps' generator COMPILE_ONLY expression only works with CMake >= 3.27")
         endif()
         # If the headers trait is not there, this will do nothing
