@@ -197,17 +197,11 @@ class MultiPackagesList:
         if context not in ("host-only", "build-only"):
             return
 
-        rref_contexts = {}
         pref_contexts = {}
         for node in graph["graph"]["nodes"].values():
-            rref = node["ref"]
-            node_context = node['context']
-            rref_contexts.setdefault(rref, set()).add(node_context)
             if node["package_id"] is not None:
-                pref = rref + ":" + node["package_id"]
-                if node["prev"] is not None:
-                    pref += "#" + node["prev"]
-                pref_contexts.setdefault(pref, set()).add(node_context)
+                pref = node["ref"] + ":" + node["package_id"]
+                pref_contexts.setdefault(pref, set()).add(node['context'])
 
         opposite_context = "build" if context == "host-only" else "host"
         for remote, pkglist in mpkglist.lists.items():
