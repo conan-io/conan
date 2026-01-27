@@ -8,6 +8,8 @@ from conan.errors import ConanException
 
 from conan.api.output import ConanOutput
 
+from conan.internal.util.files import rmdir
+
 
 class PyEnv:
 
@@ -94,23 +96,28 @@ class PyEnv:
                                  f"environment using '{self._default_python}': {e}")
 
     def _create_uv_venv(self, base_env_dir, py_version):
-        uv_env_dir = os.path.join(base_env_dir, f"uv_{self.env_name}")
         try:
-            self._conanfile.run(cmd_args_to_string(
-                [self._default_python, '-m', 'venv', uv_env_dir])
-            )
-            _python_exe = self._get_env_python(uv_env_dir)
-            self._conanfile.run(cmd_args_to_string(
-                [_python_exe, "-m", "pip", "install", "--disable-pip-version-check", "uv"])
-            )
-            self._conanfile.run(cmd_args_to_string(
-                [_python_exe, '-m', 'uv', 'venv', '--seed', '--python', py_version, self._env_dir])
-            )
+            uv_env_dir = None
+            _uv = [shutil.which('uv')]
+            if not _uv[0]:
+                uv_env_dir = os.path.join(base_env_dir, f"uv_{self.env_name}")
+                self._conanfile.run(cmd_args_to_string(
+                    [self._default_python, '-m', 'venv', uv_env_dir])
+                )
+                _python_exe = self._get_env_python(uv_env_dir)
+                self._conanfile.run(cmd_args_to_string(
+                    [_python_exe, "-m", "pip", "install", "--disable-pip-version-check", "uv"])
+                )
+                _uv = [_python_exe, '-m', 'uv']
+            self._conanfile.run(cmd_args_to_string(_uv + ['venv', '--seed', '--python', py_version, self._env_dir]))
             self._conanfile.output.info(f"Virtual environment for Python "
                                         f"{py_version} created successfully using UV.")
         except Exception as e:
             raise ConanException(f"PyEnv could not create a Python {py_version} virtual "
                                  f"environment using UV and '{self._default_python}': {e}")
+        finally:
+            if uv_env_dir:
+                rmdir(uv_env_dir)
 
 
 class PipEnv(PyEnv):
