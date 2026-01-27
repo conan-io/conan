@@ -788,3 +788,15 @@ class TestLinkFeatures:
         targets = tc.load("dep-Targets-release.cmake")
         # The requirement should have the link feature info
         assert "# Requirement dep::dep -> pkg::compA (Full link: True)\n# Link feature: MYFET" in targets
+
+
+def test_legacy_defines():
+    # We used not to populate this.
+    # We do for backward compatibility with old check_symbol_exists and similar CMake code
+    tc = TestClient()
+    tc.save({"conanfile.py": GenConanfile("mypkg", "1.0")
+             .with_package_info({"defines": ["MY_DEFINE"]})})
+    tc.run("create")
+    tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
+    mypkg_config = tc.load("mypkg-config.cmake")
+    assert "set(mypkg_DEFINITIONS MY_DEFINE )" in mypkg_config
