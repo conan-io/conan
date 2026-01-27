@@ -76,7 +76,13 @@ def test_build_py_manager():
     client.save({"pip/conanfile.py": conanfile_pyenv})
     client.run("build pip")
 
+    print(client.out)
+
     assert "RUN: hello-world" in client.out
+    assert "Hello Test World!" in client.out
+
+    client.run("build pip")
+    assert "Found existing installation: hello 0.1.0" in client.out
     assert "Hello Test World!" in client.out
 
 
@@ -167,7 +173,8 @@ def test_build_uv_manager():
     _create_py_hello_world(pip_package_folder)
     pip_package_folder = pip_package_folder.replace('\\', '/')
 
-    conanfile_pyenv = textwrap.dedent(f"""
+    def conanfile_pyenv(py_version):
+        return textwrap.dedent(f"""
         from conan import ConanFile
         from conan.tools.system import PyEnv
         from conan.tools.layout import basic_layout
@@ -183,7 +190,7 @@ def test_build_uv_manager():
                 basic_layout(self)
 
             def generate(self):
-                pip_env = PyEnv(self, py_version="3.11.6")
+                pip_env = PyEnv(self, py_version="{py_version}")
                 pip_env.install(["{pip_package_folder}"])
                 pip_env.generate()
                 pip_env.run(["--version"])
@@ -194,13 +201,30 @@ def test_build_uv_manager():
 
     client = TestClient(path_with_spaces=False)
     # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
-    client.save({"pip/conanfile.py": conanfile_pyenv})
+    client.save({"pip/conanfile.py": conanfile_pyenv("3.11.6")})
     client.run("build pip/conanfile.py")
     assert "Virtual environment for Python 3.11.6 created successfully using UV." in client.out
     if platform.system() == "Windows":
         assert "python.exe --version\nPython 3.11.6" in client.out
     else:
         assert "python --version\nPython 3.11.6" in client.out
+    assert "RUN: hello-world" in client.out
+    assert "Hello Test World!" in client.out
+
+    client.run("build pip/conanfile.py")
+    assert "Found existing installation: hello 0.1.0" in client.out
+    assert "RUN: hello-world" in client.out
+    assert "Hello Test World!" in client.out
+
+    client.save({"pip/conanfile.py": conanfile_pyenv("3.12.3")})
+
+    client.run("build pip/conanfile.py")
+    assert "Virtual environment for Python 3.12.3 created successfully using UV." in client.out
+    if platform.system() == "Windows":
+        assert "python.exe --version\nPython3.12.3" in client.out
+    else:
+        assert "python --version\nPython 3.12.3" in client.out
+    assert "Found existing installation: hello 0.1.0" not in client.out
     assert "RUN: hello-world" in client.out
     assert "Hello Test World!" in client.out
 

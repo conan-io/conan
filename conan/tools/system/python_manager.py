@@ -38,17 +38,19 @@ class PyEnv:
                                  "Python system-wide or set the "
                                  "'tools.system.pyenv:python_interpreter' "
                                  "conf to the full path of a Python executable")
-        self.env_name = f"conan_pyenv{f'_{name}' if name else ''}"
+        self.env_name = f"conan_pyenv{f'_{name}' if name else ''}" + \
+                        f'_{py_version.replace(".", "_")}' if py_version else ''
         base_env_dir = os.path.abspath(folder or conanfile.build_folder)
         self._env_dir = os.path.join(base_env_dir, self.env_name)
         bins = "Scripts" if platform.system() == "Windows" else "bin"
         self.bin_dir = os.path.join(self._env_dir, bins)
         pyexe = "python.exe" if platform.system() == "Windows" else "python"
         self._python_exe = os.path.join(self.bin_dir, pyexe)
-        if py_version:
-            self._create_uv_venv(base_env_dir, py_version)
-        else:
-            self._create_venv()
+        if not os.path.exists(self._env_dir):
+            if py_version:
+                self._create_uv_venv(base_env_dir, py_version)
+            else:
+                self._create_venv()
 
     @property
     def python(self):
@@ -96,20 +98,24 @@ class PyEnv:
                                  f"environment using '{self._default_python}': {e}")
 
     def _create_uv_venv(self, base_env_dir, py_version):
+        uv_env_dir = None
         try:
-            uv_env_dir = None
-            _uv = [shutil.which('uv')]
-            if not _uv[0]:
+            uv_path = shutil.which("uv")
+            if uv_path:
+                uv_cmd = [uv_path]
+            else:
                 uv_env_dir = os.path.join(base_env_dir, f"uv_{self.env_name}")
                 self._conanfile.run(cmd_args_to_string(
                     [self._default_python, '-m', 'venv', uv_env_dir])
                 )
-                _python_exe = self._get_env_python(uv_env_dir)
+
+                python_exe = self._get_env_python(uv_env_dir)
                 self._conanfile.run(cmd_args_to_string(
-                    [_python_exe, "-m", "pip", "install", "--disable-pip-version-check", "uv"])
+                    [python_exe, "-m", "pip", "install", "--disable-pip-version-check", "uv"])
                 )
-                _uv = [_python_exe, '-m', 'uv']
-            self._conanfile.run(cmd_args_to_string(_uv + ['venv', '--seed', '--python', py_version, self._env_dir]))
+                uv_cmd = [python_exe, "-m", "uv"]
+
+            self._conanfile.run(cmd_args_to_string(uv_cmd + ['venv', '--seed', '--python', py_version, self._env_dir]))
             self._conanfile.output.info(f"Virtual environment for Python "
                                         f"{py_version} created successfully using UV.")
         except Exception as e:
