@@ -349,9 +349,9 @@ class ListAPI:
                         except NotFoundException:
                             continue
                         pkg_revisions = pkgcontent.get("revisions")
-                        if pkg_revisions is None:  # This is a package_id, no prevs
-                            if remote_prefs:
-                                result_pkg_list.add_pref(pref, pkgcontent.get("info"))
+                        if pkg_revisions is None:  # User provided a package_id, no prevs
+                            for remote_pref in remote_prefs:
+                                result_pkg_list.add_pref(remote_pref, pkgcontent.get("info"))
                             continue
                         for pkg_revision, prev_content in pkg_revisions.items():
                             pref.revision = pkg_revision

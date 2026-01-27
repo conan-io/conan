@@ -265,9 +265,12 @@ class TestPkgListFindRemote:
             pkglist = json.loads(c.load("mylist.json"))
             revs = pkglist[origin]["zlib/1.0"]["revisions"]
             assert list(revs) == ["1cb7410d0365f87510a6767c7bef804e"]
-            info = {"info": {'settings': {'os': 'Linux'}}}
-            expected = {"9a4eb3c8701508aa9458b1a73d0633783ecc2270": info}
-            assert revs["1cb7410d0365f87510a6767c7bef804e"]["packages"] == expected
+            expected = {'settings': {'os': 'Linux'}}
+            pkgs = revs["1cb7410d0365f87510a6767c7bef804e"]["packages"]
+            assert list(pkgs) == ["9a4eb3c8701508aa9458b1a73d0633783ecc2270"]
+            pkg = pkgs["9a4eb3c8701508aa9458b1a73d0633783ecc2270"]
+            assert pkg["info"] == expected
+            assert list(pkg["revisions"]) == ["1d3c57385f4133c1fbd6d13bd538496e"]
 
         c.run("pkglist find-remote mylist.json --format=json --remote default",
               redirect_stdout="mylist.json")
