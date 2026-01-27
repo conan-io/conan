@@ -244,12 +244,11 @@ class RestV2Methods:
         src_file = self._find_compressed_file(ref, files, EXPORT_SOURCES_FILE_NAME)
         if src_file is None:
             return None
-        files = [src_file, ]
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files, scope=str(ref))
-        ret = {fn: os.path.join(dest_folder, fn) for fn in files}
+        urls = {src_file: self.router.recipe_file(ref, src_file)}
+        self._download_and_save_files(urls, dest_folder, [src_file, ], scope=str(ref))
+        ret = {src_file: os.path.join(dest_folder, src_file)}
         return ret
 
     @staticmethod

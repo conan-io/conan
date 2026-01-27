@@ -113,11 +113,11 @@ class PackagePreparator:
         self._compressformat = compressformat
         self._compresslevel = compresslevel
 
-    def prepare(self, pkg_list, enabled_remotes):
+    def prepare(self, pkg_list, enabled_remotes, metadata):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
         for ref, packages in pkg_list.items():
-            layout = self._app.cache.recipe_layout(ref)
-            conanfile_path = layout.conanfile()
+            recipe_layout = self._app.cache.recipe_layout(ref)
+            conanfile_path = recipe_layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
             url = conanfile.conan_data.get("scm", {}).get("url") if conanfile.conan_data else None
             if local_url != "allow" and url is not None:
@@ -131,21 +131,29 @@ class PackagePreparator:
             bundle.pop("files", None)
             bundle.pop("upload-urls", None)
             if bundle.get("upload"):
-                self._prepare_recipe(ref, bundle, conanfile, enabled_remotes)
+                self._prepare_recipe(recipe_layout, ref, bundle, conanfile, enabled_remotes)
+
+            # Package metadata files too
+            if metadata != [""] and (metadata or bundle.get("upload")):
+                metadata_folder = recipe_layout.metadata()
+                files = _metadata_files(metadata_folder, metadata)
+                if files:
+                    ConanOutput(scope=str(ref)).info(f"Recipe metadata: {len(files)} files")
+                    bundle.setdefault("files", {}).update(files)
+                    bundle["upload"] = True
+
             for pref in packages:
                 prev_bundle = pkg_list.package_dict(pref)
                 prev_bundle.pop("files", None)  # If defined from a previous upload
                 prev_bundle.pop("upload-urls", None)
-                if prev_bundle.get("upload"):
-                    self._prepare_package(pref, prev_bundle)
+                self._prepare_package(pref, prev_bundle, metadata)
 
-    def _prepare_recipe(self, ref, ref_bundle, conanfile, remotes):
+    def _prepare_recipe(self, recipe_layout, ref, ref_bundle, conanfile, remotes):
         """ do a bunch of things that are necessary before actually executing the upload:
         - retrieve exports_sources to complete the recipe if necessary
         - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
         """
         try:
-            recipe_layout = self._app.cache.recipe_layout(ref)
             retrieve_exports_sources(self._app.remote_manager, recipe_layout, conanfile, ref,
                                      remotes)
             cache_files = self._compress_recipe_files(recipe_layout, ref)
@@ -188,13 +196,25 @@ class PackagePreparator:
             result[comp] = os.path.join(download_export_folder, comp)
         return result
 
-    def _prepare_package(self, pref, prev_bundle):
-        pkg_layout = self._app.cache.pkg_layout(pref)
-        if pkg_layout.package_is_dirty():
-            raise ConanException(f"Package {pref} is corrupted, aborting upload.\n"
-                                 f"Remove it with 'conan remove {pref}'")
-        cache_files = self._compress_package_files(pkg_layout, pref)
-        prev_bundle["files"] = cache_files
+    def _prepare_package(self, pref, prev_bundle, metadata):
+        pkg_layout = None
+        if prev_bundle.get("upload"):
+            pkg_layout = self._app.cache.pkg_layout(pref)
+            if pkg_layout.package_is_dirty():
+                raise ConanException(f"Package {pref} is corrupted, aborting upload.\n"
+                                     f"Remove it with 'conan remove {pref}'")
+            cache_files = self._compress_package_files(pkg_layout, pref)
+            prev_bundle["files"] = cache_files
+
+        # Package metadata files too
+        if metadata != [""] and (metadata or prev_bundle.get("upload")):
+            pkg_layout = pkg_layout or self._app.cache.pkg_layout(pref)
+            metadata_folder = pkg_layout.metadata()
+            files = _metadata_files(metadata_folder, metadata)
+            if files:
+                ConanOutput(scope=str(pref)).info(f"Package metadata: {len(files)} files")
+                prev_bundle.setdefault("files", {}).update(files)
+                prev_bundle["upload"] = True
 
     def _compressed_file(self, filename, files, download_folder, ref):
         output = ConanOutput(scope=str(ref))
@@ -368,25 +388,3 @@ def _metadata_files(folder, metadata):
             path = os.path.join("metadata", relpath).replace("\\", "/")
             result[path] = abs_path
     return result
-
-
-def gather_metadata(package_list, cache, metadata):
-    for rref, packages in package_list.items():
-        recipe_bundle = package_list.recipe_dict(rref)
-        if metadata or recipe_bundle["upload"]:
-            metadata_folder = cache.recipe_layout(rref).metadata()
-            files = _metadata_files(metadata_folder, metadata)
-            if files:
-                ConanOutput(scope=str(rref)).info(f"Recipe metadata: {len(files)} files")
-                recipe_bundle.setdefault("files", {}).update(files)
-                recipe_bundle["upload"] = True
-
-        for pref in packages:
-            pkg_bundle = package_list.package_dict(pref)
-            if metadata or pkg_bundle["upload"]:
-                metadata_folder = cache.pkg_layout(pref).metadata()
-                files = _metadata_files(metadata_folder, metadata)
-                if files:
-                    ConanOutput(scope=str(pref)).info(f"Package metadata: {len(files)} files")
-                    pkg_bundle.setdefault("files", {}).update(files)
-                    pkg_bundle["upload"] = True
