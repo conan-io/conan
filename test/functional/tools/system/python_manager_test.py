@@ -221,7 +221,7 @@ def test_build_uv_manager():
     client.run("build pip/conanfile.py")
     assert "Virtual environment for Python 3.12.3 created successfully using UV." in client.out
     if platform.system() == "Windows":
-        assert "python.exe --version\nPython3.12.3" in client.out
+        assert "python.exe --version\nPython 3.12.3" in client.out
     else:
         assert "python --version\nPython 3.12.3" in client.out
     assert "Found existing installation: hello 0.1.0" not in client.out
