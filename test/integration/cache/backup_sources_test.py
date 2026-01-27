@@ -675,7 +675,7 @@ class TestDownloadCacheBackupSources:
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create .")
         assert f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in remote backup {self.file_server.fake_url}/backup2/" in self.client.out
-        assert "sha256 signature failed for" in self.client.out
+        assert "sha256 hash failed for" in self.client.out
 
     def test_export_then_upload_workflow(self):
         mkdir(os.path.join(self.download_cache_folder, "s"))
