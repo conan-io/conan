@@ -270,7 +270,7 @@ def test_fail_build_uv_manager():
     assert "PyEnv could not create a Python 3.11.86 virtual environment using UV" in client.out
 
 
-@pytest.mark.skipif(sys.version_info.minor > 8, reason="UV needs Python 3.7 to fail")
+@pytest.mark.skipif(sys.version_info.minor > 7, reason="UV needs Python 3.7 to fail")
 def test_fail_uv_python_version():
 
     pip_package_folder = temp_folder(path_with_spaces=True)
