@@ -38,8 +38,9 @@ class PyEnv:
                                  "Python system-wide or set the "
                                  "'tools.system.pyenv:python_interpreter' "
                                  "conf to the full path of a Python executable")
-        self.env_name = f"conan_pyenv{f'_{name}' if name else ''}" + \
-                        f'_{py_version.replace(".", "_")}' if py_version else ''
+        self.env_name = f"conan_pyenv{f'_{name}' if name else ''}"
+        if py_version:
+            self.env_name += f'_{py_version.replace(".", "_")}'
         base_env_dir = os.path.abspath(folder or conanfile.build_folder)
         self._env_dir = os.path.join(base_env_dir, self.env_name)
         bins = "Scripts" if platform.system() == "Windows" else "bin"
