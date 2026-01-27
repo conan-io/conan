@@ -34,7 +34,7 @@ def test_cps_static_lib():
     c = TestClient()
     c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1").with_package_file("lib/pkg.a", "-")
                                                           .with_settings("build_type")
-            .with_package_info(cpp_info={"libs": ["pkg"]}, env_info={})})
+            .with_package_info(cpp_info={"libs": ["pkg"]})})
     c.run("create pkg")
 
     settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"

@@ -23,9 +23,6 @@ class _LockRequires:
     def __init__(self):
         self._requires = OrderedDict()  # {require: package_ids}
 
-    def __contains__(self, item):
-        return item in self._requires
-
     def refs(self):
         return self._requires.keys()
 

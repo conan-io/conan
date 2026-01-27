@@ -62,13 +62,11 @@ def test_generator_files():
     client = TestClient()
     client.save({"hello.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
                                            .with_package_info(cpp_info={"libs": ["hello"],
-                                                                        "frameworks": ['framework_hello']},
-                                                              env_info={})})
+                                                                        "frameworks": ['framework_hello']})})
     client.run("export hello.py --name=hello --version=0.1")
     client.save({"goodbye.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
                                              .with_package_info(cpp_info={"libs": ["goodbye"],
-                                                                          "frameworks": ['framework_goodbye']},
-                                                                env_info={})})
+                                                                          "frameworks": ['framework_goodbye']})})
     client.run("export goodbye.py --name=goodbye --version=0.1")
     client.save({"conanfile.txt": "[requires]\nhello/0.1\ngoodbye/0.1\n"}, clean_first=True)
 
@@ -94,13 +92,11 @@ def test_generator_files_with_custom_config():
     client = TestClient()
 
     client.save({"hello.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
-                                           .with_package_info(cpp_info={"libs": ["hello"]},
-                                                              env_info={})})
+                                           .with_package_info(cpp_info={"libs": ["hello"]})})
     client.run("export hello.py --name=hello --version=0.1")
 
     client.save({"goodbye.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
-                                             .with_package_info(cpp_info={"libs": ["goodbye"]},
-                                                                env_info={})})
+                                             .with_package_info(cpp_info={"libs": ["goodbye"]})})
     client.run("export goodbye.py --name=goodbye --version=0.1")
 
     conanfile_py = textwrap.dedent("""
@@ -522,8 +518,7 @@ def test_skipped_not_included():
     pkg_info = {"components": {"component": {"defines": ["SOMEDEFINE"]}}}
 
     client.save({"dep/conanfile.py": GenConanfile().with_package_type("header-library")
-                                                   .with_package_info(cpp_info=pkg_info,
-                                                                      env_info={}),
+                                                   .with_package_info(cpp_info=pkg_info),
                  "pkg/conanfile.py": GenConanfile().with_requirement("dep/0.1")
                                                    .with_package_type("library")
                                                    .with_shared_option(),
