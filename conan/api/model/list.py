@@ -351,7 +351,7 @@ class PackagesList:
         return self._data[str(ref)]["revisions"][ref.revision]
 
     def has_rref(self, ref: RecipeReference) -> bool:
-        """ Checks if the PackagesList contains the given RecipeReference. """
+        # Checks if the PackagesList contains the given RecipeReference.
         return str(ref) in self._data and ref.revision in self._data[str(ref)].get("revisions", {})
 
     def package_dict(self, pref: PkgReference):
