@@ -1,6 +1,7 @@
 import platform
 import os
 import shutil
+import sys
 
 from conan.tools.build import cmd_args_to_string
 from conan.tools.env.environment import Environment
@@ -20,6 +21,10 @@ class PyEnv:
         :param name: Optional name for the virtualenv, by default "conan_pyenv"
         :param py_version: Optional python version to create the virtualenv using UV
         """
+        if sys.version_info.minor < 8 and py_version:
+            raise ConanException("'uv' needs Python >= 3.8. Please upgrade your Python interpreter"
+                                 " or use 'PyEnv' without defining the 'py_version'.")
+
         self._conanfile = conanfile
         self._default_python = self._conanfile.conf.get("tools.system.pyenv:python_interpreter")
         # tools.system.pipenv deprecated warning message.
