@@ -41,10 +41,6 @@ class MultiPackagesList:
         for k, v in other.lists.items():
             self.lists.setdefault(k, PackagesList()).merge(v)
 
-    def keep_outer(self, other):
-        for namespace, other_pkg_list in other.lists.items():
-            self.lists.get(namespace, PackagesList()).keep_outer(other_pkg_list)
-
     @staticmethod
     def load(file):
         """ Create an instance of the class from a serialized JSON file path pointed by ``file``."""
@@ -227,15 +223,6 @@ class PackagesList:
                     d[k] = v
             return d
         recursive_dict_update(self._data, other._data)
-
-    def keep_outer(self, other):
-        assert isinstance(other, PackagesList)
-        if not self._data:
-            return
-
-        for ref, info in other._data.items():
-            if self._data.get(ref, {}) == info:
-                self._data.pop(ref)
 
     def split(self):
         """
