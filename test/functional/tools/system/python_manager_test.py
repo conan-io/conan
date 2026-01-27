@@ -93,7 +93,7 @@ def test_install_version_range():
 
             def generate(self):
                 pyenv = PyEnv(self)
-                self.run(f"{pyenv.bin_dir}/python -m pip install .")
+                pyenv.install(["."])
                 pyenv.install(["hello>=0.0,<1.0"])
                 pyenv.generate()
 
