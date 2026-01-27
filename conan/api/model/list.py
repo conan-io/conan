@@ -92,7 +92,6 @@ class MultiPackagesList:
         if not os.path.isfile(graphfile):
             raise ConanException(f"Graph file not found: {graphfile}")
         try:
-            base_context = context.split("-")[0] if context else None
             graph = json.loads(load(graphfile))
             # Check if input json is a graph file
             if "graph" not in graph:
@@ -103,8 +102,7 @@ class MultiPackagesList:
                 )
 
             mpkglist = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
-                                                       context=base_context)
-            MultiPackagesList._filter_exclusive_context(mpkglist, graph, context)
+                                                       context=context)
             return mpkglist
         except JSONDecodeError as e:
             raise ConanException(f"Graph file invalid JSON: {graphfile}\n{e}")
@@ -119,6 +117,7 @@ class MultiPackagesList:
 
     @staticmethod
     def _define_graph(graph, graph_recipes=None, graph_binaries=None, context=None):
+        base_context = context.split("-")[0] if context else None
         pkglist = MultiPackagesList()
         cache_list = PackagesList()
         if graph_recipes is None and graph_binaries is None:
@@ -130,7 +129,7 @@ class MultiPackagesList:
 
         pkglist.lists["Local Cache"] = cache_list
         for node in graph["graph"]["nodes"].values():
-            if context and node['context'] != context:
+            if base_context and node['context'] != base_context:
                 continue
 
             # We need to add the python_requires too
@@ -178,6 +177,8 @@ class MultiPackagesList:
             if any(b == "*" or b == binary for b in binaries):
                 cache_list.add_ref(ref)  # Binary listed forces recipe listed
                 cache_list.add_pref(pref, node["info"])
+        # Now filter possible exclusive contexts once that we know how they are distributed
+        MultiPackagesList._filter_exclusive_context(pkglist, graph, context)
         return pkglist
 
     @staticmethod
