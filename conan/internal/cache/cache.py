@@ -6,7 +6,6 @@ import uuid
 from fnmatch import translate
 from typing import List
 
-from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import RecipeLayout, PackageLayout
 # TODO: Random folders are no longer accessible, how to get rid of them asap?
 # TODO: We need the workflow to remove existing references.
@@ -73,11 +72,6 @@ class PkgCache:
         # len based on: https://github.com/conan-io/conan/pull/9595#issuecomment-918976451
         # Reduce length in 3 characters 16 - 3 = 13
         return sha_bytes[0:13]
-
-    def get_random_path(self):
-        random_id = str(uuid.uuid4())
-        # d=downloading area. Using short hashes to avoid lengthy paths with hyphens
-        return os.path.join(self._base_folder, "d", self._short_hash_path(random_id))
 
     @staticmethod
     def _get_path(ref):
@@ -188,10 +182,26 @@ class PkgCache:
         self._db.create_recipe(reference_path, ref)
         return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
 
-    def create_pkg_layout(self, pref: PkgReference, current_folder):
+    def create_pkg_layout(self, pref: PkgReference):
+        """ called by:
+         - cache restore
+        """
+        assert pref.ref.revision, "Recipe revision must be known to create the package layout"
+        assert pref.package_id, "Package id must be known to create the package layout"
+        assert pref.revision, "Package revision should be known to create the package layout"
+        package_path = self._get_path_pref(pref)
+        self._db.create_package(package_path, pref, None)
+        self._create_path(package_path, remove_contents=False)
+        return PackageLayout(pref, os.path.join(self._base_folder, package_path))
+
+    def get_random_path(self):
+        random_id = str(uuid.uuid4())
+        # d=downloading area. Using short hashes to avoid lengthy paths with hyphens
+        return os.path.join(self._base_folder, "d", self._short_hash_path(random_id))
+
+    def create_atomic_pkg_layout(self, pref: PkgReference, current_folder):
         """ called by:
          - RemoteManager.get_package()
-         - cache restore
         """
         assert pref.ref.revision, "Recipe revision must be known to create the package layout"
         assert pref.package_id, "Package id must be known to create the package layout"
@@ -200,7 +210,6 @@ class PkgCache:
         path = self._full_path(package_path)
         atomic_replace(current_folder, path, f"{pref.repr_notime()} package")
         self._db.create_package(package_path, pref, None)
-        return PackageLayout(pref, os.path.join(self._base_folder, package_path))
 
     def update_recipe_timestamp(self, ref: RecipeReference):
         """ when the recipe already exists in cache, but we get a new timestamp from a server

@@ -4,9 +4,9 @@ import textwrap
 import pytest
 
 from conan import __version__
+from conan.internal.util.files import save
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conan.internal.util.files import save
 
 
 class TestNewCommand:
@@ -57,8 +57,8 @@ class TestNewCommand:
 
     def test_new_defaults(self):
         c = TestClient(light=True)
-        for t in ("cmake_lib", "cmake_exe", "meson_lib", "meson_exe", "msbuild_lib", "msbuild_exe",
-                  "bazel_lib", "bazel_exe", "autotools_lib", "autotools_exe"):
+        for t in ("cmake_lib", "cmake_exe", "meson_lib", "meson_exe", "msbuild_lib",
+                  "msbuild_exe", "bazel_lib", "bazel_exe", "autotools_lib", "autotools_exe"):
             c.save({}, clean_first=True)
             c.run(f"new {t}")
             conanfile = c.load("conanfile.py")
