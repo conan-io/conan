@@ -41,10 +41,6 @@ class MultiPackagesList:
         for k, v in other.lists.items():
             self.lists.setdefault(k, PackagesList()).merge(v)
 
-    def keep_outer(self, other):
-        for namespace, other_pkg_list in other.lists.items():
-            self.lists.get(namespace, PackagesList()).keep_outer(other_pkg_list)
-
     @staticmethod
     def load(file):
         """ Create an instance of the class from a serialized JSON file path pointed by ``file``."""
@@ -96,7 +92,6 @@ class MultiPackagesList:
         if not os.path.isfile(graphfile):
             raise ConanException(f"Graph file not found: {graphfile}")
         try:
-            base_context = context.split("-")[0] if context else None
             graph = json.loads(load(graphfile))
             # Check if input json is a graph file
             if "graph" not in graph:
@@ -107,15 +102,7 @@ class MultiPackagesList:
                 )
 
             mpkglist = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
-                                                       context=base_context)
-            if context == "build-only":
-                host = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
-                                                       context="host")
-                mpkglist.keep_outer(host)
-            elif context == "host-only":
-                build = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
-                                                        context="build")
-                mpkglist.keep_outer(build)
+                                                       context=context)
             return mpkglist
         except JSONDecodeError as e:
             raise ConanException(f"Graph file invalid JSON: {graphfile}\n{e}")
@@ -130,6 +117,7 @@ class MultiPackagesList:
 
     @staticmethod
     def _define_graph(graph, graph_recipes=None, graph_binaries=None, context=None):
+        base_context = context.split("-")[0] if context else None
         pkglist = MultiPackagesList()
         cache_list = PackagesList()
         if graph_recipes is None and graph_binaries is None:
@@ -141,7 +129,7 @@ class MultiPackagesList:
 
         pkglist.lists["Local Cache"] = cache_list
         for node in graph["graph"]["nodes"].values():
-            if context and node['context'] != context:
+            if base_context and node['context'] != base_context:
                 continue
 
             # We need to add the python_requires too
@@ -189,7 +177,31 @@ class MultiPackagesList:
             if any(b == "*" or b == binary for b in binaries):
                 cache_list.add_ref(ref)  # Binary listed forces recipe listed
                 cache_list.add_pref(pref, node["info"])
+        # Now filter possible exclusive contexts once that we know how they are distributed
+        MultiPackagesList._filter_exclusive_context(pkglist, graph, context)
         return pkglist
+
+    @staticmethod
+    def _filter_exclusive_context(mpkglist, graph, context):
+        if context not in ("host-only", "build-only"):
+            return
+
+        pref_contexts = {}
+        for node in graph["graph"]["nodes"].values():
+            if node["package_id"] is not None:
+                pref = node["ref"] + ":" + node["package_id"]
+                pref_contexts.setdefault(pref, set()).add(node['context'])
+
+        opposite_context = "build" if context == "host-only" else "host"
+        for remote, pkglist in mpkglist.lists.items():
+            for pref, contexts in pref_contexts.items():
+                if opposite_context in contexts:
+                    pref = PkgReference.loads(pref)
+                    if pkglist.has_rref(pref.ref):
+                        rev_dict = pkglist.recipe_dict(pref.ref)
+                        rev_dict.get("packages", {}).pop(pref.package_id, None)
+                        if len(rev_dict.get("packages", {})) == 0:
+                            pkglist._data.pop(str(pref.ref), None)
 
 
 class PackagesList:
@@ -212,15 +224,6 @@ class PackagesList:
                     d[k] = v
             return d
         recursive_dict_update(self._data, other._data)
-
-    def keep_outer(self, other):
-        assert isinstance(other, PackagesList)
-        if not self._data:
-            return
-
-        for ref, info in other._data.items():
-            if self._data.get(ref, {}) == info:
-                self._data.pop(ref)
 
     def split(self):
         """
@@ -334,6 +337,10 @@ class PackagesList:
         information.
         """
         return self._data[str(ref)]["revisions"][ref.revision]
+
+    def has_rref(self, ref: RecipeReference) -> bool:
+        # Checks if the PackagesList contains the given RecipeReference.
+        return str(ref) in self._data and ref.revision in self._data[str(ref)].get("revisions", {})
 
     def package_dict(self, pref: PkgReference):
         """ Gives read/write access to the dictionary containing a specific PkgReference

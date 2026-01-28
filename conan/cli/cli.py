@@ -218,8 +218,7 @@ class Cli:
     @staticmethod
     def exception_exit_error(exception):
         output = ConanOutput()
-        if exception is None:
-            return SUCCESS
+        assert exception is not None
         if isinstance(exception, ConanInvalidConfiguration):
             output.error(exception, error_type="exception")
             return ERROR_INVALID_CONFIGURATION

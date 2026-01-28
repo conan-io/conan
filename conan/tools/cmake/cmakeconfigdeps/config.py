@@ -98,7 +98,7 @@ class ConfigTemplate2:
             incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
                        for i in incdirs]
             include_dirs = ";".join(incdirs)
-            definitions = ""
+            definitions = " ".join(aggregated_cppinfo.defines)
             root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
             libraries = root_target_name or f"{pkg_name}::{pkg_name}"
 

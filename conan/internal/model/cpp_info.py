@@ -659,7 +659,7 @@ class _Component:
             return
 
         # automatic location deduction from a single .lib=["lib"]
-        if self._type not in [None, PackageType.SHARED, PackageType.STATIC]:
+        if self._type is not None and self._type not in [PackageType.SHARED, PackageType.STATIC]:
             raise ConanException(f"{name} has a library but .type {self._type} is not static/shared")
 
         # If no location is defined, it's time to guess the location

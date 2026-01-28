@@ -26,19 +26,65 @@ FIND_MODE_BOTH = "both"
 class CMakeConfigDeps:
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
         self.configuration = str(self._conanfile.settings.build_type)
 
         # These are just for legacy compatibility, but not use at al
-        self.build_context_activated = []
-        self.build_context_build_modules = []
-        self.build_context_suffix = {}
+        self._build_context_activated = []
+        self._build_context_build_modules = []
+        self._build_context_suffix = {}
         # Enable/Disable checking if a component target exists or not
-        self.check_components_exist = False
+        self._check_components_exist = False
 
         self._properties = {}
 
+    @property
+    def build_context_activated(self):
+        return self._build_context_activated
+
+    @build_context_activated.setter
+    def build_context_activated(self, value):
+        self._conanfile.output.warning("CMakeConfigDeps.build_context_activated is deprecated, "
+                                       "not used anymore", warn_tag="deprecated")
+        self._build_context_activated = value
+
+    @property
+    def build_context_build_modules(self):
+        return self._build_context_build_modules
+
+    @build_context_build_modules.setter
+    def build_context_build_modules(self, value):
+        self._conanfile.output.warning("CMakeConfigDeps.build_context_build_modules is deprecated, "
+                                       "not used anymore", warn_tag="deprecated")
+        self._build_context_build_modules = value
+
+    @property
+    def build_context_suffix(self):
+        return self._build_context_suffix
+
+    @build_context_suffix.setter
+    def build_context_suffix(self, value):
+        self._conanfile.output.warning("CMakeConfigDeps.build_context_suffix is deprecated, "
+                                       "not used anymore", warn_tag="deprecated")
+        self._build_context_suffix = value
+
+    @property
+    def check_components_exist(self):
+        return self._check_components_exist
+
+    @check_components_exist.setter
+    def check_components_exist(self, value):
+        self._conanfile.output.warning("CMakeConfigDeps.check_components_exist is deprecated, "
+                                       "not used anymore", warn_tag="deprecated")
+        self._check_components_exist = value
+
     def generate(self):
+        """
+        This method will save the generated files to the ``conanfile.generators_folder`` folder
+        """
         self._conanfile.output.warning("CMakeConfigDeps is experimental, and might get "
                                        "breaking changes in future releases",
                                        warn_tag="experimental")
@@ -63,7 +109,7 @@ class CMakeConfigDeps:
             cmake_find_mode = cmake_find_mode.lower()
             if cmake_find_mode == FIND_MODE_NONE:
                 continue
-            if cmake_find_mode == FIND_MODE_MODULE:
+            if cmake_find_mode in (FIND_MODE_MODULE, FIND_MODE_BOTH):
                 ConanOutput(self._conanfile.ref).warning("CMakeConfigDeps does not support "
                                                          f"module find mode in {dep}.\n"
                                                          f"Config mode will be used regardless.",
@@ -103,11 +149,11 @@ class CMakeConfigDeps:
 
     def set_property(self, dep, prop, value, build_context=False):
         """
-        Using this method you can overwrite the :ref:`property<CMakeDeps Properties>` values set by
-        the Conan recipes from the consumer.
+        Using this method you can overwrite the :ref:`property<CMakeConfigDeps Properties>` values
+        set by the Conan recipes from the consumer.
 
-        :param dep: Name of the dependency to set the :ref:`property<CMakeDeps Properties>`. For
-         components use the syntax: ``dep_name::component_name``.
+        :param dep: Name of the dependency to set the :ref:`property<CMakeConfigDeps Properties>`.
+         For components use the syntax: ``dep_name::component_name``.
         :param prop: Name of the :ref:`property<CMakeDeps Properties>`.
         :param value: Value of the property. Use ``None`` to invalidate any value set by the
          upstream recipe.
@@ -136,24 +182,16 @@ class CMakeConfigDeps:
             if comp is not None:
                 return comp.get_property(prop, check_type=check_type)
 
-    def get_cmake_filename(self, dep, module_mode=None):
-        """Get the name of the file for the find_package(XXX)"""
+    def get_cmake_filename(self, dep):
+        # Get the name of the file for the find_package(XXX)
         # This is used by CMakeDeps to determine:
         # - The filename to generate (XXX-config.cmake or FindXXX.cmake)
         # - The name of the defined XXX_DIR variables
         # - The name of transitive dependencies for calls to find_dependency
-        if module_mode and self._get_find_mode(dep) in [FIND_MODE_MODULE, FIND_MODE_BOTH]:
-            ret = self.get_property("cmake_module_file_name", dep)
-            if ret:
-                return ret
         ret = self.get_property("cmake_file_name", dep)
         return ret or dep.ref.name
 
     def _get_find_mode(self, dep):
-        """
-        :param dep: requirement
-        :return: "none" or "config" or "module" or "both" or "config" when not set
-        """
         tmp = self.get_property("cmake_find_mode", dep)
         if tmp is None:
             return "config"

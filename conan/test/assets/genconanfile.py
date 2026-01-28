@@ -39,6 +39,7 @@ class GenConanfile:
         self._build_requirements = None
         self._tool_requires = None
         self._tool_requirements = None
+        self._test_requirements = None
         self._test_requires = None
         self._revision_mode = None
         self._package_info = None
@@ -160,6 +161,12 @@ class GenConanfile:
         self._tool_requirements = self._tool_requirements or []
         ref_str = self._get_full_ref_str(ref)
         self._tool_requirements.append((ref_str, kwargs))
+        return self
+
+    def with_test_requirement(self, ref, **kwargs):
+        self._test_requirements = self._test_requirements or []
+        ref_str = self._get_full_ref_str(ref)
+        self._test_requirements.append((ref_str, kwargs))
         return self
 
     def with_import(self, *imports):
@@ -368,6 +375,11 @@ class GenConanfile:
             args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
                              for k, v in kwargs.items())
             lines.append('        self.tool_requires("{}", {})'.format(ref, args))
+
+        for ref, kwargs in self._test_requirements or []:
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
+                             for k, v in kwargs.items())
+            lines.append('        self.test_requires("{}", {})'.format(ref, args))
 
         return "\n".join(lines)
 

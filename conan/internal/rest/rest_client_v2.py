@@ -129,15 +129,10 @@ class RestV2Methods:
             raise get_exception_from_error(ret.status_code)(text)
         return ret.content.decode()
 
-    def server_capabilities(self, user=None, password=None):
+    def server_capabilities(self):
         """Get information about the server: status, version, type and capabilities"""
         url = self.router.ping()
-        # logger.debug("REST: ping: %s" % url)
-        if user and password:
-            # This can happen in "conan remote login" cmd. Instead of empty token, use HttpBasic
-            auth = HTTPBasicAuth(user, password)
-        else:
-            auth = self.auth
+        auth = self.auth
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers, verify=self.verify_ssl)
 
         server_capabilities = ret.headers.get('X-Conan-Server-Capabilities')
@@ -151,22 +146,11 @@ class RestV2Methods:
 
         return [cap.strip() for cap in server_capabilities.split(",") if cap]
 
-    def _get_json(self, url, data=None, headers=None):
+    def _get_json(self, url, headers=None):
         req_headers = self.custom_headers.copy()
         req_headers.update(headers or {})
-        if data:  # POST request
-            req_headers.update({'Content-type': 'application/json',
-                                'Accept': 'application/json'})
-            # logger.debug("REST: post: %s" % url)
-            response = self.requester.post(url, auth=self.auth, headers=req_headers,
-                                           verify=self.verify_ssl,
-                                           stream=True,
-                                           data=json.dumps(data))
-        else:
-            # logger.debug("REST: get: %s" % url)
-            response = self.requester.get(url, auth=self.auth, headers=req_headers,
-                                          verify=self.verify_ssl,
-                                          stream=True)
+        response = self.requester.get(url, auth=self.auth, headers=req_headers,
+                                      verify=self.verify_ssl, stream=True)
 
         if response.status_code != 200:  # Error message is text
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
@@ -206,12 +190,7 @@ class RestV2Methods:
         # We need to filter the "_/_" user and channel from Artifactory
         ret = []
         for reference in response:
-            try:
-                ref = RecipeReference.loads(reference)
-            except TypeError:
-                raise ConanException("Unexpected response from server.\n"
-                                     "URL: `{}`\n"
-                                     "Expected an iterable, but got {}.".format(url, type(response)))
+            ref = RecipeReference.loads(reference)
             if ref.user == "_":
                 ref.user = None
             if ref.channel == "_":
@@ -265,12 +244,11 @@ class RestV2Methods:
         src_file = self._find_compressed_file(ref, files, EXPORT_SOURCES_FILE_NAME)
         if src_file is None:
             return None
-        files = [src_file, ]
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files, scope=str(ref))
-        ret = {fn: os.path.join(dest_folder, fn) for fn in files}
+        urls = {src_file: self.router.recipe_file(ref, src_file)}
+        self._download_and_save_files(urls, dest_folder, [src_file, ], scope=str(ref))
+        ret = {src_file: os.path.join(dest_folder, src_file)}
         return ret
 
     @staticmethod
@@ -403,7 +381,7 @@ class RestV2Methods:
     def remove_recipe(self, ref):
         """ Remove a recipe and packages """
         self.check_credentials()
-        if ref.revision is None:
+        if ref.revision is None:  # FIXME: This is unused at the moment, check server implementation
             # Remove all the RREVs
             refs = self.get_recipe_revisions_references(ref)
         else:

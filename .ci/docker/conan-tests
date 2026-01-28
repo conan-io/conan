@@ -54,6 +54,7 @@ RUN apt-get update && \
         tk-dev \
         libffi-dev \
         liblzma-dev \
+        libzstd-dev \
         python3-openssl \
         ca-certificates \
         sudo \
