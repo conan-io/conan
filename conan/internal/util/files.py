@@ -10,6 +10,7 @@ import time
 
 from contextlib import contextmanager
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 
 _DIRTY_FOLDER = ".dirty"
@@ -191,12 +192,13 @@ if platform.system() == "Windows":
                 os.replace(src, dst)  # ATOMIC!!!
                 return
             except OSError as e:
+                msg = ("The os.replace() to put this item in the package storage has failed.\n"
+                       "If you have an antivirus, try to exclude the "
+                       "Conan cache from the antivirus software."
+                       f"    Item: {item}\n    Error: {e}")
                 if i == retries - 1:
-                    msg = ("The os.replace() to put this item in the package storage has failed.\n"
-                           "If you have an antivirus, try to exclude the "
-                           "Conan cache from the antivirus software."
-                           f"    Item: {item}\n    Error: {e}")
                     raise ConanException(msg)
+                ConanOutput().warning(msg)
                 time.sleep(delay)
 
 
