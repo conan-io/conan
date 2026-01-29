@@ -1,5 +1,7 @@
+import sys
 import textwrap
 import platform
+import pytest
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save_files
 from conan.test.utils.test_files import temp_folder
@@ -167,6 +169,7 @@ def test_create_py_manager():
     assert "Hello Test World!" in client.out
 
 
+@pytest.mark.skipif(sys.version_info.minor < 8, reason="UV needs Python >= 3.8")
 def test_build_uv_manager():
 
     pip_package_folder = temp_folder(path_with_spaces=True)
@@ -229,6 +232,7 @@ def test_build_uv_manager():
     assert "Hello Test World!" in client.out
 
 
+@pytest.mark.skipif(sys.version_info.minor < 8, reason="UV needs Python >= 3.8")
 def test_fail_build_uv_manager():
 
     pip_package_folder = temp_folder(path_with_spaces=True)
@@ -264,6 +268,44 @@ def test_fail_build_uv_manager():
     client.save({"pip/conanfile.py": conanfile_pyenv})
     client.run("build pip/conanfile.py", assert_error=True)
     assert "PyEnv could not create a Python 3.11.86 virtual environment using UV" in client.out
+
+
+@pytest.mark.skipif(sys.version_info.minor > 7, reason="UV needs Python 3.7 to fail")
+def test_fail_uv_python_version():
+
+    pip_package_folder = temp_folder(path_with_spaces=True)
+    _create_py_hello_world(pip_package_folder)
+    pip_package_folder = pip_package_folder.replace('\\', '/')
+
+    conanfile_pyenv = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.system import PyEnv
+        from conan.tools.layout import basic_layout
+        import platform
+        import os
+
+
+        class PyenvPackage(ConanFile):
+            name = "pip_hello_test"
+            version = "0.1"
+
+            def layout(self):
+                basic_layout(self)
+
+            def generate(self):
+                pip_env = PyEnv(self, py_version="3.11.86")
+                pip_env.install(["{pip_package_folder}"])
+                pip_env.generate()
+
+            def build(self):
+                self.run("hello-world")
+        """)
+
+    client = TestClient(path_with_spaces=False)
+    # FIXME: the python shebang inside vitual env packages fails when using path_with_spaces
+    client.save({"pip/conanfile.py": conanfile_pyenv})
+    client.run("build pip/conanfile.py", assert_error=True)
+    assert "needs Python >= 3.8" in client.out
 
 
 def test_build_deprecated_python_manager():
