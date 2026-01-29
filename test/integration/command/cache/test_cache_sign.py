@@ -92,9 +92,9 @@ def test_pkg_sign_no_packages():
     c = TestClient()
     c.save_home({"extensions/plugins/sign/sign.py": PLUGIN_CONTENT})
     c.run("cache sign other-pkg/*", assert_error=True)
-    assert "ERROR: No packages to process in the pkglist provided" in c.out
+    assert "ERROR: No packages to process in the package list provided" in c.out
     c.run("cache verify other-pkg/*", assert_error=True)
-    assert "ERROR: No packages to process in the pkglist provided" in c.out
+    assert "ERROR: No packages to process in the package list provided" in c.out
 
 
 def test_pkg_sign_exception():
@@ -207,16 +207,16 @@ def test_pkg_sign_verify_pkglist():
     # test empty package list
     c.run("list no-exist/* -f json", redirect_stdout="pkglist.json")
     c.run("cache sign -l pkglist.json", assert_error=True)
-    assert "ERROR: No packages to process in the pkglist provided" in c.out
+    assert "ERROR: No packages to process in the package list provided" in c.out
     c.run("cache verify -l pkglist.json", assert_error=True)
-    assert "ERROR: No packages to process in the pkglist provided" in c.out
+    assert "ERROR: No packages to process in the package list provided" in c.out
 
     # test incomplete package list
     c.run("list */* -f json", redirect_stdout="pkglist.json")
     c.run("cache sign -l pkglist.json", assert_error=True)
-    assert "ERROR: No packages to process in the pkglist provided" in c.out
+    assert "ERROR: No packages to process in the package list provided" in c.out
     c.run("cache verify -l pkglist.json", assert_error=True)
-    assert "ERROR: No packages to process in the pkglist provided" in c.out
+    assert "ERROR: No packages to process in the package list provided" in c.out
 
     # test recipe latest package list
     c.run("list */*#latest -f json", redirect_stdout="pkglist.json")
