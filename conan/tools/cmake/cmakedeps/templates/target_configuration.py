@@ -27,6 +27,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                             for components_target_name in components_targets_names]
 
         is_win = self.conanfile.settings.get_safe("os") == "Windows"
+        is_aix_gcc = (self.conanfile.settings.get_safe("os") == "AIX" and 
+                      self.conanfile.settings.get_safe("compiler") == "gcc")
         auto_link = self.cmakedeps.get_property("cmake_set_interface_link_directories",
                                                 self.conanfile, check_type=bool)
         return {"pkg_name": self.pkg_name,
@@ -36,7 +38,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names": components_names,
                 "configuration": self.cmakedeps.configuration,
-                "set_interface_link_directories": auto_link and is_win}
+                "set_interface_link_directories": auto_link and is_win,
+                "aix_gcc_no_system_includes": is_aix_gcc}
 
     @property
     def template(self):
@@ -61,7 +64,12 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         ######## Create an interface target to contain all the dependencies (frameworks, system and conan deps)
         if(NOT TARGET {{ pkg_name+'_DEPS_TARGET'}})
-            add_library({{ pkg_name+'_DEPS_TARGET'}} INTERFACE IMPORTED)
+            {% if aix_gcc_no_system_includes %}
+# using -isystem option generate error "template with C linkage"
+                add_library({{ pkg_name+'_DEPS_TARGET'}} INTERFACE)
+            {% else %}
+                add_library({{ pkg_name+'_DEPS_TARGET'}} INTERFACE IMPORTED)
+            {% endif %}
         endif()
 
         set_property(TARGET {{ pkg_name + '_DEPS_TARGET'}}
@@ -69,6 +77,11 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                      $<$<CONFIG:{{configuration}}>:{{ pkg_var(pkg_name, 'FRAMEWORKS_FOUND', config_suffix) }}>
                      $<$<CONFIG:{{configuration}}>:{{ pkg_var(pkg_name, 'SYSTEM_LIBS', config_suffix) }}>
                      $<$<CONFIG:{{configuration}}>:{{ deps_targets_names }}>)
+        {% if aix_gcc_no_system_includes %}
+        set_property(TARGET {{ pkg_name + '_DEPS_TARGET'}}
+                     APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                     $<$<CONFIG:{{configuration}}>:{{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }}>)
+        {% endif %}
 
         ####### Find the libraries declared in cpp_info.libs, create an IMPORTED target for each one and link the
         ####### {{pkg_name}}_DEPS_TARGET to all of them
@@ -106,9 +119,11 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
             set_property(TARGET {{root_target_name}}
                          APPEND PROPERTY INTERFACE_LINK_OPTIONS
                          $<$<CONFIG:{{configuration}}>:{{ pkg_var(pkg_name, 'LINKER_FLAGS', config_suffix) }}>)
+            {% if not aix_gcc_no_system_includes %}
             set_property(TARGET {{root_target_name}}
                          APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                          $<$<CONFIG:{{configuration}}>:{{ pkg_var(pkg_name, 'INCLUDE_DIRS', config_suffix) }}>)
+            {% endif %}
             # Necessary to find LINK shared libraries in Linux
             set_property(TARGET {{root_target_name}}
                          APPEND PROPERTY INTERFACE_LINK_DIRECTORIES
@@ -145,7 +160,11 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
                 ######## Create an interface target to contain all the dependencies (frameworks, system and conan deps)
                 if(NOT TARGET {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}})
+                    {% if aix_gcc_no_system_includes %}
+                    add_library({{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}} INTERFACE)
+                    {% else %}
                     add_library({{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}} INTERFACE IMPORTED)
+                    {% endif %}
                 endif()
 
                 set_property(TARGET {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}}
@@ -154,6 +173,11 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                              $<$<CONFIG:{{configuration}}>:{{ comp_var(pkg_name, comp_variable_name, 'SYSTEM_LIBS', config_suffix) }}>
                              $<$<CONFIG:{{configuration}}>:{{ comp_var(pkg_name, comp_variable_name, 'DEPENDENCIES', config_suffix) }}>
                              )
+                {% if aix_gcc_no_system_includes %}
+                set_property(TARGET {{ pkg_name + '_' + comp_variable_name + '_DEPS_TARGET'}}
+                             APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                             $<$<CONFIG:{{configuration}}>:{{ comp_var(pkg_name, comp_variable_name, 'INCLUDE_DIRS', config_suffix) }}>)
+                {% endif %}
 
                 ####### Find the libraries declared in cpp_info.component["xxx"].libs,
                 ####### create an IMPORTED target for each one and link the '{{pkg_name}}_{{comp_variable_name}}_DEPS_TARGET' to all of them
@@ -186,8 +210,10 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
                 set_property(TARGET {{ comp_target_name }} APPEND PROPERTY INTERFACE_LINK_OPTIONS
                              $<$<CONFIG:{{ configuration }}>:{{ comp_var(pkg_name, comp_variable_name, 'LINKER_FLAGS', config_suffix) }}>)
+                {% if not aix_gcc_no_system_includes %}
                 set_property(TARGET {{ comp_target_name }} APPEND PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                              $<$<CONFIG:{{ configuration }}>:{{ comp_var(pkg_name, comp_variable_name, 'INCLUDE_DIRS', config_suffix) }}>)
+                {% endif %}
                 set_property(TARGET {{comp_target_name }} APPEND PROPERTY INTERFACE_LINK_DIRECTORIES
                              $<$<CONFIG:{{ configuration }}>:{{ comp_var(pkg_name, comp_variable_name, 'LIB_DIRS', config_suffix) }}>)
                 set_property(TARGET {{ comp_target_name }} APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS
