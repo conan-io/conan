@@ -43,8 +43,8 @@ def expected_files(current_folder, configuration, architecture, sdk_version):
 def check_contents(client, deps, configuration, architecture, sdk_version):
     for dep_name in deps:
         dep_xconfig = client.load("conan_{dep}_{dep}.xcconfig".format(dep=dep_name))
-        conf_name = "conan_{}_{}{}.xcconfig".format(dep_name, dep_name,
-                                                 _get_filename(configuration, architecture, sdk_version))
+        fname = _get_filename(configuration, architecture, sdk_version)
+        conf_name = "conan_{}_{}{}.xcconfig".format(dep_name, dep_name, fname)
 
         assert '#include "{}"'.format(conf_name) in dep_xconfig
         for var in _expected_dep_xconfig:
@@ -140,6 +140,7 @@ def test_generator_files_with_custom_config():
             assert '#include "conandeps.xcconfig"' in conan_config
 
             check_contents(client, ["hello", "goodbye"],  configuration_name, "x86_64", "12.1",)
+
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 def test_xcodedeps_aggregate_components():
@@ -323,8 +324,8 @@ def test_xcodedeps_traits():
 
     # this changed from non-existing to existing after https://github.com/conan-io/conan/pull/15128
     existing = [f"conan_lib_a_cmp1_release_{arch}.xcconfig", "conan_lib_a_cmp1.xcconfig",
-                    f"conan_lib_a_cmp2_release_{arch}.xcconfig", "conan_lib_a_cmp2.xcconfig",
-                    "conan_lib_a.xcconfig"]
+                f"conan_lib_a_cmp2_release_{arch}.xcconfig", "conan_lib_a_cmp2.xcconfig",
+                "conan_lib_a.xcconfig"]
 
     for file in existing:
         assert os.path.exists(os.path.join(client.current_folder, file))

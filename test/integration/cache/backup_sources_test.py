@@ -589,7 +589,7 @@ class TestDownloadCacheBackupSources:
                 self._attach_to(self.root_app, self.store)
 
             @staticmethod
-            def _attach_to(app, store):
+            def _attach_to(app, store):  # noqa
                 @app.route("/internet/<file>", method=["GET"])
                 def get_internet_file(file):
                     return HTTPError(401, "You Are Not Allowed Here")
@@ -848,7 +848,6 @@ class TestDownloadCacheBackupSources:
         else:
             self.client.run("source .")
         assert f"{sha256} is dirty, removing it" in self.client.out
-
 
     @pytest.mark.parametrize("exception", [Exception, ConanException])
     def test_backup_source_upload_when_dirty(self, exception):
