@@ -803,8 +803,26 @@ def test_legacy_defines():
 
 
 class TestExtraFindCasingNames:
-    # Test different names from orignal file_name errors out
-    # Test what happens when I change the file name of the dependency
+    def test_generated_dir_entries(self):
+        tc = TestClient()
+        conanfile = textwrap.dedent("""
+                from conan import ConanFile
+
+                class HelloConan(ConanFile):
+                    name = "hello"
+                    version = "1.0"
+
+                    def package_info(self):
+                        self.cpp_info.set_property("cmake_extra_find_casing_names", ["HellO", "HELLO"])
+                """)
+        tc.save({"conanfile.py": conanfile})
+        tc.run("create")
+        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps")
+        paths_content = tc.load("conan_cmakedeps_paths.cmake")
+        assert "set(hello_DIR" in paths_content
+        assert "set(HellO_DIR" in paths_content
+        assert "set(HELLO_DIR" in paths_content
+
     def test_differing_names_instead_of_casings(self):
         tc = TestClient()
         conanfile = textwrap.dedent("""
@@ -819,7 +837,7 @@ class TestExtraFindCasingNames:
         """)
         tc.save({"conanfile.py": conanfile})
         tc.run("create")
-        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps", assert_error=True)
+        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps")
         assert "The 'cmake_extra_find_casing_names' property can only contain names that differ in casing" in tc.out
 
     def test_consumer_dependency_name_change(self):
@@ -851,5 +869,5 @@ class TestExtraFindCasingNames:
         """)
 
         tc.save({"conanfile.py": conanfile})
-        tc.run("install", assert_error=True)
+        tc.run("install")
         assert "The 'cmake_extra_find_casing_names' property can only contain names that differ in casing" in tc.out

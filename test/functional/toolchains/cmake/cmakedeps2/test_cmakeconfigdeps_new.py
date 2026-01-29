@@ -1659,6 +1659,13 @@ def test_find_package_extra_casings():
 
         # As long as the package generates hello-config.cmake lowercase, it works
         find_package(HellO REQUIRED)  # Casing!!!!!
+
+        if (HellO_FOUND)
+            message(STATUS "Found HellO!")
+        endif()
+        if (hello_FOUND)
+            message(STATUS "Found hello!")
+        endif()
     """)
     consumer = textwrap.dedent("""
        from conan import ConanFile
@@ -1691,3 +1698,6 @@ def test_find_package_extra_casings():
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
     client.run("build")
     assert 'Conan: Configuring Targets for hello/1.0' in client.out
+    # And this follows the expected found variable generation
+    assert "Found HellO!" in client.out
+    assert "Found hello!" not in client.out
