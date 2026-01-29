@@ -153,10 +153,10 @@ class PkgSignaturesPlugin:
                     self.sign_pkg(pref, pkg_bundle["files"],
                                   self._cache.pkg_layout(pref).download_package())
 
-    def verify(self, ref, folder, files):
-        if not self.is_verify_configured:
+    def verify(self, ref, folder, metadata_folder, files):
+        if self._plugin_verify_function is None:
             return
-        metadata_sign = os.path.join(folder, METADATA, "sign")
+        metadata_sign = os.path.join(metadata_folder, "sign")
         _verify_files_checksums(metadata_sign, files)  # Verify package files checksums before calling the plugin
         self._plugin_verify_function(ref, artifacts_folder=folder, signature_folder=metadata_sign,
                                      files=files)

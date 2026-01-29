@@ -13,7 +13,7 @@ def cpu_count():
             # cgroup2
             if os.path.exists("/sys/fs/cgroup/cgroup.controllers"):
                 cpu_max = load("/sys/fs/cgroup/cpu.max").split()
-                if cpu_max[0] != "max":
+                if cpu_max and cpu_max[0] != "max":
                     if len(cpu_max) == 1:
                         cfs_quota_us, cfs_period_us = int(cpu_max[0]), 100_000
                     else:
