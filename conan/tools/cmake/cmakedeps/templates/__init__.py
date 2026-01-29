@@ -99,3 +99,16 @@ class CMakeDepsFileTemplate(object):
         # property because that is also an absolute name (Greetings::Greetings), it is not a namespace
         # and we don't want to split and do tricks.
         return ret or self._get_target_default_name(req, component_name=comp_name)
+
+    def _is_aix_version_le(self, major, minor):
+        """Check if AIX version is less than or equal to major.minor"""
+        try:
+            version_str = self.conanfile.settings.get_safe("os.version")
+            if not version_str:
+                return False
+            version_parts = version_str.split(".")
+            aix_major = int(version_parts[0])
+            aix_minor = int(version_parts[1]) if len(version_parts) > 1 else 0
+            return (aix_major < major) or (aix_major == major and aix_minor <= minor)
+        except (ValueError, IndexError, AttributeError):
+            return False

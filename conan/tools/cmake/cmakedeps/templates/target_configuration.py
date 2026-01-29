@@ -28,7 +28,8 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
 
         is_win = self.conanfile.settings.get_safe("os") == "Windows"
         is_aix_gcc = (self.conanfile.settings.get_safe("os") == "AIX" and 
-                      self.conanfile.settings.get_safe("compiler") == "gcc")
+                      self.conanfile.settings.get_safe("compiler") == "gcc" and
+                      self._is_aix_version_le(7, 2))
         auto_link = self.cmakedeps.get_property("cmake_set_interface_link_directories",
                                                 self.conanfile, check_type=bool)
         return {"pkg_name": self.pkg_name,
