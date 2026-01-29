@@ -837,7 +837,7 @@ class TestExtraFindCasingNames:
         """)
         tc.save({"conanfile.py": conanfile})
         tc.run("create")
-        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps")
+        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps", assert_error=True)
         assert "The 'cmake_extra_find_casing_names' property can only contain names that differ in casing" in tc.out
 
     def test_consumer_dependency_name_change(self):

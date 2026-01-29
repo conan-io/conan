@@ -309,9 +309,9 @@ class _PathGenerator:
                 extra_casings = self._cmakedeps.get_property("cmake_extra_find_casing_names", dep, check_type=list) or []
 
                 if any(cmake_filename.lower() != extra_casing.lower() for extra_casing in extra_casings):
-                    self._conanfile.output.warning("The 'cmake_extra_find_casing_names' property can only contain "
-                                                   "names that differ in casing with respect to the "
-                                                   "'cmake_file_name' property.", warn_tag="risk")
+                    raise ConanException("The 'cmake_extra_find_casing_names' property can only contain "
+                                         "names that differ in casing with respect to the "
+                                         "'cmake_file_name' property.")
                 pkg_names = set(pkg_names + extra_casings)
             # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
             if cmake_find_mode == FIND_MODE_NONE:
