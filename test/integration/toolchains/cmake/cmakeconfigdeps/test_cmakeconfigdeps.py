@@ -800,3 +800,56 @@ def test_legacy_defines():
     tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
     mypkg_config = tc.load("mypkg-config.cmake")
     assert "set(mypkg_DEFINITIONS MY_DEFINE )" in mypkg_config
+
+
+class TestExtraFindCasingNames:
+    # Test different names from orignal file_name errors out
+    # Test what happens when I change the file name of the dependency
+    def test_differing_names_instead_of_casings(self):
+        tc = TestClient()
+        conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "1.0"
+
+            def package_info(self):
+                self.cpp_info.set_property("cmake_extra_find_casing_names", ["Bye!"])
+        """)
+        tc.save({"conanfile.py": conanfile})
+        tc.run("create")
+        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps", assert_error=True)
+        assert "The 'cmake_extra_find_casing_names' property can only contain names that differ in casing" in tc.out
+
+    def test_consumer_dependency_name_change(self):
+        tc = TestClient()
+        hello = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "1.0"
+
+            def package_info(self):
+                self.cpp_info.set_property("cmake_extra_find_casing_names", ["HellO"])
+        """)
+        tc.save({"hello/conanfile.py": hello})
+        tc.run("create hello")
+
+        conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeConfigDeps
+
+        class Consumer(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            requires = "hello/1.0"
+            def generate(self):
+                deps = CMakeConfigDeps(self)
+                deps.set_property("hello", "cmake_file_name", "greetings")
+                deps.generate()
+        """)
+
+        tc.save({"conanfile.py": conanfile})
+        tc.run("install", assert_error=True)
+        assert "The 'cmake_extra_find_casing_names' property can only contain names that differ in casing" in tc.out

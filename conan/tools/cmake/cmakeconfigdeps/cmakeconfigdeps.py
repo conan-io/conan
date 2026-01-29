@@ -297,40 +297,49 @@ class _PathGenerator:
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
             cmake_find_mode = cmake_find_mode.lower()
 
-            pkg_name = self._cmakedeps.get_cmake_filename(dep)
-            # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
-            if cmake_find_mode == FIND_MODE_NONE:
-                cps = glob.glob(os.path.join(dep.package_folder, f"**/{pkg_name}.cps"),
-                                recursive=True)
-                if cps:
-                    loc = os.path.dirname(os.path.join(dep.package_folder, cps[0]))
-                    loc = loc.replace("\\", "/")
-                    pkg_paths[pkg_name] = relativize_path(loc, self._conanfile,
-                                                          "${CMAKE_CURRENT_LIST_DIR}")
+            cmake_filename = self._cmakedeps.get_cmake_filename(dep)
+            extra_casings = self._cmakedeps.get_property("cmake_extra_find_casing_names", dep, check_type=list) or []
+            if any(cmake_filename.lower() != extra_casing.lower() for extra_casing in extra_casings):
+                # TODO: This can't be an exception. Changing the file name from the consumer would break it
+                # unless the cmake_extra_find_casing_names property is cleared
+                raise ConanException("The 'cmake_extra_find_casing_names' property can only contain "
+                                     "names that differ in casing with respect to the "
+                                     "'cmake_file_name' property.")
+            pkg_names = [cmake_filename] + extra_casings
+            for pkg_name in pkg_names:
+                # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
+                if cmake_find_mode == FIND_MODE_NONE:
+                    cps = glob.glob(os.path.join(dep.package_folder, f"**/{pkg_name}.cps"),
+                                    recursive=True)
+                    if cps:
+                        loc = os.path.dirname(os.path.join(dep.package_folder, cps[0]))
+                        loc = loc.replace("\\", "/")
+                        pkg_paths[pkg_name] = relativize_path(loc, self._conanfile,
+                                                              "${CMAKE_CURRENT_LIST_DIR}")
+                        continue
+
+                    try:
+                        # This is irrespective of the components, it should be in the root cpp_info
+                        # To define the location of the pkg-config.cmake file
+                        build_dir = dep.cpp_info.builddirs[0]
+                    except IndexError:
+                        build_dir = dep.package_folder
+                    pkg_folder = build_dir.replace("\\", "/") if build_dir else None
+                    if pkg_folder:
+                        f = self._cmakedeps.get_cmake_filename(dep)
+                        for filename in (f"{f}-config.cmake", f"{f}Config.cmake"):
+                            if os.path.isfile(os.path.join(pkg_folder, filename)):
+                                pkg_paths[pkg_name] = relativize_path(pkg_folder, self._conanfile,
+                                                                      "${CMAKE_CURRENT_LIST_DIR}")
+
+                        existing_paths = pkg_paths_multi.setdefault(pkg_name, [])
+                        if pkg_folder not in existing_paths:
+                            existing_paths.append(pkg_folder)
                     continue
 
-                try:
-                    # This is irrespective of the components, it should be in the root cpp_info
-                    # To define the location of the pkg-config.cmake file
-                    build_dir = dep.cpp_info.builddirs[0]
-                except IndexError:
-                    build_dir = dep.package_folder
-                pkg_folder = build_dir.replace("\\", "/") if build_dir else None
-                if pkg_folder:
-                    f = self._cmakedeps.get_cmake_filename(dep)
-                    for filename in (f"{f}-config.cmake", f"{f}Config.cmake"):
-                        if os.path.isfile(os.path.join(pkg_folder, filename)):
-                            pkg_paths[pkg_name] = relativize_path(pkg_folder, self._conanfile,
-                                                                  "${CMAKE_CURRENT_LIST_DIR}")
-
-                    existing_paths = pkg_paths_multi.setdefault(pkg_name, [])
-                    if pkg_folder not in existing_paths:
-                        existing_paths.append(pkg_folder)
-                continue
-
-            # If CMakeDeps generated, the folder is this one
-            # content.append(f'set({pkg_name}_ROOT "{gen_folder}")')
-            pkg_paths[pkg_name] = "${CMAKE_CURRENT_LIST_DIR}"
+                # If CMakeDeps generated, the folder is this one
+                # content.append(f'set({pkg_name}_ROOT "{gen_folder}")')
+                pkg_paths[pkg_name] = "${CMAKE_CURRENT_LIST_DIR}"
 
         # CMAKE_PROGRAM_PATH | CMAKE_LIBRARY_PATH | CMAKE_INCLUDE_PATH
         cmake_program_path = self._get_cmake_paths([(req, dep) for req, dep in all_reqs if req.direct], "bindirs")
