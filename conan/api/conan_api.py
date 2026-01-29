@@ -1,7 +1,7 @@
 import os
 import sys
 
-from conan.api.output import init_colorama
+from conan.api.output import init_colorama, ConanOutput
 from conan.api.subapi.audit import AuditAPI
 from conan.api.subapi.cache import CacheAPI
 from conan.api.subapi.command import CommandAPI
@@ -46,6 +46,9 @@ class ConanAPI:
         version = sys.version_info
         if version.major == 2 or version.minor < 7:
             raise ConanException("Conan needs Python >= 3.7")
+        if version.minor == 7:
+            ConanOutput().warning("Python 3.7 support in Conan is deprecated, please update Python",
+                                  warn_tag="deprecated")
         if cache_folder is not None and not os.path.isabs(cache_folder):
             raise ConanException("cache_folder has to be an absolute path")
 
