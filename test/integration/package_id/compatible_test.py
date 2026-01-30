@@ -985,13 +985,14 @@ class TestCompatibleFlags:
                         return [{"settings": [("os", "Linux")]}]
 
                 def package_info(self):
-                    def myflags(conanfile):
-                        if conanfile.settings.get_safe("os") == "Windows":
-                            return ["-mywinflag"]
-                        elif conanfile.settings.get_safe("os") == "Linux":
-                            return ["-mylinuxflag"]
-                        else:
-                            return ["-other-os-flag"]
+                    myflags = {
+                                "settings.os": {
+                                    "Windows": {
+                                        "settings.compiler": ["-mywinflag"],
+                                    "Linux": ["-mylinuxflag"],
+                                    "*": ["-other-os-flag"]
+                                }
+                    }
                     self.cpp_info.cxxflags = myflags
                     self.cpp_info.cflags = myflags
                     self.cpp_info.sharedlinkflags = myflags
