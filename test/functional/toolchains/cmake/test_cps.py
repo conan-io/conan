@@ -607,6 +607,10 @@ def test_cps_roundtrips():
                 rounded_cpp_info_second_cps = CPS.load("{c.current_folder}/mypkg.cps").to_conan()
                 assert self.cpp_info.libs == rounded_cpp_info_second_cps.libs
                 assert self.cpp_info.defines == rounded_cpp_info_second_cps.defines
+                # TODO: This should work!
+                # original_cpp_info = self.cpp_info.serialize()
+                # arounded_cpp_info = rounded_cpp_info_second_cps.serialize()
+                # assert original_cpp_info == arounded_cpp_info
 
         """)
 
