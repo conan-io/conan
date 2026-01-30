@@ -359,7 +359,7 @@ class GraphBinariesAnalyzer:
 
         if node.recipe == RECIPE_EDITABLE:
             # TODO: Check what happens when editable is passed an Invalid configuration
-            if build_mode.editable or self._evaluate_build(node, build_mode) or \
+            if build_mode.editable(node.conanfile) or self._evaluate_build(node, build_mode) or \
                     build_mode.should_build_missing(node.conanfile):
                 node.binary = BINARY_EDITABLE_BUILD
             else:
@@ -492,11 +492,6 @@ class GraphBinariesAnalyzer:
             test_mode = BuildMode(build_mode_test)
             mainprefs = [str(n.pref) for n in tested_graph.nodes
                          if n.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL)]
-
-        if main_mode.cascade:
-            ConanOutput().warning("Using build-mode 'cascade' is generally inefficient and it "
-                                  "shouldn't be used. Use 'package_id' and 'package_id_modes' for"
-                                  "more efficient re-builds")
 
         def _evaluate_single(n):
             mode = main_mode if mainprefs is None or str(n.pref) in mainprefs else test_mode
