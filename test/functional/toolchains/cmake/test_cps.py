@@ -62,6 +62,8 @@ def test_cps(shared):
                     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
                     $<INSTALL_INTERFACE:include>)
 
+        target_compile_definitions(mypkg PUBLIC FOO BAR=42)
+
         set_target_properties(mypkg PROPERTIES PUBLIC_HEADER "include/mypkg.h")
         install(TARGETS mypkg EXPORT mypkg)
 
@@ -103,6 +105,7 @@ def test_cps(shared):
                 self.requires(self.tested_reference_str)
 
             def generate(self):
+                self.output.info(f"Dep defines: {self.dependencies[self.tested_reference_str].cpp_info.defines}")
                 deps = CMakeConfigDeps(self)
                 deps.set_property("mypkg", "cmake_find_mode", "none")
                 deps.generate()
@@ -127,6 +130,7 @@ def test_cps(shared):
             "test_package/CMakeLists.txt": test_cmake})
     c.run(f"create {shared_arg} --build=never")
     assert "mypkg/0.1: Hello World Release!" in c.out
+    assert "Dep defines: ['BAR=42', 'FOO']" in c.out
 
 
 @pytest.mark.tool("cmake", "4.2")
@@ -557,3 +561,77 @@ def test_pure_cmake_shared():
     print(cps)
     cps_release = c.load("mypkginstall/cps/mypkg@release.cps")
     print(cps_release)
+
+
+def test_cps_roundtrips():
+    c = TestClient()
+    c.run("new cmake_lib")
+    conanfile = textwrap.dedent(f"""\
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
+        from conan.cps import CPS
+        import glob
+
+        class mypkgRecipe(ConanFile):
+            name = "mypkg"
+            version = "0.1"
+            package_type = "library"
+
+            settings = "os", "compiler", "build_type", "arch"
+
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
+            options = {{"shared": [True, False], "fPIC": [True, False]}}
+            default_options = {{"shared": False, "fPIC": True}}
+            implements = ["auto_shared_fpic"]
+            generators = "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+
+            def package_info(self):
+                file_loc = glob.glob("**/mypkg.cps", recursive=True)
+                self.cpp_info = CPS.load(file_loc[0]).to_conan()
+
+                to_cps = CPS().from_conan(self)
+                to_cps.save("{c.current_folder}")
+
+                rounded_cpp_info_second_cps = CPS.load("{c.current_folder}/mypkg.cps").to_conan()
+                assert self.cpp_info.libs == rounded_cpp_info_second_cps.libs
+                assert self.cpp_info.defines == rounded_cpp_info_second_cps.defines
+
+        """)
+
+    cmake = textwrap.dedent("""\
+        cmake_minimum_required(VERSION 4.2)
+        project(mypkg CXX)
+
+        set(CMAKE_EXPERIMENTAL_EXPORT_PACKAGE_INFO "b80be207-778e-46ba-8080-b23bba22639e")
+
+        add_library(mypkg src/mypkg.cpp)
+        target_include_directories(mypkg PUBLIC
+                    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+                    $<INSTALL_INTERFACE:include>)
+
+        target_compile_definitions(mypkg PUBLIC FOO BAR=42)
+
+        set_target_properties(mypkg PROPERTIES PUBLIC_HEADER "include/mypkg.h")
+        install(TARGETS mypkg EXPORT mypkg)
+
+        install(PACKAGE_INFO mypkg EXPORT mypkg)
+        """)
+
+    # First, try with the standard mypkg-config.cmake consumption
+    c.save({"conanfile.py": conanfile,
+            "CMakeLists.txt": cmake})
+
+    c.run(f"create")
+    assert "mypkg/0.1: Hello World Release!" in c.out

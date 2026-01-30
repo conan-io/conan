@@ -102,6 +102,20 @@ class CPSComponent:
         cps_comp.link_languages = [langs[lang] for lang in cpp_info.languages or []]
         required = cpp_info.requires
         cps_comp.requires = [f":{c}" if "::" not in c else c.replace("::", ":") for c in required]
+
+        def definitions_from_conan(defines):
+            result = {}
+            for define in defines:
+                if "=" in define:
+                    k, v = define.split("=", 1)
+                    result[k] = v
+                else:
+                    result[define] = None
+            return result
+        cps_comp.definitions = {
+            langs.get(lang, "*"): definitions_from_conan(cpp_info.defines)
+            for lang in (cpp_info.languages or ["*"])
+        }
         return cps_comp
 
     def update(self, conf, conf_def):
@@ -228,11 +242,23 @@ class CPS:
                 basefile = basefile[3:]
             info.libs = [basefile]
 
+        def definitions(defs):
+            # # {"lang1": {"DEF: value", ...}, ...}
+            # TODO: C/CPP specific as per CPS spec
+            # "*" has less priority than specific language
+            aggregated = {
+                **defs.get("*", {}),
+                **defs.get("c", {}),
+                **defs.get("cpp", {}),
+            }
+            result = list(f"{k}={v}" if v is not None else k for k, v in aggregated.items())
+            return result
+
         cpp_info = CppInfo()
         if len(self.components) == 1:
             comp = next(iter(self.components.values()))
             cpp_info.includedirs = strip_prefix(comp.includes)
-            cpp_info.defines = comp.definitions
+            cpp_info.defines = definitions(comp.definitions)
             cpp_info.system_libs = comp.link_libraries
             # requires for 1 component packages are automatic in Conan with self.requires()
             if comp.link_location:
@@ -248,7 +274,7 @@ class CPS:
             for comp_name, comp in self.components.items():
                 cpp_comp = cpp_info.components[comp_name]
                 cpp_comp.includedirs = strip_prefix(comp.includes)
-                cpp_comp.defines = comp.definitions
+                cpp_comp.defines = definitions(comp.definitions)
                 if comp.link_location:
                     link_location = comp.link_location
                     lib_location(link_location, cpp_comp)
