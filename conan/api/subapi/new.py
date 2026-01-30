@@ -81,7 +81,7 @@ class NewAPI:
 
     @staticmethod
     def get_builtin_template(template_name):
-        from conan.internal.api.new.basic import basic_file
+        from conan.internal.api.new.basic import basic_file, basic_default_file
         from conan.internal.api.new.alias_new import alias_file
         from conan.internal.api.new.cmake_exe import cmake_exe_files
         from conan.internal.api.new.cmake_lib import cmake_lib_files
@@ -101,6 +101,8 @@ class NewAPI:
         from conan.internal.api.new.local_recipes_index import local_recipes_index_files
         from conan.internal.api.new.qbs_lib import qbs_lib_files
         from conan.internal.api.new.workspace import workspace_files
+        if not template_name:
+            return basic_default_file
         new_templates = {"basic": basic_file,
                          "cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,

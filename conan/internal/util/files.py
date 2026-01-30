@@ -10,6 +10,7 @@ import time
 
 from contextlib import contextmanager
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 
 _DIRTY_FOLDER = ".dirty"
@@ -104,15 +105,15 @@ def _generic_algorithm_sum(file_path, algorithm_name):
         return m.hexdigest()
 
 
-def check_with_algorithm_sum(algorithm_name, file_path, signature):
-    real_signature = _generic_algorithm_sum(file_path, algorithm_name)
-    if real_signature != signature.lower():
-        raise ConanException("%s signature failed for '%s' file. \n"
-                             " Provided signature: %s  \n"
-                             " Computed signature: %s" % (algorithm_name,
+def check_with_algorithm_sum(algorithm_name, file_path, provided_hash):
+    real_hash = _generic_algorithm_sum(file_path, algorithm_name)
+    if real_hash != provided_hash.lower():
+        raise ConanException("%s hash failed for '%s' file. \n"
+                             " Provided hash: %s  \n"
+                             " Computed hash: %s" % (algorithm_name,
                                                           os.path.basename(file_path),
-                                                          signature,
-                                                          real_signature))
+                                                          provided_hash,
+                                                          real_hash))
 
 
 def save(path, content, encoding="utf-8"):
@@ -183,6 +184,24 @@ def _change_permissions(func, path, exc_info):
 
 
 if platform.system() == "Windows":
+    def atomic_replace(src, dst, item):
+        retries = 3
+        delay = 0.5
+        for i in range(retries):
+            try:
+                os.replace(src, dst)  # ATOMIC!!!
+                return
+            except OSError as e:
+                msg = ("The os.replace() to put this item in the package storage has failed.\n"
+                       "If you have an antivirus, try to exclude the "
+                       "Conan cache from the antivirus software."
+                       f"    Item: {item}\n    Error: {e}")
+                if i == retries - 1:
+                    raise ConanException(msg)
+                ConanOutput().warning(msg)
+                time.sleep(delay)
+
+
     def rmdir(path):
         if not os.path.isdir(path):
             return
@@ -216,6 +235,16 @@ if platform.system() == "Windows":
                                          "Close any app using it and retry.")
                 time.sleep(delay)
 else:
+    def atomic_replace(src, dst, item):
+        try:
+            os.replace(src, dst)  # ATOMIC!!!
+        except OSError as e:
+            msg = ("The os.replace() to put this item in the package storage has failed. Maybe"
+                   f"there was a concurrent process that did it first.\n"
+                   f"    Item: {item}\n    Msg: {e}")
+            raise ConanException(msg)
+
+
     def rmdir(path):
         if not os.path.isdir(path):
             return
