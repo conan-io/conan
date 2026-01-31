@@ -1053,10 +1053,10 @@ class TestCompatibleFlags:
 
             class Pkg(ConanFile):
                 def layout(self):
-                    self.cpp.source.cxxflags = lambda c: ["-mywineditflag"] if is_msvc(c) else []
+                    self.cpp.source.cxxflags = {"settings.compiler": {"msvc": ["-mywineditflag"]}}
 
                 def package_info(self):
-                    self.cpp_info.cxxflags = lambda c: ["-mywinflag"] if is_msvc(c) else []
+                    self.cpp_info.cxxflags = {"settings.compiler": {"msvc": ["-mywinflag"]}}
            """)
         consumer = textwrap.dedent("""
             from conan import ConanFile
@@ -1088,7 +1088,7 @@ class TestCompatibleFlags:
 
             class Pkg(ConanFile):
                 def package_info(self):
-                    self.cpp_info.cxxflags = lambda c: ["-mywinflag"] if is_msvc(c) else []
+                    self.cpp_info.cxxflags = {"settings.compiler": {"msvc": ["-mywinflag"]}}
            """)
         consumer = textwrap.dedent("""
             from conan import ConanFile
@@ -1119,13 +1119,13 @@ class TestCompatibleFlags:
 
             class Pkg(ConanFile):
                 def package_info(self):
-                    def myflags(conanfile):
-                        if conanfile.settings.get_safe("os") == "Windows":
-                            return ["-mywinflag"]
-                        elif conanfile.settings.get_safe("os") == "Linux":
-                            return ["-mylinuxflag"]
-                        else:
-                            return ["-other-os-flag"]
+                    myflags = {
+                                "settings.os": {
+                                    "Windows": ["-mywinflag"],
+                                    "Linux": ["-mylinuxflag"],
+                                    "*": ["-other-os-flag"]
+                                }
+                    }
                     self.cpp_info.cxxflags = myflags
            """)
         consumer = textwrap.dedent("""

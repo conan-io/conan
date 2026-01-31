@@ -482,8 +482,6 @@ class _Component:
     def get_init(self, attribute, default):
         # Similar to dict.setdefault
         item = getattr(self, attribute)
-        if isinstance(item, dict):
-            return self._evaluate_cond(item, self._consumer_conanfile)
         if item is not None:
             return item
         setattr(self, attribute, default)
@@ -501,13 +499,26 @@ class _Component:
             other_values = getattr(other, varname)
             if other_values is not None:
                 if not overwrite:
-                    if isinstance(other_values, dict):
-                        other_values = self._evaluate_cond(other_values, other._consumer_conanfile)
-                    current_values = self.get_init(varname, [])
-                    merge_list(other_values, current_values)
+                    if other._consumer_conanfile is None:  # package_info() editable merge
+                        assert self._consumer_conanfile is None
+                        if isinstance(other_values, dict) or isinstance(getattr(self, varname), dict):
+                            # overwite, dicts cannot be merged
+                            setattr(self, varname, other_values)
+                        else:
+                            current_values = self.get_init(varname, [])
+                            merge_list(other_values, current_values)
+                    else:  # component aggregation merge, lists can be evaluated
+                        if isinstance(other_values, dict):
+                            other_values = self._evaluate_cond(other_values,
+                                                               other._consumer_conanfile)
+                        current_values = getattr(self, varname) or []
+                        if isinstance(current_values, dict):
+                            current_values = self._evaluate_cond(current_values,
+                                                                 self._consumer_conanfile)
+                        merge_list(other_values, current_values)
+                        setattr(self, varname, current_values)
                 else:
                     setattr(self, varname, other_values)
-                c = getattr(self, varname)
 
         for varname in _SINGLE_VALUE_VARS:  # To allow editable of .exe/.location
             other_values = getattr(other, varname)
