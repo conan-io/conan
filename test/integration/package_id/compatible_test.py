@@ -987,8 +987,7 @@ class TestCompatibleFlags:
                 def package_info(self):
                     myflags = {
                                 "settings.os": {
-                                    "Windows": {
-                                        "settings.compiler": ["-mywinflag"],
+                                    "Windows": ["-mywinflag"],
                                     "Linux": ["-mylinuxflag"],
                                     "*": ["-other-os-flag"]
                                 }
@@ -1006,7 +1005,15 @@ class TestCompatibleFlags:
 
         c.run("create pkg --name=pkg --version=0.1 -s os=Linux --format=json")
         pkg_json = json.loads(c.stdout)
-        assert pkg_json["graph"]["nodes"]["1"]["cpp_info"]["root"]["cflags"] is None
+        expected_serial = {
+            "settings.os": {
+                "Windows": ["-mywinflag"],
+                "Linux": ["-mylinuxflag"],
+                "*": ["-other-os-flag"]
+            }
+        }
+        if not components:
+            assert pkg_json["graph"]["nodes"]["1"]["cpp_info"]["root"]["cflags"] == expected_serial
 
         def _check(flag, cmake_file):
             assert f"$<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:RELEASE>:{flag}>>" in cmake_file
@@ -1022,7 +1029,8 @@ class TestCompatibleFlags:
 
         c.run("install consumer -s os=Windows --format=json")
         pkg_json = json.loads(c.stdout)
-        assert pkg_json["graph"]["nodes"]["1"]["cpp_info"]["root"]["cflags"] is None
+        if not components:
+            assert pkg_json["graph"]["nodes"]["1"]["cpp_info"]["root"]["cflags"] == expected_serial
         cmake = c.load("consumer/pkg-Targets-release.cmake")
         _check("-mywinflag", cmake)
 

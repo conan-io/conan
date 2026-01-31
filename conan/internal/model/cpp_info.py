@@ -139,6 +139,35 @@ class _Component:
         }
 
     @staticmethod
+    def _evaluate_cond(definitions, conanfile):
+        """
+        Evaluate conditional definitions against the consumer conanfile.
+        definitions: dict with a single key (e.g. "settings.os", "options.shared") mapping to
+                     either a dict of value->nested_definitions or value->list (final result).
+        Returns the list of items that match the consumer's settings/options.
+        """
+        assert isinstance(definitions, dict)
+        assert len(definitions) == 1, definitions
+        condition, values = next(iter(definitions.items()))
+        # One condition key per level (e.g. "settings.os")
+
+        assert isinstance(values, dict)
+        if condition.startswith("settings."):
+            setting_key = condition[len("settings."):]
+            value = conanfile.settings.get_safe(setting_key)
+        else:
+            assert condition.startswith("options.")
+            option_key = condition[len("options."):]
+            value = conanfile.options.get_safe(option_key)
+
+        result = values.get(value) or values.get("*")
+        if isinstance(result, list):
+            return result
+        if isinstance(result, dict):
+            return _Component._evaluate_cond(result, conanfile)
+        return []
+
+    @staticmethod
     def deserialize(contents):
         result = _Component()
         for field, value in contents.items():
@@ -340,8 +369,8 @@ class _Component:
 
     @property
     def cflags(self):
-        if callable(self._cflags):
-            return self._cflags(self._consumer_conanfile)
+        if isinstance(self._cflags, dict):
+            return self._evaluate_cond(self._cflags, self._consumer_conanfile)
         if self._cflags is None:
             self._cflags = []
         return self._cflags
@@ -352,8 +381,8 @@ class _Component:
 
     @property
     def cxxflags(self):
-        if callable(self._cxxflags):
-            return self._cxxflags(self._consumer_conanfile)
+        if isinstance(self._cxxflags, dict):
+            return self._evaluate_cond(self._cxxflags, self._consumer_conanfile)
         if self._cxxflags is None:
             self._cxxflags = []
         return self._cxxflags
@@ -364,8 +393,8 @@ class _Component:
 
     @property
     def sharedlinkflags(self):
-        if callable(self._sharedlinkflags):
-            return self._sharedlinkflags(self._consumer_conanfile)
+        if isinstance(self._sharedlinkflags, dict):
+            return self._evaluate_cond(self._sharedlinkflags, self._consumer_conanfile)
         if self._sharedlinkflags is None:
             self._sharedlinkflags = []
         return self._sharedlinkflags
@@ -376,8 +405,8 @@ class _Component:
 
     @property
     def exelinkflags(self):
-        if callable(self._exelinkflags):
-            return self._exelinkflags(self._consumer_conanfile)
+        if isinstance(self._exelinkflags, dict):
+            return self._evaluate_cond(self._exelinkflags, self._consumer_conanfile)
         if self._exelinkflags is None:
             self._exelinkflags = []
         return self._exelinkflags
@@ -453,8 +482,8 @@ class _Component:
     def get_init(self, attribute, default):
         # Similar to dict.setdefault
         item = getattr(self, attribute)
-        if callable(item):
-            return item(self._consumer_conanfile)
+        if isinstance(item, dict):
+            return self._evaluate_cond(item, self._consumer_conanfile)
         if item is not None:
             return item
         setattr(self, attribute, default)
@@ -472,16 +501,13 @@ class _Component:
             other_values = getattr(other, varname)
             if other_values is not None:
                 if not overwrite:
-                    if (callable(other_values) and other._consumer_conanfile is None) or \
-                           (callable(getattr(self, varname)) and self._consumer_conanfile is None):
-                        setattr(self, varname, other_values)
-                    else:
-                        if callable(other_values):
-                            other_values = other_values(other._consumer_conanfile)
-                        current_values = self.get_init(varname, [])
-                        merge_list(other_values, current_values)
+                    if isinstance(other_values, dict):
+                        other_values = self._evaluate_cond(other_values, other._consumer_conanfile)
+                    current_values = self.get_init(varname, [])
+                    merge_list(other_values, current_values)
                 else:
                     setattr(self, varname, other_values)
+                c = getattr(self, varname)
 
         for varname in _SINGLE_VALUE_VARS:  # To allow editable of .exe/.location
             other_values = getattr(other, varname)
