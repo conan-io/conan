@@ -283,10 +283,8 @@ class DockerRunner:
         # Update conan command and some paths to run inside the container
         self.raw_args[self.raw_args.index(self.args.path)] = self.abs_docker_path
         command_list = [f'conan {self.command}'] + [f'"{raw_arg}"' if ' ' in raw_arg else raw_arg for raw_arg in self.raw_args]
-        if self.args.format != "json":
-            command_list.append('-f json > create.json')
-        else:
-            command_list.append('> create.json')
+        format_json = "> create.json" if self.args.format == "json" else "-f json > create.json"
+        command_list.append(format_json)
         self.command = ' '.join(command_list)
 
         if self.cache == 'shared':
