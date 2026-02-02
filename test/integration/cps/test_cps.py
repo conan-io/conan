@@ -194,7 +194,8 @@ def test_cps_merge():
         "components": {
             "mypkg":{
                 "includes": ["@prefix@/include"],
-                "type": "archive"
+                "type": "archive",
+                "definitions": { "*": {"MY_DEFINE": null }}
             }
         },
         "cps_path": "@prefix@/cps",
@@ -222,6 +223,7 @@ def test_cps_merge():
     assert mypkg["location"] == "@prefix@/lib/mypkg.lib"
     assert mypkg["type"] == "archive"
     assert mypkg["link_languages"] == ["cpp"]
+    assert mypkg["definitions"] == {'*': {'MY_DEFINE': None}}
 
 
 def test_extended_cpp_info():
@@ -235,6 +237,7 @@ def test_extended_cpp_info():
                 self.cpp_info.libs = ["mylib"]
                 self.cpp_info.location = "my_custom_location"
                 self.cpp_info.type = "static-library"
+                self.cpp_info.defines = ["MY_DEFINE", "MY_OTHER_DEFINE=1"]
             """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
@@ -248,3 +251,4 @@ def test_extended_cpp_info():
     pkg_comp = pkg["components"]["pkg"]
     assert pkg_comp["type"] == "archive"
     assert pkg_comp["location"] == "my_custom_location"
+    assert pkg_comp["definitions"] == {'*': {'MY_DEFINE': None, 'MY_OTHER_DEFINE': '1'}}

@@ -116,7 +116,7 @@ class CPSComponent:
         cps_comp.definitions = {
             langs.get(lang, "*"): definitions_from_conan(cpp_info.defines)
             for lang in (cpp_info.languages or ["*"])
-        }
+        } if cpp_info.defines else {}
         return cps_comp
 
     def update(self, conf, conf_def):
