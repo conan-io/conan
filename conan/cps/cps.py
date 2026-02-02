@@ -36,7 +36,7 @@ class CPSComponent:
     def __init__(self, component_type=None):
         self.includes = []
         self.type = component_type or "unknown"
-        self.definitions = []
+        self.definitions = {}
         self.requires = []
         self.link_requires = []
         self.location = None
@@ -71,7 +71,7 @@ class CPSComponent:
         comp.requires = data.get("requires", [])
         comp.link_requires = data.get("link_requires", [])
         comp.includes = data.get("includes", [])
-        comp.definitions = data.get("definitions", [])
+        comp.definitions = data.get("definitions", {})
         comp.location = data.get("location")
         comp.link_location = data.get("link_location")
         comp.link_libraries = data.get("link_libraries", [])
@@ -80,9 +80,19 @@ class CPSComponent:
 
     @staticmethod
     def from_cpp_info(cpp_info, conanfile, libname=None):
+        def definitions_from_conan(defines):
+            result = {}
+            for define in defines:
+                if "=" in define:
+                    k, v = define.split("=", 1)
+                    result[k] = v
+                else:
+                    result[define] = None
+            return result
+
         cps_comp = CPSComponent()
         if not libname:
-            cps_comp.definitions = cpp_info.defines
+            cps_comp.definitions = definitions_from_conan(cpp_info.defines)
             cps_comp.includes = [x.replace("\\", "/") for x in cpp_info.includedirs]
 
         if not cpp_info.libs:
@@ -103,15 +113,6 @@ class CPSComponent:
         required = cpp_info.requires
         cps_comp.requires = [f":{c}" if "::" not in c else c.replace("::", ":") for c in required]
 
-        def definitions_from_conan(defines):
-            result = {}
-            for define in defines:
-                if "=" in define:
-                    k, v = define.split("=", 1)
-                    result[k] = v
-                else:
-                    result[define] = None
-            return result
         cps_comp.definitions = {
             langs.get(lang, "*"): definitions_from_conan(cpp_info.defines)
             for lang in (cpp_info.languages or ["*"])
@@ -243,7 +244,6 @@ class CPS:
             info.libs = [basefile]
 
         def definitions(defs):
-            # # {"lang1": {"DEF: value", ...}, ...}
             # TODO: C/CPP specific as per CPS spec
             # "*" has less priority than specific language
             aggregated = {
@@ -271,6 +271,7 @@ class CPS:
                 location = comp.location
                 lib_location(location, cpp_info)
         else:
+            cpp_info.default_components = self.default_components
             for comp_name, comp in self.components.items():
                 cpp_comp = cpp_info.components[comp_name]
                 cpp_comp.includedirs = strip_prefix(comp.includes)
