@@ -837,8 +837,11 @@ class TestExtraFindCasingNames:
         """)
         tc.save({"conanfile.py": conanfile})
         tc.run("create")
-        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps", assert_error=True)
-        assert "The 'cmake_extra_find_casing_names' property can only contain names that differ in casing" in tc.out
+        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps")
+        paths_content = tc.load("conan_cmakedeps_paths.cmake")
+        assert "set(hello_DIR" in paths_content
+        # This exists, but it won't work, the config file will have the original name
+        assert "set(Bye!_DIR" in paths_content
 
     def test_consumer_dependency_name_change(self):
         """ If the consumer changes the dependency name via
@@ -872,12 +875,12 @@ class TestExtraFindCasingNames:
 
         tc.save({"conanfile.py": conanfile})
         tc.run("install")
-        assert "The 'cmake_extra_find_casing_names' property can only contain names that differ in casing" not in tc.out
         paths_content = tc.load("conan_cmakedeps_paths.cmake")
         assert "set(greetings_DIR" in paths_content
-        # But the old casing names are not generated
-        assert "set(HellO_DIR" not in paths_content
-        # Nor the original name, just in case
+        # But the old casing names are also generated, even though they won't work
+        # as the config file is named greetings-config.cmake
+        assert "set(HellO_DIR" in paths_content
+        # The original name is not created in any case either way
         assert "set(hello_DIR" not in paths_content
 
     def test_generated_dir_none_find_mode_multi_entries(self):

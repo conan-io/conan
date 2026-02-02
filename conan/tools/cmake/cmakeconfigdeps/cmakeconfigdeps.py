@@ -304,15 +304,8 @@ class _PathGenerator:
             cmake_find_mode = cmake_find_mode.lower()
 
             cmake_filename = self._cmakedeps.get_cmake_filename(dep)
-            pkg_names = [cmake_filename]
-            if not self._cmakedeps.has_overwritten_property("cmake_file_name", dep):
-                extra_casings = self._cmakedeps.get_property("cmake_extra_find_casing_names", dep, check_type=list) or []
-
-                if any(cmake_filename.lower() != extra_casing.lower() for extra_casing in extra_casings):
-                    raise ConanException("The 'cmake_extra_find_casing_names' property can only contain "
-                                         "names that differ in casing with respect to the "
-                                         "'cmake_file_name' property.")
-                pkg_names = set(pkg_names + extra_casings)
+            extra_casings = self._cmakedeps.get_property("cmake_extra_find_casing_names", dep, check_type=list) or []
+            pkg_names = set([cmake_filename] + extra_casings)
             # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
             if cmake_find_mode == FIND_MODE_NONE:
                 cps = glob.glob(os.path.join(dep.package_folder, f"**/{cmake_filename}.cps"),
