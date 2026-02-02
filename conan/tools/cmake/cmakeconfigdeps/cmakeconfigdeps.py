@@ -182,12 +182,6 @@ class CMakeConfigDeps:
             if comp is not None:
                 return comp.get_property(prop, check_type=check_type)
 
-    def has_overwritten_property(self, prop, dep, comp_name=None):
-        dep_name = dep.ref.name
-        build_suffix = "&build" if dep.context == "build" else ""
-        dep_comp = f"{str(dep_name)}::{comp_name}" if comp_name else f"{str(dep_name)}"
-        return prop in self._properties.get(f"{dep_comp}{build_suffix}", {})
-
     def get_cmake_filename(self, dep):
         # Get the name of the file for the find_package(XXX)
         # This is used by CMakeDeps to determine:
