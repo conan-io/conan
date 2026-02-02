@@ -86,6 +86,9 @@ class DockerRunner:
         self.build_profile = build_profile
         self.abs_host_path = self._get_abs_host_path(args.path)
         self.args = args
+        if args.format and args.format not in ['json', 'j']:
+            raise ConanException("format argument is forbidden if running in a docker runner")
+
         self.configfile = _ContainerConfig.load(host_profile.runner.get('configfile'))
         self.dockerfile = host_profile.runner.get('dockerfile') or self.configfile.build.dockerfile
         self.docker_build_context = host_profile.runner.get('build_context') or self.configfile.build.build_context
