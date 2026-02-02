@@ -1703,6 +1703,7 @@ def test_find_package_extra_casings():
     assert "Found hello!" not in client.out
 
 
+@pytest.mark.tool("cmake", "3.27")
 def test_find_package_extra_casings_name_missmatch():
     tc = TestClient()
     hello = textwrap.dedent("""
@@ -1743,5 +1744,5 @@ def test_find_package_extra_casings_name_missmatch():
     tc.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
     tc.run("build", assert_error=True)
     # This does not change the cmake file name, so only hello-config.cmake is generated
-    # so even though Bye_DIR exits, it can't find Bye-config.cmake because it was not generated
+    # so even though Bye_DIR exits, Bye-config.cmake was not generated so nothing is found
     assert 'Could not find a package configuration file provided by "Bye"' in tc.out
