@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.args import add_lockfile_args, add_common_install_arguments
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.export import common_args_export
@@ -63,7 +63,10 @@ def create(conan_api, parser, *args):
     print_profiles(profile_host, profile_build)
     runner = conan_api.command.get_runner(profile_host)
     if runner is not None:
-        return runner(conan_api, 'create', profile_host, profile_build, args, raw_args).run()
+        stdout_log, stderr_log = runner(conan_api, 'create', profile_host, profile_build, args, raw_args).run()
+        if args.format:  # if using json format, just output the stdout from the runner without reformatting
+            cli_out_write(stdout_log)
+        return None
 
     if args.build is not None and args.build_test is None:
         args.build_test = args.build

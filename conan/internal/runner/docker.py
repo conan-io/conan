@@ -4,6 +4,7 @@ import sys
 import json
 import platform
 import shutil
+import base64
 from typing import Optional, NamedTuple, Dict, List
 import yaml
 from conan.api.conan_api import ConanAPI
@@ -85,9 +86,6 @@ class DockerRunner:
         self.build_profile = build_profile
         self.abs_host_path = self._get_abs_host_path(args.path)
         self.args = args
-        if args.format:
-            raise ConanException("format argument is forbidden if running in a docker runner")
-
         self.configfile = _ContainerConfig.load(host_profile.runner.get('configfile'))
         self.dockerfile = host_profile.runner.get('dockerfile') or self.configfile.build.dockerfile
         self.docker_build_context = host_profile.runner.get('build_context') or self.configfile.build.build_context
@@ -106,7 +104,7 @@ class DockerRunner:
         self.command = command
         self.runner_logger = RunnerOutput(self.name)
 
-    def run(self) -> None:
+    def run(self) -> tuple[str, str]:
         """
         Run conan inside a Docker container
         """
@@ -114,7 +112,9 @@ class DockerRunner:
         self._start_container()
         try:
             self._init_container()
-            self._run_command(self.command)
+            stdout_log, stderr_log = self._run_command(self.command)
+            if self.args.format == "json":
+                stdout_log = self._read_file_from_container("create.json")
             self._update_local_cache()
         except RunnerException as e:
             raise ConanException(f'"{e.command}" inside docker fail')
@@ -127,6 +127,7 @@ class DockerRunner:
                 if self.remove:
                     log('Removing container')
                     self.container.remove()
+        return stdout_log, stderr_log
 
     def _initialize_docker_client(self):
         import docker
@@ -278,7 +279,12 @@ class DockerRunner:
 
         # Update conan command and some paths to run inside the container
         self.raw_args[self.raw_args.index(self.args.path)] = self.abs_docker_path
-        self.command = ' '.join([f'conan {self.command}'] + [f'"{raw_arg}"' if ' ' in raw_arg else raw_arg for raw_arg in self.raw_args] + ['-f json > create.json'])
+        command_list = [f'conan {self.command}'] + [f'"{raw_arg}"' if ' ' in raw_arg else raw_arg for raw_arg in self.raw_args]
+        if self.args.format != "json":
+            command_list.append('-f json > create.json')
+        else:
+            command_list.append('> create.json')
+        self.command = ' '.join(command_list)
 
         if self.cache == 'shared':
             volumes[self.conan_api.home_folder] = {'bind': f'/{self.docker_user_name}/.conan2', 'mode': 'rw'}
@@ -333,3 +339,24 @@ class DockerRunner:
             tgz_path = self.abs_runner_home_path / 'docker_cache_save.tgz'
             self.logger.status(f'Restore host cache from: {tgz_path}')
             self.conan_api.cache.restore(tgz_path)
+
+    def _read_file_from_container(self, filename: str) -> str:
+        """
+        Reads the content of a file from the Docker container's working directory.
+
+        :param: filename: Name of the file to read.
+        :return: Content of the file as a string.
+        :raises ConanException: If the file cannot be read or the container is not available.
+        """
+        if not self.container:
+            raise ConanException('The container is not running.')
+
+        try:
+            # Use base64 to avoid issues with special characters
+            read_cmd = f'base64 {filename}'
+            stdout, stderr = self._run_command(read_cmd, verbose=False)
+            content = base64.b64decode(stdout.strip()).decode('utf-8')
+            self.logger.verbose(f'File read from: {self.abs_docker_path}/{filename}')
+            return content
+        except Exception as e:
+            raise ConanException(f'Error reading the file "{filename}" from the container: {str(e)}')

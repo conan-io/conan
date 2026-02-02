@@ -44,10 +44,11 @@ def format_graph_dot(result):
 
 
 def format_graph_json(result):
-    graph = result["graph"]
-    field_filter = result.get("field_filter")
-    package_filter = result.get("package_filter")
-    serial = graph.serialize()
-    serial = filter_graph(serial, package_filter=package_filter, field_filter=field_filter)
-    json_result = json.dumps({"graph": serial}, indent=4)
-    cli_out_write(json_result)
+    if result:
+        graph = result["graph"]
+        field_filter = result.get("field_filter")
+        package_filter = result.get("package_filter")
+        serial = graph.serialize()
+        serial = filter_graph(serial, package_filter=package_filter, field_filter=field_filter)
+        json_result = json.dumps({"graph": serial}, indent=4)
+        cli_out_write(json_result)

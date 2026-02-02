@@ -1,3 +1,4 @@
+import json
 import textwrap
 import os
 import pytest
@@ -688,3 +689,47 @@ def test_create_docker_runner_in_subfolder():
 
     assert "Restore: pkg/1.0" in client.out
     assert "Removing container" in client.out
+
+
+@pytest.mark.docker_runner
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
+def test_docker_runner_json_format():
+    """
+    Tests the ``conan create . --format json``
+    """
+    client = TestClient()
+    profile_build = textwrap.dedent(f"""\
+    [settings]
+    arch={{{{ detect_api.detect_arch() }}}}
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    """)
+    profile_host = textwrap.dedent(f"""\
+    [settings]
+    arch={{{{ detect_api.detect_arch() }}}}
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=docker
+    dockerfile={dockerfile_path("Dockerfile_test")}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=copy
+    remove=True
+    """)
+    client.save({"host_from_profile": profile_host}, path = os.path.join(client.cache_folder, "profiles"))
+    client.save({"build_from_profile": profile_build}, path = os.path.join(client.cache_folder, "profiles"))
+    client.run("new cmake_lib -d name=pkg -d version=0.2")
+    client.run("create . -pr:h host_from_profile -pr:b build_from_profile --format json",
+               redirect_stdout="output.json")
+    output = json.loads(client.load("output.json"))
+    assert output["graph"]["nodes"]["0"]["ref"] == "conanfile"
+    assert output["graph"]["nodes"]["1"]["ref"] == "pkg/0.2#078c2d540c70638ecb4fc90d4d32df32"
