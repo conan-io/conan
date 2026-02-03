@@ -78,7 +78,7 @@ class _ContainerConfig(NamedTuple):
 
 
 class DockerRunner:
-    def __init__(self, conan_api: ConanAPI, command: str, host_profile: Profile, build_profile: Profile, args: Namespace, raw_args: list[str]):
+    def __init__(self, conan_api: ConanAPI, command: str, host_profile: Profile, build_profile: Profile, args: Namespace, raw_args: List[str]):
         self.logger = ConanOutput()
         self.docker_client = self._initialize_docker_client()
         self.docker_api = self.docker_client.api
@@ -219,7 +219,7 @@ class DockerRunner:
             raise ConanException(f'Imposible to run the container "{self.name}" with image "{self.image}"'
                                  f'\n\n{str(e)}')
 
-    def _run_command(self, command: str, workdir: Optional[str] = None, verbose: bool = True) -> tuple[str, str]:
+    def _run_command(self, command: str, workdir: Optional[str] = None, verbose: bool = True) -> Tuple[str, str]:
         workdir = workdir or self.abs_docker_path
         log = self.runner_logger.status if verbose else self.runner_logger.verbose
         log(f'$ {command}', fg=Color.BLUE)
@@ -248,7 +248,7 @@ class DockerRunner:
             raise RunnerException(command=command, stdout_log=stdout_log, stderr_log=stderr_log)
         return stdout_log, stderr_log
 
-    def _get_volumes_and_docker_path(self) -> tuple[dict, str]:
+    def _get_volumes_and_docker_path(self) -> Tuple[dict, str]:
         app = ConanApp(self.conan_api)
         remotes = self.conan_api.remotes.list(self.args.remote) if not self.args.no_remote else []
         conanfile = app.loader.load_consumer(self.abs_host_path / "conanfile.py", remotes=remotes)
@@ -272,7 +272,7 @@ class DockerRunner:
         volumes = {self.abs_host_path: {'bind': abs_docker_path, 'mode': 'rw'}}
         return volumes, abs_docker_path
 
-    def _create_runner_environment(self) -> tuple[dict, dict]:
+    def _create_runner_environment(self) -> Tuple[dict, dict]:
         # Runner configuration
         self.abs_runner_home_path = self.abs_host_path / '.conanrunner'
         self.docker_user_name = self.configfile.run.user or 'root'
