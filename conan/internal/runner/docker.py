@@ -5,7 +5,7 @@ import json
 import platform
 import shutil
 import base64
-from typing import Optional, NamedTuple, Dict, List
+from typing import Optional, NamedTuple, Dict, List, Tuple
 import yaml
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern
@@ -107,7 +107,7 @@ class DockerRunner:
         self.command = command
         self.runner_logger = RunnerOutput(self.name)
 
-    def run(self) -> tuple[str, str]:
+    def run(self) -> Tuple[str, str]:
         """
         Run conan inside a Docker container
         """
