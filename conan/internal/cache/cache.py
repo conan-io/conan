@@ -15,7 +15,7 @@ from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, renamedir, mkdir, atomic_replace
+from conan.internal.util.files import rmdir, renamedir, mkdir
 
 
 class PkgCache:
@@ -183,6 +183,7 @@ class PkgCache:
 
     def create_pkg_layout(self, pref: PkgReference):
         """ called by:
+         - RemoteManager.get_package()
          - cache restore
         """
         assert pref.ref.revision, "Recipe revision must be known to create the package layout"
@@ -192,23 +193,6 @@ class PkgCache:
         self._db.create_package(package_path, pref, None)
         self._create_path(package_path, remove_contents=False)
         return PackageLayout(pref, os.path.join(self._base_folder, package_path))
-
-    def get_random_path(self):
-        random_id = str(uuid.uuid4())
-        # d=downloading area. Using short hashes to avoid lengthy paths with hyphens
-        return os.path.join(self._base_folder, "d", self._short_hash_path(random_id))
-
-    def create_atomic_pkg_layout(self, pref: PkgReference, current_folder):
-        """ called by:
-         - RemoteManager.get_package()
-        """
-        assert pref.ref.revision, "Recipe revision must be known to create the package layout"
-        assert pref.package_id, "Package id must be known to create the package layout"
-        assert pref.revision, "Package revision should be known to create the package layout"
-        package_path = self._get_path_pref(pref)
-        path = self._full_path(package_path)
-        atomic_replace(current_folder, path, f"{pref.repr_notime()} package")
-        self._db.create_package(package_path, pref, None)
 
     def update_recipe_timestamp(self, ref: RecipeReference):
         """ when the recipe already exists in cache, but we get a new timestamp from a server

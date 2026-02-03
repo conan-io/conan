@@ -144,10 +144,10 @@ class RemoteManager:
 
         assert pref.revision is not None
 
-        pkg_layout = PackageLayout(pref, self._cache.get_random_path())
-        mkdir(pkg_layout.metadata())
-        self._get_package(pkg_layout, pref, remote, output, metadata)
-        self._cache.create_atomic_pkg_layout(pref, pkg_layout.base_folder)
+        pkg_layout = self._cache.create_pkg_layout(pref)
+        with pkg_layout.set_dirty_context_manager():
+            mkdir(pkg_layout.metadata())
+            self._get_package(pkg_layout, pref, remote, output, metadata)
 
     def get_package_metadata(self, pref, remote, metadata):
         """
