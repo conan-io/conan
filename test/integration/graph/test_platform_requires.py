@@ -194,6 +194,16 @@ class TestPlatformRequiresLock:
         c.run("install . -pr=profile", assert_error=True)
         assert "ERROR: Requirement 'dep/1.2' not in lockfile" in c.out
 
+    def test_platform_requires_lockfile(self):
+        tc = TestClient(light=True)
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+                 "conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
+                 "profile": "[platform_requires]\ndep/1.0"})
+        tc.run("create dep")
+        tc.run("lock create")
+        # Using a lockfile with a locked ref that is now a platform_require fails
+        tc.run("install -pr=profile")
+
 
 class TestGenerators:
     def test_platform_requires_range(self):
