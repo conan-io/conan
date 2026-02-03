@@ -79,14 +79,6 @@ def _verify_files_checksums(signature_folder, files):
     expected_list = json.loads(manifest_content).get("files", [])
     expected_files = {item["file"]: item["sha256"] for item in expected_list}
 
-    # Warn in case there are missing files (like conan_sources.tgz not being downloaded)
-    manifest_files = set(expected_files.keys())
-    package_files = set(files.keys())
-    missing_files = manifest_files - package_files
-    if missing_files:
-        ConanOutput().warning("[Package sign] The following files are missing in the cache and "
-                              f"will not be verified: {', '.join(missing_files)}",)
-
     # This is checking that the files of the package exist in the manifest instead of the opposite
     # because some files might be missing such as conan_sources.tgz
     for filename, file_path in files.items():
