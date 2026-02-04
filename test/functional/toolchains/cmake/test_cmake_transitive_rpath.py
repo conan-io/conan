@@ -1,4 +1,4 @@
-from platform import platform
+import platform
 import textwrap
 import pytest
 
