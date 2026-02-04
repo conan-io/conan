@@ -126,11 +126,16 @@ def test_cps(shared):
                     self.run(cmd, env="conanrun")
             """)
     shutil.rmtree(os.path.join(c.current_folder, "test_package", "build"))
+    example_cpp = c.load(os.path.join("test_package", "src", "example.cpp"))
+    example_cpp = example_cpp.replace("#include <string>", '#include <string>\n#include <iostream>')
+    example_cpp = example_cpp.replace("mypkg();", 'mypkg();\nstd::cout << "BAR: " << BAR << std::endl;')
     c.save({"test_package/conanfile.py": test_conanfile,
-            "test_package/CMakeLists.txt": test_cmake})
+            "test_package/CMakeLists.txt": test_cmake,
+            "test_package/src/example.cpp": example_cpp})
     c.run(f"create {shared_arg} --build=never")
     assert "mypkg/0.1: Hello World Release!" in c.out
     assert "Dep defines: ['BAR=42', 'FOO']" in c.out
+    assert "BAR: 42" in c.out
 
 
 @pytest.mark.tool("cmake", "4.2")
