@@ -92,7 +92,7 @@ class CPSComponent:
 
         cps_comp = CPSComponent()
         if not libname:
-            cps_comp.definitions = definitions_from_conan(cpp_info.defines)
+            cps_comp.definitions = {"*": definitions_from_conan(cpp_info.defines)}
             cps_comp.includes = [x.replace("\\", "/") for x in cpp_info.includedirs]
 
         if not cpp_info.libs:
@@ -246,11 +246,10 @@ class CPS:
         def definitions(defs):
             # TODO: C/CPP specific as per CPS spec
             # "*" has less priority than specific language
-            aggregated = {
-                **defs.get("*", {}),
-                **defs.get("c", {}),
-                **defs.get("cpp", {}),
-            }
+            aggregated = {}
+            aggregated.update(defs.get("*", {}))
+            aggregated.update(defs.get("c", {}))
+            aggregated.update(defs.get("cpp", {}))
             result = list(f"{k}={v}" if v is not None else k for k, v in aggregated.items())
             return result
 
