@@ -80,6 +80,8 @@ class CPSComponent:
 
     @staticmethod
     def from_cpp_info(cpp_info, conanfile, libname=None):
+        cps_langs_mapping = {"C": "c", "C++": "cpp"}
+        comp_langs = cpp_info.languages or conanfile.languages or []
         def definitions_from_conan(defines):
             result = {}
             for define in defines:
@@ -92,7 +94,10 @@ class CPSComponent:
 
         cps_comp = CPSComponent()
         if not libname:
-            cps_comp.definitions = {"*": definitions_from_conan(cpp_info.defines)}
+            cps_comp.definitions = {
+                cps_langs_mapping.get(lang, "*"): definitions_from_conan(cpp_info.defines)
+                for lang in (comp_langs or ["*"])
+            } if cpp_info.defines else {}
             cps_comp.includes = [x.replace("\\", "/") for x in cpp_info.includedirs]
 
         if not cpp_info.libs:
@@ -108,14 +113,13 @@ class CPSComponent:
         cps_comp.location = cpp_info.location
         cps_comp.link_location = cpp_info.link_location
         cps_comp.link_libraries = cpp_info.system_libs
-        langs = {"C": "c", "C++": "cpp"}
-        cps_comp.link_languages = [langs[lang] for lang in cpp_info.languages or conanfile.languages or []]
+        cps_comp.link_languages = [cps_langs_mapping[lang] for lang in comp_langs]
         required = cpp_info.requires
         cps_comp.requires = [f":{c}" if "::" not in c else c.replace("::", ":") for c in required]
 
         cps_comp.definitions = {
-            langs.get(lang, "*"): definitions_from_conan(cpp_info.defines)
-            for lang in (cpp_info.languages or ["*"])
+            cps_langs_mapping.get(lang, "*"): definitions_from_conan(cpp_info.defines)
+            for lang in (comp_langs or ["*"])
         } if cpp_info.defines else {}
         return cps_comp
 
