@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 import pytest
@@ -179,5 +180,5 @@ def test_buildenv_priority_copy():
     c.run("export lib --name=alib")
     c.run("export lib --name=blib")
     c.run("install . -pr=profile -s os=Windows --build=missing")
-    assert "alib/1.0: [alib] CUSTOM_PATH=/common;/only_alib!!!" in c.out
+    assert f"alib/1.0: [alib] CUSTOM_PATH=/common{os.pathsep}/only_alib!!!" in c.out
     assert "blib/1.0: [blib] CUSTOM_PATH=/common!!!" in c.out
