@@ -109,7 +109,7 @@ class CPSComponent:
         cps_comp.link_location = cpp_info.link_location
         cps_comp.link_libraries = cpp_info.system_libs
         langs = {"C": "c", "C++": "cpp"}
-        cps_comp.link_languages = [langs[lang] for lang in cpp_info.languages or []]
+        cps_comp.link_languages = [langs[lang] for lang in cpp_info.languages or conanfile.languages or []]
         required = cpp_info.requires
         cps_comp.requires = [f":{c}" if "::" not in c else c.replace("::", ":") for c in required]
 

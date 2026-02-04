@@ -233,6 +233,7 @@ def test_extended_cpp_info():
         class Pkg(ConanFile):
             name = "pkg"
             version = "0.1"
+            languages = ["C++"]
             def package_info(self):
                 self.cpp_info.libs = ["mylib"]
                 self.cpp_info.location = "my_custom_location"
@@ -251,4 +252,5 @@ def test_extended_cpp_info():
     pkg_comp = pkg["components"]["pkg"]
     assert pkg_comp["type"] == "archive"
     assert pkg_comp["location"] == "my_custom_location"
-    assert pkg_comp["definitions"] == {'*': {'MY_DEFINE': None, 'MY_OTHER_DEFINE': '1'}}
+    assert pkg_comp["link_languages"] == ["cpp"]
+    assert pkg_comp["definitions"] == {'cpp': {'MY_DEFINE': None, 'MY_OTHER_DEFINE': '1'}}
