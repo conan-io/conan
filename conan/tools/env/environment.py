@@ -212,7 +212,8 @@ class Environment:
 
     def copy(self):
         e = Environment()
-        e._values = {k: v.copy() for k, v in self._values.items()}
+        for k, v in self._values.items():
+            e._values[k] = v.copy()
         return e
 
     def __repr__(self):
