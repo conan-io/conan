@@ -70,3 +70,167 @@ def test_cmake_transitive_rpath(use_cmake_config_deps):
         c.save({"src/main.cpp": bar_test,
                 "src/app.cpp": ""})
         c.run(f"create . -o '*:shared=True' -pr=default -pr=../extra_profile {extra_conf}")
+
+
+
+@pytest.mark.skipif(platform.system() != "Linux", reason="Linux/gcc required for -rpath/-rpath-link testing")
+@pytest.mark.parametrize("use_cmake_config_deps", [True, False])
+def test_cmake_transitive_rpath_private_internal(use_cmake_config_deps):
+    c = TestClient()
+
+    foo_h = textwrap.dedent("""
+        #pragma once
+        int foo(int x, int y);
+    """)
+    foo_cpp = textwrap.dedent("""
+        #include "foo.h"
+        int foo(int x, int y) {
+            return x + y;
+        }
+    """)
+    bar_h = textwrap.dedent("""
+        #pragma once
+        int bar(int x, int y);
+    """)
+    bar_cpp = textwrap.dedent("""
+        #include "bar.h"
+        #include "foo.h"
+        int bar(int x, int y) {
+            return foo(x, y) * 2;
+        }
+    """)
+
+    foobar_cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(foobar CXX)
+
+        add_library(foo src/foo.cpp)
+        target_include_directories(foo PUBLIC include)
+        set_target_properties(foo PROPERTIES PUBLIC_HEADER "include/foo.h")
+
+        add_library(bar src/bar.cpp)
+        target_include_directories(bar PUBLIC include)
+        set_target_properties(bar PROPERTIES PUBLIC_HEADER "include/bar.h")
+        target_link_libraries(bar PRIVATE foo)
+
+        install(TARGETS foo bar)
+    """)
+
+    foobar_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout
+
+
+        class foobarRecipe(ConanFile):
+            name = "foobar"
+            version = "1.0"
+            package_type = "library"
+            settings = "os", "compiler", "build_type", "arch"
+            options = {"shared": [True, False]}
+            default_options = {"shared": True}
+
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
+
+            generators = "CMakeDeps", "CMakeToolchain"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+
+            def package_info(self):
+                self.cpp_info.components["foo"].libs = ["foo"]
+                self.cpp_info.components["bar"].libs = ["bar"]
+                self.cpp_info.components["bar"].requires = ["foo"]
+    """)
+
+    consumer_conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMake, cmake_layout
+
+            class consumerRecipe(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                package_type = "library"
+                settings = "os", "compiler", "build_type", "arch"
+                options = {"shared": [True, False]}
+                default_options = {"shared": True}
+                generators = "CMakeDeps", "CMakeToolchain"
+                exports_sources = "CMakeLists.txt", "src/*", "include/*"
+
+                def layout(self):
+                    cmake_layout(self)
+                
+                def requirements(self):
+                    self.requires("foobar/1.0")
+
+                def build(self):
+                    cmake = CMake(self)
+                    cmake.configure()
+                    cmake.build()
+
+                def package(self):
+                    cmake = CMake(self)
+                    cmake.install()
+
+                def package_info(self):
+                    self.cpp_info.libs = ["consumer"]
+    """)
+
+    consumer_cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(consumer CXX)
+
+        find_package(foobar CONFIG REQUIRED)
+
+        add_library(consumer src/consumer.cpp)
+        target_include_directories(consumer PUBLIC include)
+        target_link_libraries(consumer PRIVATE ${foobar_LIBRARIES}) # foobar_LIBRARIES is foobar::foobar
+        set_target_properties(consumer PROPERTIES PUBLIC_HEADER "include/consumer.h")
+        install(TARGETS consumer)
+
+        add_executable(my_app src/my_app.cpp)
+        target_link_libraries(my_app PRIVATE consumer)
+    """)
+
+    consumer_cpp = textwrap.dedent("""
+    #include "consumer.h"
+    #include "bar.h"
+    int consumer(int x, int y) {return bar(x, y) * 2;}
+    """)
+
+    consumer_h = textwrap.dedent("""
+    #pragma once
+    int consumer(int x, int y);
+    """)
+
+    my_app_cpp = textwrap.dedent("""
+    #include "consumer.h"
+    int main() { return consumer(2, 3) == 20 ? 0 : 1; }
+    """)
+
+    extra_conf = "-c tools.cmake.cmakedeps:new=will_break_next" if use_cmake_config_deps else ""
+
+    with c.chdir("foobar"):
+        c.save({"include/foo.h": foo_h,
+                "include/bar.h": bar_h,
+                "src/foo.cpp": foo_cpp,
+                "src/bar.cpp": bar_cpp,
+                "CMakeLists.txt": foobar_cmakelists,
+                "conanfile.py": foobar_conanfile})
+        c.run(f"create . {extra_conf} ")
+
+    with c.chdir("consumer"):
+        c.save({"src/consumer.cpp": consumer_cpp,
+                "include/consumer.h": consumer_h,
+                "src/my_app.cpp": my_app_cpp,
+                "CMakeLists.txt": consumer_cmakelists,
+                "conanfile.py": consumer_conanfile})
+        c.run(f"create . {extra_conf}")
