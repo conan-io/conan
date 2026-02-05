@@ -8,6 +8,7 @@ from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Linux/gcc required for -rpath/-rpath-link testing")
+@pytest.mark.tool("cmake", "3.27")
 @pytest.mark.parametrize("use_cmake_config_deps", [True, False])
 def test_cmake_sysroot_transitive_rpath(use_cmake_config_deps):
     c = TestClient()
@@ -79,6 +80,7 @@ def test_cmake_sysroot_transitive_rpath(use_cmake_config_deps):
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Linux/gcc required for -rpath/-rpath-link testing")
+@pytest.mark.tool("cmake", "3.27")
 @pytest.mark.parametrize("use_cmake_config_deps", [True, False])
 def test_cmake_transitive_rpath_private_internal(use_cmake_config_deps):
     c = TestClient()
