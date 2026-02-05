@@ -9,13 +9,13 @@ from conan.test.utils.tools import TestClient
 @pytest.mark.tool("meson")
 @pytest.mark.tool("pkg_config")
 @pytest.mark.skipif(platform.system() != "Linux", reason="Linux/gcc required for -rpath/-rpath-link testing")
-def test_meson_transitive_rpath_sysroot():
+def test_meson_sysroot_transitive_rpath():
     c = TestClient()
 
     extra_profile = textwrap.dedent("""
         [conf]
-        tools.compilation:verbosity=verbose
         tools.build:sysroot=/path/to/nowhere
+        tools.meson.mesontoolchain:add_rpath_link=True
     """)
 
     foobar_h = textwrap.dedent("""
