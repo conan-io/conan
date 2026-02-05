@@ -9,7 +9,6 @@ import pytest
 
 from conan.internal.rest.remote_manager import uncompress_file
 from conan.api.model import RecipeReference
-from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
@@ -94,7 +93,7 @@ class TestTgzMacosDotFiles:
 
         # 3) In the upload process, the metadata is lost again
         export_download_folder = t.get_latest_ref_layout(pref.ref).download_export()
-        tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
+        tgz = os.path.join(export_download_folder, "conan_sources.tgz")
         assert not os.path.exists(tgz)
         t.run("upload lib/version@user/channel -r default --only-recipe")
         self._test_for_metadata_in_zip_file(tgz, 'file.txt', dot_file_expected=False)

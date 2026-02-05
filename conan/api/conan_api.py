@@ -64,7 +64,8 @@ class ConanAPI:
         #: Used to get latest refs and list refs of recipes and packages
         self.list: ListAPI = ListAPI(self)
         self.profiles = ProfilesAPI(self, self._api_helpers)
-        self.install = InstallAPI(self, self._api_helpers)
+        #: Used to install binaries, sources, deploy packages and more
+        self.install: InstallAPI = InstallAPI(self, self._api_helpers)
         self.graph = GraphAPI(self, self._api_helpers)
         #: Used to export recipes and pre-compiled package binaries to the Conan cache
         self.export: ExportAPI = ExportAPI(self, self._api_helpers)
@@ -74,13 +75,16 @@ class ConanAPI:
         self.upload: UploadAPI = UploadAPI(self, self._api_helpers)
         #: Used to download recipes and packages from remotes
         self.download: DownloadAPI = DownloadAPI(self)
-        self.cache = CacheAPI(self, self._api_helpers)
-        self.lockfile = LockfileAPI(self)
+        #: Used to interact wit the packages storage cache
+        self.cache: CacheAPI = CacheAPI(self, self._api_helpers)
+        #: Used to read and manage lockfile files
+        self.lockfile: LockfileAPI = LockfileAPI(self)
         self.local = LocalAPI(self, self._api_helpers)
-        self.audit = AuditAPI(self)
+        #: Used to check vulnerabilities of dependencies
+        self.audit: AuditAPI = AuditAPI(self)
         # Now, lazy loading of editables
         self.workspace = WorkspaceAPI(self)
-        self.report = ReportAPI(self, self._api_helpers)
+        self.report: ReportAPI = ReportAPI(self, self._api_helpers)
 
     @property
     def home_folder(self) -> str:

@@ -7,6 +7,7 @@ import pytest
 
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp, gen_function_c
+from test.conftest import tools_locations
 from test.functional.utils import check_vs_runtime, check_exe_run
 from conan.test.utils.tools import TestClient
 
@@ -56,8 +57,14 @@ def client():
                 cmd = os.path.join(self.package_folder, "bin", "my_app")
                 self.output.info("MYCMD={}!".format(os.path.abspath(cmd)))
         """)
+    clangpath = tools_locations["clang"]["20"]["path"]["Windows"]
+    llvm_clang_path = textwrap.dedent(f"""
+                      [buildenv]
+                      PATH=+(path){clangpath}
+                      """)
     c.save({"conanfile.py": conanfile,
             "clang": clang_profile,
+            "clang_path": llvm_clang_path,
             "CMakeLists.txt": gen_cmakelists(appname="my_app", appsources=["src/main.cpp"],
                                              install=True),
             "src/main.cpp": gen_function_cpp(name="main")})
@@ -65,7 +72,7 @@ def client():
 
 
 @pytest.mark.tool("cmake")
-@pytest.mark.tool("clang", "18")
+@pytest.mark.tool("clang", "20")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 class TestLLVMClang:
     """ External LLVM/clang, with different CMake generators
@@ -74,19 +81,18 @@ class TestLLVMClang:
 
     @pytest.mark.tool("mingw64")
     @pytest.mark.tool("visual_studio", "17")
-    @pytest.mark.tool("clang", "18")  # repeated, for priority over the mingw64 clang
     @pytest.mark.parametrize("runtime", ["static", "dynamic"])
     def test_clang_mingw(self, client, runtime):
         """ compiling with an LLVM-clang installed, which uses by default the
         VS runtime
         """
-        client.run("create . --name=pkg --version=0.1 -pr=clang "
+        client.run("create . --name=pkg --version=0.1 -pr=clang -pr=clang_path "
                    "-s compiler.runtime_version=v144 "
                    "-s compiler.runtime={}".format(runtime))
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
         assert "GNU-like command-line" in client.out
-        assert "main __clang_major__18" in client.out
+        assert "main __clang_major__20" in client.out
         assert "main _MSC_VER194" in client.out
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
@@ -102,13 +108,13 @@ class TestLLVMClang:
     @pytest.mark.tool("visual_studio", "17")
     @pytest.mark.parametrize("generator", ["Ninja", "NMake Makefiles"])
     def test_clang_cmake_ninja_nmake(self, client, generator):
-        client.run("create . --name=pkg --version=0.1 -pr=clang -s compiler.runtime=dynamic "
-                   "-s compiler.runtime_version=v144 "
+        client.run("create . --name=pkg --version=0.1 -pr=clang  -pr=clang_path "
+                   "-s compiler.runtime=dynamic -s compiler.runtime_version=v144 "
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
 
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "GNU-like command-line" in client.out
-        assert "main __clang_major__18" in client.out
+        assert "main __clang_major__20" in client.out
         assert "main _MSC_VER194" in client.out
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
@@ -126,13 +132,13 @@ class TestLLVMClang:
             """)
         client.save({"comp_exes": pr})
 
-        client.run("create . --name=pkg --version=0.1 -pr=clang -pr=comp_exes "
+        client.run("create . --name=pkg --version=0.1 -pr=clang -pr=clang_path -pr=comp_exes "
                    "-s compiler.runtime=dynamic -s compiler.runtime_version=v144 "
                    '-c tools.cmake.cmaketoolchain:generator="Ninja"')
 
         assert 'cmake -G "Ninja"' in client.out
         assert "MSVC-like command-line" in client.out
-        assert "main __clang_major__18" in client.out
+        assert "main __clang_major__20" in client.out
         assert "main _MSC_VER194" in client.out
         assert "main _MSVC_LANG2014" in client.out
         assert "main _M_X64 defined" in client.out
@@ -143,19 +149,19 @@ class TestLLVMClang:
 
     @pytest.mark.tool("ninja")
     @pytest.mark.tool("visual_studio", "17")
-    @pytest.mark.tool("clang", "18")  # repeated, for priority over the mingw64 clang
     def test_clang_cmake_runtime_version(self, client):
         generator = "Ninja"
         # Make sure that normal CMakeLists with verify=False works
         client.save({"CMakeLists.txt": gen_cmakelists(verify=False, appname="my_app",
                                                       appsources=["src/main.cpp"], install=True)})
-        client.run("create . --name=pkg --version=0.1 -pr=clang -s compiler.runtime=dynamic "
+        client.run("create . --name=pkg --version=0.1 -pr=clang -pr=clang_path "
+                   "-s compiler.runtime=dynamic "
                    "-s compiler.cppstd=17 -s compiler.runtime_version=v144 "
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
 
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "GNU-like command-line" in client.out
-        assert "main __clang_major__18" in client.out
+        assert "main __clang_major__20" in client.out
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         assert "main _MSC_VER194" in client.out
         assert "main _MSVC_LANG2017" in client.out
@@ -181,7 +187,7 @@ class TestVSClangCL:
                    '-c tools.cmake.cmaketoolchain:generator="{}"'.format(generator))
         assert 'cmake -G "{}"'.format(generator) in client.out
         assert "MSVC-like command-line" in client.out
-        assert "main __clang_major__19" in client.out
+        assert "main __clang_major__19" in client.out  # The one inside VS is clang 19
         # Check this! Clang compiler in Windows is reporting MSC_VER and MSVC_LANG!
         # CI forced the installation of 19.38, seems to prevail there
         assert "main _MSC_VER19" in client.out
@@ -288,7 +294,7 @@ class TestMsysClang:
 
 @pytest.mark.tool("cmake")
 @pytest.mark.tool("ninja")
-@pytest.mark.tool("clang", "18")
+@pytest.mark.tool("clang", "20")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 def test_error_clang_cmake_ninja_custom_cxx(client):
     clang_profile = textwrap.dedent("""
@@ -297,7 +303,7 @@ def test_error_clang_cmake_ninja_custom_cxx(client):
         arch=x86_64
         build_type=Release
         compiler=clang
-        compiler.version=18
+        compiler.version=20
         [buildenv]
         CXX=/no/exist/clang++
         """)

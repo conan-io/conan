@@ -463,6 +463,12 @@ diff_html = r"""
                 height: auto;
             }
 
+            .diff-symbol {
+                display: inline-block;
+                width: 1ch;
+                user-select: none;
+            }
+
             /* --- Utility & Page States --- */
 
             #empty_result {
@@ -539,8 +545,12 @@ diff_html = r"""
                         old_line_index = lineNumbers[0];
                         new_line_index = lineNumbers[1];
                     } else if (line.startsWith("+")) {
+                        const spanSymbol = document.createElement("span");
+                        spanSymbol.textContent = "+";
+                        spanSymbol.className = "diff-symbol";
                         spanLine.className = "add";
-                        spanLine.textContent = line;
+                        spanLine.textContent = line.substring(1);
+                        spanLine.prepend(spanSymbol);
 
                         const lineNumberSpan = document.createElement("span");
                         lineNumberSpan.className = "line-number add";
@@ -550,8 +560,12 @@ diff_html = r"""
                         new_line_index += 1;
                         new_line_count += 1;
                     } else if (line.startsWith("-")) {
+                        const spanSymbol = document.createElement("span");
+                        spanSymbol.textContent = "-";
+                        spanSymbol.className = "diff-symbol";
                         spanLine.className = "del";
-                        spanLine.textContent = line;
+                        spanLine.textContent = line.substring(1);
+                        spanLine.prepend(spanSymbol);
 
                         const lineNumberSpan = document.createElement("span");
                         lineNumberSpan.className = "line-number del";
@@ -568,7 +582,10 @@ diff_html = r"""
                             headerDiv.appendChild(document.createElement("br"));
                             continue;
                         } else {
+                            const spanSymbol = document.createElement("span");
+                            spanSymbol.className = "diff-symbol";
                             spanLine.textContent = line;
+                            spanLine.prepend(spanSymbol);
                         }
 
                         const lineNumberSpan = document.createElement("span");

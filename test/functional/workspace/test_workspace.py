@@ -69,3 +69,29 @@ def test_new_template_and_different_folder():
     assert "Adding project: liba" in c.out
     assert "Adding project: libb" in c.out
     assert "Adding project: app1" in c.out
+
+
+# The workspace CMake needs at least 3.25 for find_package to work
+@pytest.mark.tool("cmake", "3.27")
+def test_super_build_different_layouts():
+    """
+    https://github.com/conan-io/conan/issues/18875
+    """
+    c = TestClient()
+    c.run("new workspace")
+    liba_src = os.path.join(c.current_folder, "liba", "mysrc")
+    os.makedirs(liba_src)
+    shutil.move(os.path.join(c.current_folder, "liba", "CMakeLists.txt"), liba_src)
+    shutil.move(os.path.join(c.current_folder, "liba", "include"), liba_src,)
+    shutil.move(os.path.join(c.current_folder, "liba", "src"), liba_src)
+    replace_in_file(ConanFileMock(), os.path.join(c.current_folder, "liba", "conanfile.py"),
+                    "cmake_layout(self)",
+                    "cmake_layout(self, src_folder='mysrc')")
+
+    c.run("workspace super-install")
+
+    config_preset = "conan-default" if platform.system() == "Windows" else "conan-release"
+    c.run_command(f"cmake --preset {config_preset}")  # it does not fail
+    assert "Adding project: liba" in c.out
+    assert "Adding project: libb" in c.out
+    assert "Adding project: app1" in c.out

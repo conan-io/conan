@@ -71,9 +71,9 @@ class TestBasicCliOutput:
         client.save({"conanfile.py": conanfile})
         client.run("graph info . --format=json")
         recipe = json.loads(client.stdout)["graph"]["nodes"]["0"]
-        assert type(recipe["topics"]) == list
+        assert type(recipe["topics"]) is list
         assert recipe["topics"] == ["foo"]
-        assert type(recipe["provides"]) == list
+        assert type(recipe["provides"]) is list
         assert recipe["provides"] == ["bar"]
 
         # But this used to fail,
@@ -91,9 +91,9 @@ class TestBasicCliOutput:
         client2.save({"conanfile.py": conanfile2})
         client2.run("graph info . --format=json")
         recipe = json.loads(client2.stdout)["graph"]["nodes"]["0"]
-        assert type(recipe["topics"]) == list
+        assert type(recipe["topics"]) is list
         assert recipe["topics"] == ["foo"]
-        assert type(recipe["provides"]) == list
+        assert type(recipe["provides"]) is list
         assert recipe["provides"] == ["bar"]
 
 
@@ -123,7 +123,8 @@ class TestConanfilePath:
         assert "ERROR: Package 'foo/1.0' not resolved: No remote defined." in client.out
 
         client.run("graph info . --requires=foo/1.0", assert_error=True)
-        assert "--requires and --tool-requires arguments are incompatible with [path] '.' argument" in client.out
+        assert ("--requires and --tool-requires arguments are incompatible "
+                "with [path] '.' argument") in client.out
 
 
 class TestFilters:
@@ -402,9 +403,8 @@ class TestErrorsInGraph:
         c.save({
                 "dep/conanfile.py": GenConanfile("dep").with_version("0.1"),
                 "dep_invalid/conanfile.py": dep_invalid,
-                "consumer/conanfile.py": GenConanfile("consumer")
-                                        .with_requires("dep/0.1")
-                                        .with_requires("dep_invalid/0.1"),
+                "consumer/conanfile.py": GenConanfile("consumer").with_requires("dep/0.1")
+                                                                 .with_requires("dep_invalid/0.1"),
             })
         c.run("export dep")
         c.run("export dep_invalid")

@@ -79,7 +79,8 @@ class TestBuildRequires:
           \\--(requires)->mylib/0.1 -(tool_requires)->tool/0.1 (skipped)
         """
         client.run("export . --user=lasote --channel=stable")
-        client.run("install --requires=mylib/0.1@lasote/stable --profile ./profile.txt --build missing")
+        client.run("install --requires=mylib/0.1@lasote/stable "
+                   "--profile ./profile.txt --build missing")
         assert "Hello World!" in client.out
 
         client.run("install --requires=mylib/0.1@lasote/stable --profile ./profile2.txt --build='*'")

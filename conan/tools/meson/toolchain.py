@@ -8,7 +8,7 @@ from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
     resolve_apple_flags, apple_extra_flags
-from conan.tools.build.cross_building import cross_building
+from conan.tools.build.cross_building import cross_building, can_run
 from conan.tools.build.flags import (architecture_link_flag, libcxx_flags, architecture_flag,
                                      threads_flags)
 from conan.tools.env import VirtualBuildEnv
@@ -266,7 +266,8 @@ class MesonToolchain:
                 sdk_host = conanfile.settings.get_safe("os.sdk")
                 self.cross_build["host"]["subsystem"] = get_apple_subsystem(sdk_host)
                 self.cross_build["build"]["subsystem"] = get_apple_subsystem(sdk_build)
-            self.properties["needs_exe_wrapper"] = True
+            # Issue: https://github.com/conan-io/conan/issues/19217
+            self.properties["needs_exe_wrapper"] = not can_run(self._conanfile)
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target
                 os_target = settings_target.get_safe("os")
@@ -412,7 +413,6 @@ class MesonToolchain:
         self.apple_isysroot_flag = isysroot_flag.split() if isysroot_flag else []
         self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]
         # Objective C/C++ ones
-        flags = []
         self.objc = compilers_by_conf.get("objc", "clang")
         self.objcpp = compilers_by_conf.get("objcpp", "clang++")
         enable_arc = self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
@@ -512,6 +512,11 @@ class MesonToolchain:
         self.objc_link_args.extend(self.c_link_args)
         self.objcpp_link_args.extend(self.cpp_link_args)
 
+        if self.preprocessor_definitions:
+            self._conanfile.output.warning(
+                "Use 'extra_defines' attribute for compiler preprocessor definitions instead " +
+                "of 'preprocessor_definitions'", warn_tag="deprecated")
+
         if self.libcxx:
             self.cpp_args.append(self.libcxx)
             self.cpp_link_args.append(self.libcxx)
@@ -569,6 +574,7 @@ class MesonToolchain:
             "objcpp_link_args": to_meson_value(self._filter_list_empty_fields(self.objcpp_link_args)),
             "pkg_config_path": self.pkg_config_path,
             "build_pkg_config_path": self.build_pkg_config_path,
+            #: Deprecated: Dict-like object that defines Meson ``preprocessor definitions``. Use the extra_defines attribute instead.
             "preprocessor_definitions": self.preprocessor_definitions,
             "cross_build": self.cross_build,
             "is_apple_system": self._is_apple_system
