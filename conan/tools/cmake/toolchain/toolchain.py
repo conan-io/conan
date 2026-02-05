@@ -18,7 +18,7 @@ from conan.tools.cmake.toolchain.blocks import (ExtraVariablesBlock, ToolchainBl
                                                 SkipRPath, SharedLibBock, OutputDirsBlock,
                                                 ExtraFlagsBlock, CompilersBlock, LinkerScriptsBlock,
                                                 VSDebuggerEnvironment, VariablesBlock,
-                                                PreprocessorBlock)
+                                                PreprocessorBlock, RpathLinkFlagsBlock)
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.env import VirtualBuildEnv, VirtualRunEnv
 from conan.tools.intel import IntelCC
@@ -108,6 +108,7 @@ class CMakeToolchain:
                                        ("fpic", FPicBlock),
                                        ("arch_flags", ArchitectureBlock),
                                        ("linker_scripts", LinkerScriptsBlock),
+                                       ("rpath_link_flags", RpathLinkFlagsBlock),
                                        ("libcxx", GLibCXXBlock),
                                        ("vs_runtime", VSRuntimeBlock),
                                        ("vs_debugger_environment", VSDebuggerEnvironment),

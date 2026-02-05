@@ -9,7 +9,7 @@ from conan.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Linux/gcc required for -rpath/-rpath-link testing")
 @pytest.mark.parametrize("use_cmake_config_deps", [True, False])
-def test_cmake_transitive_rpath(use_cmake_config_deps):
+def test_cmake_sysroot_transitive_rpath(use_cmake_config_deps):
     c = TestClient()
 
      
@@ -52,6 +52,10 @@ def test_cmake_transitive_rpath(use_cmake_config_deps):
 
     c.save({"extra_profile": extra_profile})
     extra_conf = "-c tools.cmake.cmakedeps:new=will_break_next" if use_cmake_config_deps else ""
+    if not use_cmake_config_deps:
+        # CMakeConfigDeps does not fail, so nothing extra is needed
+        # this is only needed to cover the case of CMakeDeps
+        extra_conf += " -c tools.cmake.cmaketoolchain:add_rpath_link=True"
     with c.chdir("foo"):
         c.run("new cmake_lib -d name=foo -d version=0.1")
         c.save({"include/foo.h": foo_h,
@@ -64,7 +68,8 @@ def test_cmake_transitive_rpath(use_cmake_config_deps):
         c.save({"include/bar.h": bar_h,
                 "src/bar.cpp": bar_cpp,
                 "test_package/src/example.cpp": bar_test})
-        c.run(f"create . -o '*:shared=True' -pr=default -pr=../extra_profile {extra_conf}")
+        # skip test package, which fails with CMakeToolchain+CMakeDeps
+        c.run(f"create . -o '*:shared=True' -tf= -pr=default -pr=../extra_profile {extra_conf}")
     with c.chdir("app"):
         c.run("new cmake_exe -d name=app -d version=0.1 -d requires=bar/0.1")
         c.save({"src/main.cpp": bar_test,
@@ -217,6 +222,7 @@ def test_cmake_transitive_rpath_private_internal(use_cmake_config_deps):
     """)
 
     extra_conf = "-c tools.cmake.cmakedeps:new=will_break_next" if use_cmake_config_deps else ""
+    extra_conf += " -c tools.cmake.cmaketoolchain:add_rpath_link=True" # removing this should break the test
 
     with c.chdir("foobar"):
         c.save({"include/foo.h": foo_h,

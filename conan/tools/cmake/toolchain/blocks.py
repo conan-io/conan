@@ -269,6 +269,29 @@ class ArchitectureBlock(Block):
         return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag,
                 "thread_flags_list": thread_flags_list}
 
+class RpathLinkFlagsBlock(Block):
+    template = textwrap.dedent("""\
+        # Pass -rpath-link pointing to all directories with runtime libraries
+        {% if rpath_link_flags %}
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ rpath_link_flags }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ rpath_link_flags }}")
+        {% endif %}
+        """)
+
+    def context(self):
+        add_rpath_link = self._conanfile.conf.get("tools.cmake.cmaketoolchain:add_rpath_link", check_type=bool)
+        if add_rpath_link:
+            runtime_dirs = []
+            host_req = self._conanfile.dependencies.filter({"build": False}).values()
+            for req in host_req:
+                cppinfo = req.cpp_info.aggregated_components()
+                runtime_dirs.extend(cppinfo.libdirs)
+
+            # surround each dir with escaped quotes, to avoid problems with spaces in paths
+            rpath_link_flags = " ".join([f'-Wl,-rpath-link=\\"{d}\\"' for d in runtime_dirs]) if runtime_dirs else None
+        else:
+            rpath_link_flags = None
+        return {"rpath_link_flags": rpath_link_flags}
 
 class LinkerScriptsBlock(Block):
     template = textwrap.dedent("""\
