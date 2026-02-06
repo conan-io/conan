@@ -259,10 +259,14 @@ class CPS:
 
         cpp_info = CppInfo()
         if len(self.components) == 1:
-            comp = next(iter(self.components.values()))
+            comp_name = next(iter(self.components))
+            comp = self.components[comp_name]
             cpp_info.includedirs = strip_prefix(comp.includes)
             cpp_info.defines = definitions(comp.definitions)
             cpp_info.system_libs = comp.link_libraries
+            # Ensure the target name still matches the expectations of CPS even though
+            # we have flattened the components to just the global cpp_info.
+            cpp_info.set_property("cmake_target_name", f"{self.name}::{comp_name}")
             # requires for 1 component packages are automatic in Conan with self.requires()
             if comp.link_location:
                 link_location = comp.link_location
