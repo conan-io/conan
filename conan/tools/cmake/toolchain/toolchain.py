@@ -98,6 +98,7 @@ class CMakeToolchain:
         self.extra_cflags = []
         self.extra_sharedlinkflags = []
         self.extra_exelinkflags = []
+        self.add_rpath_link = False
 
         self.blocks = ToolchainBlocks(self._conanfile, self,
                                       [("user_toolchain", UserToolchain),

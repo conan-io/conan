@@ -453,7 +453,7 @@ class MesonToolchain:
     
     @property
     def _rpath_link_flag(self):
-        add_rpath_link = self._conanfile.conf.get("tools.meson.mesontoolchain:add_rpath_link", check_type=bool)
+        add_rpath_link = self._conanfile.conf.get("tools.build:add_rpath_link", check_type=bool)
         if not add_rpath_link:
             return []
         runtime_dirs = []

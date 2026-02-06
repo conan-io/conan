@@ -279,7 +279,7 @@ class RpathLinkFlagsBlock(Block):
         """)
 
     def context(self):
-        add_rpath_link = self._conanfile.conf.get("tools.cmake.cmaketoolchain:add_rpath_link", check_type=bool)
+        add_rpath_link = self._toolchain.add_rpath_link or self._conanfile.conf.get("tools.build:add_rpath_link", check_type=bool)
         if add_rpath_link:
             runtime_dirs = []
             host_req = self._conanfile.dependencies.filter({"build": False}).values()

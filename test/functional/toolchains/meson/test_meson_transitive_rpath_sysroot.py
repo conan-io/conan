@@ -15,7 +15,7 @@ def test_meson_sysroot_transitive_rpath():
     extra_profile = textwrap.dedent("""
         [conf]
         tools.build:sysroot=/path/to/nowhere
-        tools.meson.mesontoolchain:add_rpath_link=True
+        tools.build:add_rpath_link=True
     """)
 
     foobar_h = textwrap.dedent("""
