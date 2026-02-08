@@ -212,6 +212,7 @@ class TestMsysClang:
         client.run('create . --name=pkg --version=0.1 -pr=clang -s os.subsystem=msys2 '
                    '-s compiler.libcxx=libc++ '
                    '-c tools.cmake.cmaketoolchain:generator="MinGW Makefiles"')
+        print(client.out)
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
         # TODO: Version is still not controlled
