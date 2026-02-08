@@ -147,6 +147,8 @@ jobs:
             install: >-
                 mingw-w64-x86_64-toolchain
                 mingw-w64-i686-toolchain
+                mingw-w64-ucrt-x86_64-toolchain
+                mingw-w64-clang-x86_64-toolchain
                 base-devel
                 gcc
                 autoconf-wrapper
