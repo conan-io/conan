@@ -273,7 +273,6 @@ class CPS:
             elif comp.location:
                 location = comp.location
                 lib_location(location, cpp_comp)
-            # all requires are the same for Conan, it uses its traits information
             requires = comp.link_requires + comp.requires
             for r in requires:
                 cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
