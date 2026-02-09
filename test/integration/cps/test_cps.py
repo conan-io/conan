@@ -2,6 +2,8 @@ import json
 import os
 import textwrap
 
+import pytest
+
 from conan.cps import CPS
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
@@ -256,9 +258,11 @@ def test_extended_cpp_info():
     assert pkg_comp["definitions"] == {'cpp': {'MY_DEFINE': None, 'MY_OTHER_DEFINE': '1'}}
 
 
-def test_cps_component_single():
+@pytest.mark.parametrize("as_comp", [True, False])
+def test_cps_component_single(as_comp):
     c = TestClient()
-    conanfile = textwrap.dedent("""\
+    cpp_info_comp = '.components["core"]' if as_comp else ""
+    conanfile = textwrap.dedent(f"""\
         from conan import ConanFile
         from conan.tools.files import save
         import os
@@ -271,7 +275,7 @@ def test_cps_component_single():
                 save(self, os.path.join(self.package_folder, "lib", "libcore.a"), "")
 
             def package_info(self):
-                self.cpp_info.components["core"].libs = ["core"]
+                self.cpp_info{cpp_info_comp}.libs = ["core"]
                 from conan.cps import CPS
                 cps = CPS.from_conan(self)
                 self.cpp_info = cps.to_conan()
@@ -280,6 +284,8 @@ def test_cps_component_single():
     c.run("create")
     c.run(f"install --requires=mypkg/0.1 -g CMakeConfigDeps")
     mypkg_targets = c.load("mypkg-Targets-release.cmake")
-    assert "add_library(mypkg::core" in mypkg_targets
-    # But we don't create what would otherwise be the default component
-    assert "add_library(mypkg::mypkg" not in mypkg_targets
+    if as_comp:
+        assert "add_library(mypkg::core" in mypkg_targets
+    else:
+        assert "add_library(mypkg::core" not in mypkg_targets
+        assert "add_library(mypkg::mypkg" in mypkg_targets
