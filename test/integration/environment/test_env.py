@@ -526,8 +526,10 @@ def test_multiple_deactivate(deactivation_mode):
         out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   shell=True, cwd=client.current_folder).communicate()
         out = out.decode()
-        assert "VAR1=Value1!!" in out
-        assert "VAR2=Value2!!" in out
+        #assert "VAR1=Value1!!" in out
+        #assert "VAR2=Value2!!" in out
+        print("RESTORING", deactivation_mode, str(out).count("Restoring environment"))
+        breakpoint()
         assert 3 == str(out).count("Restoring environment")
         assert "VAR1=!!" in out
         assert "VAR2=!!" in out

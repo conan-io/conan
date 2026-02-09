@@ -255,45 +255,32 @@ def _generate_aggregated_env(conanfile):
         conanfile.output.highlight("Generating aggregated env files")
         conanfile.output.info(f"Generated aggregated env files: {generated}")
 
-
 def _deactivate_function_names(filenames):
     return [os.path.splitext(os.path.basename(s))[0].replace("-", "_")
-            for s in reversed(filenames)]
+            for s in filenames]
 
 def _bat_global_deactivate_content(files, group):
-    macros = ""
-    for file in _deactivate_function_names(files):
-        macros += f"deactivate_{file} "
-
+    _new_line = "\n\r echo echo yolo\n\r"
     return textwrap.dedent(f"""\
-        setlocal enabledelayedexpansion
+        set "_ALIAS_DIR=%TEMP%\.conan_alias_%RANDOM%"
+        mkdir "%_ALIAS_DIR%"
+        echo "%_ALIAS_DIR%
 
-        rem === Macros to combine ===
-        set macros_to_combine={macros}
-        set combined_macro=deactivate_conan{group}
 
-        rem === Build combined macro ===
-        set "combined_cmd="
-
-        for %%M in (%macros_to_combine%) do (
-            for /f "delims=" %%L in ('doskey /macros ^| findstr /b "%%M="') do (
-                set "line=%%L"
-                rem Remove "macro_name=" prefix
-                call set "line=%%line:*%%M==%%%"
-                if defined combined_cmd (
-                    set "combined_cmd=!combined_cmd!$T!line!"
-                ) else (
-                    set "combined_cmd=!line!"
-                )
-            )
+        > "%_ALIAS_DIR%\deactivate_conan{group}.bat" (
+            {_new_line.join(f"echo deactivate_{f}" for f in _deactivate_function_names(files))}
+            echo @echo off
+            echo setlocal EnableDelayedExpansion
+            echo echo Restoring environment principal
+            echo set "_ALIAS_DIR=%%~dp0"
+            echo set "_ALIAS_DIR=%%_ALIAS_DIR:~0,-1%%"
+            echo set "UPDATED_PATH=!PATH:%%_ALIAS_DIR%%;=!"
+            echo set "UPDATED_PATH=!UPDATED_PATH:%%_ALIAS_DIR%%=!"
+            echo endlocal & set \\"PATH=%%UPDATED_PATH%%\\"
+            rem echo del "%%~f0"
         )
 
-        rem === Add self-removal ===
-        set "combined_cmd=!combined_cmd!$Tdoskey %combined_macro%="
-
-        rem === Define the combined macro ===
-        doskey %combined_macro%=!combined_cmd!
-        endlocal
+        set "PATH=%_ALIAS_DIR%;%PATH%"
 
         echo Environment activated. Run "deactivate_conan{group}" to restore.
         """)

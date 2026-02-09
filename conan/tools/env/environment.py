@@ -567,13 +567,31 @@ def _old_env_prefix(filename):
 def _bat_deactivate_contents(use_deactivate_function, values, filename):
     deactivate_file = "deactivate_{}".format(filename)
     if use_deactivate_function:
-        var_prefix = _old_env_prefix(filename)
         macro_name = _deactivate_func_name(filename)
 
         return textwrap.dedent(f"""\
-            doskey deactivate_{macro_name}=echo Restoring environment...$T{"$T".join([
-                f'set "{v}=%{var_prefix}_{v}%"$Tset {var_prefix}_{v}=' for v in values.keys()
-            ])}$Tdoskey deactivate_{macro_name}=
+            set "_ALIAS_DIR=%TEMP%\.conan_alias_%RANDOM%"
+            mkdir "%_ALIAS_DIR%"
+            echo "%_ALIAS_DIR%
+
+
+            > "%_ALIAS_DIR%\deactivate_{macro_name}.bat" (
+                echo @echo off
+                echo setlocal EnableDelayedExpansion
+                echo echo Restoring environment {macro_name}
+                echo set "_ALIAS_DIR=%%~dp0"
+                echo set "_ALIAS_DIR=%%_ALIAS_DIR:~0,-1%%"
+                echo set "UPDATED_PATH=!PATH:%%_ALIAS_DIR%%;=!"
+                echo set "UPDATED_PATH=!UPDATED_PATH:%%_ALIAS_DIR%%=!"
+                echo "endlocal & set \\"PATH=%%UPDATED_PATH%%\\""
+                echo (
+                echo    del "%%~f0"
+                echo    exit
+                echo )
+            )
+
+            set "PATH=%_ALIAS_DIR%;%PATH%"
+            echo Environment activated. Run "deactivate_{macro_name}" to restore.
         """)
 
     return textwrap.dedent("""\
