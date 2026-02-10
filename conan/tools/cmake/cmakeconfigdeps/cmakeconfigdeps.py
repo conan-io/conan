@@ -298,7 +298,12 @@ class _PathGenerator:
             cmake_find_mode = cmake_find_mode.lower()
 
             cmake_filename = self._cmakedeps.get_cmake_filename(dep)
-            extra_casings = self._cmakedeps.get_property("cmake_extra_find_casing_names", dep, check_type=list) or []
+            extra_casings = self._cmakedeps.get_property("cmake_file_name_variants", dep,
+                                                         check_type=list) or []
+            # Check:
+            # e: all casing are the same lowercase
+            # e: if the cmake_file_name prop is not defined, check that casings match the default name
+            # w: else if cmake_file_name is defined, and it's different from the casings, remove the casings and print a warning
             pkg_names = set([cmake_filename] + extra_casings)
             # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
             if cmake_find_mode == FIND_MODE_NONE:
