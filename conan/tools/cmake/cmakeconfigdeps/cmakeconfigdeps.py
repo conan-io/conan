@@ -310,7 +310,7 @@ class _PathGenerator:
                     if is_cmake_filename_defined:
                         extra_variants = []
                         msg = (f"'{dep.ref}' 'cmake_file_name_variants' property contains names "
-                               f"with different casings than the default name '{cmake_filename}'. "
+                               f"with different casings than the defined name '{cmake_filename}'. "
                                f"The specified 'cmake_file_name'='{cmake_filename}' property "
                                f"will be used as the only name and the variants will be ignored.")
                         self._conanfile.output.warning(msg)

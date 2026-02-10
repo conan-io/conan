@@ -802,7 +802,7 @@ def test_legacy_defines():
     assert "set(mypkg_DEFINITIONS MY_DEFINE )" in mypkg_config
 
 
-class TestExtraFindCasingNames:
+class TestExtraFindExtraVariants:
     def test_generated_dir_entries(self):
         tc = TestClient()
         conanfile = textwrap.dedent("""
@@ -813,7 +813,7 @@ class TestExtraFindCasingNames:
                     version = "1.0"
 
                     def package_info(self):
-                        self.cpp_info.set_property("cmake_extra_find_casing_names", ["HellO", "HELLO"])
+                        self.cpp_info.set_property("cmake_file_name_variants", ["HellO", "HELLO"])
                 """)
         tc.save({"conanfile.py": conanfile})
         tc.run("create")
@@ -823,7 +823,7 @@ class TestExtraFindCasingNames:
         assert "set(HellO_DIR" in paths_content
         assert "set(HELLO_DIR" in paths_content
 
-    def test_differing_names_instead_of_casings(self):
+    def test_differing_names_instead_of_case(self):
         tc = TestClient()
         conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -833,15 +833,13 @@ class TestExtraFindCasingNames:
             version = "1.0"
 
             def package_info(self):
-                self.cpp_info.set_property("cmake_extra_find_casing_names", ["Bye!"])
+                self.cpp_info.set_property("cmake_file_name_variants", ["Bye!"])
         """)
         tc.save({"conanfile.py": conanfile})
         tc.run("create")
-        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps")
-        paths_content = tc.load("conan_cmakedeps_paths.cmake")
-        assert "set(hello_DIR" in paths_content
-        # This exists, but it won't work, the config file will have the original name
-        assert "set(Bye!_DIR" in paths_content
+        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps", assert_error=True)
+        assert ("'cmake_file_name_variants' property contains "
+                "entries that differ from the default 'cmake_file_name'='hello'") in tc.out
 
     def test_consumer_dependency_name_change(self):
         """ If the consumer changes the dependency name via
@@ -855,7 +853,7 @@ class TestExtraFindCasingNames:
             version = "1.0"
 
             def package_info(self):
-                self.cpp_info.set_property("cmake_extra_find_casing_names", ["HellO"])
+                self.cpp_info.set_property("cmake_file_name_variants", ["HellO"])
         """)
         tc.save({"hello/conanfile.py": hello})
         tc.run("create hello")
@@ -875,12 +873,14 @@ class TestExtraFindCasingNames:
 
         tc.save({"conanfile.py": conanfile})
         tc.run("install")
+        assert ("'cmake_file_name_variants' property contains names "
+                "with different casings than the defined name 'greetings'") in tc.out
         paths_content = tc.load("conan_cmakedeps_paths.cmake")
         assert "set(greetings_DIR" in paths_content
-        # But the old casing names are also generated, even though they won't work
-        # as the config file is named greetings-config.cmake
-        assert "set(HellO_DIR" in paths_content
-        # The original name is not created in any case either way
+        # But the old casing names are not generated, even if they were defined in the package
+        # they would not work
+        assert "set(HellO_DIR" not in paths_content
+        # The original name is not created in any case either way, as expected when cmake_file_name is used
         assert "set(hello_DIR" not in paths_content
 
     def test_generated_dir_none_find_mode_multi_entries(self):
@@ -895,7 +895,7 @@ class TestExtraFindCasingNames:
 
                     def package_info(self):
                         self.cpp_info.set_property("cmake_find_mode", "none")
-                        self.cpp_info.set_property("cmake_extra_find_casing_names", ["HellO", "HELLO"])
+                        self.cpp_info.set_property("cmake_file_name_variants", ["HellO", "HELLO"])
                 """)
         tc.save({"conanfile.py": conanfile})
         tc.run("create")
@@ -916,3 +916,28 @@ class TestExtraFindCasingNames:
         assert paths_content.count("list(APPEND CONAN_hello_DIR_MULTI") == 2
         assert paths_content.count("list(APPEND CONAN_HellO_DIR_MULTI") == 2
         assert paths_content.count("list(APPEND CONAN_HELLO_DIR_MULTI") == 2
+
+    def test_find_package_extra_variants_name_missmatch(self):
+        tc = TestClient()
+        hello = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "1.0"
+
+            def package_info(self):
+                self.cpp_info.set_property("cmake_file_name_variants", ["Bye"])
+        """)
+        tc.save({"hello/conanfile.py": hello})
+        tc.run("create hello")
+
+        tc.save({"conanfile.py": GenConanfile("pkg", "0.1")
+                    .with_require("hello/1.0")
+                    .with_generator("CMakeConfigDeps")
+                    .with_settings("os", "compiler", "build_type", "arch")})
+
+        tc.run("build", assert_error=True)
+        # This does not change the cmake file name, so only hello-config.cmake is generated
+        # so even though Bye_DIR exits, Bye-config.cmake was not generated so nothing is found
+        assert "cmake_file_name_variants' property contains entries that differ" in tc.out

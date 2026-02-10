@@ -1649,7 +1649,7 @@ def test_find_package_casing_non_fallback():
 
 
 @pytest.mark.tool("cmake", "3.27")
-def test_find_package_extra_casings():
+def test_find_package_extra_variants():
     """ Producers can now specify extra casing names for find_package.
     If a consumer uses yet a different casing,
     it should directly change the cmake_file_name property instead."""
@@ -1690,7 +1690,7 @@ def test_find_package_extra_casings():
         version = "1.0"
 
         def package_info(self):
-            self.cpp_info.set_property("cmake_extra_find_casing_names", ["HellO"])
+            self.cpp_info.set_property("cmake_file_name_variants", ["HellO"])
     """)
     client.save({"conanfile.py": conanfile})
     client.run("create")
@@ -1701,48 +1701,3 @@ def test_find_package_extra_casings():
     # And this follows the expected found variable generation
     assert "Found HellO!" in client.out
     assert "Found hello!" not in client.out
-
-
-@pytest.mark.tool("cmake", "3.27")
-def test_find_package_extra_casings_name_missmatch():
-    tc = TestClient()
-    hello = textwrap.dedent("""
-    from conan import ConanFile
-
-    class HelloConan(ConanFile):
-        name = "hello"
-        version = "1.0"
-
-        def package_info(self):
-            self.cpp_info.set_property("cmake_extra_find_casing_names", ["Bye"])
-    """)
-    tc.save({"hello/conanfile.py": hello})
-    tc.run("create hello")
-
-    cmakelists = textwrap.dedent("""
-        cmake_minimum_required(VERSION 3.15)
-        project(test NONE)
-
-        find_package(Bye REQUIRED)  # Casing!!!!!
-    """)
-
-    consumer = textwrap.dedent("""
-           from conan import ConanFile
-           from conan.tools.cmake import CMake, cmake_layout
-           class Pkg(ConanFile):
-               requires = "hello/1.0"
-               generators = "CMakeToolchain", "CMakeDeps"
-               settings = "os", "compiler", "build_type", "arch"
-               def layout(self):
-                   cmake_layout(self)
-
-               def build(self):
-                   cmake = CMake(self)
-                   cmake.configure()
-           """)
-
-    tc.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    tc.run("build", assert_error=True)
-    # This does not change the cmake file name, so only hello-config.cmake is generated
-    # so even though Bye_DIR exits, Bye-config.cmake was not generated so nothing is found
-    assert 'Could not find a package configuration file provided by "Bye"' in tc.out
