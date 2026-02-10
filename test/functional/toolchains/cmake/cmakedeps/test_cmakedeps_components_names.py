@@ -539,8 +539,7 @@ class TestComponentsCMakeGenerators:
             .with_require(RecipeReference("zlib", "0.1", None, None))\
             .with_require(RecipeReference("mypkg", "0.1", None, None))\
             .with_package_info(cpp_info={"components": {"cmp": {"requires": ["mypkg::zlib",
-                                                                             "zlib::zlib"]}}},
-                               env_info={})
+                                                                             "zlib::zlib"]}}})
 
         consumer = textwrap.dedent("""
             from conan import ConanFile

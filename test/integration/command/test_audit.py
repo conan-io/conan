@@ -485,6 +485,7 @@ def test_audit_scan_threshold_error(severity_level, threshold, should_fail):
                 threshold = "9.0"
             assert f"ERROR: The package foobar/0.1.0 has a CVSS score {severity_level} and exceeded the threshold severity level {threshold}" in tc.out
 
+
 def test_parse_error_crash_when_no_edges():
     from conan.cli.commands.audit import _parse_error_threshold
 

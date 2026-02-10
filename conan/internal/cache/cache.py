@@ -15,7 +15,7 @@ from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, renamedir, mkdir, atomic_replace
+from conan.internal.util.files import rmdir, renamedir, mkdir
 
 
 class PkgCache:
@@ -183,6 +183,7 @@ class PkgCache:
 
     def create_pkg_layout(self, pref: PkgReference):
         """ called by:
+         - RemoteManager.get_package()
          - cache restore
         """
         assert pref.ref.revision, "Recipe revision must be known to create the package layout"
@@ -192,23 +193,6 @@ class PkgCache:
         self._db.create_package(package_path, pref, None)
         self._create_path(package_path, remove_contents=False)
         return PackageLayout(pref, os.path.join(self._base_folder, package_path))
-
-    def get_random_path(self):
-        random_id = str(uuid.uuid4())
-        # d=downloading area. Using short hashes to avoid lengthy paths with hyphens
-        return os.path.join(self._base_folder, "d", self._short_hash_path(random_id))
-
-    def create_atomic_pkg_layout(self, pref: PkgReference, current_folder):
-        """ called by:
-         - RemoteManager.get_package()
-        """
-        assert pref.ref.revision, "Recipe revision must be known to create the package layout"
-        assert pref.package_id, "Package id must be known to create the package layout"
-        assert pref.revision, "Package revision should be known to create the package layout"
-        package_path = self._get_path_pref(pref)
-        path = self._full_path(package_path)
-        atomic_replace(current_folder, path, f"{pref.repr_notime()} package")
-        self._db.create_package(package_path, pref, None)
 
     def update_recipe_timestamp(self, ref: RecipeReference):
         """ when the recipe already exists in cache, but we get a new timestamp from a server
@@ -317,16 +301,17 @@ class PkgCache:
             self._db.update_recipe_timestamp(ref)
 
     def get_recipe_lru(self, ref):
-        return self._db.get_recipe_lru(ref)
+        path = self._full_path(self._get_path(ref))
+        return os.path.getmtime(path)  # seconds since EPOCH
 
     def update_recipes_lru(self, refs):
-        self._db.update_recipes_lru(refs)
+        for r in refs:
+            path = self._full_path(self._get_path(r))
+            os.utime(path, None)
 
     def get_package_lru(self, pref):
-        return self._db.get_package_lru(pref)
-
-    def update_packages_lru(self, prefs):
-        self._db.update_packages_lru(prefs)
+        layout = self.pkg_layout(pref)  # It can be a build folder too
+        return os.path.getmtime(layout.base_folder)  # seconds since EPOCH
 
     def path_to_ref(self, path):
         try:

@@ -78,8 +78,6 @@ def test_build_py_manager():
     client.save({"pip/conanfile.py": conanfile_pyenv})
     client.run("build pip")
 
-    print(client.out)
-
     assert "RUN: hello-world" in client.out
     assert "Hello Test World!" in client.out
 

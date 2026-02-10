@@ -67,8 +67,10 @@ class UploadAPI:
         preparator = PackagePreparator(app, self._api_helpers.global_conf)
         preparator.prepare(package_list, enabled_remotes, metadata)
         signer = PkgSignaturesPlugin(app.cache, app.cache_folder)
-        # This might add files entries to package_list with signatures
-        signer.sign(package_list)
+        if signer.is_sign_configured:
+            ConanOutput().warning("[Package sign] Implicitly signing packages in the upload "
+                                  "command has been removed. Use 'conan cache sign' command before "
+                                  "uploading instead.", warn_tag="deprecated")
 
     def _upload(self, package_list, remote):
         app = ConanApp(self._conan_api)

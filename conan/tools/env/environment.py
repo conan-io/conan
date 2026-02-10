@@ -212,8 +212,8 @@ class Environment:
 
     def copy(self):
         e = Environment()
-        # TODO: Check this, the internal list is not being copied
-        e._values = self._values.copy()
+        for k, v in self._values.items():
+            e._values[k] = v.copy()
         return e
 
     def __repr__(self):
