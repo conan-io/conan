@@ -1,3 +1,4 @@
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.model.recipe_ref import ref_matches
 
@@ -63,6 +64,7 @@ class BuildMode:
                 raise ConanException("--build=never not compatible with other options")
 
     def editable(self, conanfile):
+        # so we can make this conditional on the context in the future
         return self._editable
 
     def forced(self, conan_file, ref, with_deps_to_build=False):
