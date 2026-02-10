@@ -304,7 +304,7 @@ class DepsGraphBuilder:
                     elif require.ref.version == d.version:
                         if d.revision is None or require.ref.revision is None or \
                                 d.revision == require.ref.revision:
-                            require.ref.revision = d.revision
+                            require.ref.revision = d.revision or "platform"
                             layout = BasicLayout(require.ref, None)
                             return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
 

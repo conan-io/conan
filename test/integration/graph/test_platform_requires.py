@@ -66,9 +66,9 @@ class TestPlatformRequires:
                      "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/1.0"),
                      "profile": "[settings]\nos=Linux\n[platform_requires]\ndep/1.0"})
         client.run("create tool -pr:b=profile --build-require")
-        assert "dep/1.0 - Platform" in client.out
+        assert "dep/1.0#platform - Platform" in client.out
         client.run("create pkg -pr:b=profile")
-        assert "dep/1.0 - Platform" in client.out
+        assert "dep/1.0#platform - Platform" in client.out
 
     def test_graph_info_platform_requires_range(self):
         """
@@ -194,15 +194,32 @@ class TestPlatformRequiresLock:
         c.run("install . -pr=profile", assert_error=True)
         assert "ERROR: Requirement 'dep/1.2' not in lockfile" in c.out
 
-    def test_platform_requires_lockfile(self):
+    @pytest.mark.parametrize("platform_rev", [None, "myrev"])
+    @pytest.mark.parametrize("is_tool_platform", [True, False])
+    def test_platform_requires_lockfile(self, platform_rev, is_tool_platform):
         tc = TestClient(light=True)
+        rev = f"#{platform_rev}" if platform_rev else ""
+        conanfile = GenConanfile("pkg", "1.0")
+        if is_tool_platform:
+            conanfile = conanfile.with_tool_requires("dep/1.0")
+        else:
+            conanfile = conanfile.with_requirement("dep/1.0")
+        substitution = "platform_tool_requires" if is_tool_platform else "platform_requires"
         tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
-                 "conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
-                 "profile": "[platform_requires]\ndep/1.0"})
+                 "conanfile.py": conanfile,
+                 "profile": f"[{substitution}]\ndep/1.0{rev}"})
         tc.run("create dep")
-        tc.run("lock create")
+        tc.run("lock create --lockfile-out=platform.lock -pr=profile")
+        tc.run("lock create --lockfile-out=real.lock")
         # Using a lockfile with a locked ref that is now a platform_require fails
+        tc.run("install")
         tc.run("install -pr=profile")
+
+        tc.run("install -pr=profile --lockfile=platform.lock")
+        tc.run("install --lockfile=real.lock")
+
+        tc.run("install --lockfile=platform.lock", assert_error=True)
+        tc.run("install -pr=profile --lockfile=real.lock", assert_error=True)
 
 
 class TestGenerators:
