@@ -198,7 +198,8 @@ class TestPlatformRequiresLock:
     @pytest.mark.parametrize("is_tool_platform", [True, False])
     def test_platform_requires_lockfile(self, platform_rev, is_tool_platform):
         tc = TestClient(light=True)
-        rev = f"#{platform_rev}" if platform_rev else ""
+        profile_rev = f"#{platform_rev}" if platform_rev else ""
+        expected_rev = platform_rev if platform_rev else "platform"
         conanfile = GenConanfile("pkg", "1.0")
         if is_tool_platform:
             conanfile = conanfile.with_tool_requires("dep/1.0")
@@ -207,19 +208,32 @@ class TestPlatformRequiresLock:
         substitution = "platform_tool_requires" if is_tool_platform else "platform_requires"
         tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
                  "conanfile.py": conanfile,
-                 "profile": f"[{substitution}]\ndep/1.0{rev}"})
+                 "profile": f"[{substitution}]\ndep/1.0{profile_rev}"})
         tc.run("create dep")
-        tc.run("lock create --lockfile-out=platform.lock -pr=profile")
-        tc.run("lock create --lockfile-out=real.lock")
-        # Using a lockfile with a locked ref that is now a platform_require fails
-        tc.run("install")
-        tc.run("install -pr=profile")
+        created_dep_ref = tc.created_layout().reference.ref
 
-        tc.run("install -pr=profile --lockfile=platform.lock")
+        # The platform revision is correctly captured in the lockfile
+        tc.run("lock create --lockfile-out=platform.lock -pr=profile")
+        assert f"dep/1.0#{expected_rev}" in tc.load("platform.lock")
+        tc.run("lock create --lockfile-out=real.lock")
+        assert str(created_dep_ref) in tc.load("real.lock")
+
+        # Not using lockfiles when expanding the graph works as expected
+        tc.run("install")
+        tc.assert_listed_require({str(created_dep_ref): "Cache"}, build=is_tool_platform)
+        tc.run("install -pr=profile")
+        tc.assert_listed_require({f"dep/1.0#{expected_rev}": "Platform"}, build=is_tool_platform)
+
+        # And also with lockfiles, the platform revision is correctly captured in the lockfile
         tc.run("install --lockfile=real.lock")
+        tc.assert_listed_require({str(created_dep_ref): "Cache"}, build=is_tool_platform)
+        tc.run("install -pr=profile --lockfile=platform.lock")
+        tc.assert_listed_require({f"dep/1.0#{expected_rev}": "Platform"}, build=is_tool_platform)
 
         tc.run("install --lockfile=platform.lock", assert_error=True)
+        assert "Package 'dep/1.0' not resolved" in tc.out
         tc.run("install -pr=profile --lockfile=real.lock", assert_error=True)
+        assert f"Requirement 'dep/1.0#{expected_rev}' not in lockfile" in tc.out
 
 
 class TestGenerators:
