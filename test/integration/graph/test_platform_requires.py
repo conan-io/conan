@@ -235,6 +235,15 @@ class TestPlatformRequiresLock:
         tc.run("install -pr=profile --lockfile=real.lock", assert_error=True)
         assert f"Requirement 'dep/1.0#{expected_rev}' not in lockfile" in tc.out
 
+        # Now, what happens if we just merge both lockfiles so we can switch on the fly?
+        # Both can coexist because they have different revisions.
+        # The platform requires does not have a timestamp, so it's never selected outside platform matches
+        tc.run("lock merge --lockfile=real.lock --lockfile=platform.lock --lockfile-out=merged.lock")
+        tc.run("install --lockfile=merged.lock")
+        tc.assert_listed_require({str(created_dep_ref): "Cache"}, build=is_tool_platform)
+        tc.run("install -pr=profile --lockfile=merged.lock")
+        tc.assert_listed_require({f"dep/1.0#{expected_rev}": "Platform"}, build=is_tool_platform)
+
 
 class TestGenerators:
     def test_platform_requires_range(self):
