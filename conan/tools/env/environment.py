@@ -5,7 +5,6 @@ from collections import OrderedDict
 from contextlib import contextmanager
 
 from conan.api.output import ConanOutput
-from conan.internal.api.install.generators import relativize_paths
 from conan.internal.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
 from conan.internal.model.recipe_ref import ref_matches
@@ -443,7 +442,7 @@ class EnvVars:
             {deactivate}
             """).format(deactivate=deactivate if generate_deactivate else "")
         result = [capture]
-        abs_base_path, new_path = relativize_paths(self._conanfile, "%~dp0")
+        abs_base_path, new_path = _relativize_paths(self._conanfile, "%~dp0")
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
@@ -461,7 +460,7 @@ class EnvVars:
         result = []
         if generate_deactivate:
             result.append(_ps1_deactivate_contents(self._deactivation_mode, self._values, filename))
-        abs_base_path, new_path = relativize_paths(self._conanfile, "$PSScriptRoot")
+        abs_base_path, new_path = _relativize_paths(self._conanfile, "$PSScriptRoot")
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
@@ -488,7 +487,7 @@ class EnvVars:
         result = []
         if generate_deactivate:
             result.append(_sh_deactivate_contents(self._deactivation_mode, self._values, filename))
-        abs_base_path, new_path = relativize_paths(self._conanfile, "$script_folder")
+        abs_base_path, new_path = _relativize_paths(self._conanfile, "$script_folder")
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
@@ -791,3 +790,97 @@ def register_env_script(conanfile, env_script_path, scope="build"):
     existing = conanfile.env_scripts.setdefault(scope, [])
     if env_script_path not in existing:
         existing.append(env_script_path)
+
+
+def generate_aggregated_env(conanfile):
+
+    def deactivates(filenames):
+        # FIXME: Probably the order needs to be reversed
+        result = []
+        for s in reversed(filenames):
+            folder, f = os.path.split(s)
+            result.append(os.path.join(folder, "deactivate_{}".format(f)))
+        return result
+
+    def deactivate_function_names(filenames):
+        return [os.path.splitext(os.path.basename(s))[0].replace("-", "_")
+                for s in reversed(filenames)]
+
+    deactivation_mode = conanfile.conf.get("tools.env:deactivation_mode", default=None,
+                                           check_type=str)
+    generated = []
+    for group, env_scripts in conanfile.env_scripts.items():
+        subsystem = deduce_subsystem(conanfile, group)
+        bats = []
+        shs = []
+        ps1s = []
+        for env_script in env_scripts:
+            path = os.path.join(conanfile.generators_folder, env_script)
+            # Only the .bat and .ps1 are made relative to current script
+            if env_script.endswith(".bat"):
+                path = os.path.relpath(path, conanfile.generators_folder)
+                bats.append("%~dp0/"+path)
+            elif env_script.endswith(".sh"):
+                shs.append(subsystem_path(subsystem, path))
+            elif env_script.endswith(".ps1"):
+                path = os.path.relpath(path, conanfile.generators_folder)
+                # This $PSScriptRoot uses the current script directory
+                ps1s.append("$PSScriptRoot/"+path)
+        if shs:
+            def sh_content(files):
+                content = ". " + " && . ".join('"{}"'.format(s) for s in files)
+                if deactivation_mode == "function":
+                    content += f"\n\ndeactivate_conan{group}() {{\n"
+                    for deactivate_name in deactivate_function_names(shs):
+                        content += f"    deactivate_{deactivate_name}\n"
+                    content += f"    unset -f deactivate_conan{group}\n}}\n"
+                return content
+            filename = "conan{}.sh".format(group)
+            generated.append(filename)
+            save(os.path.join(conanfile.generators_folder, filename), sh_content(shs))
+            if not deactivation_mode:
+                save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                     sh_content(deactivates(shs)))
+        if bats:
+            def bat_content(files):
+                return "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
+            filename = "conan{}.bat".format(group)
+            generated.append(filename)
+            save(os.path.join(conanfile.generators_folder, filename), bat_content(bats))
+            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                 bat_content(deactivates(bats)))
+        if ps1s:
+            def ps1_content(files):
+                content = "\r\n".join(['& "{}"'.format(b) for b in files])
+                if deactivation_mode == "function":
+                    content += f"\n\nfunction global:deactivate_conan{group} {{\n"
+                    for deactivate_name in deactivate_function_names(ps1s):
+                        content += f"    deactivate_{deactivate_name}\n"
+                    content += (f"    Remove-Item -Path function:deactivate_conan{group} "
+                                "-ErrorAction SilentlyContinue"
+                                "\n}\n")
+                return content
+            filename = "conan{}.ps1".format(group)
+            generated.append(filename)
+            save(os.path.join(conanfile.generators_folder, filename), ps1_content(ps1s))
+            if not deactivation_mode:
+                save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                     ps1_content(deactivates(ps1s)))
+    if generated:
+        conanfile.output.highlight("Generating aggregated env files")
+        conanfile.output.info(f"Generated aggregated env files: {generated}")
+
+
+def _relativize_paths(conanfile, placeholder):
+    abs_base_path = conanfile.folders._base_generators  # noqa
+    if not abs_base_path or not os.path.isabs(abs_base_path):
+        return None, None
+    abs_base_path = os.path.join(abs_base_path, "")  # For the trailing / to dissambiguate matches
+    generators_folder = conanfile.generators_folder
+    try:
+        rel_path = os.path.relpath(abs_base_path, generators_folder)
+    except ValueError:  # In case the unit in Windows is different, path cannot be made relative
+        return None, None
+    new_path = placeholder if rel_path == "." else os.path.join(placeholder, rel_path)
+    new_path = os.path.join(new_path, "")  # For the trailing / to dissambiguate matches
+    return abs_base_path, new_path
