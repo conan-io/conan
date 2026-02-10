@@ -492,6 +492,12 @@ class EnvVars:
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
+            placeholder = f"${varname}"
+            sep = self._pathsep if varvalues._path else varvalues._sep  # noqa
+            if value.endswith(sep + placeholder):
+                value = value.replace(sep + placeholder, f"${{{varname}:+{sep}${varname}}}", 1)
+            elif (placeholder + sep) in value:
+                value = value.replace(placeholder + sep, f"${{{varname}:-}}${{{varname}:+{sep}}}", 1)
             value = value.replace('"', '\\"')
             if generate_deactivate and self._deactivation_mode == "function":
                 # Check environment variable existence before saving value
