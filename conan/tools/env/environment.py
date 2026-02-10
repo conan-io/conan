@@ -447,7 +447,18 @@ class EnvVars:
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
-            result.append('set "{}={}"'.format(varname, value))
+            no_value = varvalues.get_str("", subsystem=self._subsystem, pathsep=self._pathsep,
+                                         root_path=abs_base_path, script_path=new_path)
+            if value != no_value:
+                set_value = textwrap.dedent(f"""\
+                    if defined {varname} (
+                        set "{varname}={value}"
+                    ) else (
+                        set "{varname}={no_value}"
+                    )""")
+            else:
+                set_value = f'set "{varname}={value}"'
+            result.append(set_value)
 
         content = "\n".join(result)
         # It is very important to save it correctly with utf-8, the Conan util save() is broken
@@ -465,6 +476,8 @@ class EnvVars:
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("$env:{name}", subsystem=self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
+            no_value = varvalues.get_str("", subsystem=self._subsystem, pathsep=self._pathsep,
+                                         root_path=abs_base_path, script_path=new_path)
             if generate_deactivate and self._deactivation_mode == "function":
                 # Check environment variable existence before saving value
                 result.append(
@@ -472,7 +485,19 @@ class EnvVars:
                 )
             if varvalues:
                 value = value.replace('"', '`"')  # escape quotes
-                result.append(f'$env:{varname}="{value}"')
+                no_value = no_value.replace('"', '`"')  # escape quotes
+
+                if value != no_value:
+                    set_value = textwrap.dedent(f"""\
+                       if ($env:{varname}) {{
+                           $env:{varname}="{value}"
+                       }} else {{
+                           $env:{varname}="{no_value}"
+                       }}
+                       """)
+                else:
+                    set_value = f'$env:{varname}="{value}"'
+                result.append(set_value)
             else:
                 result.append('if (Test-Path env:{0}) {{ Remove-Item env:{0} }}'.format(varname))
 
@@ -492,13 +517,10 @@ class EnvVars:
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
-            placeholder = f"${varname}"
-            sep = self._pathsep if varvalues._path else varvalues._sep  # noqa
-            if value.endswith(sep + placeholder):
-                value = value.replace(sep + placeholder, f"${{{varname}:+{sep}${varname}}}", 1)
-            elif (placeholder + sep) in value:
-                value = value.replace(placeholder + sep, f"${{{varname}:-}}${{{varname}:+{sep}}}", 1)
+            no_value = varvalues.get_str("", subsystem=self._subsystem, pathsep=self._pathsep,
+                                         root_path=abs_base_path, script_path=new_path)
             value = value.replace('"', '\\"')
+            no_value = no_value.replace('"', '\\"')
             if generate_deactivate and self._deactivation_mode == "function":
                 # Check environment variable existence before saving value
                 result.append(
@@ -507,7 +529,17 @@ class EnvVars:
                     f'fi;'
                 )
             if varvalues:
-                result.append(f'export {varname}="{value}"')
+                if value != no_value:
+                    set_value = textwrap.dedent(f"""\
+                       if [ -n "${varname}" ]; then
+                           export {varname}="{value}"
+                       else
+                           export {varname}="{no_value}"
+                       fi
+                       """)
+                else:
+                    set_value = f'export {varname}="{value}"'
+                result.append(set_value)
             else:
                 result.append(f'unset {varname}')
 
