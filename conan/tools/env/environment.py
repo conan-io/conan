@@ -531,7 +531,7 @@ class EnvVars:
             if varvalues:
                 if value != no_value:
                     set_value = textwrap.dedent(f"""\
-                       if [ -n "${varname}" ]; then
+                       if [ -n "${{{varname}:-}}" ]; then
                            export {varname}="{value}"
                        else
                            export {varname}="{no_value}"
