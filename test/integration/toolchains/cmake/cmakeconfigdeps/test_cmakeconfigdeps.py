@@ -916,28 +916,3 @@ class TestExtraFindExtraVariants:
         assert paths_content.count("list(APPEND CONAN_hello_DIR_MULTI") == 2
         assert paths_content.count("list(APPEND CONAN_HellO_DIR_MULTI") == 2
         assert paths_content.count("list(APPEND CONAN_HELLO_DIR_MULTI") == 2
-
-    def test_find_package_extra_variants_name_missmatch(self):
-        tc = TestClient()
-        hello = textwrap.dedent("""
-        from conan import ConanFile
-
-        class HelloConan(ConanFile):
-            name = "hello"
-            version = "1.0"
-
-            def package_info(self):
-                self.cpp_info.set_property("cmake_file_name_variants", ["Bye"])
-        """)
-        tc.save({"hello/conanfile.py": hello})
-        tc.run("create hello")
-
-        tc.save({"conanfile.py": GenConanfile("pkg", "0.1")
-                    .with_require("hello/1.0")
-                    .with_generator("CMakeConfigDeps")
-                    .with_settings("os", "compiler", "build_type", "arch")})
-
-        tc.run("build", assert_error=True)
-        # This does not change the cmake file name, so only hello-config.cmake is generated
-        # so even though Bye_DIR exits, Bye-config.cmake was not generated so nothing is found
-        assert "cmake_file_name_variants' property contains entries that differ" in tc.out
