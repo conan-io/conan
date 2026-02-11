@@ -423,19 +423,14 @@ class EnvVars:
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
-            if self._deactivation_mode == "function":
-                result.append(f'set "{_old_env_prefix(filename)}_{varname}=%{varname}%"')
             if value:
                 result.append(f'set "{varname}={value}"')
             else:
                 result.append(f'set "{varname}="')
 
         if generate_deactivate:
-            deactivate_content = _bat_deactivate_contents(self._deactivation_mode, self._values, filename)
-            if self._deactivation_mode == "function":
-                result.append(deactivate_content)
-            else:
-                result.insert(0, deactivate_content)
+            deactivate_content = _bat_deactivate_contents(self._deactivation_mode, self._values, filename, self._scope)
+            result.insert(0, deactivate_content)
 
         content = "\n".join(result)
         # It is very important to save it correctly with utf-8, the Conan util save() is broken
@@ -564,57 +559,33 @@ def _old_env_prefix(filename):
     return f"_CONAN_OLD_{_deactivate_func_name(filename).upper()}"
 
 
-def _bat_deactivate_contents(use_deactivate_function, values, filename):
+def _bat_deactivate_contents(use_deactivate_function, values, filename, scope):
     deactivate_file = "deactivate_{}".format(filename)
-    if use_deactivate_function:
-        macro_name = _deactivate_func_name(filename)
-
-        return textwrap.dedent(f"""\
-            set "_ALIAS_DIR=%TEMP%\.conan_alias_%RANDOM%"
-            mkdir "%_ALIAS_DIR%"
-            echo "%_ALIAS_DIR%
-
-
-            > "%_ALIAS_DIR%\deactivate_{macro_name}.bat" (
-                echo @echo off
-                echo setlocal EnableDelayedExpansion
-                echo echo Restoring environment {macro_name}
-                echo set "_ALIAS_DIR=%%~dp0"
-                echo set "_ALIAS_DIR=%%_ALIAS_DIR:~0,-1%%"
-                echo set "UPDATED_PATH=!PATH:%%_ALIAS_DIR%%;=!"
-                echo set "UPDATED_PATH=!UPDATED_PATH:%%_ALIAS_DIR%%=!"
-                echo "endlocal & set \\"PATH=%%UPDATED_PATH%%\\""
-                echo (
-                echo    del "%%~f0"
-                echo    exit
-                echo )
-            )
-
-            set "PATH=%_ALIAS_DIR%;%PATH%"
-            echo Environment activated. Run "deactivate_{macro_name}" to restore.
-        """)
-
+    dest_variable = f"%_CONAN_{scope}_DEACTIVATES_DIR%" if use_deactivate_function else "%~dp0"
     return textwrap.dedent("""\
         @echo off
         chcp 65001 > nul
 
         setlocal
-        echo @echo off > "%~dp0/{deactivate_file}"
-        echo echo Restoring environment >> "%~dp0/{deactivate_file}"
+        echo @echo off > "{dest_variable}/{deactivate_file}"
+        echo echo Restoring environment for {filename} with {vars} >> "{dest_variable}/{deactivate_file}"
         for %%v in ({vars}) do (
             set foundenvvar=
             for /f "delims== tokens=1,2" %%a in ('set') do (
                 if /I "%%a" == "%%v" (
-                    echo set "%%a=%%b">> "%~dp0/{deactivate_file}"
+                    echo set "%%a=%%b">> "{dest_variable}/{deactivate_file}"
                     set foundenvvar=1
                 )
             )
             if not defined foundenvvar (
-                echo set %%v=>> "%~dp0/{deactivate_file}"
+                echo set %%v=>> "{dest_variable}/{deactivate_file}"
             )
         )
         endlocal
-        """).format(deactivate_file=deactivate_file, vars=" ".join(values.keys()))
+        """).format(deactivate_file=deactivate_file,
+                    vars=" ".join(values.keys()),
+                    dest_variable=dest_variable,
+                    filename=filename,)
 
 
 def _ps1_deactivate_contents(deactivation_mode, values, filename):

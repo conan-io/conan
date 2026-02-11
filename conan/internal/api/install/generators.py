@@ -1,5 +1,6 @@
 import inspect
 import os
+import tempfile
 import textwrap
 import traceback
 import importlib
@@ -222,18 +223,27 @@ def _generate_aggregated_env(conanfile):
                 save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                      sh_content(deactivates(shs)))
         if bats:
-            def bat_content(files):
-                content = "\r\n".join(["@echo off"] + ['call "{}"'.format(b) for b in files])
+            def bat_content(files, is_deactivate=False):
+                content = ""
                 if deactivation_mode == "function":
-                    content += "\r\n" + _bat_global_deactivate_content(files, group) + "\r\n"
+                    deactivates_var = f"_CONAN_{group}_DEACTIVATES_DIR"
+                    if is_deactivate:
+                        call_prefix = f"%{deactivates_var}%\\"
+                        files = [f.replace("%~dp0\\", call_prefix) for f in files]
+                    else:
+                        content += "\r\n".join([f'set "{deactivates_var}=%TEMP%\\.conan_{group}_deactivate_envs_%RANDOM%"',
+                                                f'mkdir "%{deactivates_var}%"',
+                                                ''])
+                content += "\r\n".join(["@echo off"] + [f'call "{b}"' for b in files])
+
                 return content
 
             filename = "conan{}.bat".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), bat_content(bats))
-            if not deactivation_mode:
-                save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-                     bat_content(deactivates(bats)))
+            # if not deactivation_mode:
+            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
+                 bat_content(deactivates(bats), True))
         if ps1s:
             def ps1_content(files):
                 content = "\r\n".join(['& "{}"'.format(b) for b in files])
@@ -254,36 +264,6 @@ def _generate_aggregated_env(conanfile):
     if generated:
         conanfile.output.highlight("Generating aggregated env files")
         conanfile.output.info(f"Generated aggregated env files: {generated}")
-
-def _deactivate_function_names(filenames):
-    return [os.path.splitext(os.path.basename(s))[0].replace("-", "_")
-            for s in filenames]
-
-def _bat_global_deactivate_content(files, group):
-    _new_line = "\n\r echo echo yolo\n\r"
-    return textwrap.dedent(f"""\
-        set "_ALIAS_DIR=%TEMP%\.conan_alias_%RANDOM%"
-        mkdir "%_ALIAS_DIR%"
-        echo "%_ALIAS_DIR%
-
-
-        > "%_ALIAS_DIR%\deactivate_conan{group}.bat" (
-            {_new_line.join(f"echo deactivate_{f}" for f in _deactivate_function_names(files))}
-            echo @echo off
-            echo setlocal EnableDelayedExpansion
-            echo echo Restoring environment principal
-            echo set "_ALIAS_DIR=%%~dp0"
-            echo set "_ALIAS_DIR=%%_ALIAS_DIR:~0,-1%%"
-            echo set "UPDATED_PATH=!PATH:%%_ALIAS_DIR%%;=!"
-            echo set "UPDATED_PATH=!UPDATED_PATH:%%_ALIAS_DIR%%=!"
-            echo endlocal & set \\"PATH=%%UPDATED_PATH%%\\"
-            rem echo del "%%~f0"
-        )
-
-        set "PATH=%_ALIAS_DIR%;%PATH%"
-
-        echo Environment activated. Run "deactivate_conan{group}" to restore.
-        """)
 
 
 def relativize_paths(conanfile, placeholder):

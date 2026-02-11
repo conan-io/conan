@@ -518,7 +518,7 @@ def test_multiple_deactivate(deactivation_mode):
 
     for _ in range(2):  # Just repeat it, so we can check things keep working
         if platform.system() == "Windows":
-            deactivate_cmd = "deactivate_conanbuild" if deactivation_mode else "deactivate_conanbuild.bat"
+            deactivate_cmd = "deactivate_conanbuild.bat" if deactivation_mode else "deactivate_conanbuild.bat"
             cmd = f"conanbuild.bat && display.bat && {deactivate_cmd} && display.bat"
         else:
             deactivate_cmd = "deactivate_conanbuild" if deactivation_mode else ". ./deactivate_conanbuild.sh"
@@ -526,10 +526,9 @@ def test_multiple_deactivate(deactivation_mode):
         out, _ = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                   shell=True, cwd=client.current_folder).communicate()
         out = out.decode()
-        #assert "VAR1=Value1!!" in out
-        #assert "VAR2=Value2!!" in out
+        assert "VAR1=Value1!!" in out
+        assert "VAR2=Value2!!" in out
         print("RESTORING", deactivation_mode, str(out).count("Restoring environment"))
-        breakpoint()
         assert 3 == str(out).count("Restoring environment")
         assert "VAR1=!!" in out
         assert "VAR2=!!" in out
