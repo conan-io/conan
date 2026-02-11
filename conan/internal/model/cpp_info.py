@@ -127,7 +127,7 @@ class _Component:
             "requires": self._requires,
             "properties": self._properties,
             "exe": self._exe,  # single exe, incompatible with libs
-            "type": str(self._type),
+            "type": str(self._type) if self._type else None,
             "location": self._location,
             "link_location": self._link_location,
             "languages": self._languages
