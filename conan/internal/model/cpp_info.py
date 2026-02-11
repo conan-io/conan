@@ -127,7 +127,7 @@ class _Component:
             "requires": self._requires,
             "properties": self._properties,
             "exe": self._exe,  # single exe, incompatible with libs
-            "type": self._type,
+            "type": str(self._type),
             "location": self._location,
             "link_location": self._link_location,
             "languages": self._languages
@@ -137,6 +137,8 @@ class _Component:
     def deserialize(contents):
         result = _Component()
         for field, value in contents.items():
+            if field == "type":
+                value = PackageType(value) if value is not None else None
             setattr(result, f"_{field}", value)
         return result
 
