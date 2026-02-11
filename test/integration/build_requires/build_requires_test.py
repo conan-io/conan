@@ -539,13 +539,14 @@ class TestBuildTrackHost:
         Make the tool_requires follow the regular require with the expression "<host_version>"
         """
         c = TestClient(light=True)
+        user_channel_reference = f"@{requires_tag}" if requires_tag else ""
         pkg = textwrap.dedent(f"""
             from conan import ConanFile
             class ProtoBuf(ConanFile):
                 name = "pkg"
                 version = "0.1"
                 def requirements(self):
-                    self.requires("protobuf/1.0@{requires_tag}")
+                    self.requires("protobuf/1.0{user_channel_reference}")
                 def build_requirements(self):
                     self.tool_requires("protobuf/<host_version>@{tool_requires_tag}")
             """)
@@ -559,8 +560,8 @@ class TestBuildTrackHost:
         c.run(f"create protobuf --version=1.0 {user_channel}")
 
         c.run("create pkg")
-        c.assert_listed_require({f"protobuf/1.0@{requires_tag}": "Cache"})
-        c.assert_listed_require({f"protobuf/1.0@{requires_tag}": "Cache"}, build=True)
+        c.assert_listed_require({f"protobuf/1.0{user_channel_reference}": "Cache"})
+        c.assert_listed_require({f"protobuf/1.0{user_channel_reference}": "Cache"}, build=True)
 
     @pytest.mark.parametrize("shared", [True, False])
     def test_host_version_transitive_contexts(self, shared):
