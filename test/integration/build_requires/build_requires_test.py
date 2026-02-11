@@ -529,12 +529,12 @@ class TestBuildTrackHost:
         tc.run("create app", assert_error=assert_error)
         assert assert_msg in tc.out
 
-    @pytest.mark.parametrize("requires_tag,tool_requires_tag,fails", [
-        ("user/channel", "user/channel", False),
-        ("", "user/channel", True),
-        ("auser/achannel", "anotheruser/anotherchannel", True),
+    @pytest.mark.parametrize("requires_tag,tool_requires_tag", [
+        ("user/channel", "user/channel"),
+        ("", "user/channel"),
+        ("auser/achannel", "anotheruser/anotherchannel"),
     ])
-    def test_overriden_host_version_user_channel(self, requires_tag, tool_requires_tag, fails):
+    def test_overriden_host_version_user_channel(self, requires_tag, tool_requires_tag):
         """
         Make the tool_requires follow the regular require with the expression "<host_version>"
         """
@@ -558,12 +558,9 @@ class TestBuildTrackHost:
             user_channel = ""
         c.run(f"create protobuf --version=1.0 {user_channel}")
 
-        c.run("create pkg", assert_error=fails)
-        if fails:
-            assert f"pkg/0.1 require 'protobuf/<host_version>@{tool_requires_tag}': didn't find a " \
-                   "matching host dependency" in c.out
-        else:
-            assert "pkg/0.1: Package '39f6a091994d2d080081ea888d75ef65c1d04c8d' created" in c.out
+        c.run("create pkg")
+        c.assert_listed_require({f"protobuf/1.0@{requires_tag}": "Cache"})
+        c.assert_listed_require({f"protobuf/1.0@{requires_tag}": "Cache"}, build=True)
 
     @pytest.mark.parametrize("shared", [True, False])
     def test_host_version_transitive_contexts(self, shared):
