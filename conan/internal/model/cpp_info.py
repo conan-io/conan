@@ -137,9 +137,12 @@ class _Component:
     def deserialize(contents):
         result = _Component()
         for field, value in contents.items():
-            if field == "type":
-                value = PackageType(value) if value is not None else None
-            setattr(result, f"_{field}", value)
+            if hasattr(result, field):
+                setattr(result, field, value)
+            else:
+                # If there's on setter, use the internal field, e.g, _properties which has
+                # set_property method, but not a setter
+                setattr(result, f"_{field}", value)
         return result
 
     def clone(self):

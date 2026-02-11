@@ -24,6 +24,7 @@ def test_cpp_info_serialize_round_trip():
                 cpp_info.libs = ["mylib", "myother"]
                 cpp_info.libdirs = ["mylibs"]
                 cpp_info.type = "static-library"
+                cpp_info.set_property("myprop", "myvalue")
                 p = os.path.join(self.package_folder, "cpp_info.json")
                 cpp_info.save(p)
 
@@ -40,3 +41,4 @@ def test_cpp_info_serialize_round_trip():
     assert cpp_info["libdirs"][0].endswith("mylibs")
     assert cpp_info["libs"] == ["mylib", "myother"]
     assert cpp_info["type"] == "static-library"
+    assert cpp_info["properties"] == {"myprop": "myvalue"}
