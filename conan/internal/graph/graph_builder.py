@@ -369,11 +369,10 @@ class DepsGraphBuilder:
                 ref.name = tracking_ref[1][:-1]  # Remove the trailing >
             req = Requirement(ref, headers=True, libs=True, visible=True)
             transitive = node.transitive_deps.get(req)
-            if transitive is None or transitive.require.ref.user != ref.user \
-                    or transitive.require.ref.channel != ref.channel:
+            if transitive is None:
                 raise ConanException(f"{node.ref} require '{ref}': didn't find a matching "
                                      "host dependency")
-            require.ref.version = transitive.require.ref.version
+            require.ref = transitive.require.ref.copy()
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         resolved = self._resolved_system(node, require, profile_build, profile_host,

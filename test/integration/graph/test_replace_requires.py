@@ -770,14 +770,16 @@ def test_host_version_replace():
     tc = TestClient(light=True)
     tc.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
              "conanfile.py": GenConanfile()
-                .with_requires("pkg/0.1")
+                .with_requires("pkg/0.1@user/channel")
                 .with_tool_requires("pkg/<host_version>"),
              "profile": profile})
     tc.run("create pkg")
     tc.run("create pkg --user=user --channel=channel")
 
-    tc.run("install -pr=profile", assert_error=True)
-    assert "require 'pkg/<host_version>': didn't find a matching host dependency" in tc.out
+    tc.run("install -pr=profile")
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"})
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"}, build=True)
+    # assert "require 'pkg/<host_version>': didn't find a matching host dependency" in tc.out
 
     profile += "\n[replace_tool_requires]\npkg/*: pkg/<host_version>@user/channel"
     tc.save({"profile": profile})
