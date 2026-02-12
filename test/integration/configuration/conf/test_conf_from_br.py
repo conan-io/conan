@@ -55,6 +55,67 @@ def test_basic():
     assert "conanfile.py: NDK: MY-SYSTEM-NDK!!!" in client.out
 
 
+def test_basic_types():
+    c = TestClient()
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.conf_info.append("tools.android:ndk_path", "MY-NDK!!")
+        """)
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            tool_requires = "android_ndk/1.0"
+            def generate(self):
+                self.output.info("NDK: %s" % self.conf.get("tools.android:ndk_path"))
+        """)
+
+    c.save({"android/conanfile.py": conanfile,
+            "consumer/conanfile.py": consumer})
+
+    c.run("create android --name=android_ndk --version=1.0")
+    c.run("install consumer")
+    assert "conanfile.py: NDK: ['MY-NDK!!']" in c.out
+    c.run("install consumer -c tools.android:ndk_path=OTHERNDK!!")
+    assert "conanfile.py: NDK: OTHERNDK!!" in c.out
+
+
+@pytest.mark.parametrize("action, expected", [("define", 'MY-NDK!!'),
+                                              ("define_path", 'MY-NDK!!'),
+                                              ("append", "['MY-NDK!!']")])
+def test_important(action, expected):
+    c = TestClient()
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.conf_info.{action}("tools.android:ndk_path!", "MY-NDK!!")
+        """)
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            tool_requires = "android_ndk/1.0"
+            def generate(self):
+                self.output.info("NDK: %s" % self.conf.get("tools.android:ndk_path"))
+        """)
+
+    c.save({"android/conanfile.py": conanfile,
+            "consumer/conanfile.py": consumer})
+
+    c.run("create android --name=android_ndk --version=1.0")
+    c.run("install consumer")
+    assert f"conanfile.py: NDK: {expected}" in c.out
+    c.run("install consumer -c tools.android:ndk_path=OTHERNDK!!")
+    assert f"conanfile.py: NDK: {expected}" in c.out
+    c.run("install consumer -c tools.android:ndk_path!=OTHERNDK!!")
+    assert "conanfile.py: NDK: OTHERNDK!!" in c.out
+
+
 def test_basic_conf_through_cli():
     client = TestClient()
     conanfile = textwrap.dedent("""

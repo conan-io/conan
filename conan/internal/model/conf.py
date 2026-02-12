@@ -180,10 +180,15 @@ class _ConfVarPlaceHolder:
 
 class _ConfValue:
 
-    def __init__(self, name, value, path=False, update=None):
+    def __init__(self, name, value, path=False, update=None, important=False):
         if name != name.lower():
             raise ConanException("Conf '{}' must be lowercase".format(name))
-        self._name = name
+        if name.endswith("!"):
+            self._name = name[:-1]
+            self._important = True
+        else:
+            self._name = name
+            self._important = important
         self._value = value
         self._value_type = type(value)
         if isinstance(value, (_PackageOption, SettingsItem)):
@@ -204,19 +209,22 @@ class _ConfValue:
 
     def copy(self):
         # Using copy for when self._value is a mutable list
-        return _ConfValue(self._name, copy.copy(self._value), self._path, self._update)
+        return _ConfValue(self._name, copy.copy(self._value), self._path, self._update,
+                          self._important)
 
     def dumps(self):
+        name = f"!{self._name}" if self._important else self._name
         if self._value is None:
-            return "{}=!".format(self._name)  # unset
+            return "{}=!".format(name)  # unset
         elif self._value_type is list and _ConfVarPlaceHolder in self._value:
             v = self._value[:]
             v.remove(_ConfVarPlaceHolder)
-            return "{}={}".format(self._name, v)
+            return "{}={}".format(name, v)
         else:
-            return "{}={}".format(self._name, self._value)
+            return "{}={}".format(name, self._value)
 
     def serialize(self):
+        name = f"!{self._name}" if self._important else self._name
         if self._value is None:
             _value = "!"  # unset
         elif self._value_type is list and _ConfVarPlaceHolder in self._value:
@@ -225,7 +233,7 @@ class _ConfValue:
             _value = v
         else:
             _value = self._value
-        return {self._name: _value}
+        return {name: _value}
 
     def update(self, value):
         assert self._value_type is dict, "Only dicts can be updated"
@@ -268,6 +276,10 @@ class _ConfValue:
         """
         v_type = self._value_type
         o_type = other._value_type
+        if other._important and not self._important:
+            self._value = other._value
+            return
+
         if v_type is list and o_type is list:
             try:
                 index = self._value.index(_ConfVarPlaceHolder)
@@ -430,10 +442,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value of the configuration.
         """
-        self._values[name] = _ConfValue(name, value)
+        v = _ConfValue(name, value)
+        self._values[v._name] = v  # noqa
 
     def define_path(self, name, value):
-        self._values[name] = _ConfValue(name, value, path=True)
+        v = _ConfValue(name, value, path=True)
+        self._values[v._name] = v  # noqa
 
     def unset(self, name):
         """
@@ -466,11 +480,11 @@ class Conf:
         :param value: Value to append.
         """
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
-        self._values.setdefault(name, conf_value).append(value)
+        self._values.setdefault(conf_value._name, conf_value).append(value)  # noqa
 
     def append_path(self, name, value):
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
-        self._values.setdefault(name, conf_value).append(value)
+        self._values.setdefault(conf_value._name, conf_value).append(value)  # noqa
 
     def prepend(self, name, value):
         """
@@ -480,11 +494,11 @@ class Conf:
         :param value: Value to prepend.
         """
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
-        self._values.setdefault(name, conf_value).prepend(value)
+        self._values.setdefault(conf_value._name, conf_value).prepend(value)  # noqa
 
     def prepend_path(self, name, value):
         conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
-        self._values.setdefault(name, conf_value).prepend(value)
+        self._values.setdefault(conf_value._name, conf_value).prepend(value)  # noqa
 
     def remove(self, name, value):
         """
