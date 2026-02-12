@@ -1,5 +1,6 @@
 import inspect
 import os
+import random
 import tempfile
 import textwrap
 import traceback
@@ -223,27 +224,28 @@ def _generate_aggregated_env(conanfile):
                 save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                      sh_content(deactivates(shs)))
         if bats:
+            _folder = tempfile.mkdtemp() if deactivation_mode == "function" else conanfile.generators_folder
             def bat_content(files, is_deactivate=False):
-                content = ""
+                content = "@echo off\r\n"
+
                 if deactivation_mode == "function":
                     deactivates_var = f"_CONAN_{group}_DEACTIVATES_DIR"
                     if is_deactivate:
                         call_prefix = f"%{deactivates_var}%\\"
                         files = [f.replace("%~dp0\\", call_prefix) for f in files]
+                        content += f'\r\ncall set "PATH=%%PATH:%{deactivates_var}%;=%%"'
                     else:
-                        content += "\r\n".join([f'set "{deactivates_var}=%TEMP%\\.conan_{group}_deactivate_envs_%RANDOM%"',
-                                                f'mkdir "%{deactivates_var}%"',
-                                                ''])
-                content += "\r\n".join(["@echo off"] + [f'call "{b}"' for b in files])
+                        content += "\r\n".join([f'set "{deactivates_var}={_folder}"',
+                                                f'set PATH=%{deactivates_var}%;%PATH%'])
+                content +="\r\n" + "\r\n".join(f'call "{b}"' for b in files)
 
                 return content
 
             filename = "conan{}.bat".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), bat_content(bats))
-            # if not deactivation_mode:
-            save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
-                 bat_content(deactivates(bats), True))
+            save(os.path.join(_folder, "deactivate_{}".format(filename)), bat_content(deactivates(bats), is_deactivate=True))
+
         if ps1s:
             def ps1_content(files):
                 content = "\r\n".join(['& "{}"'.format(b) for b in files])
