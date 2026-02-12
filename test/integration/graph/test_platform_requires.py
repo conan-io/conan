@@ -244,6 +244,12 @@ class TestPlatformRequiresLock:
         tc.run("install -pr=profile --lockfile=merged.lock")
         tc.assert_listed_require({f"dep/1.0#{expected_rev}": "Platform"}, build=is_tool_platform)
 
+        # And now, having a lockfile which just has name/version
+        requires = "build-requires" if is_tool_platform else "requires"
+        tc.run(f"lock add --{requires}=dep/1.0 --lockfile-out=simple.lock")
+        tc.run("install -pr=profile --lockfile=simple.lock")
+        tc.assert_listed_require({f"dep/1.0#{expected_rev}": "Platform"}, build=is_tool_platform)
+
 
 class TestGenerators:
     def test_platform_requires_range(self):
