@@ -276,37 +276,44 @@ class _ConfValue:
         """
         v_type = self._value_type
         o_type = other._value_type
-        if other._important and not self._important:
-            self._value = other._value
-            return
 
+        important = other._important and not self._important
         if v_type is list and o_type is list:
+            v1, v2 = (other._value, self._value) if important else (self._value, other._value)
             try:
-                index = self._value.index(_ConfVarPlaceHolder)
+                index = v1.index(_ConfVarPlaceHolder)
             except ValueError:  # It doesn't have placeholder
-                pass
+                if important:
+                    self._value = other._value
             else:
-                new_value = self._value[:]  # do a copy
-                new_value[index:index + 1] = other._value  # replace the placeholder
+                new_value = v1[:]  # do a copy
+                new_value[index:index + 1] = v2  # replace the placeholder
                 self._value = new_value
         elif v_type is dict and o_type is dict:
             if self._update:
                 # only if the current one is marked as "*=" update, otherwise it remains
                 # as this is a "compose" operation, self has priority, it is the one updating
-                new_value = other._value.copy()
-                new_value.update(self._value)
+                v1, v2 = (other._value, self._value) if important else (self._value, other._value)
+                new_value = v2.copy()
+                new_value.update(v1)
                 self._value = new_value
+            elif important:
+                self._value = other._value
         elif issubclass(v_type, numbers.Number) and issubclass(o_type, numbers.Number):
             # They might be different kind of numbers, so skip the check below
             pass
         elif self._value is None or other._value is None:
             # It means any of those values were an "unset" so doing nothing because we don't
             # really know the original value type
-            pass
+            if important:
+                self._value = other._value
+                self._value_type = other._value_type
         elif o_type != v_type:
             raise ConanException("It's not possible to compose {} values "
                                  "and {} ones.".format(v_type.__name__, o_type.__name__))
         # TODO: In case of any other object types?
+        elif important:
+            self._value = other._value
 
     def set_relative_base_folder(self, folder):
         if not self._path:
@@ -455,7 +462,8 @@ class Conf:
 
         :param name: Name of the configuration.
         """
-        self._values[name] = _ConfValue(name, None)
+        v = _ConfValue(name, None)
+        self._values[v._name] = v  # noqa
 
     def update(self, name, value):
         """
@@ -466,11 +474,11 @@ class Conf:
         """
         # Placeholder trick is not good for dict update, so we need to explicitly update=True
         conf_value = _ConfValue(name, {}, update=True)
-        self._values.setdefault(name, conf_value).update(value)
+        self._values.setdefault(conf_value._name, conf_value).update(value)  # noqa
 
     def update_path(self, name, value):
         conf_value = _ConfValue(name, {}, path=True, update=True)
-        self._values.setdefault(name, conf_value).update(value)
+        self._values.setdefault(conf_value._name, conf_value).update(value)  # noqa
 
     def append(self, name, value):
         """
