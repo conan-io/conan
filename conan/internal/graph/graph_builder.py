@@ -372,7 +372,6 @@ class DepsGraphBuilder:
             if transitive is None:
                 raise ConanException(f"{node.ref} require '{ref}': didn't find a matching "
                                      "host dependency")
-            # Don't copy name/revision, they might be pointing to a different package
             require.ref.version = transitive.require.ref.version
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
