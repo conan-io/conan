@@ -629,6 +629,8 @@ def test_cps_name_mapping():
 
     # First, try with the standard mypkg-config.cmake consumption
     test_package_cmakelists = c.load("test_package/CMakeLists.txt")
+    # The target and the file name use the CPS name, not the package name
+    test_package_cmakelists = test_package_cmakelists.replace("find_package(mypkg", "find_package(potato")
     test_package_cmakelists = test_package_cmakelists.replace("mypkg::mypkg", "potato::mypkg")
     test_package_cmakelists = test_package_cmakelists.replace("CMakeDeps", "CMakeConfigDeps")
     c.save({"conanfile.py": conanfile,
@@ -668,7 +670,6 @@ def test_cps_name_mapping():
                 self.output.info(f"Dep defines: {self.dependencies[self.tested_reference_str].cpp_info.defines}")
                 deps = CMakeConfigDeps(self)
                 deps.set_property("mypkg", "cmake_find_mode", "none")
-                deps.set_property("mypkg", "cmake_file_name", "potato")
                 deps.generate()
                 tc = CMakeToolchain(self)
                 tc.generate()

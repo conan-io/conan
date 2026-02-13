@@ -263,6 +263,7 @@ class CPS:
             cpp_comp = cpp_info if len(self.components) == 1 else cpp_info.components[comp_name]
             cpp_comp.includedirs = strip_prefix(comp.includes)
             cpp_comp.defines = definitions(comp.definitions)
+            cpp_info.set_property("cmake_file_name", self.name)
             cpp_info.set_property("cmake_target_name", f"{self.name}::{comp_name}")
             if comp.link_location:
                 link_location = comp.link_location
