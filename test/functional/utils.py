@@ -40,7 +40,8 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
                     assert "libstdc++-6.dll" not in client.out
                 else:
                     assert "libstdc++-6.dll" in client.out
-            elif subsystem == "clang64":
+            else:
+                assert subsystem == "clang64"
                 assert "api-ms-win-crt-" in client.out
                 if static_runtime:
                     assert "libunwind.dll" not in client.out
@@ -49,8 +50,6 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
                     # Latest clangs from subsystems no longer depend on libunwind
                     assert "libunwind.dll" not in client.out
                     assert "libc++.dll" in client.out
-            else:
-                raise Exception("unknown {}".format(subsystem))
         elif static_runtime:
             assert "KERNEL32.dll" in client.out
             assert "MSVC" not in client.out
@@ -61,12 +60,11 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
                 assert "ucrtbased" in client.out
             else:
                 assert "api-ms-win-crt-" in client.out
-            if vs_version in ["15", "16", "17"]:  # UCRT
-                debug = "D" if build_type == "Debug" else ""
-                assert "MSVCP140{}.dll".format(debug) in client.out
-                assert "VCRUNTIME140{}.dll".format(debug) in client.out
-            else:
-                raise NotImplementedError()
+            assert vs_version in ["15", "16", "17", "18"]  # UCRT
+            debug = "D" if build_type == "Debug" else ""
+            assert "MSVCP140{}.dll".format(debug) in client.out
+            assert "VCRUNTIME140{}.dll".format(debug) in client.out
+
     else:  # A static library cannot be checked the same
         client.run_command('{} && DUMPBIN /NOLOGO /DIRECTIVES "{}"'.format(vcvars, artifact))
         if build_type == "Debug":

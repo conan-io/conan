@@ -3,7 +3,7 @@ from unittest.mock import patch
 import pytest
 
 from conan.internal.api.detect.detect_api import detect_suncc_compiler, \
-    detect_intel_compiler, detect_default_compiler
+    detect_intel_compiler, detect_emcc_compiler, detect_default_compiler
 from conan.internal.api.profile.detect import detect_defaults_settings
 from conan.internal.model.version import Version
 from conan.test.utils.mocks import RedirectedTestOutput
@@ -88,6 +88,9 @@ def test_detect_cc_versioning(detect_runner_mock, version_return, expected_versi
 @pytest.mark.parametrize("function,version_return,expected_version", [
     [detect_suncc_compiler, "Sun C 5.13", ('sun-cc', Version("5.13"), 'cc')],
     [detect_intel_compiler, "Intel C++ Compiler 2025.0", ('intel-cc', Version("2025.0"), 'icx')],
+    [detect_emcc_compiler,
+     "emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 4.0.22 (0f3d2e62bccf8e14497ff19e05a1202c51eb0c65)",
+     ('emcc', Version("4.0.22"), 'emcc')],
 ])
 def test_detect_compiler(function, version_return, expected_version):
     """
