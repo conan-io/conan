@@ -1,8 +1,6 @@
 import inspect
 import os
-import random
 import tempfile
-import textwrap
 import traceback
 import importlib
 
@@ -238,6 +236,7 @@ def _generate_aggregated_env(conanfile):
                         content += "\r\n".join([f'set "{deactivates_var}={_folder}"',
                                                 f'set PATH=%{deactivates_var}%;%PATH%'])
                 content +="\r\n" + "\r\n".join(f'call "{b}"' for b in files)
+                content += f'\r\nset {deactivates_var}=' if deactivation_mode == "function" and is_deactivate else ''
 
                 return content
 
