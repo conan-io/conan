@@ -103,7 +103,7 @@ class TestImportant:
                 def generate(self):
                     self.output.info("NDK: %s" % self.conf.get("tools.android:ndk_path"))
             """)
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"conanfile.py": conanfile})
         c.run("create . --name=android_ndk --version=1.0")
         c.save({"conanfile.py": app}, clean_first=True)

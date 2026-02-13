@@ -181,20 +181,21 @@ class _ConfVarPlaceHolder:
 class _ConfValue:
 
     def __init__(self, name, value, path=False, update=None, important=False):
-        if name != name.lower():
-            raise ConanException("Conf '{}' must be lowercase".format(name))
-        if name.endswith("!"):
-            self._name = name[:-1]
-            self._important = True
-        else:
-            self._name = name
-            self._important = important
+        self.name = name
+        self._important = important
         self._value = value
         self._value_type = type(value)
-        if isinstance(value, (_PackageOption, SettingsItem)):
-            raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
         self._path = path
         self._update = update
+
+    @staticmethod
+    def parse(name, value, path=False, update=None):
+        if name != name.lower():
+            raise ConanException("Conf '{}' must be lowercase".format(name))
+        name, important = (name[:-1], True) if name[-1] == "!" else (name, False)
+        if isinstance(value, (_PackageOption, SettingsItem)):
+            raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
+        return _ConfValue(name, value, path=path, update=update, important=important)
 
     def __repr__(self):
         return repr(self._value)
@@ -209,11 +210,11 @@ class _ConfValue:
 
     def copy(self):
         # Using copy for when self._value is a mutable list
-        return _ConfValue(self._name, copy.copy(self._value), self._path, self._update,
+        return _ConfValue(self.name, copy.copy(self._value), self._path, self._update,
                           self._important)
 
     def dumps(self):
-        name = f"!{self._name}" if self._important else self._name
+        name = f"{self.name}!" if self._important else self.name
         if self._value is None:
             return "{}=!".format(name)  # unset
         elif self._value_type is list and _ConfVarPlaceHolder in self._value:
@@ -224,7 +225,7 @@ class _ConfValue:
             return "{}={}".format(name, self._value)
 
     def serialize(self):
-        name = f"!{self._name}" if self._important else self._name
+        name = f"{self.name}!" if self._important else self.name
         if self._value is None:
             _value = "!"  # unset
         elif self._value_type is list and _ConfVarPlaceHolder in self._value:
@@ -279,6 +280,7 @@ class _ConfValue:
 
         important = other._important and not self._important
         if v_type is list and o_type is list:
+            # If important, we swap values to prioritize the other
             v1, v2 = (other._value, self._value) if important else (self._value, other._value)
             try:
                 index = v1.index(_ConfVarPlaceHolder)
@@ -293,16 +295,16 @@ class _ConfValue:
             if self._update:
                 # only if the current one is marked as "*=" update, otherwise it remains
                 # as this is a "compose" operation, self has priority, it is the one updating
+                # If important, we swap values to prioritize the other
                 v1, v2 = (other._value, self._value) if important else (self._value, other._value)
                 new_value = v2.copy()
                 new_value.update(v1)
                 self._value = new_value
             elif important:
                 self._value = other._value
-        elif issubclass(v_type, numbers.Number) and issubclass(o_type, numbers.Number):
-            # They might be different kind of numbers, so skip the check below
-            pass
-        elif self._value is None or other._value is None:
+        elif ((issubclass(v_type, numbers.Number) and issubclass(o_type, numbers.Number)) or
+              # They might be different kind of numbers, so skip the check below
+              self._value is None or other._value is None):
             # It means any of those values were an "unset" so doing nothing because we don't
             # really know the original value type
             if important:
@@ -312,7 +314,7 @@ class _ConfValue:
             raise ConanException("It's not possible to compose {} values "
                                  "and {} ones.".format(v_type.__name__, o_type.__name__))
         # TODO: In case of any other object types?
-        elif important:
+        elif important:  # equal type, but just string
             self._value = other._value
 
     def set_relative_base_folder(self, folder):
@@ -431,7 +433,7 @@ class Conf:
         """
         Returns a string with the format ``name=conf-value``
         """
-        return "\n".join([v.dumps() for v in sorted(self._values.values(), key=lambda x: x._name)])
+        return "\n".join([v.dumps() for v in sorted(self._values.values(), key=lambda x: x.name)])
 
     def serialize(self):
         """
@@ -449,12 +451,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value of the configuration.
         """
-        v = _ConfValue(name, value)
-        self._values[v._name] = v  # noqa
+        v = _ConfValue.parse(name, value)
+        self._values[v.name] = v
 
     def define_path(self, name, value):
-        v = _ConfValue(name, value, path=True)
-        self._values[v._name] = v  # noqa
+        v = _ConfValue.parse(name, value, path=True)
+        self._values[v.name] = v
 
     def unset(self, name):
         """
@@ -462,8 +464,8 @@ class Conf:
 
         :param name: Name of the configuration.
         """
-        v = _ConfValue(name, None)
-        self._values[v._name] = v  # noqa
+        v = _ConfValue.parse(name, None)
+        self._values[v.name] = v
 
     def update(self, name, value):
         """
@@ -473,12 +475,12 @@ class Conf:
         :param value: Value of the configuration.
         """
         # Placeholder trick is not good for dict update, so we need to explicitly update=True
-        conf_value = _ConfValue(name, {}, update=True)
-        self._values.setdefault(conf_value._name, conf_value).update(value)  # noqa
+        conf_value = _ConfValue.parse(name, {}, update=True)
+        self._values.setdefault(conf_value.name, conf_value).update(value)
 
     def update_path(self, name, value):
         conf_value = _ConfValue(name, {}, path=True, update=True)
-        self._values.setdefault(conf_value._name, conf_value).update(value)  # noqa
+        self._values.setdefault(conf_value.name, conf_value).update(value)
 
     def append(self, name, value):
         """
@@ -487,12 +489,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value to append.
         """
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
-        self._values.setdefault(conf_value._name, conf_value).append(value)  # noqa
+        conf_value = _ConfValue.parse(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(conf_value.name, conf_value).append(value)
 
     def append_path(self, name, value):
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
-        self._values.setdefault(conf_value._name, conf_value).append(value)  # noqa
+        conf_value = _ConfValue.parse(name, [_ConfVarPlaceHolder], path=True)
+        self._values.setdefault(conf_value.name, conf_value).append(value)
 
     def prepend(self, name, value):
         """
@@ -501,12 +503,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value to prepend.
         """
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
-        self._values.setdefault(conf_value._name, conf_value).prepend(value)  # noqa
+        conf_value = _ConfValue.parse(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(conf_value.name, conf_value).prepend(value)
 
     def prepend_path(self, name, value):
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
-        self._values.setdefault(conf_value._name, conf_value).prepend(value)  # noqa
+        conf_value = _ConfValue.parse(name, [_ConfVarPlaceHolder], path=True)
+        self._values.setdefault(conf_value.name, conf_value).prepend(value)
 
     def remove(self, name, value):
         """
@@ -733,7 +735,7 @@ class ConfDefinition:
         """
         try:
             value = eval(_v)  # This destroys Windows path strings with backslash
-        except:  # It means eval() failed because of a string without quotes
+        except (Exception,):  # It means eval() failed because of a string without quotes
             value = _v.strip()
         else:
             if not isinstance(value, (numbers.Number, bool, dict, list, set, tuple)) \
