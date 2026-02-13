@@ -502,28 +502,26 @@ class _Component:
 
         for varname in _ALL_NAMES:
             other_values = getattr(other, varname)
-            if other_values is not None:
-                if not overwrite:
-                    if other._consumer_conanfile is None:  # package_info() editable merge
-                        assert self._consumer_conanfile is None
-                        if isinstance(other_values, dict) or isinstance(getattr(self, varname), dict):
-                            # overwite, dicts cannot be merged
-                            setattr(self, varname, other_values)
-                        else:
-                            current_values = self.get_init(varname, [])
-                            merge_list(other_values, current_values)
-                    else:  # component aggregation merge, lists can be evaluated
-                        if isinstance(other_values, dict):
-                            other_values = self._evaluate_cond(other_values,
-                                                               other._consumer_conanfile)
-                        current_values = getattr(self, varname) or []
-                        if isinstance(current_values, dict):
-                            current_values = self._evaluate_cond(current_values,
-                                                                 self._consumer_conanfile)
-                        merge_list(other_values, current_values)
-                        setattr(self, varname, current_values)
+            if other_values is None:
+                continue
+            if not overwrite:
+                setattr(self, varname, other_values)
+                continue
+            if other._consumer_conanfile is None:  # package_info() editable merge
+                assert self._consumer_conanfile is None
+                if isinstance(other_values, dict) or isinstance(getattr(self, varname), dict):
+                    setattr(self, varname, other_values)  # overwite, dicts cannot be merged
                 else:
-                    setattr(self, varname, other_values)
+                    current_values = self.get_init(varname, [])
+                    merge_list(other_values, current_values)
+            else:  # component aggregation merge, lists can be evaluated
+                if isinstance(other_values, dict):
+                    other_values = self._evaluate_cond(other_values, other._consumer_conanfile)
+                current_values = getattr(self, varname) or []
+                if isinstance(current_values, dict):
+                    current_values = self._evaluate_cond(current_values, self._consumer_conanfile)
+                merge_list(other_values, current_values)
+                setattr(self, varname, current_values)
 
         for varname in _SINGLE_VALUE_VARS:  # To allow editable of .exe/.location
             other_values = getattr(other, varname)
