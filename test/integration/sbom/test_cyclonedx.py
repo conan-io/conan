@@ -340,7 +340,8 @@ class TestCyclonedx:
         content = tc.load("sbom/sbom.cdx.json")
         assert "mydep" not in content
 
-    def test_sbom_deployer(self, cyclone_version):
+    @pytest.mark.parametrize("install", ["--requires=foo/1.0", ""])
+    def test_sbom_deployer(self, cyclone_version, install):
         tc = TestClient(light=True)
         tc.save({"dep/conanfile.py": GenConanfile("mydep", "1.0"),
                  "conanfile.py": GenConanfile("foo", "1.0").with_requires("mydep/1.0")})
@@ -350,5 +351,5 @@ class TestCyclonedx:
             "cyclonedx_1_4": "1.4",
             "cyclonedx_1_6": "1.6",
         }.get(cyclone_version)
-        tc.run(f"install --requires=foo/1.0 --deployer=cyclone_{method}")
+        tc.run(f"install {install} --deployer=cyclone_{method}")
         assert os.path.exists(os.path.join(tc.current_folder, f"sbom-cyclonedx-{method}.json"))
