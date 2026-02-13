@@ -64,6 +64,7 @@ def test_autotools_bash_complete():
     assert "conanvcvars.bat" in bat_contents
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool("msys2")
 @pytest.mark.tool("clang", "20")
