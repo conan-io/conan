@@ -504,7 +504,7 @@ class _Component:
             other_values = getattr(other, varname)
             if other_values is None:
                 continue
-            if not overwrite:
+            if overwrite:
                 setattr(self, varname, other_values)
                 continue
             if other._consumer_conanfile is None:  # package_info() editable merge
