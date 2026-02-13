@@ -39,8 +39,8 @@ def _find_deployer(d, cache_deploy_folder):
     builtin_deploy = {"full_deploy.py": full_deploy,
                       "direct_deploy.py": direct_deploy,
                       "runtime_deploy.py": runtime_deploy,
-                      "cyclone_1.6.py": cyclone_deploy("1.6"),
-                      "cyclone_1.4.py": cyclone_deploy("1.4")}.get(d)
+                      "cyclone_1.6.py": cyclonedx_1_6,
+                      "cyclone_1.4.py": cyclonedx_1_4}.get(d)
     if builtin_deploy is not None:
         return builtin_deploy
     raise ConanException(f"Cannot find deployer '{d}'")
@@ -137,20 +137,18 @@ def runtime_deploy(graph, output_folder):
     conanfile.output.success(f"Runtime deployed to folder: {output_folder}")
 
 
-def cyclone_deploy(method):
-    def _deployer(graph, output_folder):
-        from conan.tools.sbom import cyclonedx_1_4, cyclonedx_1_6
-        import json
-        mapping = {
-            "1.4": cyclonedx_1_4,
-            "1.6": cyclonedx_1_6,
-        }.get(method)
-        if mapping is None:
-            raise ConanException(f"Unknown CycloneDX method: {method}")
-        sbom = mapping(graph.root.conanfile)
-        save(os.path.join(output_folder, f"sbom-cyclonedx-{method}.json"),
-             json.dumps(sbom, indent=2))
-    return _deployer
+def cyclonedx_1_4(graph, output_folder):
+    from conan.tools.sbom import cyclonedx_1_4
+    import json
+    sbom = cyclonedx_1_4(graph.root.conanfile)
+    save(os.path.join(output_folder, "sbom-cyclonedx-1.4.json"), json.dumps(sbom, indent=2))
+
+
+def cyclonedx_1_6(graph, output_folder):
+    from conan.tools.sbom import cyclonedx_1_6
+    import json
+    sbom = cyclonedx_1_6(graph.root.conanfile)
+    save(os.path.join(output_folder, "sbom-cyclonedx-1.6.json"), json.dumps(sbom, indent=2))
 
 
 def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None):
