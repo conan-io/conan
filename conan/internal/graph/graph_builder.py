@@ -369,8 +369,7 @@ class DepsGraphBuilder:
                 ref.name = tracking_ref[1][:-1]  # Remove the trailing >
             req = Requirement(ref, headers=True, libs=True, visible=True)
             transitive = node.transitive_deps.get(req)
-            if transitive is None or transitive.require.ref.user != ref.user \
-                    or transitive.require.ref.channel != ref.channel:
+            if transitive is None:
                 raise ConanException(f"{node.ref} require '{ref}': didn't find a matching "
                                      "host dependency")
             require.ref.version = transitive.require.ref.version

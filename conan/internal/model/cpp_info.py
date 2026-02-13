@@ -127,7 +127,7 @@ class _Component:
             "requires": self._requires,
             "properties": self._properties,
             "exe": self._exe,  # single exe, incompatible with libs
-            "type": self._type,
+            "type": str(self._type) if self._type else None,
             "location": self._location,
             "link_location": self._link_location,
             "languages": self._languages
@@ -137,7 +137,12 @@ class _Component:
     def deserialize(contents):
         result = _Component()
         for field, value in contents.items():
-            setattr(result, f"_{field}", value)
+            if hasattr(result, field):
+                setattr(result, field, value)
+            else:
+                # If there's on setter, use the internal field, e.g, _properties which has
+                # set_property method, but not a setter
+                setattr(result, f"_{field}", value)
         return result
 
     def clone(self):

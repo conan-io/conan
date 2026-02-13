@@ -800,3 +800,119 @@ def test_legacy_defines():
     tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
     mypkg_config = tc.load("mypkg-config.cmake")
     assert "set(mypkg_DEFINITIONS MY_DEFINE )" in mypkg_config
+
+
+class TestExtraFindExtraVariants:
+    def test_generated_dir_entries(self):
+        tc = TestClient()
+        conanfile = textwrap.dedent("""
+                from conan import ConanFile
+
+                class HelloConan(ConanFile):
+                    name = "hello"
+                    version = "1.0"
+
+                    def package_info(self):
+                        self.cpp_info.set_property("cmake_file_name_variants", ["HellO", "HELLO"])
+                """)
+        tc.save({"conanfile.py": conanfile})
+        tc.run("create")
+        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps")
+        paths_content = tc.load("conan_cmakedeps_paths.cmake")
+        assert "set(hello_DIR" in paths_content
+        assert "set(HellO_DIR" in paths_content
+        assert "set(HELLO_DIR" in paths_content
+
+    def test_differing_names_instead_of_case(self):
+        tc = TestClient()
+        conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "1.0"
+
+            def package_info(self):
+                self.cpp_info.set_property("cmake_file_name_variants", ["Bye!"])
+        """)
+        tc.save({"conanfile.py": conanfile})
+        tc.run("create")
+        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps", assert_error=True)
+        assert ("'cmake_file_name_variants' property contains "
+                "entries that differ from the default 'cmake_file_name'='hello'") in tc.out
+
+    def test_consumer_dependency_name_change(self):
+        """ If the consumer changes the dependency name via
+        cmake_file_name, the extra casings do not get generated"""
+        tc = TestClient()
+        hello = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "1.0"
+
+            def package_info(self):
+                self.cpp_info.set_property("cmake_file_name_variants", ["HellO"])
+        """)
+        tc.save({"hello/conanfile.py": hello})
+        tc.run("create hello")
+
+        conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeConfigDeps
+
+        class Consumer(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            requires = "hello/1.0"
+            def generate(self):
+                deps = CMakeConfigDeps(self)
+                deps.set_property("hello", "cmake_file_name", "greetings")
+                deps.generate()
+        """)
+
+        tc.save({"conanfile.py": conanfile})
+        tc.run("install")
+        assert ("'cmake_file_name_variants' property contains names "
+                "with different casings than the defined name 'greetings'") in tc.out
+        paths_content = tc.load("conan_cmakedeps_paths.cmake")
+        assert "set(greetings_DIR" in paths_content
+        # But the old casing names are not generated, even if they were defined in the package
+        # they would not work
+        assert "set(HellO_DIR" not in paths_content
+        # The original name is not created in any case either way, as expected when cmake_file_name is used
+        assert "set(hello_DIR" not in paths_content
+
+    def test_generated_dir_none_find_mode_multi_entries(self):
+        tc = TestClient()
+        conanfile = textwrap.dedent("""
+                from conan import ConanFile
+
+                class HelloConan(ConanFile):
+                    name = "hello"
+                    version = "1.0"
+                    settings = "build_type"
+
+                    def package_info(self):
+                        self.cpp_info.set_property("cmake_find_mode", "none")
+                        self.cpp_info.set_property("cmake_file_name_variants", ["HellO", "HELLO"])
+                """)
+        tc.save({"conanfile.py": conanfile})
+        tc.run("create")
+        tc.run("create -s=build_type=Debug")
+        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps")
+        paths_content = tc.load("conan_cmakedeps_paths.cmake")
+        assert "set(hello_DIR" not in paths_content
+        assert "set(HellO_DIR" not in paths_content
+        assert "set(HELLO_DIR" not in paths_content
+
+        assert "list(APPEND CONAN_hello_DIR_MULTI" in paths_content
+        assert "list(APPEND CONAN_HellO_DIR_MULTI" in paths_content
+        assert "list(APPEND CONAN_HELLO_DIR_MULTI" in paths_content
+
+        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps -s=build_type=Debug")
+        paths_content = tc.load("conan_cmakedeps_paths.cmake")
+        # Reading already existing MULTI variables works
+        assert paths_content.count("list(APPEND CONAN_hello_DIR_MULTI") == 2
+        assert paths_content.count("list(APPEND CONAN_HellO_DIR_MULTI") == 2
+        assert paths_content.count("list(APPEND CONAN_HELLO_DIR_MULTI") == 2
