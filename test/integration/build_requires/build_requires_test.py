@@ -508,7 +508,6 @@ class TestBuildTrackHost:
         c.assert_listed_require({"protobuf/1.1": "Cache"}, build=True)
 
     @pytest.mark.parametrize("host_version, assert_error, assert_msg", [
-        # Ensure we keep the original library, even if we take the version, user and channel,
         ("libgettext>", False, "gettext/0.2#d9f9eaeac9b6e403b271f04e04149df2"),
         # Error cases, just checking that we fail gracefully - no tracebacks
         ("libgettext", True, "Package 'gettext/<host_version:libgettext' not resolved"),
