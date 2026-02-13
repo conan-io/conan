@@ -531,6 +531,8 @@ class TestBuildTrackHost:
         assert assert_msg in tc.out
 
     @pytest.mark.parametrize("requires_tag,tool_requires_tag", [
+        ("", ""),
+        ("", "user/channel"),
         ("user/channel", "user/channel"),
         ("", "user/channel"),
         ("auser/achannel", "anotheruser/anotherchannel"),
@@ -553,16 +555,18 @@ class TestBuildTrackHost:
             """)
         c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
                 "pkg/conanfile.py": pkg})
-        if "/" in requires_tag:
-            user, channel = requires_tag.split("/", 1)
-            user_channel = f"--user={user} --channel={channel}"
-        else:
-            user_channel = ""
-        c.run(f"create protobuf --version=1.0 {user_channel}")
+        for tag in (requires_tag, tool_requires_tag):
+            if "/" in tag:
+                user, channel = tag.split("/", 1)
+                user_channel = f"--user={user} --channel={channel}"
+            else:
+                user_channel = ""
+            c.run(f"create protobuf --version=1.0 {user_channel}")
 
         c.run("create pkg")
+        expected_tool_requires_tag = f"@{tool_requires_tag}" if tool_requires_tag else ""
         c.assert_listed_require({f"protobuf/1.0{user_channel_reference}": "Cache"})
-        c.assert_listed_require({f"protobuf/1.0{user_channel_reference}": "Cache"}, build=True)
+        c.assert_listed_require({f"protobuf/1.0{expected_tool_requires_tag}": "Cache"}, build=True)
 
     @pytest.mark.parametrize("shared", [True, False])
     def test_host_version_transitive_contexts(self, shared):
