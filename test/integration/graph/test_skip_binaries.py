@@ -156,8 +156,7 @@ def test_skipped_intermediate_header():
     c = TestClient()
     c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("static-library")
                                                             .with_package_info(cpp_info={"libs":
-                                                                                         ["liba"]},
-                                                                               env_info={}),
+                                                                                         ["liba"]}),
             "libb/conanfile.py": GenConanfile("libb", "0.1").with_package_type("header-library")
                                                             .with_requires("liba/0.1"),
             "libc/conanfile.py": GenConanfile("libc", "0.1").with_package_type("static-library")

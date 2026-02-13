@@ -26,7 +26,7 @@ class BaseDbTable:
     @contextmanager
     def db_connection(self):
         if not self._lock.acquire(timeout=20):
-            raise ConanException("Conan failed to acquire database lock in 20s. Maybe the system is"
+            raise ConanException("Conan failed to acquire database lock in 20s. Maybe the system is "
                                  "under very heavy load. Please report it to Github tickets")
         # isolation_level=None, puts it in regular SQLITE autocommit mode, every
         # connection.execute() will autocommit

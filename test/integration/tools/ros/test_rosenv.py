@@ -38,7 +38,6 @@ def test_rosenv():
         cmd_source = "."
         cmd_env = "env"
 
-
     client.run("install conanfile3.txt --output-folder install/conan")
     assert f"Generated ROSEnv Conan file: {conanrosenv_file}" in client.out
     install_folder = os.path.join(client.current_folder, "install", "conan")

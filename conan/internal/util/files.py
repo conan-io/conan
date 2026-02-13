@@ -184,24 +184,6 @@ def _change_permissions(func, path, exc_info):
 
 
 if platform.system() == "Windows":
-    def atomic_replace(src, dst, item):
-        retries = 3
-        delay = 0.5
-        for i in range(retries):
-            try:
-                os.replace(src, dst)  # ATOMIC!!!
-                return
-            except OSError as e:
-                msg = ("The os.replace() to put this item in the package storage has failed.\n"
-                       "If you have an antivirus, try to exclude the "
-                       "Conan cache from the antivirus software."
-                       f"    Item: {item}\n    Error: {e}")
-                if i == retries - 1:
-                    raise ConanException(msg)
-                ConanOutput().warning(msg)
-                time.sleep(delay)
-
-
     def rmdir(path):
         if not os.path.isdir(path):
             return
@@ -235,16 +217,6 @@ if platform.system() == "Windows":
                                          "Close any app using it and retry.")
                 time.sleep(delay)
 else:
-    def atomic_replace(src, dst, item):
-        try:
-            os.replace(src, dst)  # ATOMIC!!!
-        except OSError as e:
-            msg = ("The os.replace() to put this item in the package storage has failed. Maybe"
-                   f"there was a concurrent process that did it first.\n"
-                   f"    Item: {item}\n    Msg: {e}")
-            raise ConanException(msg)
-
-
     def rmdir(path):
         if not os.path.isdir(path):
             return
