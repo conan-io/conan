@@ -374,8 +374,6 @@ class DepsGraphBuilder:
                                      "host dependency")
             # Don't copy name/revision, they might be pointing to a different package
             require.ref.version = transitive.require.ref.version
-            require.ref.user = transitive.require.ref.user
-            require.ref.channel = transitive.require.ref.channel
 
     def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         resolved = self._resolved_system(node, require, profile_build, profile_host,
