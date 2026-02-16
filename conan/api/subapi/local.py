@@ -13,8 +13,8 @@ from conan.internal.util.files import chdir
 
 
 class LocalAPI:
-    """ This LocalAPI contains several helpers related to the local development flow, like
-    calling locally source() or build() methods, or adding and removing editable packages
+    """ This ``LocalAPI`` contains several helpers related to the local development flow, i.e.,
+    locally calling ``source()`` or ``build()`` methods, or adding and removing editable packages
     """
 
     def __init__(self, conan_api, helpers):
@@ -27,9 +27,9 @@ class LocalAPI:
         """ Obtain the full path to a conanfile file, either .txt or .py, from the current
         working directory.
 
-        If both a conanfile.py and a conanfile.txt exists, it will raise an error.
+        If both ``conanfile.py`` and a ``conanfile.txt`` are present, it will raise an error.
 
-        :param path: Relative path to look for it. Can be a folder or a file.
+        :param path: Relative path to look for the file. Can be a folder or a file.
         :param cwd: The current working directory.
         :param py: If True, a conanfile.py must exist, a .txt is not valid in this case
         """
@@ -56,10 +56,10 @@ class LocalAPI:
 
     def editable_add(self, path, name=None, version=None, user=None, channel=None, cwd=None,
                      output_folder=None, remotes=None) -> RecipeReference:
-        """ Add as an editable package the conanfile in the given path
+        """ Add the conanfile in the given path as an editable package
 
-        Note that for automation over editables it might be recommended to use Workspaces instead
-        of this API.
+        Note that for automation over editables it might be recommended to use the ``WorkspacesAPI`` 
+        instead of this API.
 
         :param path: Relative path to look for it. Can be a folder or a file.
         :param name: The name of the package. If not defined, it is taken from conanfile
@@ -68,7 +68,7 @@ class LocalAPI:
         :param channel: The channel of the package. If not defined, it is taken from conanfile
         :param cwd: The current working directory
         :param output_folder: The output folder. If not defined, the recipe layout will be used.
-        :param remotes: The remotes to resolve possible python-requires for this recipe if needed.
+        :param remotes: The remotes to resolve possible ``python-requires`` for this recipe if needed.
         :return: RecipeReference of the added package
         """
         path = self.get_conanfile_path(path, cwd, py=True)
@@ -87,8 +87,8 @@ class LocalAPI:
     def editable_remove(self, path=None, requires=None, cwd=None):
         """ Remove an editable package from the given path
 
-        Note that for automation over editables it might be recommended to use Workspaces instead
-        of this API.
+        Note that for automation over editables it might be recommended to use the ``WorkspacesAPI`` 
+        instead of this API.
 
         :param path: Relative path to look for it. Can be a folder or a file.
         :param requires: Remove these requirements from editables (instead of by path)
@@ -104,17 +104,17 @@ class LocalAPI:
         return self.editable_packages.edited_refs
 
     def source(self, path, name=None, version=None, user=None, channel=None, remotes=None):
-        """ calls the 'source()' method of the current (user folder) conanfile.py
+        """ Calls the ``source()`` method of the current (user folder) ``conanfile.py``
 
         This method does not require computing a dependency graph, because the ``source()``
         method is assumed to be invariant with respect to settings, options and dependencies.
 
-        :param path: Relative path to look for it. Can be a folder or a file.
+        :param path: Relative path to look for the conanfile. Can be a folder or a file.
         :param name: The name of the package. If not defined, it is taken from conanfile
         :param version: The version of the package. If not defined, it is taken from conanfile
         :param user: The user of the package. If not defined, it is taken from conanfile
         :param channel: The channel of the package. If not defined, it is taken from conanfile
-        :param remotes: The remotes to resolve possible python-requires for this recipe if needed.
+        :param remotes: The remotes to resolve possible ``python-requires`` for this recipe if needed.
         """
         app = ConanApp(self._conan_api)
         conanfile = app.loader.load_consumer(path, name=name, version=version,
@@ -143,15 +143,15 @@ class LocalAPI:
         run_source_method(conanfile, hook_manager)
 
     def build(self, conanfile) -> None:
-        """ calls the 'build()' method of the current (user folder) conanfile.py
+        """ Calls the ``build()`` method of the current (user folder) ``conanfile.py``
 
         This method does require computing a dependency graph, because the ``build()`` method
         needs all dependencies and transitive dependencies. Then, the ``conanfile`` argument
         must be the one obtaind from a full dependency graph install operation, including both
         the graph comptutation and the binary installation.
 
-        :param conanfile: Conanfile object representing the "root" node in the dependency graph,
-          corresponding to a conanfile.py in user folder, containing the ``build()`` method to
+        :param conanfile: ``Conanfile`` object representing the "root" node in the dependency graph,
+          corresponding to a ``conanfile.py`` in the user folder, containing the ``build()`` method to
           be called. This ``conanfile`` object must have all of its dependencies computed and
           installed in the current Conan package cache to work.
         """
@@ -162,7 +162,7 @@ class LocalAPI:
 
     @staticmethod
     def test(conanfile) -> None:
-        """ calls the 'test()' method of the current (user folder) test_package/conanfile.py
+        """ Calls the ``test()`` method of the current (user folder) ``test_package/conanfile.py``
 
         This method does require computing a dependency graph, because the ``test()`` method
         needs all dependencies and transitive dependencies. Then, the ``conanfile`` argument
@@ -171,8 +171,8 @@ class LocalAPI:
 
         Typically called after a ``build()`` one.
 
-        :param conanfile: Conanfile object representing the "root" node in the dependency graph,
-          corresponding to a conanfile.py in user "test_package" folder, containing the ``test()``
+        :param conanfile: ``Conanfile`` object representing the "root" node in the dependency graph,
+          corresponding to a conanfile.py in the user "test_package" folder, containing the ``test()``
           method to be called. This ``conanfile`` object must have all of its dependencies computed
           and installed in the current Conan package cache to work.
         """
