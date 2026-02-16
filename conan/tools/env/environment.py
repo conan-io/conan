@@ -421,29 +421,29 @@ class EnvVars:
         deactivate_file = "deactivate_{}".format(filename)
         dest_variable = f"%_CONAN_{self._scope}_DEACTIVATES_DIR%" if self._deactivation_mode else "%~dp0"
         deactivate = textwrap.dedent("""\
-                @echo off
-                chcp 65001 > nul
+            @echo off
+            chcp 65001 > nul
 
-                setlocal
-                echo @echo off > "{dest_variable}/{deactivate_file}"
-                echo echo Restoring environment for {filename} with {vars} >> "{dest_variable}/{deactivate_file}"
-                for %%v in ({vars}) do (
-                    set foundenvvar=
-                    for /f "delims== tokens=1,2" %%a in ('set') do (
-                        if /I "%%a" == "%%v" (
-                            echo set "%%a=%%b">> "{dest_variable}/{deactivate_file}"
-                            set foundenvvar=1
-                        )
-                    )
-                    if not defined foundenvvar (
-                        echo set %%v=>> "{dest_variable}/{deactivate_file}"
+            setlocal
+            echo @echo off > "{dest_variable}/{deactivate_file}"
+            echo echo Restoring environment for {filename} with {vars} >> "{dest_variable}/{deactivate_file}"
+            for %%v in ({vars}) do (
+                set foundenvvar=
+                for /f "delims== tokens=1,2" %%a in ('set') do (
+                    if /I "%%a" == "%%v" (
+                        echo set "%%a=%%b">> "{dest_variable}/{deactivate_file}"
+                        set foundenvvar=1
                     )
                 )
-                endlocal
-                """).format(deactivate_file=deactivate_file,
-                            vars=" ".join(self._values.keys()),
-                            dest_variable=dest_variable,
-                            filename=filename, )
+                if not defined foundenvvar (
+                    echo set %%v=>> "{dest_variable}/{deactivate_file}"
+                )
+            )
+            endlocal
+            """).format(deactivate_file=deactivate_file,
+                        vars=" ".join(self._values.keys()),
+                        dest_variable=dest_variable,
+                        filename=filename, )
         capture = textwrap.dedent("""\
             @echo off
             chcp 65001 > nul
