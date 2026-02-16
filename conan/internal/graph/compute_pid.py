@@ -55,7 +55,8 @@ def compute_package_id(node, modes, config_version, hook_manager):
     # To account for effect of headers into consumers, like shared/static variability
     # It affects to both embed and not embed, that would imply some "repetition" of the information
     # in embed cases embedding the full package_id, but it is useful to have that info explicit too
-    if conanfile.package_type in [PackageType.SHARED, PackageType.STATIC, PackageType.APP]:
+    if conanfile.package_type and conanfile.package_type in [PackageType.SHARED, PackageType.STATIC,
+                                                             PackageType.APP]:
         for require, transitive in node.transitive_deps.items():
             if require.headers:
                 header_opts = getattr(transitive.node.conanfile, "package_id_header_options", ())
