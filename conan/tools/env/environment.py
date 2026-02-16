@@ -517,10 +517,13 @@ class EnvVars:
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("${name}", self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
-            no_value = varvalues.get_str("", subsystem=self._subsystem, pathsep=self._pathsep,
-                                         root_path=abs_base_path, script_path=new_path)
+            placeholder = f"${varname}"
+            sep = self._pathsep if varvalues._path else varvalues._sep  # noqa
+            if value.endswith(sep + placeholder):
+                value = value.replace(sep + placeholder, f"${{{varname}:+{sep}${varname}}}", 1)
+            elif (placeholder + sep) in value:
+                value = value.replace(placeholder + sep, f"${{{varname}:-}}${{{varname}:+{sep}}}", 1)
             value = value.replace('"', '\\"')
-            no_value = no_value.replace('"', '\\"')
             if generate_deactivate and self._deactivation_mode == "function":
                 # Check environment variable existence before saving value
                 result.append(
@@ -529,17 +532,7 @@ class EnvVars:
                     f'fi;'
                 )
             if varvalues:
-                if value != no_value:
-                    set_value = textwrap.dedent(f"""\
-                       if [ -n "${{{varname}:-}}" ]; then
-                           export {varname}="{value}"
-                       else
-                           export {varname}="{no_value}"
-                       fi
-                       """)
-                else:
-                    set_value = f'export {varname}="{value}"'
-                result.append(set_value)
+                result.append(f'export {varname}="{value}"')
             else:
                 result.append(f'unset {varname}')
 
