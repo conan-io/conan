@@ -50,7 +50,7 @@ class TestConanAlias:
         client.run('remove "*" -c')
 
         client.run("install .")
-        assert "'alias' is a Conan 1.X legacy feature" in client.out
+        assert "'alias' is a Conan 1.X legacy" in client.out
         client.assert_listed_require({"hello/0.1@lasote/channel": "Downloaded (default)"})
         assert "hello/0.x@lasote/channel from" not in client.out
 

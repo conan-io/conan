@@ -597,3 +597,55 @@ class TestListGraphContext:
         tc.run("list --graph=graph_context.json --graph-context=build-only --format=json",
                assert_error=True)
         assert "Note that the graph file should not be filtered" in tc.out
+
+    @pytest.mark.parametrize("context", ["build-only", "host-only"])
+    def test_context_only_binary_mismatch(self, context):
+        tc = TestClient(light=True)
+        tc.save({
+                "protobuf/conanfile.py": GenConanfile("protobuf", "1.0"),
+                "onnx/conanfile.py": GenConanfile("onnx", "1.0")
+                    .with_requires("protobuf/1.0")
+                    .with_tool_requires("protobuf/1.0")})
+
+        tc.run("create protobuf")
+        tc.run("create onnx")
+        # Note that here, the protobuf from tool_requires is skipped!
+        tc.run("graph info --requires=onnx/1.0 -f=json", redirect_stdout="graph.json")
+        tc.run(f"list --graph=graph.json --graph-context={context} --format=json")
+        # We removed both protobuf binaries, not even the recipe is still there
+        assert "protobuf/1.0" not in tc.out
+
+    @pytest.mark.parametrize("context", ["build-only", "host-only"])
+    # We're building onnx to ensure the build context protobuf binary is not skipped
+    @pytest.mark.parametrize("build_onnx", [True, False])
+    def test_context_only_binary_different_pkg_id(self, context, build_onnx):
+        tc = TestClient(light=True)
+        tc.save({
+            "protobuf/conanfile.py": GenConanfile("protobuf", "1.0")
+            .with_shared_option(),
+            "onnx/conanfile.py": GenConanfile("onnx", "1.0")
+            .with_requirement("protobuf/1.0", options={"shared": True})
+            .with_tool_requires("protobuf/1.0")})
+
+        tc.run("create protobuf -o &:shared=True")
+        protobuf_host_shared_pkgid = tc.created_layout().reference.package_id
+        tc.run("create protobuf -o &:shared=False")
+        protobuf_build_static_pkgid = tc.created_layout().reference.package_id
+
+        tc.run("create onnx")
+        build_arg = "-b=&" if build_onnx else ""
+        tc.run(f"graph info --requires=onnx/1.0 {build_arg} -f=json", redirect_stdout="graph.json")
+        tc.run(f"list --graph=graph.json --graph-context={context} --format=json")
+        if context == "build-only":
+            if not build_onnx:
+                # If we have skipped the protobuf build binary, the recipe is gone too
+                # because we have no protobuf packages being used
+                assert "protobuf/1.0" not in tc.out
+            else:
+                assert "protobuf/1.0" in tc.out
+                assert protobuf_build_static_pkgid in tc.out
+                assert protobuf_host_shared_pkgid not in tc.out
+        else:
+            assert "protobuf/1.0" in tc.out
+            assert protobuf_build_static_pkgid not in tc.out
+            assert protobuf_host_shared_pkgid in tc.out

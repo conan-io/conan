@@ -42,11 +42,12 @@ class _SystemPackageManagerTool:
             os_name = distro.id() or os_name
         elif os_name == "Windows" and self._conanfile.settings.get_safe("os.subsystem") == "msys2":
             os_name = "msys2"
-        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian", "linuxmint", 'astra', 'elbrus', 'altlinux', 'pop'],
+        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian", "linuxmint",
+                                       'astra', 'elbrus', 'altlinux', 'pop'],
                            "apk": ["alpine"],
-                           "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
-                                   "almalinux", "rocky"],
-                           "dnf": ["fedora", "rhel", "centos", "mageia", "nobara"],
+                           "yum": ["pidora", "scientific", "xenserver", "amazon", "amzn"],
+                           "dnf": ["fedora", "rhel", "centos", "mageia", "nobara", "almalinux",
+                                   "rocky", "oracle"],
                            "brew": ["Darwin"],
                            "pacman": ["arch", "manjaro", "msys2", "endeavouros"],
                            "choco": ["Windows"],
@@ -177,6 +178,7 @@ class _SystemPackageManagerTool:
         raise ConanException("None of the installs for the package substitutes succeeded.")
 
     def _install(self, packages, update=False, check=True, host_package=True, **kwargs):
+        orig_packages = packages
         pkgs = self._conanfile.system_requires.setdefault(self._active_tool, {})
         install_pkgs = pkgs.setdefault("install", [])
         install_pkgs.extend(p for p in packages if p not in install_pkgs)
@@ -211,8 +213,7 @@ class _SystemPackageManagerTool:
                                                       **kwargs)
                 return self._conanfile_run(command, self.accepted_install_codes, quiet=False)
         else:
-            self._conanfile.output.info("System requirements: {} already "
-                                        "installed".format(" ".join(packages)))
+            self._conanfile.output.info(f"System requirements: {' '.join(orig_packages)} already installed")
 
     def _update(self):
         # we just update the package manager database in case we are in 'install mode'
@@ -274,7 +275,8 @@ class Apt(_SystemPackageManagerTool):
                             "armv7": "arm",
                             "armv7hf": "armhf",
                             "armv8": "arm64",
-                            "s390x": "s390x"} if arch_names is None else arch_names
+                            "s390x": "s390x",
+                            "riscv64": "riscv64"} if arch_names is None else arch_names
 
         self._arch_separator = ":"
 
@@ -325,7 +327,8 @@ class Yum(_SystemPackageManagerTool):
                             "armv7": "armv7",
                             "armv7hf": "armv7hl",
                             "armv8": "aarch64",
-                            "s390x": "s390x"} if arch_names is None else arch_names
+                            "s390x": "s390x",
+                            "riscv64": "riscv64"} if arch_names is None else arch_names
         self._arch_separator = "."
 
 

@@ -332,11 +332,6 @@ class TestServer:
         ref = self.test_server.server_store.get_last_revision(ref)
         return ref
 
-    def recipe_revision_time(self, ref):
-        if not ref.revision:
-            raise Exception("Pass a ref with revision (Testing framework)")
-        return self.test_server.server_store.get_revision_time(ref)
-
     def latest_package(self, pref):
         if not pref.ref.revision:
             raise Exception("Pass a pref with .rev.revision (Testing framework)")

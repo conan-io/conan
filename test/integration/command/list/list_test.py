@@ -46,6 +46,13 @@ class TestParamErrors:
         c.run("list * -p os=Linux", assert_error=True)
         assert "--package-query and --filter-xxx can only be done for binaries" in c.out
 
+    def test_wrong_package_query(self):
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        c.run('list *:* -p "not os=Linux"')
+        assert "ERROR: Invalid package query: not os=Linux. 'not' operator is not allowed" in c.out
+
     def test_graph_file_error(self):
         # This can happen when reusing the same file in input and output
         c = TestClient(light=True)

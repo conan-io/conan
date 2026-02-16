@@ -24,13 +24,13 @@ class DownloadAPI:
         app = ConanBasicApp(self._conan_api)
         assert ref.revision, f"Reference '{ref}' must have revision"
         try:
-            app.cache.recipe_layout(ref)  # raises if not found
+            recipe_layout = app.cache.recipe_layout(ref)  # raises if not found
         except ConanException:
             pass
         else:
             output.info(f"Skip recipe {ref.repr_notime()} download, already in cache")
             if metadata:
-                app.remote_manager.get_recipe_metadata(ref, remote, metadata)
+                app.remote_manager.get_recipe_metadata(recipe_layout, ref, remote, metadata)
             return False
 
         output.info(f"Downloading recipe '{ref.repr_notime()}'")
@@ -40,11 +40,10 @@ class DownloadAPI:
             server_ref = app.remote_manager.get_recipe_revision(ref, remote)
             assert server_ref == ref
             ref.timestamp = server_ref.timestamp
-        app.remote_manager.get_recipe(ref, remote, metadata)
+        recipe_layout = app.remote_manager.get_recipe(ref, remote, metadata)
 
         # Download the sources too, don't be lazy
         output.info(f"Downloading '{str(ref)}' sources")
-        recipe_layout = app.cache.recipe_layout(ref)
         app.remote_manager.get_recipe_sources(ref, recipe_layout, remote)
         return True
 
