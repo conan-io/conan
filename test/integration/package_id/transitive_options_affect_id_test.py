@@ -96,7 +96,7 @@ class TestTransitiveOptionsAffectPackageID:
                                 "lib4/0.1": ("dd8f5355b399fd7d96c883ddd39b992ae968cb14", "Build"),
                                 })
 
-    def test_auto_embed_options(self):
+    def test_package_id_header_options(self):
         c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -105,7 +105,7 @@ class TestTransitiveOptionsAffectPackageID:
                 version = "0.1"
                 options = {"shared": [True, False]}
                 default_options = {"shared": False}
-                package_id_non_embed_options = ["shared"]
+                package_id_header_options = ["shared"]
             """)
         app = textwrap.dedent("""
             from conan import ConanFile
