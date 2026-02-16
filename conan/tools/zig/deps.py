@@ -54,15 +54,30 @@ class DepsTemplate:
             target["link_location"] = link_location
         return target
 
-    def _defines(self, defines):
+    def _collect(self, cpp_info, attr):
+        result = []
+        if cpp_info.has_components:
+            for name, component in cpp_info.components.items():
+                result.extend(getattr(component, attr))
+        else:
+            result.extend(getattr(cpp_info, attr))
+        return result
+
+    def _defines(self, cpp_info):
         result = {}
-        for define in defines:
+        for define in self._collect(cpp_info, "defines"):
             if "=" in define:
                 name, value = define.split("=", 1)
             else:
                 name, value = define, "1"
             result[name] = value
         return result
+
+    def _frameworks(self, cpp_info):
+        return self._collect(cpp_info, "frameworks")
+
+    def _system_libs(self, cpp_info):
+        return self._collect(cpp_info, "system_libs")
 
     @property
     def _context(self):
@@ -74,9 +89,13 @@ class DepsTemplate:
                 "include_paths": full_cpp_info.includedirs,
                 "lib_paths": full_cpp_info.libdirs,
                 "libs": self._get_libs(full_cpp_info, dep.ref.name),
-                "defines": self._defines(full_cpp_info.defines),
+                "defines": self._defines(full_cpp_info),
                 "dependencies": [],#[d.ref.name for d in dep.dependencies.host],
+                "frameworks": self._frameworks(full_cpp_info),
+                "system_libs": self._system_libs(full_cpp_info),
             }
+            if dep.ref.name == "libx264":
+                print(f"Libx264 libs: {result['deps'][dep.ref.name]['libs']}")
         return result
 
     @property
@@ -90,6 +109,8 @@ class DepsTemplate:
                 libs: []const []const u8,
                 defines: []const struct { name: []const u8, value: []const u8 },
                 dependencies: []const []const u8,
+                frameworks: []const []const u8,
+                system_libs: []const []const u8,
                 // c_sources: []const u8,
                 // link_libc: bool,
                 // link_libcpp: bool,
@@ -108,6 +129,8 @@ class DepsTemplate:
                         .libs = &.{ {% for lib in dep_info.libs.values() %}{% if "location" in lib %}"{{ lib["location"] }}",{% endif %}{% endfor %} },
                         .defines = &.{ {% for define, value in dep_info.defines.items() %}.{ .name="{{ define }}", .value="{{ value }}"},{% endfor %} },
                         .dependencies = &.{ {% for d in dep_info.dependencies %}"{{ d }}",{% endfor %} },
+                        .frameworks = &.{ {% for fw in dep_info.frameworks %}"{{ fw }}",{% endfor %} },
+                        .system_libs = &.{ {% for lib in dep_info.system_libs %}"{{ lib }}",{% endfor %} },
                     }
                 },
                 {% endfor %}

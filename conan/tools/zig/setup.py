@@ -38,29 +38,24 @@ class SetupTemplate:
                         // std.debug.print("Adding include path: {s}\\n", .{include_path});
                         step.addIncludePath(std.Build.LazyPath{ .cwd_relative = include_path });
                     }
-                    // for (dep_info.lib_paths) |lib_path| {
-                    //     std.debug.print("Adding library path: {s}\\n", .{lib_path});
-                    //     step.addLibraryPath(std.Build.LazyPath{ .cwd_relative = lib_path});
-                    // }
                     for (dep_info.libs) |lib| {
                         // std.debug.print("Linking library: {s}\\n", .{lib});
                         //step.linkSystemLibrary(lib);
                         step.addObjectFile(std.Build.LazyPath{ .cwd_relative = lib});
                     }
-                    // for (c_source in dep_info.c_sources) {
-                    //     step.addCSourceFile(c_source);
-                    // }
+                    for (dep_info.system_libs) |lib| {
+                        // std.debug.print("Linking system library: {s}\\n", .{lib});
+                        step.linkSystemLibrary(lib);
+                    }
                     for (dep_info.defines) |define| {
                         //std.debug.print("Adding define: {s}={s}\\n", .{define.name, define.value});
                         step.root_module.addCMacro(define.name, define.value);
 
                     }
-                    // if (dep_info.link_libc) {
-                    //     step.linkLibC();
-                    // }
-                    // if (dep_info.link_libcpp) {
-                    //     step.linkLibCpp();
-                    // }
+                    for (dep_info.frameworks) |framework| {
+                        //std.debug.print("Linking framework: {s}\\n", .{framework});
+                        step.linkFramework(framework);
+                    }
                 }
             }
 
