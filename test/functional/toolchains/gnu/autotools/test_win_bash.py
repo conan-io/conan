@@ -66,6 +66,21 @@ def test_autotools_bash_complete():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool("msys2")
+def test_powershell_win_bash():
+    c = TestClient(path_with_spaces=False)
+    profile_win = textwrap.dedent(f"""
+        include(default)
+        [conf]
+        tools.microsoft.bash:subsystem=msys2
+        tools.microsoft.bash:path=bash
+        """)
+    c.run("new autotools_lib -d name=mypkg -d version=0.1")
+    c.save({"profile_win": profile_win})
+    c.run("create . -tf '' -c &:tools.env.virtualenv:powershell=powershell -pr profile_win -vvv")
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.tool("msys2")
 @pytest.mark.tool("clang", "20")
 @pytest.mark.parametrize("frontend", ("clang", "clang-cl"))
 @pytest.mark.parametrize("runtime", ("static", "dynamic"))
