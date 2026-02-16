@@ -99,7 +99,7 @@ class TestTransitiveOptionsAffectPackageID:
 
 class TestHeaderOptions:
     def test_package_id_header_options(self):
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -121,20 +121,67 @@ class TestHeaderOptions:
                 "app/conanfile.py": app})
         c.run("create pkg")
         c.run("create pkg -o *:shared=True")
+
         c.run("create app")
         c.assert_listed_binary({"app": ("e822341e143eb3bba372e24b7cd908c8f91dc24e", "Build")})
-
         c.run("list app/0.1:e822341e143eb3bba372e24b7cd908c8f91dc24e")
         assert "pkg/*:shared: False" in c.out
 
         c.run("create app -o *:shared=True")
         c.assert_listed_binary({"app": ("8c15f2b19bd994dcd5b44780eda3f03bde74c217", "Build")})
+        c.run("list app/0.1:8c15f2b19bd994dcd5b44780eda3f03bde74c217")
+        assert "pkg/*:shared: True" in c.out
 
+    def test_package_id_header_options_conditional(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+                settings = "os"
+
+                def configure(self):
+                    if self.settings.os == "Windows":
+                        self.package_id_header_options = ["shared"]
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "app"
+                version = "0.1"
+                package_type = "static-library"
+                requires = "pkg/0.1"
+            """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "app/conanfile.py": app})
+        c.run("create pkg -s os=Linux")
+        c.run("create pkg -s os=Linux -o *:shared=True")
+        c.run("create pkg -s os=Windows")
+        c.run("create pkg -s os=Windows -o *:shared=True")
+
+        c.run("create app -s os=Linux")
+        c.assert_listed_binary({"app": ("e250b55435052b5e55b151d0b03900c73d262473", "Build")})
+        c.run("list app/0.1:e250b55435052b5e55b151d0b03900c73d262473")
+        assert "pkg/*:shared: False" not in c.out
+
+        c.run("create app -o *:shared=True -s os=Linux --build=missing:&")
+        c.assert_listed_binary({"app": ("e250b55435052b5e55b151d0b03900c73d262473", "Cache")})
+
+        c.run("create app -s os=Windows")
+        c.assert_listed_binary({"app": ("e822341e143eb3bba372e24b7cd908c8f91dc24e", "Build")})
+        c.run("list app/0.1:e822341e143eb3bba372e24b7cd908c8f91dc24e")
+        assert "pkg/*:shared: False" in c.out
+
+        c.run("create app -o *:shared=True -s os=Windows --build=missing:&")
+        c.assert_listed_binary({"app": ("8c15f2b19bd994dcd5b44780eda3f03bde74c217", "Build")})
         c.run("list app/0.1:8c15f2b19bd994dcd5b44780eda3f03bde74c217")
         assert "pkg/*:shared: True" in c.out
 
     def test_package_id_header_options_transitive(self):
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
