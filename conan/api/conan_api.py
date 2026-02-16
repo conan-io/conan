@@ -79,10 +79,11 @@ class ConanAPI:
         self.cache: CacheAPI = CacheAPI(self, self._api_helpers)
         #: Used to read and manage lockfile files
         self.lockfile: LockfileAPI = LockfileAPI(self)
+        #: Local flow helpers for developer "source", "build", "editable" commands
         self.local = LocalAPI(self, self._api_helpers)
         #: Used to check vulnerabilities of dependencies
         self.audit: AuditAPI = AuditAPI(self)
-        # Now, lazy loading of editables
+        #: Used to manage workspaces
         self.workspace = WorkspaceAPI(self)
         self.report: ReportAPI = ReportAPI(self, self._api_helpers)
 
