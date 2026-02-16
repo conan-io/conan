@@ -418,19 +418,44 @@ class EnvVars:
 
     def save_bat(self, file_location, generate_deactivate=True):
         _, filename = os.path.split(file_location)
-        result = []
+        deactivate_file = "deactivate_{}".format(filename)
+        dest_variable = f"%_CONAN_{self._scope}_DEACTIVATES_DIR%" if self._deactivation_mode else "%~dp0"
+        deactivate = textwrap.dedent("""\
+                @echo off
+                chcp 65001 > nul
+
+                setlocal
+                echo @echo off > "{dest_variable}/{deactivate_file}"
+                echo echo Restoring environment for {filename} with {vars} >> "{dest_variable}/{deactivate_file}"
+                for %%v in ({vars}) do (
+                    set foundenvvar=
+                    for /f "delims== tokens=1,2" %%a in ('set') do (
+                        if /I "%%a" == "%%v" (
+                            echo set "%%a=%%b">> "{dest_variable}/{deactivate_file}"
+                            set foundenvvar=1
+                        )
+                    )
+                    if not defined foundenvvar (
+                        echo set %%v=>> "{dest_variable}/{deactivate_file}"
+                    )
+                )
+                endlocal
+                """).format(deactivate_file=deactivate_file,
+                            vars=" ".join(self._values.keys()),
+                            dest_variable=dest_variable,
+                            filename=filename, )
+        capture = textwrap.dedent("""\
+            @echo off
+            chcp 65001 > nul
+            {deactivate}
+            """).format(deactivate=deactivate if generate_deactivate else "")
+        result = [capture]
         abs_base_path, new_path = relativize_paths(self._conanfile, "%~dp0")
         for varname, varvalues in self._values.items():
             value = varvalues.get_str("%{name}%", subsystem=self._subsystem, pathsep=self._pathsep,
                                       root_path=abs_base_path, script_path=new_path)
-            if value:
-                result.append(f'set "{varname}={value}"')
-            else:
-                result.append(f'set "{varname}="')
+            result.append('set "{}={}"'.format(varname, value))
 
-        if generate_deactivate:
-            deactivate_content = _bat_deactivate_contents(self._deactivation_mode, self._values, filename, self._scope)
-            result.insert(0, deactivate_content)
 
         content = "\n".join(result)
         # It is very important to save it correctly with utf-8, the Conan util save() is broken
@@ -557,35 +582,6 @@ def _deactivate_func_name(filename):
 
 def _old_env_prefix(filename):
     return f"_CONAN_OLD_{_deactivate_func_name(filename).upper()}"
-
-
-def _bat_deactivate_contents(use_deactivate_function, values, filename, scope):
-    deactivate_file = "deactivate_{}".format(filename)
-    dest_variable = f"%_CONAN_{scope}_DEACTIVATES_DIR%" if use_deactivate_function else "%~dp0"
-    return textwrap.dedent("""\
-        @echo off
-        chcp 65001 > nul
-
-        setlocal
-        echo @echo off > "{dest_variable}/{deactivate_file}"
-        echo echo Restoring environment for {filename} with {vars} >> "{dest_variable}/{deactivate_file}"
-        for %%v in ({vars}) do (
-            set foundenvvar=
-            for /f "delims== tokens=1,2" %%a in ('set') do (
-                if /I "%%a" == "%%v" (
-                    echo set "%%a=%%b">> "{dest_variable}/{deactivate_file}"
-                    set foundenvvar=1
-                )
-            )
-            if not defined foundenvvar (
-                echo set %%v=>> "{dest_variable}/{deactivate_file}"
-            )
-        )
-        endlocal
-        """).format(deactivate_file=deactivate_file,
-                    vars=" ".join(values.keys()),
-                    dest_variable=dest_variable,
-                    filename=filename,)
 
 
 def _ps1_deactivate_contents(deactivation_mode, values, filename):

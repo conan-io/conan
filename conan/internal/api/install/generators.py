@@ -224,21 +224,21 @@ def _generate_aggregated_env(conanfile):
         if bats:
             _folder = tempfile.mkdtemp() if deactivation_mode == "function" else conanfile.generators_folder
             def bat_content(files, is_deactivate=False):
-                content = "@echo off\r\n"
+                content = ["@echo off"]
 
                 if deactivation_mode == "function":
                     deactivates_var = f"_CONAN_{group}_DEACTIVATES_DIR"
                     if is_deactivate:
                         call_prefix = f"%{deactivates_var}%\\"
                         files = [f.replace("%~dp0\\", call_prefix) for f in files]
-                        content += f'\r\ncall set "PATH=%%PATH:%{deactivates_var}%;=%%"'
+                        content += [f'call set "PATH=%%PATH:%{deactivates_var}%;=%%"']
                     else:
-                        content += "\r\n".join([f'set "{deactivates_var}={_folder}"',
-                                                f'set PATH=%{deactivates_var}%;%PATH%'])
-                content +="\r\n" + "\r\n".join(f'call "{b}"' for b in files)
-                content += f'\r\nset {deactivates_var}=' if deactivation_mode == "function" and is_deactivate else ''
+                        content += [f'set "{deactivates_var}={_folder}"']
+                        content += [f'set PATH=%{deactivates_var}%;%PATH%']
+                content += [f'call "{b}"' for b in files]
+                content += [f'set {deactivates_var}=' if deactivation_mode == "function" and is_deactivate else '']
 
-                return content
+                return "\r\n".join(content)
 
             filename = "conan{}.bat".format(group)
             generated.append(filename)
