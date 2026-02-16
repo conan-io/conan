@@ -76,7 +76,8 @@ def test_powershell_win_bash():
         """)
     c.run("new autotools_lib -d name=mypkg -d version=0.1")
     c.save({"profile_win": profile_win})
-    c.run("create . -tf '' -c &:tools.env.virtualenv:powershell=powershell -pr profile_win -vvv")
+    c.run("export")
+    c.run("install --requires mypkg/0.1 --build mypkg/0.1 -c &:tools.env.virtualenv:powershell=powershell -pr profile_win -vvv")
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
