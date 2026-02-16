@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 from conan.cli import make_abs_path
 from conan.internal.conan_app import ConanApp
@@ -8,7 +9,7 @@ from conan.internal.graph.graph import CONTEXT_HOST
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
-from conan.api.model import RecipeReference
+from conan.api.model import RecipeReference, Remote
 from conan.internal.util.files import chdir
 
 
@@ -55,10 +56,10 @@ class LocalAPI:
         return path
 
     def editable_add(self, path, name=None, version=None, user=None, channel=None, cwd=None,
-                     output_folder=None, remotes=None) -> RecipeReference:
+                     output_folder=None, remotes: List[Remote] = None) -> RecipeReference:
         """ Add the conanfile in the given path as an editable package
 
-        Note that for automation over editables it might be recommended to use the ``WorkspacesAPI`` 
+        Note that for automation over editables it might be recommended to use the ``WorkspacesAPI``
         instead of this API.
 
         :param path: Relative path to look for it. Can be a folder or a file.
@@ -87,7 +88,7 @@ class LocalAPI:
     def editable_remove(self, path=None, requires=None, cwd=None):
         """ Remove an editable package from the given path
 
-        Note that for automation over editables it might be recommended to use the ``WorkspacesAPI`` 
+        Note that for automation over editables it might be recommended to use the ``WorkspacesAPI``
         instead of this API.
 
         :param path: Relative path to look for it. Can be a folder or a file.
@@ -103,7 +104,8 @@ class LocalAPI:
     def editable_list(self):
         return self.editable_packages.edited_refs
 
-    def source(self, path, name=None, version=None, user=None, channel=None, remotes=None):
+    def source(self, path, name=None, version=None, user=None, channel=None,
+               remotes: List[Remote] = None):
         """ Calls the ``source()`` method of the current (user folder) ``conanfile.py``
 
         This method does not require computing a dependency graph, because the ``source()``
