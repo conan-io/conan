@@ -170,7 +170,7 @@ class CMakeToolchain:
                         return cmake_exe_path
 
 
-    def python_hints(self, root, python_exe):
+    def configure_find_python(self, root, python_exe):
         """
         Set CMake variables so find_package(Python) uses the given Python installation.
         Use this when building with CMake so CMake picks a specific Python (e.g. from
