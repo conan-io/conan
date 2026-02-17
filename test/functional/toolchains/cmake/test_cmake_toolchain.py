@@ -1516,3 +1516,34 @@ def test_cmake_toolchain_verbosity_propagation():
     toolchain = t.load("conan_toolchain.cmake")
     # assert 'set(CMAKE_VERBOSE_MAKEFILE "OFF"' in toolchain
     assert 'set(CMAKE_MESSAGE_LOG_LEVEL "WARNING"' in toolchain
+
+
+def test_cmake_toolchain_python_hints_from_pyenv():
+    """CMakeToolchain.python_hints(pyenv) sets Python_ROOT_DIR, Python_EXECUTABLE and FIND_* vars."""
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+        from conan.tools.system import PyEnv
+
+        class Pkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+
+            def generate(self):
+                pyenv = PyEnv(self)
+                pyenv.generate()
+                tc = CMakeToolchain(self)
+                tc.python_hints(pyenv)
+                tc.generate()
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    presets = json.loads(client.load("CMakePresets.json"))
+    cv = presets["configurePresets"][0]["cacheVariables"]
+    assert "Python_ROOT_DIR" in cv
+    assert "Python_EXECUTABLE" in cv
+    assert "conan_pyenv" in cv["Python_ROOT_DIR"]
+    assert cv["Python_FIND_UNVERSIONED_NAMES"] == "FIRST"
+    assert cv["Python_FIND_STRATEGY"] == "LOCATION"
+    assert cv["Python_FIND_VIRTUALENV"] == "STANDARD"
+    assert cv["Python_FIND_REGISTRY"] == "NEVER"

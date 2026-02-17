@@ -169,6 +169,23 @@ class CMakeToolchain:
                     elif os.path.exists(cmake_exe_path):
                         return cmake_exe_path
 
+
+    def python_hints(self, pyenv):
+        """
+        Set CMake variables so find_package(Python) uses the given PyEnv virtual environment.
+        Call this when building with CMake and using PyEnv so CMake picks the venv Python
+        instead of system or registry installations.
+
+        :param pyenv: A :class:`conan.tools.system.PyEnv` instance (after generate() is not required;
+                     only ``root`` and ``python`` are used).
+        """
+        self.cache_variables["Python_ROOT_DIR"] = pyenv.root
+        self.cache_variables["Python_EXECUTABLE"] = pyenv.python
+        self.cache_variables["Python_FIND_UNVERSIONED_NAMES"] = "FIRST"
+        self.cache_variables["Python_FIND_STRATEGY"] = "LOCATION"
+        self.cache_variables["Python_FIND_VIRTUALENV"] = "STANDARD"
+        self.cache_variables["Python_FIND_REGISTRY"] = "NEVER"
+
     def generate(self):
         """
           This method will save the generated files to the conanfile.generators_folder
