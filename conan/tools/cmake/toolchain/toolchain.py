@@ -170,17 +170,19 @@ class CMakeToolchain:
                         return cmake_exe_path
 
 
-    def python_hints(self, pyenv):
+    def python_hints(self, root, python_exe):
         """
-        Set CMake variables so find_package(Python) uses the given PyEnv virtual environment.
-        Call this when building with CMake and using PyEnv so CMake picks the venv Python
-        instead of system or registry installations.
+        Set CMake variables so find_package(Python) uses the given Python installation.
+        Use this when building with CMake so CMake picks a specific Python (e.g. from
+        :class:`conan.tools.system.PyEnv`) instead of system or registry installations.
 
-        :param pyenv: A :class:`conan.tools.system.PyEnv` instance (after generate() is not required;
-                     only ``root`` and ``python`` are used).
+        :param root: Root directory of the Python environment (e.g. venv root).
+                    Pass to CMake as ``Python_ROOT_DIR``.
+        :param python_exe: Full path to the Python executable.
+                          Pass to CMake as ``Python_EXECUTABLE``.
         """
-        self.cache_variables["Python_ROOT_DIR"] = pyenv.root
-        self.cache_variables["Python_EXECUTABLE"] = pyenv.python
+        self.cache_variables["Python_ROOT_DIR"] = root
+        self.cache_variables["Python_EXECUTABLE"] = python_exe
         self.cache_variables["Python_FIND_UNVERSIONED_NAMES"] = "FIRST"
         self.cache_variables["Python_FIND_STRATEGY"] = "LOCATION"
         self.cache_variables["Python_FIND_VIRTUALENV"] = "STANDARD"

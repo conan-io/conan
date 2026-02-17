@@ -41,12 +41,11 @@ class PyEnv:
         self.bin_dir = os.path.join(self.root, bins)
 
 
-    @staticmethod
-    def _default_python(conanfile):
-        _python = conanfile.conf.get("tools.system.pyenv:python_interpreter")
+    def _get_default_python(self):
+        _python = self._conanfile.conf.get("tools.system.pyenv:python_interpreter")
         # tools.system.pipenv deprecated warning message.
-        if not _python and conanfile.conf.get("tools.system.pipenv:python_interpreter"):
-            _python = conanfile.conf.get("tools.system.pipenv:python_interpreter")
+        if not _python and self._conanfile.conf.get("tools.system.pipenv:python_interpreter"):
+            _python = self._conanfile.conf.get("tools.system.pipenv:python_interpreter")
             ConanOutput().warning("'tools.system.pipenv:python_interpreter' "
                                     "is deprecated, use 'tools.system.pyenv:python_interpreter'",
                                     warn_tag="deprecated")
@@ -107,7 +106,7 @@ class PyEnv:
         return self._conanfile.run(command)
 
     def _create_venv(self):
-        _default_python = self._default_python(self._conanfile)
+        _default_python = self._get_default_python()
         try:
             self._conanfile.run(cmd_args_to_string([_default_python, '-m', 'venv',
                                                     self.root]))
@@ -116,7 +115,7 @@ class PyEnv:
                                  f"environment using '{_default_python}': {e}")
 
     def _create_uv_venv(self, base_env_dir, py_version):
-        _default_python = self._default_python(self._conanfile)
+        _default_python = self._get_default_python()
         uv_env_dir = None
         try:
             uv_path = shutil.which("uv")

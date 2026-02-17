@@ -1518,8 +1518,7 @@ def test_cmake_toolchain_verbosity_propagation():
     assert 'set(CMAKE_MESSAGE_LOG_LEVEL "WARNING"' in toolchain
 
 
-def test_cmake_toolchain_python_hints_from_pyenv():
-    """CMakeToolchain.python_hints(pyenv) sets Python_ROOT_DIR, Python_EXECUTABLE and FIND_* vars."""
+def test_cmake_toolchain_python_hints():
     client = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -1533,7 +1532,7 @@ def test_cmake_toolchain_python_hints_from_pyenv():
                 pyenv = PyEnv(self)
                 pyenv.generate()
                 tc = CMakeToolchain(self)
-                tc.python_hints(pyenv)
+                tc.python_hints(pyenv.root, pyenv.python)
                 tc.generate()
         """)
     client.save({"conanfile.py": conanfile})
