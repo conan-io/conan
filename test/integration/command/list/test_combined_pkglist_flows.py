@@ -231,6 +231,24 @@ class TestPkgListFindRemote:
         pkglist = json.loads(c.stdout)
         assert pkglist["default"] == expected
 
+    def test_input_only_name_version_expand_revisions(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("create zlib")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list * --format=json", redirect_stdout="mylist.json")
+        pkglist = json.loads(c.load("mylist.json"))
+        expected = {"zlib/1.0": {}}
+        assert pkglist["Local Cache"] == expected
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default --expand-revisions")
+        pkglist = json.loads(c.stdout)
+        assert pkglist["default"].keys() == expected.keys()
+        assert "revisions" in pkglist["default"]["zlib/1.0"]
+        assert list(pkglist["default"]["zlib/1.0"]["revisions"].keys()) == ["c570d63921c5f2070567da4bf64ff261"]
+
     def test_input_recipe_revisions(self):
         c = TestClient(default_server_user=True, light=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
@@ -258,7 +276,7 @@ class TestPkgListFindRemote:
         c.run("create zlib -s os=Linux")
         c.run("upload zlib* -c -r=default")
 
-        # Create input pkglist for find-remote
+        # Create input pkglist for find-remote - list *:* may not include package revisions
         c.run(f"list *:* --format=json", redirect_stdout="mylist.json")
 
         def _check(origin):
@@ -270,11 +288,42 @@ class TestPkgListFindRemote:
             assert list(pkgs) == ["9a4eb3c8701508aa9458b1a73d0633783ecc2270"]
             pkg = pkgs["9a4eb3c8701508aa9458b1a73d0633783ecc2270"]
             assert pkg["info"] == expected
-            assert list(pkg["revisions"]) == ["1d3c57385f4133c1fbd6d13bd538496e"]
+            assert "revisions" not in pkg
 
+        _check("Local Cache")
         c.run("pkglist find-remote mylist.json --format=json --remote default",
               redirect_stdout="mylist.json")
         _check("default")
+
+    def test_input_only_package_ids_expand_revisions(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("os")})
+        c.run("create zlib -s os=Linux")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote - list *:* may not include package revisions
+        c.run(f"list *:* --format=json", redirect_stdout="mylist.json")
+
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            revs = pkglist[origin]["zlib/1.0"]["revisions"]
+            assert list(revs) == ["1cb7410d0365f87510a6767c7bef804e"]
+            expected = {'settings': {'os': 'Linux'}}
+            pkgs = revs["1cb7410d0365f87510a6767c7bef804e"]["packages"]
+            assert list(pkgs) == ["9a4eb3c8701508aa9458b1a73d0633783ecc2270"]
+            pkg = pkgs["9a4eb3c8701508aa9458b1a73d0633783ecc2270"]
+            assert pkg["info"] == expected
+            return pkg
+
+        pkg = _check("Local Cache")
+        assert "revisions" not in pkg
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default --expand-revisions",
+              redirect_stdout="mylist.json")
+        pkg = _check("default")
+        # When using --expand-revisions, package revisions should be included
+        assert "revisions" in pkg
+        assert list(pkg["revisions"]) == ["1d3c57385f4133c1fbd6d13bd538496e"]
 
     def test_graph_pkg_list_of_recipes_and_binaries(self):
         c = TestClient(default_server_user=True, light=True)

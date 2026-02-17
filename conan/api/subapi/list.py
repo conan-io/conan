@@ -312,9 +312,13 @@ class ListAPI:
             rev_dict["packages"][pref.package_id]["remote"] = remote
         return pkglist
 
-    def find_remotes(self, package_list, remotes):
+    def find_remotes(self, package_list, remotes, expand_revisions=False):
         """
         (Experimental) Find the remotes where the current package lists can be found
+        :param package_list: PackagesList object with recipes/packages to search for
+        :param remotes: List of Remote objects to search in
+        :param expand_revisions: If True, expand recipes/packages without revisions
+                                 to all available revisions.
         """
         result = MultiPackagesList()
         app = ConanBasicApp(self._conan_api)
@@ -328,7 +332,10 @@ class ListAPI:
                     continue
                 revisions = ref_contents.get("revisions")
                 if revisions is None:  # This is a package list just with name/version
-                    if remote_rrevs:
+                    if expand_revisions:
+                        for remote_rrev in remote_rrevs:
+                            result_pkg_list.add_ref(remote_rrev)
+                    elif remote_rrevs:
                         result_pkg_list.add_ref(ref)
                     continue
 
@@ -350,8 +357,11 @@ class ListAPI:
                             continue
                         pkg_revisions = pkgcontent.get("revisions")
                         if pkg_revisions is None:  # User provided a package_id, no prevs
-                            for remote_pref in remote_prefs:
-                                result_pkg_list.add_pref(remote_pref, pkgcontent.get("info"))
+                            if expand_revisions:
+                                for remote_pref in remote_prefs:
+                                    result_pkg_list.add_pref(remote_pref, pkgcontent.get("info"))
+                            elif remote_prefs:
+                                result_pkg_list.add_pref(pref, pkgcontent.get("info"))
                             continue
                         for pkg_revision, prev_content in pkg_revisions.items():
                             pref.revision = pkg_revision

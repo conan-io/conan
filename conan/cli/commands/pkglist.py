@@ -24,13 +24,16 @@ def pkglist_find_remote(conan_api, parser, subparser, *args):
     subparser.add_argument("-r", "--remote", default=None, action="append",
                            help="Remote names. Accepts wildcards "
                                 "('*' means all the remotes available)")
+    subparser.add_argument("--expand-revisions", action='store_true', default=False,
+                           help="Expand recipes/packages without explicit revisions "
+                                "to all available revisions on the remote.")
     args = parser.parse_args(*args)
 
     listfile = make_abs_path(args.list)
     multi_pkglist = MultiPackagesList.load(listfile)
     package_list = multi_pkglist["Local Cache"]
     selected_remotes = conan_api.remotes.list(args.remote)
-    result = conan_api.list.find_remotes(package_list, selected_remotes)
+    result = conan_api.list.find_remotes(package_list, selected_remotes, args.expand_revisions)
     return {
         "results": result.serialize(),
         "conan_api": conan_api,
