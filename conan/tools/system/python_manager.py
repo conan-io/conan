@@ -69,16 +69,6 @@ class PyEnv:
     def generate(self):
         """
         Create a conan environment to use the python venv in the next steps of the conanfile.
-
-        **PATH ordering**: The script generated here is sourced together with VirtualBuildEnv.
-        If your profile sets ``PATH=+(path)...``, that can take precedence over the venv.
-        To ensure the venv Python is first in PATH, generate VirtualBuildEnv before PyEnv::
-
-            buildenv = VirtualBuildEnv(self)
-            buildenv.generate()
-            pyenv = PyEnv(self)
-            pyenv.install(["mypackage"])
-            pyenv.generate()
         """
         env = Environment()
         env.define_path("Python_ROOT_DIR", self.root)
