@@ -26,6 +26,23 @@ class PyEnv:
                                  " or use 'PyEnv' without defining the 'py_version'.")
 
         self._conanfile = conanfile
+        self._default_python = self._conanfile.conf.get("tools.system.pyenv:python_interpreter")
+        # tools.system.pipenv deprecated warning message.
+        if not self._default_python and self._conanfile.conf.get("tools.system.pipenv:python_interpreter"):
+            self._default_python = self._conanfile.conf.get("tools.system.pipenv:python_interpreter")
+            ConanOutput().warning("'tools.system.pipenv:python_interpreter' "
+                                  "is deprecated, use 'tools.system.pyenv:python_interpreter'",
+                                  warn_tag="deprecated")
+
+        if not self._default_python:
+            python = "python" if platform.system() == "Windows" else "python3"
+            default_python = shutil.which(python)
+            self._default_python = os.path.realpath(default_python) if default_python else None
+        if not self._default_python:
+            raise ConanException("Conan could not find a Python executable path. Please, install "
+                                 "Python system-wide or set the "
+                                 "'tools.system.pyenv:python_interpreter' "
+                                 "conf to the full path of a Python executable")
         self.env_name = f"conan_pyenv{f'_{name}' if name else ''}"
         if py_version:
             self.env_name += f'_{py_version.replace(".", "_")}'
@@ -39,27 +56,6 @@ class PyEnv:
         self.python = self._get_env_python(self.root)
         bins = "Scripts" if platform.system() == "Windows" else "bin"
         self.bin_dir = os.path.join(self.root, bins)
-
-
-    def _get_default_python(self):
-        _python = self._conanfile.conf.get("tools.system.pyenv:python_interpreter")
-        # tools.system.pipenv deprecated warning message.
-        if not _python and self._conanfile.conf.get("tools.system.pipenv:python_interpreter"):
-            _python = self._conanfile.conf.get("tools.system.pipenv:python_interpreter")
-            ConanOutput().warning("'tools.system.pipenv:python_interpreter' "
-                                    "is deprecated, use 'tools.system.pyenv:python_interpreter'",
-                                    warn_tag="deprecated")
-
-        if not _python:
-            python = "python" if platform.system() == "Windows" else "python3"
-            default_python = shutil.which(python)
-            _python = os.path.realpath(default_python) if default_python else None
-        if not _python:
-            raise ConanException("Conan could not find a Python executable path. Please, install "
-                                    "Python system-wide or set the "
-                                    "'tools.system.pyenv:python_interpreter' "
-                                    "conf to the full path of a Python executable")
-        return _python
 
     @staticmethod
     def _get_env_python(env_dir):
@@ -96,16 +92,14 @@ class PyEnv:
         return self._conanfile.run(command)
 
     def _create_venv(self):
-        _default_python = self._get_default_python()
         try:
-            self._conanfile.run(cmd_args_to_string([_default_python, '-m', 'venv',
+            self._conanfile.run(cmd_args_to_string([self._default_python, '-m', 'venv',
                                                     self.root]))
         except ConanException as e:
             raise ConanException(f"PyEnv could not create a Python virtual "
-                                 f"environment using '{_default_python}': {e}")
+                                 f"environment using '{self._default_python}': {e}")
 
     def _create_uv_venv(self, base_env_dir, py_version):
-        _default_python = self._get_default_python()
         uv_env_dir = None
         try:
             uv_path = shutil.which("uv")
@@ -114,7 +108,7 @@ class PyEnv:
             else:
                 uv_env_dir = os.path.join(base_env_dir, f"uv_{self.env_name}")
                 self._conanfile.run(cmd_args_to_string(
-                    [_default_python, '-m', 'venv', uv_env_dir])
+                    [self._default_python, '-m', 'venv', uv_env_dir])
                 )
 
                 python_exe = self._get_env_python(uv_env_dir)
@@ -128,7 +122,7 @@ class PyEnv:
                                         f"{py_version} created successfully using UV.")
         except Exception as e:
             raise ConanException(f"PyEnv could not create a Python {py_version} virtual "
-                                 f"environment using UV and '{_default_python}': {e}")
+                                 f"environment using UV and '{self._default_python}': {e}")
         finally:
             if uv_env_dir:
                 rmdir(uv_env_dir)
