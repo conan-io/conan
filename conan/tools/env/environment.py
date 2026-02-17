@@ -501,6 +501,18 @@ class EnvVars:
                     f'fi;'
                 )
             if varvalues:
+                value = value.replace(f":${varname}", f"${{{varname}+:}}${varname}")
+                value = value.replace(f"${varname}:", f"${varname}${{{varname}+:}}")
+                # Omit the colon if the variable is unset.  For example,
+                #   LD_LIBRARY_PATH=PrependedDir${LD_LIBRARY_PATH+:}$LD_LIBRARY_PATH
+                # Thus, if LD_LIBRARY_PATH is unset, the result will be:
+                #   LD_LIBRARY_PATH=PrependedDir
+                # If LD_LIBRARY_PATH is a NULL string, the result will be:
+                #   LD_LIBRARY_PATH=PrependedDir:
+                # Note that a zero-length directory name in LD_LIBRARY_PATH indicates
+                # the current working directory.  The latter is probably not what we
+                # want and dangerous in some cases.
+
                 result.append(f'export {varname}="{value}"')
             else:
                 result.append(f'unset {varname}')
