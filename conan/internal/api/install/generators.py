@@ -9,6 +9,7 @@ from conan.internal.subsystems import deduce_subsystem, subsystem_path
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
 from conan.internal.util.files import save, mkdir, chdir
+from conan.tools.microsoft.visual import CONAN_VCVARS
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
                "CMakeDeps": "conan.tools.cmake",
@@ -222,28 +223,43 @@ def _generate_aggregated_env(conanfile):
                 save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                      sh_content(deactivates(shs)))
         if bats:
-            _folder = tempfile.mkdtemp() if deactivation_mode == "function" else conanfile.generators_folder
-            def bat_content(files, is_deactivate=False):
+            filename = f"conan{group}.bat"
+            deactivate_filename = f"deactivate_{filename}"
+
+            def bat_content(files):
                 content = ["@echo off"]
 
                 if deactivation_mode == "function":
                     deactivates_var = f"_CONAN_{group}_DEACTIVATES_DIR"
-                    if is_deactivate:
-                        call_prefix = f"%{deactivates_var}%\\"
-                        files = [f.replace("%~dp0\\", call_prefix) for f in files]
-                        content += [f'call set "PATH=%%PATH:%{deactivates_var}%;=%%"']
-                    else:
-                        content += [f'set "{deactivates_var}={_folder}"']
-                        content += [f'set PATH=%{deactivates_var}%;%PATH%']
+                    content += [
+                        f'set "{deactivates_var}=%TEMP%\\conan_deactivates_{group}_%RANDOM%"',
+                        f'mkdir "%{deactivates_var}%"'
+                    ]
+                    # TODO: Find a better way to get rid of vcvars deactivation
+                    f = [f for f in files if f != f"%~dp0/{CONAN_VCVARS}.bat"]
+                    deactivate_filenames = [f.replace("%~dp0\\", "")
+                                            for f in deactivates(f)]
+
+                    content += [f'set PATH=%{deactivates_var}%;%PATH%']
+                    content += [f'echo @echo off > "%{deactivates_var}%\\{deactivate_filename}"']
+                    content += [f'echo call "{b}" >> "%{deactivates_var}%\\{deactivate_filename}"'
+                                for b in deactivate_filenames]
+                    # See https://ss64.com/nt/syntax-replace.html for the syntax below to remove
+                    # the deactivation path from PATH when the deactivation script is called
+                    content += [f'echo set "PATH=%%PATH:%{deactivates_var}%;=%%" >> '
+                                f'"%{deactivates_var}%\\{deactivate_filename}"']
+                    content += [f'echo set "{deactivates_var}=" >> '
+                                f'"%{deactivates_var}%\\{deactivate_filename}"']
+
                 content += [f'call "{b}"' for b in files]
-                content += [f'set {deactivates_var}=' if deactivation_mode == "function" and is_deactivate else '']
 
                 return "\r\n".join(content)
 
-            filename = "conan{}.bat".format(group)
             generated.append(filename)
             save(os.path.join(conanfile.generators_folder, filename), bat_content(bats))
-            save(os.path.join(_folder, "deactivate_{}".format(filename)), bat_content(deactivates(bats), is_deactivate=True))
+            if not deactivation_mode:
+                save(os.path.join(conanfile.generators_folder, deactivate_filename),
+                     bat_content(deactivates(bats)))
 
         if ps1s:
             def ps1_content(files):
