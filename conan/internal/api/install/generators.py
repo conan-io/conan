@@ -232,7 +232,7 @@ def _generate_aggregated_env(conanfile):
                 if deactivation_mode == "function":
                     deactivates_var = f"_CONAN_{group}_DEACTIVATES_DIR"
                     content += [
-                        f'set "{deactivates_var}=%TEMP%\\conan_deactivates_{group}_%RANDOM%"',
+                        f'set "{deactivates_var}=%TEMP%\\conan_{group}_%RANDOM%"',
                         f'mkdir "%{deactivates_var}%"'
                     ]
                     # TODO: Find a better way to get rid of vcvars deactivation

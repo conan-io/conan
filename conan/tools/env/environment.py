@@ -419,10 +419,21 @@ class EnvVars:
     def save_bat(self, file_location, generate_deactivate=True):
         _, filename = os.path.split(file_location)
         deactivate_file = "deactivate_{}".format(filename)
-        dest_variable = f"%_CONAN_{self._scope}_DEACTIVATES_DIR%" if self._deactivation_mode else "%~dp0"
+        is_function = self._deactivation_mode == "function"
+        deactivates_variable = f"_CONAN_{self._scope}_DEACTIVATES_DIR"
+        dest_variable = f"%{deactivates_variable}%" if is_function else "%~dp0"
+
         deactivate = textwrap.dedent("""\
-            @echo off
-            chcp 65001 > nul
+            set "local_defined=0"
+            if "{is_function}" == "False" goto skip_deactivate_variable
+            if defined {deactivates_variable} goto skip_deactivate_variable
+
+            set "local_defined=1"
+            set "{deactivates_variable}=%TEMP%\\conan_{group}_%RANDOM%"
+            mkdir "%{deactivates_variable}%"
+            set "PATH=%{deactivates_variable}%;%PATH%"
+
+            :skip_deactivate_variable
 
             setlocal
             echo @echo off > "{dest_variable}/{deactivate_file}"
@@ -440,9 +451,16 @@ class EnvVars:
                 )
             )
             endlocal
+            if %local_defined% == 0 goto end
+            echo set "PATH=%%PATH:%{deactivates_variable}%;=%%" >> "{dest_variable}/{deactivate_file}"
+            echo set "{deactivates_variable}=">> "{dest_variable}/{deactivate_file}"
+            :end
             """).format(deactivate_file=deactivate_file,
+                        is_function=is_function,
                         vars=" ".join(self._values.keys()),
                         dest_variable=dest_variable,
+                        deactivates_variable=deactivates_variable,
+                        group=self._scope,
                         filename=filename, )
         capture = textwrap.dedent("""\
             @echo off
