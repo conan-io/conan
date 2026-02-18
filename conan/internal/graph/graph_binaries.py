@@ -440,10 +440,10 @@ class GraphBinariesAnalyzer:
                     node.binary = BINARY_UPDATE
                     output.info("Current package revision is older than the remote one")
                 else:
-                    # The final data is the cache one, not the server one
-                    self._binary_in_cache(node, cache_latest_prev)
                     if cache_time > node.pref_timestamp:
                         output.info("Current package revision is newer than the remote one")
+                    # The final data is the cache one, not the server one
+                    self._binary_in_cache(node, cache_latest_prev)
 
         if not node.binary:
             self._binary_in_cache(node, cache_latest_prev)
