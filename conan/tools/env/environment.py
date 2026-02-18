@@ -426,7 +426,7 @@ class EnvVars:
 
             setlocal
             echo @echo off > "{dest_variable}/{deactivate_file}"
-            echo echo Restoring environment for {filename} with {vars} >> "{dest_variable}/{deactivate_file}"
+            echo echo Restoring environment for {filename} >> "{dest_variable}/{deactivate_file}"
             for %%v in ({vars}) do (
                 set foundenvvar=
                 for /f "delims== tokens=1,2" %%a in ('set') do (
