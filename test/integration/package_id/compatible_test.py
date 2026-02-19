@@ -679,6 +679,64 @@ class TestCompatibleBuild:
             assert pkga["info"]["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
             assert pkga["build_args"] == "--requires=liba/0.1 --build=compatible:liba/0.1"
 
+    def test_compatible_build_test_package(self):
+        """
+        This test shows that the --build=compatible does not trigger the build of a dependency
+        twice when there is a "test_package"
+        """
+        tc = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.build import check_min_cppstd
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "compiler"
+
+                def validate(self):
+                    check_min_cppstd(self, 17)
+            """)
+        tc.save({"conanfile.py": conanfile,
+                 "test_package/conanfile.py": GenConanfile().with_test("pass")})
+
+        tc.run("create . -s compiler.cppstd=14 --build=compatible:&")
+        # Without checking if the compatibles are already in the cache, it will build twice,
+        # once for the package and once for the test_package
+        assert tc.out.count("pkg/0.1: Building your package") == 1
+
+    def test_compatible_consumer_rebuild(self):
+        """
+        This test shows that the --build=compatible does not trigger the build of a dependency
+        when it already exists in the cache
+        """
+        tc = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.build import check_min_cppstd
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "compiler"
+
+                def validate(self):
+                    check_min_cppstd(self, 17)
+            """)
+        tc.save({"pkg/conanfile.py": conanfile,
+                 "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")})
+
+        tc.run("create pkg -s compiler.cppstd=14 --build=compatible")  # builds cppstd=17
+
+        tc.run("install app -s compiler.cppstd=14", assert_error=True)  # Fails with invalid
+        assert "pkg/0.1: Invalid: Current cppstd (14) is lower" in tc.out
+
+        tc.run("install app -s compiler.cppstd=14 --build=compatible")
+
+        # Without checking if the compatibles are already in the cache, it will build twice,
+        # once for the package and once for the test_package
+        assert tc.out.count("pkg/0.1: Building your package") == 0
+
 
 def test_compatibility_new_setting_forwards_compat():
     """ This test tries to reflect the following scenario:
@@ -991,66 +1049,3 @@ def test_compatible_setting():
           "-pr:a=profile -s:a compiler.cppstd=17 --build=pkg*", assert_error=True)
     assert str(c.out).count("tool/0.1: Main binary package "
                             "'e297d0212cdeb8744c601b0e5ea294e62a74582f' missing") == 1
-
-
-class TestCompatibleBuildErrors:
-    def test_compatible_build_test_package(self):
-        """
-        This test shows that the --build=compatible can trigger the build of a dependency
-        twice when there is a "test_package"
-        """
-        tc = TestClient()
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.build import check_min_cppstd
-
-            class Pkg(ConanFile):
-                name = "pkg"
-                version = "0.1"
-                settings = "compiler"
-
-                def validate(self):
-                    check_min_cppstd(self, 17)
-            """)
-        tc.save({"conanfile.py": conanfile,
-                 "test_package/conanfile.py": GenConanfile().with_test("pass")})
-
-        tc.run("create . -s compiler.cppstd=14 --build=compatible:&")
-        print(tc.out)
-        # Without checking if the compatibles are already in the cache, it will build twice,
-        # once for the package and once for the test_package
-        assert tc.out.count("pkg/0.1: Building your package") == 1
-
-    def test_compatible_consumer_rebuild(self):
-        """
-        This test shows that the --build=compatible can trigger the build of a dependency
-        even if it already exists in the cache
-        """
-        tc = TestClient()
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.build import check_min_cppstd
-
-            class Pkg(ConanFile):
-                name = "pkg"
-                version = "0.1"
-                settings = "compiler"
-
-                def validate(self):
-                    check_min_cppstd(self, 17)
-            """)
-        tc.save({"pkg/conanfile.py": conanfile,
-                 "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")})
-
-        tc.run("create pkg -s compiler.cppstd=14 --build=compatible")  # builds cppstd=17
-        print(tc.out)
-
-        tc.run("install app -s compiler.cppstd=14", assert_error=True)  # Fails with invalid
-        assert "pkg/0.1: Invalid: Current cppstd (14) is lower" in tc.out
-
-        tc.run("install app -s compiler.cppstd=14 --build=compatible")
-        print(tc.out)
-
-        # Without checking if the compatibles are already in the cache, it will build twice,
-        # once for the package and once for the test_package
-        assert tc.out.count("pkg/0.1: Building your package") == 0
