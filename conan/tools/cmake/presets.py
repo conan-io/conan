@@ -54,6 +54,9 @@ class _CMakePresets:
             if conanfile.conf.get("tools.build:skip_test", check_type=bool):
                 cache_variables["BUILD_TESTING"] = "OFF"
 
+        extra_args = conanfile.conf.get("tools.cmake:configure_args", check_type=dict, default={})
+        cache_variables.update(extra_args)
+
         preset_path = os.path.join(conanfile.generators_folder, "CMakePresets.json")
         multiconfig = is_multi_configuration(generator)
         if os.path.exists(preset_path):
