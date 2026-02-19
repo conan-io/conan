@@ -42,6 +42,9 @@ def parse_extra_variable(source, key, value):
 
 
 def cmake_escape_value(v):
+    if not isinstance(v, str):
+        return v
+
     def _stream_chars(s):
         iterable = iter(enumerate(s))
         for i, char in iterable:
