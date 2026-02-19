@@ -188,8 +188,9 @@ class TestImportant:
         c.run("install -c tools.android:ndk_path!+=OTHER! -c tools.android:ndk_path!=+OTHER2!")
         assert "conanfile.py: NDK: ['OTHER2!', 'OTHER!']" in c.out
 
-    def test_important_update(self):
-        c = self.client("update", {"MYVALUE": "MY-NDK!!"})
+    @pytest.mark.parametrize("action", ["update", "update_path"])
+    def test_important_update(self, action):
+        c = self.client(action, {"MYVALUE": "MY-NDK!!"})
         c.run("install")
         assert "conanfile.py: NDK: {'MYVALUE': 'MY-NDK!!'}" in c.out
 

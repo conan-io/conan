@@ -479,7 +479,7 @@ class Conf:
         self._values.setdefault(conf_value.name, conf_value).update(value)
 
     def update_path(self, name, value):
-        conf_value = _ConfValue(name, {}, path=True, update=True)
+        conf_value = _ConfValue.parse(name, {}, path=True, update=True)
         self._values.setdefault(conf_value.name, conf_value).update(value)
 
     def append(self, name, value):
