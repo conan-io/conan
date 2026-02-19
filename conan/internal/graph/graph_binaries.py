@@ -233,7 +233,6 @@ class GraphBinariesAnalyzer:
                     self._compatible_found(conanfile, package_id, compatible_package)
                     return
 
-        assert node.binary != BINARY_INVALID
         node.conanfile.output.info("No compatible configuration found", fg=Color.BRIGHT_CYAN)
         # If no compatible is found, restore original state
         node.binary = original_binary
@@ -284,10 +283,8 @@ class GraphBinariesAnalyzer:
         return results
 
     def _compatible_find_build_binary(self, node, compatibles):
-        original_binary = node.binary
-        original_package_id = node.package_id
         output = node.conanfile.output
-        output.info(f"Requested binary package '{original_package_id}' invalid, can't be built")
+        output.info(f"Requested binary package '{node.package_id}' invalid, can't be built")
         output.info(f"Checking {len(compatibles)} configurations, to build a compatible one, "
                     f"as requested by '--build=compatible'")
         for pkg_id, compatible in compatibles.items():
@@ -296,8 +293,6 @@ class GraphBinariesAnalyzer:
                 self._compatible_found(node.conanfile, pkg_id, compatible)
                 node.binary = BINARY_BUILD
                 return
-        node.binary = original_binary
-        node._package_id = original_package_id
 
     def _evaluate_node(self, node, build_mode, remotes, update):
         assert node.binary is None, "Node.binary should be None"
@@ -326,7 +321,9 @@ class GraphBinariesAnalyzer:
             if compatibles is None:
                 compatibles = self._compatible_get_packages(node)
             if compatibles:
+                # Before deciding to build a compatible binary, we check if it exists
                 self._compatible_find_existing_binaries(node, compatibles, remotes, update)
+                # And only if not found, we consider to build it
                 if node.binary == BINARY_INVALID:
                     self._compatible_find_build_binary(node, compatibles)
 
@@ -434,14 +431,13 @@ class GraphBinariesAnalyzer:
                 if cache_time < node.pref_timestamp and cache_latest_prev != node.pref:
                     node.binary = BINARY_UPDATE
                     output.info("Current package revision is older than the remote one")
-                else:
-                    if cache_time > node.pref_timestamp:
-                        output.info("Current package revision is newer than the remote one")
-                    # The final data is the cache one, not the server one
-                    self._binary_in_cache(node, cache_latest_prev)
+                    return
+                if cache_time > node.pref_timestamp:
+                    output.info("Current package revision is newer than the remote one")
 
-        if not node.binary:
-            self._binary_in_cache(node, cache_latest_prev)
+        # The cache latest prev was there, if the server one didn't result as UPDATE
+        # Then resolve to the cache latest prev
+        self._binary_in_cache(node, cache_latest_prev)
 
     def _config_version(self):
         config_mode = self._global_conf.get("core.package_id:config_mode", default=None)
