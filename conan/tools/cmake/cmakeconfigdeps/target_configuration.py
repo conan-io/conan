@@ -193,7 +193,7 @@ class TargetConfigurationTemplate2:
 
     def _get_cmake_lib(self, info, components, pkg_folder, pkg_folder_var, comp_name=None):
         if info.exe or not (info.package_framework or info.frameworks or info.includedirs or info.libs
-                            or info.system_libs or info.defines):
+                            or info.system_libs or info.defines or info.requires):
             return
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
