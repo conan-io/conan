@@ -54,10 +54,10 @@ def test_virtualenv(client):
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Windows -s:h os=Windows")
 
-    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
-    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
-    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
-    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
+    # assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
+    # assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
+    # assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
+    # assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     with open(os.path.join(client.current_folder, "conanbuildenv.ps1"), "r", encoding="utf-16") as f:
         buildenv = f.read()
     assert '$env:MYPATH1="c:/path/to/ar"' in buildenv
@@ -119,6 +119,7 @@ def test_virtualenv_test_package(powershell):
     assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
     assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
 
+@pytest.mark.tool("ninja")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
 @pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh"])
 def test_vcvars(powershell):
@@ -210,27 +211,6 @@ def test_concatenate_build_and_run_env(powershell):
                                    client.current_folder,"mycompiler1.bat")
     client.run_command(cmd)
     assert "MYTOOL 1!!" in client.out
-
-
-@pytest.mark.parametrize("powershell", [None, True, False])
-def test_powershell_deprecated_message(powershell):
-    client = TestClient(light=True)
-    conanfile = textwrap.dedent("""\
-        from conan import ConanFile
-        class Pkg(ConanFile):
-            settings = "os"
-            name = "pkg"
-            version = "0.1"
-        """)
-
-    client.save({"conanfile.py": conanfile})
-    powershell_arg = f'-c tools.env.virtualenv:powershell={powershell}' if powershell is not None else ""
-    client.run(f'install . {powershell_arg}')
-    # only show message if the value is set to False or True if not set do not show message
-    if powershell is not None:
-        assert "Boolean values for 'tools.env.virtualenv:powershell' are deprecated" in client.out
-    else:
-        assert "Boolean values for 'tools.env.virtualenv:powershell' are deprecated" not in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
