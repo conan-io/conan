@@ -940,5 +940,7 @@ def test_requires_only_component_target_generation():
     # An otherwise empty component is generated as a target if it requires another component
     # to work as an interface target for the requirement
     # (For example, useful when a component aggregates optional components under it)
-    assert "add_library(pkg::compB" in target
+    assert "add_library(pkg::compB INTERFACE" in target
     assert "# Requirement pkg::compB -> pkg::compA (Full link: True)" in target
+    # And even if it's INTERFACE, the globally generated target requires it as usual
+    assert "# Requirement pkg::pkg -> pkg::compB (Full link: True)" in target
