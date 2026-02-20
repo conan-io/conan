@@ -43,19 +43,29 @@ class PyEnv:
                                  "Python system-wide or set the "
                                  "'tools.system.pyenv:python_interpreter' "
                                  "conf to the full path of a Python executable")
-        self.env_name = f"conan_pyenv{f'_{name}' if name else ''}"
+        self._env_name = f"conan_pyenv{f'_{name}' if name else ''}"
         if py_version:
-            self.env_name += f'_{py_version.replace(".", "_")}'
+            self._env_name += f'_{py_version.replace(".", "_")}'
         base_env_dir = os.path.abspath(folder or conanfile.build_folder)
-        self.root = os.path.join(base_env_dir, self.env_name)
-        if not os.path.exists(self.root):
+        self._root = os.path.join(base_env_dir, self._env_name)
+        if not os.path.exists(self._root):
             if py_version:
                 self._create_uv_venv(base_env_dir, py_version)
             else:
                 self._create_venv()
-        self.python = self._get_env_python(self.root)
+
+    @property
+    def python(self):
+        return self._get_env_python(self._root)
+
+    @property
+    def bin_dir(self):
         bins = "Scripts" if platform.system() == "Windows" else "bin"
-        self.bin_dir = os.path.join(self.root, bins)
+        return os.path.join(self._root, bins)
+
+    @property
+    def root(self):
+        return self._root
 
     @staticmethod
     def _get_env_python(env_dir):
@@ -67,9 +77,9 @@ class PyEnv:
         Create a conan environment to use the python venv in the next steps of the conanfile.
         """
         env = Environment()
-        env.define_path("Python_ROOT_DIR", self.root)
+        env.define_path("Python_ROOT_DIR", self._root)
         env.prepend_path("PATH", self.bin_dir)
-        env.vars(self._conanfile).save_script(self.env_name)
+        env.vars(self._conanfile).save_script(self._env_name)
 
     def run(self, args):
         return self._conanfile.run(cmd_args_to_string([self.python] + list(args)))
@@ -94,7 +104,7 @@ class PyEnv:
     def _create_venv(self):
         try:
             self._conanfile.run(cmd_args_to_string([self._default_python, '-m', 'venv',
-                                                    self.root]))
+                                                    self._root]))
         except ConanException as e:
             raise ConanException(f"PyEnv could not create a Python virtual "
                                  f"environment using '{self._default_python}': {e}")
@@ -106,7 +116,7 @@ class PyEnv:
             if uv_path:
                 uv_cmd = [uv_path]
             else:
-                uv_env_dir = os.path.join(base_env_dir, f"uv_{self.env_name}")
+                uv_env_dir = os.path.join(base_env_dir, f"uv_{self._env_name}")
                 self._conanfile.run(cmd_args_to_string(
                     [self._default_python, '-m', 'venv', uv_env_dir])
                 )
@@ -117,7 +127,7 @@ class PyEnv:
                 )
                 uv_cmd = [python_exe, "-m", "uv"]
 
-            self._conanfile.run(cmd_args_to_string(uv_cmd + ['venv', '--seed', '--python', py_version, self.root]))
+            self._conanfile.run(cmd_args_to_string(uv_cmd + ['venv', '--seed', '--python', py_version, self._root]))
             self._conanfile.output.info(f"Virtual environment for Python "
                                         f"{py_version} created successfully using UV.")
         except Exception as e:
