@@ -701,10 +701,7 @@ def test_massive_paths(num_deps):
         assert "MYTOOL {}!!".format(i) in client.out
 
     # Test .bats now
-    #client.save({"conanfile.py": conanfile}, clean_first=True)
-    #client.run("install .")
-    # assert not os.path.isfile(os.path.join(client.current_folder, "conanrunenv.ps1"))
-    #assert os.path.isfile(os.path.join(client.current_folder, "conanrunenv.bat"))
+    # No need to install anything, they were already installed
     for i in range(num_deps):
         cmd = environment_wrap_command(ConanFileMock(), "conanrunenv", client.current_folder,
                                        "mycompiler{}.bat".format(i))
