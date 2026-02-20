@@ -20,7 +20,7 @@ from conan.internal.model.settings import SettingsItem
 from conan.internal.util.files import load, save
 
 BUILT_IN_CONFS = {
-    "core:required_conan_version": "Raise if current version does not match the defined range.",
+    "core:required_conan_version": "(str) Raise if current version does not match the defined range.",
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core:warnings_as_errors": "Treat warnings matching any of the patterns in this list as errors and then raise an exception. "
                                "Current warning tags are 'network', 'deprecated'",
@@ -756,12 +756,10 @@ class ConfDefinition:
                 if len(tokens) != 2:
                     continue
                 pattern_name, value = tokens
-                pattern, name = self._split_pattern_name(pattern_name)
-                description = BUILT_IN_CONFS.get(name, "")
-                if description.startswith("(str)"):
-                    parsed_value = value.strip()
-                else:
-                    parsed_value = ConfDefinition._get_evaluated_value(value)
+                _, name = self._split_pattern_name(pattern_name)
+                # We only implement str type at the moment
+                isstr = BUILT_IN_CONFS.get(name, "").startswith("(str)")
+                parsed_value = value.strip() if isstr else ConfDefinition._get_evaluated_value(value)
                 self.update(pattern_name, parsed_value, profile=profile, method=method)
                 break
             else:
