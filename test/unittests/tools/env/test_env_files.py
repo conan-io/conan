@@ -98,7 +98,7 @@ def test_env_files_bat(env, prevenv):
         env._subsystem = WINDOWS
         env.save_bat("test.bat")
         save("display.bat", display)
-        cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
+        cmd = r".\test.bat && .\display.bat && .\deactivate_test.bat && .\display.bat"
         check_env_files_output(cmd, prevenv)
 
 
@@ -186,7 +186,7 @@ def test_relative_paths():
         if platform.system() == "Windows":
             test_bat = load("test.bat")
             assert r'set "PATH=%~dp0\myscripts"' in test_bat
-            cmd = "test.bat && myhello.bat"
+            cmd = r".\test.bat && myhello.bat"
         else:
             test_sh = load("test.sh")
             assert 'export PATH="$script_folder/myscripts"' in test_sh

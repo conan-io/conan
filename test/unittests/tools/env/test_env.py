@@ -227,7 +227,7 @@ def test_windows_case_insensitive_bat(envvars):
     with chdir(temp_folder()):
         envvars.save_bat("test.bat")
         save("display.bat", display)
-        cmd = "test.bat && display.bat && deactivate_test.bat && display.bat"
+        cmd = r".\test.bat && .\display.bat && .\deactivate_test.bat && .\display.bat"
         check_command_output(cmd, prevenv)
 
 

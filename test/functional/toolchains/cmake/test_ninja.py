@@ -92,11 +92,11 @@ def test_locally_build_msvc(build_type, shared, client):
     settings = "-s build_type={} -o hello/*:shared={}".format(build_type, shared)
     client.run("install . {}".format(settings))
 
-    client.run_command('conanvcvars.bat && cmake . -G "Ninja" '
+    client.run_command(r'.\conanvcvars.bat && cmake . -G "Ninja" '
                        '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
                        '-DCMAKE_BUILD_TYPE={}'.format(build_type))
 
-    client.run_command("conanvcvars.bat && ninja")
+    client.run_command(r".\conanvcvars.bat && ninja")
 
     libname = "mylibrary.dll" if shared else "mylibrary.lib"
     assert libname in client.out
@@ -136,11 +136,11 @@ def test_locally_build_msvc_toolset(client):
     client.save({"profile": profile})
     client.run("install . -pr=profile")
 
-    client.run_command('conanvcvars.bat && cmake . -G "Ninja" '
+    client.run_command(r'.\conanvcvars.bat && cmake . -G "Ninja" '
                        '-DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake '
                        '-DCMAKE_BUILD_TYPE=Release')
 
-    client.run_command("conanvcvars.bat && ninja")
+    client.run_command(r".\conanvcvars.bat && ninja")
 
     client.run_command("myapp.exe")
 

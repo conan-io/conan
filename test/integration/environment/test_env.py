@@ -518,7 +518,7 @@ def test_multiple_deactivate(deactivation_mode):
 
     for _ in range(2):  # Just repeat it, so we can check things keep working
         if platform.system() == "Windows":
-            cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+            cmd = r".\conanbuild.bat && .\display.bat && .\deactivate_conanbuild.bat && .\display.bat"
         else:
             deactivate_cmd = "deactivate_conanbuild" if deactivation_mode else ". ./deactivate_conanbuild.sh"
             cmd = f'. ./conanbuild.sh && ./display.sh && {deactivate_cmd} && ./display.sh'
@@ -565,7 +565,7 @@ def test_multiple_deactivate_order(deactivation_mode):
 
     for _ in range(2):  # Just repeat it, so we can check things keep working
         if platform.system() == "Windows":
-            cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+            cmd = r".\conanbuild.bat && .\display.bat && .\deactivate_conanbuild.bat && .\display.bat"
         else:
             deactivate_cmd = "deactivate_conanbuild" if deactivation_mode else ". ./deactivate_conanbuild.sh"
             cmd = f'. ./conanbuild.sh && ./display.sh && {deactivate_cmd} && ./display.sh'
@@ -731,7 +731,7 @@ def test_profile_build_env_spaces(deactivation_mode):
     client.run(f"install . -g VirtualBuildEnv -pr=profile {f'-c=tools.env:deactivation_mode={deactivation_mode}' if deactivation_mode else ''} ")
 
     if platform.system() == "Windows":
-        cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+        cmd = r".\conanbuild.bat && .\display.bat && .\deactivate_conanbuild.bat && .\display.bat"
     else:
         deactivate_cmd = "deactivate_conanbuild" if deactivation_mode else ". ./deactivate_conanbuild.sh"
         cmd = f'. ./conanbuild.sh && ./display.sh && {deactivate_cmd} && ./display.sh'
