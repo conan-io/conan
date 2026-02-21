@@ -411,7 +411,7 @@ class TestOpenAdd:
 
         c = TestClient(servers=t1.servers, light=True)
         c.run("workspace open pkg/0.1")
-        assert c.load("pkg/conanfile.py") == conanfile
+        assert c.load("pkg/conanfile.py").replace("\r\n", "\n") == conanfile
 
         c2 = TestClient(servers=t1.servers, light=True)
         c2.save({"conanws.yml": ""})
