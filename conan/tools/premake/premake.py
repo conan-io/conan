@@ -7,6 +7,7 @@ from jinja2 import Template
 from conan.errors import ConanException
 from conan.tools.files import save
 from conan.tools.microsoft.msbuild import MSBuild
+from conan.tools.apple.xcodebuild import XcodeBuild
 from conan.tools.premake.toolchain import PremakeToolchain
 from conan.tools.premake.constants import CONAN_TO_PREMAKE_ARCH
 
@@ -122,6 +123,15 @@ class Premake:
                 msbuild.platform = msbuild_platform
             msbuild.build_type = build_type
             msbuild.build(sln=f"{workspace}.sln", targets=targets)
+        elif self.action.startswith("xcode"):
+            xcodeBuild = XcodeBuild(self._conanfile)
+            workspace = f'{workspace}.xcworkspace' # Workspace is not converted to lowercase
+            if not targets:
+                targets = xcodeBuild.discover_workspace_schemes(workspace)
+            else:
+                targets = [target.lower() for target in targets] # Premake converts projects to lower
+            for target in targets:
+                xcodeBuild.build_workspace(workspace, target, configuration)
         else:
             targets = "all" if targets is None else " ".join(targets)
             njobs = build_jobs(self._conanfile)
