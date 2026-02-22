@@ -188,7 +188,7 @@ class MultiPackagesList:
 
         pref_contexts = {}
         for node in graph["graph"]["nodes"].values():
-            if node["package_id"] is not None:
+            if node["ref"] and node["package_id"] is not None:
                 pref = node["ref"] + ":" + node["package_id"]
                 pref_contexts.setdefault(pref, set()).add(node['context'])
 
