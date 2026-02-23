@@ -466,7 +466,7 @@ class EnvVars:
             endlocal
             
             {function_epilogue}
-            """))
+            """)
         capture = textwrap.dedent("""\
             @echo off
             chcp 65001 > nul
