@@ -423,9 +423,8 @@ class EnvVars:
         deactivates_variable = f"_CONAN_{self._scope}_DEACTIVATES_DIR"
         dest_variable = f"%{deactivates_variable}%" if is_function else "%~dp0"
 
-        deactivate = textwrap.dedent("""\
+        function_preamble = textwrap.dedent(f"""
             set "local_defined=0"
-            if "{is_function}" == "False" goto skip_deactivate_variable
             if defined {deactivates_variable} goto skip_deactivate_variable
 
             set "local_defined=1"
@@ -434,7 +433,18 @@ class EnvVars:
             set "PATH=%{deactivates_variable}%;%PATH%"
 
             :skip_deactivate_variable
+        """) if is_function else ""
 
+        function_epilogue = textwrap.dedent(f"""
+            if %local_defined% == 0 goto end
+            echo set "PATH=%%PATH:%{deactivates_variable}%;=%%" >> "{dest_variable}/{deactivate_file}"
+            echo set "{deactivates_variable}=">> "{dest_variable}/{deactivate_file}"
+            :end
+        """) if is_function else ""
+
+        deactivate = textwrap.dedent("""\
+            {function_preamble}
+            
             setlocal
             echo @echo off > "{dest_variable}/{deactivate_file}"
             echo echo Restoring environment for {filename} >> "{dest_variable}/{deactivate_file}"
@@ -451,17 +461,16 @@ class EnvVars:
                 )
             )
             endlocal
-            if %local_defined% == 0 goto end
-            echo set "PATH=%%PATH:%{deactivates_variable}%;=%%" >> "{dest_variable}/{deactivate_file}"
-            echo set "{deactivates_variable}=">> "{dest_variable}/{deactivate_file}"
-            :end
+            
+            {function_epilogue}
             """).format(deactivate_file=deactivate_file,
                         is_function=is_function,
                         vars=" ".join(self._values.keys()),
                         dest_variable=dest_variable,
-                        deactivates_variable=deactivates_variable,
                         group=self._scope,
-                        filename=filename, )
+                        filename=filename,
+                        function_preamble=function_preamble,
+                        function_epilogue=function_epilogue)
         capture = textwrap.dedent("""\
             @echo off
             chcp 65001 > nul
