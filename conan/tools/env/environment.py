@@ -474,7 +474,6 @@ class EnvVars:
                                       root_path=abs_base_path, script_path=new_path)
             result.append('set "{}={}"'.format(varname, value))
 
-
         content = "\n".join(result)
         # It is very important to save it correctly with utf-8, the Conan util save() is broken
         os.makedirs(os.path.dirname(os.path.abspath(file_location)), exist_ok=True)
