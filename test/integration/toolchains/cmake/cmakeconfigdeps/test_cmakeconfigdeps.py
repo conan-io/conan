@@ -916,3 +916,31 @@ class TestExtraFindExtraVariants:
         assert paths_content.count("list(APPEND CONAN_hello_DIR_MULTI") == 2
         assert paths_content.count("list(APPEND CONAN_HellO_DIR_MULTI") == 2
         assert paths_content.count("list(APPEND CONAN_HELLO_DIR_MULTI") == 2
+
+
+def test_requires_only_component_target_generation():
+    tc = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+
+            def package_info(self):
+                self.cpp_info.components["compA"].includedirs = ["include"]
+                self.cpp_info.components["compB"].includedirs = []
+                self.cpp_info.components["compB"].requires = ["compA"]
+    """)
+    tc.save({"conanfile.py": conanfile})
+    tc.run("create .")
+    tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps")
+    target = tc.load("pkg-Targets-release.cmake")
+    # An otherwise empty component is generated as a target if it requires another component
+    # to work as an interface target for the requirement
+    # (For example, useful when a component aggregates optional components under it)
+    assert "add_library(pkg::compB INTERFACE" in target
+    assert "# Requirement pkg::compB -> pkg::compA (Full link: True)" in target
+    # And even if it's INTERFACE, the globally generated target requires it as usual
+    assert "# Requirement pkg::pkg -> pkg::compB (Full link: True)" in target

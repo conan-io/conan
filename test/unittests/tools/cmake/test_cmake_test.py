@@ -7,6 +7,7 @@ from conan.internal.model.conf import Conf
 from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
+from conan.tools.cmake.utils import cmake_escape_value
 
 
 @pytest.mark.parametrize("generator,target", [
@@ -82,3 +83,24 @@ def test_run_ctest():
     cmake = CMake(conanfile)
     cmake.ctest(cli_args=["--schedule-random", "--quiet"])
     assert "--schedule-random --quiet --verbose --debug --output-junit myfile" in conanfile.command
+
+
+@pytest.mark.parametrize("input_str, expected", [
+    (r"PlainString", r"PlainString"),  # Case 1: Plain strings (No change)
+    # Case 2: Individual characters (First-time escape)
+    (r"C:\Path", r"C:\\Path"),
+    (r'He said "Hi"', r'He said \"Hi\"'),
+    (r"Cost is $10", r"Cost is \$10"),
+    # Case 3: Complex mixed strings
+    (r'Mixed \path and "quote" with $VAR', r'Mixed \\path and \"quote\" with \$VAR'),
+    # Case 4: Partial escapes (Only unescaped parts get fixed)
+    (r'\"Already" and \$Already$', r'\"Already\" and \$Already\$'),
+    # Case 5: Edge cases
+    (r'TrailingSlash\\', r'TrailingSlash\\'),
+    (r"Double\\Slash", r"Double\\Slash"),
+    (r"", r""),  # Empty string
+])
+def test_cmake_escape_correctness(input_str, expected):
+    escaped = cmake_escape_value(input_str)
+    assert escaped == expected
+    assert cmake_escape_value(escaped) == expected
