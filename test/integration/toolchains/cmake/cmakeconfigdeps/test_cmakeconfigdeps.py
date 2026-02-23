@@ -795,11 +795,11 @@ def test_legacy_defines():
     # We do for backward compatibility with old check_symbol_exists and similar CMake code
     tc = TestClient()
     tc.save({"conanfile.py": GenConanfile("mypkg", "1.0")
-             .with_package_info({"defines": ["MY_DEFINE"]})})
+             .with_package_info({"defines": ["MY_DEFINE", "MYVAR=1"]})})
     tc.run("create")
     tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
     mypkg_config = tc.load("mypkg-config.cmake")
-    assert "set(mypkg_DEFINITIONS MY_DEFINE )" in mypkg_config
+    assert 'set(mypkg_DEFINITIONS "-DMY_DEFINE;-DMYVAR=1" )' in mypkg_config
 
 
 class TestExtraFindExtraVariants:
