@@ -649,3 +649,17 @@ class TestListGraphContext:
             assert "protobuf/1.0" in tc.out
             assert protobuf_build_static_pkgid not in tc.out
             assert protobuf_host_shared_pkgid in tc.out
+
+    @pytest.mark.parametrize("context", ["build-only", "host-only"])
+    def test_context_only_consumer_recipe_no_named(self, context):
+        tc = TestClient()
+        tc.save({
+            "protobuf/conanfile.py": GenConanfile("protobuf", "1.0"),
+            "consumer/conanfile.py": GenConanfile()
+                .with_tool_requires("protobuf/1.0")
+                .with_requires("protobuf/1.0")})
+
+        tc.run("create protobuf")
+        tc.run(f"graph info consumer -f=json", redirect_stdout="graph.json")
+        tc.run(f"list --graph=graph.json --graph-context={context}")
+        assert "protobuf/1.0" not in tc.out

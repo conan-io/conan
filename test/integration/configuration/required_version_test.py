@@ -32,6 +32,13 @@ class TestRequiredVersion:
         client.save_home({"global.conf": f"core:required_conan_version={required_version}"})
         client.run("--help")
 
+    @mock.patch("conan.__version__", "2.20.0")
+    def test_lesser_version_error_parse(self):
+        required_version = "2.20"
+        client = TestClient(light=True)
+        client.save_home({"global.conf": f"core:required_conan_version={required_version}"})
+        client.run("--help")
+
     @mock.patch("conan.__version__", "1.0.0")
     def test_greater_version(self):
         required_version = ">0.1.0"
