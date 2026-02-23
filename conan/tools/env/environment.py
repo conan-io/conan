@@ -428,7 +428,7 @@ class EnvVars:
             if defined {deactivates_variable} goto skip_deactivate_variable
 
             set "local_defined=1"
-            set "{deactivates_variable}=%TEMP%\\conan_{group}_%RANDOM%"
+            set "{deactivates_variable}=%TEMP%\\conan_{self._scope}_%RANDOM%"
             mkdir "%{deactivates_variable}%"
             set "PATH=%{deactivates_variable}%;%PATH%"
 
