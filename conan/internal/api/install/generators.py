@@ -1,6 +1,5 @@
 import inspect
 import os
-import tempfile
 import traceback
 import importlib
 
