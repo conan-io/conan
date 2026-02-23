@@ -20,7 +20,7 @@ from conan.internal.model.settings import SettingsItem
 from conan.internal.util.files import load, save
 
 BUILT_IN_CONFS = {
-    "core:required_conan_version": "(str) Raise if current version does not match the defined range.",
+    "core:required_conan_version": "Raise if current version does not match the defined range.",
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core:warnings_as_errors": "Treat warnings matching any of the patterns in this list as errors and then raise an exception. "
                                "Current warning tags are 'network', 'deprecated'",
@@ -122,7 +122,7 @@ BUILT_IN_CONFS = {
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
     "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
     "tools.microsoft:winsdk_version": "Use this winsdk_version in vcvars",
-    "tools.microsoft:msvc_update": "(str) Force the specific update irrespective of compiler.update (CMakeToolchain and VCVars)",
+    "tools.microsoft:msvc_update": "Force the specific update irrespective of compiler.update (CMakeToolchain and VCVars)",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version (15, 16, 17) when using the msvc compiler. Necessary if compiler.version specifies a toolset that is not the IDE default",
     "tools.microsoft.msbuild:max_cpu_count": "Argument for the /m when running msvc to build parallel projects",
     "tools.microsoft.msbuild:installation_path": "VS install path, to avoid auto-detect via vswhere, like C:/Program Files (x86)/Microsoft Visual Studio/2019/Community. Use empty string to disable",
@@ -161,6 +161,12 @@ BUILT_IN_CONFS = {
 }
 
 BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
+
+
+_BUILT_IN_CONFS_TYPES = {
+    "core:required_conan_version": str,
+    "tools.microsoft:msvc_update": str
+}
 
 CORE_CONF_PATTERN = re.compile(r"^(core\..+|core):.*")
 TOOLS_CONF_PATTERN = re.compile(r"^(tools\..+|tools):.*")
@@ -758,7 +764,7 @@ class ConfDefinition:
                 pattern_name, value = tokens
                 _, name = self._split_pattern_name(pattern_name)
                 # We only implement str type at the moment
-                isstr = BUILT_IN_CONFS.get(name, "").startswith("(str)")
+                isstr = _BUILT_IN_CONFS_TYPES.get(name) is str
                 parsed_value = value.strip() if isstr else ConfDefinition._get_evaluated_value(value)
                 self.update(pattern_name, parsed_value, profile=profile, method=method)
                 break
