@@ -59,7 +59,7 @@ def compute_package_id(node, modes, config_version, hook_manager):
                                                              PackageType.APP]:
         for require, transitive in node.transitive_deps.items():
             if require.headers:
-                header_opts = getattr(transitive.node.conanfile, "package_id_header_options", ())
+                header_opts = getattr(transitive.node.conanfile, "package_id_abi_options", ())
                 for pkg_id_option in header_opts:
                     v = getattr(transitive.node.conanfile.options, pkg_id_option)
                     setattr(conanfile.info.options[f"{transitive.node.name}/*"], pkg_id_option, v)

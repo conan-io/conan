@@ -97,8 +97,24 @@ class TestTransitiveOptionsAffectPackageID:
                                 })
 
 
-class TestHeaderOptions:
-    def test_package_id_header_options(self):
+class TestPackageIDABIOptions:
+    """
+    These tests use the ``shared=True/False`` options for a proxy of the real issue
+    reported in https://github.com/conan-io/conan/issues/19108
+
+    The issue appears in MSVC when headers define
+
+    define FOO_EXPORT __declspec(dllimport)
+
+    Then, a static library will be a different artifact if it links against a static library
+    or a shared library. This isn't a very common issue because of 2 reasons:
+    - The most general linkage method are either all static or all shared, it is not that frequent
+      to have static libraries linking shared libraries
+    - Many third parties and open source libraries declare and use the __declspec(dllexport),
+      which is necessary for correctly exporting the symbols in MSVC. But the dllimport is not
+      that necessary and mostly a linking optimization, so not that frequent
+    """
+    def test_package_id_abi_options(self):
         c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -107,7 +123,7 @@ class TestHeaderOptions:
                 version = "0.1"
                 options = {"shared": [True, False]}
                 default_options = {"shared": False}
-                package_id_header_options = ["shared"]
+                package_id_abi_options = ["shared"]
             """)
         app = textwrap.dedent("""
             from conan import ConanFile
@@ -132,7 +148,7 @@ class TestHeaderOptions:
         c.run("list app/0.1:8c15f2b19bd994dcd5b44780eda3f03bde74c217")
         assert "pkg/*:shared: True" in c.out
 
-    def test_package_id_header_options_conditional(self):
+    def test_package_id_abi_options_conditional(self):
         c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -145,7 +161,7 @@ class TestHeaderOptions:
 
                 def configure(self):
                     if self.settings.os == "Windows":
-                        self.package_id_header_options = ["shared"]
+                        self.package_id_abi_options = ["shared"]
             """)
         app = textwrap.dedent("""
             from conan import ConanFile
@@ -180,7 +196,7 @@ class TestHeaderOptions:
         c.run("list app/0.1:8c15f2b19bd994dcd5b44780eda3f03bde74c217")
         assert "pkg/*:shared: True" in c.out
 
-    def test_package_id_header_options_transitive(self):
+    def test_package_id_abi_options_transitive(self):
         c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -189,7 +205,7 @@ class TestHeaderOptions:
                 version = "0.1"
                 options = {"shared": [True, False]}
                 default_options = {"shared": False}
-                package_id_header_options = ["shared"]
+                package_id_abi_options = ["shared"]
             """)
         middle = (GenConanfile("middle", "0.1").with_requires("pkg/0.1")
                                                .with_package_type("shared-library"))
@@ -229,8 +245,8 @@ class TestHeaderOptions:
         c.run("create middle -o *:shared=True")
 
         c.run("create app")
-        c.assert_listed_binary({"app": ("b0898f811ac04a8262f2864da36f313c7e2a1fca", "Build")})
-        c.run("list app/0.1:b0898f811ac04a8262f2864da36f313c7e2a1fca")
+        c.assert_listed_binary({"app": ("ae20c28d303d1c561f95683add6638d6155c2bd9", "Build")})
+        c.run("list app/0.1:ae20c28d303d1c561f95683add6638d6155c2bd9")
         assert "pkg/*:shared: False" in c.out
 
         c.run("create app -o *:shared=True")
