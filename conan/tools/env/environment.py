@@ -442,13 +442,14 @@ class EnvVars:
             :end
         """) if is_function else ""
 
-        deactivate = textwrap.dedent("""\
+        deactivate = textwrap.dedent(f"""\
+            @echo off
             {function_preamble}
             
             setlocal
             echo @echo off > "{dest_variable}/{deactivate_file}"
             echo echo Restoring environment for {filename} >> "{dest_variable}/{deactivate_file}"
-            for %%v in ({vars}) do (
+            for %%v in ({' '.join(self._values.keys())}) do (
                 set foundenvvar=
                 for /f "delims== tokens=1,2" %%a in ('set') do (
                     if /I "%%a" == "%%v" (
@@ -463,14 +464,7 @@ class EnvVars:
             endlocal
             
             {function_epilogue}
-            """).format(deactivate_file=deactivate_file,
-                        is_function=is_function,
-                        vars=" ".join(self._values.keys()),
-                        dest_variable=dest_variable,
-                        group=self._scope,
-                        filename=filename,
-                        function_preamble=function_preamble,
-                        function_epilogue=function_epilogue)
+            """))
         capture = textwrap.dedent("""\
             @echo off
             chcp 65001 > nul
