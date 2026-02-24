@@ -162,6 +162,12 @@ BUILT_IN_CONFS = {
 
 BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
 
+
+_BUILT_IN_CONFS_TYPES = {
+    "core:required_conan_version": str,
+    "tools.microsoft:msvc_update": str
+}
+
 CORE_CONF_PATTERN = re.compile(r"^(core\..+|core):.*")
 TOOLS_CONF_PATTERN = re.compile(r"^(tools\..+|tools):.*")
 USER_CONF_PATTERN = re.compile(r"^(user\..+|user):.*")
@@ -756,7 +762,10 @@ class ConfDefinition:
                 if len(tokens) != 2:
                     continue
                 pattern_name, value = tokens
-                parsed_value = ConfDefinition._get_evaluated_value(value)
+                _, name = self._split_pattern_name(pattern_name)
+                # We only implement str type at the moment
+                isstr = _BUILT_IN_CONFS_TYPES.get(name) is str
+                parsed_value = value.strip() if isstr else ConfDefinition._get_evaluated_value(value)
                 self.update(pattern_name, parsed_value, profile=profile, method=method)
                 break
             else:

@@ -122,7 +122,8 @@ class PkgSignaturesPlugin:
                                                 signature_folder=metadata_sign)
         if isinstance(signatures, list):
             # Save signatures file with the plugin's returned signatures data
-            _save_signatures(metadata_sign, signatures)
+            if signatures:
+                _save_signatures(metadata_sign, signatures)
         else:
             # Fallback to old behavior (plugin sign() returns None)
             ConanOutput().warning("[Package sign] The signature plugin sign() function must return "

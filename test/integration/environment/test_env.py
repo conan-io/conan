@@ -5,6 +5,7 @@ import textwrap
 
 import pytest
 
+from conan.test.utils.env import environment_update
 from conan.test.utils.mocks import ConanFileMock
 from conan.tools.env.environment import environment_wrap_command
 from conan.test.utils.tools import TestClient, GenConanfile
@@ -403,8 +404,10 @@ def test_diamond_repeated():
     conanrun = client.load("pkge/conanrunenv.sh")
     assert "PATH" not in conanrun
     assert 'export MYVAR1="PkgAValue1 PkgCValue1 PkgBValue1 PkgDValue1"' in conanrun
-    assert 'export MYVAR2="$MYVAR2 PkgAValue2 PkgCValue2 PkgBValue2 PkgDValue2"' in conanrun
-    assert 'export MYVAR3="PkgDValue3 PkgBValue3 PkgCValue3 PkgAValue3 $MYVAR3"' in conanrun
+    assert ('export MYVAR2="${MYVAR2:-}${MYVAR2:+ }PkgAValue2 PkgCValue2 '
+            'PkgBValue2 PkgDValue2"') in conanrun
+    assert ('export MYVAR3="PkgDValue3 PkgBValue3 PkgCValue3 '
+            'PkgAValue3${MYVAR3:+ $MYVAR3}"') in conanrun
     assert 'export MYVAR4="PkgDValue4"' in conanrun
 
 
@@ -975,3 +978,40 @@ class TestDotEnv:
         c.run("install . -pr=myprofile")
         assert set(os.listdir(c.current_folder)) == {'conanfile.py', 'mybuild.env', 'myprofile'}
         assert 'MYVAR1="MyVal1"' in c.load("mybuild.env")
+
+
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires shell")
+@pytest.mark.parametrize("path", [False, True])
+def test_hardened_sh(path):
+    c = TestClient()
+    echo_sh = textwrap.dedent("""
+        set -eu
+        . ./conanbuild.sh
+        echo "MYENVVAR1=$MYENVVAR1!!"
+        echo "MYENVVAR2=$MYENVVAR2!!"
+        echo "MYENVVAR3=$MYENVVAR3!!"
+        """)
+    path = "(path)" if path else ""
+    myprofile = textwrap.dedent(f"""
+        [buildenv]
+        MYENVVAR1=+{path}value1
+        MYENVVAR2+={path}value2
+        MYENVVAR3=+{path}value3
+        MYENVVAR3+={path}value4
+        """)
+    c.save({"conanfile.txt": "",
+            "myprofile": myprofile,
+            "myecho.sh": echo_sh})
+    os.chmod(os.path.join(c.current_folder, "myecho.sh"), 0o777)
+    c.run("install . -pr=myprofile")
+    c.run_command("./myecho.sh")
+    sep = ":" if path else " "
+    assert "MYENVVAR1=value1!!" in c.out
+    assert "MYENVVAR2=value2!!" in c.out
+    assert f"MYENVVAR3=value3{sep}value4!!" in c.out
+
+    with environment_update({"MYENVVAR1": "init1", "MYENVVAR2": "init2", "MYENVVAR3": "init3"}):
+        c.run_command("./myecho.sh")
+        assert f"MYENVVAR1=value1{sep}init1!!" in c.out
+        assert f"MYENVVAR2=init2{sep}value2!!" in c.out
+        assert f"MYENVVAR3=value3{sep}init3{sep}value4!!" in c.out

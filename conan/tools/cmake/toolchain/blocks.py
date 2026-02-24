@@ -13,7 +13,7 @@ from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.utils import is_multi_configuration
+from conan.tools.cmake.utils import is_multi_configuration, cmake_escape_value
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version, msvc_platform_from_arch
 from conan.internal.api.install.generators import relativize_path
@@ -1291,8 +1291,8 @@ class VariablesBlock(Block):
                 {% endfor %}
                 {% for i in range(values|count) %}{% set genexpr.str = genexpr.str + '>' %}
                 {% endfor %}
-                set({{ it }} {{ genexpr.str }} CACHE STRING
-                    "Variable {{ it }} conan-toolchain defined")
+            set({{ it }} {{ genexpr.str }} CACHE STRING
+                "Variable {{ it }} conan-toolchain defined")
             {% endfor %}
             {% endmacro %}
             # Variables
@@ -1308,8 +1308,11 @@ class VariablesBlock(Block):
             """)
 
     def context(self):
-        return {"variables": self._toolchain.variables,
-                "variables_config": self._toolchain.variables.configuration_types}
+        variables = {k: cmake_escape_value(v) for k, v in self._toolchain.variables.items()}
+        vars_config = {k: [(config, cmake_escape_value(v)) for (config, v) in configs]
+                       for k, configs in self._toolchain.variables.configuration_types.items()}
+        return {"variables": variables,
+                "variables_config": vars_config}
 
 
 class PreprocessorBlock(Block):
