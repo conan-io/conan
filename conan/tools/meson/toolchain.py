@@ -461,7 +461,6 @@ class MesonToolchain:
         for req in host_req:
             cppinfo = req.cpp_info.aggregated_components()
             runtime_dirs.extend(cppinfo.libdirs)
-        # TODO: check if this handles spaces in paths correctly
         return ["-Wl,-rpath-link=" + ":".join(runtime_dirs)] if runtime_dirs else []
     
     def _get_extra_flags(self):
