@@ -83,7 +83,7 @@ def lock_add(conan_api, parser, subparser, *args):
     Add requires, build-requires or python-requires to an existing or new lockfile.
     The resulting lockfile will be ordered, newer versions/revisions first.
     References can be supplied with and without revisions like "--requires=pkg/version",
-    but they must be package references, including at least the version,
+    but they must be recipe references, including at least the version,
     and they cannot contain a version range.
     """
     subparser.add_argument('--requires', action="append", help='Add references to lockfile.')

@@ -258,41 +258,26 @@ class CPS:
             return result
 
         cpp_info = CppInfo()
-        if len(self.components) == 1:
-            comp = next(iter(self.components.values()))
-            cpp_info.includedirs = strip_prefix(comp.includes)
-            cpp_info.defines = definitions(comp.definitions)
-            cpp_info.system_libs = comp.link_libraries
-            # requires for 1 component packages are automatic in Conan with self.requires()
+        cpp_info.default_components = self.default_components
+        for comp_name, comp in self.components.items():
+            cpp_comp = cpp_info if len(self.components) == 1 else cpp_info.components[comp_name]
+            cpp_comp.includedirs = strip_prefix(comp.includes)
+            cpp_comp.defines = definitions(comp.definitions)
+            cpp_info.set_property("cmake_file_name", self.name)
+            cpp_info.set_property("cmake_target_name", f"{self.name}::{comp_name}")
             if comp.link_location:
                 link_location = comp.link_location
-                lib_location(link_location, cpp_info)
+                lib_location(link_location, cpp_comp)
                 location = comp.location
                 location = location.replace("@prefix@/", "")
-                cpp_info.bindirs = [os.path.dirname(location)]
+                cpp_comp.bindirs = [os.path.dirname(location)]
             elif comp.location:
                 location = comp.location
-                lib_location(location, cpp_info)
-        else:
-            cpp_info.default_components = self.default_components
-            for comp_name, comp in self.components.items():
-                cpp_comp = cpp_info.components[comp_name]
-                cpp_comp.includedirs = strip_prefix(comp.includes)
-                cpp_comp.defines = definitions(comp.definitions)
-                if comp.link_location:
-                    link_location = comp.link_location
-                    lib_location(link_location, cpp_comp)
-                    location = comp.location
-                    location = location.replace("@prefix@/", "")
-                    cpp_comp.bindirs = [os.path.dirname(location)]
-                elif comp.location:
-                    location = comp.location
-                    lib_location(location, cpp_comp)
-                # all requires are the same for Conan, it uses its traits information
-                requires = comp.link_requires + comp.requires
-                for r in requires:
-                    cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
-                cpp_comp.system_libs = comp.link_libraries
+                lib_location(location, cpp_comp)
+            requires = comp.link_requires + comp.requires
+            for r in requires:
+                cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
+            cpp_comp.system_libs = comp.link_libraries
 
         return cpp_info
 

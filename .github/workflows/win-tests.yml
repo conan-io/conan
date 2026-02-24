@@ -133,7 +133,8 @@ jobs:
           choco install pkgconfiglite --version 0.28
           choco install ninja --version 1.10.2
           choco install mingw
-          choco install cygwin
+          # mirrors.kernel.org/sourceware/cygwin returns 404; use alternative mirror from this list: https://cygwin.com/mirrors.html
+          choco install cygwin --execution-timeout=300 --package-parameters="'/Site:https://mirror.clarkson.edu/cygwin/'"
           choco install cyg-get
           cyg-get automake gcc-g++ make binutils --verbose
 

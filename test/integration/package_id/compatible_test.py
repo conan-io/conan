@@ -963,3 +963,28 @@ def test_compatibility_remove_cppstd():
     # Now we try again, this time app will find the compatible dep without cppstd
     tc.run("install --requires=dep/1.0 -pr=profile -s=compiler.cppstd=17")
     assert f"dep/1.0: Found compatible package '{dep_package_id}'" in tc.out
+
+
+def test_compatible_setting():
+    c = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os = Linux
+        compiler=gcc
+        compiler.version=11
+        compiler.libcxx=libstdc++
+        """)
+    pkg = GenConanfile(version="0.1").with_settings("os", "compiler").with_tool_requires("tool/0.1")
+    c.save({"tool/conanfile.py": GenConanfile("tool", "0.1").with_settings("os", "compiler"),
+            "pkg/conanfile.py": pkg,
+            "profile": profile})
+
+    c.run("export tool")
+    c.run("export pkg --name=pkga")
+    c.run("export pkg --name=pkgb")
+    c.run("export pkg --name=pkgc")
+
+    c.run("install --requires=pkga/0.1 --requires=pkgb/0.1 --requires=pkgc/0.1 "
+          "-pr:a=profile -s:a compiler.cppstd=17 --build=pkg*", assert_error=True)
+    assert str(c.out).count("tool/0.1: Main binary package "
+                            "'e297d0212cdeb8744c601b0e5ea294e62a74582f' missing") == 1

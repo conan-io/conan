@@ -1,13 +1,14 @@
+import importlib
 import inspect
 import os
 import traceback
-import importlib
 
+from conan.errors import ConanException
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.errors import conanfile_exception_formatter
-from conan.errors import ConanException
 from conan.internal.util.files import mkdir, chdir
 from conan.tools.env.environment import generate_aggregated_env
+
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
                "CMakeDeps": "conan.tools.cmake",

@@ -264,7 +264,6 @@ class GraphBinariesAnalyzer:
     @staticmethod
     def _binary_in_cache(node, cache_latest_prev):
         assert cache_latest_prev.revision
-        assert node.binary is None
         node.binary = BINARY_CACHE
         node.binary_remote = None
         node.prev = cache_latest_prev.revision
@@ -312,6 +311,10 @@ class GraphBinariesAnalyzer:
         assert node.package_id is not None, "Node.package_id shouldn't be None"
         assert node.prev is None, "Node.prev should be None"
 
+        # Check that this same reference hasn't already been checked
+        if self._evaluate_is_cached(node):
+            return
+
         self._process_node(node, build_mode, remotes, update)
         compatibles = None
 
@@ -346,10 +349,6 @@ class GraphBinariesAnalyzer:
                                          "dependencies, this is dangerous", warn_tag="risk")
 
     def _process_node(self, node, build_mode, remotes, update):
-        # Check that this same reference hasn't already been checked
-        if self._evaluate_is_cached(node):
-            return
-
         if node.conanfile.info.invalid:
             node.binary = BINARY_INVALID
             return
@@ -384,8 +383,7 @@ class GraphBinariesAnalyzer:
             # Download/update shouldn't be checked in the servers if this is "skip-upload"
             # The binary can only be in cache or missing.
             if cache_latest_prev:
-                node.binary = BINARY_CACHE
-                node.prev = cache_latest_prev.revision
+                self._binary_in_cache(node, cache_latest_prev)
             else:
                 node.binary = BINARY_MISSING
         elif cache_latest_prev is None:  # This binary does NOT exist in the cache
@@ -442,19 +440,13 @@ class GraphBinariesAnalyzer:
                     node.binary = BINARY_UPDATE
                     output.info("Current package revision is older than the remote one")
                 else:
-                    node.binary = BINARY_CACHE
-                    # The final data is the cache one, not the server one
-                    node.binary_remote = None
-                    node.prev = cache_latest_prev.revision
                     if cache_time > node.pref_timestamp:
                         output.info("Current package revision is newer than the remote one")
-                    node.pref_timestamp = cache_time
+                    # The final data is the cache one, not the server one
+                    self._binary_in_cache(node, cache_latest_prev)
+
         if not node.binary:
-            node.binary = BINARY_CACHE
-            node.binary_remote = None
-            node.prev = cache_latest_prev.revision
-            node.pref_timestamp = cache_latest_prev.timestamp
-            assert node.prev, "PREV for %s is None" % str(node.pref)
+            self._binary_in_cache(node, cache_latest_prev)
 
     def _config_version(self):
         config_mode = self._global_conf.get("core.package_id:config_mode", default=None)
@@ -526,7 +518,7 @@ class GraphBinariesAnalyzer:
             # Evaluate the possible nodes with repeated "prefs" that haven't been evaluated
             for pref, pref_nodes in nodes.items():
                 for n in pref_nodes[1:]:
-                    _evaluate_single(n)
+                    assert self._evaluate_is_cached(n)  # The pref is the same, must exist cached
 
         if self._warn_about_new_compatibility:
             (ConanOutput().info("\nA new experimental approach for binary compatibility detection "
