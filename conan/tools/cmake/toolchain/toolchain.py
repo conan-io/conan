@@ -169,25 +169,6 @@ class CMakeToolchain:
                     elif os.path.exists(cmake_exe_path):
                         return cmake_exe_path
 
-
-    def configure_find_python(self, root, python_exe):
-        """
-        Set CMake variables so find_package(Python) uses the given Python installation.
-        Use this when building with CMake so CMake picks a specific Python (e.g. from
-        :class:`conan.tools.system.PyEnv`) instead of system or registry installations.
-
-        :param root: Root directory of the Python environment (e.g. venv root).
-                    Pass to CMake as ``Python_ROOT_DIR``.
-        :param python_exe: Full path to the Python executable.
-                          Pass to CMake as ``Python_EXECUTABLE``.
-        """
-        self.cache_variables["Python_ROOT_DIR"] = root
-        self.cache_variables["Python_EXECUTABLE"] = python_exe
-        self.cache_variables["Python_FIND_UNVERSIONED_NAMES"] = "FIRST"
-        self.cache_variables["Python_FIND_STRATEGY"] = "LOCATION"
-        self.cache_variables["Python_FIND_VIRTUALENV"] = "STANDARD"
-        self.cache_variables["Python_FIND_REGISTRY"] = "NEVER"
-
     def generate(self):
         """
           This method will save the generated files to the conanfile.generators_folder

@@ -47,25 +47,28 @@ class PyEnv:
         if py_version:
             self._env_name += f'_{py_version.replace(".", "_")}'
         base_env_dir = os.path.abspath(folder or conanfile.build_folder)
-        self._root = os.path.join(base_env_dir, self._env_name)
-        if not os.path.exists(self._root):
+        self._env_dir = os.path.join(base_env_dir, self._env_name)
+        if not os.path.exists(self._env_dir):
             if py_version:
                 self._create_uv_venv(base_env_dir, py_version)
             else:
                 self._create_venv()
 
     @property
-    def python(self):
-        return self._get_env_python(self._root)
+    def env_dir(self):
+        """Root directory of the virtual environment."""
+        return self._env_dir
 
     @property
-    def bin_dir(self):
+    def env_exe(self):
+        """Path to the Python executable inside the venv."""
+        return self._get_env_python(self._env_dir)
+
+    @property
+    def bin_path(self):
+        """Path to the bin or Scripts directory inside the venv."""
         bins = "Scripts" if platform.system() == "Windows" else "bin"
-        return os.path.join(self._root, bins)
-
-    @property
-    def root(self):
-        return self._root
+        return os.path.join(self._env_dir, bins)
 
     @staticmethod
     def _get_env_python(env_dir):
@@ -77,12 +80,12 @@ class PyEnv:
         Create a conan environment to use the python venv in the next steps of the conanfile.
         """
         env = Environment()
-        env.define_path("Python_ROOT_DIR", self._root)
-        env.prepend_path("PATH", self.bin_dir)
+        env.define_path("Python_ROOT_DIR", self.env_dir)
+        env.prepend_path("PATH", self.bin_path)
         env.vars(self._conanfile).save_script(self._env_name)
 
     def run(self, args):
-        return self._conanfile.run(cmd_args_to_string([self.python] + list(args)))
+        return self._conanfile.run(cmd_args_to_string([self.env_exe] + list(args)))
 
     def install(self, packages, pip_args=None):
         """
@@ -94,7 +97,7 @@ class PyEnv:
                          Defaults to ``None``.
         :return: the return code of the executed pip command.
         """
-        args = [self.python, "-m", "pip", "install", "--disable-pip-version-check"]
+        args = [self.env_exe, "-m", "pip", "install", "--disable-pip-version-check"]
         if pip_args:
             args.extend(pip_args)
         args += [f'"{p}"' for p in packages]
@@ -104,7 +107,7 @@ class PyEnv:
     def _create_venv(self):
         try:
             self._conanfile.run(cmd_args_to_string([self._default_python, '-m', 'venv',
-                                                    self._root]))
+                                                    self._env_dir]))
         except ConanException as e:
             raise ConanException(f"PyEnv could not create a Python virtual "
                                  f"environment using '{self._default_python}': {e}")
@@ -127,7 +130,7 @@ class PyEnv:
                 )
                 uv_cmd = [python_exe, "-m", "uv"]
 
-            self._conanfile.run(cmd_args_to_string(uv_cmd + ['venv', '--seed', '--python', py_version, self._root]))
+            self._conanfile.run(cmd_args_to_string(uv_cmd + ['venv', '--seed', '--python', py_version, self._env_dir]))
             self._conanfile.output.info(f"Virtual environment for Python "
                                         f"{py_version} created successfully using UV.")
         except Exception as e:
