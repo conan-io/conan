@@ -18,6 +18,9 @@ from conan.internal.rest.download_cache import DownloadCache
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.api.uploader import PackagePreparator
+from conan.internal.conan_app import ConanApp
+from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.util.dates import revision_timestamp_now
 from conan.internal.util.files import rmdir, mkdir, remove, save
 
@@ -181,6 +184,74 @@ class CacheAPI:
         if corrupted_pkg_list:
             raise ConanException("There are corrupted artifacts, check the error logs")
 
+    def sign(self, package_list):
+        """Sign packages with the package signing plugin"""
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
+        pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder)
+        if not pkg_signer.is_sign_configured:
+            raise ConanException(
+                "The sign() function in the package sign plugin is not defined. For more "
+                "information on how to configure the plugin, please read the documentation at "
+                "https://docs.conan.io/2/reference/extensions/package_signing.html.")
+
+        app = ConanApp(self._conan_api)
+        preparator = PackagePreparator(app, self._api_helpers.global_conf)
+        # Some packages can have missing sources/exports_sources
+        enabled_remotes = self._conan_api.remotes.list()
+        preparator.prepare(package_list, enabled_remotes, None, force=True)
+
+        for rref, packages in package_list.items():
+            recipe_bundle = package_list.recipe_dict(rref)
+            rref_folder = cache.recipe_layout(rref).download_export()
+            try:
+                pkg_signer.sign_pkg(rref, recipe_bundle.get("files", {}), rref_folder)
+            except Exception as e:
+                recipe_bundle["pkgsign_error"] = str(e)
+            for pref in packages:
+                pkg_bundle = package_list.package_dict(pref)
+                if pkg_bundle:
+                    pref_folder = cache.pkg_layout(pref).download_package()
+                    try:
+                        pkg_signer.sign_pkg(pref, pkg_bundle.get("files", {}), pref_folder)
+                    except Exception as e:
+                        pkg_bundle["pkgsign_error"] = str(e)
+        return package_list
+
+    def verify(self, package_list):
+        """Verify packages with the package signing plugin"""
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
+        pkg_signer = PkgSignaturesPlugin(cache, self._conan_api.home_folder)
+        if not pkg_signer.is_verify_configured:
+            raise ConanException(
+                "The verify() function in the package sign plugin is not defined. For more "
+                "information on how to configure the plugin, please read the documentation at "
+                "https://docs.conan.io/2/reference/extensions/package_signing.html.")
+
+        for rref, packages in package_list.items():
+            recipe_bundle = package_list.recipe_dict(rref)
+            layout = cache.recipe_layout(rref)
+            rref_folder = layout.download_export()
+            files = {file: os.path.join(rref_folder, file) for file in
+                     sorted(os.listdir(rref_folder)) if not file.startswith(METADATA)}
+            recipe_bundle["files"] = files
+            try:
+                pkg_signer.verify(rref, rref_folder, layout.metadata(), files)
+            except Exception as e:
+                recipe_bundle["pkgsign_error"] = str(e)
+            for pref in packages:
+                pkg_bundle = package_list.package_dict(pref)
+                if pkg_bundle:
+                    layout = cache.pkg_layout(pref)
+                    pref_folder = layout.download_package()
+                    files = {file: os.path.join(pref_folder, file) for file in
+                             sorted(os.listdir(pref_folder)) if not file.startswith(METADATA)}
+                    pkg_bundle["files"] = files
+                    try:
+                        pkg_signer.verify(pref, pref_folder, layout.metadata(), files)
+                    except Exception as e:
+                        pkg_bundle["pkgsign_error"] = str(e)
+        return package_list
+
     def clean(self, package_list, source=True, build=True, download=True, temp=True,
               backup_sources=False) -> None:
         """
@@ -209,11 +280,6 @@ class CacheAPI:
                     info = os.path.join(folder, "p", "conaninfo.txt")
                     if not os.path.exists(manifest) or not os.path.exists(info):
                         rmdir(folder)
-
-        # Temporary name (not named) until we have clarity if this is the same as the "t"
-        # temporary (for exports) or not
-        if os.path.exists(os.path.join(cache.store, "d")):
-            rmdir(os.path.join(cache.store, "d"))
 
         if backup_sources:
             backup_files = self._conan_api.cache.get_backup_sources(package_list, exclude=False,

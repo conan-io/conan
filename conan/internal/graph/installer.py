@@ -251,7 +251,6 @@ class BinaryInstaller:
         handled_count = 1
 
         self._download_bulk(install_order)
-        prefs_lru = []
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
@@ -259,10 +258,6 @@ class BinaryInstaller:
                     self._handle_package(recipe_layout, package, install_reference, handled_count,
                                          package_count)
                     handled_count += 1
-                    if package.binary == BINARY_CACHE:
-                        prefs_lru.append(package.nodes[0].pref)
-
-        self._cache.update_packages_lru(prefs_lru)
 
         MockInfoProperty.message()
 
@@ -336,6 +331,7 @@ class BinaryInstaller:
                 assert node.prev, "PREV for %s is None" % str(pref)
                 msg = f'Already installed! ({handled_count} of {total_count})'
                 node.conanfile.output.success(msg)
+                os.utime(package_layout.base_folder, None)
 
         # Make sure that all nodes with same pref compute package_info()
         pkg_folder = package_layout.package()

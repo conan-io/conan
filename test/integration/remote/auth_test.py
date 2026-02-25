@@ -176,7 +176,7 @@ def test_token_expired():
        disk_authorize_timeout: 0
        disk_storage_path: ./data
        updown_secret: 12345
-       jwt_secret: mysecret
+       jwt_secret: mysecretmysecretmysecretmysecret
        port: 12345
        [read_permissions]
        */*@*/*: *

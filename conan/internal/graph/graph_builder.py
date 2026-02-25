@@ -304,7 +304,7 @@ class DepsGraphBuilder:
                     elif require.ref.version == d.version:
                         if d.revision is None or require.ref.revision is None or \
                                 d.revision == require.ref.revision:
-                            require.ref.revision = d.revision
+                            require.ref.revision = d.revision or "platform"
                             layout = BasicLayout(require.ref, None)
                             return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
 
@@ -369,8 +369,7 @@ class DepsGraphBuilder:
                 ref.name = tracking_ref[1][:-1]  # Remove the trailing >
             req = Requirement(ref, headers=True, libs=True, visible=True)
             transitive = node.transitive_deps.get(req)
-            if transitive is None or transitive.require.ref.user != ref.user \
-                    or transitive.require.ref.channel != ref.channel:
+            if transitive is None:
                 raise ConanException(f"{node.ref} require '{ref}': didn't find a matching "
                                      "host dependency")
             require.ref.version = transitive.require.ref.version

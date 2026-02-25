@@ -181,22 +181,21 @@ class _CMakePresets:
         def _format_val(val):
             return f'"{val}"' if type(val) is str and " " in val else f"{val}"
 
-        # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
-        cache_variables_info = " ".join(
-            [f"-D{var}={_format_val(value)}" for var, value in cache_variables.items()])
-        add_toolchain_cache = f"-DCMAKE_TOOLCHAIN_FILE={toolchain_file} " \
-            if "CMAKE_TOOLCHAIN_FILE" not in cache_variables_info else ""
-
         try:
             is_consumer = conanfile._conan_node.recipe == RECIPE_CONSUMER and \
                           conanfile.tested_reference_str is None
         except:
             is_consumer = False
         if is_consumer:
+            # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
+            vars_tip = " ".join([f"-D{k}={_format_val(v)}" for k, v in cache_variables.items()])
+            tc_tip = f"-DCMAKE_TOOLCHAIN_FILE=<output_folder>/{toolchain_file} " \
+                if "CMAKE_TOOLCHAIN_FILE" not in vars_tip else ""
+
             msg = textwrap.dedent(f"""\
                 CMakeToolchain: Preset '{name}' added to CMakePresets.json.
                     (cmake>=3.23) cmake --preset {name}
-                    (cmake<3.23) cmake <path> -G {_format_val(generator)} {add_toolchain_cache} {cache_variables_info}""")
+                    (cmake<3.23) cmake <path> -G {_format_val(generator)} {tc_tip} {vars_tip}""")
             conanfile.output.info(msg, fg=Color.CYAN)
         return ret
 

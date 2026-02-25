@@ -335,8 +335,7 @@ def test_do_not_mix_cflags_cxxflags():
     # TODO: Verify with components too
     client = TestClient()
     cpp_info = {"cflags": ["one", "two"], "cxxflags": ["three", "four"]}
-    client.save({"conanfile.py": GenConanfile("upstream", "1.0").with_package_info(cpp_info=cpp_info,
-                                                                                   env_info={})})
+    client.save({"conanfile.py": GenConanfile("upstream", "1.0").with_package_info(cpp_info=cpp_info)})
     client.run("create .")
 
     consumer_conanfile = textwrap.dedent("""
@@ -488,8 +487,7 @@ def test_cpp_info_link_objects():
                                  'if self.settings.os == "Windows" else "."')
                       .with_test('self.run("{}{}example".format(path, os.sep))'))
     client.save({"CMakeLists.txt": cmakelists,
-                 "conanfile.py": GenConanfile("myobject", "1.0").with_package_info(cpp_info=cpp_info,
-                                                                                   env_info={})
+                 "conanfile.py": GenConanfile("myobject", "1.0").with_package_info(cpp_info=cpp_info)
                                                                 .with_exports_sources("*")
                                                                 .with_cmake_build()
                                                                 .with_package("cmake = CMake(self)",

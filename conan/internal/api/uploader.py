@@ -115,7 +115,7 @@ class PackagePreparator:
         plugin = app.conan_api._api_helpers.compression_plugin  # noqa
         self._compress_plugin = getattr(plugin, "tar_compress", None) if plugin else None
 
-    def prepare(self, pkg_list, enabled_remotes, metadata):
+    def prepare(self, pkg_list, enabled_remotes, metadata, force=False):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
         for ref, packages in pkg_list.items():
             recipe_layout = self._app.cache.recipe_layout(ref)
@@ -132,7 +132,7 @@ class PackagePreparator:
             bundle = pkg_list.recipe_dict(ref)
             bundle.pop("files", None)
             bundle.pop("upload-urls", None)
-            if bundle.get("upload"):
+            if bundle.get("upload") or force:
                 self._prepare_recipe(recipe_layout, ref, bundle, conanfile, enabled_remotes)
 
             # Package metadata files too
@@ -148,7 +148,7 @@ class PackagePreparator:
                 prev_bundle = pkg_list.package_dict(pref)
                 prev_bundle.pop("files", None)  # If defined from a previous upload
                 prev_bundle.pop("upload-urls", None)
-                self._prepare_package(pref, prev_bundle, metadata)
+                self._prepare_package(pref, prev_bundle, metadata, force=force)
 
     def _prepare_recipe(self, recipe_layout, ref, ref_bundle, conanfile, remotes):
         """ do a bunch of things that are necessary before actually executing the upload:
@@ -198,9 +198,9 @@ class PackagePreparator:
             result[comp] = os.path.join(download_export_folder, comp)
         return result
 
-    def _prepare_package(self, pref, prev_bundle, metadata):
+    def _prepare_package(self, pref, prev_bundle, metadata, force=False):
         pkg_layout = None
-        if prev_bundle.get("upload"):
+        if prev_bundle.get("upload") or force:
             pkg_layout = self._app.cache.pkg_layout(pref)
             if pkg_layout.package_is_dirty():
                 raise ConanException(f"Package {pref} is corrupted, aborting upload.\n"

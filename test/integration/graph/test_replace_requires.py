@@ -758,3 +758,42 @@ def test_replace_requires_ranges(require, pattern, alternative, expected):
         assert f"{require}: {expected}" in c.out
     else:
         assert "Replaced requires" not in c.out
+
+
+def test_host_version_replace():
+    profile = textwrap.dedent("""
+    include(default)
+    [replace_requires]
+    pkg/*: pkg/0.1@user/channel
+    """)
+
+    tc = TestClient(light=True)
+    tc.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
+             "conanfile.py": GenConanfile()
+                .with_requires("pkg/0.1@user/channel")
+                .with_tool_requires("pkg/<host_version>"),
+             "profile": profile})
+    tc.run("create pkg")
+    tc.run("create pkg --user=user --channel=channel")
+
+    # We did not track the user/channel, we resolve the version but keep the original user/channel
+    tc.run("install -pr=profile")
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"})
+    tc.assert_listed_require({"pkg/0.1#485dad6cb11e2fa99d9afbe44a57a164": "Cache"}, build=True)
+
+    # If we want to also match user/channel
+    # Solution 1: Also replace the tool_requires in your profile to use same user/channel
+    tool_profile = profile + "\n[replace_tool_requires]\npkg/*: pkg/<host_version>@user/channel"
+    tc.save({"tool_profile": tool_profile})
+    tc.run("install -pr=tool_profile")
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"})
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"}, build=True)
+
+    # Solution 2: Directly in the requirement
+    tc.save({"conanfile.py": GenConanfile()
+                .with_requires("pkg/0.1@user/channel")
+                .with_tool_requires("pkg/<host_version>@user/channel")})
+
+    tc.run("install -pr=profile")
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"})
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"}, build=True)

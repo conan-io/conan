@@ -149,7 +149,7 @@ def ftp_download(conanfile, host, filename, login='', password='', secure=False)
     :param secure: Set to True to use FTP over TLS/SSL (FTPS). Defaults to False for regular FTP.
     """
     # TODO: Check if we want to join this method with download() one, based on ftp:// protocol
-    # this has been requested by some users, but the signature is a bit divergent
+    # this has been requested by some users, but the hash is a bit divergent
     import ftplib
     ftp = None
     try:
@@ -493,36 +493,36 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
 
 def check_sha1(conanfile, file_path, signature):
     """
-    Check that the specified ``sha1`` of the ``file_path`` matches with signature.
+    Check that the specified ``SHA-1`` hash of the ``file_path`` matches the actual hash.
     If doesn’t match it will raise a ``ConanException``.
 
     :param conanfile: Conanfile object.
     :param file_path: Path of the file to check.
-    :param signature: Expected sha1sum
+    :param signature: Expected SHA-1 hash.
     """
     check_with_algorithm_sum("sha1", file_path, signature)
 
 
 def check_md5(conanfile, file_path, signature):
     """
-    Check that the specified ``md5sum`` of the ``file_path`` matches with ``signature``.
+    Check that the specified ``MD5`` hash of the ``file_path`` matches the actual hash.
     If doesn’t match it will raise a ``ConanException``.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param file_path: Path of the file to check.
-    :param signature: Expected md5sum.
+    :param signature: Expected MD5 hash.
     """
     check_with_algorithm_sum("md5", file_path, signature)
 
 
 def check_sha256(conanfile, file_path, signature):
     """
-    Check that the specified ``sha256`` of the ``file_path`` matches with signature.
+    Check that the specified ``SHA-256`` hash of the ``file_path`` matches the actual hash.
     If doesn’t match it will raise a ``ConanException``.
 
     :param conanfile: Conanfile object.
     :param file_path: Path of the file to check.
-    :param signature: Expected sha256sum
+    :param signature: Expected SHA-256 hash.
     """
     check_with_algorithm_sum("sha256", file_path, signature)
 

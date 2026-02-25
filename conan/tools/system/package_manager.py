@@ -275,7 +275,8 @@ class Apt(_SystemPackageManagerTool):
                             "armv7": "arm",
                             "armv7hf": "armhf",
                             "armv8": "arm64",
-                            "s390x": "s390x"} if arch_names is None else arch_names
+                            "s390x": "s390x",
+                            "riscv64": "riscv64"} if arch_names is None else arch_names
 
         self._arch_separator = ":"
 
@@ -326,7 +327,8 @@ class Yum(_SystemPackageManagerTool):
                             "armv7": "armv7",
                             "armv7hf": "armv7hl",
                             "armv8": "aarch64",
-                            "s390x": "s390x"} if arch_names is None else arch_names
+                            "s390x": "s390x",
+                            "riscv64": "riscv64"} if arch_names is None else arch_names
         self._arch_separator = "."
 
 

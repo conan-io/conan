@@ -30,7 +30,6 @@ class GenConanfile:
         self._finalize_lines = None
         self._package_files = None
         self._package_files_env = None
-        self._package_files_link = None
         self._build_messages = None
         self._requires = None
         self._requirements = None
@@ -200,18 +199,15 @@ class GenConanfile:
     def with_shared_option(self, default=False):
         return self.with_option("shared", [True, False]).with_default_option("shared", default)
 
-    def with_package_file(self, file_name, contents=None, env_var=None, link=None):
-        if not contents and not env_var:
-            raise Exception("Specify contents or env_var")
+    def with_package_file(self, file_name, contents=None, env_var=None):
+        assert contents is not None or env_var
         self._package_files = self._package_files or {}
-        self._package_files_link = self._package_files_link or {}
+
         self._package_files_env = self._package_files_env or {}
         self.with_import("import os")
         self.with_import("from conan.tools.files import save, chdir")
         if contents:
             self._package_files[file_name] = contents
-        if link:
-            self._package_files_link[file_name] = link
         if env_var:
             self._package_files_env[file_name] = env_var
         return self
@@ -233,14 +229,11 @@ class GenConanfile:
         self._build_messages.append(msg)
         return self
 
-    def with_package_info(self, cpp_info=None, env_info=None):
-        assert cpp_info is None or isinstance(cpp_info, dict), "cpp_info ({}) expects dict".format(type(cpp_info))
-        assert env_info is None or isinstance(env_info, dict), "env_info ({}) expects dict".format(type(env_info))
+    def with_package_info(self, cpp_info=None):
+        assert cpp_info is None or isinstance(cpp_info, dict)
         self._package_info = self._package_info or {}
         if cpp_info:
             self._package_info["cpp_info"] = cpp_info
-        if env_info:
-            self._package_info["env_info"] = env_info
         return self
 
     def with_package_id(self, *lines):
@@ -319,15 +312,6 @@ class GenConanfile:
         return tmp
 
     @property
-    def _build_requirements_render(self):
-        lines = []
-        for ref, kwargs in self._build_requirements:
-            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
-                             for k, v in kwargs.items())
-            lines.append('        self.build_requires("{}", {})'.format(ref, args))
-        return "def build_requirements(self):\n{}\n".format("\n".join(lines))
-
-    @property
     def _build_requires_render(self):
         line = ", ".join(['"{}"'.format(r) for r in self._build_requires])
         tmp = "build_requires = %s" % line
@@ -385,8 +369,7 @@ class GenConanfile:
 
     @property
     def _package_method(self):
-        return (self._package_lines or self._package_files or self._package_files_env or
-                self._package_files_link)
+        return self._package_lines or self._package_files or self._package_files_env
 
     @property
     def _finalize_method(self):
@@ -406,15 +389,6 @@ class GenConanfile:
             lines.extend(['        save(self, os.path.join(self.package_folder, "{}"), '
                           'os.getenv("{}"))'.format(key, value)
                           for key, value in self._package_files_env.items()])
-        if self._package_files_link:
-            lines.extend(['        with chdir(self, os.path.dirname('
-                          'os.path.join(self.package_folder, "{}"))):\n'
-                          '            os.symlink(os.path.basename("{}"), '
-                          'os.path.join(self.package_folder, "{}"))'.format(key, key, value)
-                          for key, value in self._package_files_link.items()])
-
-        if not lines:
-            return ""
         return """
     def package(self):
 {}
@@ -426,8 +400,6 @@ class GenConanfile:
         if self._finalize_lines:
             lines.extend("        {}".format(line) for line in self._finalize_lines)
 
-        if not lines:
-            return ""
         return """
     def finalize(self):
 {}

@@ -303,7 +303,7 @@ class TestToolRequiresFlows:
                 .with_import("from conan.tools.files import save")
                 .with_package_type("application")
                 .with_package("save(self, 'file.txt', 'Hello World!')")
-                .with_package_info({"bindirs": ["bin"]}, {})
+                .with_package_info({"bindirs": ["bin"]})
                 .with_finalize("save(self, 'finalized.txt', 'finalized file')"),
                  "test_package/conanfile.py": GenConanfile()
                 .with_import("from conan.tools.files import save",
