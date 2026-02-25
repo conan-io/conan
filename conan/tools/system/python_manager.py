@@ -57,18 +57,18 @@ class PyEnv:
     @property
     def env_dir(self):
         """Root directory of the virtual environment."""
-        return self._env_dir
+        return self._env_dir.replace("\\", "/")
 
     @property
     def env_exe(self):
         """Path to the Python executable inside the virtual environment."""
-        return self._get_env_python(self._env_dir)
+        return self._get_env_python(self._env_dir).replace("\\", "/")
 
     @property
     def bin_path(self):
         """Path to the bin or Scripts directory inside the virtual environment."""
         bins = "Scripts" if platform.system() == "Windows" else "bin"
-        return os.path.join(self._env_dir, bins)
+        return os.path.join(self._env_dir, bins).replace("\\", "/")
 
     @staticmethod
     def _get_env_python(env_dir):
@@ -80,7 +80,6 @@ class PyEnv:
         Create a conan environment to use the python venv in the next steps of the conanfile.
         """
         env = Environment()
-        env.define_path("Python_ROOT_DIR", self.env_dir)
         env.prepend_path("PATH", self.bin_path)
         env.vars(self._conanfile).save_script(self._env_name)
 

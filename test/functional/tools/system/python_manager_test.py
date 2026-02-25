@@ -372,6 +372,8 @@ def test_cmake_toolchain_configure_find_python():
     cv = presets["configurePresets"][0]["cacheVariables"]
     assert "Python_ROOT_DIR" in cv
     assert "Python_EXECUTABLE" in cv
+    assert "\\" not in cv["Python_ROOT_DIR"]
+    assert "\\" not in cv["Python_EXECUTABLE"]
     assert "conan_pyenv" in cv["Python_ROOT_DIR"]
     assert cv["Python_FIND_UNVERSIONED_NAMES"] == "FIRST"
     assert cv["Python_FIND_STRATEGY"] == "LOCATION"
