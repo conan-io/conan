@@ -9,7 +9,6 @@ from conan.internal.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.util.files import save
-from conan.tools.microsoft.visual import CONAN_VCVARS
 
 
 class _EnvVarPlaceHolder:
@@ -910,6 +909,7 @@ def generate_aggregated_env(conanfile):
                 content = ["@echo off"]
 
                 if deactivation_mode == "function":
+                    from conan.tools.microsoft.visual import CONAN_VCVARS
                     deactivates_var = f"_CONAN_{group}_DEACTIVATES_DIR"
                     content += [
                         f'set "{deactivates_var}=%TEMP%\\conan_{group}_%RANDOM%"',
