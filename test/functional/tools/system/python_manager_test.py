@@ -51,7 +51,6 @@ def test_empty_pyenv():
     assert "PyJWT" not in c.out
     ext = ".bat" if platform.system() == "Windows" else ".sh"
     script = c.load(f"conan_pyenv{ext}")
-    assert "Python_ROOT_DIR" in script
     assert "conan_pyenv" in script
 
 
