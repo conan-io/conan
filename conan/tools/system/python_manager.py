@@ -61,12 +61,12 @@ class PyEnv:
 
     @property
     def env_exe(self):
-        """Path to the Python executable inside the venv."""
+        """Path to the Python executable inside the virtual environment."""
         return self._get_env_python(self._env_dir)
 
     @property
     def bin_path(self):
-        """Path to the bin or Scripts directory inside the venv."""
+        """Path to the bin or Scripts directory inside the virtual environment."""
         bins = "Scripts" if platform.system() == "Windows" else "bin"
         return os.path.join(self._env_dir, bins)
 
