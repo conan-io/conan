@@ -917,6 +917,35 @@ class TestExtraFindExtraVariants:
         assert paths_content.count("list(APPEND CONAN_HellO_DIR_MULTI") == 2
         assert paths_content.count("list(APPEND CONAN_HELLO_DIR_MULTI") == 2
 
+    def test_find_file_in_package(self):
+        tc = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import save
+
+            class HelloConan(ConanFile):
+                name = "hello"
+                version = "1.0"
+                settings = "build_type"
+
+                def package(self):
+                    save(self, os.path.join(self.package_folder, "HellOConfig.cmake"), "")
+
+                def package_info(self):
+                    self.cpp_info.builddirs = ["."]
+                    self.cpp_info.set_property("cmake_find_mode", "none")
+                    self.cpp_info.set_property("cmake_file_name_variants", ["HellO", "HELLO"])
+            """)
+        tc.save({"conanfile.py": conanfile})
+        tc.run("create")
+        tc.run("create -s=build_type=Debug")
+        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps")
+        paths_content = tc.load("conan_cmakedeps_paths.cmake")
+        assert "set(hello_DIR" in paths_content
+        assert "set(HellO_DIR" in paths_content
+        assert "set(HELLO_DIR" in paths_content
+
 
 def test_requires_only_component_target_generation():
     tc = TestClient()
