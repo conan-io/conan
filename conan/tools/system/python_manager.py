@@ -16,9 +16,9 @@ class PyEnv:
 
     def __init__(self, conanfile, folder=None, name="", py_version=None):
         """
-        :param conanfile: The current conanfile "self"
-        :param folder: Optional folder, by default the "build_folder"
-        :param name: Optional name for the virtualenv, by default "conan_pyenv"
+        :param conanfile: The current conanfile ``self``
+        :param folder: Optional folder, by default the ``build_folder``
+        :param name: Optional name for the virtualenv, by default ``conan_pyenv``
         :param py_version: Optional python version to create the virtualenv using UV
         """
         if sys.version_info.minor < 8 and py_version:
