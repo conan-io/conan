@@ -20,10 +20,12 @@ class ConfigVersionTemplate2:
                      undefined=jinja2.StrictUndefined)
         for config_comp_name, cmake_file_name in self._cmakedeps.get_cmake_filenames(self._conanfile).items():
             context = self._get_context(config_comp_name, cmake_file_name)
-            filename = f"{cmake_file_name}-config-version.cmake" if cmake_file_name == cmake_file_name.lower() \
-                else f"{cmake_file_name}ConfigVersion.cmake"
-            ret[filename] = t.render(context)
+            ret[self._get_filename(cmake_file_name)] = t.render(context)
         return ret
+
+    def _get_filename(self, cmake_file_name):
+        return f"{cmake_file_name}-config-version.cmake" if cmake_file_name == cmake_file_name.lower() \
+                else f"{cmake_file_name}ConfigVersion.cmake"
 
     def _get_context(self, config_comp_name, cmake_file_name):
         policy = self._cmakedeps.get_property("cmake_config_version_compat", self._conanfile,

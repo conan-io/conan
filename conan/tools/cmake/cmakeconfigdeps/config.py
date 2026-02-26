@@ -23,10 +23,12 @@ class ConfigTemplate2:
                      undefined=jinja2.StrictUndefined)
         for config_comp_name, cmake_file_name in self._cmakedeps.get_cmake_filenames(self._conanfile).items():
             context = self._get_context(config_comp_name, cmake_file_name)
-            filename = f"{cmake_file_name}-config.cmake" if cmake_file_name == cmake_file_name.lower() \
-                else f"{cmake_file_name}Config.cmake"
-            ret[filename] = t.render(context)
+            ret[self._get_filename(cmake_file_name)] = t.render(context)
         return ret
+
+    def _get_filename(self, cmake_file_name):
+        return f"{cmake_file_name}-config.cmake" if cmake_file_name == cmake_file_name.lower() \
+                else f"{cmake_file_name}Config.cmake"
 
     def _get_cmake_components(self):
         components = self._cmakedeps.get_property("cmake_components", self._conanfile,

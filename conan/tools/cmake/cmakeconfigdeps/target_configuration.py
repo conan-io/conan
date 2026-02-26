@@ -35,13 +35,15 @@ class TargetConfigurationTemplate2:
                             "invalid. The package 'package_info()' must correctly define the (CPS) "
                             "information", warn_tag="deprecated")
             context = self._get_context(config_comp_name, cmake_file_name)
-            # Fallback to consumer configuration if it doesn't have build_type
-            config = self._conanfile.settings.get_safe("build_type", self._cmakedeps.configuration)
-            config = (config or "none").lower()
-            build = "Build" if self._conanfile.context == CONTEXT_BUILD else ""
-            filename = f"{cmake_file_name}-Targets{build}-{config}.cmake"
-            ret[filename] = t.render(context)
+            ret[self._get_filename(cmake_file_name)] = t.render(context)
         return ret
+
+    def _get_filename(self, cmake_file_name):
+        # Fallback to consumer configuration if it doesn't have build_type
+        config = self._conanfile.settings.get_safe("build_type", self._cmakedeps.configuration)
+        config = (config or "none").lower()
+        build = "Build" if self._conanfile.context == CONTEXT_BUILD else ""
+        return f"{cmake_file_name}-Targets{build}-{config}.cmake"
 
     def _requires(self, info, components):
         result = {}
