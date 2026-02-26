@@ -305,9 +305,9 @@ class _PathGenerator:
             cmake_find_mode = cmake_find_mode.lower()
 
             all_names = self._cmakedeps.get_cmake_filenames(dep)
-            for cmp_name, cmake_filename in all_names.items():
+            for comp_name, cmake_filename in all_names.items():
                 extra_variants = self._cmakedeps.get_property("cmake_file_name_variants", dep,
-                                                              cmp_name=cmp_name, check_type=list) or []
+                                                              comp_name=comp_name, check_type=list) or []
                 lowercase_variants = {variant.lower() for variant in extra_variants}
                 if len(lowercase_variants) > 1:
                     raise ConanException(f"'{dep.ref}' 'cmake_file_name_variants' property contains different words. "
@@ -315,8 +315,8 @@ class _PathGenerator:
                 if lowercase_variants:
                     if cmake_filename.lower() not in lowercase_variants:
                         is_cmake_filename_defined = self._cmakedeps.get_property("cmake_file_name", dep,
-                                                                                 cmp_name=cmp_name) is not None
-                        ref = f"{dep.ref}" if cmp_name is None else f"{dep.ref} ({cmp_name})"
+                                                                                 comp_name=comp_name) is not None
+                        ref = f"{dep.ref}" if comp_name is None else f"{dep.ref} ({comp_name})"
                         if is_cmake_filename_defined:
                             extra_variants = []
                             msg = (f"'{ref}' 'cmake_file_name_variants' property contains names "
