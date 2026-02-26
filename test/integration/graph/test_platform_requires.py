@@ -16,7 +16,6 @@ class TestPlatformRequires:
                      "profile": f"[platform_requires]\ndep/1.0{revision}"})
         client.run("create . -pr=profile")
         assert f"dep/1.0{revision or '#platform'} - Platform" in client.out
-        print()
 
     def test_platform_requires_non_matching(self):
         """ if what is specified in [platform_requires] doesn't match what the recipe requires, then
