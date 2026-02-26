@@ -16,8 +16,8 @@ class TargetsTemplate2:
         ret = {}
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
-        for comp_name, cmake_file_name in self._cmakedeps.get_cmake_filenames(self._conanfile).items():
-            context = self._get_context(comp_name, cmake_file_name)
+        for config_comp_name, cmake_file_name in self._cmakedeps.get_cmake_filenames(self._conanfile).items():
+            context = self._get_context(config_comp_name, cmake_file_name)
             filename = f"{cmake_file_name}Targets.cmake"
             ret[filename] = t.render(context)
         return ret
