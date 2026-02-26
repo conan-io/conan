@@ -11,7 +11,7 @@ def reqs():
         content = open("reqs.txt", "r").read()
         lines = [line for line in content.splitlines() if line]
         return tuple(lines)
-    except:
+    except Exception:
         return None
 
 class Test(ConanFile):

@@ -262,7 +262,7 @@ class DockerRunner:
                         volumes = {abs_path: {'bind': abs_docker_base_path.as_posix(), 'mode': 'rw'}}
                         abs_docker_path = abs_docker_base_path / self.abs_host_path.relative_to(abs_path)
                         return volumes, abs_docker_path.as_posix()
-            except:
+            except Exception:
                 pass
         abs_docker_path = (abs_docker_base_path / self.abs_host_path.name).as_posix()
         volumes = {self.abs_host_path: {'bind': abs_docker_path, 'mode': 'rw'}}

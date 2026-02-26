@@ -180,7 +180,7 @@ class SSHRunner:
             try:
                 sftp = self.client.open_sftp()
                 sftp.putfo(BytesIO(conan_bat_contents.encode()), conan_bat)
-            except:
+            except Exception:
                 raise ConanException("unable to set up Conan remote script")
             finally:
                 sftp.close()
@@ -205,7 +205,7 @@ class SSHRunner:
             for name, contents in profiles.items():
                 dest_filename = self.remote_conan_home + f"/profiles/{name}"
                 sftp.putfo(BytesIO(contents.encode()), dest_filename)
-        except:
+        except Exception:
             raise ConanException("Unable to copy profiles to remote")
         finally:
             sftp.close()

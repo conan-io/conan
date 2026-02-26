@@ -140,7 +140,7 @@ class TestingResponse:
     def json(self):
         try:
             return json.loads(self.test_response.content)
-        except:
+        except Exception:
             raise ValueError("The response is not a JSON")
 
 

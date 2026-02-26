@@ -184,7 +184,7 @@ class _CMakePresets:
         try:
             is_consumer = conanfile._conan_node.recipe == RECIPE_CONSUMER and \
                           conanfile.tested_reference_str is None
-        except:
+        except Exception:
             is_consumer = False
         if is_consumer:
             # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285

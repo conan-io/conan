@@ -214,7 +214,7 @@ class _LocalRecipesIndexLayout:
             # We don't care about user/channel for now, we'll check for those below,
             # just add all candidates for now
             pattern = f"{pattern_ref.name}/{pattern_ref.version}"
-        except:
+        except Exception:
             # pattern = pattern
             pattern = f"{name_pattern}/*"
             original_pattern = pattern

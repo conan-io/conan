@@ -60,7 +60,7 @@ def test_all_commands_call_args_parse():
                                side_effect=Exception("called")) as mock_run:
                         try:
                             tc.run(f"{command} {subcommand.name} -h")
-                        except:
+                        except Exception:
                             pass
                         finally:
                             assert mock_run.called, f'Command "conan {command} {subcommand.name}" did not call parse_args()'
@@ -69,7 +69,7 @@ def test_all_commands_call_args_parse():
                            side_effect=Exception("called")) as mock_run:
                     try:
                         tc.run(f"{command} -h")
-                    except:
+                    except Exception:
                         pass
                     finally:
                         assert mock_run.called, f'Command "conan {command}" did not call parse_args()'
