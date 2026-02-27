@@ -10,31 +10,31 @@ class ConfigVersionTemplate2:
     """
     foo-config-version.cmake
     """
-    def __init__(self, cmakedeps, conanfile):
+    def __init__(self, cmakedeps, conanfile, config_comp_name, cmake_file_name):
         self._cmakedeps = cmakedeps
         self._conanfile = conanfile
+        self._config_comp_name = config_comp_name
+        self._cmake_file_name = cmake_file_name
 
     def content(self):
-        ret = {}
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
-        for config_comp_name, cmake_file_name in self._cmakedeps.get_cmake_filenames(self._conanfile).items():
-            context = self._get_context(config_comp_name, cmake_file_name)
-            ret[self._get_filename(cmake_file_name)] = t.render(context)
-        return ret
+        return t.render(self._context)
 
-    def _get_filename(self, cmake_file_name):
-        return f"{cmake_file_name}-config-version.cmake" if cmake_file_name == cmake_file_name.lower() \
-                else f"{cmake_file_name}ConfigVersion.cmake"
+    @property
+    def filename(self):
+        return f"{self._cmake_file_name}-config-version.cmake" if self._cmake_file_name == self._cmake_file_name.lower() \
+                else f"{self._cmake_file_name}ConfigVersion.cmake"
 
-    def _get_context(self, config_comp_name, cmake_file_name):
+    @property
+    def _context(self):
         policy = self._cmakedeps.get_property("cmake_config_version_compat", self._conanfile,
-                                              comp_name=config_comp_name)
+                                              comp_name=self._config_comp_name)
         if policy is None:
             policy = "SameMajorVersion"
         if policy not in ("AnyNewerVersion", "SameMajorVersion", "SameMinorVersion", "ExactVersion"):
             raise ConanException(f"Unknown cmake_config_version_compat={policy} in {self._conanfile}")
-        version = (self._cmakedeps.get_property("system_package_version", self._conanfile, comp_name=config_comp_name) or
+        version = (self._cmakedeps.get_property("system_package_version", self._conanfile, comp_name=self._config_comp_name) or
                    self._conanfile.ref.version)
         return {"version": version,
                 "policy": policy}

@@ -11,24 +11,23 @@ class ConfigTemplate2:
     FooConfig.cmake
     foo-config.cmake
     """
-    def __init__(self, cmakedeps, require, conanfile, full_cpp_info):
+    def __init__(self, cmakedeps, require, conanfile, full_cpp_info, config_comp_name, cmake_file_name):
         self._cmakedeps = cmakedeps
         self._require = require
         self._conanfile = conanfile
         self._full_cpp_info = full_cpp_info
+        self._config_comp_name = config_comp_name
+        self._cmake_file_name = cmake_file_name
 
     def content(self):
-        ret = {}
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
-        for config_comp_name, cmake_file_name in self._cmakedeps.get_cmake_filenames(self._conanfile).items():
-            context = self._get_context(config_comp_name, cmake_file_name)
-            ret[self._get_filename(cmake_file_name)] = t.render(context)
-        return ret
+        return t.render(self._context)
 
-    def _get_filename(self, cmake_file_name):
-        return f"{cmake_file_name}-config.cmake" if cmake_file_name == cmake_file_name.lower() \
-                else f"{cmake_file_name}Config.cmake"
+    @property
+    def filename(self):
+        return f"{self._cmake_file_name}-config.cmake" if self._cmake_file_name == self._cmake_file_name.lower() \
+                else f"{self._cmake_file_name}Config.cmake"
 
     def _get_cmake_components(self):
         components = self._cmakedeps.get_property("cmake_components", self._conanfile,
@@ -51,10 +50,11 @@ class ConfigTemplate2:
                     components.append(cmakename or name)
         return " ".join(components) if components else ""
 
-    def _get_context(self, config_comp_name, cmake_file_name):
-        targets_include = f"{cmake_file_name}Targets.cmake"
+    @property
+    def _context(self):
+        targets_include = f"{self._cmake_file_name}Targets.cmake"
         build_modules_paths = self._cmakedeps.get_property("cmake_build_modules", self._conanfile,
-                                                           comp_name=config_comp_name, check_type=list) or []
+                                                           comp_name=self._config_comp_name, check_type=list) or []
         # FIXME: Proper escaping of paths for CMake and relativization
         # FIXME: build_module_paths coming from last config only
         build_modules_paths = [f.replace("\\", "/") for f in build_modules_paths]
@@ -63,8 +63,8 @@ class ConfigTemplate2:
                                for p in build_modules_paths]
 
         result = {
-            "filename": cmake_file_name,
-            "components": self._get_cmake_components() if config_comp_name is None else "",
+            "filename": self._cmake_file_name,
+            "components": self._get_cmake_components() if self._config_comp_name is None else "",
             "pkg_name": self._conanfile.ref.name,
             "targets_include_file": targets_include,
             "build_modules_paths": build_modules_paths
@@ -73,7 +73,7 @@ class ConfigTemplate2:
         conf_extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
                                                         default={}, check_type=dict)
         dep_extra_variables = self._cmakedeps.get_property("cmake_extra_variables", self._conanfile,
-                                                           comp_name=config_comp_name, check_type=dict) or {}
+                                                           comp_name=self._config_comp_name, check_type=dict) or {}
         # The configuration variables have precedence over the dependency ones
         extra_variables = {dep: value for dep, value in dep_extra_variables.items()
                            if dep not in conf_extra_variables}
@@ -83,22 +83,22 @@ class ConfigTemplate2:
                                                                key, value)
         result["extra_variables"] = parsed_extra_variables
 
-        result.update(self._get_legacy_vars(config_comp_name, cmake_file_name))
+        result.update(self._get_legacy_vars())
         return result
 
-    def _get_legacy_vars(self, config_comp_name, cmake_file_name):
+    def _get_legacy_vars(self):
         # Auxiliary variables for legacy consumption and try_compile cases
         pkg_name = self._conanfile.ref.name
         prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
-                                                self._conanfile, comp_name=config_comp_name, check_type=list) or []
+                                                self._conanfile, comp_name=self._config_comp_name, check_type=list) or []
 
-        prefixes = [cmake_file_name] + prefixes
+        prefixes = [self._cmake_file_name] + prefixes
         include_dirs = definitions = libraries = None
-        version = (self._cmakedeps.get_property("component_version", self._conanfile, config_comp_name) or
+        version = (self._cmakedeps.get_property("component_version", self._conanfile, self._config_comp_name) or
                    self._conanfile.ref.version)
         if not self._require.build:  # To add global variables for try_compile and legacy
-            aggregated_cppinfo = self._full_cpp_info.aggregated_components() if config_comp_name is None \
-                else self._full_cpp_info.components[config_comp_name]
+            aggregated_cppinfo = self._full_cpp_info.aggregated_components() if self._config_comp_name is None \
+                else self._full_cpp_info.components[self._config_comp_name]
             # FIXME: Proper escaping of paths for CMake
             incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
             incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
@@ -106,9 +106,9 @@ class ConfigTemplate2:
             include_dirs = ";".join(incdirs)
             definitions = ";".join("-D" + cmake_escape_value(d) for d in aggregated_cppinfo.defines)
             root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
-                                                            comp_name=config_comp_name)
-            libraries = root_target_name or (f"{pkg_name}::{pkg_name}" if config_comp_name is None
-                                             else f"{pkg_name}::{config_comp_name}")
+                                                            comp_name=self._config_comp_name)
+            libraries = root_target_name or (f"{pkg_name}::{pkg_name}" if self._config_comp_name is None
+                                             else f"{pkg_name}::{self._config_comp_name}")
 
         return {"additional_variables_prefixes": prefixes,
                 "version": version,

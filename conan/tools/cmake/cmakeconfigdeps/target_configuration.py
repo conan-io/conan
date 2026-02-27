@@ -15,35 +15,34 @@ class TargetConfigurationTemplate2:
     """
     FooTarget-release.cmake
     """
-    def __init__(self, cmakedeps, conanfile, require, full_cpp_info):
+    def __init__(self, cmakedeps, conanfile, require, full_cpp_info, config_comp_name, cmake_file_name):
         self._cmakedeps = cmakedeps
         self._conanfile = conanfile  # The dependency conanfile, not the consumer one
         self._require = require
         self._full_cpp_info = full_cpp_info
+        self._config_comp_name = config_comp_name
+        self._cmake_file_name = cmake_file_name
 
     def content(self):
-        ret = {}
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
-        for config_comp_name, cmake_file_name in self._cmakedeps.get_cmake_filenames(self._conanfile).items():
-            auto_link = self._cmakedeps.get_property("cmake_set_interface_link_directories",
-                                                     self._conanfile, comp_name=config_comp_name,
-                                                     check_type=bool)
-            if auto_link:
-                out = self._cmakedeps._conanfile.output  # noqa
-                out.warning("CMakeConfigDeps: cmake_set_interface_link_directories deprecated and "
-                            "invalid. The package 'package_info()' must correctly define the (CPS) "
-                            "information", warn_tag="deprecated")
-            context = self._get_context(config_comp_name, cmake_file_name)
-            ret[self._get_filename(cmake_file_name)] = t.render(context)
-        return ret
+        auto_link = self._cmakedeps.get_property("cmake_set_interface_link_directories",
+                                                 self._conanfile, comp_name=self._config_comp_name,
+                                                 check_type=bool)
+        if auto_link:
+            out = self._cmakedeps._conanfile.output  # noqa
+            out.warning("CMakeConfigDeps: cmake_set_interface_link_directories deprecated and "
+                        "invalid. The package 'package_info()' must correctly define the (CPS) "
+                        "information", warn_tag="deprecated")
+        return t.render(self._context)
 
-    def _get_filename(self, cmake_file_name):
+    @property
+    def filename(self):
         # Fallback to consumer configuration if it doesn't have build_type
         config = self._conanfile.settings.get_safe("build_type", self._cmakedeps.configuration)
         config = (config or "none").lower()
         build = "Build" if self._conanfile.context == CONTEXT_BUILD else ""
-        return f"{cmake_file_name}-Targets{build}-{config}.cmake"
+        return f"{self._cmake_file_name}-Targets{build}-{config}.cmake"
 
     def _requires(self, info, components):
         result = {}
@@ -122,8 +121,10 @@ class TargetConfigurationTemplate2:
                     }
         return result
 
-    def _get_context(self, config_comp_name, cmake_file_name):
-        cpp_info = self._full_cpp_info if config_comp_name is None else self._full_cpp_info.components[config_comp_name]
+    @property
+    def _context(self):
+        cpp_info = self._full_cpp_info if self._config_comp_name is None \
+            else self._full_cpp_info.components[self._config_comp_name]
         assert isinstance(cpp_info.type, PackageType)
         pkg_name = self._conanfile.ref.name
         # fallback to consumer configuration if it doesn't have build_type
@@ -132,19 +133,19 @@ class TargetConfigurationTemplate2:
         pkg_folder = self._conanfile.package_folder.replace("\\", "/")
         config_folder = f"_{config}" if config else ""
         build = "_BUILD" if self._conanfile.context == CONTEXT_BUILD else ""
-        pkg_folder_name = pkg_name if config_comp_name is None else config_comp_name
+        pkg_folder_name = pkg_name if self._config_comp_name is None else self._config_comp_name
         pkg_folder_var = f"{pkg_folder_name}_PACKAGE_FOLDER{config_folder}{build}"
 
         libs = {}
         # The BUILD context does not generate libraries targets atm
         if not self._require.build:
-            libs = self._get_libs(cpp_info, pkg_name, config_comp_name, pkg_folder, pkg_folder_var)
-            if config_comp_name is None:  # We should only need this for the root component
+            libs = self._get_libs(cpp_info, pkg_name, self._config_comp_name, pkg_folder, pkg_folder_var)
+            if self._config_comp_name is None:  # We should only need this for the root component
                 self._add_root_lib_target(libs, pkg_name, cpp_info)
-        exes = self._get_exes(cpp_info, pkg_name, config_comp_name, pkg_folder, pkg_folder_var)
+        exes = self._get_exes(cpp_info, pkg_name, self._config_comp_name, pkg_folder, pkg_folder_var)
 
         seen_aliases = set()
-        root_target_name = self._get_cmake_target_name(pkg_name, comp_name=config_comp_name)
+        root_target_name = self._get_cmake_target_name(pkg_name, comp_name=self._config_comp_name)
         for lib in libs.values():
             for alias in lib.get("cmake_target_aliases", []):
                 if alias == root_target_name:
@@ -161,7 +162,7 @@ class TargetConfigurationTemplate2:
 
         pkg_folder = relativize_path(pkg_folder, self._cmakedeps._conanfile,
                                      "${CMAKE_CURRENT_LIST_DIR}")
-        dependencies = self._get_dependencies(config_comp_name=config_comp_name)
+        dependencies = self._get_dependencies(config_comp_name=self._config_comp_name)
         return {"dependencies": dependencies,
                 "pkg_folder": pkg_folder,
                 "pkg_folder_var": pkg_folder_var,
