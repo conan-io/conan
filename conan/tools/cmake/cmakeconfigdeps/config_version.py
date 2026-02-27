@@ -23,8 +23,8 @@ class ConfigVersionTemplate2:
 
     @property
     def filename(self):
-        return f"{self._cmake_file_name}-config-version.cmake" if self._cmake_file_name == self._cmake_file_name.lower() \
-                else f"{self._cmake_file_name}ConfigVersion.cmake"
+        f = self._cmake_file_name
+        return f"{f}-config-version.cmake" if f == f.lower() else f"{f}ConfigVersion.cmake"
 
     @property
     def _context(self):

@@ -21,7 +21,8 @@ class TargetsTemplate2:
 
     @property
     def filename(self):
-        return f"{self._cmake_file_name}Targets.cmake"
+        f = self._cmake_file_name
+        return f"{f}Targets.cmake"
 
     @property
     def _context(self):

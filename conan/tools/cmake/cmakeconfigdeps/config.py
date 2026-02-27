@@ -26,29 +26,8 @@ class ConfigTemplate2:
 
     @property
     def filename(self):
-        return f"{self._cmake_file_name}-config.cmake" if self._cmake_file_name == self._cmake_file_name.lower() \
-                else f"{self._cmake_file_name}Config.cmake"
-
-    def _get_cmake_components(self):
-        components = self._cmakedeps.get_property("cmake_components", self._conanfile,
-                                                  check_type=list)
-        if components is None:  # Lets compute the default components names
-            components = []
-            # This assumes that cmake_components is only defined with not multi .libs=[lib1, lib2]
-            for name in self._conanfile.cpp_info.components:
-                if name.startswith("_"):  # Skip private components
-                    continue
-                comp_components = self._cmakedeps.get_property("cmake_components", self._conanfile,
-                                                               name, check_type=list)
-                if comp_components:
-                    components.extend(comp_components)
-                else:
-                    cmakename = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
-                                                             name)
-                    if cmakename and "::" in cmakename:  # Remove package namespace
-                        cmakename = cmakename.split("::", 1)[1]
-                    components.append(cmakename or name)
-        return " ".join(components) if components else ""
+        f = self._cmake_file_name
+        return f"{f}-config.cmake" if f == f.lower() else f"{f}Config.cmake"
 
     @property
     def _context(self):
@@ -64,7 +43,7 @@ class ConfigTemplate2:
 
         result = {
             "filename": self._cmake_file_name,
-            "components": self._get_cmake_components() if self._config_comp_name is None else "",
+            "components": self._components,
             "pkg_name": self._conanfile.ref.name,
             "targets_include_file": targets_include,
             "build_modules_paths": build_modules_paths
@@ -85,6 +64,32 @@ class ConfigTemplate2:
 
         result.update(self._get_legacy_vars())
         return result
+
+    @property
+    def _components(self):
+        if self._config_comp_name is not None:
+            return ""
+
+        components = self._cmakedeps.get_property("cmake_components", self._conanfile,
+                                                  check_type=list)
+        if components is None:  # Lets compute the default components names
+            components = []
+            # This assumes that cmake_components is only defined with not multi .libs=[lib1, lib2]
+            for name in self._conanfile.cpp_info.components:
+                if name.startswith("_"):  # Skip private components
+                    continue
+                comp_components = self._cmakedeps.get_property("cmake_components", self._conanfile,
+                                                               name, check_type=list)
+                if comp_components:
+                    components.extend(comp_components)
+                else:
+                    cmakename = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
+                                                             name)
+                    if cmakename and "::" in cmakename:  # Remove package namespace
+                        cmakename = cmakename.split("::", 1)[1]
+                    components.append(cmakename or name)
+        return " ".join(components) if components else ""
+
 
     def _get_legacy_vars(self):
         # Auxiliary variables for legacy consumption and try_compile cases

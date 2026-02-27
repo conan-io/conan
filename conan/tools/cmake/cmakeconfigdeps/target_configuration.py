@@ -38,11 +38,12 @@ class TargetConfigurationTemplate2:
 
     @property
     def filename(self):
+        f = self._cmake_file_name
         # Fallback to consumer configuration if it doesn't have build_type
         config = self._conanfile.settings.get_safe("build_type", self._cmakedeps.configuration)
         config = (config or "none").lower()
         build = "Build" if self._conanfile.context == CONTEXT_BUILD else ""
-        return f"{self._cmake_file_name}-Targets{build}-{config}.cmake"
+        return f"{f}-Targets{build}-{config}.cmake"
 
     def _requires(self, info, components):
         result = {}
