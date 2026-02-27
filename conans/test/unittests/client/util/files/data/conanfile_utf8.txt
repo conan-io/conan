@@ -1,4 +1,0 @@
-[requires]
-zlib/1.2.11@conan/stable
-[generators]
-cmake

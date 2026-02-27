@@ -4,16 +4,17 @@ https://packaging.python.org/en/latest/distributing.html
 https://github.com/pypa/sampleproject
 """
 
-import os
-import re
-# To use a consistent encoding
-from codecs import open
-from os import path
-
 # Always prefer setuptools over distutils
 from setuptools import find_packages, setup
 
+import os
+import re
+from os import path
+
+
+# The tests utils are used by conan-package-tools
 here = path.abspath(path.dirname(__file__))
+excluded_test_packages = ["test*"]
 
 
 def get_requires(filename):
@@ -25,19 +26,10 @@ def get_requires(filename):
     return requirements
 
 
-project_requirements = get_requires("conans/requirements.txt")
-project_requirements.extend(get_requires("conans/requirements_server.txt"))
-dev_requirements = get_requires("conans/requirements_dev.txt")
-# The tests utils are used by conan-package-tools
-exclude_test_packages = ["conans.test.{}*".format(d)
-                         for d in os.listdir(os.path.join(here, "conans/test"))
-                         if os.path.isdir(os.path.join(here, "conans/test", d)) and d != "utils"]
-
-
 def load_version():
     """ Loads a file content """
     filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                            "conans", "__init__.py"))
+                                            "conan", "__init__.py"))
     with open(filename, "rt") as version_file:
         conan_init = version_file.read()
         version = re.search(r"__version__ = '([0-9a-z.-]+)'", conan_init).group(1)
@@ -46,13 +38,21 @@ def load_version():
 
 def generate_long_description_file():
     this_directory = path.abspath(path.dirname(__file__))
-    with open(path.join(this_directory, 'README.rst')) as f:
+    with open(path.join(this_directory, 'README.md')) as f:
         long_description = f.read()
     return long_description
 
+
+project_requirements = get_requires("conans/requirements.txt")
+dev_requirements = get_requires("conans/requirements_dev.txt")
+runners_requirements = get_requires("conans/requirements_runner.txt")
+excluded_server_packages = ["conans.server*"]
+exclude = excluded_test_packages + excluded_server_packages
+
+
 setup(
     name='conan',
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
@@ -60,7 +60,7 @@ setup(
 
     description='Conan C/C++ package manager',
     long_description=generate_long_description_file(),
-    long_description_content_type='text/x-rst',
+    long_description_content_type='text/markdown',
 
     # The project's main homepage.
     url='https://conan.io',
@@ -84,9 +84,13 @@ setup(
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8'
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13'
     ],
 
     # What does your project relate to?
@@ -95,7 +99,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=exclude_test_packages),
+    packages=find_packages(exclude=exclude),
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
@@ -110,10 +114,11 @@ setup(
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
-    # $ pip install -e .[dev,test]
+    # $ pip install -e .[dev,test,runners]
     extras_require={
         'dev': dev_requirements,
         'test': dev_requirements,
+        'runners': runners_requirements
     },
 
     # If there are data files included in your packages that need to be
@@ -135,8 +140,6 @@ setup(
     entry_points={
         'console_scripts': [
             'conan=conans.conan:run',
-            'conan_server=conans.conan_server:run',
-            'conan_build_info=conans.build_info.command:run'
         ],
     },
 )

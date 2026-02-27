@@ -1,7 +1,7 @@
 from jinja2 import Template
-from conan.tools._check_build_profile import check_using_build_profile
-from conans.model.new_build_info import NewCppInfo
-from conans.util.files import save
+
+from conan.tools import CppInfo
+from conan.internal.util.files import save
 
 
 class SConsDeps:
@@ -9,7 +9,6 @@ class SConsDeps:
         self._conanfile = conanfile
         self._ordered_deps = None
         self._generator_file = 'SConscript_conandeps'
-        check_using_build_profile(self._conanfile)
 
     @property
     def ordered_deps(self):
@@ -19,7 +18,7 @@ class SConsDeps:
         return self._ordered_deps
 
     def _get_cpp_info(self):
-        ret = NewCppInfo()
+        ret = CppInfo(self._conanfile)
         for dep in self.ordered_deps:
             dep_cppinfo = dep.cpp_info.aggregated_components()
             ret.merge(dep_cppinfo)

@@ -6,21 +6,37 @@ import os
 import random
 import string
 from datetime import timedelta
+from configparser import ConfigParser, NoSectionError
 
-import six
-from six.moves.configparser import ConfigParser, NoSectionError
-
-from conans.client import tools
-from conans.errors import ConanException
-from conans.paths import conan_expand_user
+from conan.errors import ConanException
 from conans.server.conf.default_server_conf import default_server_conf
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
-from conans.util.env_reader import get_env
-from conans.util.files import mkdir, save
-from conans.util.log import logger
+from conan.internal.util.files import mkdir, save, load
 
 MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
+
+
+def get_env(env_key, default=None, environment=None):
+    """Get the env variable associated with env_key"""
+    if environment is None:
+        environment = os.environ
+
+    env_var = environment.get(env_key, default)
+    if env_var != default:
+        if isinstance(default, str):
+            return env_var
+        elif isinstance(default, bool):
+            return env_var == "1" or env_var == "True"
+        elif isinstance(default, int):
+            return int(env_var)
+        elif isinstance(default, float):
+            return float(env_var)
+        elif isinstance(default, list):
+            if env_var.strip():
+                return [var.strip() for var in env_var.split(",")]
+            return []
+    return env_var
 
 
 class ConanServerConfigParser(ConfigParser):
@@ -63,8 +79,8 @@ class ConanServerConfigParser(ConfigParser):
         """
         try:
             if not os.path.exists(self.config_filename):
-                jwt_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(24))
-                updown_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(24))
+                jwt_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(32))
+                updown_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(32))
                 server_conf = default_server_conf.format(jwt_secret=jwt_random_secret,
                                                          updown_secret=updown_random_secret)
                 save(self.config_filename, server_conf)
@@ -72,10 +88,7 @@ class ConanServerConfigParser(ConfigParser):
             if not self._loaded:
                 self._loaded = True
                 # To avoid encoding problems we use our tools.load
-                if six.PY3:
-                    self.read_string(tools.load(self.config_filename))
-                else:
-                    self.read(self.config_filename)
+                self.read_string(load(self.config_filename))
 
             if varname:
                 section = dict(self.items(section))
@@ -85,7 +98,6 @@ class ConanServerConfigParser(ConfigParser):
         except NoSectionError:
             raise ConanException("No section '%s' found" % section)
         except Exception as exc:
-            logger.debug(exc)
             raise ConanException("Invalid configuration, "
                                  "missing %s: %s" % (section, varname))
 
@@ -119,7 +131,7 @@ class ConanServerConfigParser(ConfigParser):
     def public_url(self):
         host_name = self.host_name
         ssl_enabled = self.ssl_enabled
-        protocol_version = "v1"
+        protocol_version = "v2"
         if host_name is None and ssl_enabled is None:
             # No hostname and ssl config means that the transfer and the
             # logical endpoint are the same and a relative URL is sufficient
@@ -139,7 +151,7 @@ class ConanServerConfigParser(ConfigParser):
             if disk_path.startswith("."):
                 disk_path = os.path.join(os.path.dirname(self.config_filename), disk_path)
                 disk_path = os.path.abspath(disk_path)
-            ret = conan_expand_user(disk_path)
+            ret = os.path.expanduser(disk_path)
         except ConanException:
             # If storage_path is not defined, use the current dir
             # So tests use test folder instead of user/.conan_server
@@ -232,9 +244,7 @@ class ConanServerConfigParser(ConfigParser):
         return timedelta(minutes=float(self._get_conf_server_string("jwt_expire_minutes")))
 
 
-def get_server_store(disk_storage_path, public_url, updown_auth_manager):
+def get_server_store(disk_storage_path, public_url):
     disk_controller_url = "%s/%s" % (public_url, "files")
-    if not updown_auth_manager:
-        raise Exception("Updown auth manager needed for disk controller (not s3)")
-    adapter = ServerDiskAdapter(disk_controller_url, disk_storage_path, updown_auth_manager)
+    adapter = ServerDiskAdapter(disk_controller_url, disk_storage_path)
     return ServerStore(adapter)

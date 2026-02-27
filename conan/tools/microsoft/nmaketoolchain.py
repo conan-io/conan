@@ -1,9 +1,11 @@
-from conan.tools._compilers import cppstd_flag, build_type_flags, build_type_link_flags
+
+from conan.internal import check_duplicated_generator
+from conan.tools.build.flags import build_type_flags, cppstd_flag, build_type_link_flags
 from conan.tools.env import Environment
 from conan.tools.microsoft.visual import msvc_runtime_flag, VCVars
 
 
-class NMakeToolchain(object):
+class NMakeToolchain:
     """
     https://learn.microsoft.com/en-us/cpp/build/reference/running-nmake?view=msvc-170#toolsini-and-nmake
     We have also explored the usage of Tools.ini:
@@ -23,10 +25,12 @@ class NMakeToolchain(object):
         self.extra_ldflags = []
         self.extra_defines = []
 
-    def _format_options(self, options):
+    @staticmethod
+    def _format_options(options):
         return [f"{opt[0].replace('-', '/')}{opt[1:]}" for opt in options if len(opt) > 1]
 
-    def _format_defines(self, defines):
+    @staticmethod
+    def _format_defines(defines):
         formated_defines = []
         for define in defines:
             if "=" in define:
@@ -36,12 +40,12 @@ class NMakeToolchain(object):
                 if value and not value.isnumeric():
                     value = f'\\"{value}\\"'
                 define = f"{macro}#{value}"
-            formated_defines.append(f"/D{define}")
+            formated_defines.append(f"/D\"{define}\"")
         return formated_defines
 
     @property
     def _cl(self):
-        bt_flags = build_type_flags(self._conanfile.settings)
+        bt_flags = build_type_flags(self._conanfile)
         bt_flags = bt_flags if bt_flags else []
 
         rt_flags = msvc_runtime_flag(self._conanfile)
@@ -52,10 +56,11 @@ class NMakeToolchain(object):
         cflags.extend(self.extra_cflags)
 
         cxxflags = []
-        cppstd = cppstd_flag(self._conanfile.settings)
+        cppstd = cppstd_flag(self._conanfile)
         if cppstd:
             cxxflags.append(cppstd)
-        cxxflags.extend(self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list))
+        cxxflags.extend(self._conanfile.conf.get("tools.build:cxxflags", default=[],
+                                                 check_type=list))
         cxxflags.extend(self.extra_cxxflags)
 
         defines = []
@@ -65,9 +70,8 @@ class NMakeToolchain(object):
         defines.extend(self._conanfile.conf.get("tools.build:defines", default=[], check_type=list))
         defines.extend(self.extra_defines)
 
-        return ["/nologo"] + \
-               self._format_options(bt_flags + rt_flags + cflags + cxxflags) + \
-               self._format_defines(defines)
+        return (["/nologo"] + self._format_options(bt_flags + rt_flags + cflags + cxxflags) +
+                self._format_defines(defines))
 
     @property
     def _link(self):
@@ -76,8 +80,10 @@ class NMakeToolchain(object):
 
         ldflags = []
         ldflags.extend(bt_ldflags)
-        ldflags.extend(self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list))
-        ldflags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list))
+        ldflags.extend(self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
+                                                check_type=list))
+        ldflags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],
+                                                check_type=list))
         ldflags.extend(self.extra_ldflags)
 
         return ["/nologo"] + self._format_options(ldflags)
@@ -92,7 +98,8 @@ class NMakeToolchain(object):
         env.append("_LINK_", self._link)
         # Also define some special env-vars which can override special NMake macros:
         # https://learn.microsoft.com/en-us/cpp/build/reference/special-nmake-macros
-        conf_compilers = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+        conf_compilers = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                  check_type=dict)
         if conf_compilers:
             compilers_mapping = {
                 "AS": "asm",
@@ -110,6 +117,7 @@ class NMakeToolchain(object):
         return self.environment().vars(self._conanfile, scope="build")
 
     def generate(self, env=None, scope="build"):
+        check_duplicated_generator(self, self._conanfile)
         env = env or self.environment()
         env.vars(self._conanfile, scope=scope).save_script("conannmaketoolchain")
         VCVars(self._conanfile).generate(scope=scope)

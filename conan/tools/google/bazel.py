@@ -4,24 +4,21 @@ import platform
 from conan.tools.google import BazelToolchain
 
 
-class Bazel(object):
+class Bazel:
 
-    def __init__(self, conanfile, namespace=None):
+    def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
-        # TODO: Remove namespace in Conan 2.x
-        if namespace:
-            self._conanfile.output.warning("In Bazel() call, namespace param has been "
-                                        "deprecated as it's not used anymore.")
-
-    def configure(self, args=None):
-        # TODO: Remove in Conan 2.x. Keeping it backward compatible
-        self._conanfile.output.warning("Bazel.configure() function has been deprecated."
-                                    " Removing in Conan 2.x.")
-        pass
+        # Use BazelToolchain generated file if exists
+        self._conan_bazelrc = os.path.join(self._conanfile.generators_folder, BazelToolchain.bazelrc_name)
+        self._use_conan_config = os.path.exists(self._conan_bazelrc)
+        self._startup_opts = self._get_startup_command_options()
 
     def _safe_run_command(self, command):
         """
-        Windows is having problems for stopping bazel processes, so it ends up locking
+        Windows is having problems stopping bazel processes, so it ends up locking
         some files if something goes wrong. Better to shut down the Bazel server after running
         each command.
         """
@@ -29,56 +26,57 @@ class Bazel(object):
             self._conanfile.run(command)
         finally:
             if platform.system() == "Windows":
-                self._conanfile.run("bazel shutdown")
+                self._conanfile.run("bazel" + self._startup_opts + " shutdown")
 
-    def build(self, args=None, label=None, target="//..."):
-        """
-        Runs "bazel <rcpaths> build <configs> <args> <targets>"
-
-        :param label: DEPRECATED: It'll disappear in Conan 2.x. It is the target label
-        :param target: It is the target label
-        :param args: list of extra arguments
-        :return:
-        """
-        # TODO: Remove in Conan 2.x. Superseded by target
-        if label:
-            self._conanfile.output.warning("In Bazel.build() call, label param has been deprecated."
-                                        " Migrating to target.")
-            target = label
-        # Use BazelToolchain generated file if exists
-        conan_bazelrc = os.path.join(self._conanfile.generators_folder, BazelToolchain.bazelrc_name)
-        use_conan_config = os.path.exists(conan_bazelrc)
+    def _get_startup_command_options(self):
         bazelrc_paths = []
-        bazelrc_configs = []
-        if use_conan_config:
-            bazelrc_paths.append(conan_bazelrc)
-            bazelrc_configs.append(BazelToolchain.bazelrc_config)
+        if self._use_conan_config:
+            bazelrc_paths.append(self._conan_bazelrc)
         # User bazelrc paths have more prio than Conan one
         # See more info in https://bazel.build/run/bazelrc
-        # TODO: Legacy Bazel allowed only one value. Remove for Conan 2.x and check list-type.
-        rc_paths = self._conanfile.conf.get("tools.google.bazel:bazelrc_path", default=[])
-        rc_paths = [rc_paths.strip()] if isinstance(rc_paths, str) else rc_paths
-        bazelrc_paths.extend(rc_paths)
-        command = "bazel"
-        for rc in bazelrc_paths:
-            command += f" --bazelrc={rc}"
-        command += " build"
-        # TODO: Legacy Bazel allowed only one value or several ones separate by commas.
-        #       Remove for Conan 2.x and check list-type.
-        configs = self._conanfile.conf.get("tools.google.bazel:configs", default=[])
-        configs = [c.strip() for c in configs.split(",")] if isinstance(configs, str) else configs
-        bazelrc_configs.extend(configs)
-        for config in bazelrc_configs:
+        bazelrc_paths.extend(self._conanfile.conf.get("tools.google.bazel:bazelrc_path", default=[],
+                                                      check_type=list))
+        opts = " ".join(["--bazelrc=" + rc.replace("\\", "/") for rc in bazelrc_paths])
+        return f" {opts}" if opts else ""
+
+    def build(self, args=None, target="//...", clean=True):
+        """
+        Runs "bazel <rcpaths> build <configs> <args> <targets>" command where:
+
+        * ``rcpaths``: adds ``--bazelrc=xxxx`` per rc-file path. It listens to ``BazelToolchain``
+          (``--bazelrc=conan_bzl.rc``), and ``tools.google.bazel:bazelrc_path`` conf.
+        * ``configs``: adds ``--config=xxxx`` per bazel-build configuration.
+          It listens to ``BazelToolchain`` (``--config=conan-config``), and
+          ``tools.google.bazel:configs`` conf.
+        * ``args``: they are any extra arguments to add to the ``bazel build`` execution.
+        * ``targets``: all the target labels.
+
+        :param target: It is the target label. By default, it's "//..." which runs all the targets.
+        :param args: list of extra arguments to pass to the CLI.
+        :param clean: boolean that indicates to run a "bazel clean" before running the "bazel build".
+                      Notice that this is important to ensure a fresh bazel cache every
+        """
+        # Note: In case of error like this: ... https://bcr.bazel.build/: PKIX path building failed
+        # Check this comment: https://github.com/bazelbuild/bazel/issues/3915#issuecomment-1120894057
+        bazelrc_build_configs = []
+        if self._use_conan_config:
+            bazelrc_build_configs.append(BazelToolchain.bazelrc_config)
+        command = "bazel" + self._startup_opts + " build"
+        bazelrc_build_configs.extend(self._conanfile.conf.get("tools.google.bazel:configs", default=[],
+                                                        check_type=list))
+        for config in bazelrc_build_configs:
             command += f" --config={config}"
         if args:
             command += " ".join(f" {arg}" for arg in args)
         command += f" {target}"
+        if clean:
+            self._safe_run_command("bazel" + self._startup_opts + " clean")
         self._safe_run_command(command)
 
     def test(self, target=None):
         """
-        Runs "bazel test <target>"
+        Runs "bazel test <targets>" command.
         """
         if self._conanfile.conf.get("tools.build:skip_test", check_type=bool) or target is None:
             return
-        self._safe_run_command(f'bazel test {target}')
+        self._safe_run_command("bazel" + self._startup_opts + f" test {target}")

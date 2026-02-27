@@ -1,8 +1,8 @@
 from bottle import request
 
-from conans.model.ref import ConanFileReference
+from conan.api.model import RecipeReference
 from conans.server.rest.bottle_routes import BottleRoutes
-from conans.server.service.common.search import SearchService
+from conans.server.service.v2.search import SearchService
 
 
 class SearchControllerV2(object):
@@ -27,8 +27,11 @@ class SearchControllerV2(object):
         @app.route(r.common_search_packages, method=["GET"])
         @app.route(r.common_search_packages_revision, method=["GET"])
         def search_packages(name, version, username, channel, auth_user, revision=None):
-            query = request.params.get("q", None)
+            # query is no longer server side
+            list_only = request.params.get("list_only", False)
+            if isinstance(list_only, str):
+                list_only = False if 'false' == list_only.lower() else True
             search_service = SearchService(app.authorizer, app.server_store, auth_user)
-            ref = ConanFileReference(name, version, username, channel, revision)
-            info = search_service.search_packages(ref, query)
+            ref = RecipeReference(name, version, username, channel, revision)
+            info = search_service.search_packages(ref, list_only)
             return info

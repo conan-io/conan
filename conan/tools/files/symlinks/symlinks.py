@@ -17,9 +17,13 @@ def _path_inside(base, folder):
 
 
 def absolute_to_relative_symlinks(conanfile, base_folder):
-    """Convert the symlinks with absolute paths to relative if they are pointing to a file or
-    directory inside the 'base_folder'. Any absolute symlink pointing outside the 'base_folder'
-    will be ignored"""
+    """
+    Convert the symlinks with absolute paths into relative ones if they are pointing to a file or
+    directory inside the ``base_folder``. Any absolute symlink pointing outside the ``base_folder``    will be ignored.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param base_folder: Folder to be scanned.
+    """
     for fullpath in get_symlinks(base_folder):
         link_target = os.readlink(fullpath)
         if not os.path.isabs(link_target):
@@ -31,9 +35,13 @@ def absolute_to_relative_symlinks(conanfile, base_folder):
             os.symlink(new_link, fullpath)
 
 
-def remove_external_symlinks(conanfile, base_folder=None):
-    """Remove the symlinks to files that point outside the 'base_folder', no matter if relative or
-    absolute"""
+def remove_external_symlinks(conanfile, base_folder):
+    """
+    Remove the symlinks to files that point outside the ``base_folder``, no matter if relative or absolute.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param base_folder: Folder to be scanned.
+    """
     for fullpath in get_symlinks(base_folder):
         link_target = os.readlink(fullpath)
         if not os.path.isabs(link_target):
@@ -43,7 +51,12 @@ def remove_external_symlinks(conanfile, base_folder=None):
 
 
 def remove_broken_symlinks(conanfile, base_folder=None):
-    """Remove the broken symlinks, no matter if relative or absolute"""
+    """
+    Remove the broken symlinks, no matter if relative or absolute.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param base_folder: Folder to be scanned.
+    """
     for fullpath in get_symlinks(base_folder):
         link_target = os.readlink(fullpath)
         if not os.path.isabs(link_target):

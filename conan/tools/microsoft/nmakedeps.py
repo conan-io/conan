@@ -1,10 +1,11 @@
 import os
 
+from conan.internal import check_duplicated_generator
+from conan.tools import CppInfo
 from conan.tools.env import Environment
-from conans.model.new_build_info import NewCppInfo
 
 
-class NMakeDeps(object):
+class NMakeDeps:
 
     def __init__(self, conanfile):
         """
@@ -15,7 +16,7 @@ class NMakeDeps(object):
 
     # TODO: This is similar from AutotoolsDeps: Refactor and make common
     def _get_cpp_info(self):
-        ret = NewCppInfo()
+        ret = CppInfo(self._conanfile)
         deps = self._conanfile.dependencies.host.topological_sort
         deps = [dep for dep in reversed(deps.values())]
         for dep in deps:
@@ -50,9 +51,9 @@ class NMakeDeps(object):
                     # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
                     macro, value = define.split("=", 1)
                     if value and not value.isnumeric():
-                        value = f'\\"{value}\\"'
+                        value = f'\"{value}\"'
                     define = f"{macro}#{value}"
-                return f"/D{define}"
+                return f"/D\"{define}\""
 
             cl_flags = [f'-I"{p}"' for p in cpp_info.includedirs or []]
             cl_flags.extend(cpp_info.cflags or [])
@@ -70,4 +71,5 @@ class NMakeDeps(object):
         return self.environment.vars(self._conanfile, scope=scope)
 
     def generate(self, scope="build"):
+        check_duplicated_generator(self, self._conanfile)
         self.vars(scope).save_script("conannmakedeps")

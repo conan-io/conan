@@ -1,13 +1,15 @@
 import os
+import re
 import textwrap
 from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.tools._check_build_profile import check_using_build_profile
-from conans.errors import ConanException
-from conans.util.files import load, save
-from conans.client.tools.apple import to_apple_arch
+from conan.internal import check_duplicated_generator
+from conan.errors import ConanException
+from conan.internal.model.dependencies import get_transitive_requires
+from conan.internal.util.files import load, save
+from conan.tools.apple.apple import _to_apple_arch
 
 GLOBAL_XCCONFIG_TEMPLATE = textwrap.dedent("""\
     // Includes both the toolchain and the dependencies
@@ -19,14 +21,13 @@ GLOBAL_XCCONFIG_FILENAME = "conan_config.xcconfig"
 
 
 def _format_name(name):
-    name = name.replace(".", "_").replace("-", "_")
-    return name.lower()
+    return re.sub(r'[^A-Za-z0-9_]', '_', name).lower()
 
 
-def _xcconfig_settings_filename(settings):
+def _xcconfig_settings_filename(settings, configuration):
     arch = settings.get_safe("arch")
-    architecture = to_apple_arch(arch) or arch
-    props = [("configuration", settings.get_safe("build_type")),
+    architecture = _to_apple_arch(arch) or arch
+    props = [("configuration", configuration),
              ("architecture", architecture),
              ("sdk name", settings.get_safe("os.sdk")),
              ("sdk version", settings.get_safe("os.sdk_version"))]
@@ -34,14 +35,15 @@ def _xcconfig_settings_filename(settings):
     return _format_name(name)
 
 
-def _xcconfig_conditional(settings):
+def _xcconfig_conditional(settings, configuration):
     sdk_condition = "*"
     arch = settings.get_safe("arch")
-    architecture = to_apple_arch(arch) or arch
-    if settings.get_safe("os.sdk"):
-        sdk_condition = "{}{}".format(settings.get_safe("os.sdk"), settings.get_safe("os.sdk_version") or "*")
+    architecture = _to_apple_arch(arch) or arch
+    sdk = settings.get_safe("os.sdk") if settings.get_safe("os") != "Macos" else "macosx"
+    if sdk:
+        sdk_condition = "{}{}".format(sdk, settings.get_safe("os.sdk_version") or "*")
 
-    return "[config={}][arch={}][sdk={}]".format(settings.get_safe("build_type"), architecture, sdk_condition)
+    return "[config={}][arch={}][sdk={}]".format(configuration, architecture, sdk_condition)
 
 
 def _add_includes_to_file_or_create(filename, template, files_to_include):
@@ -57,7 +59,7 @@ def _add_includes_to_file_or_create(filename, template, files_to_include):
     return content
 
 
-class XcodeDeps(object):
+class XcodeDeps:
     general_name = "conandeps.xcconfig"
 
     _conf_xconfig = textwrap.dedent("""\
@@ -91,7 +93,7 @@ class XcodeDeps(object):
         // Link options for {{pkg_name}}_{{comp_name}}
         LIBRARY_SEARCH_PATHS = $(inherited) $(LIBRARY_SEARCH_PATHS_{{pkg_name}}_{{comp_name}})
         OTHER_LDFLAGS = $(inherited) $(OTHER_LDFLAGS_{{pkg_name}}_{{comp_name}})
-         """)
+        """)
 
     _all_xconfig = textwrap.dedent("""\
         // Conan XcodeDeps generated file
@@ -107,13 +109,13 @@ class XcodeDeps(object):
         self._conanfile = conanfile
         self.configuration = conanfile.settings.get_safe("build_type")
         arch = conanfile.settings.get_safe("arch")
-        self.architecture = to_apple_arch(arch) or arch
+        self.architecture = _to_apple_arch(arch, default=arch)
         self.os_version = conanfile.settings.get_safe("os.version")
         self.sdk = conanfile.settings.get_safe("os.sdk")
         self.sdk_version = conanfile.settings.get_safe("os.sdk_version")
-        check_using_build_profile(self._conanfile)
 
     def generate(self):
+        check_duplicated_generator(self, self._conanfile)
         if self.configuration is None:
             raise ConanException("XcodeDeps.configuration is None, it should have a value")
         if self.architecture is None:
@@ -122,7 +124,7 @@ class XcodeDeps(object):
         for generator_file, content in generator_files.items():
             save(generator_file, content)
 
-    def _conf_xconfig_file(self, pkg_name, comp_name, package_folder, transitive_cpp_infos):
+    def _conf_xconfig_file(self, require, pkg_name, comp_name, package_folder, transitive_cpp_infos):
         """
         content for conan_poco_x86_release.xcconfig, containing the activation
         """
@@ -146,8 +148,25 @@ class XcodeDeps(object):
             'cxx_compiler_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("cxxflags")),
             'linker_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("sharedlinkflags")),
             'exe_flags': " ".join('"{}"'.format(p.replace('"', '\\"')) for p in _merged_vars("exelinkflags")),
-            'condition': _xcconfig_conditional(self._conanfile.settings)
+            'condition': _xcconfig_conditional(self._conanfile.settings, self.configuration)
         }
+
+        if not require.headers:
+            fields["include_dirs"] = ""
+
+        if not require.libs:
+            fields["lib_dirs"] = ""
+            fields["libs"] = ""
+            fields["system_libs"] = ""
+            fields["frameworkdirs"] = ""
+            fields["frameworks"] = ""
+
+        if not require.libs and not require.headers:
+            fields["definitions"] = ""
+            fields["c_compiler_flags"] = ""
+            fields["cxx_compiler_flags"] = ""
+            fields["linker_flags"] = ""
+            fields["exe_flags"] = ""
 
         template = Template(self._conf_xconfig)
         content_multi = template.render(**fields)
@@ -180,15 +199,16 @@ class XcodeDeps(object):
 
         return content_multi
 
-    def _all_xconfig_file(self, deps):
+    def _all_xconfig_file(self, deps, content):
         """
         this is a .xcconfig file including all declared dependencies
         """
-        content_multi = self._all_xconfig
+        content_multi = content or self._all_xconfig
 
-        for req, dep in deps.items():
-            dep_name = _format_name(dep.ref.name)
-            content_multi = content_multi + '\n#include "conan_{}.xcconfig"\n'.format(dep_name)
+        for dep in deps.values():
+            include_file = f'conan_{_format_name(dep.ref.name)}.xcconfig'
+            if include_file not in content_multi:
+                content_multi = content_multi + f'\n#include "{include_file}"\n'
         return content_multi
 
     def _pkg_xconfig_file(self, components):
@@ -207,13 +227,13 @@ class XcodeDeps(object):
                                                GLOBAL_XCCONFIG_TEMPLATE,
                                                [self.general_name])
 
-    def get_content_for_component(self, pkg_name, component_name, package_folder, transitive_internal, transitive_external):
+    def get_content_for_component(self, require, pkg_name, component_name, package_folder, transitive_internal, transitive_external):
         result = {}
 
-        conf_name = _xcconfig_settings_filename(self._conanfile.settings)
+        conf_name = _xcconfig_settings_filename(self._conanfile.settings, self.configuration)
 
         props_name = "conan_{}_{}{}.xcconfig".format(pkg_name, component_name, conf_name)
-        result[props_name] = self._conf_xconfig_file(pkg_name, component_name, package_folder, transitive_internal)
+        result[props_name] = self._conf_xconfig_file(require, pkg_name, component_name, package_folder, transitive_internal)
 
         # The entry point for each package
         file_dep_name = "conan_{}_{}.xcconfig".format(pkg_name, component_name)
@@ -230,13 +250,16 @@ class XcodeDeps(object):
         # All components are included in the conan_pkgname.xcconfig file
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
-        all_deps = list(host_req.values()) + list(test_req.values())
-        for dep in all_deps:
+        requires = list(host_req.items()) + list(test_req.items())
+        for require, dep in requires:
 
             dep_name = _format_name(dep.ref.name)
 
             include_components_names = []
+            transitive_requires = [r for r, _ in
+                                   get_transitive_requires(self._conanfile, dep).items()]
             if dep.cpp_info.has_components:
+                transitive_dep_names = [_format_name(dep.ref.name) for dep in transitive_requires]
 
                 sorted_components = dep.cpp_info.get_sorted_components().items()
                 for comp_name, comp_cpp_info in sorted_components:
@@ -246,7 +269,8 @@ class XcodeDeps(object):
                     #           "list of names from required components from other packages")
                     def _get_component_requires(component):
                         requires_external = [(req.split("::")[0], req.split("::")[1]) for req in
-                                             component.requires if "::" in req]
+                                             component.requires if "::" in req
+                                             and req.split("::")[0] in transitive_dep_names]
                         requires_internal = [dep.cpp_info.components.get(req) for req in
                                              component.requires if "::" not in req]
                         return requires_internal, requires_external
@@ -262,8 +286,8 @@ class XcodeDeps(object):
                         transitive_internal.append(component)
                         transitive_internal.extend(requires_internal)
                         transitive_external.extend(requires_external)
-                        for require in requires_internal:
-                            _transitive_components(require)
+                        for treq in requires_internal:
+                            _transitive_components(treq)
 
                     _transitive_components(comp_cpp_info)
 
@@ -273,7 +297,7 @@ class XcodeDeps(object):
 
                     # In case dep is editable and package_folder=None
                     pkg_folder = dep.package_folder or dep.recipe_folder
-                    component_content = self.get_content_for_component(dep_name, comp_name,
+                    component_content = self.get_content_for_component(require, dep_name, comp_name,
                                                                        pkg_folder,
                                                                        transitive_internal,
                                                                        transitive_external)
@@ -282,7 +306,7 @@ class XcodeDeps(object):
             else:
                 public_deps = []
                 for r, d in dep.dependencies.direct_host.items():
-                    if not r.visible:
+                    if r not in transitive_requires:
                         continue
                     if d.cpp_info.has_components:
                         sorted_components = d.cpp_info.get_sorted_components().items()
@@ -294,16 +318,18 @@ class XcodeDeps(object):
                 required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
                 # In case dep is editable and package_folder=None
                 pkg_folder = dep.package_folder or dep.recipe_folder
-                root_content = self.get_content_for_component(dep_name, dep_name, pkg_folder, [dep.cpp_info],
+                root_content = self.get_content_for_component(require, dep_name, dep_name, pkg_folder, [dep.cpp_info],
                                                               required_components)
                 include_components_names.append((dep_name, dep_name))
                 result.update(root_content)
 
             result["conan_{}.xcconfig".format(dep_name)] = self._pkg_xconfig_file(include_components_names)
 
-        # Include all direct build_requires for host context.
-        direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False})
-        result[self.general_name] = self._all_xconfig_file(direct_deps)
+        all_file_content = ""
+
+        # Include direct requires
+        direct_deps = self._conanfile.dependencies.filter({"direct": True, "build": False, "skip": False})
+        result[self.general_name] = self._all_xconfig_file(direct_deps, all_file_content)
 
         result[GLOBAL_XCCONFIG_FILENAME] = self._global_xconfig_content
 

@@ -1,10 +1,5 @@
 import sys
-import os
-
-if os.getenv("CONAN_V2_CLI"):
-    from conans.cli.cli import main
-else:
-    from conans.client.command import main
+from conan.cli.cli import main
 
 
 def run():
@@ -12,4 +7,6 @@ def run():
 
 
 if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
     run()

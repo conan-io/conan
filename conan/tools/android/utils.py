@@ -4,12 +4,14 @@ from conan.errors import ConanException
 def android_abi(conanfile, context="host"):
     """
     Returns Android-NDK ABI
+
     :param conanfile: ConanFile instance
     :param context: either "host", "build" or "target"
     :return: Android-NDK ABI
     """
     if context not in ("host", "build", "target"):
-        raise ConanException(f"context argument must be either 'host', 'build' or 'target', was '{context}'")
+        raise ConanException(f"context argument must be either 'host', 'build' or 'target', "
+                             f"was '{context}'")
 
     try:
         settings = getattr(conanfile, f"settings_{context}")
@@ -18,6 +20,8 @@ def android_abi(conanfile, context="host"):
             settings = conanfile.settings
         else:
             raise ConanException(f"settings_{context} not declared in recipe")
+    if settings is None:
+        raise ConanException(f"settings_{context}=None in recipe")
     arch = settings.get_safe("arch")
     # https://cmake.org/cmake/help/latest/variable/CMAKE_ANDROID_ARCH_ABI.html
     return {

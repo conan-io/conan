@@ -6,17 +6,20 @@ from xml.dom import minidom
 
 from jinja2 import Template
 
-from conan.tools._check_build_profile import check_using_build_profile
-from conans.errors import ConanException
-from conans.util.files import load, save
+from conan.internal import check_duplicated_generator
+from conan.errors import ConanException
+from conan.internal.api.install.generators import relativize_path
+from conan.internal.model.dependencies import get_transitive_requires
+from conan.tools.microsoft.visual import msvc_platform_from_arch
+from conan.internal.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
 
-class MSBuildDeps(object):
+class MSBuildDeps:
     """
+    MSBuildDeps class generator
     conandeps.props: unconditional import of all *direct* dependencies only
-
     """
 
     _vars_props = textwrap.dedent("""\
@@ -77,7 +80,6 @@ class MSBuildDeps(object):
             <ResourceCompile>
               <AdditionalIncludeDirectories>$(Conan{{name}}IncludeDirectories)%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
               <PreprocessorDefinitions>$(Conan{{name}}PreprocessorDefinitions)%(PreprocessorDefinitions)</PreprocessorDefinitions>
-              <AdditionalOptions>$(Conan{{name}}CompilerFlags) %(AdditionalOptions)</AdditionalOptions>
             </ResourceCompile>
           </ItemDefinitionGroup>
           {% else %}
@@ -89,20 +91,34 @@ class MSBuildDeps(object):
         """)
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
-        self._conanfile.must_use_new_helpers = True  # TODO: Remove 2.0
+        #: Defines the build type. By default, the value of ``settings.build_type``.
         self.configuration = conanfile.settings.build_type
+        #: Defines the configuration key used to conditionally select which property sheet to
+        #: import (defaults to ``"Configuration"``).
+        self.configuration_key = "Configuration"
         # TODO: This platform is not exactly the same as ``msbuild_arch``, because it differs
         # in x86=>Win32
-        self.platform = {'x86': 'Win32',
-                         'x86_64': 'x64',
-                         'armv7': 'ARM',
-                         'armv8': 'ARM64'}.get(str(conanfile.settings.arch))
+        #: Platform name, e.g., ``Win32`` if ``settings.arch == "x86"``.
+        self.platform = msvc_platform_from_arch(str(conanfile.settings.arch))
+        #: Defines the platform key used to conditionally select which property sheet to
+        #: import (defaults to ``"Platform"``).
+        self.platform_key = "Platform"
         ca_exclude = "tools.microsoft.msbuilddeps:exclude_code_analysis"
+        #: List of packages names patterns to add Visual Studio ``CAExcludePath`` property
+        #: to each match as part of its ``conan_[DEP]_[CONFIG].props``. By default, value given by
+        #: ``tools.microsoft.msbuilddeps:exclude_code_analysis`` configuration.
         self.exclude_code_analysis = self._conanfile.conf.get(ca_exclude, check_type=list)
-        check_using_build_profile(self._conanfile)
 
     def generate(self):
+        """
+        Generates ``conan_<pkg>_<config>_vars.props``, ``conan_<pkg>_<config>.props``,
+        and ``conan_<pkg>.props`` files into the ``conanfile.generators_folder``.
+        """
+        check_duplicated_generator(self, self._conanfile)
         if self.configuration is None:
             raise ConanException("MSBuildDeps.configuration is None, it should have a value")
         if self.platform is None:
@@ -112,14 +128,14 @@ class MSBuildDeps(object):
             save(generator_file, content)
 
     def _config_filename(self):
-        props = [("Configuration", self.configuration),
-                 ("Platform", self.platform)]
-        name = "".join("_%s" % v for _, v in props)
+        props = [self.configuration,
+                 self.platform]
+        name = "".join("_%s" % v for v in props)
         return name.lower()
 
     def _condition(self):
-        props = [("Configuration", self.configuration),
-                 ("Platform", self.platform)]
+        props = [(self.configuration_key, self.configuration),
+                 (self.platform_key, self.platform)]
         condition = " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in props)
         return condition
 
@@ -134,16 +150,24 @@ class MSBuildDeps(object):
     def _get_valid_xml_format(name):
         return re.compile(r"[.+]").sub("_", name)
 
-    def _vars_props_file(self, dep, name, cpp_info, build):
+    def _vars_props_file(self, require, dep, name, cpp_info, build):
         """
         content for conan_vars_poco_x86_release.props, containing the variables for 1 config
         This will be for 1 package or for one component of a package
         :return: varfile content
         """
 
-        def add_valid_ext(libname):
+        def add_valid_ext(libname, libdirs=None):
             ext = os.path.splitext(libname)[1]
-            return '%s;' % libname if ext in VALID_LIB_EXTENSIONS else '%s.lib;' % libname
+            if ext in VALID_LIB_EXTENSIONS:
+                return f"{libname};"
+
+            lib_name = f"{libname}.lib"
+            if libdirs and not any(lib_name in os.listdir(d) for d in libdirs if os.path.isdir(d)):
+                meson_name = f"lib{libname}.a"
+                if any(meson_name in os.listdir(d) for d in libdirs if os.path.isdir(d)):
+                    lib_name = meson_name
+            return f"{lib_name};"
 
         pkg_placeholder = "$(Conan{}RootFolder)".format(name)
 
@@ -151,7 +175,7 @@ class MSBuildDeps(object):
             # https://docs.microsoft.com/en-us/visualstudio/msbuild/
             #                          how-to-escape-special-characters-in-msbuild
             # https://docs.microsoft.com/en-us/visualstudio/msbuild/msbuild-special-characters
-            return path.replace("\\", "/").lstrip("/")
+            return path.lstrip("/")
 
         def join_paths(paths):
             # TODO: ALmost copied from CMakeDeps TargetDataContext
@@ -167,20 +191,47 @@ class MSBuildDeps(object):
 
         root_folder = dep.recipe_folder if dep.package_folder is None else dep.package_folder
         root_folder = escape_path(root_folder)
+        # Make the root_folder relative to the generated conan_vars_xxx.props file
+        relative_root_folder = relativize_path(root_folder, self._conanfile,
+                                               "$(MSBuildThisFileDirectory)", normalize=False)
+
+        bin_dirs = join_paths(cpp_info.bindirs)
+        res_dirs = join_paths(cpp_info.resdirs)
+        include_dirs = join_paths(cpp_info.includedirs)
+        lib_dirs = join_paths(cpp_info.libdirs)
+        libs = "".join([add_valid_ext(lib, cpp_info.libdirs) for lib in cpp_info.libs])
+        # TODO: Missing objects
+        system_libs = "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs])
+        definitions = "".join("%s;" % d for d in cpp_info.defines)
+        compiler_flags = " ".join(cpp_info.cxxflags + cpp_info.cflags)
+        linker_flags = " ".join(cpp_info.sharedlinkflags + cpp_info.exelinkflags)
+
+        # traits logic
+        if require and not require.headers:
+            include_dirs = ""
+        if require and not require.libs:
+            lib_dirs = ""
+            libs = ""
+        if require and not require.libs and not require.headers:
+            definitions = ""
+            compiler_flags = ""
+            linker_flags = ""
+        if require and not require.run:
+            bin_dirs = ""
 
         fields = {
             'name': name,
-            'root_folder': root_folder,
-            'bin_dirs': join_paths(cpp_info.bindirs),
-            'res_dirs': join_paths(cpp_info.resdirs),
-            'include_dirs': join_paths(cpp_info.includedirs),
-            'lib_dirs': join_paths(cpp_info.libdirs),
-            'libs': "".join([add_valid_ext(lib) for lib in cpp_info.libs]),
+            'root_folder': relative_root_folder,
+            'bin_dirs': bin_dirs,
+            'res_dirs': res_dirs,
+            'include_dirs': include_dirs,
+            'lib_dirs': lib_dirs,
+            'libs': libs,
             # TODO: Missing objects
-            'system_libs': "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs]),
-            'definitions': "".join("%s;" % d for d in cpp_info.defines),
-            'compiler_flags': " ".join(cpp_info.cxxflags + cpp_info.cflags),
-            'linker_flags': " ".join(cpp_info.sharedlinkflags + cpp_info.exelinkflags),
+            'system_libs': system_libs,
+            'definitions': definitions,
+            'compiler_flags': compiler_flags,
+            'linker_flags': linker_flags,
             'host_context': not build
         }
         formatted_template = Template(self._vars_props, trim_blocks=True,
@@ -269,7 +320,7 @@ class MSBuildDeps(object):
                                                           content=pkg_aggregated_content)
         return {conandeps_filename: pkg_aggregated_content}
 
-    def _package_props_files(self, dep, build=False):
+    def _package_props_files(self, require, dep, build=False):
         """ all the files for a given package:
         - conan_pkgname_vars_config.props: definition of variables, one per config
         - conan_pkgname_config.props: The one using those variables. This is very different for
@@ -280,11 +331,10 @@ class MSBuildDeps(object):
         condition = self._condition()
         dep_name = self._dep_name(dep, build)
         result = {}
+        pkg_deps = get_transitive_requires(self._conanfile, dep)  # only non-skipped dependencies
         if dep.cpp_info.has_components:
             pkg_aggregated_content = None
             for comp_name, comp_info in dep.cpp_info.components.items():
-                if comp_name is None:
-                    continue
                 full_comp_name = "{}_{}".format(dep_name, self._get_valid_xml_format(comp_name))
                 vars_filename = "conan_%s_vars%s.props" % (full_comp_name, conf_name)
                 activate_filename = "conan_%s%s.props" % (full_comp_name, conf_name)
@@ -292,15 +342,21 @@ class MSBuildDeps(object):
                 pkg_filename = "conan_%s.props" % dep_name
 
                 public_deps = []  # To store the xml dependencies/file names
-                for r in comp_info.requires:
-                    if "::" in r:  # Points to a component of a different package
-                        pkg, cmp_name = r.split("::")
-                        public_deps.append(pkg if pkg == cmp_name else "{}_{}".format(pkg, cmp_name))
+                for required_pkg, required_comp in comp_info.parsed_requires():
+                    if required_pkg is not None:  # Points to a component of a different package
+                        try:
+                            required = pkg_deps[required_pkg]
+                        except KeyError:  # The transitive dep might have been skipped
+                            required = None
+                        if required:  # The transitive dep might have been skipped
+                            required_name = self._dep_name(required, build)
+                            public_deps.append(required_name if required_pkg == required_comp
+                                               else "{}_{}".format(required_name, required_comp))
                     else:  # Points to a component of same package
-                        public_deps.append("{}_{}".format(dep_name, r))
+                        public_deps.append("{}_{}".format(dep_name, required_comp))
                 public_deps = [self._get_valid_xml_format(d) for d in public_deps]
-                result[vars_filename] = self._vars_props_file(dep, full_comp_name, comp_info,
-                                                              build=build)
+                result[vars_filename] = self._vars_props_file(require, dep, full_comp_name,
+                                                              comp_info, build=build)
                 result[activate_filename] = self._activate_props_file(full_comp_name, vars_filename,
                                                                       public_deps, build=build)
                 result[comp_filename] = self._dep_props_file(full_comp_name, comp_filename,
@@ -315,9 +371,9 @@ class MSBuildDeps(object):
             vars_filename = "conan_%s_vars%s.props" % (dep_name, conf_name)
             activate_filename = "conan_%s%s.props" % (dep_name, conf_name)
             pkg_filename = "conan_%s.props" % dep_name
-            public_deps = [self._dep_name(d, build)
-                           for r, d in dep.dependencies.direct_host.items() if r.visible]
-            result[vars_filename] = self._vars_props_file(dep, dep_name, cpp_info,
+            public_deps = [self._dep_name(d, build) for d in pkg_deps.values()]
+
+            result[vars_filename] = self._vars_props_file(require, dep, dep_name, cpp_info,
                                                           build=build)
             result[activate_filename] = self._activate_props_file(dep_name, vars_filename,
                                                                   public_deps, build=build)
@@ -330,14 +386,12 @@ class MSBuildDeps(object):
             raise ConanException("The 'msbuild' generator requires a 'build_type' setting value")
         result = {}
 
-        host_req = list(self._conanfile.dependencies.host.values())
-        test_req = list(self._conanfile.dependencies.test.values())
-        for dep in host_req + test_req:
-            result.update(self._package_props_files(dep, build=False))
-
-        build_req = list(self._conanfile.dependencies.build.values())
-        for dep in build_req:
-            result.update(self._package_props_files(dep, build=True))
+        for req, dep in self._conanfile.dependencies.host.items():
+            result.update(self._package_props_files(req, dep, build=False))
+        for req, dep in self._conanfile.dependencies.test.items():
+            result.update(self._package_props_files(req, dep, build=False))
+        for req, dep in self._conanfile.dependencies.build.items():
+            result.update(self._package_props_files(req, dep, build=True))
 
         # Include all direct build_requires for host context. This might change
         result.update(self._conandeps())

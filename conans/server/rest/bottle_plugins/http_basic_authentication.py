@@ -4,7 +4,6 @@ from collections import namedtuple
 from bottle import HTTPResponse
 
 from conans.server.rest.bottle_plugins.authorization_header import AuthorizationHeader
-from conans.util.files import decode_text
 
 
 class UserPasswordPair(namedtuple('UserPasswordPair', ['user', 'password'])):
@@ -31,7 +30,8 @@ class HttpBasicAuthentication(AuthorizationHeader):
         method parameters"""
         if header_value is None:
             return None
-        username, password = decode_text(base64.b64decode(header_value)).split(":", 1)
+        # HTTP protocol is utf-8
+        username, password = base64.b64decode(header_value).decode().split(":", 1)
         ret = UserPasswordPair(username, password)
         return {self.keyword: ret}
 
