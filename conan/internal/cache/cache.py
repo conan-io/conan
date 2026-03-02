@@ -485,15 +485,21 @@ class PkgCache:
         # This ensures waiting processes don't return until both DB and folder are ready
         # Note: We must release lock quickly to avoid blocking other operations like LRU updates
         with self.package_lock(pref):
-            # Create DB entry first, BEFORE moving folder
-            # This prevents the race where folder exists but DB doesn't
-            # If another process already created the DB entry, this will raise
-            # and we'll handle it in the caller's exception handler
+            # Create DB entry first, BEFORE moving folder.
+            # If another process already registered this package, this raises
+            # ConanReferenceAlreadyExistsInDB which the caller handles.
             self._db.create_package(package_path, pref, None)
+
+            # If the destination folder already exists it must be an orphaned directory
+            # from a previous interrupted download (the DB had no entry, proven above).
+            # os.replace() on Linux fails with ENOTEMPTY when the destination directory
+            # is non-empty, so remove it while we hold the lock before the rename.
+            if os.path.exists(path):
+                rmdir(path)
 
             try:
                 # atomic_replace is atomic at filesystem level
-                # If it fails (destination exists), we need to clean up the DB entry
+                # If it fails, clean up the DB entry we just created
                 atomic_replace(current_folder, path, f"{pref.repr_notime()} package")
             except Exception:
                 # atomic_replace failed, remove the DB entry we just created
