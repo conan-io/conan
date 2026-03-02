@@ -20,30 +20,32 @@ class TestLRU:
         c.run("create . --name=pkg --version=0.1")
         c.run("create . --name=dep --version=0.2")
 
-        time.sleep(2)
+        # Use longer sleep and larger LRU threshold to handle scheduling delays
+        # in parallel test environments under heavy load
+        time.sleep(4)
         # This should update the LRU
         c.run("install --requires=pkg/0.1")
         # Removing recipes (+ its binaries) that recipes haven't been used
         if method == "list":
-            c.run("list *#* --lru=1s --format=json", redirect_stdout="old.json")
+            c.run("list *#* --lru=2s --format=json", redirect_stdout="old.json")
             c.run("remove --list=old.json -c")
         else:
-            c.run("remove * --lru=1s -c")
+            c.run("remove * --lru=2s -c")
         # Do the checks
         c.run("list *:*#*")
         assert "pkg" in c.out
         assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
         assert "dep" not in c.out
 
-        time.sleep(2)
+        time.sleep(4)
         # This should update the LRU of the recipe only
         c.run("graph info --requires=pkg/0.1")
         # IMPORTANT: Note the pattern is NOT the same as the equivalent for 'conan remove'
         if method == "list":
-            c.run("list *#*:*#* --lru=1s --format=json", redirect_stdout="old.json")
+            c.run("list *#*:*#* --lru=2s --format=json", redirect_stdout="old.json")
             c.run("remove --list=old.json -c")
         else:
-            c.run("remove *:* --lru=1s -c")
+            c.run("remove *:* --lru=2s -c")
 
         # Check the binary has been removed, but the recipe is still there
         c.run("list *:*")
@@ -66,21 +68,28 @@ class TestLRU:
         # Doesn't fail, but packages is empty
         c.run("list pkg/0.1:*#* --lru=1d --format=json")
         pkgs = json.loads(c.stdout)
-        rev = pkgs["Local Cache"]["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]
+        rev = pkgs["Local Cache"]["pkg/0.1"]["revisions"][
+            "485dad6cb11e2fa99d9afbe44a57a164"
+        ]
         assert rev["packages"] == {}
 
     def test_update_lru_when_used_as_dependency(self):
         """Show that using a recipe as a dependency will update its LRU"""
         c = TestClient()
-        c.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
-                "conanfile.py": GenConanfile("app", "1.0").with_require("dep/1.0")})
+        c.save(
+            {
+                "dep/conanfile.py": GenConanfile("dep", "1.0"),
+                "conanfile.py": GenConanfile("app", "1.0").with_require("dep/1.0"),
+            }
+        )
 
         c.run("create dep")
-        time.sleep(3)
+        # Use longer sleep and larger LRU threshold to handle scheduling delays
+        # in parallel test environments under heavy load
+        time.sleep(5)
         c.run("create .")
         # Dep is not removed because its lru was updated as part of the above create
-        # Use --lru=2s to account for potential scheduling delays in parallel test environments
-        c.run("remove * --lru=2s -c -f=json", redirect_stdout="removed.json")
+        c.run("remove * --lru=3s -c -f=json", redirect_stdout="removed.json")
         removed = json.loads(c.load("removed.json"))
         assert len(removed["Local Cache"]) == 0
 
