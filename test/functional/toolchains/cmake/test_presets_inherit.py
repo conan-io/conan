@@ -134,7 +134,7 @@ def test_cmake_presets_build_preset_stub_needs_configure_preset():
     'configurePreset' field for cmake --list-presets to succeed (single-config generators).
     """
     c = _client_with_user_presets()
-    c.run("install . --build=missing")
+    c.run("install .")
 
     conan_presets = json.loads(c.load("ConanPresets.json"))
     for stub in conan_presets.get("buildPresets", []):

@@ -321,11 +321,15 @@ class _IncludingPresets:
 
     @staticmethod
     def _update_stubs(data, inherited_user, output_dir, absolute_paths):
-        """Set configurePresets/buildPresets/testPresets to stubs for conan-* presets
-        that the user inherits but that don't have a real preset in the existing includes.
-        Stubs for buildPresets/testPresets include configurePreset so cmake --list-presets works.
         """
-        real_preset_names = set()
+        Set configurePresets/buildPresets/testPresets to stubs for conan-* presets
+        that the user inherits but that don't have a real preset of the same type in the includes.
+        """
+        real_preset_names_by_type = {
+            "configurePresets": set(),
+            "buildPresets": set(),
+            "testPresets": set(),
+        }
         for inc in data.get("include", []):
             inc_path = os.path.join(output_dir, inc) if not absolute_paths else inc
             if not os.path.exists(inc_path):
@@ -338,12 +342,13 @@ class _IncludingPresets:
                 for p in inc_json.get(preset_type, []):
                     name = p.get("name")
                     if name:
-                        real_preset_names.add(name)
+                        real_preset_names_by_type[preset_type].add(name)
 
         for preset_type in ("configurePresets", "buildPresets", "testPresets"):
+            real_names = real_preset_names_by_type[preset_type]
             stubs = []
             for name in inherited_user.get(preset_type, []):
-                if name not in real_preset_names:
+                if name not in real_names:
                     stub = {"name": name}
                     if preset_type in ("buildPresets", "testPresets"):
                         stub["configurePreset"] = name
