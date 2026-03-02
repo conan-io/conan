@@ -52,56 +52,8 @@ def test_cmake_presets_with_user_presets_file():
                                   "tc = CMakeToolchain(self)\n"
                                   "        tc.user_presets_path = 'ConanPresets.json'\n"
                                   "        tc.presets_prefix = 'conan'\n")
-    cmake_presets = textwrap.dedent("""
-        {
-        "version": 4,
-        "include": ["./ConanPresets.json"],
-        "configurePresets": [
-            {
-                "name": "default",
-                "displayName": "multi config",
-                "inherits": "conan-default"
-            },
-            {
-                "name": "release",
-                "displayName": "release single config",
-                "inherits": "conan-release"
-            },
-            {
-                "name": "debug",
-                "displayName": "debug single config",
-                "inherits": "conan-debug"
-            }
-        ],
-        "buildPresets": [
-            {
-                "name": "multi-release",
-                "configurePreset": "default",
-                "configuration": "Release",
-                "inherits": "conan-release"
-            },
-            {
-                "name": "multi-debug",
-                "configurePreset": "default",
-                "configuration": "Debug",
-                "inherits": "conan-debug"
-            },
-            {
-                "name": "release",
-                "configurePreset": "release",
-                "configuration": "Release",
-                "inherits": "conan-release"
-            },
-            {
-                "name": "debug",
-                "configurePreset": "debug",
-                "configuration": "Debug",
-                "inherits": "conan-debug"
-            }
-        ]
-        }""")
     c.save({"conanfile.py": conanfile,
-            "CMakePresets.json": cmake_presets})
+            "CMakePresets.json": _CMAKE_PRESETS_FILE})
 
     c.run(f"install . ")
     c.run(f"install . -s build_type=Debug")
