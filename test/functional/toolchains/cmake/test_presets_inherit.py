@@ -9,7 +9,7 @@ import pytest
 from conan.test.utils.tools import TestClient
 
 # Shared CMakePresets.json for tests that use user_presets_path + ConanPresets.json
-_USER_CMAKE_PRESETS = textwrap.dedent("""
+_CMAKE_PRESETS_FILE = textwrap.dedent("""
     {
       "version": 4,
       "include": ["./ConanPresets.json"],
@@ -37,7 +37,7 @@ def _client_with_user_presets():
         "tc = CMakeToolchain(self)",
         "tc = CMakeToolchain(self)\n        tc.user_presets_path = 'ConanPresets.json'",
     )
-    c.save({"conanfile.py": conanfile, "CMakePresets.json": _USER_CMAKE_PRESETS})
+    c.save({"conanfile.py": conanfile, "CMakePresets.json": _CMAKE_PRESETS_FILE})
     return c
 
 
