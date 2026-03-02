@@ -64,8 +64,7 @@ class TargetConfigurationTemplate2:
                 link = not (pkg_type is PackageType.SHARED and d.package_type is PackageType.SHARED)
                 result[dep_target] = {
                     "link": link,
-                    "link_feature": link_feature,
-                    "component_name": None
+                    "link_feature": link_feature
                 }
             return result
 
@@ -79,8 +78,7 @@ class TargetConfigurationTemplate2:
                                                               required_comp)
                 result[dep_target] = {
                     "link": link,
-                    "link_feature": link_feature,
-                    "component_name": required_comp
+                    "link_feature": link_feature
                 }
             else:  # Different package
                 try:
@@ -117,8 +115,7 @@ class TargetConfigurationTemplate2:
 
                     result[dep_target] = {
                         "link": link,
-                        "link_feature": link_feature,
-                        "component_name": required_comp
+                        "link_feature": link_feature
                     }
         return result
 
@@ -177,6 +174,8 @@ class TargetConfigurationTemplate2:
         libs = {}
         if self._config_comp_name is None and cpp_info.has_components:
             for name, component in cpp_info.components.items():
+                if name in self._cmakedeps.get_cmake_filenames(self._conanfile):
+                    continue  # that component will create its own CONFIG file
                 target_name = self._get_cmake_target_name(pkg_name, comp_name=name)
                 target = self._get_cmake_lib(component, cpp_info.components, pkg_folder,
                                              pkg_folder_var, comp_name=name)
@@ -198,17 +197,6 @@ class TargetConfigurationTemplate2:
     def _get_cmake_target_name(self, pkg_name, comp_name=None) -> str:
         target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile, comp_name)
         return target_name or (f"{pkg_name}::{comp_name}" if comp_name else f"{pkg_name}::{pkg_name}")
-
-    # def _get_cmake_target_info(self, cpp_info, pkg_name, comp_name, pkg_folder, pkg_folder_var) -> dict:
-    #     ret = {}
-    #     target_name = self._get_cmake_target_name(pkg_name, comp_name=comp_name)
-    #     target = self._get_cmake_lib(cpp_info, pkg_folder, pkg_folder_var, comp_name=comp_name)
-    #     if target is not None:
-    #         target_requires = self._requires(cpp_info, self._full_cpp_info.components)
-    #         assert isinstance(target_requires, dict)
-    #         target["requires"] = target_requires
-    #         ret[target_name] = target
-    #     return ret
 
     def _get_cmake_lib(self, info, components, pkg_folder, pkg_folder_var, comp_name=None):
         if info.exe or not (info.package_framework or info.frameworks or info.includedirs or info.libs
@@ -338,9 +326,47 @@ class TargetConfigurationTemplate2:
         # FIXME: Hardcoded CONFIG
         ret = {self._cmakedeps.get_cmake_filenames(r)[None]: "CONFIG" for r in transitive_reqs.values()}
         extra_mods = self._cmakedeps.get_property("cmake_extra_dependencies", self._conanfile,
-                                                  comp_name=self._config_comp_name, check_type=list) or []
+                                                  check_type=list) or []
         ret.update({extra_mod: "" for extra_mod in extra_mods})
         return ret
+
+    def _get_component_requirement_names(self, cpp_info):
+        """
+        Get all the pkg-config valid names from the requirements ones given a CppInfo object.
+
+        For instance, those requirements could be coming from:
+
+        ```python
+        from conan import ConanFile
+        class PkgConfigConan(ConanFile):
+            requires = "other/1.0"
+
+            def package_info(self):
+                self.cpp_info.requires = ["other::cmp1"]
+
+            # Or:
+
+            def package_info(self):
+                self.cpp_info.components["cmp"].requires = ["other::cmp1"]
+        ```
+        """
+        dep_ref_name = self._dep.ref.name
+        ret = []
+        for req in cpp_info.requires:
+            pkg_ref_name, comp_ref_name = req.split("::") if "::" in req else (dep_ref_name, req)
+            # For instance, dep == "hello/1.0" and req == "other::cmp1" -> hello != other
+            if dep_ref_name != pkg_ref_name:
+                try:
+                    req_conanfile = self._transitive_reqs[pkg_ref_name]
+                except KeyError:
+                    continue  # If the dependency is not in the transitive, might be skipped
+            else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
+                req_conanfile = self._dep
+            comp_name = self._get_name(req_conanfile, pkg_ref_name, comp_ref_name)
+            if comp_name not in ret:
+                ret.append(comp_name)
+        return ret
+
 
     @staticmethod
     def _path(p, pkg_folder, pkg_folder_var):
