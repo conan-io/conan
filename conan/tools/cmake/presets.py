@@ -197,6 +197,7 @@ class _CMakePresets:
                 CMakeToolchain: Preset '{name}' added to CMakePresets.json.
                     (cmake>=3.23) cmake --preset {name}
                     (cmake<3.23) cmake <path> -G {_format_val(generator)} {add_toolchain_cache} {cache_variables_info}""")
+            conanfile.output.info(msg, fg=Color.CYAN)
         return ret
 
     @staticmethod
