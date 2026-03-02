@@ -115,12 +115,9 @@ class _PackageBuilder:
         # FIXME: Conan 2.0 Clear the registry entry (package ref)
         return prev
 
-    def build_package(self, node, package_layout):
+    def build_package(self, node, recipe_layout, package_layout):
         conanfile = node.conanfile
         pref = node.pref
-
-        # TODO: cache2.0 fix this
-        recipe_layout = self._cache.recipe_layout(pref.ref)
 
         base_source = recipe_layout.source()
         base_package = package_layout.package()
@@ -198,6 +195,7 @@ class BinaryInstaller:
         conanfile.folders.set_base_export_sources(source_folder)
         conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
         config_source(export_source_folder, conanfile, self._hook_manager)
+        return recipe_layout
 
     @staticmethod
     def install_system_requires(graph, only_info=False, install_order=None):
@@ -256,8 +254,9 @@ class BinaryInstaller:
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
-                    self._install_source(package.nodes[0], remotes)
-                    self._handle_package(package, install_reference, handled_count, package_count)
+                    recipe_layout = self._install_source(package.nodes[0], remotes)
+                    self._handle_package(recipe_layout, package, install_reference, handled_count,
+                                         package_count)
                     handled_count += 1
 
         MockInfoProperty.message()
@@ -296,7 +295,7 @@ class BinaryInstaller:
         assert node.pref.timestamp is not None
         self._remote_manager.get_package(node.pref, node.binary_remote)
 
-    def _handle_package(self, package, install_reference, handled_count, total_count):
+    def _handle_package(self, recipe_layout, package, install_reference, handled_count, total_count):
         if package.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
             self._handle_node_editable(package)
             return
@@ -317,7 +316,7 @@ class BinaryInstaller:
             for line in compact_dumps:
                 ConanOutput(scope=str(pref.ref)).info(line, fg=Color.BRIGHT_GREEN)
             package_layout = self._cache.create_build_pkg_layout(pref)
-            self._handle_node_build(package, package_layout)
+            self._handle_node_build(package, recipe_layout, package_layout)
             # Just in case it was recomputed
             package.package_id = package.nodes[0].pref.package_id  # Just in case it was recomputed
             package.prev = package.nodes[0].pref.revision
@@ -329,10 +328,10 @@ class BinaryInstaller:
             if package.binary == BINARY_CACHE:
                 node = package.nodes[0]
                 pref = node.pref
-                self._cache.update_package_lru(pref)
                 assert node.prev, "PREV for %s is None" % str(pref)
                 msg = f'Already installed! ({handled_count} of {total_count})'
                 node.conanfile.output.success(msg)
+                os.utime(package_layout.base_folder, None)
 
         # Make sure that all nodes with same pref compute package_info()
         pkg_folder = package_layout.package()
@@ -384,7 +383,7 @@ class BinaryInstaller:
             # TODO: Check this base_path usage for editable when not defined
             self._call_package_info(conanfile, package_folder=rooted_base_path, is_editable=True)
 
-    def _handle_node_build(self, package, pkg_layout):
+    def _handle_node_build(self, package, recipe_layout, pkg_layout):
         node = package.nodes[0]
         pref = node.pref
         assert pref.package_id, "Package-ID without value"
@@ -396,7 +395,7 @@ class BinaryInstaller:
             pkg_layout.package_remove()
             with pkg_layout.set_dirty_context_manager():
                 builder = _PackageBuilder(self._app, self._hook_manager)
-                pref = builder.build_package(node, pkg_layout)
+                pref = builder.build_package(node, recipe_layout, pkg_layout)
             assert node.prev, "Node PREV shouldn't be empty"
             assert node.pref.revision, "Node PREF revision shouldn't be empty"
             assert pref.revision is not None, "PREV for %s to be built is None" % str(pref)
@@ -447,12 +446,20 @@ class BinaryInstaller:
 
                     # Paste the editable cpp_info but prioritizing it, only if a
                     # variable is not declared at build/source, the package will keep the value
-                    conanfile.buildenv_info.compose_env(conanfile.layouts.source.buildenv_info)
-                    conanfile.buildenv_info.compose_env(conanfile.layouts.build.buildenv_info)
-                    conanfile.runenv_info.compose_env(conanfile.layouts.source.runenv_info)
-                    conanfile.runenv_info.compose_env(conanfile.layouts.build.runenv_info)
-                    conanfile.conf_info.compose_conf(conanfile.layouts.source.conf_info)
-                    conanfile.conf_info.compose_conf(conanfile.layouts.build.conf_info)
+                    full_buildenv_info = conanfile.layouts.source.buildenv_info.copy()
+                    full_buildenv_info.compose_env(conanfile.layouts.build.buildenv_info)
+                    full_buildenv_info.compose_env(conanfile.buildenv_info)
+                    conanfile.buildenv_info = full_buildenv_info
+
+                    full_runenv_info = conanfile.layouts.source.runenv_info.copy()
+                    full_runenv_info.compose_env(conanfile.layouts.build.runenv_info)
+                    full_runenv_info.compose_env(conanfile.runenv_info)
+                    conanfile.runenv_info = full_runenv_info
+
+                    full_conf_info = conanfile.layouts.source.conf_info.copy()
+                    full_conf_info.compose_conf(conanfile.layouts.build.conf_info)
+                    full_conf_info.compose_conf(conanfile.conf_info)
+                    conanfile.conf_info = full_conf_info
                 else:
                     conanfile.layouts.package.set_relative_base_folder(conanfile.package_folder)
                     conanfile.buildenv_info.compose_env(conanfile.layouts.package.buildenv_info)

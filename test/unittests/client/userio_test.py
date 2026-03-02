@@ -1,4 +1,3 @@
-import pytest
 from unittest.mock import patch
 
 from conan.api.input import UserInput

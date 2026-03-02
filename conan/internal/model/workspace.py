@@ -5,6 +5,7 @@ import yaml
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
+from conan.internal.errors import scoped_traceback
 from conan.internal.util.files import load, save
 
 # Related folder
@@ -25,6 +26,23 @@ class Workspace:
         self._conan_api = conan_api
         self.output = ConanOutput(scope=f"Workspace '{self.name()}'")
 
+    def __getattribute__(self, item):
+        # Return a protected wrapper around workspace overridable callables in order to
+        # be able to have clean errors if user errors in conanws.py code
+        myattr = object.__getattribute__(self, item)
+        if item not in ("name", "packages", "add", "remove", "clean", "build_order"):
+            return myattr
+
+        def wrapper(*args, **kwargs):
+            try:
+                return myattr(*args, **kwargs)
+            except ConanException:
+                raise
+            except Exception as e:
+                m = scoped_traceback(f"Error in {item}() method", e, scope="conanws.py")
+                raise ConanException(f"Workspace conanws.py file: {m}")
+        return wrapper
+
     def name(self):
         return self.conan_data.get("name") or os.path.basename(self.folder)
 
@@ -39,7 +57,8 @@ class Workspace:
         return data or {}
 
     def add(self, ref, path, output_folder):
-        assert os.path.isfile(path)
+        if not path or not os.path.isfile(path):
+            raise ConanException(f"Cannot add to workspace. File not found: {path}")
         path = self._conan_rel_path(os.path.dirname(path))
         editable = {
             "path": path,
@@ -112,5 +131,5 @@ class Workspace:
         msg = ["Packages build order:"]
         for level in order:
             for item in level:
-                msg.append(f"    {item['ref']}")
+                msg.append(f"    {item['ref']}: {item['folder']}")
         self.output.info("\n".join(msg))

@@ -77,8 +77,7 @@ def test_frameworks():
 
     client.save({"hello.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type")
                                            .with_package_info(cpp_info={"frameworks":
-                                                                        ['CoreFoundation']},
-                                                              env_info={})})
+                                                                        ['CoreFoundation']})})
     client.run("export hello.py --name=hello --version=0.1")
 
     main = textwrap.dedent("""

@@ -61,8 +61,9 @@ def print_graph_basic(graph):
 
     _format_resolved("Resolved alias", graph.aliased)
     if graph.aliased:
-        output.warning("'alias' is a Conan 1.X legacy feature, no longer recommended and "
-                       "it might be removed in 3.0.")
+        output.warning("'alias' is a Conan 1.X legacy, unsupported and undocumented feature, "
+                       "completely discouraged. "
+                       "It might be removed in future Conan versions", warn_tag="deprecated")
         output.warning("Consider using version-ranges instead.")
     _format_resolved("Resolved version ranges", graph.resolved_ranges)
     for req in graph.resolved_ranges:

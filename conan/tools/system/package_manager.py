@@ -5,7 +5,7 @@ from conan.internal.graph.graph import CONTEXT_BUILD
 from conan.errors import ConanException
 
 
-class _SystemPackageManagerTool(object):
+class _SystemPackageManagerTool:
     mode_check = "check"  # Check if installed, fail if not
     mode_install = "install"
     mode_report = "report"  # Only report what would be installed, no check (can run in any system)
@@ -42,11 +42,12 @@ class _SystemPackageManagerTool(object):
             os_name = distro.id() or os_name
         elif os_name == "Windows" and self._conanfile.settings.get_safe("os.subsystem") == "msys2":
             os_name = "msys2"
-        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian", "linuxmint", 'astra', 'elbrus', 'altlinux', 'pop'],
+        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian", "linuxmint",
+                                       'astra', 'elbrus', 'altlinux', 'pop'],
                            "apk": ["alpine"],
-                           "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
-                                   "almalinux", "rocky"],
-                           "dnf": ["fedora", "rhel", "centos", "mageia", "nobara"],
+                           "yum": ["pidora", "scientific", "xenserver", "amazon", "amzn"],
+                           "dnf": ["fedora", "rhel", "centos", "mageia", "nobara", "almalinux",
+                                   "rocky", "oracle"],
                            "brew": ["Darwin"],
                            "pacman": ["arch", "manjaro", "msys2", "endeavouros"],
                            "choco": ["Windows"],
@@ -105,9 +106,9 @@ class _SystemPackageManagerTool(object):
         if self._active_tool == self.__class__.tool_name:
             return method(*args, **kwargs)
 
-    def _conanfile_run(self, command, accepted_returns):
+    def _conanfile_run(self, command, accepted_returns, quiet=True):
         # When checking multiple packages, this is too noisy
-        ret = self._conanfile.run(command, ignore_errors=True, quiet=True)
+        ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet)
         if ret not in accepted_returns:
             raise ConanException("Command '%s' failed" % command)
         return ret
@@ -177,6 +178,7 @@ class _SystemPackageManagerTool(object):
         raise ConanException("None of the installs for the package substitutes succeeded.")
 
     def _install(self, packages, update=False, check=True, host_package=True, **kwargs):
+        orig_packages = packages
         pkgs = self._conanfile.system_requires.setdefault(self._active_tool, {})
         install_pkgs = pkgs.setdefault("install", [])
         install_pkgs.extend(p for p in packages if p not in install_pkgs)
@@ -209,17 +211,16 @@ class _SystemPackageManagerTool(object):
                                                       tool=self.tool_name,
                                                       packages=" ".join(packages_arch),
                                                       **kwargs)
-                return self._conanfile_run(command, self.accepted_install_codes)
+                return self._conanfile_run(command, self.accepted_install_codes, quiet=False)
         else:
-            self._conanfile.output.info("System requirements: {} already "
-                                        "installed".format(" ".join(packages)))
+            self._conanfile.output.info(f"System requirements: {' '.join(orig_packages)} already installed")
 
     def _update(self):
         # we just update the package manager database in case we are in 'install mode'
         # in case we are in check mode just ignore
         if self._mode == self.mode_install:
             command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
-            return self._conanfile_run(command, self.accepted_update_codes)
+            return self._conanfile_run(command, self.accepted_update_codes, quiet=False)
 
     def _check(self, packages, host_package=True):
         missing = [pkg for pkg in packages if self.check_package(pkg, host_package) != 0]
@@ -274,7 +275,8 @@ class Apt(_SystemPackageManagerTool):
                             "armv7": "arm",
                             "armv7hf": "armhf",
                             "armv8": "arm64",
-                            "s390x": "s390x"} if arch_names is None else arch_names
+                            "s390x": "s390x",
+                            "riscv64": "riscv64"} if arch_names is None else arch_names
 
         self._arch_separator = ":"
 
@@ -325,7 +327,8 @@ class Yum(_SystemPackageManagerTool):
                             "armv7": "armv7",
                             "armv7hf": "armv7hl",
                             "armv8": "aarch64",
-                            "s390x": "s390x"} if arch_names is None else arch_names
+                            "s390x": "s390x",
+                            "riscv64": "riscv64"} if arch_names is None else arch_names
         self._arch_separator = "."
 
 

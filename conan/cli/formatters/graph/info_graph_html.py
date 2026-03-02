@@ -88,10 +88,13 @@ graph_info_html = r"""
                 let edge_counter = 0;
                 let conflict=null;
                 let provide_conflict=null;
+                let missing_error=null;
                 if (graph_data["error"] && graph_data["error"]["type"] == "conflict")
                     conflict = graph_data["error"];
                 else if (graph_data["error"] && graph_data["error"]["type"] == "provide_conflict")
                     provide_conflict = graph_data["error"];
+                else if (graph_data["error"] && graph_data["error"]["type"] == "missing")
+                    missing_error = graph_data["error"];
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
                     if (node.context == "build" && hide_build) continue;
                     if (node.test && hide_test) continue;
@@ -217,7 +220,23 @@ graph_info_html = r"""
                                 title: "Both nodes provide the same requirement: " + provide_conflict.provided.join(", "),
                                 dashes: true});
                     global_edges[edge_counter++] = {"provided": provide_conflict.provided};
-
+                }
+                if(missing_error) {
+                    nodes.push({
+                        id: "missing_node",
+                        font: {multi: 'html', color: "white"},
+                        label: missing_error["require"]["ref"],
+                        shape: "Circle",
+                        color: {background: "Black"},
+                    });
+                    edges.push({id: edge_counter,
+                                from: missing_error["node"]["id"],
+                                to: "missing_node",
+                                color: {color: "Red", highlight: "Red"},
+                                label: "missing",
+                                title: "missing",
+                                dashes: true});
+                    global_edges[edge_counter++] = {"missing": missing_error["error"]};
                 }
                 return {nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges)};
             };

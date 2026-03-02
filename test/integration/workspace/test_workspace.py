@@ -5,6 +5,7 @@ import textwrap
 
 import pytest
 
+from conan.api.model import RecipeReference
 from conan.api.subapi.workspace import WorkspaceAPI
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.mocks import ConanFileMock
@@ -238,13 +239,6 @@ class TestAddRemove:
         # For workspace, the version of the conanfile can be ignored if the
         # workspace define a different version.
         c = TestClient(light=True)
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class Lib(ConanFile):
-                name= "pkg"
-                version = "0.1"
-            """)
-
         workspace = textwrap.dedent("""\
             import os
             from conan import Workspace
@@ -255,12 +249,36 @@ class TestAddRemove:
             """)
 
         c.save({"conanws.py": workspace,
-                "dep1/conanfile.py": conanfile})
+                "dep1/conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("workspace info --format=json")
         info = json.loads(c.stdout)
         assert info["packages"] == [{"ref": "pkg/1.2.3", "path": "dep1"}]
         c.run("install --requires=pkg/1.2.3")
         # it will not fail
+
+    def test_replace_requires(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/develop"),
+                "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1",
+                                                                               "pkga/0.1"),
+                "myreplaces": "[replace_requires]\npkga/develop: pkga/0.1"})
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb")
+        c.run("workspace add pkgc")
+        c.run("workspace info --format=json")
+
+        info = json.loads(c.stdout)
+        assert info["packages"] == [{'path': 'pkga', 'ref': 'pkga/0.1'},
+                                    {'path': 'pkgb', 'ref': 'pkgb/0.1'},
+                                    {'path': 'pkgc', 'ref': 'pkgc/0.1'}]
+        c.run("install --requires=pkgc/0.1", assert_error=True)
+        assert "Version conflict: Conflict between pkga/develop and pkga/0.1 in the graph" in c.out
+        # it will not fail
+        c.run("install --requires=pkgc/0.1 -pr=default -pr=myreplaces")
+        assert "pkga/0.1 - Editable" in c.out
+        assert "pkga/develop: pkga/0.1" in c.out
 
     def test_error_uppercase(self):
         c = TestClient(light=True)
@@ -337,7 +355,6 @@ class TestAddRemove:
         c = TestClient(light=True)
         c.save({"conanws.yml": ""})
         c.run("workspace remove kk", assert_error=True)
-        print(c.out)
         assert "ERROR: No editable package to remove from this path: kk" in c.out
 
 
@@ -422,6 +439,77 @@ class TestOpenAdd:
         assert "pkgb/0.1: WARN: BUILD PKGB!" in c.out
 
 
+class TestComplete:
+    def test_complete_add(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+                "pkgx/conanfile.py": GenConanfile("pkgx", "0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
+                "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkga/0.1",
+                                                                               "pkgx/0.1"),
+                "pkgd/conanfile.py": GenConanfile("pkgd", "0.1").with_requires("pkgb/0.1",
+                                                                               "pkgc/0.1")})
+
+        c.run("workspace complete")  # Does nothing, but it doesn't fail
+        assert "There are no packages in this workspace, nothing to complete" in c.out
+        c.run("workspace info")
+        assert "packages: (empty)" in c.out
+
+        for pkg in ("pkga", "pkgx", "pkgb", "pkgc", "pkgd"):
+            c.run(f"export {pkg}")
+
+        c.run("workspace add pkgd")
+        c.run("workspace complete")  # Does nothing, but it doesn't fail
+        assert "There are no intermediate packages to add to the workspace" in c.out
+        c.run("workspace info")
+        assert "pkgd/0.1" in c.out
+        assert "pkga/0.1" not in c.out
+
+        c.run("workspace add pkga")
+        c.run("workspace install --build=missing", assert_error=True)
+        assert "Workspace definition error. Package pkgb/0.1 in the Conan cache" in c.out
+        c.run("workspace info")
+        assert "pkgb/0.1" not in c.out
+        assert "pkgc/0.1" not in c.out
+
+        c.run("workspace complete")
+        c.run("workspace info")
+        assert "pkgb/0.1" in c.out
+        assert "pkgc/0.1" in c.out
+        assert "pkgx/0.1" not in c.out
+
+    def test_complete_open(self):
+        c = TestClient(light=True)
+        c.save({"pkgx/conanfile.py": GenConanfile("pkgx", "0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
+                "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkga/0.1",
+                                                                               "pkgx/0.1")})
+
+        for pkg in ("pkgx", "pkgb", "pkgc"):
+            c.run(f"export {pkg}")
+
+        c.save({"conanws.yml": "",
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+                "pkgd/conanfile.py": GenConanfile("pkgd", "0.1").with_requires("pkgb/0.1",
+                                                                               "pkgc/0.1")},
+               clean_first=True)
+
+        c.run("workspace add pkgd")
+        c.run("workspace add pkga")
+        c.run("workspace install --build=missing", assert_error=True)
+        assert "Workspace definition error. Package pkgb/0.1 in the Conan cache" in c.out
+        c.run("workspace info")
+        assert "pkgb/0.1" not in c.out
+        assert "pkgc/0.1" not in c.out
+
+        c.run("workspace complete")
+        c.run("workspace info")
+        assert "pkgb/0.1" in c.out
+        assert "pkgc/0.1" in c.out
+        assert "pkgx/0.1" not in c.out
+
+
 class TestWorkspaceBuild:
 
     def test_build(self):
@@ -504,6 +592,34 @@ class TestWorkspaceBuild:
         c.run("workspace build")
         assert "conanfile.py (pkga/0.1): Building pkga AND 0.1!!!" in c.out
 
+    def test_build_with_external_editable_python_requires(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "ext/conanfile.py": GenConanfile("ext", "0.1").with_package_type("python-require"),
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_python_requires("ext/0.1")
+                })
+        c.run("editable add ext")
+        c.run("workspace add pkga")
+        c.run("workspace build")
+        c.assert_listed_binary({"pkga/0.1": ("8bca2eae7cd0d6b6da8d14f8c86069d89d265bd4",
+                                             "EditableBuild")})
+        c.assert_listed_require({"ext/0.1": "Editable"}, python=True)
+
+    def test_build_with_external_editable(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "ext/conanfile.py": GenConanfile("ext", "0.1").with_build_msg("BUILD EXT!"),
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_requires("ext/0.1")
+                })
+        c.run("editable add ext")
+        c.run("workspace add pkga")
+        c.run("workspace build")
+        assert "ext/0.1: WARN: BUILD EXT!" in c.out
+        c.assert_listed_binary({"pkga/0.1": ("38f8a554b1b3c2cbb44321f0e731b3863359126c",
+                                             "EditableBuild"),
+                                "ext/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                                            "EditableBuild")})
+
 
 class TestNew:
     def test_new(self):
@@ -543,7 +659,7 @@ class TestMeta:
         c.run("workspace add libb")
         c.run("workspace super-install -g CMakeDeps -g CMakeToolchain -of=build "
               "--envs-generation=false")
-        assert "Packages build order:\n    liba/0.1\n    libb/0.1" in c.out
+        assert "Packages build order:\n    liba/0.1: liba\n    libb/0.1: libb" in c.out
         assert "Workspace conanws.py not found in the workspace folder, using default" in c.out
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conan_toolchain.cmake" in files
@@ -564,6 +680,9 @@ class TestMeta:
                 settings = "arch", "build_type"
                 generators = "MSBuildDeps"
 
+                def generate(self):
+                    self.run("echo myhello world!!!!")
+
             class Ws(Workspace):
                 def root_conanfile(self):
                     return MyWs
@@ -573,6 +692,7 @@ class TestMeta:
                 "conanws.py": conanfilews})
         c.run("workspace add dep")
         c.run("workspace super-install -of=build")
+        assert "myhello world!!!!" in c.out
         files = os.listdir(os.path.join(c.current_folder, "build"))
         assert "conandeps.props" in files
 
@@ -781,6 +901,117 @@ class TestMeta:
         c.run("workspace super-install", assert_error=True)
         assert ("Workspace definition error. Package libb/0.1 in the Conan cache "
                 "has dependencies to packages in the workspace: [liba/0.1]") in c.out
+
+    def test_install_create_use_lockfile(self):
+        c = TestClient()
+        c.save({"dep/conanfile.py": GenConanfile(),
+                "ws/conanws.yml": "",
+                "ws/liba/conanfile.py": GenConanfile("liba").with_requires("dep1/[*]", "dep2/[*]"),
+                "ws/libb/conanfile.py": GenConanfile("libb").with_requires("liba/[*]", "dep1/[*]")},
+               )
+        c.run("create dep --name=dep1 --version=0.1")
+        c.run("create dep --name=dep2 --version=0.1")
+        with c.chdir("ws"):
+            c.run("workspace add liba --version=0.1")
+            c.run("workspace add libb --version=0.1")
+            c.run("workspace super-install --lockfile-out=ws.lock")
+            lock = json.loads(c.load("ws.lock"))
+        refs = [RecipeReference.loads(r).repr_notime() for r in lock["requires"]]
+        # Liba and libb are NOT in the lockfile for this
+        assert refs == ['libb/0.1',
+                        'liba/0.1',
+                        'dep2/0.1#4d670581ccb765839f2239cc8dff8fbd',
+                        'dep1/0.1#4d670581ccb765839f2239cc8dff8fbd']
+        c.run("create dep --name=dep1 --version=0.2")
+        c.run("create dep --name=dep2 --version=0.2")
+        with c.chdir("ws"):
+            c.run("workspace super-install --lockfile=ws.lock")
+            assert "dep1/0.1" in c.out
+            assert "dep2/0.1" in c.out
+            assert "dep1/0.2" not in c.out
+            assert "dep2/0.2" not in c.out
+
+            # bump the workspace versions themselves
+            c.run("workspace add liba --version=0.2")
+            assert "Workspace 'ws': WARN: Package liba already exists, updating" in c.out
+            c.run("workspace add libb --version=0.2")
+
+            c.run("workspace super-install --lockfile=ws.lock", assert_error=True)
+            assert "ERROR: Requirement 'liba/0.2' not in lockfile 'requires'" in c.out
+
+            c.run("workspace super-install --lockfile=ws.lock --lockfile-partial "
+                  "--lockfile-clean --lockfile-out=ws2.lock")
+            assert "dep1/0.1" in c.out
+            assert "dep2/0.1" in c.out
+            lock = json.loads(c.load("ws2.lock"))
+            refs = [RecipeReference.loads(r).repr_notime() for r in lock["requires"]]
+            # Liba and libb are NOT in the lockfile for this
+            assert refs == ['libb/0.2',
+                            'liba/0.2',
+                            'dep2/0.1#4d670581ccb765839f2239cc8dff8fbd',
+                            'dep1/0.1#4d670581ccb765839f2239cc8dff8fbd']
+
+    def test_deployers_json(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            import os
+            from conan.tools.files import save
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "1.0"
+
+                def package(self):
+                    save(self, os.path.join(self.package_folder, "myfile.txt"), "content")
+            """)
+        pkg = textwrap.dedent("""
+            import os
+            from conan.tools.files import save
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                requires = "dep/1.0"
+
+                def package(self):
+                    save(self, os.path.join(self.package_folder, "myfile.txt"), "content")
+            """)
+        c.save({"dep/conanfile.py": dep,
+                "pkg/conanfile.py": pkg})
+        c.run("workspace init")
+        c.run("create dep")
+        c.run("workspace add pkg")
+        c.run("workspace super-install --format=json --deployer=full_deploy")
+        graph = json.loads(c.stdout)
+        # Only 1 node, pkg is not a node in the graph!
+        assert graph["graph"]["nodes"]["1"]["name"] == "dep"
+        deploy_folder = os.path.join(c.current_folder, "full_deploy", "host")
+        folders = os.listdir(deploy_folder)
+        assert "dep" in folders
+        assert "pkg" not in folders
+        assert os.path.isfile(os.path.join(deploy_folder, "dep", "1.0", "myfile.txt"))
+
+    def test_customize_generator_per_package(self):
+        # https://github.com/conan-io/conan/issues/19326
+        c = TestClient(light=True)
+
+        pkg = GenConanfile("pkg", "0.1")
+        workspace = textwrap.dedent("""\
+            from conan import Workspace, ConanFile
+
+            class MyWs(ConanFile):
+                pass
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+           """)
+        c.save({"pkg/conanfile.py": pkg,
+                "conanws.py": workspace})
+        c.run("workspace add pkg")
+        c.run("workspace super-install -c acme*:tools.cmake.cmaketoolchain:generator=Ninja")
+        # It no longer crashes
+        assert "Install finished successfully" in c.out
 
 
 def test_workspace_with_local_recipes_index():
@@ -1118,6 +1349,17 @@ class TestInstall:
         assert "conanfile.py (pkgb/0.1): CMakeToolchain generated" in c.out
         assert "conanfile.py (pkgc/0.1): CMakeToolchain generated" in c.out
 
+    def test_install_lockfile_out_error(self):
+        # it is not possible to generate a lockfile for an orchestrated
+        # "conan workspace install/build" command
+        c = TestClient()
+        c.save({"conanws.yml": ""})
+        c.run("workspace install --lockfile-out=conan.lock", assert_error=True)
+        assert "error: unrecognized arguments: --lockfile-out=conan.lock" in c.out
+
+        c.run("workspace create --lockfile-out=conan.lock", assert_error=True)
+        assert "error: unrecognized arguments: --lockfile-out=conan.lock" in c.out
+
 
 def test_keep_core_conf():
     c = TestClient()
@@ -1191,7 +1433,7 @@ def test_workspace_defining_duplicate_references():
     """
     Testing duplicate references but different paths
     """
-    c = TestClient()
+    c = TestClient(light=True)
     conanws_with_labels = textwrap.dedent("""\
     packages:
       - path: liba
@@ -1209,7 +1451,7 @@ def test_workspace_defining_duplicate_references():
 
 
 def test_workspace_reference_error():
-    c = TestClient()
+    c = TestClient(light=True)
     conanws_with_labels = textwrap.dedent("""\
     packages:
       - path: libx
@@ -1219,3 +1461,22 @@ def test_workspace_reference_error():
     c.run("workspace install", assert_error=True)
     assert ("Workspace package reference could not be deduced by libx/conanfile.py or it is not"
             " correctly defined in the conanws.yml file") in c.out
+
+
+def test_workspace_python_error():
+    c = TestClient()
+    workspace = textwrap.dedent("""\
+       from conan import Workspace
+
+       class MyWorkspace(Workspace):
+           def packages(self):
+               os.listdir(self.folder)
+      """)
+    c.save({"conanws.yml": "",
+            "conanws.py": "bad"})
+    c.run("workspace info", assert_error=True)
+    assert "ERROR: Error loading conanws.py at" in c.out
+    c.save({"conanws.yml": "",
+            "conanws.py": workspace})
+    c.run("workspace info", assert_error=True)
+    assert "ERROR: Workspace conanws.py file: Error in packages() method, line 5" in c.out

@@ -142,7 +142,7 @@ def text_vuln_formatter(result):
                       "through patches applied in the recipe.\nTo verify if a patch has been applied, check the recipe in Conan Center.\n",
                       fg=Color.BRIGHT_YELLOW)
 
-    if total_vulns > 0 or not "error" in result:
+    if total_vulns > 0 or "error" not in result:
         cli_out_write("\nVulnerability information provided by JFrog Catalog. Check "
                       "https://audit.conan.io/jfrogcuration for more information.\n",
                       fg=Color.BRIGHT_GREEN)
@@ -326,7 +326,8 @@ def html_vuln_formatter(result):
     for ref, pkg_info in result["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         if not edges:
-            description = "No vulnerabilities found." if not "error" in pkg_info else pkg_info["error"].get("details", "")
+            description = "No vulnerabilities found." if "error" not in pkg_info \
+                else pkg_info["error"].get("details", "")
             vulns.append({
                 "package": ref,
                 "vuln_id": "-",

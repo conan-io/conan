@@ -16,10 +16,10 @@ from contextlib import contextmanager
 from inspect import getframeinfo, stack
 from urllib.parse import urlsplit, urlunsplit
 
-import mock
+from unittest import mock
 import pytest
 import requests
-from mock import Mock
+from unittest.mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
@@ -81,7 +81,7 @@ default_profiles = {
 }
 
 
-class TestingResponse(object):
+class TestingResponse:
     """Wraps a response from TestApp external tool
     to guarantee the presence of response.ok, response.content
     and response.status_code, as it was a requests library object.
@@ -331,11 +331,6 @@ class TestServer:
     def latest_recipe(self, ref):
         ref = self.test_server.server_store.get_last_revision(ref)
         return ref
-
-    def recipe_revision_time(self, ref):
-        if not ref.revision:
-            raise Exception("Pass a ref with revision (Testing framework)")
-        return self.test_server.server_store.get_revision_time(ref)
 
     def latest_package(self, pref):
         if not pref.ref.revision:

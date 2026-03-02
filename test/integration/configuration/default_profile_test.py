@@ -18,8 +18,7 @@ class TestDefaultProfile:
 
         client.save({CONANFILE: conanfile})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=stable")
-        assert "pkg/0.1@lasote/stable: Package '%s' created" % NO_SETTINGS_PACKAGE_ID \
-                      in client.out
+        assert "pkg/0.1@lasote/stable: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
 
         client.save({"conanfile.txt": "[requires]\npkg/0.1@lasote/stable"}, clean_first=True)
         client.run('install .')

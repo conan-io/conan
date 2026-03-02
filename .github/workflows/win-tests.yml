@@ -133,7 +133,8 @@ jobs:
           choco install pkgconfiglite --version 0.28
           choco install ninja --version 1.10.2
           choco install mingw
-          choco install cygwin
+          # mirrors.kernel.org/sourceware/cygwin returns 404; use alternative mirror from this list: https://cygwin.com/mirrors.html
+          choco install cygwin --execution-timeout=300 --package-parameters="'/Site:https://mirror.clarkson.edu/cygwin/'"
           choco install cyg-get
           cyg-get automake gcc-g++ make binutils --verbose
 
@@ -147,6 +148,8 @@ jobs:
             install: >-
                 mingw-w64-x86_64-toolchain
                 mingw-w64-i686-toolchain
+                mingw-w64-ucrt-x86_64-toolchain
+                mingw-w64-clang-x86_64-toolchain
                 base-devel
                 gcc
                 autoconf-wrapper
@@ -162,7 +165,7 @@ jobs:
             C:\tools\cmake\3.19.7
             C:\tools\cmake\3.23.5
             C:\tools\cmake\3.27.9
-            C:\tools\cmake\4.0.0-rc3
+            C:\tools\cmake\4.2.1
             C:\tools\bazel\6.5.0
             C:\tools\bazel\7.6.2
             C:\tools\bazel\8.4.2
@@ -171,7 +174,7 @@ jobs:
       - name: Install CMake versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
-          $CMAKE_BUILD_VERSIONS = "3.15.7", "3.19.7", "3.23.5", "3.27.9", "4.0.0-rc3"
+          $CMAKE_BUILD_VERSIONS = "3.15.7", "3.19.7", "3.23.5", "3.27.9", "4.2.1"
           foreach ($version in $CMAKE_BUILD_VERSIONS) {
             Write-Host "Downloading CMake version $version for Windows..."
             $destination = "C:\tools\cmake\$version"

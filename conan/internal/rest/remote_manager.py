@@ -1,15 +1,18 @@
 import os
 import shutil
+import sys
+
 from collections import namedtuple
 from typing import List
 
 from requests.exceptions import ConnectionError
 
 from conan.api.model import LOCAL_RECIPES_INDEX
+from conan.internal.paths import CONANINFO, CONAN_MANIFEST, PACKAGE_FILE_NAME, EXPORT_FILE_NAME
 from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
-from conan.internal.cache.conan_reference_layout import METADATA
+from conan.internal.cache.conan_reference_layout import METADATA, PackageLayout
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException
 from conan.errors import ConanException
@@ -17,7 +20,6 @@ from conan.internal.model.info import load_binary_info
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.files import rmdir, human_size
-from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.internal.util.files import mkdir, tar_extract
 
 
@@ -55,14 +57,22 @@ class RemoteManager:
         assert ref.revision, "get_recipe without revision specified"
         assert ref.timestamp, "get_recipe without ref.timestamp specified"
 
+        # This fails if there is a DB entry for this ref
         layout = self._cache.create_ref_layout(ref)
 
         export_folder = layout.export()
         local_folder_remote = self._local_folder_remote(remote)
         if local_folder_remote is not None:
             local_folder_remote.get_recipe(ref, export_folder)
-            return layout
+        else:
+            self._download_recipe(layout, ref, remote, metadata)
+        # Make sure that the source dir is deleted, but it seems unnecessary
+        rmdir(layout.source())
+        mkdir(layout.metadata())
 
+        return layout
+
+    def _download_recipe(self, layout, ref, remote, metadata):
         download_export = layout.download_export()
         try:
             zipped_files = self._call_remote(remote, "get_recipe", ref, download_export, metadata,
@@ -78,14 +88,15 @@ class RemoteManager:
             if "conanmanifest.txt" not in zipped_files:
                 raise ConanException(f"Corrupted {ref} in '{remote.name}' remote: "
                                      f"no conanmanifest.txt")
-            self._signer.verify(ref, download_export, files=zipped_files)
+            self._signer.verify(ref, download_export, layout.metadata(), files=zipped_files)
         except BaseException:  # So KeyboardInterrupt also cleans things
             ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'",
                                               error_type="exception")
             self._cache.remove_recipe_layout(layout)
             raise
         export_folder = layout.export()
-        tgz_file = zipped_files.pop(EXPORT_TGZ_NAME, None)
+        export_file = next((f for f in zipped_files if f.startswith(EXPORT_FILE_NAME)), None)
+        tgz_file = zipped_files.pop(export_file, None)
 
         if tgz_file:
             uncompress_file(tgz_file, export_folder, scope=str(ref))
@@ -93,19 +104,14 @@ class RemoteManager:
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
 
-        # Make sure that the source dir is deleted
-        rmdir(layout.source())
-        return layout
-
-    def get_recipe_metadata(self, ref, remote, metadata):
+    def get_recipe_metadata(self, recipe_layout, ref, remote, metadata):
         """
         Get only the metadata for a locally existing recipe in Cache
         """
         assert ref.revision, "get_recipe without revision specified"
         output = ConanOutput(scope=str(ref))
         output.info("Retrieving recipe metadata from remote '%s' " % remote.name)
-        layout = self._cache.recipe_layout(ref)
-        download_export = layout.download_export()
+        download_export = recipe_layout.download_export()
         try:
             self._call_remote(remote, "get_recipe", ref, download_export, metadata,
                               only_metadata=True)
@@ -122,16 +128,15 @@ class RemoteManager:
         local_folder_remote = self._local_folder_remote(remote)
         if local_folder_remote is not None:
             local_folder_remote.get_recipe_sources(ref, export_sources_folder)
-            return
-
-        zipped_files = self._call_remote(remote, "get_recipe_sources", ref, download_folder)
-        if not zipped_files:
-            mkdir(export_sources_folder)  # create the folder even if no source files
-            return
-
-        self._signer.verify(ref, download_folder, files=zipped_files)
-        tgz_file = zipped_files[EXPORT_SOURCES_TGZ_NAME]
-        uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
+        else:
+            zipped_files = self._call_remote(remote, "get_recipe_sources", ref, download_folder)
+            if not zipped_files:
+                mkdir(export_sources_folder)  # create the folder even if no source files
+            else:
+                self._signer.verify(ref, download_folder, layout.metadata(), files=zipped_files)
+                # Only 1 file is guaranteed
+                tgz_file = next(iter(zipped_files.values()))
+                uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
 
     def get_package(self, pref, remote, metadata=None):
         output = ConanOutput(scope=str(pref.ref))
@@ -141,6 +146,7 @@ class RemoteManager:
 
         pkg_layout = self._cache.create_pkg_layout(pref)
         with pkg_layout.set_dirty_context_manager():
+            mkdir(pkg_layout.metadata())
             self._get_package(pkg_layout, pref, remote, output, metadata)
 
     def get_package_metadata(self, pref, remote, metadata):
@@ -175,12 +181,15 @@ class RemoteManager:
                                              metadata, only_metadata=False)
             zipped_files = {k: v for k, v in zipped_files.items() if not k.startswith(METADATA)}
             # quick server package integrity check:
-            for f in ("conaninfo.txt", "conanmanifest.txt", "conan_package.tgz"):
+            for f in (CONANINFO, CONAN_MANIFEST):
                 if f not in zipped_files:
                     raise ConanException(f"Corrupted {pref} in '{remote.name}' remote: no {f}")
-            self._signer.verify(pref, download_pkg_folder, zipped_files)
 
-            tgz_file = zipped_files.pop(PACKAGE_TGZ_NAME, None)
+            # This is guaranteed to exists, otherwise RestClient would have raised already
+            package_file = next(f for f in zipped_files if PACKAGE_FILE_NAME in f)
+            self._signer.verify(pref, download_pkg_folder, layout.metadata(), zipped_files)
+
+            tgz_file = zipped_files.pop(package_file)
             package_folder = layout.package()
             uncompress_file(tgz_file, package_folder, scope=str(pref.ref))
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
@@ -208,15 +217,18 @@ class RemoteManager:
             cached_method[pattern] = result
             return result
 
-    def search_packages(self, remote, ref):
+    def search_packages(self, remote, ref, list_only=False):
         # Used only by ListAPI to list the different package_ids for a reference
         if remote.recipes_only:
             return {}
-        packages = self._call_remote(remote, "search_packages", ref)
-        # Avoid serializing conaninfo in server side
-        packages = {PkgReference(ref, pid): load_binary_info(data["content"])
-                    if "content" in data else data
-                    for pid, data in packages.items() if not data.get("recipe_hash")}
+        packages = self._call_remote(remote, "search_packages", ref, list_only)
+        if list_only:
+            packages = {PkgReference(ref, pid): None for pid, data in packages.items()}
+        else:
+            # Avoid serializing conaninfo in server side
+            packages = {PkgReference(ref, pid): load_binary_info(data["content"])
+                        if "content" in data else data
+                        for pid, data in packages.items() if not data.get("recipe_hash")}
         return packages
 
     def remove_recipe(self, ref, remote):
@@ -331,6 +343,9 @@ class RemoteManager:
 
 
 def uncompress_file(src_path, dest_folder, scope=None):
+    if sys.version_info.minor < 14 and src_path.endswith("zst"):
+        raise ConanException(f"File {os.path.basename(src_path)} compressed with 'zst', "
+                             f"unsupported for Python<3.14 ")
     try:
         filesize = os.path.getsize(src_path)
         big_file = filesize > 10000000  # 10 MB

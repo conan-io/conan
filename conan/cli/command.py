@@ -37,7 +37,7 @@ class BaseConanCommand:
                     self._formatters[kind] = action
                 else:
                     raise ConanException("Invalid formatter for {}. The formatter must be"
-                                         "a valid function".format(kind))
+                                         " a valid function".format(kind))
         if method.__doc__:
             self._doc = method.__doc__
         else:
@@ -116,7 +116,12 @@ class BaseConanCommand:
     def _dispatch_errors(info):
         if info and isinstance(info, dict):
             if info.get("conan_error"):
-                raise ConanException(info["conan_error"])
+                e = info["conan_error"]
+                # Storing and launching an exception is better than the string, as it keeps
+                # the correct backtrace for debugging.
+                if isinstance(e, Exception):
+                    raise e
+                raise ConanException(e)
             if info.get("conan_warning"):
                 ConanOutput().warning(info["conan_warning"])
 

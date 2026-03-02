@@ -99,10 +99,10 @@ class ProfileLoader:
     def load_profile(self, profile_name, cwd=None, context=None):
         # TODO: This can be made private, only used in testing now
         cwd = cwd or os.getcwd()
-        profile = self._load_profile(profile_name, cwd, context)
+        profile = self._load_profile(profile_name, cwd, context, root_profile_name=profile_name)
         return profile
 
-    def _load_profile(self, profile_name, cwd, context):
+    def _load_profile(self, profile_name, cwd, context, root_profile_name):
         """ Will look for "profile_name" in disk if profile_name is absolute path,
         in current folder if path is relative or in the default folder otherwise.
         return: a Profile object
@@ -122,6 +122,7 @@ class ProfileLoader:
                    "subprocess": subprocess,
                    "profile_dir": base_path,
                    "profile_name": file_path,
+                   "root_profile_name": root_profile_name,
                    "conan_version": conan_version,
                    "detect_api": detect_api,
                    "context": context}
@@ -138,11 +139,11 @@ class ProfileLoader:
                                  f"Check your Jinja2 syntax: {str(e)}")
 
         try:
-            return self._recurse_load_profile(text, profile_path, context)
+            return self._recurse_load_profile(text, profile_path, context, profile_name)
         except ConanException as exc:
             raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
-    def _recurse_load_profile(self, text, profile_path, context):
+    def _recurse_load_profile(self, text, profile_path, context, root_profile_name):
         """ Parse and return a Profile object from a text config like representation.
             cwd is needed to be able to load the includes
         """
@@ -154,7 +155,7 @@ class ProfileLoader:
             # from parent profiles
             for include in profile_parser.includes:
                 # Recursion !!
-                profile = self._load_profile(include, cwd, context)
+                profile = self._load_profile(include, cwd, context, root_profile_name)
                 inherited_profile.compose_profile(profile)
 
             # Current profile before update with parents (but parent variables already applied)
@@ -220,7 +221,7 @@ class _ProfileParser:
                 raise ConanException("Error while parsing line %i: '%s'" % (counter, line))
 
 
-class _ProfileValueParser(object):
+class _ProfileValueParser:
     """ parses a "pure" or "effective" profile, with no includes, no variables,
     as the one in the lockfiles, or once these things have been processed by ProfileParser
     """
@@ -332,6 +333,11 @@ class _ProfileValueParser(object):
                     pattern, req_list = "*", br_line
                 else:
                     pattern, req_list = tokens
+                if "[" in pattern:
+                    ConanOutput().warning(
+                        f"Tool requires pattern {pattern} contains a version range, which has no effect. "
+                        f"Only '&' for consumer and '*' as wildcard are supported in this context.",
+                        warn_tag="risk")
                 refs = [RecipeReference.loads(r.strip()) for r in req_list.split(",")]
                 result.setdefault(pattern, []).extend(refs)
         return result
@@ -344,6 +350,10 @@ class _ProfileValueParser(object):
             if ":" in item:
                 tmp = item.split(":", 1)
                 packagename, item = tmp
+                if "[" in packagename:
+                    ConanOutput().warning(f"Settings pattern {packagename} contains a version range, which has no effect. "
+                                          f"Only '&' for consumer and '*' as wildcard are supported in this context.",
+                                          warn_tag="risk")
 
             result_name, result_value = item.split("=", 1)
             result_name = result_name.strip()
@@ -396,6 +406,11 @@ def _profile_parse_args(settings, options, conf):
                 tmp = name.split(":", 1)
                 ref_name = tmp[0]
                 name = tmp[1]
+                if "[" in ref_name:
+                    ConanOutput().warning(
+                        f"Pattern {ref_name} contains a version range, which has no effect. "
+                        f"Only '&' for consumer and '*' as wildcard are supported in this context.",
+                        warn_tag="risk")
                 package_items[ref_name].append((name, value))
             else:
                 simple_items.append((name, value))

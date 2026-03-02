@@ -38,19 +38,23 @@ demo: %s
         save(conf_path, server_conf % "cönan")
 
         server_config = ConanServerConfigParser(tmp_dir)
-        with pytest.raises(ConanException, match="Password contains invalid characters. Only ASCII encoding is supported"):
-            server_config.users
+        with pytest.raises(ConanException, match="Password contains invalid characters. "
+                                                 "Only ASCII encoding is supported"):
+            server_config.users   # noqa
 
         save(conf_path, server_conf % "manol ito!@")
         server_config = ConanServerConfigParser(tmp_dir)
         assert server_config.users == {"demo": "manol ito!@"}
 
         # Now test from ENV
-        server_config = ConanServerConfigParser(tmp_dir, environment={"CONAN_SERVER_USERS": "demo: cönan"})
-        with pytest.raises(ConanException, match="Password contains invalid characters. Only ASCII encoding is supported"):
-            server_config.users
+        server_config = ConanServerConfigParser(tmp_dir, environment={"CONAN_SERVER_USERS":
+                                                                      "demo: cönan"})
+        with pytest.raises(ConanException, match="Password contains invalid characters. "
+                                                 "Only ASCII encoding is supported"):
+            server_config.users  # noqa
 
-        server_config = ConanServerConfigParser(tmp_dir, environment={"CONAN_SERVER_USERS": "demo:manolito!@"})
+        server_config = ConanServerConfigParser(tmp_dir, environment={"CONAN_SERVER_USERS":
+                                                                      "demo:manolito!@"})
         assert server_config.users == {"demo": "manolito!@"}
 
     def test_relative_public_url(self):

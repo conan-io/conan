@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 from conan.cli import make_abs_path
 from conan.internal.conan_app import ConanApp
@@ -8,11 +9,14 @@ from conan.internal.graph.graph import CONTEXT_HOST
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
-from conan.api.model import RecipeReference
+from conan.api.model import RecipeReference, Remote
 from conan.internal.util.files import chdir
 
 
 class LocalAPI:
+    """ This ``LocalAPI`` contains several helpers related to the local development flow, i.e.,
+    locally calling ``source()`` or ``build()`` methods, or adding and removing editable packages
+    """
 
     def __init__(self, conan_api, helpers):
         self._conan_api = conan_api
@@ -21,8 +25,14 @@ class LocalAPI:
 
     @staticmethod
     def get_conanfile_path(path, cwd, py):
-        """
-        param py= True: Must be .py, None: Try .py, then .txt
+        """ Obtain the full path to a conanfile file, either .txt or .py, from the current
+        working directory.
+
+        If both ``conanfile.py`` and a ``conanfile.txt`` are present, it will raise an error.
+
+        :param path: Relative path to look for the file. Can be a folder or a file.
+        :param cwd: The current working directory.
+        :param py: If True, a conanfile.py must exist, a .txt is not valid in this case
         """
         path = make_abs_path(path, cwd)
 
@@ -33,7 +43,8 @@ class LocalAPI:
             else:
                 path_txt = os.path.join(path, "conanfile.txt")
                 if os.path.isfile(path_py) and os.path.isfile(path_txt):
-                    raise ConanException("Ambiguous command, both conanfile.py and conanfile.txt exist")
+                    raise ConanException("Ambiguous command, both conanfile.py and "
+                                         "conanfile.txt exist")
                 path = path_py if os.path.isfile(path_py) else path_txt
 
         if not os.path.isfile(path):  # Must exist
@@ -45,7 +56,22 @@ class LocalAPI:
         return path
 
     def editable_add(self, path, name=None, version=None, user=None, channel=None, cwd=None,
-                     output_folder=None, remotes=None):
+                     output_folder=None, remotes: List[Remote] = None) -> RecipeReference:
+        """ Add the conanfile in the given path as an editable package
+
+        Note that for automation over editables it might be recommended to use the ``WorkspacesAPI``
+        instead of this API.
+
+        :param path: Relative path to look for it. Can be a folder or a file.
+        :param name: The name of the package. If not defined, it is taken from conanfile
+        :param version: The version of the package. If not defined, it is taken from conanfile
+        :param user: The user of the package. If not defined, it is taken from conanfile
+        :param channel: The channel of the package. If not defined, it is taken from conanfile
+        :param cwd: The current working directory
+        :param output_folder: The output folder. If not defined, the recipe layout will be used.
+        :param remotes: The remotes to resolve possible ``python-requires`` for this recipe if needed.
+        :return: RecipeReference of the added package
+        """
         path = self.get_conanfile_path(path, cwd, py=True)
         app = ConanApp(self._conan_api)
         conanfile = app.loader.load_named(path, name, version, user, channel, remotes=remotes)
@@ -60,6 +86,16 @@ class LocalAPI:
         return ref
 
     def editable_remove(self, path=None, requires=None, cwd=None):
+        """ Remove an editable package from the given path
+
+        Note that for automation over editables it might be recommended to use the ``WorkspacesAPI``
+        instead of this API.
+
+        :param path: Relative path to look for it. Can be a folder or a file.
+        :param requires: Remove these requirements from editables (instead of by path)
+        :param cwd: The current working directory
+        :return: RecipeReference of the added package
+        """
         if path:
             path = make_abs_path(path, cwd)
             path = os.path.join(path, "conanfile.py")
@@ -68,8 +104,19 @@ class LocalAPI:
     def editable_list(self):
         return self.editable_packages.edited_refs
 
-    def source(self, path, name=None, version=None, user=None, channel=None, remotes=None):
-        """ calls the 'source()' method of the current (user folder) conanfile.py
+    def source(self, path, name=None, version=None, user=None, channel=None,
+               remotes: List[Remote] = None):
+        """ Calls the ``source()`` method of the current (user folder) ``conanfile.py``
+
+        This method does not require computing a dependency graph, because the ``source()``
+        method is assumed to be invariant with respect to settings, options and dependencies.
+
+        :param path: Relative path to look for the conanfile. Can be a folder or a file.
+        :param name: The name of the package. If not defined, it is taken from conanfile
+        :param version: The version of the package. If not defined, it is taken from conanfile
+        :param user: The user of the package. If not defined, it is taken from conanfile
+        :param channel: The channel of the package. If not defined, it is taken from conanfile
+        :param remotes: The remotes to resolve possible ``python-requires`` for this recipe if needed.
         """
         app = ConanApp(self._conan_api)
         conanfile = app.loader.load_consumer(path, name=name, version=version,
@@ -97,8 +144,18 @@ class LocalAPI:
         hook_manager = self._helpers.hook_manager
         run_source_method(conanfile, hook_manager)
 
-    def build(self, conanfile):
-        """ calls the 'build()' method of the current (user folder) conanfile.py
+    def build(self, conanfile) -> None:
+        """ Calls the ``build()`` method of the current (user folder) ``conanfile.py``
+
+        This method does require computing a dependency graph, because the ``build()`` method
+        needs all dependencies and transitive dependencies. Then, the ``conanfile`` argument
+        must be the one obtaind from a full dependency graph install operation, including both
+        the graph comptutation and the binary installation.
+
+        :param conanfile: ``Conanfile`` object representing the "root" node in the dependency graph,
+          corresponding to a ``conanfile.py`` in the user folder, containing the ``build()`` method to
+          be called. This ``conanfile`` object must have all of its dependencies computed and
+          installed in the current Conan package cache to work.
         """
         hook_manager = self._helpers.hook_manager
         conanfile.folders.set_base_package(conanfile.folders.base_build)
@@ -106,8 +163,20 @@ class LocalAPI:
         run_build_method(conanfile, hook_manager)
 
     @staticmethod
-    def test(conanfile):
-        """ calls the 'test()' method of the current (user folder) test_package/conanfile.py
+    def test(conanfile) -> None:
+        """ Calls the ``test()`` method of the current (user folder) ``test_package/conanfile.py``
+
+        This method does require computing a dependency graph, because the ``test()`` method
+        needs all dependencies and transitive dependencies. Then, the ``conanfile`` argument
+        must be the one obtaind from a full dependency graph install operation, including both
+        the graph comptutation and the binary installation.
+
+        Typically called after a ``build()`` one.
+
+        :param conanfile: ``Conanfile`` object representing the "root" node in the dependency graph,
+          corresponding to a conanfile.py in the user "test_package" folder, containing the ``test()``
+          method to be called. This ``conanfile`` object must have all of its dependencies computed
+          and installed in the current Conan package cache to work.
         """
         with conanfile_exception_formatter(conanfile, "test"):
             with chdir(conanfile.build_folder):

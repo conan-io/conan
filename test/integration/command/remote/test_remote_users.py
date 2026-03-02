@@ -4,7 +4,7 @@ import time
 from collections import OrderedDict
 from datetime import timedelta
 
-from mock import patch
+from unittest.mock import patch
 
 from conan.internal.api.remotes.localdb import LocalDB
 from conan.test.utils.tools import TestClient, TestServer
@@ -428,11 +428,11 @@ class TestRemoteAuth:
         assert "Remote 'default' needs authentication, obtaining credentials" not in c.out
         assert "user: myuser" in c.out
         # Invalidate server secret
-        server.test_server.ra.api_v2.credentials_manager.secret = "potato"
+        server.test_server.ra.api_v2.credentials_manager.secret = "potato" * 6
         c.run("remote auth *")
         assert "user: myotheruser" in c.out
         # Invalidate server secret again
-        server.test_server.ra.api_v2.credentials_manager.secret = "potato2"
+        server.test_server.ra.api_v2.credentials_manager.secret = "potato2" * 6
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out
 
