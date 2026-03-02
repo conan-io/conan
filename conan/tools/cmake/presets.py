@@ -179,13 +179,7 @@ class _CMakePresets:
             ret["binaryDir"] = conanfile.build_folder
 
         def _format_val(val):
-            return f'"{val}"' if type(val) == str and " " in val else f"{val}"
-
-        # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
-        cache_variables_info = " ".join(
-            [f"-D{var}={_format_val(value)}" for var, value in cache_variables.items()])
-        add_toolchain_cache = f"-DCMAKE_TOOLCHAIN_FILE={toolchain_file} " \
-            if "CMAKE_TOOLCHAIN_FILE" not in cache_variables_info else ""
+            return f'"{val}"' if type(val) is str and " " in val else f"{val}"
 
         try:
             is_consumer = conanfile._conan_node.recipe == RECIPE_CONSUMER and \
@@ -193,10 +187,15 @@ class _CMakePresets:
         except:
             is_consumer = False
         if is_consumer:
+            # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
+            vars_tip = " ".join([f"-D{k}={_format_val(v)}" for k, v in cache_variables.items()])
+            tc_tip = f"-DCMAKE_TOOLCHAIN_FILE=<output_folder>/{toolchain_file} " \
+                if "CMAKE_TOOLCHAIN_FILE" not in vars_tip else ""
+
             msg = textwrap.dedent(f"""\
                 CMakeToolchain: Preset '{name}' added to CMakePresets.json.
                     (cmake>=3.23) cmake --preset {name}
-                    (cmake<3.23) cmake <path> -G {_format_val(generator)} {add_toolchain_cache} {cache_variables_info}""")
+                    (cmake<3.23) cmake <path> -G {_format_val(generator)} {tc_tip} {vars_tip}""")
             conanfile.output.info(msg, fg=Color.CYAN)
         return ret
 
@@ -303,7 +302,15 @@ class _IncludingPresets:
                 # The file is not ours, we cannot overwrite it
                 return
 
-        data = _IncludingPresets._append_user_preset_path(data, preset_path, output_dir, absolute_paths)
+        if not absolute_paths:
+            try:  # Make it relative to the CMakeUserPresets.json if possible
+                preset_path = os.path.relpath(preset_path, output_dir)
+                # If we don't normalize, path will be removed in Linux shared folders
+                # https://github.com/conan-io/conan/issues/18434
+                preset_path = preset_path.replace("\\", "/")
+            except ValueError:
+                pass
+        data = _IncludingPresets._append_user_preset_path(data, preset_path, output_dir)
 
         if inherited_user:
             data = _IncludingPresets._update_stubs(data, inherited_user, output_dir, absolute_paths)
@@ -314,18 +321,15 @@ class _IncludingPresets:
 
     @staticmethod
     def _update_stubs(data, inherited_user, output_dir, absolute_paths):
-
-        included_files = []
+        """Set configurePresets/buildPresets/testPresets to stubs for conan-* presets
+        that the user inherits but that don't have a real preset in the existing includes.
+        Stubs for buildPresets/testPresets include configurePreset so cmake --list-presets works.
+        """
+        real_preset_names = set()
         for inc in data.get("include", []):
             inc_path = os.path.join(output_dir, inc) if not absolute_paths else inc
-            if os.path.exists(inc_path):
-                included_files.append(inc_path)
-
-        # Read include field from data and get all absolute paths to included presets if they exist
-        real_preset_names = set()
-        build_preset_to_configure_preset = {}
-
-        for inc_path in included_files:
+            if not os.path.exists(inc_path):
+                continue
             try:
                 inc_json = json.loads(load(inc_path))
             except Exception:
@@ -335,22 +339,17 @@ class _IncludingPresets:
                     name = p.get("name")
                     if name:
                         real_preset_names.add(name)
-                    if preset_type in ("buildPresets", "testPresets"):
-                        configure_preset = p.get("configurePreset")
-                        if configure_preset:
-                            build_preset_to_configure_preset[name] = configure_preset
 
-        for preset_type, inherited_names in inherited_user.items():
+        for preset_type in ("configurePresets", "buildPresets", "testPresets"):
             stubs = []
-            for p in inherited_names:
-                if p not in real_preset_names:
-                    stub = {"name": p}
-                    # For buildPresets and testPresets, add configurePreset if mapping exists
-                    # or use the same name if no mapping (assuming same base name)
+            for name in inherited_user.get(preset_type, []):
+                if name not in real_preset_names:
+                    stub = {"name": name}
                     if preset_type in ("buildPresets", "testPresets"):
-                        stub["configurePreset"] = build_preset_to_configure_preset.get(p, p)
+                        stub["configurePreset"] = name
                     stubs.append(stub)
             data[preset_type] = stubs
+
         return data
 
     @staticmethod
@@ -378,20 +377,11 @@ class _IncludingPresets:
         return collected_targets
 
     @staticmethod
-    def _append_user_preset_path(data, preset_path, output_dir, absolute_paths):
+    def _append_user_preset_path(data, preset_path, output_dir):
         """ - Appends a 'include' to preset_path if the schema supports it.
             - Otherwise it merges to "data" all the configurePresets, buildPresets etc from the
               read preset_path.
         """
-        if not absolute_paths:
-            try:  # Make it relative to the CMakeUserPresets.json if possible
-                preset_path = os.path.relpath(preset_path, output_dir)
-                # If we don't normalize, path will be removed in Linux shared folders
-                # https://github.com/conan-io/conan/issues/18434
-                preset_path = preset_path.replace("\\", "/")
-            except ValueError:
-                pass
-
         if "include" not in data:
             data["include"] = []
         # Clear the folders that have been deleted
