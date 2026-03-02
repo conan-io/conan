@@ -47,12 +47,13 @@ class _RemoteCreds:
 
     def set(self, remote, user, token):
         setattr(remote, "_creds", (user, token))
-        ConanOutput().success(f"Authenticated in remote '{remote.name}' with user '{user}'")
+        ConanOutput().success(
+            f"Authenticated in remote '{remote.name}' with user '{user}'"
+        )
         self._localdb.store(user, token, None, remote.url)
 
 
 class ConanApiAuthManager:
-
     def __init__(self, requester, cache_folder, localdb, global_conf):
         self._requester = requester
         self._creds = _RemoteCreds(localdb)
@@ -65,6 +66,7 @@ class ConanApiAuthManager:
         # This prevents multiple processes from prompting for credentials simultaneously
         # when running parallel uploads/downloads with expired tokens
         from conan.internal.cache.concurrency_lock import ConcurrencyLock
+
         self._process_lock_manager = ConcurrencyLock(cache_folder)
 
     def call_rest_api_method(self, remote, method_name, *args, **kwargs):
@@ -77,6 +79,12 @@ class ConanApiAuthManager:
 
         try:
             ret = getattr(rest_client, method_name)(*args, **kwargs)
+            # Mark that a token has been successfully used at least once with this remote
+            # This is used below to distinguish between:
+            # - Token that worked but later expired (should allow re-auth)
+            # - Token that was just issued but immediately rejected (infinite loop)
+            if token is not None:
+                setattr(remote, "_any_token_successfully_used", True)
             return ret
         except ForbiddenException as e:
             raise ForbiddenException(f"Permission denied for user: '{user}': {e}")
@@ -84,7 +92,9 @@ class ConanApiAuthManager:
             # User valid but not enough permissions
             # token is None when you change user with user command
             # Anonymous is not enough, ask for a user
-            ConanOutput().info(f"Remote '{remote.name}' needs authentication, obtaining credentials")
+            ConanOutput().info(
+                f"Remote '{remote.name}' needs authentication, obtaining credentials"
+            )
 
             # Use remote-specific lock to serialize authentication across both threads and processes
             # This prevents multiple threads/processes from prompting for credentials simultaneously
@@ -92,48 +102,71 @@ class ConanApiAuthManager:
             # IMPORTANT: Release lock BEFORE retrying the API call to prevent holding the lock
             # during potentially long operations that might cause token expiry
             import hashlib
-            remote_lock_id = f"auth_{hashlib.sha256(remote.url.encode()).hexdigest()[:16]}"
+
+            remote_lock_id = (
+                f"auth_{hashlib.sha256(remote.url.encode()).hexdigest()[:16]}"
+            )
 
             should_retry = False
             with self._process_lock_manager.lock(
                 remote_lock_id,
                 wait_msg=f"Waiting for authentication to '{remote.name}' to complete...",
-                level=None  # Auth locks don't participate in hierarchy
+                level=None,  # Auth locks don't participate in hierarchy
             ):
                 # Also acquire thread lock for efficiency within this process
                 with self._auth_lock:
                     # Double-check: another thread/process might have already re-authenticated
                     # while we were waiting for the lock. Force refresh from database to detect
                     # credentials updated by another process (not visible in our cached copy).
-                    user_recheck, token_recheck = self._creds.get(remote, msg=False, force_refresh=True)
+                    user_recheck, token_recheck = self._creds.get(
+                        remote, msg=False, force_refresh=True
+                    )
                     if token_recheck != token:
                         # Token was updated by another thread/process, retry with new token
-                        ConanOutput().info(f"Using credentials obtained by another process")
+                        ConanOutput().info(
+                            f"Using credentials obtained by another process"
+                        )
                         should_retry = True
                     else:
                         # We're the first thread/process to authenticate, proceed with getting credentials
-                        # But first check: don't retry authentication if we just authenticated with this exact token
-                        # This prevents infinite loops when the server rejects a newly-issued token
-                        # We use a timestamp to distinguish between:
-                        # - Fresh authentication failure (< 0.5 seconds ago): prevent infinite loop
-                        # - Old token expiry (>= 0.5 seconds ago): allow re-authentication
-                        # Note: 0.5 seconds is short enough to catch immediate rejections but allows
-                        #       tokens with very short TTL (e.g., 1.2 seconds in tests) to be refreshed
-                        import time
-                        last_auth_info = getattr(remote, "_last_authenticated_token", None)
-                        if last_auth_info is not None:
-                            last_token, last_time = last_auth_info
-                            if token is not None and token == last_token and (time.time() - last_time) < 0.5:
+                        # But first check: prevent infinite loops when the server immediately rejects
+                        # a newly-issued token (e.g., due to misconfiguration).
+                        # We track whether ANY token has ever been successfully used with this remote.
+                        # If so, we know the auth system works and this is just token expiry.
+                        last_auth_token = getattr(
+                            remote, "_last_authenticated_token", None
+                        )
+                        any_token_successfully_used = getattr(
+                            remote, "_any_token_successfully_used", False
+                        )
+                        if (
+                            last_auth_token is not None
+                            and not any_token_successfully_used
+                        ):
+                            # Only block re-auth if:
+                            # 1. We just authenticated (last_auth_token is set), AND
+                            # 2. NO token has EVER been successfully used with this remote
+                            # This means the server is rejecting tokens immediately after issuance
+                            if token is not None and token == last_auth_token:
                                 # Token was just authenticated and immediately failed, prevent infinite loop
                                 raise
 
-                        rest_client_recheck = RestApiClient(remote, token_recheck, self._requester,
-                                                             self._global_conf)
-                        if self._get_credentials_and_authenticate(rest_client_recheck, user_recheck, remote):
-                            # Mark this token and timestamp as the last authentication
+                        rest_client_recheck = RestApiClient(
+                            remote, token_recheck, self._requester, self._global_conf
+                        )
+                        if self._get_credentials_and_authenticate(
+                            rest_client_recheck, user_recheck, remote
+                        ):
+                            # Mark this token as the last authentication
                             # This is checked above to prevent infinite loops
-                            new_token = self._creds.get(remote, msg=False, force_refresh=False)[1]
-                            setattr(remote, "_last_authenticated_token", (new_token, time.time()))
+                            new_token = self._creds.get(
+                                remote, msg=False, force_refresh=False
+                            )[1]
+                            setattr(
+                                remote,
+                                "_last_authenticated_token",
+                                new_token,
+                            )
                             should_retry = True
 
             # Retry outside the lock to prevent holding the lock during API calls
@@ -152,11 +185,16 @@ class ConanApiAuthManager:
             except AuthenticationException:
                 out = ConanOutput()
                 if user is None:
-                    out.error('Wrong user or password', error_type="exception")
+                    out.error("Wrong user or password", error_type="exception")
                 else:
-                    out.error(f'Wrong password for user "{input_user}"', error_type="exception")
+                    out.error(
+                        f'Wrong password for user "{input_user}"',
+                        error_type="exception",
+                    )
                 if not interactive:
-                    raise AuthenticationException(f"Authentication error in remote '{remote.name}'")
+                    raise AuthenticationException(
+                        f"Authentication error in remote '{remote.name}'"
+                    )
             else:
                 return True
         raise AuthenticationException("Too many failed login attempts, bye!")
