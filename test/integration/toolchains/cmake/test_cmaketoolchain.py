@@ -5,7 +5,7 @@ import re
 import textwrap
 
 import pytest
-from mock import mock
+from unittest import mock
 
 from conan.tools.cmake.presets import load_cmake_presets
 from conan.test.assets.genconanfile import GenConanfile
@@ -573,6 +573,68 @@ def test_cmake_presets_binary_dir_available():
     assert presets["configurePresets"][0]["binaryDir"] == build_dir
 
 
+@pytest.mark.parametrize("presets", ["CMakePresets.json", "CMakeUserPresets.json"])
+def test_cmake_presets_shared_preset(presets):
+    """valid user preset file is created when multiple project presets inherit
+    from the same conan presets.
+    """
+    client = TestClient()
+    project_presets = textwrap.dedent("""
+    {
+        "version": 4,
+        "cmakeMinimumRequired": {
+            "major": 3,
+            "minor": 23,
+            "patch": 0
+        },
+        "include":["ConanPresets.json"],
+        "configurePresets": [
+            {
+                "name": "debug1",
+                "inherits": ["conan-debug"]
+            },
+            {
+                "name": "debug2",
+                "inherits": ["conan-debug"]
+            },
+            {
+                "name": "release1",
+                "inherits": ["conan-release"]
+            },
+            {
+                "name": "release2",
+                "inherits": ["conan-release"]
+            }
+        ]
+    }""")
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.cmake import cmake_layout, CMakeToolchain
+
+    class TestPresets(ConanFile):
+        generators = ["CMakeDeps"]
+        settings = "build_type"
+
+        def layout(self):
+            cmake_layout(self)
+
+        def generate(self):
+            tc = CMakeToolchain(self)
+            tc.user_presets_path = 'ConanPresets.json'
+            tc.generate()
+    """)
+
+    client.save({presets: project_presets,
+                 "conanfile.py": conanfile,
+                 "CMakeLists.txt": ""})  # File must exist for Conan to do Preset things.
+
+    client.run("install . -s build_type=Debug")
+
+    conan_presets = json.loads(client.load("ConanPresets.json"))
+    assert len(conan_presets["configurePresets"]) == 1
+    assert conan_presets["configurePresets"][0]["name"] == "conan-release"
+
+
 def test_cmake_presets_multiconfig():
     client = TestClient()
     profile = textwrap.dedent("""
@@ -774,6 +836,29 @@ def test_variables_types():
 
     toolchain = client.load("conan_toolchain.cmake")
     assert 'set(FOO ON CACHE BOOL "Variable FOO conan-toolchain defined")' in toolchain
+
+
+def test_variables_escaping():
+    # https://github.com/conan-io/conan/issues/19638
+    client = TestClient()
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def generate(self):
+                toolchain = CMakeToolchain(self)
+                toolchain.variables["FOO"] = r"D:\new\thing\path"
+                toolchain.variables.release["BAR"] = r"C:\new\thing\path"
+                toolchain.generate()
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . --name=mylib --version=1.0")
+
+    toolchain = client.load("conan_toolchain.cmake")
+    assert r'set(FOO "D:\\new\\thing\\path" CACHE STRING' in toolchain
+    assert r'set(CONAN_DEF_releaseBAR "C:\\new\\thing\\path")' in toolchain
 
 
 def test_android_c_library():
