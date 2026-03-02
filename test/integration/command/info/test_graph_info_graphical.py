@@ -160,6 +160,19 @@ def test_graph_conflict_diamond():
     # check that it doesn't crash
     assert "ERROR: Version conflict: Conflict between math/1.0.1 and math/1.0 in the graph." in c.out
 
+def test_graph_conflict_diamond():
+    c = TestClient()
+    c.save({"lib_a/conanfile.py": GenConanfile("lib_a", "1.0").with_requires("lib_b/1.0"),
+            "lib_b/conanfile.py": GenConanfile("lib_b", "1.0").with_requires("lib_c/1.0"),
+            "lib_c/conanfile.py": GenConanfile("lib_c", "1.0").with_requires("lib_a/1.0"),
+            "lib_x/conanfile.py": GenConanfile("lib_x", "1.0").with_requires("lib_a/1.0"),
+            })
+    c.run("export lib_a")
+    c.run("export lib_b")
+    c.run("export lib_c")
+    c.run("graph info lib_x --format=html", assert_error=True, redirect_stdout="graph.html")
+    # check that it doesn't crash, tested manually
+    assert "ERROR: There is a cycle/loop in the graph" in c.out
 
 def test_graph_missing_error():
     c = TestClient()
