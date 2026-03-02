@@ -147,6 +147,10 @@ class LocalDB:
                 # The execute() above already committed the transaction
                 # Force WAL checkpoint to ensure token updates are immediately visible to other processes
                 # Critical for parallel downloads where worker processes need to see re-authenticated tokens
-                connection.execute("PRAGMA wal_checkpoint(PASSIVE)")
+                # Use TRUNCATE (not FULL) to force truncation of WAL file, guaranteeing all readers
+                # see the updated token on next query. FULL mode checkpoints but doesn't truncate,
+                # so readers positioned at old WAL location might not see updates immediately.
+                # This is especially critical with short JWT expirations where stale tokens cause auth loops.
+                connection.execute("PRAGMA wal_checkpoint(TRUNCATE)")
             except Exception as e:
                 raise ConanException("Could not store credentials %s" % str(e))

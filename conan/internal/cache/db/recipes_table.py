@@ -81,7 +81,8 @@ class RecipesDBTable(BaseDbTable):
             # Force WAL checkpoint to ensure changes are immediately visible to other processes
             # Under heavy parallel load, this prevents race conditions where one process
             # updates LRU but another process immediately queries and doesn't see the update
-            conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
+            # Use FULL to ensure checkpoint completes (waits for readers if needed)
+            conn.execute("PRAGMA wal_checkpoint(FULL)")
 
     def remove(self, ref: RecipeReference):
         where_clause = self._where_clause(ref)
