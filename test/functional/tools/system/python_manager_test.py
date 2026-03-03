@@ -1,3 +1,4 @@
+import json
 import sys
 import textwrap
 import platform
@@ -48,6 +49,9 @@ def test_empty_pyenv():
     assert "colorama" not in c.out
     assert "Jinja2" not in c.out
     assert "PyJWT" not in c.out
+    ext = ".bat" if platform.system() == "Windows" else ".sh"
+    script = c.load(f"conan_pyenv{ext}")
+    assert "conan_pyenv" in script
 
 
 def test_build_py_manager():
@@ -141,7 +145,7 @@ def test_create_py_manager():
                 PyEnv(self, self.package_folder).install(["{pip_package_folder}"])
 
             def package_info(self):
-                python_env_bin = PyEnv(self, self.package_folder).bin_dir
+                python_env_bin = PyEnv(self, self.package_folder).bin_path
                 self.buildenv_info.prepend_path("PATH", python_env_bin)
         """)
 
@@ -337,3 +341,40 @@ def test_build_deprecated_python_manager():
     assert "WARN: deprecated: 'PipEnv()' is deprecated, use 'PyEnv()'" in client.out
     assert "RUN: hello-world" in client.out
     assert "Hello Test World!" in client.out
+
+
+def test_cmake_toolchain_configure_find_python():
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+        from conan.tools.system import PyEnv
+
+        class Pkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+
+            def generate(self):
+                pyenv = PyEnv(self)
+                pyenv.generate()
+                tc = CMakeToolchain(self)
+                tc.cache_variables["Python_ROOT_DIR"] = pyenv.env_dir
+                tc.cache_variables["Python_EXECUTABLE"] = pyenv.env_exe
+                tc.cache_variables["Python_FIND_UNVERSIONED_NAMES"] = "FIRST"
+                tc.cache_variables["Python_FIND_STRATEGY"] = "LOCATION"
+                tc.cache_variables["Python_FIND_VIRTUALENV"] = "STANDARD"
+                tc.cache_variables["Python_FIND_REGISTRY"] = "NEVER"
+                tc.generate()
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    presets = json.loads(client.load("CMakePresets.json"))
+    cv = presets["configurePresets"][0]["cacheVariables"]
+    assert "Python_ROOT_DIR" in cv
+    assert "Python_EXECUTABLE" in cv
+    assert "\\" not in cv["Python_ROOT_DIR"]
+    assert "\\" not in cv["Python_EXECUTABLE"]
+    assert "conan_pyenv" in cv["Python_ROOT_DIR"]
+    assert cv["Python_FIND_UNVERSIONED_NAMES"] == "FIRST"
+    assert cv["Python_FIND_STRATEGY"] == "LOCATION"
+    assert cv["Python_FIND_VIRTUALENV"] == "STANDARD"
+    assert cv["Python_FIND_REGISTRY"] == "NEVER"

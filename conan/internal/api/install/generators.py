@@ -7,7 +7,6 @@ from conan.errors import ConanException
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.errors import conanfile_exception_formatter
 from conan.internal.util.files import mkdir, chdir
-from conan.tools.env.environment import generate_aggregated_env
 
 
 _generators = {"CMakeToolchain": "conan.tools.cmake",
@@ -142,6 +141,7 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
                 env = VirtualRunEnv(conanfile)
                 env.generate()
 
+    from conan.tools.env.environment import generate_aggregated_env
     generate_aggregated_env(conanfile)
     hook_manager.execute("post_generate", conanfile=conanfile)
 

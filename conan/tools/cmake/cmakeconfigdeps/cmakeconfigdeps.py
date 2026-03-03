@@ -341,13 +341,12 @@ class _PathGenerator:
                     build_dir = dep.package_folder
                 pkg_folder = build_dir.replace("\\", "/") if build_dir else None
                 if pkg_folder:
-                    f = self._cmakedeps.get_cmake_filename(dep)
-                    for filename in (f"{f}-config.cmake", f"{f}Config.cmake"):
-                        if os.path.isfile(os.path.join(pkg_folder, filename)):
-                            relative_path = relativize_path(pkg_folder, self._conanfile,
-                                                            "${CMAKE_CURRENT_LIST_DIR}")
-                            for pkg_name in pkg_names:
-                                pkg_paths[pkg_name] = relative_path
+                    if any(os.path.isfile(os.path.join(pkg_folder, f + ext)) for f in pkg_names
+                           for ext in ("-config.cmake", "Config.cmake")):
+                        relative_path = relativize_path(pkg_folder, self._conanfile,
+                                                        "${CMAKE_CURRENT_LIST_DIR}")
+                        for pkg_name in pkg_names:
+                            pkg_paths[pkg_name] = relative_path
 
                     for pkg_name in pkg_names:
                         existing_paths = pkg_paths_multi.setdefault(pkg_name, [])
