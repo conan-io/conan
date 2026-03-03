@@ -332,8 +332,7 @@ class _IncludingPresets:
         }
         for inc in data.get("include", []):
             inc_path = os.path.join(output_dir, inc) if not absolute_paths else inc
-            if not os.path.exists(inc_path):
-                continue
+            assert os.path.exists(inc_path), f"Presets include must point to an existing file: '{inc_path}'"
             try:
                 inc_json = json.loads(load(inc_path))
             except Exception:
