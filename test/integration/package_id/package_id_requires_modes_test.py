@@ -214,3 +214,19 @@ class TestRequirementPackageId:
         c.run("create pkg")
         c.run("list pkg:*")
         assert f"liba/{pattern}" in c.out
+
+    def test_transitive_statics(self):
+        # https://github.com/conan-io/conan/issues/19664
+        c = TestClient(light=True)
+        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type("static-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
+                                                                .with_requires("liba/1.0"),
+                "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type("static-library")
+                                                                .with_requires("libb/1.0"),
+               })
+        c.run("create liba")
+        c.run("create libb")
+        c.run("create libc")
+        c.run("list libc:*")
+        assert "libb/1.0.Z" in c.out
+        assert "liba/" not in c.out
