@@ -41,6 +41,10 @@ def test_cmake_find_none_transitive():
         """)
 
     cmake = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
 
@@ -75,6 +79,10 @@ def test_cmake_find_none_transitive():
     c.run("create .")
 
     consumer_cmake = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
 
@@ -115,6 +123,10 @@ def test_cmake_find_none_relocation():
     conanfile = conanfile + '\n        self.cpp_info.builddirs = ["pkg/cmake"]'
 
     cmake_export = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello CXX)
 
@@ -220,6 +232,10 @@ def test_cmake_find_none_relocation_multi():
         """)
 
     cmake_export = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello CXX)
 

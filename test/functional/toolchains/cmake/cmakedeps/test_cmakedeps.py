@@ -119,6 +119,10 @@ def test_system_libs():
         CMakeDeps
         """)
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(consumer NONE)
         set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
@@ -194,6 +198,10 @@ def test_system_libs_no_libs():
         CMakeDeps
         """)
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        set(CMAKE_C_COMPILER_WORKS 1)
+        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(consumer NONE)
         set(CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})

@@ -38,6 +38,10 @@ def test_global_alias():
     """)
 
     cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
+    set(CMAKE_C_COMPILER_WORKS 1)
+    set(CMAKE_C_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(test NONE)
 
@@ -72,6 +76,10 @@ def test_component_alias():
     """)
 
     cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
+    set(CMAKE_C_COMPILER_WORKS 1)
+    set(CMAKE_C_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(test NONE)
 
@@ -106,6 +114,10 @@ def test_custom_name():
     """)
 
     cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
+    set(CMAKE_C_COMPILER_WORKS 1)
+    set(CMAKE_C_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(test NONE)
 
@@ -144,6 +156,10 @@ def test_collide_global_alias():
     """)
 
     cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
+    set(CMAKE_C_COMPILER_WORKS 1)
+    set(CMAKE_C_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(test NONE)
 
@@ -179,6 +195,10 @@ def test_collide_component_alias():
     """)
 
     cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
+    set(CMAKE_C_COMPILER_WORKS 1)
+    set(CMAKE_C_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(test NONE)
 
