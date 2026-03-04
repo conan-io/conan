@@ -103,7 +103,6 @@ graph_info_html = r"""
                     if (node.test && hide_test) continue;
                     let shape = node.context == "build" || node.test ? "ellipse" : "box";
                     let label = null;
-                    const level = loop_error ? node.level : undefined;
                     if (node["name"])
                         label =  node["name"] + "/" + node["version"];
                     else if (node["ref"])
@@ -177,7 +176,6 @@ graph_info_html = r"""
                         borderWidth: borderWidth,
                         color: {border: borderColor, background: color,
                                 highlight: {background: color, border: "Blue"}},
-                        level: level
                     });
                 }
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
@@ -190,8 +188,12 @@ graph_info_html = r"""
                         }
                         if (loop_error && loop_error[1] == node["name"] && loop_error[0] == dep["ref"]) {
                             let target_id = targets[dep_id] || dep_id;
-                            edges.push({id: edge_counter, from: target_id, to: node_id,
-                                        color: {color: "Red", highlight: "Red"}, smooth: { enabled: true, type: 'curvedCW', roundness: 0.4 }});
+                            edges.push({id: edge_counter, from: node_id, to: target_id,
+                                        color: {color: "Red", highlight: "Red"},
+                                        smooth: { enabled: true, type: 'curvedCW', roundness: 0.4 },
+                                        arrows: "from",
+                                        label: "loop",
+                                        title: "loop"});
                             global_edges[edge_counter++] = dep;
                         }
                     }

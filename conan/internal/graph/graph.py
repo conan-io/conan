@@ -273,7 +273,6 @@ class Node:
         result["recipe"] = self.recipe
         result["package_id"] = self.package_id
         result["prev"] = self.prev
-        result["level"] = getattr(self, "level", None)
         result["rrev"] = self.ref.revision if self.ref is not None else None
         result["rrev_timestamp"] = self.ref.timestamp if self.ref is not None else None
         result["prev_timestamp"] = self.pref_timestamp
@@ -448,9 +447,6 @@ class DepsGraph:
     def serialize(self):
         for i, n in enumerate(self.nodes):
             n.id = str(i)
-        by_levels = self.by_levels()
-        for node in self.nodes:
-            node.level = len(by_levels) - next(i for i, level in enumerate(by_levels) if node in level)
         result = OrderedDict()
         result["nodes"] = {n.id: n.serialize() for n in self.nodes}
         result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual

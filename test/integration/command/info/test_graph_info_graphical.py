@@ -162,7 +162,7 @@ def test_graph_conflict_diamond():
 
 
 def test_graph_conflict_loop():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"lib_a/conanfile.py": GenConanfile("lib_a", "1.0").with_requires("lib_b/1.0"),
             "lib_b/conanfile.py": GenConanfile("lib_b", "1.0").with_requires("lib_c/1.0"),
             "lib_c/conanfile.py": GenConanfile("lib_c", "1.0").with_requires("lib_a/1.0"),
