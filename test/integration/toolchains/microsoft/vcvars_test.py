@@ -112,6 +112,18 @@ def test_vcvars_compiler_update():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_vcvars_conf_msvc_update():
+    client = TestClient(path_with_spaces=False)
+    client.save({"conanfile.txt": "[generators]\nVCVars"})
+    client.run('install . -s os=Windows -s compiler=msvc -s compiler.version=193 '
+               '-s compiler.cppstd=14 -s compiler.runtime=static '
+               '-c tools.microsoft:msvc_update=8.29910')
+
+    vcvars = client.load("conanvcvars.bat")
+    assert 'vcvarsall.bat"  amd64 -vcvars_ver=14.38.29910' in vcvars
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_vcvars_armv8_windows_store():
     client = TestClient(path_with_spaces=False)
     client.save({"conanfile.txt": "[generators]\nVCVars"})

@@ -795,11 +795,11 @@ def test_legacy_defines():
     # We do for backward compatibility with old check_symbol_exists and similar CMake code
     tc = TestClient()
     tc.save({"conanfile.py": GenConanfile("mypkg", "1.0")
-             .with_package_info({"defines": ["MY_DEFINE"]})})
+             .with_package_info({"defines": ["MY_DEFINE", "MYVAR=1"]})})
     tc.run("create")
     tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
     mypkg_config = tc.load("mypkg-config.cmake")
-    assert "set(mypkg_DEFINITIONS MY_DEFINE )" in mypkg_config
+    assert 'set(mypkg_DEFINITIONS "-DMY_DEFINE;-DMYVAR=1" )' in mypkg_config
 
 
 class TestExtraFindExtraVariants:
@@ -916,3 +916,60 @@ class TestExtraFindExtraVariants:
         assert paths_content.count("list(APPEND CONAN_hello_DIR_MULTI") == 2
         assert paths_content.count("list(APPEND CONAN_HellO_DIR_MULTI") == 2
         assert paths_content.count("list(APPEND CONAN_HELLO_DIR_MULTI") == 2
+
+    def test_find_file_in_package(self):
+        tc = TestClient()
+        conanfile = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import save
+
+            class HelloConan(ConanFile):
+                name = "hello"
+                version = "1.0"
+                settings = "build_type"
+
+                def package(self):
+                    save(self, os.path.join(self.package_folder, "HellOConfig.cmake"), "")
+
+                def package_info(self):
+                    self.cpp_info.builddirs = ["."]
+                    self.cpp_info.set_property("cmake_find_mode", "none")
+                    self.cpp_info.set_property("cmake_file_name_variants", ["HellO", "HELLO"])
+            """)
+        tc.save({"conanfile.py": conanfile})
+        tc.run("create")
+        tc.run("create -s=build_type=Debug")
+        tc.run("install --requires=hello/1.0 -g CMakeConfigDeps")
+        paths_content = tc.load("conan_cmakedeps_paths.cmake")
+        assert "set(hello_DIR" in paths_content
+        assert "set(HellO_DIR" in paths_content
+        assert "set(HELLO_DIR" in paths_content
+
+
+def test_requires_only_component_target_generation():
+    tc = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+
+            def package_info(self):
+                self.cpp_info.components["compA"].includedirs = ["include"]
+                self.cpp_info.components["compB"].includedirs = []
+                self.cpp_info.components["compB"].requires = ["compA"]
+    """)
+    tc.save({"conanfile.py": conanfile})
+    tc.run("create .")
+    tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps")
+    target = tc.load("pkg-Targets-release.cmake")
+    # An otherwise empty component is generated as a target if it requires another component
+    # to work as an interface target for the requirement
+    # (For example, useful when a component aggregates optional components under it)
+    assert "add_library(pkg::compB INTERFACE" in target
+    assert "# Requirement pkg::compB -> pkg::compA (Full link: True)" in target
+    # And even if it's INTERFACE, the globally generated target requires it as usual
+    assert "# Requirement pkg::pkg -> pkg::compB (Full link: True)" in target

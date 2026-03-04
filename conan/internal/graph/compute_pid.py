@@ -5,6 +5,7 @@ from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.internal.methods import auto_header_only_package_id
 from conan.internal.model.info import (ConanInfo, RequirementsInfo, RequirementInfo,
                                        PythonRequiresInfo)
+from conan.internal.model.pkg_type import PackageType
 
 
 def compute_package_id(node, modes, config_version, hook_manager):
@@ -50,6 +51,18 @@ def compute_package_id(node, modes, config_version, hook_manager):
                                conf=conanfile.conf.copy_conaninfo_conf(),
                                config_version=config_version.copy() if config_version else None)
     conanfile.original_info = conanfile.info.clone()
+
+    # To account for effect of headers into consumers, like shared/static variability
+    # It affects to both embed and not embed, that would imply some "repetition" of the information
+    # in embed cases embedding the full package_id, but it is useful to have that info explicit too
+    if conanfile.package_type and conanfile.package_type in [PackageType.SHARED, PackageType.STATIC,
+                                                             PackageType.APP]:
+        for require, transitive in node.transitive_deps.items():
+            if require.headers:
+                header_opts = getattr(transitive.node.conanfile, "package_id_abi_options", ())
+                for pkg_id_option in header_opts:
+                    v = getattr(transitive.node.conanfile.options, pkg_id_option)
+                    setattr(conanfile.info.options[f"{transitive.node.name}/*"], pkg_id_option, v)
 
     run_validate_package_id(conanfile, hook_manager)
 

@@ -193,7 +193,7 @@ class TargetConfigurationTemplate2:
 
     def _get_cmake_lib(self, info, components, pkg_folder, pkg_folder_var, comp_name=None):
         if info.exe or not (info.package_framework or info.frameworks or info.includedirs or info.libs
-                            or info.system_libs or info.defines):
+                            or info.system_libs or info.defines or info.requires):
             return
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
@@ -408,6 +408,12 @@ class TargetConfigurationTemplate2:
 
         {% if lib_info.get("link_languages") %}
         get_property(_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+        if("CXX" IN_LIST _languages)
+            list(APPEND _languages "C")
+        endif()
+        if("CUDA" IN_LIST _languages)
+            list(APPEND _languages "C" "CXX")
+        endif()
         {% for lang in lib_info["link_languages"] %}
         if(NOT "{{lang}}" IN_LIST _languages)
             message(SEND_ERROR
