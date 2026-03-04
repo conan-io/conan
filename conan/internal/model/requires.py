@@ -391,10 +391,11 @@ class Requirement:
             elif pkg_type is PackageType.STATIC:
                 if dep_pkg_type is PackageType.HEADER:
                     self.package_id_mode = embed_mode
-                elif self.direct or self.headers:
+                elif self.headers:
                     self.package_id_mode = non_embed_mode
                 else:
-                    self.package_id_mode = "unrelated_mode"
+                    self.package_id_mode = None
+                return
 
             if self.package_id_mode is None:
                 self.package_id_mode = unknown_mode

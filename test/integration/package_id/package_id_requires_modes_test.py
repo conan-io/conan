@@ -215,13 +215,15 @@ class TestRequirementPackageId:
         c.run("list pkg:*")
         assert f"liba/{pattern}" in c.out
 
-    def test_transitive_statics(self):
+    @pytest.mark.parametrize("shared", [True, False])
+    def test_transitive_statics(self, shared):
         # https://github.com/conan-io/conan/issues/19664
         c = TestClient(light=True)
-        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type("static-library"),
-                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
+        pkgtype = "shared-library" if shared else "static-library"
+        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type(pkgtype),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type(pkgtype)
                                                                 .with_requires("liba/1.0"),
-                "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type("static-library")
+                "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type(pkgtype)
                                                                 .with_requires("libb/1.0"),
                })
         c.run("create liba")
