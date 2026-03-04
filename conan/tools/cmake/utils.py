@@ -52,6 +52,9 @@ def cmake_escape_value(v):
             if char == '\\' and i + 1 < len(s) and s[i+1] in r'\$"':
                 yield s[i:i+2]  # Yield the existing pair
                 next(iterable)   # Skip the next char in the loop
+            elif char == '$' and i + 1 < len(s) and s[i+1] == '{':
+                # CMake variable ${...}: leave $ unescaped, keep moving
+                yield char
             elif char in r'\$"':
                 yield '\\' + char  # Escape the lonely char
             else:

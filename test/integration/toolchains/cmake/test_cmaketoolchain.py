@@ -850,6 +850,7 @@ def test_variables_escaping():
             def generate(self):
                 toolchain = CMakeToolchain(self)
                 toolchain.variables["FOO"] = r"D:\new\thing\path"
+                toolchain.variables["CMAKE_Fortran_FLAGS_INIT"] = "${CMAKE_C_FLAGS_INIT}"
                 toolchain.variables.release["BAR"] = r"C:\new\thing\path"
                 toolchain.generate()
         """)
@@ -857,6 +858,7 @@ def test_variables_escaping():
     client.run("install . --name=mylib --version=1.0")
 
     toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_Fortran_FLAGS_INIT "${CMAKE_C_FLAGS_INIT}"' in toolchain
     assert r'set(FOO "D:\\new\\thing\\path" CACHE STRING' in toolchain
     assert r'set(CONAN_DEF_releaseBAR "C:\\new\\thing\\path")' in toolchain
 

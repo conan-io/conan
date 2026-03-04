@@ -99,6 +99,8 @@ def test_run_ctest():
     (r'TrailingSlash\\', r'TrailingSlash\\'),
     (r"Double\\Slash", r"Double\\Slash"),
     (r"", r""),  # Empty string
+    (r"${CMAKE_C_FLAGS_INIT}", r"${CMAKE_C_FLAGS_INIT}"),  # CMake variables no escaped
+    (r"${CMAKE_${LANG}_FLAGS_INIT}", r"${CMAKE_${LANG}_FLAGS_INIT}"),
 ])
 def test_cmake_escape_correctness(input_str, expected):
     escaped = cmake_escape_value(input_str)
