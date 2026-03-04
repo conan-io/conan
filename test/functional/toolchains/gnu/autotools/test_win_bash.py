@@ -144,8 +144,9 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     check_vs_runtime("main.exe", client, "17", build_type=build_type, static_runtime=static_runtime)
 
 
+@pytest.mark.parametrize("scope", ["build", "run"])
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-def test_add_msys2_path_automatically():
+def test_add_msys2_path_automatically(scope):
     """ Check that commands like ar, autoconf, etc, that are in the /usr/bin folder together
     with the bash.exe, can be automaticallly used when running in windows bash, without user
     extra addition to [buildenv] of that msys64/usr/bin path
@@ -164,21 +165,25 @@ def test_add_msys2_path_automatically():
             tools.microsoft.bash:path={}
             """.format(bash_path))})
 
-    conanfile = textwrap.dedent("""
+    conanfile = textwrap.dedent(f"""
         from conan import ConanFile
 
         class HelloConan(ConanFile):
             name = "hello"
             version = "0.1"
 
-            win_bash = True
+            def configure(self):
+                if "{scope}" == "build":
+                    self.win_bash = True
+                else:
+                    self.win_bash_run = True
 
             def build(self):
-                self.run("ar -h")
+                self.run("ar -h", scope="{scope}")
                 """)
 
     client.save({"conanfile.py": conanfile})
-    client.run("create .")
+    client.run("build .")
     assert "ar.exe" in client.out
 
 
