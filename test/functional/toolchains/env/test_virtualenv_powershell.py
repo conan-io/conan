@@ -143,7 +143,7 @@ def test_vcvars(powershell):
     hello_cpp = gen_function_cpp(name="main")
     cmakelists = gen_cmakelists(appname="hello", appsources=["hello.cpp"])
     client.save({"conanfile.py": conanfile, "hello.cpp": hello_cpp, "CMakeLists.txt": cmakelists})
-    powershell_exe = "powershell.exe" if powershell == "powershell" else "pwsh"
+    powershell_exe = powershell
     client.run(f"build . -c tools.env.virtualenv:powershell={powershell} -c tools.cmake.cmaketoolchain:generator=Ninja")
     client.run_command(rf'{powershell_exe} -Command ".\build\Release\generators\conanbuild.ps1; dir env:"')
     #check the conanbuid.ps1 activation message
