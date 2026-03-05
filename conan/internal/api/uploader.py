@@ -66,7 +66,6 @@ class UploadUpstreamChecker:
 
         try:
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-<<<<<<< HEAD
             pref_no_rev = copy.copy(pref)
             pref_no_rev.revision = None
             # This is not slower, because the API always asks for all revisions!
@@ -76,10 +75,7 @@ class UploadUpstreamChecker:
                                      f"contains another package revision")
             if not any(r == pref for r in server_refs):
                 raise NotFoundException()
-=======
-            server_revisions = self._app.remote_manager.get_package_revision(pref, remote)
-            assert server_revisions
->>>>>>> develop2
+
         except NotFoundException:
             prev_bundle["force_upload"] = False
             prev_bundle["upload"] = True
