@@ -66,7 +66,8 @@ def test_cli_args_configure_extra_args():
 
     conanfile = ConanFileMock()
     conanfile.conf = Conf()
-    conanfile.conf.define("tools.cmake:configure_args", {"CMAKE_PROJECT_INCLUDE_BEFORE": "MyFile"})
+    conanfile.conf.define("tools.cmake:configure_args", ["-DCMAKE_PROJECT_INCLUDE_BEFORE=MyFile",
+                                                         "--fresh"])
     conanfile.folders.generators = "."
     conanfile.folders.set_base_generators(temp_folder())
     conanfile.settings = settings
@@ -74,7 +75,7 @@ def test_cli_args_configure_extra_args():
     write_cmake_presets(conanfile, "toolchain", "Unix Makefiles", {})
     cmake = CMake(conanfile)
     cmake.configure()
-    assert '-DCMAKE_PROJECT_INCLUDE_BEFORE="MyFile"' in conanfile.command
+    assert '-DCMAKE_PROJECT_INCLUDE_BEFORE=MyFile --fresh' in conanfile.command
 
 
 def test_run_ctest():
