@@ -690,8 +690,8 @@ def test_compiler_path_with_spaces():
 def test_meson_sysroot_app():
     """Testing when users pass tools.build:sysroot on the profile with Meson
 
-    The generated conan_meson_cross.ini needs to contain both sys_root property to fill the
-    PKG_CONFIG_PATH and the compiler flags with --sysroot.
+    * The generated conan_meson_cross.ini does not fill the "sys_root" property (see https://github.com/conan-io/conan/issues/16468)
+    * It adds the compiler flags with --sysroot.
 
     When cross-building, Meson needs both compiler_executables in the config, otherwise it will fail
     when running setup.
@@ -728,7 +728,7 @@ def test_meson_sysroot_app():
     client.run("install . -pr:h host -pr:b build")
     # Check the meson configuration file
     conan_meson = client.load("conan_meson_cross.ini")
-    assert f"sys_root = '{sysroot}'\n" in conan_meson
+    assert f"sys_root = '{sysroot}'\n" not in conan_meson
     assert re.search(r"c_args =.+--sysroot={}.+".format(sysroot), conan_meson)
     assert re.search(r"c_link_args =.+--sysroot={}.+".format(sysroot), conan_meson)
     assert re.search(r"cpp_args =.+--sysroot={}.+".format(sysroot), conan_meson)
@@ -825,6 +825,7 @@ def test_conf_extra_apple_flags():
     for flags in ["objcpp_args", "objc_args"]:
         assert f"{flags} = ['-fno-objc-arc', '-m64', '-fvisibility=hidden', '-fvisibility-inlines-hidden']" in tc
 
+
 @pytest.mark.parametrize(
     "threads, flags",
     [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
@@ -903,3 +904,46 @@ def test_new_public_attributes():
     backend = 'xcode'
     """)
     assert expected in content
+
+
+def test_needs_exe_wrapper():
+    """
+    Tests needs_exe_wrapper depends on `can_run()` function instead of
+    simply checking the cross_building() one.
+
+    Issue: https://github.com/conan-io/conan/issues/19217
+    """
+    host = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=apple-clang
+    compiler.cppstd=gnu17
+    compiler.libcxx=libc++
+    compiler.version=16
+    os=Macos
+    [conf]
+    tools.apple:sdk_path=/my/sdk/path
+    tools.build.cross_building:can_run=True
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=apple-clang
+    compiler.cppstd=gnu17
+    compiler.libcxx=libc++
+    compiler.version=16
+    os=Macos
+    """)
+    client = TestClient()
+    client.save({
+        "host": host,
+        "build": build,
+        "conanfile.py": GenConanfile("pkg", "1.0")
+                        .with_settings("os", "arch", "compiler", "build_type")
+                        .with_generator("MesonToolchain")
+    })
+    client.run("install . -pr:h host -pr:b build")
+    content = client.load(MesonToolchain.cross_filename)
+    assert "needs_exe_wrapper = false" in content

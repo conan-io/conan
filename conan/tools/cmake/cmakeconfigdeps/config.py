@@ -2,7 +2,7 @@ import textwrap
 
 import jinja2
 from jinja2 import Template
-from conan.tools.cmake.utils import parse_extra_variable
+from conan.tools.cmake.utils import parse_extra_variable, cmake_escape_value
 from conan.internal.api.install.generators import relativize_path
 
 
@@ -98,7 +98,7 @@ class ConfigTemplate2:
             incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
                        for i in incdirs]
             include_dirs = ";".join(incdirs)
-            definitions = ""
+            definitions = ";".join("-D" + cmake_escape_value(d) for d in aggregated_cppinfo.defines)
             root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
             libraries = root_target_name or f"{pkg_name}::{pkg_name}"
 
@@ -124,12 +124,6 @@ class ConfigTemplate2:
                                "adding the '-DCMAKE_BUILD_TYPE=<build_type>' argument.")
         endif()
 
-        # build_modules_paths comes from last configuration only
-        {% for build_module in build_modules_paths %}
-        message(STATUS "Conan: Including build module from '{{build_module}}'")
-        include("{{ build_module }}")
-        {% endfor %}
-
         {% if components %}
         set({{filename}}_PACKAGE_PROVIDED_COMPONENTS {{components}})
         foreach(comp {%raw%}${{%endraw%}{{filename}}_FIND_COMPONENTS})
@@ -153,8 +147,16 @@ class ConfigTemplate2:
         set({{ prefix }}_LIBRARIES {{ libraries }} )
         {% endif %}
         {% if definitions is not none %}
-        set({{ prefix }}_DEFINITIONS {{ definitions}} )
+        set({{ prefix }}_DEFINITIONS "{{ definitions}}" )
         {% endif %}
+        {% endfor %}
+
+        # build_modules_paths comes from last configuration only
+        # Some build modules in ConanCenter use try_compile variables and legacy, so this
+        # include() needs to happen after the above variables are defined
+        {% for build_module in build_modules_paths %}
+        message(STATUS "Conan: Including build module from '{{build_module}}'")
+        include("{{ build_module }}")
         {% endfor %}
 
         # Definition of extra CMake variables from cmake_extra_variables

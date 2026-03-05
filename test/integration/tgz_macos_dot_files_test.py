@@ -9,14 +9,14 @@ import pytest
 
 from conan.internal.rest.remote_manager import uncompress_file
 from conan.api.model import RecipeReference
-from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires OSX")
 class TestTgzMacosDotFiles:
 
-    def _test_for_metadata_in_zip_file(self, tgz, annotated_file, dot_file_expected):
+    @staticmethod
+    def _test_for_metadata_in_zip_file(tgz, annotated_file, dot_file_expected):
         tmp_folder = tempfile.mkdtemp()
         try:
             uncompress_file(src_path=tgz, dest_folder=tmp_folder)
@@ -93,7 +93,7 @@ class TestTgzMacosDotFiles:
 
         # 3) In the upload process, the metadata is lost again
         export_download_folder = t.get_latest_ref_layout(pref.ref).download_export()
-        tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
+        tgz = os.path.join(export_download_folder, "conan_sources.tgz")
         assert not os.path.exists(tgz)
         t.run("upload lib/version@user/channel -r default --only-recipe")
         self._test_for_metadata_in_zip_file(tgz, 'file.txt', dot_file_expected=False)

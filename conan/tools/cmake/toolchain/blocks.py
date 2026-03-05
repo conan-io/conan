@@ -13,7 +13,7 @@ from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.utils import is_multi_configuration, parse_extra_variable
+from conan.tools.cmake.utils import is_multi_configuration, cmake_escape_value
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version, msvc_platform_from_arch
 from conan.internal.api.install.generators import relativize_path
@@ -269,6 +269,29 @@ class ArchitectureBlock(Block):
         return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag,
                 "thread_flags_list": thread_flags_list}
 
+class RpathLinkFlagsBlock(Block):
+    template = textwrap.dedent("""\
+        # Pass -rpath-link pointing to all directories with runtime libraries
+        {% if rpath_link_flags %}
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ rpath_link_flags }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ rpath_link_flags }}")
+        {% endif %}
+        """)
+
+    def context(self):
+        add_rpath_link = self._toolchain.add_rpath_link or self._conanfile.conf.get("tools.build:add_rpath_link", check_type=bool)
+        if add_rpath_link:
+            runtime_dirs = []
+            host_req = self._conanfile.dependencies.filter({"build": False}).values()
+            for req in host_req:
+                cppinfo = req.cpp_info.aggregated_components()
+                runtime_dirs.extend(cppinfo.libdirs)
+
+            # surround each dir with escaped quotes, to avoid problems with spaces in paths
+            rpath_link_flags = " ".join([f'-Wl,-rpath-link=\\"{d}\\"' for d in runtime_dirs]) if runtime_dirs else None
+        else:
+            rpath_link_flags = None
+        return {"rpath_link_flags": rpath_link_flags}
 
 class LinkerScriptsBlock(Block):
     template = textwrap.dedent("""\
@@ -836,7 +859,7 @@ class ExtraFlagsBlock(Block):
             "cflags": cflags,
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags,
-            "defines": [define.replace('"', '\\"') for define in defines]
+            "defines": [define.replace('"', '\\"') for define in defines],
         }
 
 
@@ -1005,11 +1028,11 @@ class GenericSystemBlock(Block):
                     toolset += ",version=14.{}{}".format(compiler_version[-1], compiler_update)
         elif compiler == "clang":
             if generator and "Visual" in generator:
-                if "Visual Studio 16" in generator or "Visual Studio 17" in generator:
+                if any(f"Visual Studio {v}" in generator for v in ("16", "17", "18")):
                     toolset = "ClangCL"
                 else:
                     raise ConanException("CMakeToolchain with compiler=clang and a CMake "
-                                         "'Visual Studio' generator requires VS16 or VS17")
+                                         "'Visual Studio' generator requires VS16, VS17 or VS18")
         toolset_arch = conanfile.conf.get("tools.cmake.cmaketoolchain:toolset_arch")
         if toolset_arch is not None:
             toolset_arch = "host={}".format(toolset_arch)
@@ -1206,6 +1229,23 @@ class ExtraVariablesBlock(Block):
         # Reading configuration from "tools.cmake.cmaketoolchain:extra_variables"
         extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
                                                    default={}, check_type=dict)
+        compilation_verbosity = self._conanfile.conf.get("tools.compilation:verbosity",
+                                                         choices=("quiet", "verbose"))
+        build_verbosity = self._conanfile.conf.get("tools.build:verbosity",
+                                                   choices=("quiet", "verbose"))
+        if build_verbosity == "quiet":
+            build_verbosity = "error"
+
+        if compilation_verbosity == "verbose":
+            extra_variables.setdefault("CMAKE_VERBOSE_MAKEFILE",
+                                       {"cache": True, "type": "BOOL",
+                                        "value": "ON"})
+
+        if build_verbosity:
+            extra_variables.setdefault("CMAKE_MESSAGE_LOG_LEVEL",
+                                       {"cache": True, "type": "STRING",
+                                        "value": build_verbosity.upper()})
+
         parsed_extra_variables = {}
         for key, value in extra_variables.items():
             parsed_extra_variables[key] = parse_extra_variable("tools.cmake.cmaketoolchain:extra_variables",
@@ -1274,8 +1314,8 @@ class VariablesBlock(Block):
                 {% endfor %}
                 {% for i in range(values|count) %}{% set genexpr.str = genexpr.str + '>' %}
                 {% endfor %}
-                set({{ it }} {{ genexpr.str }} CACHE STRING
-                    "Variable {{ it }} conan-toolchain defined")
+            set({{ it }} {{ genexpr.str }} CACHE STRING
+                "Variable {{ it }} conan-toolchain defined")
             {% endfor %}
             {% endmacro %}
             # Variables
@@ -1291,8 +1331,11 @@ class VariablesBlock(Block):
             """)
 
     def context(self):
-        return {"variables": self._toolchain.variables,
-                "variables_config": self._toolchain.variables.configuration_types}
+        variables = {k: cmake_escape_value(v) for k, v in self._toolchain.variables.items()}
+        vars_config = {k: [(config, cmake_escape_value(v)) for (config, v) in configs]
+                       for k, configs in self._toolchain.variables.configuration_types.items()}
+        return {"variables": variables,
+                "variables_config": vars_config}
 
 
 class PreprocessorBlock(Block):

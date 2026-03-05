@@ -505,6 +505,35 @@ class TestMultipleOptionsPatterns:
         assert "dep3/1.0: SHARED: True!!" in c.out
         assert "dep4/1.0: SHARED: True!!" in c.out
 
+    def test_pattern_version_range_warn(self):
+        c = TestClient(light=True)
+        profile = textwrap.dedent("""
+        include(default)
+
+        [tool_requires]
+        fmt/[*]:cmake/3.31.0
+
+        [options]
+        fmt/[*]:shared=True
+
+        [settings]
+        fmt/[*]:compiler.cppstd=17
+        """)
+        c.save({
+            "profile": profile,
+            "conanfile.py": GenConanfile("fmt", "1.0")})
+        c.run("create -pr=profile")
+        assert "WARN: risk: Settings pattern fmt/[*] contains a version range" in c.out
+        assert "WARN: risk: Options pattern fmt/[*] contains a version range" in c.out
+        assert "WARN: risk: Tool requires pattern fmt/[*] contains a version range" in c.out
+
+    def test_pattern_version_range_wrong_split(self):
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("foo", "1.0")})
+        c.run("create -o=foo/[>=1]:shared=True", assert_error=True)
+        # We split by the first =, so this version range we can't catch and warn before it breaks
+        assert "option 'foo/[>' doesn't exist" in c.out
+
 
 class TestTransitiveOptionsShared:
     """
@@ -772,6 +801,43 @@ class TestImportantOptions:
         c.run("graph info app -o *:myoption!=4")
         assert "liba/0.1: MYOPTION: 4" in c.out
 
+    def test_important_options_recipe_priority_conditional(self):
+        c = TestClient()
+
+        liba = textwrap.dedent("""
+            from conan import ConanFile
+            class Lib(ConanFile):
+                name = "liba"
+                version = "0.1"
+                settings = "os"
+                options = {"myoption": [1, 2, 3]}
+
+                def config_options(self):
+                    if self.settings.os == "Windows":
+                        setattr(self.options, "myoption!", 2)
+
+                def package_id(self):
+                    self.output.info(f"MYOPTION: {self.info.options.myoption}")
+            """)
+
+        c.save({"liba/conanfile.py": liba,
+                "app/conanfile.py": GenConanfile().with_requires("liba/0.1")})
+        c.run("export liba")
+
+        c.run("graph info app -s os=Linux -o *:myoption=3")
+        assert "liba/0.1: MYOPTION: 3" in c.out
+        c.run("graph info app -s os=Linux -o *:myoption=2")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+        c.run("graph info app -s os=Linux -o *:myoption=1")
+        assert "liba/0.1: MYOPTION: 1" in c.out
+
+        c.run("graph info app -s os=Windows -o *:myoption=3")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+        c.run("graph info app -s os=Windows -o *:myoption=2")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+        c.run("graph info app -s os=Windows -o *:myoption=1")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+
     def test_wrong_option_syntax_no_trace(self):
         tc = TestClient(light=True)
         tc.save({"conanfile.py": GenConanfile().with_option("myoption", [1, 2, 3])})
@@ -819,9 +885,20 @@ def test_get_safe_none_option_checks():
             .with_package("self.output.info(f'get_safe is None: {self.options.get_safe(\"myoption\") is None}')",
                           "self.output.info(f'get_safe is not None: {self.options.get_safe(\"myoption\") is not None}')",
                           "self.output.info(f'get_safe == None: {self.options.get_safe(\"myoption\") == None}')",
-                          "self.output.info(f'get_safe != None: {self.options.get_safe(\"myoption\") != None}')" )})
+                          "self.output.info(f'get_safe != None: {self.options.get_safe(\"myoption\") != None}')")})
     tc.run("create .")
     assert "get_safe is None: True" in tc.out
     assert "get_safe is not None: False" in tc.out
     assert "get_safe == None: True" in tc.out
     assert "get_safe != None: False" in tc.out
+
+
+def test_option_apply_version_range():
+    c = TestClient(light=True)
+    c.save({"conanfile.py": GenConanfile("dep", "0.1").with_shared_option(False)})
+    c.run("create -o shared=True")
+    c.run("install --requires=dep/0.1 -o shared=True")  # This worked without problem
+    c.run("install --requires=dep/[*] -o shared=True")
+    assert "WARN: risk" not in c.out
+    # This failed because of dep/[*] not matching pattern, now it works
+    assert "Install finished successfully" in c.out

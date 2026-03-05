@@ -7,7 +7,7 @@ from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFI
 from conan.internal.util.files import save
 
 
-class XcodeToolchain(object):
+class XcodeToolchain:
     filename = "conantoolchain"
     extension = ".xcconfig"
 

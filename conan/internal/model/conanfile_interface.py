@@ -4,10 +4,12 @@ from conan.internal.graph.graph import CONTEXT_BUILD
 
 
 class ConanFileInterface:
-    """ this is just a protective wrapper to give consumers
+    """
+    This is just a protective wrapper to give consumers
     a limited view of conanfile dependencies, "read" only,
     and only to some attributes, not methods
     """
+
     def __str__(self):
         return str(self._conanfile)
 
@@ -131,6 +133,10 @@ class ConanFileInterface:
     @property
     def description(self):
         return self._conanfile.description
+
+    @property
+    def author(self):
+        return self._conanfile.author
 
     @property
     def homepage(self):

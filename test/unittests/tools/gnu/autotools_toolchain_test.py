@@ -531,6 +531,21 @@ def test_sysrootflag():
     assert expected in env["LDFLAGS"]
 
 
+def test_sysrootflag_qnx():
+    """Even when no cross building it is adjusted because it could target a Mac version"""
+    conanfile = ConanFileMock()
+    conanfile.conf.define("tools.build:sysroot", "/path/to/sysroot")
+    conanfile.settings = MockSettings(
+        {"compiler": "qcc",
+         "build_type": "Debug",
+         "os": "Linux",
+         "arch": "x86_64"})
+    conanfile.settings_build = conanfile.settings
+    be = AutotoolsToolchain(conanfile)
+    expected = "-Wc,-isysroot,/path/to/sysroot"
+    assert be.sysroot_flag == expected
+
+
 def test_custom_defines():
     conanfile = ConanFileMock()
     conanfile.conf.define("tools.apple:sdk_path", "/path/to/sdk")

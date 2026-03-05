@@ -158,7 +158,9 @@ class TestSubsystemsBuild:
         $ pacman -S mingw-w64-clang-x86_64-toolchain
         """
         client = TestClient()
-        self._build(client, static_runtime=static)
+        # Not defined in msys2 clang by default
+        with environment_update({"CC": "clang", "CXX": "clang++"}):
+            self._build(client, static_runtime=static)
 
         check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None,
                       subsystem="mingw64")
@@ -491,7 +493,8 @@ class TestSubsystemsCMakeBuild:
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="cygwin")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="cygwin")
 
-    @pytest.mark.tool("clang", "13")
+    @pytest.mark.tool("ninja")
+    @pytest.mark.tool("clang", "20")
     def test_clang(self):
         """
         native, LLVM/Clang compiler

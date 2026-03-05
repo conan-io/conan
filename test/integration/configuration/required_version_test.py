@@ -1,5 +1,5 @@
 import os
-import mock
+from unittest import mock
 
 from conan import __version__
 from conan.test.utils.test_files import temp_folder
@@ -28,6 +28,13 @@ class TestRequiredVersion:
     @mock.patch("conan.__version__", "2.1.0")
     def test_lesser_version(self):
         required_version = "<3.0"
+        client = TestClient(light=True)
+        client.save_home({"global.conf": f"core:required_conan_version={required_version}"})
+        client.run("--help")
+
+    @mock.patch("conan.__version__", "2.20.0")
+    def test_lesser_version_error_parse(self):
+        required_version = "2.20"
         client = TestClient(light=True)
         client.save_home({"global.conf": f"core:required_conan_version={required_version}"})
         client.run("--help")

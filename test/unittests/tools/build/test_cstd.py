@@ -57,6 +57,19 @@ def test_supported_cstd_msvc(compiler, compiler_version, values):
     assert sot == values
 
 
+@pytest.mark.parametrize("compiler,compiler_version,values", [
+    ("emcc", "3", ["99", "gnu99", "11", "gnu11", "17", "gnu17"]),
+    ("emcc", "3.1", ["99", "gnu99", "11", "gnu11", "17", "gnu17", "23", "gnu23"]),
+    ("emcc", "3.3", ["99", "gnu99", "11", "gnu11", "17", "gnu17", "23", "gnu23"]),
+    ("emcc", "4.1", ["99", "gnu99", "11", "gnu11", "17", "gnu17", "23", "gnu23"]),
+])
+def test_supported_cstd_emcc(compiler, compiler_version, values):
+    settings = MockSettings({"compiler": compiler, "compiler.version": compiler_version})
+    conanfile = ConanFileMock(settings)
+    sot = supported_cstd(conanfile)
+    assert sot == values
+
+
 def test_check_cstd_type():
     """ cppstd must be a number
     """

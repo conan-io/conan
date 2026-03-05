@@ -1,0 +1,54 @@
+from conan.tools.system import PyEnv
+from unittest.mock import patch
+import pytest
+from conan.errors import ConanException
+from conan.internal.model.settings import Settings
+from conan.test.utils.mocks import ConanFileMock
+
+
+@patch('shutil.which')
+def test_pyenv_conf(mock_shutil_which):
+    conanfile = ConanFileMock()
+    conanfile.settings = Settings()
+    conanfile.conf.define("tools.system.pyenv:python_interpreter",
+                          "/python/interpreter/from/config")
+    PyEnv(conanfile, "testenv")
+    conanfile.run = None
+    mock_shutil_which.assert_not_called()
+
+
+@patch('shutil.which')
+def test_pyenv_deprecated_conf(mock_shutil_which):
+    conanfile = ConanFileMock()
+    conanfile.settings = Settings()
+    conanfile.conf.define("tools.system.pipenv:python_interpreter",
+                          "/python/interpreter/from/config")
+    PyEnv(conanfile, "testenv")
+    conanfile.run = None
+    mock_shutil_which.assert_not_called()
+
+
+@patch('shutil.which')
+def test_pyenv_error_message(mock_shutil_which):
+    conanfile = ConanFileMock()
+    conanfile.settings = Settings()
+    mock_shutil_which.return_value = None
+    with pytest.raises(ConanException) as exc_info:
+        PyEnv(conanfile, "testenv")
+    assert ("install Python system-wide or set the 'tools.system.pyenv:python_interpreter' "
+            "conf") in exc_info.value.args[0]
+
+
+def test_pyenv_creation_error_message():
+    conanfile = ConanFileMock()
+    conanfile.settings = Settings()
+    conanfile.conf.define("tools.system.pyenv:python_interpreter",
+                          "/python/interpreter/from/config")
+
+    def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,   # noqa
+                 quiet=False):  # noqa
+        raise ConanException("fake error message")
+    conanfile.run = fake_run
+    with pytest.raises(ConanException) as exc_info:
+        PyEnv(conanfile, "testenv")
+    assert "using '/python/interpreter/from/config': fake error message" in exc_info.value.args[0]

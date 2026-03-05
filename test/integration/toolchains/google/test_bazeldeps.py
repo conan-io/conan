@@ -1,6 +1,7 @@
 import os
 import pathlib
 import platform
+import re
 import textwrap
 
 import pytest
@@ -1092,7 +1093,6 @@ class TestBazelGenerationBuildContext:
         assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
 
 
-
 def test_shared_windows_find_libraries():
     """
     Testing the ``_get_libs`` mechanism in Windows, the shared libraries and their
@@ -1198,8 +1198,8 @@ def test_shared_windows_find_libraries():
             "zlib/conanfile.py": zlib,
             "openssl/conanfile.py": openssl,
             "libcurl/conanfile.py": libcurl,
-            "libiconv/conanfile.py": libiconv,
-    })
+            "libiconv/conanfile.py": libiconv
+            })
     c.run("export-pkg zlib -o:a shared=True")
     c.run("export-pkg openssl -o:a shared=True")
     c.run("export-pkg libcurl -o:a shared=True")
@@ -1347,3 +1347,48 @@ def test_apple_frameworks_and_frameworkdirs():
     )
     """)
     assert build_file_expected in build_content
+
+
+def test_shared_libs_and_unix_includes_rpath():
+    """
+    Testing the RPATH flag is added to the BUILD.bazel file if these conditions
+    are given: shared library and UNIX systems.
+
+    Issue: https://github.com/conan-io/conan/issues/19190
+    Issue: https://github.com/conan-io/conan/issues/19135
+    """
+    client = TestClient()
+    csm = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Pkg(ConanFile):
+            name = "csm"
+            version = "1.0"
+            settings = "os"
+            options = {"shared": [True, False]}
+            default_options = {"shared": False}
+            def package(self):
+                if self.settings.os == "Windows":
+                    save(self, os.path.join(self.package_folder, "bin", "csmapi.dll"), "")
+                    save(self, os.path.join(self.package_folder, "lib", "csmapi.lib"), "")
+                else:
+                    save(self, os.path.join(self.package_folder, "lib", "libcsmapi.so"), "")
+            def package_info(self):
+                self.cpp_info.libs = ["csmapi"]
+        """)
+    consumer = textwrap.dedent("""
+        [requires]
+        csm/1.0
+        [options]
+        *:shared=True
+    """)
+    client.save({"conanfile.txt": consumer, "csm/conanfile.py": csm})
+    client.run("export-pkg csm -o '*:shared=True' -s 'os=Windows'")
+    client.run("export-pkg csm -o '*:shared=True' -s 'os=Linux'")
+    client.run("install . -g BazelDeps -s 'os=Windows'")
+    build_content = load(None, os.path.join(client.current_folder, "csm", "BUILD.bazel"))
+    assert '"-Wl,-rpath,' not in build_content
+    client.run("install . -g BazelDeps -s 'os=Linux'")
+    build_content = load(None, os.path.join(client.current_folder, "csm", "BUILD.bazel"))
+    assert re.search('"-Wl,-rpath,.*/p/lib"', build_content.replace("\\", "/"))

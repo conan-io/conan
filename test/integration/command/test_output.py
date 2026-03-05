@@ -12,9 +12,7 @@ class TestOutputLevel:
         t = TestClient(light=True)
         t.save({"conanfile.py": GenConanfile("foo", "1.0")})
         t.run("create . -vfooling", assert_error=True)
-        assert "Invalid argument '-vfooling'" in t.out
-        assert "Allowed values: quiet, error, warning, notice, status, verbose, " \
-               "debug(v), trace(vv)" in t.out
+        assert "argument -v: invalid choice: 'fooling'" in t.out
 
         with environment_update({"CONAN_LOG_LEVEL": "fail"}):
             t.run("create .", assert_error=True)
@@ -280,19 +278,19 @@ def test_formatter_redirection_to_file():
     assert "Formatted output saved to 'graph.json'" in c.out
     graph = json.loads(c.load("graph.json"))
     assert len(graph["graph"]["nodes"]) == 1
-    assert not "nodes" in c.stdout
+    assert "nodes" not in c.stdout
 
     c.run("graph info . --format=html --out-file=graph.html")
     assert "Formatted output saved to 'graph.html'" in c.out
     html = c.load("graph.html")
     assert "<head>" in html
-    assert not "<head>" in c.stdout
+    assert "<head>" not in c.stdout
 
     c.run("install . --format=json --out-file=graph.json")
     assert "Formatted output saved to 'graph.json'" in c.out
     graph = json.loads(c.load("graph.json"))
     assert len(graph["graph"]["nodes"]) == 1
-    assert not "nodes" in c.stdout
+    assert "nodes" not in c.stdout
 
 
 def test_redirect_to_file_create_dir():
