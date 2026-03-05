@@ -7,6 +7,7 @@ from conan.internal.model.conf import Conf
 from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
+from conan.tools.cmake.utils import cmake_escape_value
 
 
 @pytest.mark.parametrize("generator,target", [

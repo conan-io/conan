@@ -89,12 +89,15 @@ graph_info_html = r"""
                 let conflict=null;
                 let provide_conflict=null;
                 let missing_error=null;
+                let loop_error=null;
                 if (graph_data["error"] && graph_data["error"]["type"] == "conflict")
                     conflict = graph_data["error"];
                 else if (graph_data["error"] && graph_data["error"]["type"] == "provide_conflict")
                     provide_conflict = graph_data["error"];
                 else if (graph_data["error"] && graph_data["error"]["type"] == "missing")
                     missing_error = graph_data["error"];
+                else if (graph_data["error"] && graph_data["error"]["type"] == "loop")
+                    loop_error = [graph_data["error"]['node']['label'], graph_data["error"]['require']['name']];
                 for (const [node_id, node] of Object.entries(graph_data["nodes"])) {
                     if (node.context == "build" && hide_build) continue;
                     if (node.test && hide_test) continue;
@@ -181,6 +184,16 @@ graph_info_html = r"""
                             let target_id = targets[dep_id] || dep_id;
                             edges.push({id: edge_counter, from: node_id, to: target_id,
                                         color: {color: "SkyBlue", highlight: "Blue"}});
+                            global_edges[edge_counter++] = dep;
+                        }
+                        if (loop_error && loop_error[1] == node["name"] && loop_error[0] == dep["ref"]) {
+                            let target_id = targets[dep_id] || dep_id;
+                            edges.push({id: edge_counter, from: node_id, to: target_id,
+                                        color: {color: "Red", highlight: "Red"},
+                                        smooth: { enabled: true, type: 'curvedCW', roundness: 0.4 },
+                                        arrows: "from",
+                                        label: "loop",
+                                        title: "loop"});
                             global_edges[edge_counter++] = dep;
                         }
                     }

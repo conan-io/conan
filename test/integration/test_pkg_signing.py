@@ -1,5 +1,7 @@
+import os
 import textwrap
 
+from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -268,3 +270,39 @@ def test_pkg_sign_exports_sources():
     assert "Checksum verified for file conan_package.tgz" in c.out
     c.run("install --requires=pkg/0.1 -r=default --build=pkg/0.1")
     assert "Checksum verified for file conan_sources.tgz" in c.out
+
+
+def test_pkg_sign_no_op():
+    c = TestClient()
+    c.save({"conanfile1.py": GenConanfile("pkg", "0.1"),
+            "conanfile2.py": GenConanfile("no-op", "0.1")})
+    signer = textwrap.dedent(r"""
+        def sign(ref, artifacts_folder, signature_folder, **kwargs):
+            if "pkg/0.1" in str(ref):
+                print("Signing package", str(ref))
+                # Return the pkgsign-signatures.json's content
+                return [{"method": "openssl-dgst",
+                        "provider": "conan-client",
+                        "sign_artifacts": {"manifest": "pkgsign-manifest.json",
+                                           "signature": "pkgsign-manifest.json.sig"}}]
+            else:
+                # no-op: The package should not be signed or if it is signed, it shouldn't be resigned
+                print("Skipping package", str(ref))
+                return []
+
+        """)
+    c.save_home({"extensions/plugins/sign/sign.py": signer})
+    c.run("create conanfile1.py")
+    c.run("cache sign pkg/0.1")
+    assert "Signing package pkg/0.1" in c.out
+    metadata_folder = c.cache.recipe_layout(
+        RecipeReference("pkg", "0.1", revision="485dad6cb11e2fa99d9afbe44a57a164")).metadata()
+    signatures_path = os.path.join(metadata_folder, "sign", "pkgsign-signatures.json")
+    assert os.path.exists(signatures_path)
+    c.run("create conanfile2.py")
+    c.run("cache sign no-op/0.1")
+    assert "Skipping package no-op/0.1" in c.out
+    metadata_folder = c.cache.recipe_layout(
+        RecipeReference("no-op", "0.1", revision="9f8243dd2f341b13df241e599326b3cb")).metadata()
+    signatures_path = os.path.join(metadata_folder, "sign", "pkgsign-signatures.json")
+    assert not os.path.exists(signatures_path)

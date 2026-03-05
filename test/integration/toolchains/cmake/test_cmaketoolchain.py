@@ -838,6 +838,33 @@ def test_variables_types():
     assert 'set(FOO ON CACHE BOOL "Variable FOO conan-toolchain defined")' in toolchain
 
 
+def test_variables_escaping():
+    # https://github.com/conan-io/conan/issues/19638
+    client = TestClient()
+    # NOTE: Users need to do explicit escaping
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def generate(self):
+                toolchain = CMakeToolchain(self)
+                toolchain.variables["FOO"] = r"D:\new\thing\path".replace("\\", "\\\\")
+                toolchain.variables["CMAKE_Fortran_FLAGS_INIT"] = "${CMAKE_C_FLAGS_INIT}"
+                toolchain.variables.release["BAR"] = r"C:\new\thing\path".replace("\\", "\\\\")
+                toolchain.generate()
+        """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_Fortran_FLAGS_INIT "${CMAKE_C_FLAGS_INIT}"' in toolchain
+    assert r'set(FOO "D:\\new\\thing\\path" CACHE STRING' in toolchain
+    assert r'set(CONAN_DEF_releaseBAR "C:\\new\\thing\\path")' in toolchain
+
+
 def test_android_c_library():
     client = TestClient()
     conanfile = textwrap.dedent("""
