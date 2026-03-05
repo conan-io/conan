@@ -77,6 +77,7 @@ BUILT_IN_CONFS = {
     "tools.build:download_source": "Force download of sources for every package",
     "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
     "tools.build:sysroot": "Pass the --sysroot=<tools.build:sysroot> flag if available. (None by default)",
+    "tools.build:add_rpath_link": "Add -Wl,-rpath-link flags pointing to all lib directories for host dependencies (CMake and Meson toolchains)",
     "tools.build.cross_building:can_run": "(boolean) Indicates whether is possible to run a non-native app on the same architecture. It's used by 'can_run' tool",
     "tools.build.cross_building:cross_build": "(boolean) Decides whether cross-building or not regardless of arch/OS settings. Used by 'cross_building' tool",
     "tools.build:verbosity": "Verbosity of build systems if set. Possible values are 'quiet' and 'verbose'",
@@ -161,6 +162,12 @@ BUILT_IN_CONFS = {
 }
 
 BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
+
+
+_BUILT_IN_CONFS_TYPES = {
+    "core:required_conan_version": str,
+    "tools.microsoft:msvc_update": str
+}
 
 CORE_CONF_PATTERN = re.compile(r"^(core\..+|core):.*")
 TOOLS_CONF_PATTERN = re.compile(r"^(tools\..+|tools):.*")
@@ -756,7 +763,10 @@ class ConfDefinition:
                 if len(tokens) != 2:
                     continue
                 pattern_name, value = tokens
-                parsed_value = ConfDefinition._get_evaluated_value(value)
+                _, name = self._split_pattern_name(pattern_name)
+                # We only implement str type at the moment
+                isstr = _BUILT_IN_CONFS_TYPES.get(name) is str
+                parsed_value = value.strip() if isstr else ConfDefinition._get_evaluated_value(value)
                 self.update(pattern_name, parsed_value, profile=profile, method=method)
                 break
             else:

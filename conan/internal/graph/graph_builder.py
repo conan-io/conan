@@ -299,6 +299,7 @@ class DepsGraphBuilder:
                     if version_range:
                         if version_range.contains(d.version, resolve_prereleases):
                             require.ref.version = d.version  # resolved range is replaced by exact
+                            require.ref.revision = d.revision or "platform"
                             layout = BasicLayout(require.ref, None)
                             return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
                     elif require.ref.version == d.version:

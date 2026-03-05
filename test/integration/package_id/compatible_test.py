@@ -447,6 +447,9 @@ class TestCompatibleBuild:
         c.assert_listed_binary({"pkg/0.1": ("389803bed06200476fcee1af2023d4e9bfa24ff9", "Build")})
         c.run("list *:*")
         assert "compiler.cppstd: 14" in c.out
+        c.run(f"create . {settings} --build=& --build=compatible:&")
+        # the one for cppstd=14 is built!!
+        c.assert_listed_binary({"pkg/0.1": ("389803bed06200476fcee1af2023d4e9bfa24ff9", "Cache")})
 
     def test_build_compatible_cant_build(self):
         # requires c++17 to build, can be consumed with c++14
@@ -675,6 +678,93 @@ class TestCompatibleBuild:
             pkga = liba["packages"][0][pkg_index]
             assert pkga["info"]["compatibility_delta"] == {"settings": [["compiler.cppstd", "14"]]}
             assert pkga["build_args"] == "--requires=liba/0.1 --build=compatible:liba/0.1"
+
+    @pytest.mark.parametrize("validate, validate_build, expected",
+                             [("pass", "pass", 14),
+                              ("check_min_cppstd(self, 17)", "pass", 17),
+                              ("pass", "check_min_cppstd(self, 20)", 20),
+                              ("check_min_cppstd(self, 17)", "check_min_cppstd(self, 20)", 20)])
+    def test_compatible_build_test_package(self, validate, validate_build, expected):
+        """
+        This test shows that the --build=compatible does not trigger the build of a dependency
+        twice when there is a "test_package"
+        """
+        tc = TestClient()
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            from conan.tools.build import check_min_cppstd
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "compiler"
+
+                def validate(self):
+                    {validate}
+
+                def validate_build(self):
+                    {validate_build}
+            """)
+        tc.save({"conanfile.py": conanfile,
+                 "test_package/conanfile.py": GenConanfile().with_test("pass")})
+
+        tc.run("create . -s os=Linux -s compiler=gcc -s compiler.version=13 "
+               "-s compiler.libcxx=libstdc++11 -s compiler.cppstd=14 --build=compatible:&")
+        assert f"compiler.cppstd={expected}" in tc.out
+        # Without checking if the compatibles are already in the cache, it will build twice,
+        # once for the package and once for the test_package
+        assert tc.out.count("pkg/0.1: Building your package") == 1
+        tc.run("list *:*")
+        assert f"compiler.cppstd: {expected}" in tc.out
+
+    @pytest.mark.parametrize("validate, validate_build, expected",
+                             [("check_min_cppstd(self, 17)", "pass", 17),
+                              ("pass", "check_min_cppstd(self, 20)", 20),
+                              ("check_min_cppstd(self, 17)", "check_min_cppstd(self, 20)", 20)])
+    def test_compatible_consumer_rebuild(self, validate, validate_build, expected):
+        """
+        This test shows that the --build=compatible does not trigger the build of a dependency
+        when it already exists in the cache
+        """
+        tc = TestClient()
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            from conan.tools.build import check_min_cppstd
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "compiler"
+
+                def validate(self):
+                    {validate}
+
+                def validate_build(self):
+                    {validate_build}
+            """)
+        tc.save({"pkg/conanfile.py": conanfile,
+                 "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")})
+
+        settings = ("-s os=Linux -s compiler=gcc -s compiler.version=13 "
+                    "-s compiler.libcxx=libstdc++11")
+        tc.run(f"create pkg {settings} -s compiler.cppstd=14 --build=compatible:&")
+        tc.run("list *:*")
+        assert f"compiler.cppstd: {expected}" in tc.out
+
+        if validate == "pass":
+            tc.run(f"install app {settings} -s compiler.cppstd=14")
+            assert ("pkg/0.1: Found compatible package '151b937d845d306265254e74d7af81d35b2099fc': "
+                    "compiler.cppstd=20") in tc.out
+        else:
+            tc.run(f"install app {settings} -s compiler.cppstd=14", assert_error=True)
+            assert "pkg/0.1: Invalid: Current cppstd (14) is lower" in tc.out
+
+        tc.run(f"install app {settings} -s compiler.cppstd=14 --build=compatible")
+        assert "pkg/0.1: Found compatible package" in tc.out
+
+        # Without checking if the compatibles are already in the cache, it will build twice,
+        # once for the package and once for the test_package
+        assert tc.out.count("pkg/0.1: Building your package") == 0
 
 
 def test_compatibility_new_setting_forwards_compat():

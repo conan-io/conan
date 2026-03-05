@@ -521,7 +521,8 @@ def test_multiple_deactivate(deactivation_mode):
 
     for _ in range(2):  # Just repeat it, so we can check things keep working
         if platform.system() == "Windows":
-            cmd = "conanbuild.bat && display.bat && deactivate_conanbuild.bat && display.bat"
+            deactivate_bat = "deactivate_conanbuild" if deactivation_mode else "deactivate_conanbuild.bat"
+            cmd = f"conanbuild.bat && display.bat && {deactivate_bat} && display.bat"
         else:
             deactivate_cmd = "deactivate_conanbuild" if deactivation_mode else ". ./deactivate_conanbuild.sh"
             cmd = f'. ./conanbuild.sh && ./display.sh && {deactivate_cmd} && ./display.sh'

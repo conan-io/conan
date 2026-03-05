@@ -155,7 +155,7 @@ class RequirementInfo:
         self.user = self._ref.user
         self.channel = self._ref.channel
         self.package_id = None
-        self.recipe_revision = self._ref.revision
+        self.recipe_revision = self._ref.revision if self._ref.revision != "platform" else None
 
     def full_mode(self):
         self.name = self._ref.name
@@ -163,7 +163,7 @@ class RequirementInfo:
         self.user = self._ref.user
         self.channel = self._ref.channel
         self.package_id = self._package_id
-        self.recipe_revision = self._ref.revision
+        self.recipe_revision = self._ref.revision if self._ref.revision != "platform" else None
 
     full_recipe_mode = full_version_mode
     recipe_revision_mode = full_mode  # to not break everything and help in upgrade
