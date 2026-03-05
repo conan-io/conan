@@ -37,9 +37,7 @@ class GraphBinariesAnalyzer:
         embed_mode = global_conf.get("core.package_id:default_embed_mode", default="full_mode")
         python_mode = global_conf.get("core.package_id:default_python_mode", default="minor_mode")
         build_mode = global_conf.get("core.package_id:default_build_mode", default=None)
-        fixes = global_conf.get("core.package_id:fix", check_type=list, default=[])
-        fix_static = "transitive_static" in fixes
-        self._modes = unknown_mode, non_embed, embed_mode, python_mode, build_mode, fix_static
+        self._modes = unknown_mode, non_embed, embed_mode, python_mode, build_mode
         self._warn_about_new_compatibility = False
 
     @staticmethod

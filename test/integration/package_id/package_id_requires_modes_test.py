@@ -220,18 +220,19 @@ class TestRequirementPackageId:
         # https://github.com/conan-io/conan/issues/19664
         c = TestClient(light=True)
         pkgtype = "static-library"
+        fix = "package_id_fix_transitive_static=True" if apply_fix else ""
         c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type(pkgtype),
                 "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type(pkgtype)
                                                                 .with_requires("liba/1.0"),
                 "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type(pkgtype)
                                                                 .with_requires("libb/1.0")
+                                                                .with_class_attribute(fix)
                 })
         c.run("create liba")
         c.run("create libb")
-        args = "-cc core.package_id:fix=\"['transitive_static']\"" if apply_fix else ""
-        c.run(f"create libc {args}")
+        c.run(f"create libc")
         if not apply_fix:
-            assert ("libc/1.0: WARN: optimization: Transitive dependency 'liba/1.0' with "
+            assert ("libc/1.0: WARN: risk: Transitive dependencies with "
                     "'headers=False' effect in 'package_id'") in c.out
         c.run("list libc:*")
         assert "libb/1.0.Z" in c.out
