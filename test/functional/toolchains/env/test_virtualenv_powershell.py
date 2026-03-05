@@ -44,6 +44,7 @@ def test_virtualenv(client):
             version = "0.1"
             requires = "pkg/0.1"
             apply_env = False
+            settings = "os"  # Needs for the conanrun scope
 
             def build(self):
                 self.output.info("----------BUILD----------------")
@@ -207,6 +208,23 @@ def test_concatenate_build_and_run_env(powershell):
                                    client.current_folder,"mycompiler1.bat")
     client.run_command(cmd)
     assert "MYTOOL 1!!" in client.out
+
+
+def test_powershell_deprecated_message():
+    client = TestClient(light=True)
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os"
+            name = "pkg"
+            version = "0.1"
+            def build(self):
+                self.run("echo HELLO")
+        """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run(f'build . -c tools.env.virtualenv:powershell=True', assert_error=True)
+    assert "Boolean values for 'tools.env.virtualenv:powershell' are deprecated" in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
