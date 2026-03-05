@@ -71,7 +71,7 @@ def test_virtualenv(client):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
-@pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh"])
+@pytest.mark.parametrize("powershell", ["powershell.exe", "pwsh"])
 def test_virtualenv_test_package(powershell):
     """ The test_package could crash if not cleaning correctly the test_package
     output folder. This will still crassh if the layout is not creating different build folders
@@ -119,7 +119,7 @@ def test_virtualenv_test_package(powershell):
 
 @pytest.mark.tool("ninja")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
-@pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh"])
+@pytest.mark.parametrize("powershell", ["powershell.exe", "pwsh"])
 def test_vcvars(powershell):
     client = TestClient()
     conanfile = textwrap.dedent(r"""
@@ -163,7 +163,7 @@ def test_vcvars(powershell):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
-@pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh", "powershell.exe -NoProfile", "pwsh -NoProfile"])
+@pytest.mark.parametrize("powershell", ["powershell.exe", "pwsh", "powershell.exe -NoProfile", "pwsh -NoProfile"])
 def test_concatenate_build_and_run_env(powershell):
     # this tests that if we have both build and run env, they are concatenated correctly when using
     # powershell
@@ -228,7 +228,7 @@ def test_powershell_deprecated_message():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
-@pytest.mark.parametrize("powershell", [True, "pwsh", "powershell.exe"])
+@pytest.mark.parametrize("powershell", ["pwsh", "powershell.exe"])
 def test_powershell_quoting(powershell):
     client = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent("""\
