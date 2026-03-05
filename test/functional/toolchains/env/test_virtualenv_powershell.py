@@ -44,7 +44,6 @@ def test_virtualenv(client):
             version = "0.1"
             requires = "pkg/0.1"
             apply_env = False
-            settings = "os"  # So it generates bat and ps1
 
             def build(self):
                 self.output.info("----------BUILD----------------")

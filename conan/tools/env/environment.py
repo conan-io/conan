@@ -37,13 +37,11 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
             if os.path.isfile(f):
                 ps1s.append(f)
         else:  # Simple name like "conanrunenv"
+            # Powershell is never used unless explicit extension
             path_bat = "{}.bat".format(f)
             path_sh = "{}.sh".format(f)
-            # path_ps1 = "{}.ps1".format(f)
             if os.path.isfile(path_bat) and "bat" in accept:
                 bats.append(path_bat)
-            # if os.path.isfile(path_ps1) and "ps1" in accept:
-            #    ps1s.append(path_ps1)
             if os.path.isfile(path_sh) and "sh" in accept:
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
@@ -585,10 +583,11 @@ class EnvVars:
         if ext:
             paths = [filename]
         else:  # Need to deduce it automatically
-            if self._subsystem == WINDOWS:
-                paths = [filename + e for e in (".bat", ".ps1")]
-            else:
-                paths = [filename + ".sh"]
+            ext = ".bat" if self._subsystem == WINDOWS else ".sh"
+            paths = [filename + ext]
+            if self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str):
+                paths.append(filename + ".ps1")
+
         for p in paths:
             if p.endswith(".bat"):
                 self.save_bat(p)
