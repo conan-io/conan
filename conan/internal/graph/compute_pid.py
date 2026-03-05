@@ -13,7 +13,7 @@ def compute_package_id(node, modes, config_version, hook_manager):
     Compute the binary package ID of this node
     """
     conanfile = node.conanfile
-    unknown_mode, non_embed_mode, embed_mode, python_mode, build_mode = modes
+    unknown_mode, non_embed_mode, embed_mode, python_mode, build_mode, fix_transitive_static = modes
     python_requires = getattr(conanfile, "python_requires", None)
     if python_requires:
         python_requires = python_requires.info_requires()
@@ -22,8 +22,9 @@ def compute_package_id(node, modes, config_version, hook_manager):
     build_data = OrderedDict()
     for require, transitive in node.transitive_deps.items():
         dep_node = transitive.node
-        require.deduce_package_id_mode(conanfile.package_type, dep_node,
-                                       non_embed_mode, embed_mode, build_mode, unknown_mode)
+        require.deduce_package_id_mode(conanfile, dep_node,
+                                       non_embed_mode, embed_mode, build_mode, unknown_mode,
+                                       fix_transitive_static)
         if require.package_id_mode is not None:
             req_info = RequirementInfo(dep_node.pref.ref, dep_node.pref.package_id,
                                        require.package_id_mode)

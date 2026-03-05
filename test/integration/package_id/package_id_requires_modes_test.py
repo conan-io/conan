@@ -215,20 +215,46 @@ class TestRequirementPackageId:
         c.run("list pkg:*")
         assert f"liba/{pattern}" in c.out
 
-    @pytest.mark.parametrize("shared", [True, False])
-    def test_transitive_statics(self, shared):
+    @pytest.mark.parametrize("apply_fix", [True, False])
+    def test_transitive_statics(self, apply_fix):
         # https://github.com/conan-io/conan/issues/19664
         c = TestClient(light=True)
-        pkgtype = "shared-library" if shared else "static-library"
+        pkgtype = "static-library"
         c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type(pkgtype),
                 "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type(pkgtype)
                                                                 .with_requires("liba/1.0"),
                 "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type(pkgtype)
-                                                                .with_requires("libb/1.0"),
-               })
+                                                                .with_requires("libb/1.0")
+                })
+        c.run("create liba")
+        c.run("create libb")
+        args = "-cc core.package_id:fix=\"['transitive_static']\"" if apply_fix else ""
+        c.run(f"create libc {args}")
+        if not apply_fix:
+            assert ("libc/1.0: WARN: optimization: Transitive dependency 'liba/1.0' with "
+                    "'headers=False' effect in 'package_id'") in c.out
+        c.run("list libc:*")
+        assert "libb/1.0.Z" in c.out
+        if apply_fix:
+            assert "liba/" not in c.out
+        else:
+            assert "liba/" in c.out
+
+    def test_transitive_shared(self):
+        # https://github.com/conan-io/conan/issues/19664
+        c = TestClient(light=True)
+        pkgtype = "shared-library"
+        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type(pkgtype),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type(pkgtype)
+               .with_requires("liba/1.0"),
+                "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type(pkgtype)
+               .with_requires("libb/1.0"),
+                })
         c.run("create liba")
         c.run("create libb")
         c.run("create libc")
+
+        assert "libc/1.0: WARN" not in c.out
         c.run("list libc:*")
         assert "libb/1.0.Z" in c.out
         assert "liba/" not in c.out

@@ -1,3 +1,4 @@
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
@@ -357,8 +358,8 @@ class Requirement:
         downstream_require.direct = False
         return downstream_require
 
-    def deduce_package_id_mode(self, pkg_type, dep_node, non_embed_mode, embed_mode, build_mode,
-                               unknown_mode):
+    def deduce_package_id_mode(self, conanfile, dep_node, non_embed_mode, embed_mode, build_mode,
+                               unknown_mode, fix_transitive_static):
         # If defined by the ``require(package_id_mode=xxx)`` trait, that is higher priority
         # The "conf" values are defaults, no hard overrides
         if self.package_id_mode:
@@ -374,6 +375,7 @@ class Requirement:
                 self.package_id_mode = build_mode
             return
 
+        pkg_type = conanfile.package_type
         if pkg_type is PackageType.HEADER:
             self.package_id_mode = "unrelated_mode"
             return
@@ -391,8 +393,13 @@ class Requirement:
             elif pkg_type is PackageType.STATIC:
                 if dep_pkg_type is PackageType.HEADER:
                     self.package_id_mode = embed_mode
-                elif self.headers:
+                elif self.headers or not fix_transitive_static:
                     self.package_id_mode = non_embed_mode
+                    if not self.headers and not fix_transitive_static:
+                        msg = (f"Transitive dependency '{dep_node}' with 'headers=False' "
+                               f"effect in 'package_id' is not necessary. "
+                               f"Use core.package_id:fix=['transitive_static'] to optimize it.")
+                        conanfile.output.warning(msg, warn_tag="optimization")
                 else:
                     self.package_id_mode = None
                 return
