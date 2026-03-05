@@ -42,19 +42,4 @@ def parse_extra_variable(source, key, value):
 
 
 def cmake_escape_value(v):
-    if not isinstance(v, str):
-        return v
-
-    def _stream_chars(s):
-        iterable = iter(enumerate(s))
-        for i, char in iterable:
-            # If we see a backslash, check the next char immediately
-            if char == '\\' and i + 1 < len(s) and s[i+1] in r'\$"':
-                yield s[i:i+2]  # Yield the existing pair
-                next(iterable)   # Skip the next char in the loop
-            elif char in r'\$"':
-                yield '\\' + char  # Escape the lonely char
-            else:
-                yield char
-
-    return "".join(_stream_chars(v))
+    return v.replace('\\', '\\\\').replace('$', '\\$').replace('"', '\\"')
