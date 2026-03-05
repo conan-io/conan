@@ -408,6 +408,12 @@ class TargetConfigurationTemplate2:
 
         {% if lib_info.get("link_languages") %}
         get_property(_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+        if("CXX" IN_LIST _languages)
+            list(APPEND _languages "C")
+        endif()
+        if("CUDA" IN_LIST _languages)
+            list(APPEND _languages "C" "CXX")
+        endif()
         {% for lang in lib_info["link_languages"] %}
         if(NOT "{{lang}}" IN_LIST _languages)
             message(SEND_ERROR

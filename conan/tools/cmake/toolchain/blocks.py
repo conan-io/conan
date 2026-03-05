@@ -1331,11 +1331,8 @@ class VariablesBlock(Block):
             """)
 
     def context(self):
-        variables = {k: cmake_escape_value(v) for k, v in self._toolchain.variables.items()}
-        vars_config = {k: [(config, cmake_escape_value(v)) for (config, v) in configs]
-                       for k, configs in self._toolchain.variables.configuration_types.items()}
-        return {"variables": variables,
-                "variables_config": vars_config}
+        return {"variables": self._toolchain.variables,
+                "variables_config": self._toolchain.variables.configuration_types}
 
 
 class PreprocessorBlock(Block):
