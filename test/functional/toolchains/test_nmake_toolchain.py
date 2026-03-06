@@ -8,6 +8,7 @@ from test.functional.utils import check_exe_run
 from conan.test.utils.tools import TestClient
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "compiler, version, runtime, cppstd, build_type, defines, cflags, cxxflags, sharedlinkflags, exelinkflags",
     [
@@ -89,6 +90,7 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
                   conf_preprocessors)
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool("cmake", "3.23")
 # This test uses clang inside Visual Studio, not managed by mark.tool

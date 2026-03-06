@@ -11,6 +11,7 @@ from conan.test.utils.tools import TestClient
 from conan.test.assets.sources import gen_function_cpp
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(platform.machine() != "x86_64",
                     reason="Premake Legacy generator only supports x86_64 machines")
 @pytest.mark.tool("premake")
@@ -80,6 +81,7 @@ def test_premake_legacy(matrix_client):
     assert "matrix/1.0: Hello World Debug!" in c.out
 
 
+@pytest.mark.slow
 @pytest.mark.tool("premake")
 def test_premake_new_generator():
     c = TestClient()
@@ -93,6 +95,7 @@ def test_premake_new_generator():
     assert "example/1.0: Hello World Release!" in c.out
 
 
+@pytest.mark.slow
 @pytest.mark.tool("premake")
 def test_premake_shared_lib():
     c = TestClient()
@@ -102,6 +105,7 @@ def test_premake_shared_lib():
     assert "lib/0.1: package(): Packaged 1 '.a' file: liblib.a" not in c.out
 
 
+@pytest.mark.slow
 @pytest.mark.tool("premake")
 @pytest.mark.parametrize("transitive_libs", [True, False])
 def test_premake_components(transitive_libs):
@@ -205,6 +209,7 @@ def test_premake_components(transitive_libs):
     c.run("build consumer", assert_error=not transitive_libs)
 
 
+@pytest.mark.slow
 @pytest.mark.tool("premake")
 def test_transitive_headers_not_public(transitive_libraries):
     c = transitive_libraries
@@ -257,6 +262,8 @@ def test_transitive_headers_not_public(transitive_libraries):
     c.run("build .", assert_error=True)
     # Error should be about not finding matrix
 
+
+@pytest.mark.slow
 @pytest.mark.tool("premake")
 def test_premake_custom_configuration(transitive_libraries):
     c = transitive_libraries

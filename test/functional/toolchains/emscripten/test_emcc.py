@@ -80,11 +80,6 @@ asmjs_profile = textwrap.dedent(
 
 
 @pytest.mark.slow
-def test_will_fail():
-    raise Exception("Test will fail")
-
-
-@pytest.mark.slow
 @pytest.mark.tool("cmake")
 @pytest.mark.tool("emcc")
 @pytest.mark.tool("node")
