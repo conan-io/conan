@@ -38,6 +38,17 @@ jobs:
       run_slow_tests: ${{ steps.set_versions.outputs.run_slow_tests }}
     name: Determine Python versions
     steps:
+      - name: Fetch current PR body
+        if: github.event_name == 'pull_request'
+        id: fetch_pr
+        run: |
+          BODY=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
+            | jq -r '.body // ""')
+          echo "pr_body<<EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Determine Python versions
         id: set_versions
         run: |
@@ -49,11 +60,16 @@ jobs:
             echo "python_versions_macos=['3.10']" >> $GITHUB_OUTPUT
           fi
 
-          # Run slow tests on develop2, or when PR description contains $runslowtests
+          # Run slow tests on develop2, or when current PR description contains $runslowtests
           if [[ "${{ github.ref }}" == "refs/heads/develop2" ]]; then
             echo "run_slow_tests=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event_name }}" == "pull_request" ]] && echo "${{ github.event.pull_request.body }}" | grep -Fq '$runslowtests'; then
-            echo "run_slow_tests=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_BODY="${{ steps.fetch_pr.outputs.pr_body }}"
+            if echo "$PR_BODY" | grep -Fq '$runslowtests'; then
+              echo "run_slow_tests=true" >> $GITHUB_OUTPUT
+            else
+              echo "run_slow_tests=false" >> $GITHUB_OUTPUT
+            fi
           else
             echo "run_slow_tests=false" >> $GITHUB_OUTPUT
           fi
