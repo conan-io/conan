@@ -502,3 +502,108 @@ class TestConsistentTrait:
         c.run("install libb", assert_error=True)
         assert ("Requirement liba/[>=1] with visible=True and "
                 "consistent=False is not supported") in c.out
+
+
+def test():
+    c = TestClient()
+    libzip = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HostRecipe(ConanFile):
+            name = "libzip"
+            version = "1.11.3"
+            package_type = "library"
+
+            settings = "os", "compiler", "build_type", "arch"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": False, "fPIC": True}
+
+            def requirements(self):
+                self.requires("zlib/[>=1.2.11 <2]")
+                self.requires("bzip2/1.0.8")
+        """)
+    minizip = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HostRecipe(ConanFile):
+            name = "minizip"
+            version = "1.3.1"
+            package_type = "library"
+
+            settings = "os", "compiler", "build_type", "arch"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": False, "fPIC": True}
+
+            def requirements(self):
+                self.requires("zlib/[>=1.2.11 <2]")
+                self.requires("bzip2/1.0.8")
+        """)
+    host = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HostRecipe(ConanFile):
+            name = "host"
+            version = "0.1"
+            package_type = "library"
+
+            settings = "os", "compiler", "build_type", "arch"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": True, "fPIC": True, "*:shared": True}
+
+            def requirements(self):
+                self.requires("libzip/1.11.3")
+        """)
+    lib = textwrap.dedent("""
+        from conan import ConanFile
+
+        class HostRecipe(ConanFile):
+            name = "lib"
+            version = "0.1"
+            package_type = "library"
+
+            # Binary configuration
+            settings = "os", "compiler", "build_type", "arch"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": True, "fPIC": True, "*:shared": True}
+
+            implements = ["auto_shared_fpic"]
+
+            def requirements(self):
+                self.requires("minizip/1.3.1")
+        """)
+    plugin = textwrap.dedent("""
+        from conan import ConanFile
+
+        class pluginRecipe(ConanFile):
+            name = "plugin"
+            version = "0.1"
+            package_type = "library"
+
+            # Binary configuration
+            settings = "os", "compiler", "build_type", "arch"
+            options = {"shared": [True, False], "fPIC": [True, False]}
+            default_options = {"shared": False, "fPIC": True}
+
+            implements = ["auto_shared_fpic"]
+
+            def requirements(self):
+                self.requires("host/0.1", visible=False)
+                self.requires("lib/0.1", visible=False)
+        """)
+    c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.3.1").with_package_type("static-library"),
+            "bzip2/conanfile.py": GenConanfile("bzip2", "1.0.8").with_package_type("static-library"),
+            "libzip/conanfile.py": libzip,
+            "minizip/conanfile.py": minizip,
+            "host/conanfile.py": host,
+            "lib/conanfile.py": lib,
+            "plugin/conanfile.py": plugin,
+            })
+    c.run("export zlib")
+    c.run("export bzip2")
+    c.run("export libzip")
+    c.run("export minizip")
+    c.run("export host")
+    c.run("export lib")
+    c.run("export plugin")
+    c.run("graph info plugin --format=html", redirect_stdout="graph.html")
+    c.open("graph.html")
