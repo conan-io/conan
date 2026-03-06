@@ -22,6 +22,7 @@ class TargetConfigurationTemplate2:
         self._full_cpp_info = full_cpp_info
         self._config_comp_name = config_comp_name
         self._cmake_file_name = cmake_file_name
+        self._cmake_file_names = self._cmakedeps.get_cmake_filenames(self._conanfile)
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
@@ -63,7 +64,8 @@ class TargetConfigurationTemplate2:
                 link = not (pkg_type is PackageType.SHARED and d.package_type is PackageType.SHARED)
                 result[dep_target] = {
                     "link": link,
-                    "link_feature": link_feature
+                    "link_feature": link_feature,
+                    "dependency": (d, None)
                 }
             return result
 
@@ -77,7 +79,8 @@ class TargetConfigurationTemplate2:
                                                               required_comp)
                 result[dep_target] = {
                     "link": link,
-                    "link_feature": link_feature
+                    "link_feature": link_feature,
+                    "dependency": (self._conanfile, required_comp)  # package itself
                 }
             else:  # Different package
                 try:
@@ -114,7 +117,8 @@ class TargetConfigurationTemplate2:
 
                     result[dep_target] = {
                         "link": link,
-                        "link_feature": link_feature
+                        "link_feature": link_feature,
+                        "dependency": (dep, comp)
                     }
         return result
 
@@ -124,25 +128,34 @@ class TargetConfigurationTemplate2:
         for find_dependency()
         """
         requires_map = {}
+        dependencies = {}
         # Build requires are already filtered by the get_transitive_requires
         transitive_reqs = self._cmakedeps.get_transitive_requires(self._conanfile)
-        # FIXME: Hardcoded CONFIG
-        dependencies = {self._cmakedeps.get_cmake_filenames(r)[None]: "CONFIG" for r in transitive_reqs.values()}
-        extra_mods = self._cmakedeps.get_property("cmake_extra_dependencies", self._conanfile,
-                                                  check_type=list) or []
-        dependencies.update({extra_mod: "" for extra_mod in extra_mods})
-
+        # Get the requirements mapping (to be used by the _get_cmake_lib method)
         if self._require.build:
             return dependencies, requires_map
         elif self._config_comp_name is None and cpp_info.has_components:
             for name, component in cpp_info.components.items():
+                if name in self._cmake_file_names:
+                    continue  # that component will create its own CONFIG file
                 target_name = self._get_cmake_target_name(pkg_name, comp_name=name)
                 requires_map[target_name] = self._requires(component, cpp_info.components, transitive_reqs)
         else:
             target_name = self._get_cmake_target_name(pkg_name, comp_name=self._config_comp_name)
             components = None if self._config_comp_name is None else self._full_cpp_info.components
             requires_map[target_name] = self._requires(cpp_info, components, transitive_reqs)
-
+        # Get the dependencies mapping (to be declared as find_dependency(XXXX REQUIRED CONFIG))
+        for requires_info in requires_map.values():
+            for target_name, info in requires_info.items():
+                dependency = info["dependency"]
+                for component_name, cmake_filename in self._cmakedeps.get_cmake_filenames(dependency[0]).items():
+                    if self._config_comp_name and component_name == self._config_comp_name:
+                        continue
+                    # FIXME: Hardcoded CONFIG
+                    dependencies[cmake_filename] = "CONFIG"
+        extra_mods = self._cmakedeps.get_property("cmake_extra_dependencies", self._conanfile,
+                                                  comp_name=self._config_comp_name, check_type=list) or []
+        dependencies.update({extra_mod: "" for extra_mod in extra_mods})
         return dependencies, requires_map
 
     @property
@@ -200,7 +213,7 @@ class TargetConfigurationTemplate2:
         libs = {}
         if self._config_comp_name is None and cpp_info.has_components:
             for name, component in cpp_info.components.items():
-                if name in self._cmakedeps.get_cmake_filenames(self._conanfile):
+                if name in self._cmake_file_names:
                     continue  # that component will create its own CONFIG file
                 target_name = self._get_cmake_target_name(pkg_name, comp_name=name)
                 target = self._get_cmake_lib(component, pkg_folder, pkg_folder_var, comp_name=name,
