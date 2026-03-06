@@ -148,6 +148,7 @@ class TargetConfigurationTemplate2:
         for requires_info in requires_map.values():
             for target_name, info in requires_info.items():
                 dependency = info["dependency"]
+                # FIXME: Check the component name from the dependency tuple too
                 for component_name, cmake_filename in self._cmakedeps.get_cmake_filenames(dependency[0]).items():
                     if self._config_comp_name and component_name == self._config_comp_name:
                         continue
