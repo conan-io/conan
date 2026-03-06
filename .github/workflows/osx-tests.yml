@@ -8,8 +8,8 @@ on:
         type: string
       run-slow-tests:
         required: false
-        default: false
-        type: boolean
+        default: 'false'
+        type: string
 
 jobs:
   osx_setup:
@@ -181,4 +181,4 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           test-type: ${{ matrix.test-type }}
-          tests: ${{ matrix.test-type == 'functional' && (inputs.run-slow-tests && 'test/functional' || 'test/functional -m "not slow"') || format('test/{0}', matrix.test-type) }}
+          tests: ${{ matrix.test-type == 'functional' && (inputs.run-slow-tests == 'true' && 'test/functional' || 'test/functional -m "not slow"') || format('test/{0}', matrix.test-type) }}
