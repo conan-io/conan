@@ -529,41 +529,43 @@ class TestBuildTrackHost:
         tc.run("create app", assert_error=assert_error)
         assert assert_msg in tc.out
 
-    @pytest.mark.parametrize("requires_tag,tool_requires_tag,fails", [
-        ("user/channel", "user/channel", False),
-        ("", "user/channel", True),
-        ("auser/achannel", "anotheruser/anotherchannel", True),
+    @pytest.mark.parametrize("requires_tag,tool_requires_tag", [
+        ("", ""),
+        ("", "user/channel"),
+        ("user/channel", "user/channel"),
+        ("", "user/channel"),
+        ("auser/achannel", "anotheruser/anotherchannel"),
     ])
-    def test_overriden_host_version_user_channel(self, requires_tag, tool_requires_tag, fails):
+    def test_overriden_host_version_user_channel(self, requires_tag, tool_requires_tag):
         """
         Make the tool_requires follow the regular require with the expression "<host_version>"
         """
         c = TestClient(light=True)
+        user_channel_reference = f"@{requires_tag}" if requires_tag else ""
         pkg = textwrap.dedent(f"""
             from conan import ConanFile
             class ProtoBuf(ConanFile):
                 name = "pkg"
                 version = "0.1"
                 def requirements(self):
-                    self.requires("protobuf/1.0@{requires_tag}")
+                    self.requires("protobuf/1.0{user_channel_reference}")
                 def build_requirements(self):
                     self.tool_requires("protobuf/<host_version>@{tool_requires_tag}")
             """)
         c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
                 "pkg/conanfile.py": pkg})
-        if "/" in requires_tag:
-            user, channel = requires_tag.split("/", 1)
-            user_channel = f"--user={user} --channel={channel}"
-        else:
-            user_channel = ""
-        c.run(f"create protobuf --version=1.0 {user_channel}")
+        for tag in (requires_tag, tool_requires_tag):
+            if "/" in tag:
+                user, channel = tag.split("/", 1)
+                user_channel = f"--user={user} --channel={channel}"
+            else:
+                user_channel = ""
+            c.run(f"create protobuf --version=1.0 {user_channel}")
 
-        c.run("create pkg", assert_error=fails)
-        if fails:
-            assert f"pkg/0.1 require 'protobuf/<host_version>@{tool_requires_tag}': didn't find a " \
-                   "matching host dependency" in c.out
-        else:
-            assert "pkg/0.1: Package '39f6a091994d2d080081ea888d75ef65c1d04c8d' created" in c.out
+        c.run("create pkg")
+        expected_tool_requires_tag = f"@{tool_requires_tag}" if tool_requires_tag else ""
+        c.assert_listed_require({f"protobuf/1.0{user_channel_reference}": "Cache"})
+        c.assert_listed_require({f"protobuf/1.0{expected_tool_requires_tag}": "Cache"}, build=True)
 
     @pytest.mark.parametrize("shared", [True, False])
     def test_host_version_transitive_contexts(self, shared):

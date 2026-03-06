@@ -1610,7 +1610,14 @@ def test_multiple_find_package_subfolder():
 
 
 @pytest.mark.tool("cmake", "3.27")
-def test_find_package_casing():
+def test_find_package_casing_non_fallback():
+    """ CMakeConfigDeps creates hello_DIR by default, but CMake looks for
+    the package name as given in find_package, so casing matters,
+    and it won't look for hello_DIR, but to HellO_DIR.
+
+    Note that this would work without the layout, because CMake would fallback
+    to find the lowercase hello-config.cmake file in the CMAKE_INSTALL_PREFIX,
+    which happens to be the same folder the generated config file ends up without the layout."""
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(test NONE)
@@ -1620,11 +1627,14 @@ def test_find_package_casing():
     """)
     consumer = textwrap.dedent("""
        from conan import ConanFile
-       from conan.tools.cmake import CMake
+       from conan.tools.cmake import CMake, cmake_layout
        class Pkg(ConanFile):
            requires = "hello/1.0"
            generators = "CMakeToolchain", "CMakeDeps"
            settings = "os", "compiler", "build_type", "arch"
+           def layout(self):
+               cmake_layout(self)
+
            def build(self):
                cmake = CMake(self)
                cmake.configure()
@@ -1634,5 +1644,60 @@ def test_find_package_casing():
     client.run(f"create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
-    assert "Conan: Configuring Targets for hello/1.0" in client.out
+    client.run(f"build . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
+    assert 'Could not find a package configuration file provided by "HellO"' in client.out
+
+
+@pytest.mark.tool("cmake", "3.27")
+def test_find_package_extra_variants():
+    """ Producers can now specify extra casing names for find_package.
+    If a consumer uses yet a different casing,
+    it should directly change the cmake_file_name property instead."""
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(test NONE)
+
+        # As long as the package generates hello-config.cmake lowercase, it works
+        find_package(HellO REQUIRED)  # Casing!!!!!
+
+        if (HellO_FOUND)
+            message(STATUS "Found HellO!")
+        endif()
+        if (hello_FOUND)
+            message(STATUS "Found hello!")
+        endif()
+    """)
+    consumer = textwrap.dedent("""
+       from conan import ConanFile
+       from conan.tools.cmake import CMake, cmake_layout
+       class Pkg(ConanFile):
+           requires = "hello/1.0"
+           generators = "CMakeToolchain", "CMakeConfigDeps"
+           settings = "os", "compiler", "build_type", "arch"
+           def layout(self):
+               cmake_layout(self)
+
+           def build(self):
+               cmake = CMake(self)
+               cmake.configure()
+       """)
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    class HelloConan(ConanFile):
+        name = "hello"
+        version = "1.0"
+
+        def package_info(self):
+            self.cpp_info.set_property("cmake_file_name_variants", ["HellO"])
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create")
+
+    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+    client.run("build")
+    assert 'Conan: Configuring Targets for hello/1.0' in client.out
+    # And this follows the expected found variable generation
+    assert "Found HellO!" in client.out
+    assert "Found hello!" not in client.out

@@ -299,7 +299,9 @@ def cache_save(conan_api: ConanAPI, parser, subparser, *args):
                                 "e.g: zlib/1.2.13:* means all binaries for zlib/1.2.13. "
                                 "If revision is not specified, it is assumed latest one.")
     subparser.add_argument("-l", "--list", help="Package list of packages to save")
-    subparser.add_argument('--file', help="Save to this tgz file")
+    subparser.add_argument('--file', help="Save to this file. Allowed extensions .tgz, .txz, .tzst"
+                                          " (.txz and .tzst experimental and .tzst requires "
+                                          "Python>=3.14)")
     subparser.add_argument("--no-source", action="store_true", help="Exclude the sources")
     args = parser.parse_args(*args)
 
