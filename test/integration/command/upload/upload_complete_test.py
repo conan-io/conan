@@ -1,3 +1,4 @@
+import json
 import os
 
 from requests import ConnectionError
@@ -97,6 +98,31 @@ def test_check_upload_confirm_question_yes():
         client.run("create . ")
     client.run("upload hello*#*:*#* -r default")
     assert str(client.out).count("(Uploaded)") == 5
+
+
+def test_upload_block_multiple_prevs_conf():
+    client = TestClient(default_server_user=True, light=True)
+    client.save({"conanfile.py": GenConanfile("hello1", "1.2.1")
+                .with_package_file("file.txt", env_var="MYVAR")})
+
+    # First create and upload a package revision without blocking multiple PREVs
+    with environment_update({"MYVAR": "0"}):
+        client.run("create")
+    client.run("upload hello1/1.2.1 -r default -c")
+
+    # Create a new local PREV for the same reference
+    with environment_update({"MYVAR": "1"}):
+        client.run("create .")
+
+    # Now try to upload with the conf enabled, it should fail
+    client.run("upload hello1/1.2.1 -r default -c -cc core.upload:block_multiple_prevs=True",
+               assert_error=True)
+    assert "ERROR: Cannot upload a new package revision to default" in client.out
+    client.run("list *:*#* -r=default --format=json")
+    pkgs = json.loads(client.stdout)
+    rev = pkgs["default"]["hello1/1.2.1"]["revisions"]["3d21fabf730435f04359989b56cded39"]
+    prevs = rev["packages"]["da39a3ee5e6b4b0d3255bfef95601890afd80709"]["revisions"]
+    assert len(prevs) == 1
 
 
 class TestUpload:

@@ -29,7 +29,8 @@ class UploadUpstreamChecker:
     """
     def __init__(self, app: ConanApp):
         self._app = app
-        self._block_prevs = app.conan_api._api_helpers.global_conf.get("core:block_prevs")
+        global_conf = app.conan_api._api_helpers.global_conf  # noqa
+        self._block_prevs = global_conf.get("core.upload:block_multiple_prevs")
 
     def check(self, package_list, remote, force):
         for ref, packages in package_list.items():
@@ -75,7 +76,6 @@ class UploadUpstreamChecker:
                                      f"contains another package revision")
             if not any(r == pref for r in server_refs):
                 raise NotFoundException()
-
         except NotFoundException:
             prev_bundle["force_upload"] = False
             prev_bundle["upload"] = True
