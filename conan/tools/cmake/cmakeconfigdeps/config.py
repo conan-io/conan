@@ -11,12 +11,12 @@ class ConfigTemplate2:
     FooConfig.cmake
     foo-config.cmake
     """
-    def __init__(self, cmakedeps, require, conanfile, full_cpp_info, config_comp_name, cmake_file_name):
+    def __init__(self, cmakedeps, require, conanfile, full_cpp_info, config_comp_names, cmake_file_name):
         self._cmakedeps = cmakedeps
         self._require = require
         self._conanfile = conanfile
         self._full_cpp_info = full_cpp_info
-        self._config_comp_name = config_comp_name
+        self._config_comp_name = config_comp_names[0]
         self._cmake_file_name = cmake_file_name
 
     def content(self):

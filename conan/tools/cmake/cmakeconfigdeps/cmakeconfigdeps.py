@@ -2,6 +2,7 @@ import glob
 import os
 import re
 import textwrap
+from collections import defaultdict
 
 from jinja2 import Template
 
@@ -119,16 +120,16 @@ class CMakeConfigDeps:
             if require.direct:
                 direct_deps.append((require, dep))
             full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
-            for config_comp_name, cmake_file_name in self.get_cmake_filenames(dep).items():
-                config = ConfigTemplate2(self, require, dep, full_cpp_info, config_comp_name, cmake_file_name)
+            for cmake_file_name, config_comp_names in self.get_cmake_filenames(dep).items():
+                config = ConfigTemplate2(self, require, dep, full_cpp_info, config_comp_names, cmake_file_name)
                 ret[config.filename] = config.content()
-                config_version = ConfigVersionTemplate2(self, dep, config_comp_name, cmake_file_name)
+                config_version = ConfigVersionTemplate2(self, dep, config_comp_names, cmake_file_name)
                 ret[config_version.filename] = config_version.content()
 
-                targets = TargetsTemplate2(self, dep, config_comp_name, cmake_file_name)
+                targets = TargetsTemplate2(self, dep, config_comp_names, cmake_file_name)
                 ret[targets.filename] = targets.content()
                 target_configuration = TargetConfigurationTemplate2(self, dep, require, full_cpp_info,
-                                                                    config_comp_name, cmake_file_name)
+                                                                    config_comp_names, cmake_file_name)
                 ret[target_configuration.filename] = target_configuration.content()
 
         self._print_help(direct_deps)
@@ -191,13 +192,33 @@ class CMakeConfigDeps:
         # - The filename to generate (XXX-config.cmake or FindXXX.cmake)
         # - The name of the defined XXX_DIR variables
         # - The name of transitive dependencies for calls to find_dependency
-        ret = {}
-        if dep.cpp_info.has_components:
-            for comp_name in dep.cpp_info.components:
-                filename = self.get_property("cmake_file_name", dep, comp_name=comp_name)
-                if filename:
-                    ret[comp_name] = filename
-        ret[None] = self.get_property("cmake_file_name", dep) or dep.ref.name
+        ret = defaultdict(list)
+        components_in_dep = []
+        components_as_roots = {}
+        for comp_name in dep.cpp_info.components:
+            filename = self.get_property("cmake_file_name", dep, comp_name=comp_name)
+            if filename:
+                if self.get_property("cmake_file_name_root", dep, comp_name=comp_name,
+                                     check_type=bool):
+                    if filename in components_as_roots:  # only one root per cmake_file_name
+                        self._conanfile.output.warning(f"Several components defined as root of the "
+                                                       f"same cmake_file_name. Using as root the "
+                                                       f"component {components_as_roots[filename]}")
+                        ret[filename].append(comp_name)
+                    else:
+                        ret[filename].insert(0, comp_name)
+                        components_as_roots[filename] = comp_name
+                else:
+                    ret[filename].append(comp_name)
+            else:
+                components_in_dep.append(comp_name)
+        # Root filename is needed if there are no components or all the components define any other
+        # cmake_file_name
+        if not dep.cpp_info.has_components or components_in_dep:
+            # Then let's add the root global cmake_file_name
+            root_filename = self.get_property("cmake_file_name", dep) or dep.ref.name
+            if root_filename not in ret:
+                ret[root_filename] = [None] + components_in_dep
         return ret
 
     def _get_find_mode(self, dep, comp_name=None):
@@ -334,7 +355,8 @@ class _PathGenerator:
             cmake_find_mode = cmake_find_mode.lower()
 
             all_names = self._cmakedeps.get_cmake_filenames(dep)
-            for comp_name, cmake_filename in all_names.items():
+            for cmake_filename, comp_names in all_names.items():
+                comp_name = comp_names[0]  # root one
                 pkg_names = set([cmake_filename] + self._get_cmake_extra_variants(dep, comp_name, cmake_filename))
                 # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
                 if cmake_find_mode == FIND_MODE_NONE:

@@ -15,14 +15,14 @@ class TargetConfigurationTemplate2:
     """
     FooTarget-release.cmake
     """
-    def __init__(self, cmakedeps, conanfile, require, full_cpp_info, config_comp_name, cmake_file_name):
+    def __init__(self, cmakedeps, conanfile, require, full_cpp_info, config_comp_names, cmake_file_name):
         self._cmakedeps = cmakedeps
         self._conanfile = conanfile  # The dependency conanfile, not the consumer one
         self._require = require
         self._full_cpp_info = full_cpp_info
-        self._config_comp_name = config_comp_name
+        self._config_comp_name = config_comp_names[0]
+        self._config_comp_names = config_comp_names
         self._cmake_file_name = cmake_file_name
-        self._cmake_file_names = self._cmakedeps.get_cmake_filenames(self._conanfile)
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
@@ -136,7 +136,7 @@ class TargetConfigurationTemplate2:
             return dependencies, requires_map
         elif self._config_comp_name is None and cpp_info.has_components:
             for name, component in cpp_info.components.items():
-                if name in self._cmake_file_names:
+                if name not in self._config_comp_names:
                     continue  # that component will create its own CONFIG file
                 target_name = self._get_cmake_target_name(pkg_name, comp_name=name)
                 requires_map[target_name] = self._requires(component, cpp_info.components, transitive_reqs)
@@ -149,8 +149,8 @@ class TargetConfigurationTemplate2:
             for target_name, info in requires_info.items():
                 dependency = info["dependency"]
                 # FIXME: Check the component name from the dependency tuple too
-                for component_name, cmake_filename in self._cmakedeps.get_cmake_filenames(dependency[0]).items():
-                    if self._config_comp_name and component_name == self._config_comp_name:
+                for cmake_filename, component_names in self._cmakedeps.get_cmake_filenames(dependency[0]).items():
+                    if self._config_comp_name and component_names[0] == self._config_comp_name:
                         continue
                     # FIXME: Hardcoded CONFIG
                     dependencies[cmake_filename] = "CONFIG"
@@ -214,7 +214,7 @@ class TargetConfigurationTemplate2:
         libs = {}
         if self._config_comp_name is None and cpp_info.has_components:
             for name, component in cpp_info.components.items():
-                if name in self._cmake_file_names:
+                if name not in self._config_comp_names:
                     continue  # that component will create its own CONFIG file
                 target_name = self._get_cmake_target_name(pkg_name, comp_name=name)
                 target = self._get_cmake_lib(component, pkg_folder, pkg_folder_var, comp_name=name,
