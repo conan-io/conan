@@ -58,7 +58,7 @@ def test_multi_cmake():
         """)
 
     hello_h = textwrap.dedent("""
-        #prama once
+        #pragma once
         void hello_{name}();
         """)
 
