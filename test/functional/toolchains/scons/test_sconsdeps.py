@@ -136,8 +136,6 @@ def test_sconsdeps():
         class helloTestConan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
             generators = "SConsDeps"
-            apply_env = False
-            test_type = "explicit"
 
             def requirements(self):
                 self.requires(self.tested_reference_str)

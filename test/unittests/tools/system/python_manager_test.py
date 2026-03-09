@@ -12,8 +12,13 @@ def test_pyenv_conf(mock_shutil_which):
     conanfile.settings = Settings()
     conanfile.conf.define("tools.system.pyenv:python_interpreter",
                           "/python/interpreter/from/config")
+
+    def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,  # noqa
+                 quiet=False):  # noqa
+        assert "/python/interpreter/from/config" in command
+
+    conanfile.run = fake_run
     PyEnv(conanfile, "testenv")
-    conanfile.run = None
     mock_shutil_which.assert_not_called()
 
 
@@ -23,8 +28,13 @@ def test_pyenv_deprecated_conf(mock_shutil_which):
     conanfile.settings = Settings()
     conanfile.conf.define("tools.system.pipenv:python_interpreter",
                           "/python/interpreter/from/config")
+
+    def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,  # noqa
+                 quiet=False):  # noqa
+        assert "/python/interpreter/from/config" in command
+
+    conanfile.run = fake_run
     PyEnv(conanfile, "testenv")
-    conanfile.run = None
     mock_shutil_which.assert_not_called()
 
 

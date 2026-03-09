@@ -52,19 +52,13 @@ class JWTAuth(AuthBase):
         return request
 
 
-def get_exception_from_error(error_code):
+def _raise_exception_from_error(error_code, text):
     tmp = {v: k for k, v in EXCEPTION_CODE_MAPPING.items()  # All except NotFound
            if k not in (RecipeNotFoundException, PackageNotFoundException)}
-    if error_code in tmp:
-        # logger.debug("REST ERROR: %s" % str(tmp[error_code]))
-        return tmp[error_code]
-    else:
-        base_error = int(str(error_code)[0] + "00")
-        # logger.debug("REST ERROR: %s" % str(base_error))
-        try:
-            return tmp[base_error]
-        except KeyError:
-            return None
+    try:
+        raise tmp[error_code](text)
+    except KeyError:
+        raise ConanException(f"Server exception {error_code}: {text}")
 
 
 def _get_mac_digest():  # To avoid re-hashing all the time the same mac
@@ -126,7 +120,7 @@ class RestV2Methods:
         if ret.status_code != 200:
             ret.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
             text = ret.text if ret.status_code != 404 else "404 Not found"
-            raise get_exception_from_error(ret.status_code)(text)
+            _raise_exception_from_error(ret.status_code, text)
         return ret.content.decode()
 
     def server_capabilities(self):
@@ -139,7 +133,7 @@ class RestV2Methods:
         if not server_capabilities and not ret.ok:
             # Old Artifactory might return 401/403 without capabilities, we don't want
             # to cache them #5687, so raise the exception and force authentication
-            raise get_exception_from_error(ret.status_code)(response_to_str(ret))
+            _raise_exception_from_error(ret.status_code, response_to_str(ret))
         if server_capabilities is None:
             # Some servers returning 200-ok, even if not valid repo
             raise ConanException(f"Remote {self.remote_url} doesn't seem like a valid Conan remote")
@@ -154,7 +148,7 @@ class RestV2Methods:
 
         if response.status_code != 200:  # Error message is text
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
-            raise get_exception_from_error(response.status_code)(response_to_str(response))
+            _raise_exception_from_error(response.status_code, response_to_str(response))
 
         content = response.content.decode()
         content_type = response.headers.get("Content-Type")
@@ -358,7 +352,7 @@ class RestV2Methods:
         if response.status_code != 200:  # Error message is text
             # To be able to access ret.text (ret.content are bytes)
             response.charset = "utf-8"
-            raise get_exception_from_error(response.status_code)(response.text)
+            _raise_exception_from_error(response.status_code, response.text)
 
     def remove_packages(self, prefs):
         self.check_credentials()
@@ -376,7 +370,7 @@ class RestV2Methods:
                 if response.status_code != 200:  # Error message is text
                     # To be able to access ret.text (ret.content are bytes)
                     response.charset = "utf-8"
-                    raise get_exception_from_error(response.status_code)(response.text)
+                    _raise_exception_from_error(response.status_code, response.text)
 
     def remove_recipe(self, ref):
         """ Remove a recipe and packages """
@@ -396,7 +390,7 @@ class RestV2Methods:
             if response.status_code != 200:  # Error message is text
                 # To be able to access ret.text (ret.content are bytes)
                 response.charset = "utf-8"
-                raise get_exception_from_error(response.status_code)(response.text)
+                _raise_exception_from_error(response.status_code, response.text)
 
     def get_recipe_revision_reference(self, ref):
         # FIXME: implement this new endpoint in the remotes?
