@@ -20,6 +20,8 @@ class SourcesCachingDownloader:
     def __init__(self, conanfile):
         helpers = getattr(conanfile, "_conan_helpers")
         self._global_conf = helpers.global_conf
+        self._cache = helpers.cache
+        self._requester = helpers.requester
         self._file_downloader = FileDownloader(helpers.requester, scope=conanfile.display_name,
                                                source_credentials=True)
         self._home_folder = helpers.home_folder
@@ -30,6 +32,10 @@ class SourcesCachingDownloader:
                  retry, retry_wait, verify_ssl, auth, headers, md5, sha1, sha256):
         download_cache_folder = self._global_conf.get("core.sources:download_cache")
         backups_urls = self._global_conf.get("core.sources:download_urls", check_type=list)
+        if download_cache_folder == "in-package":
+            self._in_pkg_download(urls, file_path,
+                                  retry, retry_wait, verify_ssl, auth, headers, md5, sha1, sha256)
+            return
         if not (backups_urls or download_cache_folder) or not sha256:
             # regular, non backup/caching download
             if backups_urls or download_cache_folder:
@@ -40,6 +46,49 @@ class SourcesCachingDownloader:
             self._caching_download(urls, file_path,
                                    retry, retry_wait, verify_ssl, auth, headers, md5, sha1, sha256,
                                    download_cache_folder, backups_urls)
+
+    def _in_pkg_download(self, urls, file_path,
+                         retry, retry_wait, verify_ssl, auth, headers, md5, sha1, sha256):
+
+        # Check if file in metadata/conan_sources_download
+        metadata_folder = os.path.join(self._conanfile.recipe_metadata_folder, "conan_source_backup")
+        # TODO: Fixme, relative path poor
+        rel_file_path = os.path.relpath(file_path, os.getcwd())
+        metadata_path = os.path.join(metadata_folder, rel_file_path)
+        if os.path.isfile(metadata_path):
+            self._file_downloader.check_checksum(metadata_path, md5, sha1, sha256)
+            shutil.copyfile(metadata_path, file_path)
+            return
+
+        # If not there, check if in server, which servers?
+        ref = self._conanfile.ref
+        recipe_layout = self._cache.recipe_layout(ref)  # raises if not found
+        from conan.internal.api.remotes.localdb import LocalDB
+        localdb = LocalDB(self._home_folder)
+
+        from conan.internal.rest.auth_manager import ConanApiAuthManager
+        auth_manager = ConanApiAuthManager(self._requester, self._home_folder, localdb, self._global_conf)
+        # Handle remote connections
+        from conan.internal.rest.remote_manager import RemoteManager
+        remote_manager = RemoteManager(self._cache, auth_manager, self._home_folder)
+        remotes = self._conanfile._conan_helpers.remotes
+        for remote in remotes:
+            try:
+                remote_manager.get_recipe_metadata(recipe_layout, ref, remote,
+                                                   metadata=["conan_source_backup*"])
+            except NotFoundException:
+                pass
+            if os.path.isfile(metadata_path):
+                self._file_downloader.check_checksum(metadata_path, md5, sha1, sha256)
+                shutil.copyfile(metadata_path, file_path)
+                return
+
+        # If not there, really download from internet
+        self._download_from_urls(urls, file_path, retry, retry_wait,
+                                 verify_ssl, auth, headers, md5, sha1, sha256)
+        # do a copy in metadata for later upload
+        os.makedirs(metadata_folder, exist_ok=True)
+        shutil.copyfile(file_path, metadata_path)
 
     def _caching_download(self, urls, file_path,
                           retry, retry_wait, verify_ssl, auth, headers, md5, sha1, sha256,

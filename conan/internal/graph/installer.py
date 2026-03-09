@@ -185,6 +185,8 @@ class BinaryInstaller:
         if node.binary == BINARY_EDITABLE:
             return
 
+        conanfile._conan_helpers.remotes = remotes
+
         recipe_layout = self._cache.recipe_layout(node.ref)
         export_source_folder = recipe_layout.export_sources()
         source_folder = recipe_layout.source()
@@ -255,6 +257,7 @@ class BinaryInstaller:
             for install_reference in level:
                 for package in install_reference.packages.values():
                     recipe_layout = self._install_source(package.nodes[0], remotes)
+                    package.nodes[0].conanfile._conan_helpers.remotes = remotes
                     self._handle_package(recipe_layout, package, install_reference, handled_count,
                                          package_count)
                     handled_count += 1

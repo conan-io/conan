@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import textwrap
 import uuid
 from unittest import mock
@@ -885,3 +886,36 @@ class TestDownloadCacheBackupSources:
         self.client.run("upload * -c -r=default")
         assert "No backup sources files to upload" in self.client.out
         assert sha256 + ".dirty" not in os.listdir(os.path.join(self.download_cache_folder, "s"))
+
+
+def test_new_in_server_approach():
+    c = TestClient(default_server_user=True, light=True)
+    file_server = TestFileServer()
+    c.servers["file_server"] = file_server
+
+    http_server_base_folder_internet = os.path.join(file_server.store, "internet")
+
+    save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+    hello_world_sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.files import download
+        class Pkg2(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            def source(self):
+                download(self, "{file_server.fake_url}/internet/myfile.txt",
+                        "myfile.txt",
+                         sha256="{hello_world_sha256}")
+        """)
+
+    c.save_home({"global.conf": "core.sources:download_cache=in-package"})
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+
+    c.run("upload * -c -r=default")
+    c.run("remove * -c")
+    shutil.rmtree(http_server_base_folder_internet)
+    c.run("create .")
+
