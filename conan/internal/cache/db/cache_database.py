@@ -18,7 +18,6 @@ class CacheDatabase:
         # Recipes: JSON file-based table under Conan home "db" folder (shareable, no SQLite)
         db_folder = os.path.join(os.path.dirname(filename), "db")
         self._recipes = RecipesJsonTable(db_folder)
-        self._recipes.create_table()
         # Packages: still SQLite for now
         self._packages = PackagesDBTable(filename)
         if not os.path.isfile(filename):

@@ -35,6 +35,7 @@ class RecipesJsonTable:
 
     def __init__(self, db_folder: str):
         self._db_folder = os.path.abspath(db_folder)
+        os.makedirs(self._db_folder, exist_ok=True)
         self._lock = self._lock_storage[self._db_folder]
 
     def _ref_dir(self, ref: RecipeReference) -> str:
@@ -55,19 +56,6 @@ class RecipesJsonTable:
 
     def _release(self):
         self._lock.release()
-
-    def create_table(self):
-        os.makedirs(self._db_folder, exist_ok=True)
-
-    @staticmethod
-    def _as_dict(reference: str, rrev: str, path: str, timestamp: float) -> dict:
-        ref = RecipeReference.loads(reference)
-        ref.revision = rrev
-        ref.timestamp = timestamp
-        return {
-            "ref": ref,
-            "path": path,
-        }
 
     def create(self, path: str, ref: RecipeReference):
         assert ref is not None
@@ -144,8 +132,6 @@ class RecipesJsonTable:
         self._acquire()
         try:
             refs = set()
-            if not os.path.isdir(self._db_folder):
-                return []
             for ref_hash_dir in os.listdir(self._db_folder):
                 ref_dir = os.path.join(self._db_folder, ref_hash_dir)
                 if not os.path.isdir(ref_dir):
@@ -166,18 +152,15 @@ class RecipesJsonTable:
         try:
             if not os.path.isfile(rev_data_path):
                 raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref.repr_notime()}' not found")
-            ref_data_path = self._ref_data_path(ref)
-            with open(ref_data_path, "r", encoding="utf-8") as f:
-                ref_data = json.load(f)
             with open(rev_data_path, "r", encoding="utf-8") as f:
                 rev_data = json.load(f)
-            reference = ref_data["ref"]
-            return self._as_dict(
-                reference,
-                rev_data["revision"],
-                rev_data["path"],
-                rev_data["timestamp"],
-            )
+            result = ref.copy()
+            result.revision = rev_data["revision"]
+            result.timestamp = rev_data["timestamp"]
+            return {
+                "ref": result,
+                "path": rev_data["path"]
+            }
         finally:
             self._release()
 
@@ -190,9 +173,6 @@ class RecipesJsonTable:
             ref_data_path = self._ref_data_path(ref)
             if not os.path.isfile(ref_data_path):
                 raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref}' not found")
-            with open(ref_data_path, "r", encoding="utf-8") as f:
-                ref_data = json.load(f)
-            reference = ref_data["ref"]
 
             best = None
             best_ts = None
@@ -212,12 +192,14 @@ class RecipesJsonTable:
 
             if best is None:
                 raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref}' not found")
-            return self._as_dict(
-                reference,
-                best["revision"],
-                best["path"],
-                best["timestamp"],
-            )
+
+            result = ref.copy()
+            result.revision = best["revision"]
+            result.timestamp = best["timestamp"]
+            return {
+                "ref": result,
+                "path": best["path"]
+            }
         finally:
             self._release()
 
@@ -231,9 +213,6 @@ class RecipesJsonTable:
             ref_data_path = self._ref_data_path(ref)
             if not os.path.isfile(ref_data_path):
                 return []
-            with open(ref_data_path, "r", encoding="utf-8") as f:
-                ref_data = json.load(f)
-            reference = ref_data["ref"]
 
             revs = []
             for name in os.listdir(ref_dir):
@@ -249,7 +228,7 @@ class RecipesJsonTable:
             revs.sort(key=lambda x: x[0], reverse=True)
             result = []
             for ts, rrev in revs:
-                r = RecipeReference.loads(reference)
+                r = ref.copy()
                 r.revision = rrev
                 r.timestamp = ts
                 result.append(r)
