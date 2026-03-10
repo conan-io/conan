@@ -1,9 +1,11 @@
 import sqlite3
 import threading
+import traceback
 from collections import defaultdict, namedtuple
 from contextlib import contextmanager
 from typing import Tuple, List
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 
 
@@ -26,6 +28,8 @@ class BaseDbTable:
     @contextmanager
     def db_connection(self):
         if not self._lock.acquire(timeout=20):
+            m = traceback.format_exc() + "\n"
+            ConanOutput().error(m)
             raise ConanException("Conan failed to acquire database lock in 20s. Maybe the system is "
                                  "under very heavy load. Please report it to Github tickets")
         # isolation_level=None, puts it in regular SQLITE autocommit mode, every

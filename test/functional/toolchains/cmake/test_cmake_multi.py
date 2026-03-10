@@ -8,21 +8,19 @@ from conan.test.utils.tools import TestClient
 def test_multi_cmake():
     conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
+        from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout
         import os
-
 
         class multiRecipe(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
 
-            exports_sources = "cmake_one/CMakeLists.txt", "cmake_two/CMakeLists.txt", "src_one/*", "src_two/*"
+            exports_sources = ("cmake_one/CMakeLists.txt", "cmake_two/CMakeLists.txt",
+                               "src_one/*", "src_two/*")
 
             def layout(self):
                 cmake_layout(self)
 
             def generate(self):
-                deps = CMakeDeps(self)
-                deps.generate()
                 tc = CMakeToolchain(self)
                 tc.generate()
 
@@ -30,11 +28,9 @@ def test_multi_cmake():
                 cmake = CMake(self)
                 cmake.configure(build_script_folder="cmake_one", subfolder="one")
                 cmake.build(subfolder="one")
-                # cmake.install(subfolder="one")
 
             def build_two(self):
                 cmake = CMake(self)
-                # CMAKE_PREFIX_PATH
                 cmake.configure(build_script_folder="cmake_two", subfolder="two")
                 cmake.build(subfolder="two")
 
@@ -62,12 +58,8 @@ def test_multi_cmake():
         """)
 
     hello_h = textwrap.dedent("""
-        #ifndef HELLO_{name}_H
-        #define HELLO_{name}_H
-
+        #pragma once
         void hello_{name}();
-
-        #endif
         """)
 
     cmakelist = textwrap.dedent("""
@@ -91,13 +83,13 @@ def test_multi_cmake():
                  "src_two/hello_two.cpp": hello_cpp.format(name="two")})
 
     client.run("create . --name=multi --version=0.1")
-    file_ext = '.a' if platform.system() != "Windows" else '.lib'
-    lib_prefix = 'lib' if platform.system() != "Windows" else ''
+    ext = '.a' if platform.system() != "Windows" else '.lib'
+    prefix = 'lib' if platform.system() != "Windows" else ''
 
     assert "multi/0.1: package(): Packaged 1 '.h' file: hello_two.h" in client.out
-    assert f"multi/0.1: package(): Packaged 1 '{file_ext}' file: {lib_prefix}hello_two{file_ext}" in client.out
+    assert f"multi/0.1: package(): Packaged 1 '{ext}' file: {prefix}hello_two{ext}" in client.out
     package_folder = client.created_layout().package()
     assert not os.path.exists(os.path.join(package_folder, "one", "include", "hello_one.h"))
-    assert not os.path.exists(os.path.join(package_folder, "one", "lib", f"{lib_prefix}hello_one{file_ext}"))
+    assert not os.path.exists(os.path.join(package_folder, "one", "lib", f"{prefix}hello_one{ext}"))
     assert os.path.exists(os.path.join(package_folder, "two", "include", "hello_two.h"))
-    assert os.path.exists(os.path.join(package_folder, "two", "lib", f"{lib_prefix}hello_two{file_ext}"))
+    assert os.path.exists(os.path.join(package_folder, "two", "lib", f"{prefix}hello_two{ext}"))

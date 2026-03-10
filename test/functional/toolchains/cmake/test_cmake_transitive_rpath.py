@@ -2,18 +2,16 @@ import platform
 import textwrap
 import pytest
 
-from conan.test.utils.mocks import ConanFileMock
-from conan.tools.env.environment import environment_wrap_command
-from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 
-@pytest.mark.skipif(platform.system() != "Linux", reason="Linux/gcc required for -rpath/-rpath-link testing")
+
+@pytest.mark.skipif(platform.system() != "Linux",
+                    reason="Linux/gcc required for -rpath/-rpath-link testing")
 @pytest.mark.tool("cmake", "3.27")
 @pytest.mark.parametrize("use_cmake_config_deps", [True, False])
 def test_cmake_sysroot_transitive_rpath(use_cmake_config_deps):
     c = TestClient()
 
-     
     extra_profile = textwrap.dedent("""
         [conf]
         tools.build:sysroot=/path/to/nowhere
@@ -78,8 +76,8 @@ def test_cmake_sysroot_transitive_rpath(use_cmake_config_deps):
         c.run(f"create . -o '*:shared=True' -pr=default -pr=../extra_profile {extra_conf}")
 
 
-
-@pytest.mark.skipif(platform.system() != "Linux", reason="Linux/gcc required for -rpath/-rpath-link testing")
+@pytest.mark.skipif(platform.system() != "Linux",
+                    reason="Linux/gcc required for -rpath/-rpath-link testing")
 @pytest.mark.tool("cmake", "3.27")
 @pytest.mark.parametrize("use_cmake_config_deps", [True, False])
 def test_cmake_transitive_rpath_private_internal(use_cmake_config_deps):
@@ -123,7 +121,8 @@ def test_cmake_transitive_rpath_private_internal(use_cmake_config_deps):
         install(TARGETS foo bar)
     """)
 
-    foobar_conanfile = textwrap.dedent("""
+    cmake_deps_gen = "CMakeConfigDeps" if use_cmake_config_deps else "CMakeDeps"
+    foobar_conanfile = textwrap.dedent(f"""
         from conan import ConanFile
         from conan.tools.cmake import CMake, cmake_layout
 
@@ -133,12 +132,12 @@ def test_cmake_transitive_rpath_private_internal(use_cmake_config_deps):
             version = "1.0"
             package_type = "library"
             settings = "os", "compiler", "build_type", "arch"
-            options = {"shared": [True, False]}
-            default_options = {"shared": True}
+            options = {{"shared": [True, False]}}
+            default_options = {{"shared": True}}
 
             exports_sources = "CMakeLists.txt", "src/*", "include/*"
 
-            generators = "CMakeDeps", "CMakeToolchain"
+            generators = "{cmake_deps_gen}", "CMakeToolchain"
 
             def layout(self):
                 cmake_layout(self)
@@ -158,7 +157,7 @@ def test_cmake_transitive_rpath_private_internal(use_cmake_config_deps):
                 self.cpp_info.components["bar"].requires = ["foo"]
     """)
 
-    consumer_conanfile = textwrap.dedent("""
+    consumer_conanfile = textwrap.dedent(f"""
             from conan import ConanFile
             from conan.tools.cmake import CMake, cmake_layout
 
@@ -167,14 +166,14 @@ def test_cmake_transitive_rpath_private_internal(use_cmake_config_deps):
                 version = "1.0"
                 package_type = "library"
                 settings = "os", "compiler", "build_type", "arch"
-                options = {"shared": [True, False]}
-                default_options = {"shared": True}
-                generators = "CMakeDeps", "CMakeToolchain"
+                options = {{"shared": [True, False]}}
+                default_options = {{"shared": True}}
+                generators = "{cmake_deps_gen}", "CMakeToolchain"
                 exports_sources = "CMakeLists.txt", "src/*", "include/*"
 
                 def layout(self):
                     cmake_layout(self)
-                
+
                 def requirements(self):
                     self.requires("foobar/1.0")
 
@@ -223,8 +222,7 @@ def test_cmake_transitive_rpath_private_internal(use_cmake_config_deps):
     int main() { return consumer(2, 3) == 20 ? 0 : 1; }
     """)
 
-    extra_conf = "-c tools.cmake.cmakedeps:new=will_break_next" if use_cmake_config_deps else ""
-    extra_conf += " -c tools.build:add_rpath_link=True" # removing this should break the test
+    extra_conf = "-c tools.build:add_rpath_link=True"  # removing this should break the test
 
     with c.chdir("foobar"):
         c.save({"include/foo.h": foo_h,
