@@ -145,10 +145,10 @@ class TargetConfigurationTemplate2:
         for requires_info in requires_map.values():
             for target_name, info in requires_info.items():
                 dep, comp = info["dependency"]
-                if comp in self._component_names:
+                if self._config_comp_name is not None and comp in self._component_names:
                     continue  # component over the same CONFIG file, let's continue...
                 for cmake_filename, component_names in self._cmakedeps.get_cmake_filenames(dep).items():
-                    if comp in component_names:
+                    if self._config_comp_name is None or comp in component_names:
                         # FIXME: Hardcoded CONFIG
                         dependencies[cmake_filename] = "CONFIG"
         extra_mods = self._cmakedeps.get_property("cmake_extra_dependencies", self._conanfile,

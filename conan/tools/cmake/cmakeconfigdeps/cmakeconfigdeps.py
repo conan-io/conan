@@ -200,9 +200,11 @@ class CMakeConfigDeps:
             for name in components:
                 if name in default_components:
                     raise ConanException(f"The default component '{name}' is defined in "
-                                         f"another CMake Config file.")
+                                         f"another CMake Config file. Check the "
+                                         f"'cmake_file_component_names' property.")
                 elif name not in components_in_dep:
-                    self._conanfile.output.warning(f"Component {name} does not exist. Ignoring it.")
+                    raise ConanException(f"Component {name} does not exist. Check the "
+                                         f"'cmake_file_component_names' property definition.")
                 else:
                     ret[filename].append(name)
                     components_in_dep.remove(name)  # total of components within the root Config file
