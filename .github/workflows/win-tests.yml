@@ -6,6 +6,10 @@ on:
       python-versions:
         required: true
         type: string
+      run-slow-tests:
+        required: false
+        default: 'false'
+        type: string
 
 jobs:
   unit_integration_tests:
@@ -255,4 +259,4 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           test-type: functional
-          tests: test/functional
+          tests: ${{ inputs.run-slow-tests == 'true' && 'test/functional' || 'test/functional -m "not slow"' }}

@@ -38,6 +38,7 @@ def base_profile():
         """)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
 @pytest.mark.tool("bazel", "6.x")
 def test_basic_exe_6x(bazelrc, build_type, base_profile, bazel_output_root_dir):
@@ -56,6 +57,7 @@ def test_basic_exe_6x(bazelrc, build_type, base_profile, bazel_output_root_dir):
         assert "myapp/1.0: Hello World Debug!" in client.out
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
 @pytest.mark.tool("bazel", "7.x")
 def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
@@ -74,6 +76,7 @@ def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
         assert "myapp/1.0: Hello World Debug!" in client.out
 
 
+@pytest.mark.slow
 @pytest.mark.tool("bazel", "8.x")
 def test_basic_lib(bazelrc, base_profile, bazel_output_root_dir):
     """
@@ -84,7 +87,7 @@ def test_basic_lib(bazelrc, base_profile, bazel_output_root_dir):
     client.run("create .")
     assert "mylib/1.0: Hello World Release!" in client.out
 
-
+@pytest.mark.slow
 @pytest.mark.parametrize("shared", [False, True])
 @pytest.mark.tool("bazel", "6.x")
 def test_transitive_libs_consuming_6x(shared, bazel_output_root_dir):
@@ -211,6 +214,7 @@ def test_transitive_libs_consuming_6x(shared, bazel_output_root_dir):
         assert "myfirstlib/1.2.11: Hello World Release!"
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("shared", [False, True])
 @pytest.mark.tool("bazel", "7.x")
 @pytest.mark.skipif(platform.system() == "Linux",
@@ -344,6 +348,7 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
         assert "myfirstlib/1.2.11: Hello World Release!"
 
 
+@pytest.mark.slow
 @pytest.mark.tool("bazel", "8.x")
 def test_empty_bazel_query():
     """
