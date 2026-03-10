@@ -193,34 +193,21 @@ class CMakeConfigDeps:
         # - The name of the defined XXX_DIR variables
         # - The name of transitive dependencies for calls to find_dependency
         ret = defaultdict(list)
-        components_in_dep = []
-        components_as_roots = {}
-        for comp_name in dep.cpp_info.components:
-            filename = self.get_property("cmake_file_name", dep, comp_name=comp_name)
-            if filename:
-                if self.get_property("cmake_file_name_root", dep, comp_name=comp_name,
-                                     check_type=bool):
-                    if filename in components_as_roots:  # only one root per cmake_file_name
-                        self._conanfile.output.warning(f"Several components defined as root of the "
-                                                       f"same cmake_file_name. Using as root the "
-                                                       f"component {components_as_roots[filename]}")
-                        ret[filename].append(comp_name)
-                    else:
-                        ret[filename].insert(0, comp_name)
-                        components_as_roots[filename] = comp_name
+        components_in_dep = list(dep.cpp_info.components.keys())
+        default_components = dep.cpp_info.default_components or []
+        components_file_names = self.get_property("cmake_file_component_names", dep) or {}
+        for filename, components in components_file_names.items():
+            for name in components:
+                if name in default_components:
+                    raise ConanException(f"The default component '{name}' is defined in "
+                                         f"another CMake Config file.")
+                elif name not in components_in_dep:
+                    self._conanfile.output.warning(f"Component {name} does not exist. Ignoring it.")
                 else:
-                    ret[filename].append(comp_name)
-            else:
-                components_in_dep.append(comp_name)
-        # Root filename is needed if there are no components or all the components define any other
-        # cmake_file_name
+                    ret[filename].append(name)
+                    components_in_dep.remove(name)  # total of components within the root Config file
+        # Root filename (if needed)
         if not dep.cpp_info.has_components or components_in_dep:
-            # Check the default components
-            if dep.cpp_info.default_components:
-                for default_comp in dep.cpp_info.default_components:
-                    if default_comp not in components_in_dep:
-                        raise ConanException(f"The default component '{default_comp}' is defined in "
-                                             f"another CMake Config file.")
             # Then let's add the root global cmake_file_name
             root_filename = self.get_property("cmake_file_name", dep) or dep.ref.name
             if root_filename not in ret:

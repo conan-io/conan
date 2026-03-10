@@ -21,10 +21,11 @@ class TargetConfigurationTemplate2:
         self._require = require
         self._full_cpp_info = full_cpp_info
         assert isinstance(full_cpp_info.type, PackageType)
-        root_comp_name = config_comp_names[0]
         self._config_comp_name = config_comp_names[0]
-        self._component_names = {name: self._full_cpp_info.components[name] for name in config_comp_names[1:]}
-        self._component_names[root_comp_name] = self._full_cpp_info if root_comp_name is None else self._full_cpp_info.components[root_comp_name]
+        self._component_names = {name: self._full_cpp_info.components[name] for name in config_comp_names
+                                 if name is not None}
+        if not self._component_names and self._config_comp_name is None:
+            self._component_names = {None: self._full_cpp_info}
         self._cmake_file_name = cmake_file_name
 
     def content(self):
@@ -294,7 +295,8 @@ class TargetConfigurationTemplate2:
         """
         root_target_name = self._get_cmake_target_name(pkg_name)
         # TODO: What if an exe target is called like the pkg_name::pkg_name
-        if libs and root_target_name not in libs:
+        # TODO: Only root target, but what about component defining its own file?
+        if self._config_comp_name is None and libs and root_target_name not in libs:
             # Add a generic interface target for the package depending on the others
             if self._full_cpp_info.default_components is not None:
                 all_requires = {}
