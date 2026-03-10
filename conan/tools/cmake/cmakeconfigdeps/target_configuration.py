@@ -20,6 +20,7 @@ class TargetConfigurationTemplate2:
         self._conanfile = conanfile  # The dependency conanfile, not the consumer one
         self._require = require
         self._full_cpp_info = full_cpp_info
+        assert isinstance(full_cpp_info.type, PackageType)
         root_comp_name = config_comp_names[0]
         self._config_comp_name = config_comp_names[0]
         self._component_names = {name: self._full_cpp_info.components[name] for name in config_comp_names[1:]}
@@ -138,8 +139,7 @@ class TargetConfigurationTemplate2:
             return dependencies, requires_map
         for name, component in self._component_names.items():
             target_name = self._get_cmake_target_name(pkg_name, comp_name=name)
-            components = None if name is None else self._full_cpp_info.components
-            requires_map[target_name] = self._requires(component, components, transitive_reqs)
+            requires_map[target_name] = self._requires(component, self._full_cpp_info.components, transitive_reqs)
         # Get the dependencies mapping (to be declared as find_dependency(XXXX REQUIRED CONFIG))
         for requires_info in requires_map.values():
             for target_name, info in requires_info.items():
@@ -147,10 +147,9 @@ class TargetConfigurationTemplate2:
                 if comp in self._component_names:
                     continue  # component over the same CONFIG file, let's continue...
                 for cmake_filename, component_names in self._cmakedeps.get_cmake_filenames(dep).items():
-                    if self._config_comp_name and component_names[0] == self._config_comp_name:
-                        continue
-                    # FIXME: Hardcoded CONFIG
-                    dependencies[cmake_filename] = "CONFIG"
+                    if comp in component_names:
+                        # FIXME: Hardcoded CONFIG
+                        dependencies[cmake_filename] = "CONFIG"
         extra_mods = self._cmakedeps.get_property("cmake_extra_dependencies", self._conanfile,
                                                   comp_name=self._config_comp_name, check_type=list) or []
         dependencies.update({extra_mod: "" for extra_mod in extra_mods})
@@ -158,9 +157,6 @@ class TargetConfigurationTemplate2:
 
     @property
     def _context(self):
-        cpp_info = self._full_cpp_info if self._config_comp_name is None \
-            else self._full_cpp_info.components[self._config_comp_name]
-        assert isinstance(cpp_info.type, PackageType)
         pkg_name = self._conanfile.ref.name
         # fallback to consumer configuration if it doesn't have build_type
         config = self._conanfile.settings.get_safe("build_type", self._cmakedeps.configuration)
@@ -176,8 +172,7 @@ class TargetConfigurationTemplate2:
         # The BUILD context does not generate libraries targets atm
         if not self._require.build:
             libs = self._get_libs(pkg_name, pkg_folder, pkg_folder_var, requires_map)
-            if self._config_comp_name is None:  # We should only need this for the root component
-                self._add_root_lib_target(libs, pkg_name, cpp_info)
+            self._add_root_lib_target(libs, pkg_name)
         exes = self._get_exes(pkg_name, pkg_folder, pkg_folder_var)
 
         seen_aliases = set()
@@ -291,7 +286,7 @@ class TargetConfigurationTemplate2:
                                                comp_name, check_type=list) or []
         return aliases
 
-    def _add_root_lib_target(self, libs, pkg_name, cpp_info):
+    def _add_root_lib_target(self, libs, pkg_name):
         """
         Add a new pkgname::pkgname INTERFACE target that depends on default_components or
         on all other library targets (not exes)
@@ -301,9 +296,9 @@ class TargetConfigurationTemplate2:
         # TODO: What if an exe target is called like the pkg_name::pkg_name
         if libs and root_target_name not in libs:
             # Add a generic interface target for the package depending on the others
-            if cpp_info.default_components is not None:
+            if self._full_cpp_info.default_components is not None:
                 all_requires = {}
-                for defaultc in cpp_info.default_components:
+                for defaultc in self._full_cpp_info.default_components:
                     target_comp_name = self._get_cmake_target_name(pkg_name, comp_name=defaultc)
                     link_feature = self._cmakedeps.get_property("cmake_link_feature", self._conanfile,
                                                                 defaultc)

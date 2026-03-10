@@ -142,7 +142,7 @@ class CMakeConfigDeps:
             for (require, dep) in direct_deps:
                 note = " # Optional. This is a tool-require, can't link its targets" \
                     if require.build else ""
-                for _, cmake_file_name in self.get_cmake_filenames(dep).items():
+                for cmake_file_name, _ in self.get_cmake_filenames(dep).items():
                     msg.append(f"    find_package({cmake_file_name}){note}")
                 if not require.build and not dep.cpp_info.exe:
                     target_name = self.get_property("cmake_target_name", dep)
@@ -215,6 +215,12 @@ class CMakeConfigDeps:
         # Root filename is needed if there are no components or all the components define any other
         # cmake_file_name
         if not dep.cpp_info.has_components or components_in_dep:
+            # Check the default components
+            if dep.cpp_info.default_components:
+                for default_comp in dep.cpp_info.default_components:
+                    if default_comp not in components_in_dep:
+                        raise ConanException(f"The default component '{default_comp}' is defined in "
+                                             f"another CMake Config file.")
             # Then let's add the root global cmake_file_name
             root_filename = self.get_property("cmake_file_name", dep) or dep.ref.name
             if root_filename not in ret:
