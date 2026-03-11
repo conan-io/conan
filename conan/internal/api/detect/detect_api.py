@@ -616,21 +616,18 @@ def detect_cl_compiler(compiler_exe="cl"):
 
 
 def detect_emcc_compiler(compiler_exe="emcc"):
-    try:
-        ret, out = detect_runner(f'"{compiler_exe}" --version')
-        if ret != 0:
-            return None, None, None
-        first_line = out.splitlines()[0]
-        if "Emscripten" not in first_line:
-            return None, None, None
-        compiler = "emcc"
-        version_match = re.search(r"[0-9]+\.[0-9]+\.[0-9]+", first_line)
-        if version_match:
-            version = version_match.group()
-            ConanOutput(scope="detect_api").info("Found %s %s" % (compiler, version))
-            return compiler, Version(version), compiler_exe
-    except (Exception,):  # to disable broad-except
+    ret, out = detect_runner(f'"{compiler_exe}" --version')
+    if ret != 0:
         return None, None, None
+    if "Emscripten" not in out:
+        return None, None, None
+    compiler = "emcc"
+    version_match = re.search(r"[0-9]+\.[0-9]+\.[0-9]+", out)
+    if not version_match:
+        return None, None, None
+    version = version_match.group()
+    ConanOutput(scope="detect_api").info("Found %s %s" % (compiler, version))
+    return compiler, Version(version), compiler_exe
 
 
 def default_compiler_version(compiler, version):
