@@ -5,6 +5,7 @@ from collections import OrderedDict
 import pytest
 from unittest.mock import patch
 
+from conan.internal.graph.graph_builder import DepsGraphBuilder
 from conan.test.utils.env import environment_update
 from conan.internal.errors import RecipeNotFoundException
 from conan.api.model import RecipeReference
@@ -22,6 +23,9 @@ def _create(c_v2, ref, conanfile=None, args=None, assert_error=False):
     if not assert_error:
         pref = c_v2.created_package_reference(str(ref))
         return pref
+
+
+DepsGraphBuilder.ALLOW_ALIAS = True
 
 
 @pytest.mark.artifactory_ready
