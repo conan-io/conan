@@ -343,6 +343,31 @@ def test_build_deprecated_python_manager():
     assert "Hello Test World!" in client.out
 
 
+@pytest.mark.parametrize("verbosity, expect_pip_output", [
+    ("-verror", True),
+    ("-vstatus", True),
+])
+def test_pyenv_install_error_output_by_verbosity(verbosity, expect_pip_output):
+    conanfile_pyenv = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.system import PyEnv
+
+        class PyenvPackage(ConanFile):
+            def generate(self):
+                pyenv = PyEnv(self)
+                pyenv.install(["package_does_not_exist"])
+        """)
+
+    client = TestClient(path_with_spaces=False)
+    client.save({"conanfile.py": conanfile_pyenv})
+    client.run(f"build . {verbosity}", assert_error=True)
+    if expect_pip_output:
+        assert "package_does_not_exist" in client.out
+        assert "ERROR" in client.out
+    else:
+        assert "package_does_not_exist" not in client.out
+
+
 def test_cmake_toolchain_configure_find_python():
     client = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent("""

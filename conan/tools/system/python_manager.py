@@ -83,13 +83,8 @@ class PyEnv:
         env.prepend_path("PATH", self.bin_path)
         env.vars(self._conanfile).save_script(self._env_name)
 
-    @staticmethod
-    def _quiet():
-        return not ConanOutput.level_allowed(LEVEL_STATUS)
-
     def run(self, args):
-        return self._conanfile.run(cmd_args_to_string([self.env_exe] + list(args)),
-                                   quiet=self._quiet())
+        return self._conanfile.run(cmd_args_to_string([self.env_exe] + list(args)))
 
     def install(self, packages, pip_args=None):
         """
@@ -102,17 +97,18 @@ class PyEnv:
         :return: the return code of the executed pip command.
         """
         args = [self.env_exe, "-m", "pip", "install", "--disable-pip-version-check"]
+        if not ConanOutput.level_allowed(LEVEL_STATUS):
+            args.append("-q")
         if pip_args:
             args.extend(pip_args)
         args += [f'"{p}"' for p in packages]
         command = " ".join(args)
-        return self._conanfile.run(command, quiet=self._quiet())
+        return self._conanfile.run(command)
 
     def _create_venv(self):
         try:
             self._conanfile.run(cmd_args_to_string([self._default_python, '-m', 'venv',
-                                                    self._env_dir]),
-                                quiet=self._quiet())
+                                                    self._env_dir]))
         except ConanException as e:
             raise ConanException(f"PyEnv could not create a Python virtual "
                                  f"environment using '{self._default_python}': {e}")
@@ -126,17 +122,21 @@ class PyEnv:
             else:
                 uv_env_dir = os.path.join(base_env_dir, f"uv_{self._env_name}")
                 self._conanfile.run(cmd_args_to_string(
-                    [self._default_python, '-m', 'venv', uv_env_dir]),
-                    quiet=self._quiet())
+                    [self._default_python, '-m', 'venv', uv_env_dir])
+                )
 
                 python_exe = self._get_env_python(uv_env_dir)
-                self._conanfile.run(cmd_args_to_string(
-                    [python_exe, "-m", "pip", "install", "--disable-pip-version-check", "uv"]),
-                    quiet=self._quiet())
+                pip_args = [python_exe, "-m", "pip", "install", "--disable-pip-version-check"]
+                if not ConanOutput.level_allowed(LEVEL_STATUS):
+                    pip_args.append("-q")
+                pip_args.append("uv")
+                self._conanfile.run(cmd_args_to_string(pip_args))
                 uv_cmd = [python_exe, "-m", "uv"]
 
-            self._conanfile.run(cmd_args_to_string(uv_cmd + ['venv', '--seed', '--python', py_version, self._env_dir]),
-                                quiet=self._quiet())
+            uv_venv_args = uv_cmd + ['venv', '--seed', '--python', py_version, self._env_dir]
+            if not ConanOutput.level_allowed(LEVEL_STATUS):
+                uv_venv_args.append("--quiet")
+            self._conanfile.run(cmd_args_to_string(uv_venv_args))
             self._conanfile.output.info(f"Virtual environment for Python "
                                         f"{py_version} created successfully using UV.")
         except Exception as e:

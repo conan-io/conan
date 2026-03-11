@@ -81,7 +81,7 @@ def test_pyenv_quiet_with_high_verbosity(level, expected_quiet):
 
     def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,  # noqa
                  quiet=False):  # noqa
-        calls.append({"command": command, "quiet": quiet})
+        calls.append(command)
 
     conanfile.run = fake_run
 
@@ -89,15 +89,14 @@ def test_pyenv_quiet_with_high_verbosity(level, expected_quiet):
     try:
         ConanOutput.set_output_level(level)
         pyenv = PyEnv(conanfile, f"testenv_{level}")
-        assert len(calls) == 1
-        assert "venv" in calls[0]["command"]
-        assert calls[0]["quiet"] is expected_quiet
-
         calls.clear()
 
         pyenv.install(["some_package"])
         assert len(calls) == 1
-        assert "pip install" in calls[0]["command"]
-        assert calls[0]["quiet"] is expected_quiet
+        assert "pip install" in calls[0]
+        if expected_quiet:
+            assert " -q " in calls[0]
+        else:
+            assert " -q " not in calls[0]
     finally:
         ConanOutput.set_output_level(old_level)
