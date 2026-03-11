@@ -120,7 +120,7 @@ class CMakeConfigDeps:
             if require.direct:
                 direct_deps.append((require, dep))
             full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
-            for cmake_file_name, config_comp_names in self.get_cmake_filenames(dep).items():
+            for cmake_file_name, config_comp_names in self.get_cmake_filenames(dep, components=full_cpp_info.components).items():
                 config = ConfigTemplate2(self, require, dep, full_cpp_info, config_comp_names, cmake_file_name)
                 ret[config.filename] = config.content()
                 config_version = ConfigVersionTemplate2(self, dep, config_comp_names, cmake_file_name)
@@ -186,14 +186,15 @@ class CMakeConfigDeps:
             if comp is not None:
                 return comp.get_property(prop, check_type=check_type)
 
-    def get_cmake_filenames(self, dep):
+    def get_cmake_filenames(self, dep, components=None):
         # Get the name of the file for the find_package(XXX)
         # This is used by CMakeDeps to determine:
         # - The filename to generate (XXX-config.cmake or FindXXX.cmake)
         # - The name of the defined XXX_DIR variables
         # - The name of transitive dependencies for calls to find_dependency
         ret = defaultdict(list)
-        components_in_dep = list(dep.cpp_info.components.keys())
+        components = components or dep.cpp_info.components
+        components_in_dep = list(components.keys())
         default_components = dep.cpp_info.default_components or []
         components_file_names = self.get_property("cmake_file_component_names", dep) or {}
         for filename, components in components_file_names.items():
