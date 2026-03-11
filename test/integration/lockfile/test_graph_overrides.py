@@ -371,3 +371,20 @@ def test_consecutive_installs():
     # This used to crash when overrides were not managed
     c.run("install pkgc --build=missing --lockfile=conan.lock --lockfile-out=conan.lock")
     c.assert_overrides({"pkga/0.1": ["pkga/0.2"]})
+
+
+def test_error_lockfile_override_build_require():
+    c = TestClient(light=True)
+    c.save({"abseil/conanfile.py": GenConanfile("abseil"),
+            "protobuf/conanfile.py": GenConanfile("protobuf", "0.1").with_requires("abseil/[*]"),
+            "app/conanfile.py": GenConanfile("pkgd", "0.1").with_requirement("protobuf/0.1")
+                                                           .with_requirement("abseil/0.1",
+                                                                             override=True)
+                                                           .with_tool_requires("protobuf/0.1")
+            })
+    c.run("create abseil --version=0.1")
+    c.run("create abseil --version=0.2")
+    c.run("create protobuf")
+    c.run("lock create app")
+    c.run("install app --build=missing")
+    # It doesnt fail
