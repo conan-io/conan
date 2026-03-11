@@ -2,7 +2,10 @@ import os
 import textwrap
 
 from conan.api.model import RecipeReference
+from conan.internal.graph.graph_builder import DepsGraphBuilder
 from conan.test.utils.tools import TestClient, GenConanfile
+
+DepsGraphBuilder.ALLOW_ALIAS = True
 
 
 class TestConanAlias:
