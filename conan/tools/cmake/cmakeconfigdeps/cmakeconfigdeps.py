@@ -187,15 +187,31 @@ class CMakeConfigDeps:
                 return comp.get_property(prop, check_type=check_type)
 
     def get_cmake_filenames(self, dep, components=None):
-        # Get the name of the file for the find_package(XXX)
-        # This is used by CMakeDeps to determine:
-        # - The filename to generate (XXX-config.cmake or FindXXX.cmake)
-        # - The name of the defined XXX_DIR variables
-        # - The name of transitive dependencies for calls to find_dependency
+        """
+        Get the name of the files for the find_package(XXX) for the root and the rest of
+        the components.
+        This is used by CMakeConfigDeps to determine:
+            - The filename to generate (XXX-config.cmake or FindXXX.cmake)
+            - The name of the defined XXX_DIR variables
+            - The name of transitive dependencies for calls to find_dependency
+
+        This method creates a map for the root/components belonging to each XXX-config file.
+        It also reads the properties:
+            - cmake_file_name: name for the root config file.
+            - cmake_file_component_names: dict-like object to define the cmake_file_name and the
+                                          components belonging to it. The first one mentioned in the
+                                          list will act as the root one. For example:
+                                          self.cpp_info.set_property("cmake_file_component_names", {
+                                              "CMAKE_FILE_NAME1": ["COMP1", "COMP2"],
+                                              "CMAKE_FILE_NAME2": ["COMP3"],
+                                              ...
+                                          })
+        """
         ret = defaultdict(list)
         components = components or dep.cpp_info.components
         components_in_dep = list(components.keys())
         default_components = dep.cpp_info.default_components or []
+        # Component filenames mapping
         components_file_names = self.get_property("cmake_file_component_names", dep) or {}
         for filename, components in components_file_names.items():
             for name in components:
