@@ -121,12 +121,12 @@ class CMakeConfigDeps:
                 direct_deps.append((require, dep))
             full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
             for cmake_file_name, config_comp_names in self.get_cmake_filenames(dep, components=full_cpp_info.components).items():
-                config = ConfigTemplate2(self, require, dep, full_cpp_info, config_comp_names, cmake_file_name)
+                config = ConfigTemplate2(self, require, dep, full_cpp_info, config_comp_names[0], cmake_file_name)
                 ret[config.filename] = config.content()
-                config_version = ConfigVersionTemplate2(self, dep, config_comp_names, cmake_file_name)
+                config_version = ConfigVersionTemplate2(self, dep, config_comp_names[0], cmake_file_name)
                 ret[config_version.filename] = config_version.content()
 
-                targets = TargetsTemplate2(self, dep, config_comp_names, cmake_file_name)
+                targets = TargetsTemplate2(self, dep, config_comp_names[0], cmake_file_name)
                 ret[targets.filename] = targets.content()
                 target_configuration = TargetConfigurationTemplate2(self, dep, require, full_cpp_info,
                                                                     config_comp_names, cmake_file_name)
