@@ -1,3 +1,4 @@
+import os
 import re
 import textwrap
 
@@ -973,3 +974,226 @@ def test_requires_only_component_target_generation():
     assert "# Requirement pkg::compB -> pkg::compA (Full link: True)" in target
     # And even if it's INTERFACE, the globally generated target requires it as usual
     assert "# Requirement pkg::pkg -> pkg::compB (Full link: True)" in target
+
+
+class TestCmakeFileComponentNames:
+    """Tests for cmake_file_component_names property - components define their own cmake_file_name."""
+
+    def test_generates_multiple_config_files(self):
+        """Package with cmake_file_component_names generates separate config files per group."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.components["hello"].libs = ["hello"]
+                    self.cpp_info.components["hello"].type = "shared-library"
+                    self.cpp_info.components["hello"].location = "lib/libhello.so"
+                    self.cpp_info.components["hello-helpers"].defines = ["HELLO_HELPERS"]
+                    self.cpp_info.components["bye"].libs = ["bye"]
+                    self.cpp_info.components["bye"].type = "shared-library"
+                    self.cpp_info.components["bye"].location = "lib/libbye.so"
+                    self.cpp_info.components["bye-helpers"].defines = ["BYE_HELPERS"]
+
+                    self.cpp_info.set_property("cmake_file_component_names", {
+                        "greetings": ["hello", "hello-helpers"],
+                        "adieu": ["bye", "bye-helpers"],
+                    })
+        """)
+        tc.save({"conanfile.py": dep})
+        tc.run("create .")
+        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps -c tools.cmake.cmakedeps:new={new_value}")
+
+        # Each group gets its own config, targets and config-version files
+        assert tc.load("greetings-config.cmake")
+        assert tc.load("greetings-Targets-release.cmake")
+        assert tc.load("greetings-config-version.cmake")
+
+        assert tc.load("adieu-config.cmake")
+        assert tc.load("adieu-Targets-release.cmake")
+        assert tc.load("adieu-config-version.cmake")
+
+        # No root pkg config when all components are in cmake_file_component_names
+        assert not os.path.exists(os.path.join(tc.current_folder, "pkg-config.cmake"))
+
+        # Targets contain the expected components
+        greetings_targets = tc.load("greetings-Targets-release.cmake")
+        assert "pkg::hello" in greetings_targets
+        assert "pkg::hello-helpers" in greetings_targets
+
+        adieu_targets = tc.load("adieu-Targets-release.cmake")
+        assert "pkg::bye" in adieu_targets
+        assert "pkg::bye-helpers" in adieu_targets
+
+    def test_paths_include_cmake_file_names(self):
+        """conan_cmakedeps_paths.cmake sets DIR for each cmake_file_name from cmake_file_component_names."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.components["compA"].libs = ["a"]
+                    self.cpp_info.components["compA"].type = "static-library"
+                    self.cpp_info.components["compA"].location = "lib/liba.a"
+                    self.cpp_info.components["compB"].libs = ["b"]
+                    self.cpp_info.components["compB"].type = "static-library"
+                    self.cpp_info.components["compB"].location = "lib/libb.a"
+                    self.cpp_info.set_property("cmake_file_component_names", {
+                        "MyLib": ["compA", "compB"],
+                    })
+        """)
+        tc.save({"conanfile.py": dep})
+        tc.run("create .")
+        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps -c tools.cmake.cmakedeps:new={new_value}")
+
+        paths = tc.load("conan_cmakedeps_paths.cmake")
+        assert "set(MyLib_DIR" in paths
+        # pkg_DIR should not exist when all components are in cmake_file_component_names
+        assert "set(pkg_DIR" not in paths
+
+    def test_error_nonexistent_component(self):
+        """Using a non-existent component in cmake_file_component_names raises ConanException."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.components["compA"].libs = ["a"]
+                    self.cpp_info.components["compA"].type = "static-library"
+                    self.cpp_info.components["compA"].location = "lib/liba.a"
+                    self.cpp_info.set_property("cmake_file_component_names", {
+                        "MyLib": ["compA", "nonexistent"],
+                    })
+        """)
+        tc.save({"conanfile.py": dep})
+        tc.run("create .")
+        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps -c tools.cmake.cmakedeps:new={new_value}",
+               assert_error=True)
+        assert "Component nonexistent does not exist" in tc.out
+        assert "cmake_file_component_names" in tc.out
+
+    def test_error_default_component_in_another_file(self):
+        """Default component in cmake_file_component_names raises ConanException."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.components["compA"].libs = ["a"]
+                    self.cpp_info.components["compA"].type = "static-library"
+                    self.cpp_info.components["compA"].location = "lib/liba.a"
+                    self.cpp_info.components["compB"].libs = ["b"]
+                    self.cpp_info.components["compB"].type = "static-library"
+                    self.cpp_info.components["compB"].location = "lib/libb.a"
+                    self.cpp_info.default_components = ["compA"]
+                    self.cpp_info.set_property("cmake_file_component_names", {
+                        "MyLib": ["compA", "compB"],
+                    })
+        """)
+        tc.save({"conanfile.py": dep})
+        tc.run("create .")
+        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps -c tools.cmake.cmakedeps:new={new_value}",
+               assert_error=True)
+        assert "default component 'compA' is defined in another CMake Config file" in tc.out
+        assert "cmake_file_component_names" in tc.out
+
+    def test_mixed_root_and_component_files(self):
+        """Some components in cmake_file_component_names, rest in root config file."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.components["core"].libs = ["core"]
+                    self.cpp_info.components["core"].type = "static-library"
+                    self.cpp_info.components["core"].location = "lib/libcore.a"
+                    self.cpp_info.components["extra"].libs = ["extra"]
+                    self.cpp_info.components["extra"].type = "static-library"
+                    self.cpp_info.components["extra"].location = "lib/libextra.a"
+                    self.cpp_info.set_property("cmake_file_component_names", {
+                        "Extra": ["extra"],
+                    })
+        """)
+        tc.save({"conanfile.py": dep})
+        tc.run("create .")
+        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps -c tools.cmake.cmakedeps:new={new_value}")
+
+        # Root pkg config with core component
+        assert tc.load("pkg-config.cmake")
+        pkg_targets = tc.load("pkg-Targets-release.cmake")
+        assert "pkg::core" in pkg_targets
+
+        # Extra config with extra component
+        assert tc.load("Extra-config.cmake")
+        extra_targets = tc.load("Extra-Targets-release.cmake")
+        assert "pkg::extra" in extra_targets
+
+        paths = tc.load("conan_cmakedeps_paths.cmake")
+        assert "set(pkg_DIR" in paths
+        assert "set(Extra_DIR" in paths
+
+    def test_find_dependency_uses_correct_names(self):
+        """Transitive find_dependency uses cmake_file_name from cmake_file_component_names."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Dep(ConanFile):
+                name = "dep"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.components["lib"].libs = ["dep"]
+                    self.cpp_info.components["lib"].type = "static-library"
+                    self.cpp_info.components["lib"].location = "lib/libdep.a"
+                    self.cpp_info.set_property("cmake_file_component_names", {
+                        "DepLib": ["lib"],
+                    })
+        """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Consumer(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                requires = "dep/1.0"
+
+                def package_info(self):
+                    self.cpp_info.requires = ["dep::lib"]
+        """)
+        tc.save({"dep/conanfile.py": dep, "consumer/conanfile.py": consumer})
+        tc.run("create dep")
+        tc.run("create consumer")
+        tc.run(f"install --requires=consumer/1.0 -g CMakeConfigDeps -c tools.cmake.cmakedeps:new={new_value}")
+
+        # Consumer targets should use find_dependency(DepLib) not find_dependency(dep)
+        consumer_targets = tc.load("consumer-Targets-release.cmake")
+        assert "find_dependency(DepLib" in consumer_targets
+        assert "find_dependency(dep " not in consumer_targets
