@@ -114,7 +114,7 @@ graph_info_html = r"""
                         label = node["ref"];
                     else
                         label = node.recipe == "Consumer"? "conanfile": "CLI";
-                    if (collapse_packages) {
+                    if (collapse_packages && node.context == "build") {
                         let existing = collapsed_packages[label];
                         targets[node_id] = existing;
                         if (existing) continue;
