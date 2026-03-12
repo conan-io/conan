@@ -1,3 +1,4 @@
+import os
 from collections import deque
 
 from conan.internal.cache.conan_reference_layout import BasicLayout
@@ -20,6 +21,7 @@ from conan.internal.model.version_range import VersionRange
 
 
 class DepsGraphBuilder:
+    ALLOW_ALIAS = False
 
     def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf):
         self._proxy = proxy
@@ -219,6 +221,8 @@ class DepsGraphBuilder:
             result.append(require)
             alias = require.alias  # alias needs to be processed this early
             if alias is not None:
+                if not DepsGraphBuilder.ALLOW_ALIAS and os.getenv("CONAN_ALLOW_ALIAS") != "will_break_next":
+                    raise ConanException(f"Alias requirements have been removed: '{node}' requiring: '{alias}'")
                 resolved = False
                 if graph_lock is not None:
                     resolved = graph_lock.replace_alias(require, alias)
