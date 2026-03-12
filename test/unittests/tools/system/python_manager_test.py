@@ -1,7 +1,8 @@
 from conan.tools.system import PyEnv
 from unittest.mock import patch
 import pytest
-from conan.api.output import ConanOutput, LEVEL_ERROR, LEVEL_STATUS, LEVEL_WARNING, LEVEL_VERBOSE
+from conan.api.output import ConanOutput, LEVEL_QUIET, LEVEL_ERROR, LEVEL_WARNING, \
+    LEVEL_STATUS, LEVEL_VERBOSE, LEVEL_DEBUG, LEVEL_TRACE
 from conan.errors import ConanException
 from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import ConanFileMock
@@ -65,13 +66,20 @@ def test_pyenv_creation_error_message():
     assert "using '/python/interpreter/from/config': fake error message" in exc_info.value.args[0]
 
 
-@pytest.mark.parametrize("level, expected_quiet", [
-    (LEVEL_ERROR, True),
-    (LEVEL_WARNING, True),
-    (LEVEL_STATUS, False),
-    (LEVEL_VERBOSE, False),
+@pytest.mark.parametrize("level, expected_pip_flag", [
+    (LEVEL_QUIET, "-qqq"),
+    (LEVEL_ERROR, "-qq"),
+    (LEVEL_WARNING, "-q"),
+    (LEVEL_STATUS, None),
+    (LEVEL_VERBOSE, "-v"),
+    (LEVEL_DEBUG, "-vv"),
+    (LEVEL_TRACE, "-vvv"),
 ])
-def test_pyenv_quiet_with_high_verbosity(level, expected_quiet):
+def test_pyenv_pip_verbosity(level, expected_pip_flag):
+    """
+    https://github.com/conan-io/conan/issues/19729
+    PyEnv.install() should map Conan verbosity levels to pip's native -q/-v flags.
+    """
     conanfile = ConanFileMock()
     conanfile.settings = Settings()
     conanfile.conf.define("tools.system.pyenv:python_interpreter",
@@ -94,9 +102,10 @@ def test_pyenv_quiet_with_high_verbosity(level, expected_quiet):
         pyenv.install(["some_package"])
         assert len(calls) == 1
         assert "pip install" in calls[0]
-        if expected_quiet:
-            assert " -q " in calls[0]
+        if expected_pip_flag:
+            assert f" {expected_pip_flag} " in calls[0]
         else:
-            assert " -q " not in calls[0]
+            assert " -q" not in calls[0]
+            assert " -v " not in calls[0]
     finally:
         ConanOutput.set_output_level(old_level)

@@ -7,9 +7,40 @@ from conan.tools.build import cmd_args_to_string
 from conan.tools.env.environment import Environment
 from conan.errors import ConanException
 
-from conan.api.output import ConanOutput, LEVEL_STATUS
+from conan.api.output import (
+    ConanOutput,
+    LEVEL_QUIET,
+    LEVEL_ERROR,
+    LEVEL_WARNING,
+    LEVEL_STATUS,
+    LEVEL_VERBOSE,
+    LEVEL_DEBUG,
+    LEVEL_TRACE,
+)
 
 from conan.internal.util.files import rmdir
+
+
+def _get_pip_verbosity():
+    return {
+        LEVEL_QUIET: "-qqq",
+        LEVEL_ERROR: "-qq",
+        LEVEL_WARNING: "-q",
+        LEVEL_VERBOSE: "-v",
+        LEVEL_DEBUG: "-vv",
+        LEVEL_TRACE: "-vvv",
+    }.get(ConanOutput.get_output_level(), "")
+
+
+def _get_uv_verbosity():
+    return {
+        LEVEL_QUIET: "--quiet",
+        LEVEL_ERROR: "--quiet",
+        LEVEL_WARNING: "--quiet",
+        LEVEL_VERBOSE: "--verbose",
+        LEVEL_DEBUG: "--verbose",
+        LEVEL_TRACE: "--verbose",
+    }.get(ConanOutput.get_output_level(), "")
 
 
 class PyEnv:
@@ -96,9 +127,8 @@ class PyEnv:
                          Defaults to ``None``.
         :return: the return code of the executed pip command.
         """
-        args = [self.env_exe, "-m", "pip", "install", "--disable-pip-version-check"]
-        if not ConanOutput.level_allowed(LEVEL_STATUS):
-            args.append("-q")
+        args = [self.env_exe, "-m", "pip", "install", "--disable-pip-version-check",
+                _get_pip_verbosity()]
         if pip_args:
             args.extend(pip_args)
         args += [f'"{p}"' for p in packages]
@@ -126,17 +156,14 @@ class PyEnv:
                 )
 
                 python_exe = self._get_env_python(uv_env_dir)
-                pip_args = [python_exe, "-m", "pip", "install", "--disable-pip-version-check"]
-                if not ConanOutput.level_allowed(LEVEL_STATUS):
-                    pip_args.append("-q")
-                pip_args.append("uv")
-                self._conanfile.run(cmd_args_to_string(pip_args))
+                self._conanfile.run(cmd_args_to_string(
+                    [python_exe, "-m", "pip", "install", "--disable-pip-version-check",
+                     _get_pip_verbosity(), "uv"]))
                 uv_cmd = [python_exe, "-m", "uv"]
 
-            uv_venv_args = uv_cmd + ['venv', '--seed', '--python', py_version, self._env_dir]
-            if not ConanOutput.level_allowed(LEVEL_STATUS):
-                uv_venv_args.append("--quiet")
-            self._conanfile.run(cmd_args_to_string(uv_venv_args))
+            self._conanfile.run(cmd_args_to_string(
+                uv_cmd + ['venv', '--seed', '--python', py_version, self._env_dir,
+                           _get_uv_verbosity()]))
             self._conanfile.output.info(f"Virtual environment for Python "
                                         f"{py_version} created successfully using UV.")
         except Exception as e:
