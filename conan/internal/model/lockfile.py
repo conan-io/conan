@@ -305,7 +305,7 @@ class Lockfile:
             override_ref = next(iter(overriden))
             locked_refs = self._build_requires.refs() if context == "build" else self._requires.refs()
             if override_ref not in locked_refs:
-                return
+                return  # The override came from the other context
             require.overriden_ref = require.overriden_ref or require.ref.copy()
             require.override_ref = override_ref
             require.ref = override_ref
