@@ -991,44 +991,60 @@ class TestCmakeFileComponentNames:
                 settings = "os", "compiler", "build_type", "arch"
 
                 def package_info(self):
-                    self.cpp_info.components["hello"].libs = ["hello"]
-                    self.cpp_info.components["hello"].type = "shared-library"
-                    self.cpp_info.components["hello"].location = "lib/libhello.so"
-                    self.cpp_info.components["hello-helpers"].defines = ["HELLO_HELPERS"]
-                    self.cpp_info.components["bye"].libs = ["bye"]
-                    self.cpp_info.components["bye"].type = "shared-library"
-                    self.cpp_info.components["bye"].location = "lib/libbye.so"
-                    self.cpp_info.components["bye-helpers"].defines = ["BYE_HELPERS"]
-
+                    # CMake File names for components
                     self.cpp_info.set_property("cmake_file_component_names", {
                         "greetings": ["hello", "hello-helpers"],
                         "adieu": ["bye", "bye-helpers"],
                     })
+
+                    self.cpp_info.components["hello"].libs = ["hello"]
+                    self.cpp_info.components["hello"].set_property("cmake_target_name", "greet")
+                    self.cpp_info.components["hello"].type = "shared-library"
+                    self.cpp_info.components["hello"].location = "lib/libhello.so"
+
+                    self.cpp_info.components["hello-helpers"].defines = ["HELLO_HELPERS"]
+
+                    self.cpp_info.components["bye"].libs = ["bye"]
+                    self.cpp_info.components["bye"].type = "shared-library"
+                    self.cpp_info.components["bye"].location = "lib/libbye.so"
+                    self.cpp_info.components["bye"].requires = ["hello", "bye-helpers"]
+
+                    self.cpp_info.components["bye-helpers"].defines = ["BYE_HELPERS"]
         """)
         tc.save({"conanfile.py": dep})
         tc.run("create .")
-        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps -c tools.cmake.cmakedeps:new={new_value}")
-
+        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps")
         # Each group gets its own config, targets and config-version files
-        assert tc.load("greetings-config.cmake")
-        assert tc.load("greetings-Targets-release.cmake")
-        assert tc.load("greetings-config-version.cmake")
+        # greetings
+        assert os.path.exists(os.path.join(tc.current_folder, "greetings-config.cmake"))
+        assert os.path.exists(os.path.join(tc.current_folder, "greetings-Targets-release.cmake"))
+        assert os.path.exists(os.path.join(tc.current_folder, "greetings-config-version.cmake"))
+        # Targets contain the expected components
+        adieu_config = tc.load("greetings-config.cmake")
+        assert "set(greetings_LIBRARIES greet )" in adieu_config
+        # Targets contain the expected components
+        greetings_targets = tc.load("greetings-Targets-release.cmake")
+        assert "add_library(greet SHARED IMPORTED)" in greetings_targets
+        assert "add_library(pkg::hello-helpers INTERFACE IMPORTED)" in greetings_targets
+        assert "find_dependency" not in greetings_targets
 
-        assert tc.load("adieu-config.cmake")
-        assert tc.load("adieu-Targets-release.cmake")
-        assert tc.load("adieu-config-version.cmake")
+        # adieu
+        assert os.path.exists(os.path.join(tc.current_folder, "adieu-config.cmake"))
+        assert os.path.exists(os.path.join(tc.current_folder, "adieu-Targets-release.cmake"))
+        assert os.path.exists(os.path.join(tc.current_folder, "adieu-config-version.cmake"))
+        # Targets contain the expected components
+        adieu_config = tc.load("adieu-config.cmake")
+        assert "set(adieu_LIBRARIES pkg::bye )" in adieu_config
+        # Targets contain the expected components
+        adieu_targets = tc.load("adieu-Targets-release.cmake")
+        assert "find_dependency(greetings REQUIRED CONFIG)" in adieu_targets
+        assert "add_library(pkg::bye SHARED IMPORTED)" in adieu_targets
+        assert "add_library(pkg::bye-helpers INTERFACE IMPORTED)" in adieu_targets
+        assert "# Requirement pkg::bye -> greet (Full link: False)" in adieu_targets
+        assert "# Requirement pkg::bye -> pkg::bye-helpers (Full link: True)" in adieu_targets
 
         # No root pkg config when all components are in cmake_file_component_names
         assert not os.path.exists(os.path.join(tc.current_folder, "pkg-config.cmake"))
-
-        # Targets contain the expected components
-        greetings_targets = tc.load("greetings-Targets-release.cmake")
-        assert "pkg::hello" in greetings_targets
-        assert "pkg::hello-helpers" in greetings_targets
-
-        adieu_targets = tc.load("adieu-Targets-release.cmake")
-        assert "pkg::bye" in adieu_targets
-        assert "pkg::bye-helpers" in adieu_targets
 
     def test_paths_include_cmake_file_names(self):
         """conan_cmakedeps_paths.cmake sets DIR for each cmake_file_name from cmake_file_component_names."""
@@ -1054,7 +1070,7 @@ class TestCmakeFileComponentNames:
         """)
         tc.save({"conanfile.py": dep})
         tc.run("create .")
-        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps -c tools.cmake.cmakedeps:new={new_value}")
+        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps")
 
         paths = tc.load("conan_cmakedeps_paths.cmake")
         assert "set(MyLib_DIR" in paths
@@ -1082,9 +1098,9 @@ class TestCmakeFileComponentNames:
         """)
         tc.save({"conanfile.py": dep})
         tc.run("create .")
-        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps -c tools.cmake.cmakedeps:new={new_value}",
+        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps",
                assert_error=True)
-        assert "Component nonexistent does not exist" in tc.out
+        assert "Component 'nonexistent' does not exist" in tc.out
         assert "cmake_file_component_names" in tc.out
 
     def test_error_default_component_in_another_file(self):
@@ -1112,7 +1128,7 @@ class TestCmakeFileComponentNames:
         """)
         tc.save({"conanfile.py": dep})
         tc.run("create .")
-        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps -c tools.cmake.cmakedeps:new={new_value}",
+        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps",
                assert_error=True)
         assert "default component 'compA' is defined in another CMake Config file" in tc.out
         assert "cmake_file_component_names" in tc.out
@@ -1141,7 +1157,7 @@ class TestCmakeFileComponentNames:
         """)
         tc.save({"conanfile.py": dep})
         tc.run("create .")
-        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps -c tools.cmake.cmakedeps:new={new_value}")
+        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps")
 
         # Root pkg config with core component
         assert tc.load("pkg-config.cmake")
@@ -1149,7 +1165,7 @@ class TestCmakeFileComponentNames:
         assert "pkg::core" in pkg_targets
 
         # Extra config with extra component
-        assert tc.load("Extra-config.cmake")
+        assert tc.load("ExtraConfig.cmake")
         extra_targets = tc.load("Extra-Targets-release.cmake")
         assert "pkg::extra" in extra_targets
 
@@ -1191,7 +1207,7 @@ class TestCmakeFileComponentNames:
         tc.save({"dep/conanfile.py": dep, "consumer/conanfile.py": consumer})
         tc.run("create dep")
         tc.run("create consumer")
-        tc.run(f"install --requires=consumer/1.0 -g CMakeConfigDeps -c tools.cmake.cmakedeps:new={new_value}")
+        tc.run(f"install --requires=consumer/1.0 -g CMakeConfigDeps")
 
         # Consumer targets should use find_dependency(DepLib) not find_dependency(dep)
         consumer_targets = tc.load("consumer-Targets-release.cmake")

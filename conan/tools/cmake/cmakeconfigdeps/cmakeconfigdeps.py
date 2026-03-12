@@ -220,7 +220,7 @@ class CMakeConfigDeps:
                                          f"another CMake Config file. Check the "
                                          f"'cmake_file_component_names' property.")
                 elif name not in components_in_dep:
-                    raise ConanException(f"Component {name} does not exist. Check the "
+                    raise ConanException(f"Component '{name}' does not exist. Check the "
                                          f"'cmake_file_component_names' property definition.")
                 else:
                     ret[filename].append(name)
