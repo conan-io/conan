@@ -127,8 +127,10 @@ class PyEnv:
                          Defaults to ``None``.
         :return: the return code of the executed pip command.
         """
-        args = [self.env_exe, "-m", "pip", "install", "--disable-pip-version-check",
-                _get_pip_verbosity()]
+        args = [self.env_exe, "-m", "pip", "install", "--disable-pip-version-check"]
+        pip_verbosity = _get_pip_verbosity()
+        if pip_verbosity:
+            args.append(pip_verbosity)
         if pip_args:
             args.extend(pip_args)
         args += [f'"{p}"' for p in packages]
@@ -156,14 +158,19 @@ class PyEnv:
                 )
 
                 python_exe = self._get_env_python(uv_env_dir)
-                self._conanfile.run(cmd_args_to_string(
-                    [python_exe, "-m", "pip", "install", "--disable-pip-version-check",
-                     _get_pip_verbosity(), "uv"]))
+                pip_args = [python_exe, "-m", "pip", "install", "--disable-pip-version-check"]
+                pip_verbosity = _get_pip_verbosity()
+                if pip_verbosity:
+                    pip_args.append(pip_verbosity)
+                pip_args.append("uv")
+                self._conanfile.run(cmd_args_to_string(pip_args))
                 uv_cmd = [python_exe, "-m", "uv"]
 
-            self._conanfile.run(cmd_args_to_string(
-                uv_cmd + ['venv', '--seed', '--python', py_version, self._env_dir,
-                           _get_uv_verbosity()]))
+            uv_venv_args = uv_cmd + ['venv', '--seed', '--python', py_version, self._env_dir]
+            uv_verbosity = _get_uv_verbosity()
+            if uv_verbosity:
+                uv_venv_args.append(uv_verbosity)
+            self._conanfile.run(cmd_args_to_string(uv_venv_args))
             self._conanfile.output.info(f"Virtual environment for Python "
                                         f"{py_version} created successfully using UV.")
         except Exception as e:
