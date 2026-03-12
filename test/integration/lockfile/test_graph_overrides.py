@@ -65,6 +65,8 @@ def test_overrides_half_diamond_ranges(override, force):
     c.run("graph info pkgc --lockfile=pkgc/conan.lock")
     assert "pkga/0.2" in c.out
     assert "pkga/0.1" not in c.out
+    c.run("graph info pkgb --lockfile=pkgc/conan.lock")
+    # should work
 
 
 @pytest.mark.parametrize("override, force", [(True, False), (False, True)])
@@ -94,6 +96,8 @@ def test_overrides_half_diamond_ranges_inverted(override, force):
     c.run("graph info pkgc --lockfile=pkgc/conan.lock")
     assert "pkga/0.1" in c.out
     assert "pkga/0.2" not in c.out
+    c.run("graph info pkgb --lockfile=pkgc/conan.lock")
+    # should work
 
 
 @pytest.mark.parametrize("override, force", [(True, False), (False, True)])
@@ -224,6 +228,8 @@ def test_overrides_multiple(override1, force1, override2, force2):
     assert "pkga/0.3" in c.out
     assert "pkga/0.2#" not in c.out
     assert "pkga/0.1#" not in c.out  # appears in override information
+    c.run("graph info pkgb --lockfile=pkgd/conan.lock")
+    # should work
 
 
 def test_graph_different_overrides():
