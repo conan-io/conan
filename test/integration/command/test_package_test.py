@@ -323,13 +323,6 @@ def test_tested_reference_str():
     """
     At the test_package/conanfile the variable `self.tested_reference_str` is injected with the
     str of the reference being tested. It is available in all the methods.
-
-    Compatibility with Conan 2.0:
-    If the 'test_type' is set to "explicit" the require won't be automatically injected and has to
-    be the user the one injecting the require or the build require using the
-    `self.tested_reference_str`. This 'test_type' can be removed in 2.0 if we consider it has
-    to be always explicit. The recipes will still work in Conan 2.0 because the 'test_type' will be
-    ignored.
     """
     client = TestClient()
     test_conanfile = textwrap.dedent("""

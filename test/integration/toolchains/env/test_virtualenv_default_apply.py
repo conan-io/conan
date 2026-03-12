@@ -57,6 +57,20 @@ def test_virtualenv_deactivated(client, scope, default_virtualenv, cli_value):
         assert not exists_file, f"File {filename} should not exist in {os.listdir(client.current_folder)}"
 
 
+def test_deactivate_virtualxxxenv_attr():
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class ConanFileToolsTest(ConanFile):
+            virtualbuildenv = False
+            virtualrunenv = False
+        """)
+    c = TestClient(light=True)
+    c.save({"conanfile.py": conanfile})
+    c.run(f"install ")
+    assert os.listdir(c.current_folder) == ["conanfile.py"]
+
+
 def test_virtualrunenv_not_applied(client):
     """By default the VirtualRunEnv is not added to the list, otherwise when declaring
        generators = "VirtualBuildEnv", "VirtualRunEnv" will be always added"""

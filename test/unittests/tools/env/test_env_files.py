@@ -54,7 +54,7 @@ def check_env_files_output(cmd_, prevenv):
     assert "MyVar3=MyValue3 OldVar3 with spaces!!" in out
     assert "MyVar4=!!" in out
     assert "MyVar5=MyValue5 With Space5=More Space5;:More!!" in out
-    assert "MyVar6= MyValue6!!" in out  # The previous is non existing, append has space
+    assert "MyVar6=MyValue6!!" in out  # Space is correctly trimmed here
     assert "MyPath1=/Some/Path1/!!" in out
     assert os.pathsep.join(["MyPath2=OldPath2", "/Some/Path2/", "/Other/Path2/!!"]) in out
     assert os.pathsep.join(["MyPath3=/Some/Path3/", "OldPath3!!"]) in out

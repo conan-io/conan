@@ -16,9 +16,9 @@ class PyEnv:
 
     def __init__(self, conanfile, folder=None, name="", py_version=None):
         """
-        :param conanfile: The current conanfile "self"
-        :param folder: Optional folder, by default the "build_folder"
-        :param name: Optional name for the virtualenv, by default "conan_pyenv"
+        :param conanfile: The current conanfile ``self``
+        :param folder: Optional folder, by default the ``build_folder``
+        :param name: Optional name for the virtualenv, by default ``conan_pyenv``
         :param py_version: Optional python version to create the virtualenv using UV
         """
         if sys.version_info.minor < 8 and py_version:
@@ -43,15 +43,11 @@ class PyEnv:
                                  "Python system-wide or set the "
                                  "'tools.system.pyenv:python_interpreter' "
                                  "conf to the full path of a Python executable")
-        self.env_name = f"conan_pyenv{f'_{name}' if name else ''}"
+        self._env_name = f"conan_pyenv{f'_{name}' if name else ''}"
         if py_version:
-            self.env_name += f'_{py_version.replace(".", "_")}'
+            self._env_name += f'_{py_version.replace(".", "_")}'
         base_env_dir = os.path.abspath(folder or conanfile.build_folder)
-        self._env_dir = os.path.join(base_env_dir, self.env_name)
-        bins = "Scripts" if platform.system() == "Windows" else "bin"
-        self.bin_dir = os.path.join(self._env_dir, bins)
-        pyexe = "python.exe" if platform.system() == "Windows" else "python"
-        self._python_exe = os.path.join(self.bin_dir, pyexe)
+        self._env_dir = os.path.join(base_env_dir, self._env_name)
         if not os.path.exists(self._env_dir):
             if py_version:
                 self._create_uv_venv(base_env_dir, py_version)
@@ -59,8 +55,20 @@ class PyEnv:
                 self._create_venv()
 
     @property
-    def python(self):
-        return self._get_env_python(self._env_dir)
+    def env_dir(self):
+        """Root directory of the virtual environment."""
+        return self._env_dir.replace("\\", "/")
+
+    @property
+    def env_exe(self):
+        """Path to the Python executable inside the virtual environment."""
+        return self._get_env_python(self._env_dir).replace("\\", "/")
+
+    @property
+    def bin_path(self):
+        """Path to the bin or Scripts directory inside the virtual environment."""
+        bins = "Scripts" if platform.system() == "Windows" else "bin"
+        return os.path.join(self._env_dir, bins).replace("\\", "/")
 
     @staticmethod
     def _get_env_python(env_dir):
@@ -72,11 +80,11 @@ class PyEnv:
         Create a conan environment to use the python venv in the next steps of the conanfile.
         """
         env = Environment()
-        env.prepend_path("PATH", self.bin_dir)
-        env.vars(self._conanfile).save_script(self.env_name)
+        env.prepend_path("PATH", self.bin_path)
+        env.vars(self._conanfile).save_script(self._env_name)
 
     def run(self, args):
-        return self._conanfile.run(cmd_args_to_string([self.python] + list(args)))
+        return self._conanfile.run(cmd_args_to_string([self.env_exe] + list(args)))
 
     def install(self, packages, pip_args=None):
         """
@@ -88,7 +96,7 @@ class PyEnv:
                          Defaults to ``None``.
         :return: the return code of the executed pip command.
         """
-        args = [self.python, "-m", "pip", "install", "--disable-pip-version-check"]
+        args = [self.env_exe, "-m", "pip", "install", "--disable-pip-version-check"]
         if pip_args:
             args.extend(pip_args)
         args += [f'"{p}"' for p in packages]
@@ -110,7 +118,7 @@ class PyEnv:
             if uv_path:
                 uv_cmd = [uv_path]
             else:
-                uv_env_dir = os.path.join(base_env_dir, f"uv_{self.env_name}")
+                uv_env_dir = os.path.join(base_env_dir, f"uv_{self._env_name}")
                 self._conanfile.run(cmd_args_to_string(
                     [self._default_python, '-m', 'venv', uv_env_dir])
                 )

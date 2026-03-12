@@ -8,7 +8,7 @@ from conan.api.output import ConanOutput
 from conan.internal.loader import load_python_file
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
-from conan.internal.util.files import rmdir, mkdir
+from conan.internal.util.files import rmdir, mkdir, save
 
 
 def _find_deployer(d, cache_deploy_folder):
@@ -38,7 +38,9 @@ def _find_deployer(d, cache_deploy_folder):
         return _load(cache_path)
     builtin_deploy = {"full_deploy.py": full_deploy,
                       "direct_deploy.py": direct_deploy,
-                      "runtime_deploy.py": runtime_deploy}.get(d)
+                      "runtime_deploy.py": runtime_deploy,
+                      "cyclone_1.6.py": cyclonedx_1_6,
+                      "cyclone_1.4.py": cyclonedx_1_4}.get(d)
     if builtin_deploy is not None:
         return builtin_deploy
     raise ConanException(f"Cannot find deployer '{d}'")
@@ -133,6 +135,20 @@ def runtime_deploy(graph, output_folder):
 
         output.info(f"Copied {count} files from {dep.ref}")
     conanfile.output.success(f"Runtime deployed to folder: {output_folder}")
+
+
+def cyclonedx_1_4(graph, output_folder):
+    from conan.tools.sbom import cyclonedx_1_4
+    import json
+    sbom = cyclonedx_1_4(graph.root.conanfile)
+    save(os.path.join(output_folder, "sbom-cyclonedx-1.4.json"), json.dumps(sbom, indent=2))
+
+
+def cyclonedx_1_6(graph, output_folder):
+    from conan.tools.sbom import cyclonedx_1_6
+    import json
+    sbom = cyclonedx_1_6(graph.root.conanfile)
+    save(os.path.join(output_folder, "sbom-cyclonedx-1.6.json"), json.dumps(sbom, indent=2))
 
 
 def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None):

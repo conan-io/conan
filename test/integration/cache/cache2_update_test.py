@@ -452,6 +452,11 @@ class TestUpdateFlows:
                                                      "libb/1.0": "Cache"}],
                                            ["libb", {"liba/1.0": "Cache",
                                                      "libb/1.1": "Downloaded (default)"}],
+                                           ["libb/1.0", {"liba/1.0": "Cache",
+                                                         "libb/1.0": "Cache"}],
+                                           ["libb/1.0#7e88fd43dc3c8171b6f38f8d1b139641",
+                                                {"liba/1.0": "Cache",
+                                                 "libb/1.0": "Cache"}],
                                            ["", {"liba/1.0": "Cache",
                                                  "libb/1.0": "Cache"}],
                                            # Patterns not supported, only full name match
