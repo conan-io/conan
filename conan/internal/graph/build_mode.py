@@ -63,8 +63,9 @@ class BuildMode:
             if self._never and (self._missing or self._patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
 
-    def editable(self, conanfile):
-        # so we can make this conditional on the context in the future
+    @property
+    def editable(self):
+        # we can make this conditional on the context in the future
         return self._editable
 
     def forced(self, conan_file, ref, with_deps_to_build=False):

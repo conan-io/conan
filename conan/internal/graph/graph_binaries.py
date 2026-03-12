@@ -350,7 +350,7 @@ class GraphBinariesAnalyzer:
 
         if node.recipe == RECIPE_EDITABLE:
             # TODO: Check what happens when editable is passed an Invalid configuration
-            if build_mode.editable(node.conanfile) or self._evaluate_build(node, build_mode) or \
+            if build_mode.editable or self._evaluate_build(node, build_mode) or \
                     build_mode.should_build_missing(node.conanfile):
                 node.binary = BINARY_EDITABLE_BUILD
             else:
