@@ -1,5 +1,5 @@
 from conan.api.output import ConanOutput
-from conan.internal.conan_app import ConanApp, ConanBasicApp
+from conan.internal.conan_app import ConanApp
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
     CONTEXT_BUILD, BINARY_MISSING, DepsGraph

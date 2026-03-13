@@ -78,7 +78,7 @@ class ConanAPI:
         #: Used to upload recipes and packages to remotes
         self.upload: UploadAPI = UploadAPI(self, self._api_helpers)
         #: Used to download recipes and packages from remotes
-        self.download: DownloadAPI = DownloadAPI(self)
+        self.download: DownloadAPI = DownloadAPI(self, self._api_helpers)
         #: Used to interact wit the packages storage cache
         self.cache: CacheAPI = CacheAPI(self, self._api_helpers)
         #: Used to read and manage lockfile files

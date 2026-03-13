@@ -340,7 +340,7 @@ class ListAPI:
                     for pkgid, pkgcontent in packages.items():
                         pref = PkgReference(ref, pkgid)
                         try:
-                            remote_prefs = app.remote_manager.get_package_revisions(pref, remote=r)
+                            remote_prefs = remote_manager.get_package_revisions(pref, remote=r)
                         except NotFoundException:
                             continue
                         pkg_revisions = pkgcontent.get("revisions")
