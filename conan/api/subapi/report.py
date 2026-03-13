@@ -98,7 +98,8 @@ def _configure_source(conan_api, hook_manager, conanfile_path, ref, remotes):
         with conanfile_exception_formatter(conanfile, "layout"):
             conanfile.layout()
 
-    recipe_layout = app.cache.recipe_layout(ref)
+    cache = conan_api._api_helpers.cache # noqa
+    recipe_layout = cache.recipe_layout(ref)
     export_source_folder = recipe_layout.export_sources()
     source_folder = recipe_layout.source()
 
