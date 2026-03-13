@@ -34,9 +34,9 @@ def _get_pip_verbosity():
 
 def _get_uv_verbosity():
     return {
-        LEVEL_QUIET: "--quiet",
-        LEVEL_ERROR: "--quiet",
-        LEVEL_WARNING: "--quiet",
+        LEVEL_QUIET: "-qq",
+        LEVEL_ERROR: "-qq",
+        LEVEL_WARNING: "-q",
         LEVEL_VERBOSE: "--verbose",
         LEVEL_DEBUG: "--verbose",
         LEVEL_TRACE: "--verbose",
