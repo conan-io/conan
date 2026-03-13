@@ -12,14 +12,14 @@ from conan.internal.paths import CONANINFO, CONAN_MANIFEST, PACKAGE_FILE_NAME, E
 from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
-from conan.internal.cache.conan_reference_layout import METADATA, PackageLayout
+from conan.internal.cache.conan_reference_layout import METADATA, PackageLayout, RecipeLayout
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException
 from conan.errors import ConanException
 from conan.internal.model.info import load_binary_info
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conan.internal.util.files import rmdir, human_size
+from conan.internal.util.files import human_size, atomic_replace, rmdir
 from conan.internal.util.files import mkdir, tar_extract
 
 
@@ -57,8 +57,8 @@ class RemoteManager:
         assert ref.revision, "get_recipe without revision specified"
         assert ref.timestamp, "get_recipe without ref.timestamp specified"
 
-        # This fails if there is a DB entry for this ref
-        layout = self._cache.create_ref_layout(ref)
+        # All the download and unzip happens in a random, independent folder
+        layout = RecipeLayout(ref, self._cache.get_random_path())
 
         export_folder = layout.export()
         local_folder_remote = self._local_folder_remote(remote)
@@ -70,6 +70,10 @@ class RemoteManager:
         rmdir(layout.source())
         mkdir(layout.metadata())
 
+        # If something crashes while unzipping and downloading, the folder
+        # will still be there for inspection. Can be collected with "conan cache clean"
+        # only when things are fully downloaded and unzip, they are put in the cache DB and storage
+        layout = self._cache.create_ref_layout(ref, layout.base_folder)
         return layout
 
     def _download_recipe(self, layout, ref, remote, metadata):
@@ -92,7 +96,6 @@ class RemoteManager:
         except BaseException:  # So KeyboardInterrupt also cleans things
             ConanOutput(scope=str(ref)).error(f"Error downloading from remote '{remote.name}'",
                                               error_type="exception")
-            self._cache.remove_recipe_layout(layout)
             raise
         export_folder = layout.export()
         export_file = next((f for f in zipped_files if f.startswith(EXPORT_FILE_NAME)), None)
@@ -123,8 +126,10 @@ class RemoteManager:
     def get_recipe_sources(self, ref, layout, remote):
         assert ref.revision, "get_recipe_sources requires RREV"
 
-        download_folder = layout.download_export()
-        export_sources_folder = layout.export_sources()
+        temp_layout = RecipeLayout(ref, self._cache.get_random_path())
+        export_sources_folder = temp_layout.export_sources()
+        download_folder = temp_layout.download_export()
+
         local_folder_remote = self._local_folder_remote(remote)
         if local_folder_remote is not None:
             local_folder_remote.get_recipe_sources(ref, export_sources_folder)
@@ -137,6 +142,11 @@ class RemoteManager:
                 # Only 1 file is guaranteed
                 tgz_file = next(iter(zipped_files.values()))
                 uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
+                dst_tgz = os.path.join(layout.download_export(), os.path.basename(tgz_file))
+                atomic_replace(tgz_file, dst_tgz, f"{ref.repr_notime} conan_source")
+        atomic_replace(export_sources_folder, layout.export_sources(),
+                       f"{ref.repr_notime()} export sources")
+        rmdir(temp_layout.base_folder)
 
     def get_package(self, pref, remote, metadata=None):
         output = ConanOutput(scope=str(pref.ref))

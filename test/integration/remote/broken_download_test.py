@@ -6,6 +6,7 @@ from requests import Response
 
 from requests.exceptions import ConnectionError
 
+from conan.internal.errors import ConanReferenceDoesNotExistInDB
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestRequester, TestServer
 from conan.internal.util.files import save
@@ -32,7 +33,9 @@ class TestBrokenDownload:
         save(tgz, "contents")  # dummy content to break it, so the download decompress will fail
         client.run("install --requires=hello/0.1", assert_error=True)
         assert "Error while extracting downloaded file" in client.out
-        assert not os.path.exists(client.get_latest_ref_layout(pref.ref).export())
+        # It doesn't have an entry in the DB at all, as it failed to unzip
+        with pytest.raises(ConanReferenceDoesNotExistInDB):
+            client.cache.recipe_layout(pref.ref)
 
     def test_remove_conaninfo(self, setup):
         """

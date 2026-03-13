@@ -6,6 +6,7 @@ import yaml
 
 from conan.api.conan_api import ConanAPI
 from conan.internal.cache.cache import PkgCache
+from conan.internal.cache.conan_reference_layout import RecipeLayout
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.default_settings import default_settings_yml
 from conan.internal.model.conf import ConfDefinition
@@ -53,10 +54,11 @@ class GraphManagerTest:
             ref = RecipeReference.loads(ref)
         ref.revision = "123"
         ref.timestamp = revision_timestamp_now()
-        recipe_layout = self.cache.create_ref_layout(ref)
+        recipe_layout = RecipeLayout(ref, self.cache.get_random_path())
         save(recipe_layout.conanfile(), str(test_conanfile))
         manifest = FileTreeManifest.create(recipe_layout.export())
         manifest.save(recipe_layout.export())
+        self.cache.create_ref_layout(ref, recipe_layout.base_folder)
 
     def alias_cache(self, alias, target):
         ref = RecipeReference.loads(alias)

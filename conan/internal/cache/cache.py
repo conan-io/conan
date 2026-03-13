@@ -170,15 +170,16 @@ class PkgCache:
         # we use abspath to convert cache forward slash in Windows to backslash
         return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
 
-    def create_ref_layout(self, ref: RecipeReference):
+    def create_ref_layout(self, ref: RecipeReference, current_folder):
         """ called exclusively by:
         - RemoteManager.get_recipe()
         - cache restore
         """
         assert ref.revision, "Recipe revision must be known to create the package layout"
         reference_path = self._get_path(ref)
+        path = self._full_path(reference_path)
+        atomic_replace(current_folder, path, f"{ref.repr_notime()} recipe")
         self._db.create_recipe(reference_path, ref)
-        self._create_path(reference_path, remove_contents=False)
         return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
 
     def create_pkg_layout(self, pref: PkgReference):
