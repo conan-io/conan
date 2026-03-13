@@ -183,7 +183,7 @@ class UploadAPI:
                                    "Skipping updating file but continuing with upload. "
                                    f"Missing permissions?: {e}")
                 else:
-                    raise ConanException(f"The source backup server '{url}' needs authentication"
-                                         f"/permissions, please provide 'source_credentials.json': {e}")
+                    raise ConanException(f"Authentication to source backup server '{url}' failed, "
+                                         f"please check your 'source_credentials.json': {e}")
 
         output.success("Upload backup sources complete\n")

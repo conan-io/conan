@@ -31,6 +31,7 @@ def test_cascade():
 
     # Building A everything is built
     c.run("install app --build=liba* --build cascade")
+    assert "Using build-mode 'cascade' is generally inefficient" in c.out
     _assert_built(["liba/1.0", "libb/1.0", "libc/1.0", "libd/1.0", "libe/1.0", "libf/1.0"])
 
     c.run("install app --build=libd* --build cascade")

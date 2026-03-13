@@ -79,6 +79,7 @@ asmjs_profile = textwrap.dedent(
 )
 
 
+@pytest.mark.slow
 @pytest.mark.tool("cmake")
 @pytest.mark.tool("emcc")
 @pytest.mark.tool("node")
@@ -106,6 +107,7 @@ def test_cmake_emscripten():
     assert "Hello World Release!" in client.out
 
 
+@pytest.mark.slow
 @pytest.mark.tool("meson")
 @pytest.mark.tool("emcc")
 @pytest.mark.tool("node")
@@ -138,6 +140,7 @@ def test_meson_emscripten():
     assert "Hello World Release!" in client.out
 
 
+@pytest.mark.slow
 @pytest.mark.tool("autotools")
 @pytest.mark.tool("emcc")
 @pytest.mark.tool("node")
@@ -168,6 +171,7 @@ def test_autotools_emscripten():
     assert "Hello World Release!" in client.out
 
 
+@pytest.mark.slow
 @pytest.mark.tool("premake")
 @pytest.mark.tool("emcc")
 @pytest.mark.tool("node")

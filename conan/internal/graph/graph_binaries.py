@@ -476,11 +476,6 @@ class GraphBinariesAnalyzer:
             mainprefs = [str(n.pref) for n in tested_graph.nodes
                          if n.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL)]
 
-        if main_mode.cascade:
-            ConanOutput().warning("Using build-mode 'cascade' is generally inefficient and it "
-                                  "shouldn't be used. Use 'package_id' and 'package_id_modes' for"
-                                  "more efficient re-builds")
-
         def _evaluate_single(n):
             mode = main_mode if mainprefs is None or str(n.pref) in mainprefs else test_mode
             if lockfile:
