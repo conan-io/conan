@@ -66,14 +66,14 @@ class ConanAPI:
         self.remotes: RemotesAPI = RemotesAPI(self, self._api_helpers)
         self.command = CommandAPI(self)
         #: Used to get latest refs and list refs of recipes and packages
-        self.list: ListAPI = ListAPI(self)
+        self.list: ListAPI = ListAPI(self, self._api_helpers)
         self.profiles = ProfilesAPI(self, self._api_helpers)
         #: Used to install binaries, sources, deploy packages and more
         self.install: InstallAPI = InstallAPI(self, self._api_helpers)
         self.graph = GraphAPI(self, self._api_helpers)
         #: Used to export recipes and pre-compiled package binaries to the Conan cache
         self.export: ExportAPI = ExportAPI(self, self._api_helpers)
-        self.remove = RemoveAPI(self)
+        self.remove = RemoveAPI(self, self._api_helpers)
         self.new = NewAPI(self)
         #: Used to upload recipes and packages to remotes
         self.upload: UploadAPI = UploadAPI(self, self._api_helpers)

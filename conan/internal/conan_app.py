@@ -44,8 +44,8 @@ class ConanBasicApp:
         # TODO: Remove this global_conf from here
         global_conf = conan_api._api_helpers.global_conf  # noqa
         # TODO: Temporary while refactoring, remove i nthe future
-        self.cache = conan_api._api_helpers.cache # noqa
-        self.remote_manager = conan_api._api_helpers.remote_manager  # noqa
+        self._cache = conan_api._api_helpers.cache # noqa
+        self._remote_manager = conan_api._api_helpers.remote_manager  # noqa
         self._global_conf = global_conf
         self.cache_folder = conan_api.home_folder
         global_editables = conan_api.local.editable_packages
@@ -60,13 +60,13 @@ class ConanApp(ConanBasicApp):
         """
         super().__init__(conan_api)
         legacy_update = self._global_conf.get("core:update_policy", choices=["legacy"])
-        self.proxy = ConanProxy(self.cache, self.remote_manager, self.editable_packages,
+        self.proxy = ConanProxy(self._cache, self._remote_manager, self.editable_packages,
                                 legacy_update=legacy_update)
-        self.range_resolver = RangeResolver(self.cache, self.remote_manager, self._global_conf,
+        self.range_resolver = RangeResolver(self._cache, self._remote_manager, self._global_conf,
                                             self.editable_packages)
         cmd_wrap = CmdWrapper(HomePaths(self.cache_folder).wrapper_path)
         requester = conan_api._api_helpers.requester  # noqa
-        conanfile_helpers = ConanFileHelpers(requester, cmd_wrap, self._global_conf, self.cache,
+        conanfile_helpers = ConanFileHelpers(requester, cmd_wrap, self._global_conf, self._cache,
                                              self.cache_folder, conan_api)
         pyreq_loader = PyRequireLoader(self.proxy, self.range_resolver, self._global_conf)
         self.loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
