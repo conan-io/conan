@@ -182,7 +182,7 @@ class BinaryInstaller:
             return
 
         conanfile = node.conanfile
-        if node.binary == BINARY_EDITABLE:
+        if node.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
             return
 
         recipe_layout = self._cache.recipe_layout(node.ref)
