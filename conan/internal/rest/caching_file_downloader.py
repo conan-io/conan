@@ -75,7 +75,7 @@ class SourcesCachingDownloader:
         for remote in remotes:
             try:
                 remote_manager.get_recipe_metadata(recipe_layout, ref, remote,
-                                                   metadata=["conan_source_backup*"])
+                                                   metadata=["conan_source_backup/*"])
             except NotFoundException:
                 pass
             if os.path.isfile(metadata_path):
