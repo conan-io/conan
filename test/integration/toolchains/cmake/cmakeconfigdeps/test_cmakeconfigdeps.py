@@ -802,6 +802,34 @@ def test_legacy_defines():
     assert 'set(mypkg_DEFINITIONS "-DMY_DEFINE;-DMYVAR=1" )' in mypkg_config
 
 
+class TestPropertiesBuildContext:
+    def test_property_build_context(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeConfigDeps
+
+            class PackageConan(ConanFile):
+                name = "package"
+                settings = "os", "arch", "compiler", "build_type"
+
+                def requirements(self):
+                    self.requires("zlib/1.3.1")
+
+                def generate(self):
+                    deps = CMakeConfigDeps(self)
+                    deps.set_property("zlib", "cmake_file_name", "MyZlibName")
+                    deps.generate()
+            """)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.3.1"),
+                "pkg/conanfile.py": conanfile})
+        c.run("create zlib")
+        c.run("install pkg --build-require")
+        assert "find_package(MyZlibName)" in c.out
+        config = c.load("pkg/MyZlibNameConfig.cmake")
+        assert 'set(MyZlibName_VERSION_STRING "1.3.1")' in config
+
+
 class TestExtraFindExtraVariants:
     def test_generated_dir_entries(self):
         tc = TestClient()
