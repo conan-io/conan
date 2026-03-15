@@ -5,7 +5,6 @@ from conan.api.conan_api import ConanAPI
 from conan.cli.command import conan_command, conan_subcommand
 
 
-
 @conan_command(group="Security")
 def report(conan_api: ConanAPI, parser, *args):
     """
@@ -40,7 +39,7 @@ def report_diff(conan_api, parser, subparser, *args):
     subparser.add_argument("-nr", "--new-reference", help=ref_help.format(type="New"), required=True)
 
     subparser.add_argument("-r", "--remote", action="append", default=None,
-                       help='Look in the specified remote or remotes server')
+                           help='Look in the specified remote or remotes server')
 
     args = parser.parse_args(*args)
 

@@ -402,6 +402,28 @@ class TestLibsLinkageTraits:
         c.run(f"build . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
         # it works
 
+    @pytest.mark.tool("cmake", "3.27")
+    def test_link_features(self):
+        tc = TestClient()
+        tc.run("new cmake_lib -d name=matrix -d version=0.1")
+        conanfile = tc.load("conanfile.py")
+        # So that the custom link feature works
+        conanfile += ("        self.cpp_info.set_property('cmake_extra_variables', "
+                      "{'CMAKE_LINK_LIBRARY_USING_MYFET_SUPPORTED': True,"
+                      "'CMAKE_LINK_LIBRARY_USING_MYFET': '<LIBRARY>'})\n")
+        # And set this library to use the custom link feature
+        conanfile += "        self.cpp_info.set_property('cmake_link_feature', 'MYFET')"
+        tc.save({"conanfile.py": conanfile})
+        tc.run(f"create -c tools.cmake.cmakedeps:new={new_value}")
+
+        tc.save({}, clean_first=True)
+        tc.run("new cmake_lib -d name=lib -d version=0.1 -d requires=matrix/0.1")
+        tc.run(f"create -c tools.cmake.cmakedeps:new={new_value}")
+        test_build_folder = tc.created_test_build_folder("lib/0.1")
+        test_generators_folder = os.path.join("test_package", test_build_folder, "generators")
+        libs_targets = tc.load(os.path.join(test_generators_folder, "lib-Targets-release.cmake"))
+        assert '"$<LINK_LIBRARY:MYFET,$<$<CONFIG:RELEASE>:matrix::matrix>>"' in libs_targets
+
 
 @pytest.mark.tool("cmake")
 class TestLibsComponents:
@@ -997,6 +1019,17 @@ class TestToolRequires:
         assert 'set(tool_INCLUDE_DIR' not in tool_config
         assert 'set(tool_LIBRARIES' not in tool_config
 
+    def test_libs_build_context(self):
+        c = TestClient()
+        c.run("new header_lib -d name=hello -d version=1.0 -o=hello")
+        c.run("create hello -tf=")
+        c.run("new cmake_lib -d name=bye -d version=1.0 -d requires=hello/1.0 -o=bye")
+        # Ninja for same layout in all platforms
+        c.run(f"install bye --build-require -c:a tools.cmake.cmakedeps:new={new_value} "
+              f"-c:a tools.cmake.cmaketoolchain:generator=Ninja")
+        cmake = c.load("bye/build/Release/generators/hello-TargetsBuild-release.cmake")
+        assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
+
 
 @pytest.mark.tool("cmake")
 @pytest.mark.parametrize("tool_requires", [True, False])
@@ -1529,7 +1562,6 @@ class TestCppInfoChecks:
         assert "dep/0.1 cpp_info incorrect .type shared-library for .exe myexe" in c.out
 
 
-
 def test_multiple_find_package_subfolder():
     c = TestClient()
     conanfile = textwrap.dedent("""
@@ -1575,3 +1607,97 @@ def test_multiple_find_package_subfolder():
     assert "find_package(matrix)" in c.out
     assert "target_link_libraries(... matrix::matrix)" in c.out
     assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out
+
+
+@pytest.mark.tool("cmake", "3.27")
+def test_find_package_casing_non_fallback():
+    """ CMakeConfigDeps creates hello_DIR by default, but CMake looks for
+    the package name as given in find_package, so casing matters,
+    and it won't look for hello_DIR, but to HellO_DIR.
+
+    Note that this would work without the layout, because CMake would fallback
+    to find the lowercase hello-config.cmake file in the CMAKE_INSTALL_PREFIX,
+    which happens to be the same folder the generated config file ends up without the layout."""
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(test NONE)
+
+        # As long as the package generates hello-config.cmake lowercase, it works
+        find_package(HellO REQUIRED)  # Casing!!!!!
+    """)
+    consumer = textwrap.dedent("""
+       from conan import ConanFile
+       from conan.tools.cmake import CMake, cmake_layout
+       class Pkg(ConanFile):
+           requires = "hello/1.0"
+           generators = "CMakeToolchain", "CMakeDeps"
+           settings = "os", "compiler", "build_type", "arch"
+           def layout(self):
+               cmake_layout(self)
+
+           def build(self):
+               cmake = CMake(self)
+               cmake.configure()
+       """)
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("hello", "1.0")})
+    client.run(f"create .")
+
+    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+    client.run(f"build . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
+    assert 'Could not find a package configuration file provided by "HellO"' in client.out
+
+
+@pytest.mark.tool("cmake", "3.27")
+def test_find_package_extra_variants():
+    """ Producers can now specify extra casing names for find_package.
+    If a consumer uses yet a different casing,
+    it should directly change the cmake_file_name property instead."""
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(test NONE)
+
+        # As long as the package generates hello-config.cmake lowercase, it works
+        find_package(HellO REQUIRED)  # Casing!!!!!
+
+        if (HellO_FOUND)
+            message(STATUS "Found HellO!")
+        endif()
+        if (hello_FOUND)
+            message(STATUS "Found hello!")
+        endif()
+    """)
+    consumer = textwrap.dedent("""
+       from conan import ConanFile
+       from conan.tools.cmake import CMake, cmake_layout
+       class Pkg(ConanFile):
+           requires = "hello/1.0"
+           generators = "CMakeToolchain", "CMakeConfigDeps"
+           settings = "os", "compiler", "build_type", "arch"
+           def layout(self):
+               cmake_layout(self)
+
+           def build(self):
+               cmake = CMake(self)
+               cmake.configure()
+       """)
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    class HelloConan(ConanFile):
+        name = "hello"
+        version = "1.0"
+
+        def package_info(self):
+            self.cpp_info.set_property("cmake_file_name_variants", ["HellO"])
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create")
+
+    client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
+    client.run("build")
+    assert 'Conan: Configuring Targets for hello/1.0' in client.out
+    # And this follows the expected found variable generation
+    assert "Found HellO!" in client.out
+    assert "Found hello!" not in client.out

@@ -1,3 +1,4 @@
+import glob
 import os
 import re
 import textwrap
@@ -9,10 +10,10 @@ from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
-from conan.tools.cmake.cmakedeps2.config import ConfigTemplate2
-from conan.tools.cmake.cmakedeps2.config_version import ConfigVersionTemplate2
-from conan.tools.cmake.cmakedeps2.target_configuration import TargetConfigurationTemplate2
-from conan.tools.cmake.cmakedeps2.targets import TargetsTemplate2
+from conan.tools.cmake.cmakeconfigdeps.config import ConfigTemplate2
+from conan.tools.cmake.cmakeconfigdeps.config_version import ConfigVersionTemplate2
+from conan.tools.cmake.cmakeconfigdeps.target_configuration import TargetConfigurationTemplate2
+from conan.tools.cmake.cmakeconfigdeps.targets import TargetsTemplate2
 from conan.tools.files import save
 from conan.internal.util.files import load
 
@@ -22,22 +23,71 @@ FIND_MODE_NONE = "none"
 FIND_MODE_BOTH = "both"
 
 
-class CMakeDeps2:
+class CMakeConfigDeps:
 
     def __init__(self, conanfile):
+        """
+        :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
+        """
         self._conanfile = conanfile
         self.configuration = str(self._conanfile.settings.build_type)
 
         # These are just for legacy compatibility, but not use at al
-        self.build_context_activated = []
-        self.build_context_build_modules = []
-        self.build_context_suffix = {}
+        self._build_context_activated = []
+        self._build_context_build_modules = []
+        self._build_context_suffix = {}
         # Enable/Disable checking if a component target exists or not
-        self.check_components_exist = False
+        self._check_components_exist = False
 
         self._properties = {}
 
+    @property
+    def build_context_activated(self):
+        return self._build_context_activated
+
+    @build_context_activated.setter
+    def build_context_activated(self, value):
+        self._conanfile.output.warning("CMakeConfigDeps.build_context_activated is deprecated, "
+                                       "not used anymore", warn_tag="deprecated")
+        self._build_context_activated = value
+
+    @property
+    def build_context_build_modules(self):
+        return self._build_context_build_modules
+
+    @build_context_build_modules.setter
+    def build_context_build_modules(self, value):
+        self._conanfile.output.warning("CMakeConfigDeps.build_context_build_modules is deprecated, "
+                                       "not used anymore", warn_tag="deprecated")
+        self._build_context_build_modules = value
+
+    @property
+    def build_context_suffix(self):
+        return self._build_context_suffix
+
+    @build_context_suffix.setter
+    def build_context_suffix(self, value):
+        self._conanfile.output.warning("CMakeConfigDeps.build_context_suffix is deprecated, "
+                                       "not used anymore", warn_tag="deprecated")
+        self._build_context_suffix = value
+
+    @property
+    def check_components_exist(self):
+        return self._check_components_exist
+
+    @check_components_exist.setter
+    def check_components_exist(self, value):
+        self._conanfile.output.warning("CMakeConfigDeps.check_components_exist is deprecated, "
+                                       "not used anymore", warn_tag="deprecated")
+        self._check_components_exist = value
+
     def generate(self):
+        """
+        This method will save the generated files to the ``conanfile.generators_folder`` folder
+        """
+        self._conanfile.output.warning("CMakeConfigDeps is experimental, and might get "
+                                       "breaking changes in future releases",
+                                       warn_tag="experimental")
         check_duplicated_generator(self, self._conanfile)
         # Current directory is the generators_folder
         generator_files = self._content()
@@ -59,7 +109,7 @@ class CMakeDeps2:
             cmake_find_mode = cmake_find_mode.lower()
             if cmake_find_mode == FIND_MODE_NONE:
                 continue
-            if cmake_find_mode == FIND_MODE_MODULE:
+            if cmake_find_mode in (FIND_MODE_MODULE, FIND_MODE_BOTH):
                 ConanOutput(self._conanfile.ref).warning("CMakeConfigDeps does not support "
                                                          f"module find mode in {dep}.\n"
                                                          f"Config mode will be used regardless.",
@@ -99,11 +149,11 @@ class CMakeDeps2:
 
     def set_property(self, dep, prop, value, build_context=False):
         """
-        Using this method you can overwrite the :ref:`property<CMakeDeps Properties>` values set by
-        the Conan recipes from the consumer.
+        Using this method you can overwrite the :ref:`property<CMakeConfigDeps Properties>` values
+        set by the Conan recipes from the consumer.
 
-        :param dep: Name of the dependency to set the :ref:`property<CMakeDeps Properties>`. For
-         components use the syntax: ``dep_name::component_name``.
+        :param dep: Name of the dependency to set the :ref:`property<CMakeConfigDeps Properties>`.
+         For components use the syntax: ``dep_name::component_name``.
         :param prop: Name of the :ref:`property<CMakeDeps Properties>`.
         :param value: Value of the property. Use ``None`` to invalidate any value set by the
          upstream recipe.
@@ -115,7 +165,11 @@ class CMakeDeps2:
 
     def get_property(self, prop, dep, comp_name=None, check_type=None):
         dep_name = dep.ref.name
-        build_suffix = "&build" if dep.context == "build" else ""
+        # Find the requirement that points to this "dep".
+        # TODO: It would probably be more explicit if it was an argument as "dep", but to keep
+        #   diff minimal
+        require = next(iter(r for r, d in self._conanfile.dependencies.items() if d is dep))
+        build_suffix = "&build" if require.build else ""
         dep_comp = f"{str(dep_name)}::{comp_name}" if comp_name else f"{str(dep_name)}"
         try:
             value = self._properties[f"{dep_comp}{build_suffix}"][prop]
@@ -132,24 +186,16 @@ class CMakeDeps2:
             if comp is not None:
                 return comp.get_property(prop, check_type=check_type)
 
-    def get_cmake_filename(self, dep, module_mode=None):
-        """Get the name of the file for the find_package(XXX)"""
+    def get_cmake_filename(self, dep):
+        # Get the name of the file for the find_package(XXX)
         # This is used by CMakeDeps to determine:
         # - The filename to generate (XXX-config.cmake or FindXXX.cmake)
         # - The name of the defined XXX_DIR variables
         # - The name of transitive dependencies for calls to find_dependency
-        if module_mode and self._get_find_mode(dep) in [FIND_MODE_MODULE, FIND_MODE_BOTH]:
-            ret = self.get_property("cmake_module_file_name", dep)
-            if ret:
-                return ret
         ret = self.get_property("cmake_file_name", dep)
         return ret or dep.ref.name
 
     def _get_find_mode(self, dep):
-        """
-        :param dep: requirement
-        :return: "none" or "config" or "module" or "both" or "config" when not set
-        """
         tmp = self.get_property("cmake_find_mode", dep)
         if tmp is None:
             return "config"
@@ -255,9 +301,42 @@ class _PathGenerator:
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
             cmake_find_mode = cmake_find_mode.lower()
 
-            pkg_name = self._cmakedeps.get_cmake_filename(dep)
+            cmake_filename = self._cmakedeps.get_cmake_filename(dep)
+            extra_variants = self._cmakedeps.get_property("cmake_file_name_variants", dep,
+                                                          check_type=list) or []
+            lowercase_variants = {variant.lower() for variant in extra_variants}
+            if len(lowercase_variants) > 1:
+                raise ConanException(f"'{dep.ref}' 'cmake_file_name_variants' property contains different words. "
+                                     "They should be the same with different upper/lower cases only.")
+            if lowercase_variants:
+                if cmake_filename.lower() not in lowercase_variants:
+                    is_cmake_filename_defined = self._cmakedeps.get_property("cmake_file_name", dep) is not None
+                    if is_cmake_filename_defined:
+                        extra_variants = []
+                        msg = (f"'{dep.ref}' 'cmake_file_name_variants' property contains names "
+                               f"with different casings than the defined name '{cmake_filename}'. "
+                               f"The specified 'cmake_file_name'='{cmake_filename}' property "
+                               f"will be used as the only name and the variants will be ignored.")
+                        self._conanfile.output.warning(msg)
+                    else:
+                        msg = (f"'{dep.ref}' 'cmake_file_name_variants' property contains entries "
+                               f"that differ from the default 'cmake_file_name'='{cmake_filename}'. "
+                               f"They should be the same with different upper/lower cases only.")
+                        raise ConanException(msg)
+            pkg_names = set([cmake_filename] + extra_variants)
             # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
             if cmake_find_mode == FIND_MODE_NONE:
+                cps = glob.glob(os.path.join(dep.package_folder, f"**/{cmake_filename}.cps"),
+                                recursive=True)
+                if cps:
+                    loc = os.path.dirname(os.path.join(dep.package_folder, cps[0]))
+                    loc = loc.replace("\\", "/")
+                    relative_path = relativize_path(loc, self._conanfile,
+                                                    "${CMAKE_CURRENT_LIST_DIR}")
+                    for pkg_name in pkg_names:
+                        pkg_paths[pkg_name] = relative_path
+                    continue
+
                 try:
                     # This is irrespective of the components, it should be in the root cpp_info
                     # To define the location of the pkg-config.cmake file
@@ -266,20 +345,23 @@ class _PathGenerator:
                     build_dir = dep.package_folder
                 pkg_folder = build_dir.replace("\\", "/") if build_dir else None
                 if pkg_folder:
-                    f = self._cmakedeps.get_cmake_filename(dep)
-                    for filename in (f"{f}-config.cmake", f"{f}Config.cmake"):
-                        if os.path.isfile(os.path.join(pkg_folder, filename)):
-                            pkg_paths[pkg_name] = relativize_path(pkg_folder, self._conanfile,
-                                                                  "${CMAKE_CURRENT_LIST_DIR}")
+                    if any(os.path.isfile(os.path.join(pkg_folder, f + ext)) for f in pkg_names
+                           for ext in ("-config.cmake", "Config.cmake")):
+                        relative_path = relativize_path(pkg_folder, self._conanfile,
+                                                        "${CMAKE_CURRENT_LIST_DIR}")
+                        for pkg_name in pkg_names:
+                            pkg_paths[pkg_name] = relative_path
 
-                    existing_paths = pkg_paths_multi.setdefault(pkg_name, [])
-                    if pkg_folder not in existing_paths:
-                        existing_paths.append(pkg_folder)
+                    for pkg_name in pkg_names:
+                        existing_paths = pkg_paths_multi.setdefault(pkg_name, [])
+                        if pkg_folder not in existing_paths:
+                            existing_paths.append(pkg_folder)
                 continue
 
             # If CMakeDeps generated, the folder is this one
             # content.append(f'set({pkg_name}_ROOT "{gen_folder}")')
-            pkg_paths[pkg_name] = "${CMAKE_CURRENT_LIST_DIR}"
+            for pkg_name in pkg_names:
+                pkg_paths[pkg_name] = "${CMAKE_CURRENT_LIST_DIR}"
 
         # CMAKE_PROGRAM_PATH | CMAKE_LIBRARY_PATH | CMAKE_INCLUDE_PATH
         cmake_program_path = self._get_cmake_paths([(req, dep) for req, dep in all_reqs if req.direct], "bindirs")

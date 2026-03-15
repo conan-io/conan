@@ -95,7 +95,7 @@ end
 
 
 # Helper class that expands cpp_info meta information in lua readable string sequences
-class _PremakeTemplate(object):
+class _PremakeTemplate:
     def __init__(self, req, dep_cpp_info):
         def _format_paths(paths):
             if not paths:

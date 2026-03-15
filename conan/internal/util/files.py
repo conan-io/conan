@@ -10,6 +10,7 @@ import time
 
 from contextlib import contextmanager
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 
 _DIRTY_FOLDER = ".dirty"
@@ -104,15 +105,15 @@ def _generic_algorithm_sum(file_path, algorithm_name):
         return m.hexdigest()
 
 
-def check_with_algorithm_sum(algorithm_name, file_path, signature):
-    real_signature = _generic_algorithm_sum(file_path, algorithm_name)
-    if real_signature != signature.lower():
-        raise ConanException("%s signature failed for '%s' file. \n"
-                             " Provided signature: %s  \n"
-                             " Computed signature: %s" % (algorithm_name,
+def check_with_algorithm_sum(algorithm_name, file_path, provided_hash):
+    real_hash = _generic_algorithm_sum(file_path, algorithm_name)
+    if real_hash != provided_hash.lower():
+        raise ConanException("%s hash failed for '%s' file. \n"
+                             " Provided hash: %s  \n"
+                             " Computed hash: %s" % (algorithm_name,
                                                           os.path.basename(file_path),
-                                                          signature,
-                                                          real_signature))
+                                                          provided_hash,
+                                                          real_hash))
 
 
 def save(path, content, encoding="utf-8"):

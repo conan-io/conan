@@ -263,7 +263,7 @@ os: [Windows, Linux]
         s2 = ["os"]
         self.sut.constrained(s2)
         with pytest.raises(ConanException) as cm:
-            self.sut.compiler
+            self.sut.compiler  # noqa
         assert str(cm.value) == str(undefined_field("settings", "compiler", ["os"], "settings"))
         self.sut.os = "Windows"
         self.sut.os = "Linux"
@@ -272,16 +272,17 @@ os: [Windows, Linux]
         s2 = ["os2"]
         with pytest.raises(ConanException) as cm:
             self.sut.constrained(s2)
-        assert str(cm.value) == str(undefined_field("settings", "os2", ["compiler", "os"], "settings"))
+        assert str(cm.value) == str(undefined_field("settings", "os2", ["compiler", "os"],
+                                                    "settings"))
 
     def test_constraint6(self):
         s2 = {"os", "compiler"}
         self.sut.constrained(s2)
         self.sut.compiler = "Visual Studio"
         with pytest.raises(ConanException) as cm:
-            self.sut.compiler.arch
+            self.sut.compiler.arch  # noqa
         assert str(cm.value) == str(undefined_field("settings.compiler", "arch",
-                                                                ['runtime', 'version'], "Visual Studio"))
+                                                    ['runtime', 'version'], "Visual Studio"))
         self.sut.os = "Windows"
         self.sut.compiler.version = "11"
         self.sut.compiler.version = "12"
@@ -309,10 +310,10 @@ os: [Windows, Linux]
         self.sut.os = "Windows"
         self.sut.validate()
         assert self.sut.values_list == [("compiler", "gcc"),
-                                                ("compiler.arch", "x86"),
-                                                ("compiler.arch.speed", "A"),
-                                                ("compiler.version", "4.8"),
-                                                ("os", "Windows")]
+                                        ("compiler.arch", "x86"),
+                                        ("compiler.arch.speed", "A"),
+                                        ("compiler.version", "4.8"),
+                                        ("os", "Windows")]
 
     def test_validate2(self):
         self.sut.os = "Windows"
@@ -351,11 +352,11 @@ os: [Windows, Linux]
         assert self.sut.compiler == "Visual Studio"
 
         with pytest.raises(ConanException) as cm:
-            self.sut.compiler.kk
-        assert str(cm.value) == str(undefined_field("settings.compiler", "kk", ['runtime', 'version'],
-                                             "Visual Studio"))
+            self.sut.compiler.kk  # noqa
+        assert str(cm.value) == str(undefined_field("settings.compiler", "kk",
+                                                    ['runtime', 'version'], "Visual Studio"))
 
-        assert self.sut.compiler.version == None
+        assert self.sut.compiler.version == None  # noqa
 
         with pytest.raises(ConanException) as cm:
             self.sut.compiler.version = "123"
@@ -381,9 +382,9 @@ os: [Windows, Linux]
 
         self.sut.compiler = "gcc"
         with pytest.raises(ConanException) as cm:
-            self.sut.compiler.runtime
-        assert str(cm.value) == str(undefined_field("settings.compiler", "runtime", "['arch', 'version']",
-                                             "gcc"))
+            self.sut.compiler.runtime  # noqa
+        assert str(cm.value) == str(undefined_field("settings.compiler", "runtime",
+                                                    "['arch', 'version']", "gcc"))
 
         self.sut.compiler.arch = "x86"
         self.sut.compiler.arch.speed = "A"

@@ -349,7 +349,7 @@ class MSBuildDeps:
                         except KeyError:  # The transitive dep might have been skipped
                             required = None
                         if required:  # The transitive dep might have been skipped
-                            required_name = required.ref.name
+                            required_name = self._dep_name(required, build)
                             public_deps.append(required_name if required_pkg == required_comp
                                                else "{}_{}".format(required_name, required_comp))
                     else:  # Points to a component of same package

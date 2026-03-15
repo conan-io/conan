@@ -236,13 +236,15 @@ class TestBlocksFunctionality:
         c.settings.arch = "x86_64"
         c.settings.compiler = "gcc"
         c.settings.compiler.version = "11"
-        c.settings.compiler.cppstd = "20"
+        c.settings.compiler.cstd = "gnu17"
         c.settings.compiler.libcxx = "libstdc++"
         c.settings.os = "Linux"
 
         toolchain = CMakeToolchain(c)
         content = toolchain.content
         assert '_GLIBCXX_USE_CXX11_ABI=0' in content
+        assert 'CMAKE_C_STANDARD 17' in toolchain.content
+        assert 'CMAKE_C_EXTENSIONS ON' in toolchain.content
         c.settings.compiler.libcxx = "libstdc++11"
         toolchain = CMakeToolchain(c)
         content = toolchain.content
@@ -269,6 +271,7 @@ class TestMSVCToolset:
         c.settings.compiler = "msvc"
         c.settings.compiler.version = "194"
         c.settings.compiler.cppstd = "20"
+        c.settings.compiler.cstd = "17"
         c.settings.os = "Windows"
         return c
 
@@ -277,6 +280,7 @@ class TestMSVCToolset:
         assert 'set(CMAKE_GENERATOR_TOOLSET "v143" CACHE STRING "" FORCE)' in toolchain.content
         assert 'Visual Studio 17 2022' in toolchain.generator
         assert 'CMAKE_CXX_STANDARD 20' in toolchain.content
+        assert 'CMAKE_C_STANDARD 17' in toolchain.content
 
     def test_toolset_latest_generator(self, conanfile_msvc):
         conanfile_msvc.settings.compiler.version = "195"
@@ -317,6 +321,7 @@ class TestMSVCToolset:
         assert 'set(CMAKE_GENERATOR_TOOLSET "v143,host=x64" CACHE STRING "" FORCE)' in c.content
         assert 'Visual Studio 17 2022' in c.generator
         assert 'CMAKE_CXX_STANDARD 20' in c.content
+        assert 'CMAKE_C_STANDARD 17' in c.content
 
     def test_toolset_cuda(self, conanfile_msvc):
         conanfile_msvc.conf.define("tools.cmake.cmaketoolchain:toolset_cuda", "C:/Path/To/CUDA")

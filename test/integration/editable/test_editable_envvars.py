@@ -39,7 +39,7 @@ def test_editable_envvars():
     # But don't use same vars
     assert 'export OTHERVAR="randomvalue"' in buildenv
     run_path = os.path.join(c.current_folder, "dep", "mysource", "mylocalsrc")
-    assert f'export MYRUNPATH="$MYRUNPATH:{run_path}"' in runenv
+    assert f'export MYRUNPATH="${{MYRUNPATH:-}}${{MYRUNPATH:+:}}{run_path}"' in runenv
 
     c.run("editable remove dep")
     c.run("create dep")

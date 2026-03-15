@@ -1,5 +1,3 @@
-import pytest
-
 from conan.internal.model.info import _VersionRepr
 from conan.internal.model.version import Version
 

@@ -1,7 +1,10 @@
+from conan.internal.graph.graph_builder import DepsGraphBuilder
 from conan.test.assets.genconanfile import GenConanfile
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
 from test.integration.graph.core.graph_manager_test import _check_transitive
 from conan.test.utils.tools import TestClient
+
+DepsGraphBuilder.ALLOW_ALIAS = True
 
 
 class TestAlias(GraphManagerTest):

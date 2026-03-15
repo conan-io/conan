@@ -243,3 +243,41 @@ def test_msbuilddeps_consume_meson():
     c.run("install app -g MSBuildDeps -s arch=x86_64")
     deps = c.load("app/conan_pkga_vars_release_x64.props")
     assert "<ConanpkgaLibraries>libpkga.a;</ConanpkgaLibraries>" in deps
+
+
+def test_build_requires_transitives_with_components():
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1")
+                                    .with_package_type("shared-library")
+                                    .with_package_info(cpp_info={
+                                        "components": {
+                                            "core": {"libs": ["depcore"]},
+                                            "extra": {"requires": ["core"]}
+                                        }
+                                    }),
+        "tool/conanfile.py": GenConanfile("tool", "0.1")
+                                 .with_requires("dep/0.1")
+                                 .with_package_info(cpp_info={
+                                     "components": {
+                                         "a": {"requires": ["dep::core"]},
+                                         "b": {"requires": ["dep::dep"]}
+                                     }
+                                 }),
+            "consumer/conanfile.py":
+                GenConanfile().with_settings("os", "compiler", "build_type", "arch")
+                              .with_build_requires("tool/0.1")})
+    c.run("create dep -s arch=x86_64")
+    c.run("create tool -s arch=x86_64")
+    c.run("install consumer -g MSBuildDeps -of=. -s arch=x86_64")
+
+    dep_extra = c.load("conan_dep_build_extra_release_x64.props")
+    assert "conan_dep_build_core.props" in dep_extra
+    assert "conan_dep_core.props" not in dep_extra
+
+    tool_a = c.load("conan_tool_build_a_release_x64.props")
+    assert "conan_dep_build_core.props" in tool_a
+    assert "conan_dep_core.props" not in tool_a
+
+    tool_b = c.load("conan_tool_build_b_release_x64.props")
+    assert "conan_dep_build.props" in tool_b
+    assert "conan_dep.props" not in tool_b

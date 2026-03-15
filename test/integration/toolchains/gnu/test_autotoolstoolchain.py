@@ -41,10 +41,10 @@ def test_extra_flags_via_conf():
         assert 'set "CFLAGS=%CFLAGS% -O3 --flag3 --flag4"' in toolchain
         assert 'set "LDFLAGS=%LDFLAGS% --flag5 --flag6"' in toolchain
     else:
-        assert 'export CPPFLAGS="$CPPFLAGS -DNDEBUG -DDEF1 -DDEF2"' in toolchain
-        assert 'export CXXFLAGS="$CXXFLAGS -O3 --flag1 --flag2"' in toolchain
-        assert 'export CFLAGS="$CFLAGS -O3 --flag3 --flag4"' in toolchain
-        assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6"' in toolchain
+        assert 'export CPPFLAGS="${CPPFLAGS:-}${CPPFLAGS:+ }-DNDEBUG -DDEF1 -DDEF2"' in toolchain
+        assert 'export CXXFLAGS="${CXXFLAGS:-}${CXXFLAGS:+ }-O3 --flag1 --flag2"' in toolchain
+        assert 'export CFLAGS="${CFLAGS:-}${CFLAGS:+ }-O3 --flag3 --flag4"' in toolchain
+        assert 'export LDFLAGS="${LDFLAGS:-}${LDFLAGS:+ }--flag5 --flag6"' in toolchain
 
 
 def test_extra_flags_order():
@@ -133,7 +133,7 @@ def test_linker_scripts_via_conf():
     if os_ == "Windows":
         assert 'set "LDFLAGS=%LDFLAGS% --flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
     else:
-        assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
+        assert 'export LDFLAGS="${LDFLAGS:-}${LDFLAGS:+ }--flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
 
 
 def test_not_none_values():
@@ -369,12 +369,13 @@ def test_conf_build_does_not_exist():
     assert 'export CC_FOR_BUILD="x86_64-linux-gnu-gcc"' in tc
     assert 'export CXX_FOR_BUILD="x86_64-linux-gnu-g++"' in tc
 
+
 @pytest.mark.parametrize(
     "threads, flags",
     [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
 )
 def test_thread_flags(threads, flags):
-    os = platform.system()
+    is_win = platform.system() == "Windows"
     client = TestClient()
     profile = textwrap.dedent(f"""
         [settings]
@@ -396,12 +397,12 @@ def test_thread_flags(threads, flags):
         }
     )
     client.run("install . -pr=./profile")
-    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if os == "Windows" else '.sh'))
-    if os == "Windows":
+    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if is_win else '.sh'))
+    if is_win:
         assert f'set "CXXFLAGS=%CXXFLAGS% -stdlib=libc++ {flags}"' in toolchain
         assert f'set "CFLAGS=%CFLAGS% {flags}"' in toolchain
         assert f'set "LDFLAGS=%LDFLAGS% {flags}' in toolchain
     else:
-        assert f'export CXXFLAGS="$CXXFLAGS -stdlib=libc++ {flags}"' in toolchain
-        assert f'export CFLAGS="$CFLAGS {flags}"' in toolchain
-        assert f'export LDFLAGS="$LDFLAGS {flags}"' in toolchain
+        assert f'export CXXFLAGS="${{CXXFLAGS:-}}${{CXXFLAGS:+ }}-stdlib=libc++ {flags}"' in toolchain
+        assert f'export CFLAGS="${{CFLAGS:-}}${{CFLAGS:+ }}{flags}"' in toolchain
+        assert f'export LDFLAGS="${{LDFLAGS:-}}${{LDFLAGS:+ }}{flags}"' in toolchain

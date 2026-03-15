@@ -1,3 +1,5 @@
+from requests import Response
+
 from conan.internal import REVISIONS
 from conan.test.utils.tools import TestClient, TestServer, TestRequester
 from collections import namedtuple
@@ -54,3 +56,17 @@ class TestError200NoJson:
 
         client.run("install --requires=pkg/ref@user/testing", assert_error=True)
         assert "Unexpected server response [1, 2, 3]" in client.out
+
+
+def test_unrecongized_exception():
+    class BuggyRequester(TestRequester):
+        def get(self, *args, **kwargs):
+            resp = Response()
+            resp.status_code = 444
+            resp._content = 'some 444 error message'
+            return resp
+
+    c = TestClient(default_server_user=True, requester_class=BuggyRequester)
+    c.run("install --requires=zlib/1.2 -r=default", assert_error=True)
+    assert ("ERROR: Package 'zlib/1.2' not resolved: Server exception 444:"
+            " some 444 error message") in c.out
