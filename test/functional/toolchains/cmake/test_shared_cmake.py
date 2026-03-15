@@ -92,7 +92,6 @@ def test_other_client_can_link_autotools(transitive_shared_client):
     # client.run("create . --build=missing")
 
 
-@pytest.mark.skipif(sys.version_info.minor < 8, reason="shutil.copytree with dirs_exists_ok")
 def test_virtualrunenv_relocator(transitive_shared_client):
     client = TestClient(servers=transitive_shared_client.servers)
     conanfile = textwrap.dedent("""
@@ -110,18 +109,7 @@ def test_virtualrunenv_relocator(transitive_shared_client):
                 # Windows, *.dll
                 # Copy to generators folder + "imported-bin"
                 binpath = os.path.join(self.generators_folder, "imported-bin")
-
-                def handler(dep):
-                    if os.path.exists(dep.cpp_info.libdir):
-                        shutil.copytree(dep.cpp_info.libdir, binpath, dirs_exist_ok=True)
-                    if os.path.exists(dep.cpp_info.bindir):
-                        shutil.copytree(dep.cpp_info.bindir, binpath, dirs_exist_ok=True)
-
-                runenv = VirtualRunEnv(self, handler=handler)
-                # Add it to PATH instead the original location
-                runenv.environment().prepend_path("PATH", binpath)
-                runenv.environment().prepend_path("LD_LIBRARY_PATH", binpath)
-                runenv.environment().prepend_path("DYLD_LIBRARY_PATH", binpath)
+                runenv = VirtualRunEnv(self, runtime_copy=binpath)
                 runenv.generate()
 
             def build(self):
@@ -132,6 +120,11 @@ def test_virtualrunenv_relocator(transitive_shared_client):
     assert "app/0.1: Hello World Release!" in client.out
     assert "chat/0.1: Hello World Release!" in client.out
     assert "hello/0.1: Hello World Release!" in client.out
+    if platform.system() == "Windows":
+        client.run_command(r".\imported-bin\app")
+        assert "app/0.1: Hello World Release!" in client.out
+        assert "chat/0.1: Hello World Release!" in client.out
+        assert "hello/0.1: Hello World Release!" in client.out
 
 
 @pytest.mark.tool("cmake")

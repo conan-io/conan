@@ -1,7 +1,11 @@
 import os
+import shutil
+import sys
 
+from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.env import Environment
+from conan.tools.files import copy
 
 
 def runenv_from_cpp_info(dep, os_name):
@@ -29,7 +33,7 @@ class VirtualRunEnv:
         .bat or .sh script
     """
 
-    def __init__(self, conanfile, auto_generate=False, handler=None):
+    def __init__(self, conanfile, auto_generate=False, runtime_copy=None):
         """
 
         :param conanfile:  The current recipe object. Always use ``self``.
@@ -45,7 +49,7 @@ class VirtualRunEnv:
         self.arch = conanfile.settings.get_safe("arch")
         if self.arch:
             self.arch = self.arch.lower()
-        self._handler = handler
+        self._runtime_copy = runtime_copy
 
     @property
     def _filename(self):
@@ -79,13 +83,28 @@ class VirtualRunEnv:
                 self._runenv.compose_env(dep.runenv_info)
             if require.run:  # Only if the require is run (shared or application to be run)
                 _os = self._conanfile.settings.get_safe("os")
-                if self._handler:
-                    self._handler(dep)
+                if self._runtime_copy:
+                    self._runtime_copy_exe(dep)
                 else:
                     runenv = runenv_from_cpp_info(dep, _os)
                     self._runenv.compose_env(runenv)
 
+        if self._runtime_copy:
+            self._runenv.prepend_path("PATH", self._runtime_copy)
+            self._runenv.prepend_path("LD_LIBRARY_PATH", self._runtime_copy)
+            self._runenv.prepend_path("DYLD_LIBRARY_PATH", self._runtime_copy)
         return self._runenv
+
+    def _runtime_copy_exe(self, dep):
+        # Avoid adding all deps to PATH, copy them to a specific folder
+        cpp_info = dep.cpp_info.aggregated_components()
+        for bindir in cpp_info.bindirs:
+            if os.path.isdir(bindir):
+                copy(self._conanfile, "*", src=bindir, dst=self._runtime_copy)
+        for libdir in cpp_info.libdirs:
+            if os.path.isdir(libdir):
+                copy(self._conanfile, "*.so*", src=libdir, dst=self._runtime_copy)
+                copy(self._conanfile, "*.dylib*", src=libdir, dst=self._runtime_copy)
 
     def vars(self, scope="run"):
         """
