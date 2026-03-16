@@ -231,7 +231,7 @@ class DepsGraphBuilder:
                     self._resolve_alias(node, require, alias, graph)
             self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
             if graph_lock:
-                graph_lock.resolve_overrides(require)
+                graph_lock.resolve_overrides(require, node.context)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
         return result
 
