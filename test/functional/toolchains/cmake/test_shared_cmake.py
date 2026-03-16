@@ -122,6 +122,11 @@ def test_virtualrunenv_relocator(transitive_shared_client):
     assert "hello/0.1: Hello World Release!" in client.out
     if platform.system() == "Windows":
         client.run_command(r".\imported-bin\app")
+    elif platform.system() == "Linux":
+        client.run_command(r"LD_LIBRARY_PATH=./imported-bin ./imported-bin/app")
+    elif platform.system() == "Darwin":
+        client.run_command(r"DYLD_LIBRARY_PATH=./imported-bin ./imported-bin/app")
+    if platform.system() in ("Windows", "Linux", "Darwin"):
         assert "app/0.1: Hello World Release!" in client.out
         assert "chat/0.1: Hello World Release!" in client.out
         assert "hello/0.1: Hello World Release!" in client.out

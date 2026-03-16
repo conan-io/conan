@@ -1,8 +1,5 @@
 import os
-import shutil
-import sys
 
-from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.env import Environment
 from conan.tools.files import copy
