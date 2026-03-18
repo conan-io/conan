@@ -427,6 +427,16 @@ def test_runtime_lib_dirs_multiconf(lib_dir_setup):
     assert "<CONFIG:Debug>" in runtime_lib_dirs
 
 
+def test_disable_package_registry():
+    # https://github.com/conan-io/conan/issues/19749
+    client = TestClient()
+    client.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
+    client.run("install .")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)" in toolchain
+    assert "set(CMAKE_EXPORT_PACKAGE_REGISTRY OFF)" in toolchain
+
+
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_cmaketoolchain_cmake_system_processor_cross_apple():
     """

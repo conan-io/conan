@@ -576,6 +576,15 @@ class FindFiles(Block):
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
         {% endif %}
 
+        # Disable CMake package registry to avoid polluting the user package registry
+        # with Conan-generated builds.
+        if(NOT DEFINED CMAKE_EXPORT_NO_PACKAGE_REGISTRY)
+            set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
+        endif()
+        if(NOT DEFINED CMAKE_EXPORT_PACKAGE_REGISTRY)
+            set(CMAKE_EXPORT_PACKAGE_REGISTRY OFF)
+        endif()
+
         # Definition of CMAKE_MODULE_PATH
         {% if build_paths %}
         list(PREPEND CMAKE_MODULE_PATH {{ build_paths }})
