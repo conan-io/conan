@@ -429,7 +429,7 @@ def test_runtime_lib_dirs_multiconf(lib_dir_setup):
 
 def test_disable_package_registry():
     # https://github.com/conan-io/conan/issues/19749
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
     client.run("install .")
     toolchain = client.load("conan_toolchain.cmake")
