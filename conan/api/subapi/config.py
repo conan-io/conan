@@ -213,6 +213,7 @@ class ConfigAPI:
         profile_host = profile_build = profile or conan_api.profiles.get_profile([])
 
         app = ConanApp(self._conan_api)
+        cache = self._helpers.cache
 
         ConanOutput().title("Fetching requested configuration packages")
         result = []
@@ -225,7 +226,7 @@ class ConfigAPI:
                              recipe=RECIPE_VIRTUAL)
             root_node.is_conf = True
             update = ["*"]
-            builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
+            builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, cache, remotes,
                                        update, update, self._helpers.global_conf)
             deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
 

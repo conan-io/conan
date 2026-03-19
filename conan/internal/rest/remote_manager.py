@@ -12,7 +12,7 @@ from conan.internal.paths import CONANINFO, CONAN_MANIFEST, PACKAGE_FILE_NAME, E
 from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
-from conan.internal.cache.conan_reference_layout import METADATA, PackageLayout
+from conan.internal.cache.conan_reference_layout import METADATA
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException
 from conan.errors import ConanException
