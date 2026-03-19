@@ -72,8 +72,17 @@ def text_vuln_formatter(result):
             name = node["name"]
             sev = node.get("severity", "Medium")
             sev_color = severity_colors.get(sev, Color.BRIGHT_YELLOW)
-            score = node.get("cvss", {}).get("preferredBaseScore")
-            score_txt = f", CVSS: {score}" if score else ""
+            cvss = node.get("cvss", {})
+            score_txt = ""
+            if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
+                score = cvss["v4"].get("baseScore", 0)
+                score_txt = f", CVSS (v4): {score}"
+            if "v3" in cvss and cvss["v3"].get("baseScore", 0) > 0:
+                score = cvss["v3"].get("baseScore", 0)
+                score_txt = f", CVSS (v3): {score}"
+            if not score_txt:
+                score = cvss.get("preferredBaseScore")
+                score_txt = f", CVSS: {score}" if score else ""
             desc = node.get("description", "")
             desc = (desc[:240] + "...") if len(desc) > 240 else desc
             desc_wrapped = wrap_and_indent(desc)
@@ -349,8 +358,17 @@ def html_vuln_formatter(result):
                 name = node.get("name")
                 sev = node.get("severity", "Medium")
                 sev = f"{severity_order.get(sev, 2)} - {sev}"
-                score = node.get("cvss", {}).get("preferredBaseScore")
-                score_txt = f"CVSS: {score}" if score else "-"
+                cvss = node.get("cvss", {})
+                score_txt = ""
+                if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
+                    score = cvss["v4"].get("baseScore", 0)
+                    score_txt = f", CVSS (v4): {score}"
+                if "v3" in cvss and cvss["v3"].get("baseScore", 0) > 0:
+                    score = cvss["v3"].get("baseScore", 0)
+                    score_txt = f", CVSS (v3): {score}"
+                if not score_txt:
+                    score = cvss.get("preferredBaseScore")
+                    score_txt = f", CVSS: {score}" if score else ""
                 aliases = node.get("aliases", [])
                 references = node.get("references", [])
                 desc = node.get("description", "")
