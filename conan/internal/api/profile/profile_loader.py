@@ -244,7 +244,7 @@ class _ProfileValueParser:
         doc_platform_tool_requires = doc.platform_tool_requires or doc.system_tools or ""
         if doc.system_tools:
             ConanOutput().warning("Profile [system_tools] is deprecated,"
-                                  " please use [platform_tool_requires]")
+                                  " please use [platform_tool_requires]", warn_tag="deprecated")
 
         def parse_replaces(replaces):
             result = [RecipeReference.loads(r) for r in replaces.splitlines()]
