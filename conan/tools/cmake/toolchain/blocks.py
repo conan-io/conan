@@ -578,9 +578,6 @@ class FindFiles(Block):
 
         # Disable CMake package registry to avoid polluting the user package registry
         # with Conan-generated builds.
-        if(NOT DEFINED CMAKE_EXPORT_NO_PACKAGE_REGISTRY)
-            set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)
-        endif()
         if(NOT DEFINED CMAKE_EXPORT_PACKAGE_REGISTRY)
             set(CMAKE_EXPORT_PACKAGE_REGISTRY OFF)
         endif()

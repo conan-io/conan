@@ -433,7 +433,6 @@ def test_disable_package_registry():
     client.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
     client.run("install .")
     toolchain = client.load("conan_toolchain.cmake")
-    assert "set(CMAKE_EXPORT_NO_PACKAGE_REGISTRY ON)" in toolchain
     assert "set(CMAKE_EXPORT_PACKAGE_REGISTRY OFF)" in toolchain
 
 
