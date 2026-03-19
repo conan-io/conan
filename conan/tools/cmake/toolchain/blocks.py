@@ -576,12 +576,6 @@ class FindFiles(Block):
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG {{ find_package_prefer_config }})
         {% endif %}
 
-        # Disable CMake package registry to avoid polluting the user package registry
-        # with Conan-generated builds.
-        if(NOT DEFINED CMAKE_EXPORT_PACKAGE_REGISTRY)
-            set(CMAKE_EXPORT_PACKAGE_REGISTRY OFF)
-        endif()
-
         # Definition of CMAKE_MODULE_PATH
         {% if build_paths %}
         list(PREPEND CMAKE_MODULE_PATH {{ build_paths }})
@@ -1265,6 +1259,13 @@ class OutputDirsBlock(Block):
     def template(self):
         return textwrap.dedent("""\
            # Definition of CMAKE_INSTALL_XXX folders
+
+           # Ensure export(PACKAGE) honors CMAKE_EXPORT_PACKAGE_REGISTRY even if the
+           # project sets cmake_minimum_required() lower than 3.15.
+           cmake_policy(SET CMP0090 NEW)
+           if(NOT DEFINED CMAKE_EXPORT_PACKAGE_REGISTRY)
+               set(CMAKE_EXPORT_PACKAGE_REGISTRY OFF)
+           endif()
 
            {% if package_folder %}
            set(CMAKE_INSTALL_PREFIX "{{package_folder}}")
