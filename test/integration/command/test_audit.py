@@ -598,7 +598,6 @@ def test_audit_cvss_versions(score, out):
 
     with proxy_response(200, successful_response):
         tc.run(f"audit scan --requires=foobar/0.1.0 -f={out}")
-        print(score)
         if "v4" in score:
             assert str(score["v4"]["baseScore"]) in tc.out
         if "v3" in score:
