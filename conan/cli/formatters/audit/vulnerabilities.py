@@ -74,12 +74,12 @@ def text_vuln_formatter(result):
             sev_color = severity_colors.get(sev, Color.BRIGHT_YELLOW)
             cvss = node.get("cvss", {})
             score_txt = ""
-            if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
-                score = cvss["v4"].get("baseScore", 0)
-                score_txt = f", CVSS (v4): {score}"
             if "v3" in cvss and cvss["v3"].get("baseScore", 0) > 0:
                 score = cvss["v3"].get("baseScore", 0)
                 score_txt = f", CVSS (v3): {score}"
+            if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
+                score = cvss["v4"].get("baseScore", 0)
+                score_txt = f", CVSS (v4): {score}"
             if not score_txt:
                 score = cvss.get("preferredBaseScore")
                 score_txt = f", CVSS: {score}" if score else ""
@@ -360,12 +360,12 @@ def html_vuln_formatter(result):
                 sev = f"{severity_order.get(sev, 2)} - {sev}"
                 cvss = node.get("cvss", {})
                 score_txt = ""
-                if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
-                    score = cvss["v4"].get("baseScore", 0)
-                    score_txt = f", CVSS (v4): {score}"
                 if "v3" in cvss and cvss["v3"].get("baseScore", 0) > 0:
                     score = cvss["v3"].get("baseScore", 0)
                     score_txt = f", CVSS (v3): {score}"
+                if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
+                    score = cvss["v4"].get("baseScore", 0)
+                    score_txt = f", CVSS (v4): {score}"
                 if not score_txt:
                     score = cvss.get("preferredBaseScore")
                     score_txt = f", CVSS: {score}" if score else ""
