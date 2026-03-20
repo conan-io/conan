@@ -787,6 +787,9 @@ class ExtraFlagsBlock(Block):
         {% if exelinkflags %}
         string(APPEND CONAN_EXE_LINKER_FLAGS{{suffix}} "{% for exelinkflag in exelinkflags %} {{ exelinkflag }}{% endfor %}")
         {% endif %}
+        {% if rcflags %}
+        string(APPEND CONAN_RC_FLAGS{{suffix}} "{% for rcflag in rcflags %} {{ rcflag }}{% endfor %}")
+        {% endif %}
         {% if defines %}
         {% if config %}
         {% for define in defines %}
@@ -837,6 +840,7 @@ class ExtraFlagsBlock(Block):
         cflags = self._toolchain.extra_cflags + self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         sharedlinkflags = self._toolchain.extra_sharedlinkflags + self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._toolchain.extra_exelinkflags + self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        rcflags = self._conanfile.conf.get("tools.build:rcflags", default=[], check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
 
         # See https://github.com/conan-io/conan/issues/13374
@@ -859,6 +863,7 @@ class ExtraFlagsBlock(Block):
             "cflags": cflags,
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags,
+            "rcflags": rcflags,
             "defines": [define.replace('"', '\\"') for define in defines],
         }
 
@@ -881,6 +886,9 @@ class CMakeFlagsInitBlock(Block):
             if(DEFINED CONAN_EXE_LINKER_FLAGS_${config})
               string(APPEND CMAKE_EXE_LINKER_FLAGS_${config}_INIT " ${CONAN_EXE_LINKER_FLAGS_${config}}")
             endif()
+            if(DEFINED CONAN_RC_FLAGS_${config})
+              string(APPEND CMAKE_RC_FLAGS_${config}_INIT " ${CONAN_RC_FLAGS_${config}}")
+            endif()
         endforeach()
 
         if(DEFINED CONAN_CXX_FLAGS)
@@ -894,6 +902,9 @@ class CMakeFlagsInitBlock(Block):
         endif()
         if(DEFINED CONAN_EXE_LINKER_FLAGS)
           string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " ${CONAN_EXE_LINKER_FLAGS}")
+        endif()
+        if(DEFINED CONAN_RC_FLAGS)
+          string(APPEND CMAKE_RC_FLAGS_INIT " ${CONAN_RC_FLAGS}")
         endif()
         if(DEFINED CONAN_OBJCXX_FLAGS)
           string(APPEND CMAKE_OBJCXX_FLAGS_INIT " ${CONAN_OBJCXX_FLAGS}")

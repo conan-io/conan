@@ -92,6 +92,31 @@ def test_extra_flags_order():
     assert 'extra_ldflags sharedlinkflags exelinkflags' in toolchain
 
 
+def test_gnutoolchain_rcflags():
+    """Test that tools.build:rcflags is applied to RCFLAGS in the generated script."""
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:rcflags=["--rcflag1", "--rcflag2"]
+        """)
+    client = TestClient()
+    conanfile = (GenConanfile().with_settings("os", "arch", "compiler", "build_type")
+                 .with_generator("GnuToolchain"))
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conangnutoolchain.sh")
+    assert "RCFLAGS" in toolchain
+    assert "--rcflag1" in toolchain
+    assert "--rcflag2" in toolchain
+
+
 def test_autotools_custom_environment():
     client = TestClient()
     conanfile = textwrap.dedent("""

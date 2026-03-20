@@ -535,6 +535,31 @@ def test_extra_flags_via_conf():
     assert 'add_compile_definitions( "D1" "D2")' in toolchain
 
 
+def test_cmaketoolchain_rcflags():
+    """Test that tools.build:rcflags is applied to CONAN_RC_FLAGS and CMAKE_RC_FLAGS_INIT"""
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:rcflags=["/nologo", "/flag-rc"]
+        """)
+
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:host=profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_RC_FLAGS " /nologo /flag-rc")' in toolchain
+    assert 'string(APPEND CMAKE_RC_FLAGS_INIT " ${CONAN_RC_FLAGS}")' in toolchain
+
+
 def test_bitcode_enable_flag():
     profile = textwrap.dedent("""
         [settings]
