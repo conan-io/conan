@@ -31,6 +31,12 @@ def _generate_flags(self, conanfile):
         -- Link flags retrieved from LDFLAGS environment, conan.conf(tools.build:sharedlinkflags), conan.conf(tools.build:exelinkflags), extra_cxxflags and compiler settings
         linkoptions { {{ extra_ldflags }} }
         {% endif %}
+        {% if extra_rcflags %}
+        -- RC flags retrieved from conan.conf(tools.build:rcflags)
+        filter { files { "**.rc" } }
+            buildoptions { {{ extra_rcflags }} }
+        filter {}
+        {% endif %}
         {% if extra_defines %}
         -- Defines retrieved from DEFINES environment, conan.conf(tools.build:defines) and extra_defines
         defines { {{ extra_defines }} }
@@ -75,6 +81,7 @@ def _generate_flags(self, conanfile):
         + arch_link_flags
         + thread_flags_list
     )
+    extra_rc_flags = format_list(conanfile.conf.get("tools.build:rcflags", default=[], check_type=list))
 
     return (
         Template(template, trim_blocks=True, lstrip_blocks=True)
@@ -83,6 +90,7 @@ def _generate_flags(self, conanfile):
             extra_cflags=extra_c_flags,
             extra_cxxflags=extra_cxx_flags,
             extra_ldflags=extra_ld_flags,
+            extra_rcflags=extra_rc_flags,
         )
         .strip()
     )

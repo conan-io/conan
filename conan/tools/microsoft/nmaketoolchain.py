@@ -88,6 +88,11 @@ class NMakeToolchain:
 
         return ["/nologo"] + self._format_options(ldflags)
 
+    @property
+    def _rcflags(self):
+        rcflags = self._conanfile.conf.get("tools.build:rcflags", default=[], check_type=list)
+        return self._format_options(rcflags) if rcflags else []
+
     def environment(self):
         env = Environment()
         # Injection of compile flags in CL env-var:
@@ -96,6 +101,8 @@ class NMakeToolchain:
         # Injection of link flags in _LINK_ env-var:
         # https://learn.microsoft.com/en-us/cpp/build/reference/linking
         env.append("_LINK_", self._link)
+        if self._rcflags:
+            env.append("RCFLAGS", self._rcflags)
         # Also define some special env-vars which can override special NMake macros:
         # https://learn.microsoft.com/en-us/cpp/build/reference/special-nmake-macros
         conf_compilers = self._conanfile.conf.get("tools.build:compiler_executables", default={},
