@@ -73,16 +73,14 @@ def text_vuln_formatter(result):
             sev = node.get("severity", "Medium")
             sev_color = severity_colors.get(sev, Color.BRIGHT_YELLOW)
             cvss = node.get("cvss", {})
-            score_txt = ""
+            preferred_score = cvss.get("preferredBaseScore")
+            score_txt = f" - {preferred_score}" if preferred_score else ""
             if "v3" in cvss and cvss["v3"].get("baseScore", 0) > 0:
-                score = cvss["v3"].get("baseScore", 0)
-                score_txt = f", CVSS (v3): {score}"
+                score_v3 = cvss["v3"].get("baseScore", 0)
+                score_txt += f" - {score_v3} (v3)"
             if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
-                score = cvss["v4"].get("baseScore", 0)
-                score_txt = f", CVSS (v4): {score}"
-            if not score_txt:
-                score = cvss.get("preferredBaseScore")
-                score_txt = f", CVSS: {score}" if score else ""
+                score_v4 = cvss["v4"].get("baseScore", 0)
+                score_txt += f" - {score_v4} (v4)"
             desc = node.get("description", "")
             desc = (desc[:240] + "...") if len(desc) > 240 else desc
             desc_wrapped = wrap_and_indent(desc)
