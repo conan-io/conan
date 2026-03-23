@@ -1,7 +1,6 @@
 import copy
 import json
 import textwrap
-from collections import OrderedDict
 
 import pytest
 from unittest.mock import patch
@@ -17,7 +16,7 @@ class TestUpdateFlows:
     def _setup(self):
         self.liba = RecipeReference.loads("liba/1.0.0")
 
-        servers = OrderedDict()
+        servers = {}
         for index in range(3):
             servers[f"server{index}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                                    users={"user": "password"})
@@ -442,33 +441,33 @@ class TestUpdateFlows:
                "from remote 'server2' " in self.client.out
 
 
-@pytest.mark.parametrize("update,result", [
-                                           # Not a real pattern, works to support legacy syntax
-                                           ["*", {"liba/1.1": "Downloaded (default)",
-                                                  "libb/1.1": "Downloaded (default)"}],
-                                           ["libc", {"liba/1.0": "Cache",
-                                                     "libb/1.0": "Cache"}],
-                                           ["liba", {"liba/1.1": "Downloaded (default)",
-                                                     "libb/1.0": "Cache"}],
-                                           ["libb", {"liba/1.0": "Cache",
-                                                     "libb/1.1": "Downloaded (default)"}],
-                                           ["libb/1.0", {"liba/1.0": "Cache",
-                                                         "libb/1.0": "Cache"}],
-                                           ["libb/1.0#7e88fd43dc3c8171b6f38f8d1b139641",
-                                                {"liba/1.0": "Cache",
-                                                 "libb/1.0": "Cache"}],
-                                           ["", {"liba/1.0": "Cache",
-                                                 "libb/1.0": "Cache"}],
-                                           # Patterns not supported, only full name match
-                                           ["lib*", {"liba/1.0": "Cache",
-                                                     "libb/1.0": "Cache"}],
-                                           ["liba/*", {"liba/1.0": "Cache",
-                                                       "libb/1.0": "Cache"}],
-                                           # None only passes legacy --update without args,
-                                           # to ensure it works, it should be the same as passing *
-                                           [None, {"liba/1.1": "Downloaded (default)",
-                                                   "libb/1.1": "Downloaded (default)"}]
-                                           ])
+@pytest.mark.parametrize("update,result",
+                         [
+                             # Not a real pattern, works to support legacy syntax
+                             ["*", {"liba/1.1": "Downloaded (default)",
+                                    "libb/1.1": "Downloaded (default)"}],
+                             ["libc", {"liba/1.0": "Cache",
+                                       "libb/1.0": "Cache"}],
+                             ["liba", {"liba/1.1": "Downloaded (default)",
+                                       "libb/1.0": "Cache"}],
+                             ["libb", {"liba/1.0": "Cache",
+                                       "libb/1.1": "Downloaded (default)"}],
+                             ["libb/1.0", {"liba/1.0": "Cache",
+                                           "libb/1.0": "Cache"}],
+                             ["libb/1.0#7e88fd43dc3c8171b6f38f8d1b139641", {"liba/1.0": "Cache",
+                                                                            "libb/1.0": "Cache"}],
+                             ["", {"liba/1.0": "Cache",
+                                   "libb/1.0": "Cache"}],
+                             # Patterns not supported, only full name match
+                             ["lib*", {"liba/1.0": "Cache",
+                                       "libb/1.0": "Cache"}],
+                             ["liba/*", {"liba/1.0": "Cache",
+                                         "libb/1.0": "Cache"}],
+                             # None only passes legacy --update without args,
+                             # to ensure it works, it should be the same as passing *
+                             [None, {"liba/1.1": "Downloaded (default)",
+                                     "libb/1.1": "Downloaded (default)"}]
+                         ])
 def test_muliref_update_pattern(update, result):
     tc = TestClient(light=True, default_server_user=True)
     tc.save({"liba/conanfile.py": GenConanfile("liba"),

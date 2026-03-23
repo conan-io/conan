@@ -1,6 +1,5 @@
 import copy
 import time
-from collections import OrderedDict
 
 import pytest
 from unittest.mock import patch
@@ -35,8 +34,7 @@ class TestInstallingPackagesWithRevisions:
     def setup(self):
         self.server = TestServer()
         self.server2 = TestServer()
-        self.servers = OrderedDict([("default", self.server),
-                                    ("remote2", self.server2)])
+        self.servers = {"default": self.server, "remote2": self.server2}
         self.c_v2 = TestClient(servers=self.servers, inputs=2*["admin", "password"])
         self.ref = RecipeReference.loads("lib/1.0@conan/testing")
 
@@ -274,7 +272,8 @@ class TestRemoveWithRevisions:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.server = TestServer()
-        self.c_v2 = TestClient(servers={"default": self.server}, inputs=["admin", "password"])
+        self.c_v2 = TestClient(light=True,
+                               servers={"default": self.server}, inputs=["admin", "password"])
         self.ref = RecipeReference.loads("lib/1.0@conan/testing")
 
     def test_remove_local_recipe(self):
@@ -530,7 +529,8 @@ class TestServerRevisionsIndexes:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.server = TestServer()
-        self.c_v2 = TestClient(servers={"default": self.server}, inputs=["admin", "password"])
+        self.c_v2 = TestClient(light=True,
+                               servers={"default": self.server}, inputs=["admin", "password"])
         self.ref = RecipeReference.loads("lib/1.0@conan/testing")
 
     def test_rotation_deleting_recipe_revisions(self):
@@ -660,8 +660,7 @@ class TestServerRevisionsIndexes:
 
 def test_touching_other_server():
     # https://github.com/conan-io/conan/issues/9333
-    servers = OrderedDict([("remote1", TestServer()),
-                           ("remote2", None)])  # None server will crash if touched
+    servers = {"remote1": TestServer(), "remote2": None}  # None server will crash if touched
     c = TestClient(servers=servers, inputs=["admin", "password"])
     c.save({"conanfile.py": GenConanfile().with_settings("os")})
     c.run("create . --name=pkg --version=0.1 --user=conan --channel=channel -s os=Windows")

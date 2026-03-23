@@ -1,5 +1,4 @@
 import json
-from collections import OrderedDict
 
 import pytest
 
@@ -179,7 +178,7 @@ class TestPkgListFindRemote:
     """ we can recover a list of remotes for an already installed graph, for metadata download
     """
     def test_graph_2_pkg_list_remotes(self):
-        servers = OrderedDict([("default", TestServer()), ("remote2", TestServer())])
+        servers = {"default": TestServer(), "remote2": TestServer()}
         c = TestClient(servers=servers, inputs=2 * ["admin", "password"], light=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
@@ -329,7 +328,7 @@ class TestPkgListMerge:
     """ deep merge lists
     """
     def test_graph_2_pkg_list_remotes(self):
-        servers = OrderedDict([("default", TestServer()), ("remote2", TestServer())])
+        servers = {"default": TestServer(), "remote2": TestServer()}
         c = TestClient(servers=servers, inputs=2 * ["admin", "password"])
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("build_type"),
                 "bzip2/conanfile.py": GenConanfile("bzip2", "1.0").with_settings("build_type"),
@@ -603,9 +602,8 @@ class TestListGraphContext:
         tc = TestClient(light=True)
         tc.save({
                 "protobuf/conanfile.py": GenConanfile("protobuf", "1.0"),
-                "onnx/conanfile.py": GenConanfile("onnx", "1.0")
-                    .with_requires("protobuf/1.0")
-                    .with_tool_requires("protobuf/1.0")})
+                "onnx/conanfile.py": GenConanfile("onnx", "1.0").with_requires("protobuf/1.0")
+                                                                .with_tool_requires("protobuf/1.0")})
 
         tc.run("create protobuf")
         tc.run("create onnx")
