@@ -791,7 +791,7 @@ class TestLinkFeatures:
 
 
 class TestLegacyVariables:
-    def test_legacy_definesself(self):
+    def test_legacy_defines(self):
         # We used not to populate this.
         # We do for backward compatibility with old check_symbol_exists and similar CMake code
         tc = TestClient()
