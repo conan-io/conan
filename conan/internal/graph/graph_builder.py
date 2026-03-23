@@ -192,7 +192,16 @@ class DepsGraphBuilder:
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
         for pattern, tool_requires in profile.tool_requires.items():
-            if ref_matches(ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
+            pattern_or = pattern.split("|")  # Allow OR conditions just for negated [tool_requires]
+            is_consumer = conanfile._conan_is_consumer  # noqa
+            if len(pattern_or) <= 1:
+                matched = ref_matches(ref, pattern, is_consumer=is_consumer)
+            else:
+                if pattern[0] not in "!~":
+                    raise ConanException(f"Patterns with OR only allowed if negated : {pattern}")
+                pattern_or[0] = pattern_or[0][1:]  # Remove the initial !~ negation char
+                matched = not any(ref_matches(ref, p, is_consumer=is_consumer) for p in pattern_or)
+            if matched:
                 for tool_require in tool_requires:  # Do the override
                     # Check if it is a self-loop of build-requires in build context and avoid it
                     if ref and tool_require.name == ref.name and tool_require.user == ref.user and \
