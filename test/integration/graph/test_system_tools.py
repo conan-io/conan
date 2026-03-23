@@ -27,7 +27,7 @@ class TestToolRequires:
                      "profile": "[system_tools]\ntool/1.1"})
         client.run("create tool")
         client.run("create . -pr=profile")
-        assert "WARN: Profile [system_tools] is deprecated" in client.out
+        assert "WARN: deprecated: Profile [system_tools] is deprecated" in client.out
         assert "tool/1.0#60ed6e65eae112df86da7f6d790887fd - Cache" in client.out
 
     @pytest.mark.parametrize("revision", ["", "#myrev"])
