@@ -234,7 +234,8 @@ def test_profile_tool_requires_negated_or_patterns():
 
         [tool_requires]
         mold/1.0
-        !zlib*|mold*:cmake/1.0
+        !zlib*:cmake/1.0
+        !mold*:cmake/1.0
         """)
     profile = textwrap.dedent("""\
         [tool_requires]
