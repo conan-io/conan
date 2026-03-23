@@ -791,14 +791,23 @@ class TestLinkFeatures:
 
 
 class TestLegacyVariables:
-    def test_legacy_defines(self):
+    def test_legacy_definesself(self):
         # We used not to populate this.
         # We do for backward compatibility with old check_symbol_exists and similar CMake code
         tc = TestClient()
         tc.save({"conanfile.py": GenConanfile("mypkg", "1.0")
+                .with_package_info({"defines": ["MY_DEFINE", "MYVAR=1"]})})
+        tc.run("create")
+        tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
+        mypkg_config = tc.load("mypkg-config.cmake")
+        assert 'set(mypkg_DEFINITIONS "-DMY_DEFINE;-DMYVAR=1" )' in mypkg_config
+
+    def test_legacy_defines_multiple_components(self):
+        tc = TestClient()
+        tc.save({"conanfile.py": GenConanfile("mypkg", "1.0")
                  .with_package_info({"components": {"mypkg": {"defines": ["MY_DEFINE", "MYVAR=1"]},
                                                     "lib2": {"defines": ["MY_DEFINE2", "MYVAR2=1"]}}})
-                 .with_package_info()})
+                 })
         tc.run("create")
         tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
         mypkg_config = tc.load("mypkg-config.cmake")
