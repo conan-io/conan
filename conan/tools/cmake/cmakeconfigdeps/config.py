@@ -103,7 +103,8 @@ class ConfigTemplate2:
             libraries = []
             if self._full_cpp_info.has_components:
                 for component in self._full_cpp_info.components.keys():
-                    root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
+                    root_target_name = self._cmakedeps.get_property("cmake_target_name",
+                                                                    self._conanfile,
                                                                     comp_name=component)
                     libraries.append(root_target_name or f"{pkg_name}::{component}")
             else:

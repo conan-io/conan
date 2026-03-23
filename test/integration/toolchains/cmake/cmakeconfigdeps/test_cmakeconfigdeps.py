@@ -829,7 +829,6 @@ class TestLegacyVariables:
         assert "set(mypkg_LIBRARIES mypkg::mypkg mypkg::lib2 )" in mypkg_config
 
 
-
 class TestExtraFindExtraVariants:
     def test_generated_dir_entries(self):
         tc = TestClient()
