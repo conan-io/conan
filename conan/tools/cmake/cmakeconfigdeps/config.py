@@ -110,7 +110,7 @@ class ConfigTemplate2:
             else:
                 root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
                 libraries.append(root_target_name or f"{pkg_name}::{pkg_name}")
-        libraries = " ".join(libraries) if libraries else ""
+            libraries = " ".join(libraries) if libraries else ""
         return {"additional_variables_prefixes": prefixes,
                 "version": self._conanfile.ref.version,
                 "include_dirs": include_dirs,
