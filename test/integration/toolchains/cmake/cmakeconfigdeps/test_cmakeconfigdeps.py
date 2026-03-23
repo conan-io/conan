@@ -796,11 +796,13 @@ class TestLegacyVariables:
         # We do for backward compatibility with old check_symbol_exists and similar CMake code
         tc = TestClient()
         tc.save({"conanfile.py": GenConanfile("mypkg", "1.0")
-                 .with_package_info({"defines": ["MY_DEFINE", "MYVAR=1"]})})
+                 .with_package_info({"components": {"mypkg": {"defines": ["MY_DEFINE", "MYVAR=1"]},
+                                                    "lib2": {"defines": ["MY_DEFINE2", "MYVAR2=1"]}}})
+                 .with_package_info()})
         tc.run("create")
         tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
         mypkg_config = tc.load("mypkg-config.cmake")
-        assert 'set(mypkg_DEFINITIONS "-DMY_DEFINE;-DMYVAR=1" )' in mypkg_config
+        assert 'set(mypkg_DEFINITIONS "-DMY_DEFINE2;-DMYVAR2=1;-DMY_DEFINE;-DMYVAR=1" )' in mypkg_config
 
     def test_legacy_libraries(self):
         tc = TestClient()
