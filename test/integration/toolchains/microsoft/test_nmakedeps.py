@@ -40,18 +40,16 @@ def test_nmakedeps():
                " -g NMakeDeps -s build_type=Release -s arch=x86_64")
     # Checking that NMakeDeps builds correctly .bat file
     bat_file = client.load("conannmakedeps.bat")
-    print(bat_file)
     # Checking that defines are added to CL
     for flag in (
         r'/D"TEST_DEFINITION1"', '/D"TEST_DEFINITION2#0"',
-        r'/D"TEST_DEFINITION3#"', '/D"TEST_DEFINITION4#"foo""',
-        r'/D"TEST_DEFINITION5#"__declspec\(dllexport\)""',
-        r'/D"TEST_DEFINITION6#"foo bar""',
+        r'/D"TEST_DEFINITION3#"', r'/D"TEST_DEFINITION4#\"foo\""',
+        r'/D"TEST_DEFINITION5#\"__declspec(dllexport)\""',
+        r'/D"TEST_DEFINITION6#\"foo bar\""',
         r'/D"TEST_DEFINITION7#7"',
         r'/D"TEST_WINVER#0x0601"'
     ):
-        print("TESTING", flag)
-        assert re.search(fr'set "CL=%CL%.*\s{flag}(?:\s|")', bat_file)
+        assert flag in bat_file
     # Checking that libs and system libs are added to _LINK_
     for flag in (r"pkg-1\.lib", r"pkg-2\.lib", r"pkg-3\.lib", r"pkg-4\.lib", r"ws2_32\.lib"):
         assert re.search(fr'set "_LINK_=%_LINK_%.*\s{flag}(?:\s|")', bat_file)

@@ -21,9 +21,10 @@ def format_defines(defines):
             # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
             macro, value = define.split("=", 1)
             if value and not is_hex_or_numeric(value):
+                # value quotes are escaped
                 value = f'\\"{value}\\"'
             define = f"{macro}#{value}"
-        formated_defines.append(f"/D\"{define}\"")
+        formated_defines.append(f'/D"{define}"')
     return formated_defines
 
 
