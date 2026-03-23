@@ -428,7 +428,7 @@ class TestTransitiveBuild:
                     .with_requirement("abseil/[~1]"),
                 "protobuf2/conanfile.py": GenConanfile("protobuf", "2.0")
                     .with_requirement("abseil/[~2]"),
-                "project/conanfile.py": GenConanfile()
+                "consumer/conanfile.py": GenConanfile("consumer", "1.0")
                     .with_tool_requirement("protobuf/1.0", run=False)
                     .with_tool_requirement("protobuf/2.0", run=False)
                 })
@@ -437,7 +437,8 @@ class TestTransitiveBuild:
         c.run("create abseil --version=2.0")
         c.run("create protobuf1")
         c.run("create protobuf2")
-        c.run("install project")
+        c.run("export consumer")
+        c.run("install consumer")
         # No conflict, because both protobufs are run=False,
         # so the shared-library abseil is not propagated with run=True in any of the branches
         assert "Install finished successfully" in c.out

@@ -762,11 +762,12 @@ class TestLinearFourLevels(GraphManagerTest):
                                 (liba, False, False, False, False)])
 
     def test_run_false_multiversion_shared(self):
-        self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("shared-library"))
+        self.recipe_conanfile("liba/1.0", GenConanfile().with_package_type("shared-library"))
+        self.recipe_conanfile("liba/2.0", GenConanfile().with_package_type("shared-library"))
         self.recipe_conanfile("tool/1.0", GenConanfile().with_package_type("application")
-                              .with_requires("liba/0.1"))
+                              .with_requires("liba/1.0"))
         self.recipe_conanfile("tool/2.0", GenConanfile().with_package_type("application")
-                              .with_requires("liba/0.1"))
+                              .with_requires("liba/2.0"))
         self.recipe_conanfile("libc/0.1",
                               GenConanfile().with_package_type("shared-library")
                                             .with_tool_requirement("tool/1.0", run=False)
@@ -792,7 +793,7 @@ class TestLinearFourLevels(GraphManagerTest):
         _check_transitive(libc, [
             (tool1, False, False, True, False),
             (tool2, False, False, True, False),
-            #(liba1, True, True, False, False),
+            (liba1, False, False, True, False),
             (liba2, False, False, True, False)
         ])
 
