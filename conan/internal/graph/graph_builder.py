@@ -192,26 +192,15 @@ class DepsGraphBuilder:
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
 
-        # Accumulate negated patterns
-        # TODO: This can be pre-processed and cached at the profile level, reused
-        #  for all nodes
-        profile_tool_requires = []  # pattern, tool_requires
         for pattern, tool_requires in profile.tool_requires.items():
-            if pattern[0] in "!~" and profile_tool_requires:  # There is a previous one
-                last = profile_tool_requires[-1]
-                if last[0][0] in "!~" and last[1] == tool_requires:  # same targets
-                    profile_tool_requires[-1] = ([last[0], pattern], tool_requires)
-                else:
-                    profile_tool_requires.append((pattern, tool_requires))
-            else:
-                profile_tool_requires.append((pattern, tool_requires))
-
-        for pattern, tool_requires in profile_tool_requires:
             is_consumer = conanfile._conan_is_consumer  # noqa
-            if isinstance(pattern, str):
-                matched = ref_matches(ref, pattern, is_consumer=is_consumer)
+            if pattern[0] in "!~" and pattern[1] == "(":  # This is a negated OR operation
+                assert pattern[-1] == ")", (f"Malformed profile OR expression without"
+                                            f" closing parenthesis: {pattern}")
+                parts = pattern[2:-1].split("|")
+                matched = not any(ref_matches(ref, p, is_consumer=is_consumer) for p in parts)
             else:
-                matched = all(ref_matches(ref, p, is_consumer=is_consumer) for p in pattern)
+                matched = ref_matches(ref, pattern, is_consumer=is_consumer)
             if matched:
                 for tool_require in tool_requires:  # Do the override
                     # Check if it is a self-loop of build-requires in build context and avoid it

@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import textwrap
@@ -234,8 +235,7 @@ def test_profile_tool_requires_negated_or_patterns():
 
         [tool_requires]
         mold/1.0
-        !zlib*:cmake/1.0
-        !mold*:cmake/1.0
+        !(zlib*|mold*):cmake/1.0
         """)
     profile = textwrap.dedent("""\
         [tool_requires]
@@ -256,7 +256,9 @@ def test_profile_tool_requires_negated_or_patterns():
     c.run("create zlib")
     c.run("create cmake")
     c.run("create gcc")
-    c.run("graph info app -pr=profile -pr:b=profile_build")
+    c.run("graph info app -pr=profile -pr:b=profile_build --format=json")
+    graph = json.loads(c.stdout)
+    assert len(graph["graph"]["nodes"]) == 14
     c.assert_listed_require({"cmake/1.0": "Cache",
                              "gcc/1.0": "Cache",
                              "mold/1.0": "Cache",
