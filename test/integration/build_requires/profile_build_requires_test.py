@@ -249,9 +249,7 @@ def test_profile_tool_requires_negated_or_patterns():
             "gcc/conanfile.py": GenConanfile("gcc", "1.0").with_tool_requires("zlib/1.0"),
             "app/conanfile.py": GenConanfile("app", "1.0"),
             "profile_build": profile_build,
-            "profile": profile
-        }
-    )
+            "profile": profile})
     c.run("create mold")
     c.run("create zlib")
     c.run("create cmake")
