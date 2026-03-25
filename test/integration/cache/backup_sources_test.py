@@ -904,8 +904,7 @@ def test_new_in_server_approach():
             name = "pkg"
             version = "1.0"
             def source(self):
-                download(self, "{file_server.fake_url}/internet/myfile.txt",
-                        "myfile.txt",
+                download(self, "{file_server.fake_url}/internet/myfile.txt", "myfile.txt",
                          sha256="{hello_world_sha256}")
                 content = load(self, "myfile.txt")
                 self.output.info("CONTENT=%s!!!!" % content)
@@ -913,6 +912,9 @@ def test_new_in_server_approach():
 
     c.save_home({"global.conf": "core.sources:pkg_cache=True"})
     c.save({"conanfile.py": conanfile})
+    c.run("source .")
+    print(c.out)
+
     c.run("create .")
     assert "pkg/1.0: Source myfile.txt not found in download cache or recipe metadata" in c.out
     assert "CONTENT=Hello, world!!!" in c.out
