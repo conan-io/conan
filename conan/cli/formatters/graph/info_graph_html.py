@@ -21,12 +21,39 @@ graph_info_html = r"""
                 display: inline-block;
                 font-size: 18px;
             }
+            label {
+                user-select: none
+            }
+
+            #container {
+                display: grid;
+                grid-template-columns: 75% 25%;
+                grid-template-rows: 50px auto;
+                height: 100vh;
+            }
+            #mylegend {
+                border-bottom: 2px solid #f2f2f2;
+                grid-column-end: span 1;
+                font-size: 14px;
+                height: 100%;
+            }
+            #empty-sidebar, #sidebar {
+                background-color: #f9f9fe;
+                border: none;
+                min-height:100%;
+                height:0;
+                overflow-y: auto;
+                padding: 5px 10px;
+            }
         </style>
 
-        <div style="display: grid; grid-template-columns: 75% 25%; grid-template-rows: 30px auto; height: 100vh;">
-            <div id="mylegend" style="background-color: lightgrey; grid-column-end: span 2;height: 100%"></div>
+        <div id="container">
+            <div id="mylegend"></div>
+            <div id="empty-sidebar">
+                <h3>Controls</h3>
+            </div>
             <div id="mynetwork"></div>
-            <div style="background-color: lightgrey;min-height:100%;height:0;overflow-y: auto;">
+            <div id="sidebar">
                 <div>
                     <input type="checkbox" onchange="switchBuild()" id="show_build_requires" checked />
                     <label for="show_build_requires">Show build-requires</label>
@@ -54,11 +81,18 @@ graph_info_html = r"""
                     <input type="search" placeholder="Exclude packages..." title="Add a comma to exclude an additional package" oninput="excludePackages(this)">
                 </div>
                 <div>
-                    <input type="checkbox" onchange="showhideclass('controls')" id="show_controls"/>
-                    <label for="show_controls">Show graph controls</label>
+                    <details>
+                    <summary>Extra graph controls</summary>
+                    <div id="controls" class="controls" style="padding: 5;"></div>
+                    </details>
                 </div>
-                <div id="controls" class="controls" style="padding:5; display:none"></div>
-                <div id="details"  style="padding:10;" class="noPrint">Package info: Click on one package to show information</div>
+
+                <div id="details-container" style="padding:10;" class="noPrint">
+                    <h3>Information</h3>
+                    <div id="details">
+                    Click on one package or edge to show information
+                    </div>
+                </div>
                 <div id="error" style="padding:10;" class="noPrint"></div>
             </div>
         </div>
@@ -370,7 +404,7 @@ graph_info_html = r"""
                     control.appendChild(div2);
                 }
                 else {
-                    control.innerHTML = "<b>Info</b>: Click on a package or edge for more info";
+                    control.innerHTML = "Click on one package or edge to show information";
                 }
             });
             function draw() {
