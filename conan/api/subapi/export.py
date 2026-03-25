@@ -46,7 +46,7 @@ class ExportAPI:
         ConanOutput().title("Exporting recipe to the cache")
         app = ConanApp(self._conan_api)
         hook_manager = self._helpers.hook_manager
-        return cmd_export(app.loader, app.cache, hook_manager, self._helpers.global_conf, path,
+        return cmd_export(app.loader,self._helpers.cache, hook_manager, self._helpers.global_conf, path,
                           name, version, user, channel, graph_lock=lockfile, remotes=remotes)
 
     def export_pkg_graph(self, path, ref: RecipeReference, profile_host, profile_build,

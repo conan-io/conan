@@ -21,15 +21,15 @@ from conan.internal.model.pkg_type import PackageType
 
 class GraphBinariesAnalyzer:
 
-    def __init__(self, conan_app, global_conf, hook_manager):
-        self._cache = conan_app.cache
-        self._home_folder = conan_app.cache_folder
+    def __init__(self, cache, remote_manager, home_folder, global_conf, hook_manager):
+        self._cache = cache
+        self._home_folder = home_folder
         self._global_conf = global_conf
-        self._remote_manager = conan_app.remote_manager
+        self._remote_manager = remote_manager
         self._hook_manager = hook_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
-        compat_folder = HomePaths(conan_app.cache_folder).compatibility_plugin_path
+        compat_folder = HomePaths(home_folder).compatibility_plugin_path
         self._compatibility = BinaryCompatibility(compat_folder, hook_manager)
         unknown_mode = global_conf.get("core.package_id:default_unknown_mode", default="semver_mode")
         non_embed = global_conf.get("core.package_id:default_non_embed_mode", default="minor_mode")

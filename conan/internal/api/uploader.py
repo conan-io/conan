@@ -26,8 +26,8 @@ class UploadUpstreamChecker:
     This is completely irrespective of the actual package contents, it only uses the local
     computed revision and the remote one
     """
-    def __init__(self, app: ConanApp):
-        self._app = app
+    def __init__(self, remote_manager):
+        self._remote_manager = remote_manager
 
     def check(self, package_list, remote, force):
         for ref, packages in package_list.items():
@@ -43,7 +43,7 @@ class UploadUpstreamChecker:
         try:
             assert ref.revision
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_ref = self._app.remote_manager.get_recipe_revision(ref, remote)
+            server_ref = self._remote_manager.get_recipe_revision(ref, remote)
             assert server_ref  # If successful (not raising NotFoundException), this will exist
         except NotFoundException:
             ref_bundle["force_upload"] = False
@@ -64,7 +64,7 @@ class UploadUpstreamChecker:
 
         try:
             # TODO: It is a bit ugly, interface-wise to ask for revisions to check existence
-            server_revisions = self._app.remote_manager.get_package_revision(pref, remote)
+            server_revisions = self._remote_manager.get_package_revision(pref, remote)
             assert server_revisions
         except NotFoundException:
             prev_bundle["force_upload"] = False
@@ -104,8 +104,10 @@ def get_compress_level(compressformat, global_conf):
 
 
 class PackagePreparator:
-    def __init__(self, app: ConanApp, global_conf):
+    def __init__(self, app: ConanApp, cache, remote_manager, global_conf):
         self._app = app
+        self._remote_manager = remote_manager
+        self._cache = cache
         self._global_conf = global_conf
         compressformat = self._global_conf.get("core.upload:compression_format", default="gz",
                                                choices=COMPRESSIONS)
@@ -116,7 +118,7 @@ class PackagePreparator:
     def prepare(self, pkg_list, enabled_remotes, metadata, force=False):
         local_url = self._global_conf.get("core.scm:local_url", choices=["allow", "block"])
         for ref, packages in pkg_list.items():
-            recipe_layout = self._app.cache.recipe_layout(ref)
+            recipe_layout = self._cache.recipe_layout(ref)
             conanfile_path = recipe_layout.conanfile()
             conanfile = self._app.loader.load_basic(conanfile_path)
             url = conanfile.conan_data.get("scm", {}).get("url") if conanfile.conan_data else None
@@ -154,7 +156,7 @@ class PackagePreparator:
         - compress the artifacts in conan_export.tgz and conan_export_sources.tgz
         """
         try:
-            retrieve_exports_sources(self._app.remote_manager, recipe_layout, conanfile, ref,
+            retrieve_exports_sources(self._remote_manager, recipe_layout, conanfile, ref,
                                      remotes)
             cache_files = self._compress_recipe_files(recipe_layout, ref)
             ref_bundle["files"] = cache_files
@@ -199,7 +201,7 @@ class PackagePreparator:
     def _prepare_package(self, pref, prev_bundle, metadata, force=False):
         pkg_layout = None
         if prev_bundle.get("upload") or force:
-            pkg_layout = self._app.cache.pkg_layout(pref)
+            pkg_layout = self._cache.pkg_layout(pref)
             if pkg_layout.package_is_dirty():
                 raise ConanException(f"Package {pref} is corrupted, aborting upload.\n"
                                      f"Remove it with 'conan remove {pref}'")
@@ -208,7 +210,7 @@ class PackagePreparator:
 
         # Package metadata files too
         if metadata != [""] and (metadata or prev_bundle.get("upload")):
-            pkg_layout = pkg_layout or self._app.cache.pkg_layout(pref)
+            pkg_layout = pkg_layout or self._cache.pkg_layout(pref)
             metadata_folder = pkg_layout.metadata()
             files = _metadata_files(metadata_folder, metadata)
             if files:
@@ -280,8 +282,8 @@ class UploadExecutor:
     been computed and are passed in the ``upload_data`` parameter, so this executor is also
     agnostic about which files are transferred
     """
-    def __init__(self, app: ConanApp):
-        self._app = app
+    def __init__(self, remote_manager):
+        self._remote_manager = remote_manager
 
     def upload(self, upload_data, remote):
         for ref, packages in upload_data.items():
@@ -300,7 +302,7 @@ class UploadExecutor:
         output.info(f"Uploading recipe '{ref.repr_notime()}' ({_total_size(cache_files)})")
 
         t1 = time.time()
-        self._app.remote_manager.upload_recipe(ref, cache_files, remote)
+        self._remote_manager.upload_recipe(ref, cache_files, remote)
 
         duration = time.time() - t1
         output.debug(f"Upload {ref} in {duration} time")
@@ -315,7 +317,7 @@ class UploadExecutor:
         output.info(f"Uploading package '{pref.repr_notime()}' ({_total_size(cache_files)})")
 
         t1 = time.time()
-        self._app.remote_manager.upload_package(pref, cache_files, remote)
+        self._remote_manager.upload_package(pref, cache_files, remote)
         duration = time.time() - t1
         output.debug(f"Upload {pref} in {duration} time")
 

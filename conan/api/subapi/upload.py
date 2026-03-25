@@ -38,7 +38,7 @@ class UploadAPI:
         """
         app = ConanApp(self._conan_api)
         for ref, _ in package_list.items():
-            layout = app.cache.recipe_layout(ref)
+            layout = self._api_helpers.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
             conanfile = app.loader.load_basic(conanfile_path, remotes=enabled_remotes)
             if conanfile.upload_policy == "skip":
@@ -46,7 +46,7 @@ class UploadAPI:
                                    "because upload_policy='skip'")
                 package_list.recipe_dict(ref)["packages"] = {}
 
-        UploadUpstreamChecker(app).check(package_list, remote, force)
+        UploadUpstreamChecker(self._api_helpers.remote_manager).check(package_list, remote, force)
 
     def prepare(self, package_list: PackagesList, enabled_remotes: List[Remote],
                 metadata: List[str] = None):
@@ -64,18 +64,19 @@ class UploadAPI:
         if metadata and metadata != [''] and '' in metadata:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
         app = ConanApp(self._conan_api)
-        preparator = PackagePreparator(app, self._api_helpers.global_conf)
+        preparator = PackagePreparator(app, self._api_helpers.cache,
+                                       self._api_helpers.remote_manager,
+                                       self._api_helpers.global_conf)
         preparator.prepare(package_list, enabled_remotes, metadata)
-        signer = PkgSignaturesPlugin(app.cache, app.cache_folder)
+        signer = PkgSignaturesPlugin(self._api_helpers.cache, self._conan_api.home_folder)
         if signer.is_sign_configured:
             ConanOutput().warning("[Package sign] Implicitly signing packages in the upload "
                                   "command has been removed. Use 'conan cache sign' command before "
                                   "uploading instead.", warn_tag="deprecated")
 
     def _upload(self, package_list, remote):
-        app = ConanApp(self._conan_api)
-        app.remote_manager.check_credentials(remote)
-        executor = UploadExecutor(app)
+        self._api_helpers.remote_manager.check_credentials(remote)
+        executor = UploadExecutor(self._api_helpers.remote_manager)
         executor.upload(package_list, remote)
 
     def upload_full(self, package_list: PackagesList, remote: Remote, enabled_remotes: List[Remote],
