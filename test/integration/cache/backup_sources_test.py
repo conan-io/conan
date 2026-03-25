@@ -414,8 +414,8 @@ class TestDownloadCacheBackupSources:
 
         client.save({"conanfile.py": conanfile})
         client.run("create .", assert_error=True)
-        assert f"ConanException: The source backup server '{http_server.fake_url}" \
-               f"/downloader/' needs authentication" in client.out
+        assert f"ConanException: Authentication to source backup server '{http_server.fake_url}" \
+               f"/downloader/' failed" in client.out
         content = {"credentials": [
             {"url": f"{http_server.fake_url}", "token": "mytoken"}
         ]}
@@ -424,8 +424,8 @@ class TestDownloadCacheBackupSources:
         client.run("create .")
         assert "CONTENT: Hello, world!" in client.out
         client.run("upload * -c -r=default", assert_error=True)
-        assert f"The source backup server '{http_server.fake_url}" \
-               f"/uploader/' needs authentication" in client.out
+        assert f"Authentication to source backup server '{http_server.fake_url}" \
+               f"/uploader/' failed" in client.out
         content = {"credentials": [
             {"url": f"{http_server.fake_url}", "token": "myuploadtoken"}
         ]}
@@ -589,7 +589,7 @@ class TestDownloadCacheBackupSources:
                 self._attach_to(self.root_app, self.store)
 
             @staticmethod
-            def _attach_to(app, store):
+            def _attach_to(app, store):  # noqa
                 @app.route("/internet/<file>", method=["GET"])
                 def get_internet_file(file):
                     return HTTPError(401, "You Are Not Allowed Here")
@@ -675,7 +675,7 @@ class TestDownloadCacheBackupSources:
         self.client.save({"conanfile.py": conanfile})
         self.client.run("create .")
         assert f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in remote backup {self.file_server.fake_url}/backup2/" in self.client.out
-        assert "sha256 signature failed for" in self.client.out
+        assert "sha256 hash failed for" in self.client.out
 
     def test_export_then_upload_workflow(self):
         mkdir(os.path.join(self.download_cache_folder, "s"))
@@ -848,7 +848,6 @@ class TestDownloadCacheBackupSources:
         else:
             self.client.run("source .")
         assert f"{sha256} is dirty, removing it" in self.client.out
-
 
     @pytest.mark.parametrize("exception", [Exception, ConanException])
     def test_backup_source_upload_when_dirty(self, exception):

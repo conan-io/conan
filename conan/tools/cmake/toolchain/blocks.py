@@ -13,7 +13,7 @@ from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.utils import is_multi_configuration
+from conan.tools.cmake.utils import is_multi_configuration, cmake_escape_value
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version, msvc_platform_from_arch
 from conan.internal.api.install.generators import relativize_path
@@ -269,6 +269,29 @@ class ArchitectureBlock(Block):
         return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag,
                 "thread_flags_list": thread_flags_list}
 
+class RpathLinkFlagsBlock(Block):
+    template = textwrap.dedent("""\
+        # Pass -rpath-link pointing to all directories with runtime libraries
+        {% if rpath_link_flags %}
+        string(APPEND CONAN_EXE_LINKER_FLAGS " {{ rpath_link_flags }}")
+        string(APPEND CONAN_SHARED_LINKER_FLAGS " {{ rpath_link_flags }}")
+        {% endif %}
+        """)
+
+    def context(self):
+        add_rpath_link = self._toolchain.add_rpath_link or self._conanfile.conf.get("tools.build:add_rpath_link", check_type=bool)
+        if add_rpath_link:
+            runtime_dirs = []
+            host_req = self._conanfile.dependencies.filter({"build": False}).values()
+            for req in host_req:
+                cppinfo = req.cpp_info.aggregated_components()
+                runtime_dirs.extend(cppinfo.libdirs)
+
+            # surround each dir with escaped quotes, to avoid problems with spaces in paths
+            rpath_link_flags = " ".join([f'-Wl,-rpath-link=\\"{d}\\"' for d in runtime_dirs]) if runtime_dirs else None
+        else:
+            rpath_link_flags = None
+        return {"rpath_link_flags": rpath_link_flags}
 
 class LinkerScriptsBlock(Block):
     template = textwrap.dedent("""\
@@ -545,7 +568,7 @@ class FindFiles(Block):
     template = textwrap.dedent("""\
         # Define paths to find packages, programs, libraries, etc.
         if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/conan_cmakedeps_paths.cmake")
-          message(STATUS "Conan toolchain: Including CMakeDeps generated conan_cmakedeps_paths.cmake")
+          message(STATUS "Conan toolchain: Including CMakeConfigDeps generated conan_cmakedeps_paths.cmake")
           include("${CMAKE_CURRENT_LIST_DIR}/conan_cmakedeps_paths.cmake")
         else()
 
@@ -764,6 +787,9 @@ class ExtraFlagsBlock(Block):
         {% if exelinkflags %}
         string(APPEND CONAN_EXE_LINKER_FLAGS{{suffix}} "{% for exelinkflag in exelinkflags %} {{ exelinkflag }}{% endfor %}")
         {% endif %}
+        {% if rcflags %}
+        string(APPEND CONAN_RC_FLAGS{{suffix}} "{% for rcflag in rcflags %} {{ rcflag }}{% endfor %}")
+        {% endif %}
         {% if defines %}
         {% if config %}
         {% for define in defines %}
@@ -814,6 +840,7 @@ class ExtraFlagsBlock(Block):
         cflags = self._toolchain.extra_cflags + self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         sharedlinkflags = self._toolchain.extra_sharedlinkflags + self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._toolchain.extra_exelinkflags + self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        rcflags = self._conanfile.conf.get("tools.build:rcflags", default=[], check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
 
         # See https://github.com/conan-io/conan/issues/13374
@@ -836,6 +863,7 @@ class ExtraFlagsBlock(Block):
             "cflags": cflags,
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags,
+            "rcflags": rcflags,
             "defines": [define.replace('"', '\\"') for define in defines],
         }
 
@@ -858,6 +886,9 @@ class CMakeFlagsInitBlock(Block):
             if(DEFINED CONAN_EXE_LINKER_FLAGS_${config})
               string(APPEND CMAKE_EXE_LINKER_FLAGS_${config}_INIT " ${CONAN_EXE_LINKER_FLAGS_${config}}")
             endif()
+            if(DEFINED CONAN_RC_FLAGS_${config})
+              string(APPEND CMAKE_RC_FLAGS_${config}_INIT " ${CONAN_RC_FLAGS_${config}}")
+            endif()
         endforeach()
 
         if(DEFINED CONAN_CXX_FLAGS)
@@ -871,6 +902,9 @@ class CMakeFlagsInitBlock(Block):
         endif()
         if(DEFINED CONAN_EXE_LINKER_FLAGS)
           string(APPEND CMAKE_EXE_LINKER_FLAGS_INIT " ${CONAN_EXE_LINKER_FLAGS}")
+        endif()
+        if(DEFINED CONAN_RC_FLAGS)
+          string(APPEND CMAKE_RC_FLAGS_INIT " ${CONAN_RC_FLAGS}")
         endif()
         if(DEFINED CONAN_OBJCXX_FLAGS)
           string(APPEND CMAKE_OBJCXX_FLAGS_INIT " ${CONAN_OBJCXX_FLAGS}")
@@ -1237,6 +1271,13 @@ class OutputDirsBlock(Block):
         return textwrap.dedent("""\
            # Definition of CMAKE_INSTALL_XXX folders
 
+           # Ensure export(PACKAGE) honors CMAKE_EXPORT_PACKAGE_REGISTRY even if the
+           # project sets cmake_minimum_required() lower than 3.15.
+           cmake_policy(SET CMP0090 NEW)
+           if(NOT DEFINED CMAKE_EXPORT_PACKAGE_REGISTRY)
+               set(CMAKE_EXPORT_PACKAGE_REGISTRY OFF)
+           endif()
+
            {% if package_folder %}
            set(CMAKE_INSTALL_PREFIX "{{package_folder}}")
            {% endif %}
@@ -1291,8 +1332,8 @@ class VariablesBlock(Block):
                 {% endfor %}
                 {% for i in range(values|count) %}{% set genexpr.str = genexpr.str + '>' %}
                 {% endfor %}
-                set({{ it }} {{ genexpr.str }} CACHE STRING
-                    "Variable {{ it }} conan-toolchain defined")
+            set({{ it }} {{ genexpr.str }} CACHE STRING
+                "Variable {{ it }} conan-toolchain defined")
             {% endfor %}
             {% endmacro %}
             # Variables

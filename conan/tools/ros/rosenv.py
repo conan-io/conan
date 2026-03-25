@@ -41,7 +41,7 @@ class ROSEnv:
         for build_script_file in [self._build_script_sh_file, self._build_script_bat_file]:
             rosbuildenv.vars(self._conanfile, "build").save_script(build_script_file)
 
-        #TODO: Add powrshell support generating .ps1 files
+        # TODO: Add powrshell support generating .ps1 files
         self._generate_sh_files()
         self._generate_bat_files()
 

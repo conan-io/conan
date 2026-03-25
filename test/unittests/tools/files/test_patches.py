@@ -151,7 +151,7 @@ def test_single_no_patchset(monkeypatch):
 
 def test_single_apply_fail(monkeypatch):
     class MockedApply:
-        def apply(self, *args, **kwargs):
+        def apply(self, *args, **kwargs):  # noqa
             return False
 
     monkeypatch.setattr(patch_ng, "fromfile", lambda _: MockedApply())

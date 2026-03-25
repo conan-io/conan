@@ -2,7 +2,7 @@ import textwrap
 
 import jinja2
 from jinja2 import Template
-from conan.tools.cmake.utils import parse_extra_variable
+from conan.tools.cmake.utils import parse_extra_variable, cmake_escape_value
 from conan.internal.api.install.generators import relativize_path
 
 
@@ -98,10 +98,19 @@ class ConfigTemplate2:
             incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
                        for i in incdirs]
             include_dirs = ";".join(incdirs)
-            definitions = ""
-            root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
-            libraries = root_target_name or f"{pkg_name}::{pkg_name}"
+            definitions = ";".join("-D" + cmake_escape_value(d) for d in aggregated_cppinfo.defines)
 
+            libraries = []
+            if self._full_cpp_info.has_components:
+                for component in self._full_cpp_info.components.keys():
+                    root_target_name = self._cmakedeps.get_property("cmake_target_name",
+                                                                    self._conanfile,
+                                                                    comp_name=component)
+                    libraries.append(root_target_name or f"{pkg_name}::{component}")
+            else:
+                root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
+                libraries.append(root_target_name or f"{pkg_name}::{pkg_name}")
+            libraries = " ".join(libraries) if libraries else ""
         return {"additional_variables_prefixes": prefixes,
                 "version": self._conanfile.ref.version,
                 "include_dirs": include_dirs,
@@ -147,7 +156,7 @@ class ConfigTemplate2:
         set({{ prefix }}_LIBRARIES {{ libraries }} )
         {% endif %}
         {% if definitions is not none %}
-        set({{ prefix }}_DEFINITIONS {{ definitions}} )
+        set({{ prefix }}_DEFINITIONS "{{ definitions}}" )
         {% endif %}
         {% endfor %}
 

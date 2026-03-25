@@ -60,3 +60,79 @@ def test_install_strip(install_strip):
     autotools.install()
 
     assert ('install-strip' in str(conanfile.command)) == install_strip
+
+
+def test_configure_arguments():
+    tmp = temp_folder()
+    os.chdir(tmp)
+    save_toolchain_args({
+        "configure_args": "my_configure_args",
+        "make_args": "my_make_args"}
+    )
+
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux"})
+    conanfile.folders.set_base_source(tmp)
+    conanfile.conf.define("tools.gnu:make_program", "my_make")
+    conanfile.conf.define("tools.build:jobs", 23)
+
+    ab = Autotools(conanfile)
+    ab.configure()
+    assert "configure\" my_configure_args" in str(conanfile.command)
+
+    ab = Autotools(conanfile)
+    ab.make()
+    assert "my_make my_make_args -j23" == str(conanfile.command)
+
+    # test install target argument
+
+    ab.install()
+    assert 'my_make install my_make_args DESTDIR=None -j23' == str(conanfile.command)
+
+    ab.install(target="install_other")
+    assert 'my_make install_other my_make_args DESTDIR=None -j23' == str(conanfile.command)
+
+
+@pytest.mark.parametrize("make_args", ["my_make_args", None])
+def test_configure_install_arguments(make_args):
+    tmp = temp_folder()
+    os.chdir(tmp)
+
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux"})
+    conanfile.settings_build = conanfile.settings
+    conanfile.folders.set_base_source(tmp)
+    conanfile.conf.define("tools.gnu:make_program", "my_make")
+    conanfile.conf.define("tools.build:jobs", 23)
+    save_toolchain_args({
+        "configure_args": "my_configure_args",
+        "make_args": f"{make_args or ''}"}
+    )
+
+    ab = Autotools(conanfile)
+
+    make_args = f" {make_args}" if make_args else ""
+
+    ab.make(args=["-j1"])
+    assert "-j23" not in str(conanfile.command)
+    assert f"my_make{make_args} -j1" == str(conanfile.command)
+
+    ab.install(args=["-j1"])
+    assert "-j23" not in str(conanfile.command)
+    assert f"my_make install{make_args} DESTDIR=None -j1" == str(conanfile.command)
+
+    ab.install(args=["DESTDIR=whatever", "-j1"])
+    assert "-j23" not in str(conanfile.command)
+    assert f"my_make install{make_args} DESTDIR=whatever -j1" == str(conanfile.command)
+
+    ab.install(args=["DESTDIR=whatever", "-arg1 -j1 -arg2"])
+    assert "-j23" not in str(conanfile.command)
+    assert f"my_make install{make_args} DESTDIR=whatever -arg1 -j1 -arg2" == str(conanfile.command)
+
+    # check that we don't detect -j in an argument as number of jobs
+    ab.install(args=["DESTDIR=/user/smith-john/what"])
+    assert f"my_make install{make_args} DESTDIR=/user/smith-john/what -j23" == str(conanfile.command)
+
+    # check that we don't detect -j in an argument as number of jobs
+    ab.install(args=["DESTDIR=/user/smith-j47/what"])
+    assert f"my_make install{make_args} DESTDIR=/user/smith-j47/what -j23" == str(conanfile.command)

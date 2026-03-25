@@ -5,6 +5,29 @@ from conan.tools import CppInfo
 from conan.tools.env import Environment
 
 
+def format_defines(defines):
+    def is_hex_or_numeric(s):
+        try:
+            # Check for Hexadecimal (base 16)
+            int(s, 16)
+            return True
+        except ValueError:
+            return False
+
+    formated_defines = []
+    for define in defines:
+        if "=" in define:
+            # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
+            # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
+            macro, value = define.split("=", 1)
+            if value and not is_hex_or_numeric(value):
+                # value quotes are escaped
+                value = f'\\"{value}\\"'
+            define = f"{macro}#{value}"
+        formated_defines.append(f'/D"{define}"')
+    return formated_defines
+
+
 class NMakeDeps:
 
     def __init__(self, conanfile):
@@ -45,20 +68,10 @@ class NMakeDeps:
             ret.extend([format_lib(lib) for lib in cpp_info.system_libs or []])
             link_args = " ".join(ret)
 
-            def format_define(define):
-                if "=" in define:
-                    # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
-                    # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
-                    macro, value = define.split("=", 1)
-                    if value and not value.isnumeric():
-                        value = f'\"{value}\"'
-                    define = f"{macro}#{value}"
-                return f"/D\"{define}\""
-
             cl_flags = [f'-I"{p}"' for p in cpp_info.includedirs or []]
             cl_flags.extend(cpp_info.cflags or [])
             cl_flags.extend(cpp_info.cxxflags or [])
-            cl_flags.extend([format_define(define) for define in cpp_info.defines or []])
+            cl_flags.extend(format_defines(cpp_info.defines or []))
 
             env = Environment()
             env.append("CL", " ".join(cl_flags))

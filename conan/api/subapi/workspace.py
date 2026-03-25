@@ -159,7 +159,8 @@ class WorkspaceAPI:
             conanfile.output.warning("conandata doesn't contain 'scm' information\n"
                                      "doing a local copy!!!")
             shutil.copytree(layout.export(), dst_path)
-            retrieve_exports_sources(app.remote_manager, layout, conanfile, ref, remotes)
+            remote_manager = self._conan_api._api_helpers.remote_manager # noqa
+            retrieve_exports_sources(remote_manager, layout, conanfile, ref, remotes)
             export_sources = layout.export_sources()
             if os.path.exists(export_sources):
                 conanfile.output.warning("There are export-sources, copying them, but the location"
@@ -310,9 +311,17 @@ class WorkspaceAPI:
 
         for level in deps_graph.by_levels():
             items = [item for item in level if item.recipe == "Editable"]
-            items = [{"ref": item.ref, "folder": find_folder(item.ref)} for item in items]
-            if items:
-                order.append(items)
+            level_order = []
+            for node in items:
+                conanfile = node.conanfile
+                if hasattr(conanfile, "layout"):
+                    with conanfile_exception_formatter(conanfile, "layout"):
+                        conanfile.layout()
+                base_folder = find_folder(node.ref)
+                src_folder = os.path.normpath(os.path.join(base_folder, conanfile.folders.source))
+                level_order.append({"ref": node.ref, "folder": src_folder.replace("\\", "/")})
+            order.append(level_order)
+
         self._ws.build_order(order)
 
         ConanOutput().title("Collapsing workspace packages")

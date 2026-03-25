@@ -427,6 +427,18 @@ def test_runtime_lib_dirs_multiconf(lib_dir_setup):
     assert "<CONFIG:Debug>" in runtime_lib_dirs
 
 
+def test_disable_package_registry():
+    # https://github.com/conan-io/conan/issues/19749
+    client = TestClient(light=True)
+    client.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
+    client.run("install .")
+    toolchain = client.load("conan_toolchain.cmake")
+    before_output_dirs, output_dirs_block = toolchain.split("########## 'output_dirs' block #############\n", 1)
+    assert "CMAKE_EXPORT_PACKAGE_REGISTRY" not in before_output_dirs
+    assert "cmake_policy(SET CMP0090 NEW)" in output_dirs_block
+    assert "set(CMAKE_EXPORT_PACKAGE_REGISTRY OFF)" in toolchain
+
+
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_cmaketoolchain_cmake_system_processor_cross_apple():
     """
@@ -521,6 +533,31 @@ def test_extra_flags_via_conf():
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain
     assert 'add_compile_definitions( "D1" "D2")' in toolchain
+
+
+def test_cmaketoolchain_rcflags():
+    """Test that tools.build:rcflags is applied to CONAN_RC_FLAGS and CMAKE_RC_FLAGS_INIT"""
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:rcflags=["/nologo", "/flag-rc"]
+        """)
+
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:host=profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_RC_FLAGS " /nologo /flag-rc")' in toolchain
+    assert 'string(APPEND CMAKE_RC_FLAGS_INIT " ${CONAN_RC_FLAGS}")' in toolchain
 
 
 def test_bitcode_enable_flag():
@@ -836,6 +873,33 @@ def test_variables_types():
 
     toolchain = client.load("conan_toolchain.cmake")
     assert 'set(FOO ON CACHE BOOL "Variable FOO conan-toolchain defined")' in toolchain
+
+
+def test_variables_escaping():
+    # https://github.com/conan-io/conan/issues/19638
+    client = TestClient()
+    # NOTE: Users need to do explicit escaping
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+
+        class Conan(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def generate(self):
+                toolchain = CMakeToolchain(self)
+                toolchain.variables["FOO"] = r"D:\new\thing\path".replace("\\", "\\\\")
+                toolchain.variables["CMAKE_Fortran_FLAGS_INIT"] = "${CMAKE_C_FLAGS_INIT}"
+                toolchain.variables.release["BAR"] = r"C:\new\thing\path".replace("\\", "\\\\")
+                toolchain.generate()
+        """)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_Fortran_FLAGS_INIT "${CMAKE_C_FLAGS_INIT}"' in toolchain
+    assert r'set(FOO "D:\\new\\thing\\path" CACHE STRING' in toolchain
+    assert r'set(CONAN_DEF_releaseBAR "C:\\new\\thing\\path")' in toolchain
 
 
 def test_android_c_library():

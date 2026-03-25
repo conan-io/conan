@@ -12,7 +12,6 @@ from requests import Response
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.internal.api.uploader import gzopen_without_timestamps
-from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     GenConanfile, TestRequester, TestingResponse
 from conan.internal.util.files import is_dirty, save, set_dirty, sha1sum
@@ -129,7 +128,7 @@ class TestUpload:
 
             export_download_folder = layout.download_export()
 
-            tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
+            tgz = os.path.join(export_download_folder, "conan_sources.tgz")
             assert os.path.exists(tgz)
             assert is_dirty(tgz)
 
@@ -147,7 +146,7 @@ class TestUpload:
         pref = client.created_layout().reference
 
         def gzopen_patched(name, fileobj, compresslevel=None):  # noqa
-            if name == PACKAGE_TGZ_NAME:
+            if name == "conan_package.tgz":
                 raise ConanException("Error gzopen %s" % name)
             return gzopen_without_timestamps(name, fileobj)
         with patch('conan.internal.api.uploader.gzopen_without_timestamps', new=gzopen_patched):
@@ -155,7 +154,7 @@ class TestUpload:
             assert "Error gzopen conan_package.tgz" in client.out
 
             download_folder = client.get_latest_pkg_layout(pref).download_package()
-            tgz = os.path.join(download_folder, PACKAGE_TGZ_NAME)
+            tgz = os.path.join(download_folder, "conan_package.tgz")
             assert os.path.exists(tgz)
             assert is_dirty(tgz)
 

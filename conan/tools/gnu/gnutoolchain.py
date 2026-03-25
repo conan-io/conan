@@ -98,8 +98,13 @@ class GnuToolchain:
                 self.triplets_info["build"] = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
 
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
-        sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
-        self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
+        if sysroot:
+            root = sysroot.replace("\\", "/")
+            compiler = self._conanfile.settings.get_safe("compiler")
+            self.sysroot_flag = f"--sysroot {root}" if compiler != "qcc" else f"-Wc,-isysroot,{root}"
+        else:
+            self.sysroot_flag = None
+
         self.configure_args = {}
         self.autoreconf_args = {"--force": None, "--install": None}
         self.make_args = {}
@@ -320,6 +325,11 @@ class GnuToolchain:
         ret = [self.ndebug, self.gcc_cxx11_abi] + self.extra_defines + conf_flags
         return self._filter_list_empty_fields(ret)
 
+    @property
+    def rcflags(self):
+        conf_flags = self._conanfile.conf.get("tools.build:rcflags", default=[], check_type=list)
+        return self._filter_list_empty_fields(conf_flags)
+
     def _get_default_configure_shared_flags(self):
         args = {}
         # Just add these flags if there's a shared option defined (never add to exe's)
@@ -368,6 +378,8 @@ class GnuToolchain:
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
+        if self.rcflags:
+            env.append("RCFLAGS", self.rcflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
         # Objective C/C++
         self._include_obj_arc_flags(env)

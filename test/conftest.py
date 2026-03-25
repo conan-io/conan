@@ -48,7 +48,13 @@ windows_choco_root = "C:/ProgramData/chocolatey/lib/"
 msys2_path = os.getenv("MSYS2_PATH", "C:/msys64")
 
 tools_locations = {
-    "clang": {"disabled": True},
+    "clang": {
+        "exe": "clang",
+        "default": "20",
+        "20": {
+            "path": {'Windows': 'C:/Program Files/LLVM/bin'}  # by choco
+        }
+    },
     'visual_studio': {"default": "15",
                       "15": {},
                       "16": {"disabled": True},
@@ -87,10 +93,10 @@ tools_locations = {
                      'Darwin': '/Users/runner/Applications/CMake/3.27.9/bin',
                      'Linux': "/usr/share/cmake-3.27.9/bin"}
         },
-        "4.0": {
-            "path": {'Windows': 'C:/tools/cmake/4.0.0-rc3/cmake-4.0.0-rc3-windows-x86_64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/4.0.0-rc3/bin',
-                     'Linux': "/usr/share/cmake-4.0.0-rc3/bin"}
+        "4.2": {
+            "path": {'Windows': 'C:/tools/cmake/4.2.1/cmake-4.2.1-windows-x86_64/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/4.2.1/bin',
+                     'Linux': "/usr/share/cmake-4.2.1/bin"}
         }
     },
     'ninja': {
@@ -114,7 +120,6 @@ tools_locations = {
         "system": {"path": {'Windows': f"{msys2_path}/mingw32/bin"}},
     },
     'ucrt64': {
-        "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "mingw32-make",
@@ -133,7 +138,6 @@ tools_locations = {
         "system": {"path": {'Windows': f"{msys2_path}/usr/bin"}},
     },
     'msys2_clang64': {
-        "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "clang",
@@ -155,14 +159,14 @@ tools_locations = {
     'bazel': {
         "default": "7.x",
         "6.x": {"path": {'Linux': '/usr/share/bazel-6.5.0/bin',
-                           'Windows': 'C:/tools/bazel/6.5.0',
-                           'Darwin': '/Users/runner/Applications/bazel/6.5.0'}},
+                         'Windows': 'C:/tools/bazel/6.5.0',
+                         'Darwin': '/Users/runner/Applications/bazel/6.5.0'}},
         "7.x": {"path": {'Linux': '/usr/share/bazel-7.6.2/bin',
-                           'Windows': 'C:/tools/bazel/7.6.2',
-                           'Darwin': '/Users/runner/Applications/bazel/7.6.2'}},
+                         'Windows': 'C:/tools/bazel/7.6.2',
+                         'Darwin': '/Users/runner/Applications/bazel/7.6.2'}},
         "8.x": {"path": {'Linux': '/usr/share/bazel-8.4.2/bin',
-                           'Windows': 'C:/tools/bazel/8.4.2',
-                           'Darwin': '/Users/runner/Applications/bazel/8.4.2'}},
+                         'Windows': 'C:/tools/bazel/8.4.2',
+                         'Darwin': '/Users/runner/Applications/bazel/8.4.2'}},
     },
     'premake': {
         "exe": "premake5",

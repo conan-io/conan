@@ -72,8 +72,9 @@ def text_vuln_formatter(result):
             name = node["name"]
             sev = node.get("severity", "Medium")
             sev_color = severity_colors.get(sev, Color.BRIGHT_YELLOW)
-            score = node.get("cvss", {}).get("preferredBaseScore")
-            score_txt = f", CVSS: {score}" if score else ""
+            cvss = node.get("cvss", {})
+            preferred_score = cvss.get("preferredBaseScore")
+            score_txt = f" - {preferred_score}" if preferred_score else ""
             desc = node.get("description", "")
             desc = (desc[:240] + "...") if len(desc) > 240 else desc
             desc_wrapped = wrap_and_indent(desc)
@@ -127,6 +128,17 @@ def text_vuln_formatter(result):
                 if fixVersions:
                     cli_out_write(f"  fixed in version(s): ", endline="", fg=Color.BRIGHT_BLUE)
                     cli_out_write(', '.join(fixVersions))
+
+            if "v3" in cvss and cvss["v3"].get("baseScore", 0) > 0:
+                score_v3 = cvss["v3"].get("baseScore", 0)
+                if score_v3:
+                    cli_out_write(f"  CVSS v3: ", endline="", fg=Color.BRIGHT_BLUE)
+                    cli_out_write(score_v3)
+            if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
+                score_v4 = cvss["v4"].get("baseScore", 0)
+                if score_v4:
+                    cli_out_write(f"  CVSS v4: ", endline="", fg=Color.BRIGHT_BLUE)
+                    cli_out_write(score_v4)
             cli_out_write("")
 
     color_for_total = Color.BRIGHT_RED if total_vulns else Color.BRIGHT_GREEN
@@ -142,7 +154,7 @@ def text_vuln_formatter(result):
                       "through patches applied in the recipe.\nTo verify if a patch has been applied, check the recipe in Conan Center.\n",
                       fg=Color.BRIGHT_YELLOW)
 
-    if total_vulns > 0 or not "error" in result:
+    if total_vulns > 0 or "error" not in result:
         cli_out_write("\nVulnerability information provided by JFrog Catalog. Check "
                       "https://audit.conan.io/jfrogcuration for more information.\n",
                       fg=Color.BRIGHT_GREEN)
@@ -237,18 +249,20 @@ vuln_html = """
             {{ vuln.package }}
           </td>
           <td>
-            <span style="display: none">{{ vuln.score }}</span>
-            {% if vuln.withdrawn %}
-                <span style="color: #00ced1; font-weight: bold;">[WITHDRAWN]</span><br>
-            {% endif %}
-            {{ vuln.vuln_id }}
-            <br>
+            <span style="display: none">{{ vuln.preferred_score }}</span>
             {% if vuln.severity not in ['N/A', ''] %}
-              <span class="severity-badge severity-{{ severity_label }}">{{ severity_label }}</span>
+              <span class="severity-badge severity-{{ severity_label }}">{{ severity_label }} {% if vuln.preferred_score %}({{ vuln.preferred_score }}){% endif %}</span>
             {% else %}
               {{ vuln.severity }}
             {% endif %}
-            {{ vuln.score }}
+            <br>
+            <br>
+            {% if vuln.withdrawn %}
+                <span style="color: #00ced1; font-weight: bold;">[WITHDRAWN]</span><br>
+            {% endif %}
+            <b>{{ vuln.vuln_id }}</b>
+            {% if vuln.score_v3 %}<br/>CVSS <i>v3</i>: {{ vuln.score_v3 }}{% endif %}
+            {% if vuln.score_v4 %}<br/>CVSS <i>v4</i>: {{ vuln.score_v4 }}{% endif %}
           </td>
           <td>
             {% for research in vuln.advisories %}
@@ -326,7 +340,8 @@ def html_vuln_formatter(result):
     for ref, pkg_info in result["data"].items():
         edges = pkg_info.get("vulnerabilities", {}).get("edges", [])
         if not edges:
-            description = "No vulnerabilities found." if not "error" in pkg_info else pkg_info["error"].get("details", "")
+            description = "No vulnerabilities found." if "error" not in pkg_info \
+                else pkg_info["error"].get("details", "")
             vulns.append({
                 "package": ref,
                 "vuln_id": "-",
@@ -348,8 +363,14 @@ def html_vuln_formatter(result):
                 name = node.get("name")
                 sev = node.get("severity", "Medium")
                 sev = f"{severity_order.get(sev, 2)} - {sev}"
-                score = node.get("cvss", {}).get("preferredBaseScore")
-                score_txt = f"CVSS: {score}" if score else "-"
+                cvss = node.get("cvss", {})
+                preferred_score = cvss.get("preferredBaseScore")
+                score_v3 = 0
+                score_v4 = 0
+                if "v3" in cvss and cvss["v3"].get("baseScore", 0) > 0:
+                    score_v3 = cvss["v3"].get("baseScore", 0)
+                if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
+                    score_v4 = cvss["v4"].get("baseScore", 0)
                 aliases = node.get("aliases", [])
                 references = node.get("references", [])
                 desc = node.get("description", "")
@@ -365,7 +386,9 @@ def html_vuln_formatter(result):
                     "vuln_id": name,
                     "aliases": aliases,
                     "severity": sev,
-                    "score": score_txt,
+                    "preferred_score": preferred_score,
+                    "score_v3": score_v3,
+                    "score_v4": score_v4,
                     "description": desc,
                     "references": references,
                     "withdrawn": withdrawn,

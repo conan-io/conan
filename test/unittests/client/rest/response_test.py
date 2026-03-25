@@ -5,7 +5,7 @@ from conan.internal import rest
 class TestRestString:
 
     def _get_html_response(self):
-        headers = {"content-type": "text/html;charset=utf-8",}
+        headers = {"content-type": "text/html;charset=utf-8"}
         return namedtuple("Response", "status_code headers reason content")(
             404,
             headers,

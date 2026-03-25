@@ -24,7 +24,6 @@ def test_basic():
     assert "hello/1.2:" not in client.out
 
 
-
 def test_export_cci():
     c = TestClient(light=True)
     c.save({"conanfile.py": GenConanfile("mypkg", "cci.123")})

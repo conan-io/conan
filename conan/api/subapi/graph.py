@@ -1,5 +1,5 @@
 from conan.api.output import ConanOutput
-from conan.internal.conan_app import ConanApp, ConanBasicApp
+from conan.internal.conan_app import ConanApp
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
     CONTEXT_BUILD, BINARY_MISSING, DepsGraph
@@ -109,12 +109,15 @@ class GraphAPI:
         Command line helper to scope options when ``command -o myoption=myvalue`` is used,
         that needs to be converted to "-o pkg:myoption=myvalue". The "pkg" value will be
         computed from the given requires/tool_requires
+
+        This is legacy, as options should always be scoped now
         """
-        # FIXME: This helper function here is not great, find a better place
         if requires and len(requires) == 1 and not tool_requires:
-            profile.options.scope(requires[0])
-        if tool_requires and len(tool_requires) == 1 and not requires:
-            profile.options.scope(tool_requires[0])
+            ref = requires[0]
+            if str(ref.version).startswith("["):
+                ref = ref.copy()
+                ref.version = "*"
+            profile.options.scope(ref)
 
     def load_graph_requires(self, requires, tool_requires, profile_host, profile_build,
                             lockfile, remotes, update, check_updates=False, python_requires=None):
@@ -185,7 +188,8 @@ class GraphAPI:
         assert profile_build is not None
 
         remotes = remotes or []
-        builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
+        cache = self._conan_api._api_helpers.cache # noqa
+        builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, cache, remotes,
                                    update, check_update, self._conan_api._api_helpers.global_conf)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
         return deps_graph
@@ -210,8 +214,10 @@ class GraphAPI:
         :param tested_graph: In case of a "test_package", the graph being tested
         """
         ConanOutput().title("Computing necessary packages")
-        conan_app = ConanBasicApp(self._conan_api)
-        binaries_analyzer = GraphBinariesAnalyzer(conan_app, self._conan_api._api_helpers.global_conf,
+        binaries_analyzer = GraphBinariesAnalyzer(self._helpers.cache,
+                                                  self._helpers.remote_manager,
+                                                  self._conan_api.home_folder,
+                                                  self._helpers.global_conf,
                                                   self._helpers.hook_manager)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update,
                                          build_modes_test, tested_graph)

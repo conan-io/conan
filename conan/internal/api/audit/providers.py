@@ -148,6 +148,12 @@ class PrivateProvider:
                             severity
                             cvss {{
                                 preferredBaseScore
+                                v3 {{
+                                  baseScore
+                                }}
+                                v4 {{
+                                  baseScore
+                                }}
                             }}
                             aliases
                             withdrawn

@@ -38,8 +38,7 @@ def test_cpp_info_sources():
     # Check that the hello library builds in test_package
     c.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
     # Check content of the generated files
-    c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps "
-          f"-c tools.cmake.cmakedeps:new={new_value}")
+    c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps")
     cmake = c.load("hello-Targets-release.cmake")
     assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
     assert "set_property(TARGET hello::hello APPEND PROPERTY INTERFACE_SOURCES\n"\
@@ -81,8 +80,7 @@ def test_cpp_info_component_sources():
     # Check that the hello library builds in test_package
     c.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
     # Check the content of the generated files
-    c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps "
-          f"-c tools.cmake.cmakedeps:new={new_value}")
+    c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps")
     cmake = c.load("hello-Targets-release.cmake")
     assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
     assert "add_library(hello::my_comp INTERFACE IMPORTED)" in cmake

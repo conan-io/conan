@@ -44,18 +44,14 @@ def test_extra_flags_via_conf(os_):
         assert 'set "CFLAGS=%CFLAGS% -O3 --flag3 --flag4"' in toolchain
         assert 'set "LDFLAGS=%LDFLAGS% --flag5 --flag6"' in toolchain
         assert f'set "PKG_CONFIG_PATH={client.current_folder};%PKG_CONFIG_PATH%"' in toolchain
-    elif os_ == "Linux":
-        assert 'export CPPFLAGS="$CPPFLAGS -DNDEBUG -DDEF1 -DDEF2"' in toolchain
-        assert 'export CXXFLAGS="$CXXFLAGS -O3 --flag1 --flag2"' in toolchain
-        assert 'export CFLAGS="$CFLAGS -O3 --flag3 --flag4"' in toolchain
-        assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6"' in toolchain
-        assert f'export PKG_CONFIG_PATH="{client.current_folder}:$PKG_CONFIG_PATH"' in toolchain
-    else:  # macOS
-        assert 'export CPPFLAGS="$CPPFLAGS -DNDEBUG -DDEF1 -DDEF2"' in toolchain
-        assert 'export CXXFLAGS="$CXXFLAGS -O3 --flag1 --flag2"' in toolchain
-        assert 'export CFLAGS="$CFLAGS -O3 --flag3 --flag4"' in toolchain
-        assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6"' in toolchain
-        assert f'export PKG_CONFIG_PATH="{client.current_folder}:$PKG_CONFIG_PATH"' in toolchain
+    else:
+        assert os_ in ("Linux", "Macos")
+        assert 'export CPPFLAGS="${CPPFLAGS:-}${CPPFLAGS:+ }-DNDEBUG -DDEF1 -DDEF2"' in toolchain
+        assert 'export CXXFLAGS="${CXXFLAGS:-}${CXXFLAGS:+ }-O3 --flag1 --flag2"' in toolchain
+        assert 'export CFLAGS="${CFLAGS:-}${CFLAGS:+ }-O3 --flag3 --flag4"' in toolchain
+        assert 'export LDFLAGS="${LDFLAGS:-}${LDFLAGS:+ }--flag5 --flag6"' in toolchain
+        assert (f'export PKG_CONFIG_PATH="{client.current_folder}'
+                f'${{PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}}"') in toolchain
 
 
 def test_extra_flags_order():
@@ -94,6 +90,31 @@ def test_extra_flags_order():
     assert 'extra_cxxflags cxxflags' in toolchain
     assert 'extra_cflags cflags' in toolchain
     assert 'extra_ldflags sharedlinkflags exelinkflags' in toolchain
+
+
+def test_gnutoolchain_rcflags():
+    """Test that tools.build:rcflags is applied to RCFLAGS in the generated script."""
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:rcflags=["--rcflag1", "--rcflag2"]
+        """)
+    client = TestClient()
+    conanfile = (GenConanfile().with_settings("os", "arch", "compiler", "build_type")
+                 .with_generator("GnuToolchain"))
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conangnutoolchain.sh")
+    assert "RCFLAGS" in toolchain
+    assert "--rcflag1" in toolchain
+    assert "--rcflag2" in toolchain
 
 
 def test_autotools_custom_environment():
@@ -145,7 +166,7 @@ def test_linker_scripts_via_conf(os_):
     if os_ == "Windows":
         assert 'set "LDFLAGS=%LDFLAGS% --flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
     else:
-        assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
+        assert 'export LDFLAGS="${LDFLAGS:-}${LDFLAGS:+ }--flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
 
 
 def test_not_none_values():
@@ -476,19 +497,19 @@ def test_conf_extra_apple_flags(toolchain):
     c.run("install . -pr:a host")
     f = "conanautotoolstoolchain.sh" if toolchain == "AutotoolsToolchain" else "conangnutoolchain.sh"
     tc = c.load(f)
-    assert 'export CXXFLAGS="$CXXFLAGS -fembed-bitcode -fvisibility=default"' in tc
-    assert 'export CFLAGS="$CFLAGS -fembed-bitcode -fvisibility=default"' in tc
-    assert 'export LDFLAGS="$LDFLAGS -fembed-bitcode -fvisibility=default"' in tc
-    assert 'export OBJCFLAGS="$OBJCFLAGS -fobjc-arc"' in tc
-    assert 'export OBJCXXFLAGS="$OBJCXXFLAGS -fobjc-arc"' in tc
+    assert 'export CXXFLAGS="${CXXFLAGS:-}${CXXFLAGS:+ }-fembed-bitcode -fvisibility=default"' in tc
+    assert 'export CFLAGS="${CFLAGS:-}${CFLAGS:+ }-fembed-bitcode -fvisibility=default"' in tc
+    assert 'export LDFLAGS="${LDFLAGS:-}${LDFLAGS:+ }-fembed-bitcode -fvisibility=default"' in tc
+    assert 'export OBJCFLAGS="${OBJCFLAGS:-}${OBJCFLAGS:+ }-fobjc-arc"' in tc
+    assert 'export OBJCXXFLAGS="${OBJCXXFLAGS:-}${OBJCXXFLAGS:+ }-fobjc-arc"' in tc
 
     c.run("install . -pr:a host -s build_type=Debug")
     tc = c.load(f)
-    assert 'export CXXFLAGS="$CXXFLAGS -fembed-bitcode-marker -fvisibility=default"' in tc
-    assert 'export CFLAGS="$CFLAGS -fembed-bitcode-marker -fvisibility=default"' in tc
-    assert 'export LDFLAGS="$LDFLAGS -fembed-bitcode-marker -fvisibility=default"' in tc
-    assert 'export OBJCFLAGS="$OBJCFLAGS -fobjc-arc"' in tc
-    assert 'export OBJCXXFLAGS="$OBJCXXFLAGS -fobjc-arc"' in tc
+    assert 'export CXXFLAGS="${CXXFLAGS:-}${CXXFLAGS:+ }-fembed-bitcode-marker -fvisibility=default"' in tc
+    assert 'export CFLAGS="${CFLAGS:-}${CFLAGS:+ }-fembed-bitcode-marker -fvisibility=default"' in tc
+    assert 'export LDFLAGS="${LDFLAGS:-}${LDFLAGS:+ }-fembed-bitcode-marker -fvisibility=default"' in tc
+    assert 'export OBJCFLAGS="${OBJCFLAGS:-}${OBJCFLAGS:+ }-fobjc-arc"' in tc
+    assert 'export OBJCXXFLAGS="${OBJCXXFLAGS:-}${OBJCXXFLAGS:+ }-fobjc-arc"' in tc
 
     host = textwrap.dedent("""
         [settings]
@@ -503,11 +524,11 @@ def test_conf_extra_apple_flags(toolchain):
     c.save({"host": host})
     c.run("install . -pr:a host")
     tc = c.load(f)
-    assert 'CXXFLAGS="$CXXFLAGS -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
-    assert 'CFLAGS="$CFLAGS -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
-    assert 'LDFLAGS="$LDFLAGS -fvisibility=hidden -fvisibility-inlines-hidden"' in tc
-    assert 'export OBJCFLAGS="$OBJCFLAGS -fno-objc-arc"' in tc
-    assert 'export OBJCXXFLAGS="$OBJCXXFLAGS -fno-objc-arc"' in tc
+    assert 'CXXFLAGS="${CXXFLAGS:-}${CXXFLAGS:+ }-fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+    assert 'CFLAGS="${CFLAGS:-}${CFLAGS:+ }-fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+    assert 'LDFLAGS="${LDFLAGS:-}${LDFLAGS:+ }-fvisibility=hidden -fvisibility-inlines-hidden"' in tc
+    assert 'export OBJCFLAGS="${OBJCFLAGS:-}${OBJCFLAGS:+ }-fno-objc-arc"' in tc
+    assert 'export OBJCXXFLAGS="${OBJCXXFLAGS:-}${OBJCXXFLAGS:+ }-fno-objc-arc"' in tc
 
 
 def test_toolchain_crossbuild_to_android():
@@ -620,15 +641,15 @@ def test_thread_flags(threads, flags):
         }
     )
     client.run("install . -pr=./profile")
-    os = platform.system()
+    is_win = platform.system() == "Windows"
     toolchain = client.load(
-        "conangnutoolchain{}".format('.bat' if os == "Windows" else '.sh'))
+        "conangnutoolchain{}".format('.bat' if is_win else '.sh'))
 
-    if os == "Windows":
+    if is_win:
         assert f'set "CXXFLAGS=%CXXFLAGS% -stdlib=libc++ {flags}"' in toolchain
         assert f'set "CFLAGS=%CFLAGS% {flags}"' in toolchain
         assert f'set "LDFLAGS=%LDFLAGS% {flags}' in toolchain
     else:
-        assert f'export CXXFLAGS="$CXXFLAGS -stdlib=libc++ {flags}"' in toolchain
-        assert f'export CFLAGS="$CFLAGS {flags}"' in toolchain
-        assert f'export LDFLAGS="$LDFLAGS {flags}"' in toolchain
+        assert f'export CXXFLAGS="${{CXXFLAGS:-}}${{CXXFLAGS:+ }}-stdlib=libc++ {flags}"' in toolchain
+        assert f'export CFLAGS="${{CFLAGS:-}}${{CFLAGS:+ }}{flags}"' in toolchain
+        assert f'export LDFLAGS="${{LDFLAGS:-}}${{LDFLAGS:+ }}{flags}"' in toolchain

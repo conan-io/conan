@@ -43,7 +43,6 @@ def test_virtualenv(client):
             name = "app"
             version = "0.1"
             requires = "pkg/0.1"
-            apply_env = False
 
             def build(self):
                 self.output.info("----------BUILD----------------")

@@ -64,10 +64,10 @@ class PyRequires:
             self._pyrequires[name] = transitive_py_require
 
 
-class PyRequireLoader(object):
-    def __init__(self, conan_app, global_conf):
-        self._proxy = conan_app.proxy
-        self._range_resolver = conan_app.range_resolver
+class PyRequireLoader:
+    def __init__(self, proxy, range_resolver, global_conf):
+        self._proxy = proxy
+        self._range_resolver = range_resolver
         self._cached_py_requires = {}
         self._resolve_prereleases = global_conf.get("core.version_ranges:resolve_prereleases")
 

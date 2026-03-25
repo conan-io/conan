@@ -2,7 +2,7 @@ import textwrap
 
 import pytest
 
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, TestServer
 
 
 class TestAuthRemotePlugin:
@@ -57,3 +57,22 @@ class TestAuthRemotePlugin:
         # the input methods in this case the stdin provided by TestClient.
         assert ("Changed user of remote 'default' from 'None' (anonymous) to "
                 "'admin' (authenticated)") in c.out
+
+    def test_creds_caching_multiple_remotes(self):
+        """ The auth plugin can cache partial results and credentials to avoid repeated
+        multiple interactive requests, reusing the same inputs for all remotes
+        https://github.com/conan-io/conan/issues/19772
+        """
+        c = TestClient(servers={"server1": TestServer(users={"admin1": "passwd"}),
+                                "server2": TestServer(users={"admin2": "passwd"})})
+        auth_plugin = textwrap.dedent("""\
+            count = 0
+            def auth_remote_plugin(remote, user=None):
+                global count
+                count = count + 1
+                return f"admin{count}", "passwd"
+            """)
+        c.save_home({"extensions/plugins/auth_remote.py": auth_plugin})
+        c.run("remote auth *")  # Triggers all remotes
+        assert "Authenticated in remote 'server1' with user 'admin1'" in c.out
+        assert "Authenticated in remote 'server2' with user 'admin2'" in c.out

@@ -23,9 +23,6 @@ class _LockRequires:
     def __init__(self):
         self._requires = OrderedDict()  # {require: package_ids}
 
-    def __contains__(self, item):
-        return item in self._requires
-
     def refs(self):
         return self._requires.keys()
 
@@ -115,7 +112,7 @@ class _LockRequires:
         self.sort()
 
 
-class Lockfile(object):
+class Lockfile:
 
     def __init__(self, deps_graph=None, lock_packages=False):
         self._requires = _LockRequires()
@@ -296,7 +293,7 @@ class Lockfile(object):
                 ConanOutput().error(msg, error_type="exception")
             raise
 
-    def resolve_overrides(self, require):
+    def resolve_overrides(self, require, context):
         """ The lockfile contains the overrides to be able to inject them when the lockfile is
         applied to upstream dependencies, that have the overrides downstream
         """
@@ -306,6 +303,9 @@ class Lockfile(object):
         overriden = self._overrides.get(require.ref)
         if overriden and len(overriden) == 1:
             override_ref = next(iter(overriden))
+            locked_refs = self._build_requires.refs() if context == "build" else self._requires.refs()
+            if override_ref not in locked_refs:
+                return  # The override came from the other context
             require.overriden_ref = require.overriden_ref or require.ref.copy()
             require.override_ref = override_ref
             require.ref = override_ref

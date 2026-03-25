@@ -35,8 +35,22 @@ jobs:
     outputs:
       python_versions_linux_windows: ${{ steps.set_versions.outputs.python_versions_linux_windows }}
       python_versions_macos: ${{ steps.set_versions.outputs.python_versions_macos }}
+      run_slow_tests: ${{ steps.set_versions.outputs.run_slow_tests }}
     name: Determine Python versions
     steps:
+      - name: Fetch current PR body and check for slow-tests marker
+        if: github.event_name == 'pull_request'
+        id: fetch_pr
+        run: |
+          BODY=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" \
+            | jq -r '.body // ""')
+          if echo "$BODY" | grep -Fq '$runslowtests'; then
+            echo "run_slow_tests=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_slow_tests=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Determine Python versions
         id: set_versions
         run: |
@@ -48,12 +62,22 @@ jobs:
             echo "python_versions_macos=['3.10']" >> $GITHUB_OUTPUT
           fi
 
+          # Run slow tests on develop2, or when PR description contains $runslowtests (checked in fetch_pr step)
+          if [[ "${{ github.ref }}" == "refs/heads/develop2" ]]; then
+            echo "run_slow_tests=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "run_slow_tests=${{ steps.fetch_pr.outputs.run_slow_tests }}" >> $GITHUB_OUTPUT
+          else
+            echo "run_slow_tests=false" >> $GITHUB_OUTPUT
+          fi
+
   linux_suite:
     needs: [ensure_latest_tag_merged, set_python_versions]
     uses: ./.github/workflows/linux-tests.yml
     name: Linux test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
+      run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
 
   osx_suite:
     needs: [ensure_latest_tag_merged, set_python_versions]
@@ -61,6 +85,7 @@ jobs:
     name: OSX test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_macos }}
+      run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
 
   windows_suite:
     needs: [ensure_latest_tag_merged, set_python_versions]
@@ -68,6 +93,7 @@ jobs:
     name: Windows test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
+      run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
 
   code_coverage:
     runs-on: ubuntu-latest
