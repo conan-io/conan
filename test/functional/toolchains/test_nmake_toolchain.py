@@ -15,7 +15,7 @@ from conan.test.utils.tools import TestClient
         ("msvc", "191", "dynamic", "14", "Release", [], [], [], [], []),
         ("msvc", "191", "dynamic", "14", "Release",
          ["TEST_DEFINITION1", "TEST_DEFINITION2=0", "TEST_DEFINITION3=", "TEST_DEFINITION4=TestPpdValue4",
-          "TEST_DEFINITION5=__declspec(dllexport)", "TEST_DEFINITION6=foo bar"],
+          "TEST_DEFINITION5=__declspec(dllexport)", "TEST_DEFINITION6=foo bar", "TEST_WINVER=0x0601"],
          ["/GL"], ["/GL"], ["/LTCG"], ["/LTCG"]),
         ("msvc", "191", "static", "17", "Debug", [], [], [], [], []),
     ],
@@ -86,6 +86,9 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
     client.run(f"build . {settings} {conf}")
     client.run_command("simple.exe")
     assert "dep/1.0" in client.out
+    # It is printed as an integer number by default
+    if "TEST_WINVER" in conf_preprocessors:
+        conf_preprocessors["TEST_WINVER"] = 1537
     check_exe_run(client.out, "main", "msvc", version, build_type, "x86_64", cppstd,
                   conf_preprocessors)
 

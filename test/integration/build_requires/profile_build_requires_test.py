@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import textwrap
@@ -222,3 +223,41 @@ def test_tool_requires_version_range_loop():
     c.run("create tool")
     c.run("install app -pr:b=build_profile")
     assert "tool/1.1" in c.out  # It is skipped
+
+
+def test_profile_tool_requires_negated_or_patterns():
+    """Negated [tool_requires] patterns may use | so the rule applies
+    if the ref matches none of the branches."""
+    c = TestClient(light=True)
+    profile_build = textwrap.dedent("""\
+        [settings]
+        os=Linux
+
+        [tool_requires]
+        mold/1.0
+        !(zlib*|mold*):cmake/1.0
+        """)
+    profile = textwrap.dedent("""\
+        [tool_requires]
+        mold/1.0
+        cmake/1.0
+        gcc/1.0
+            """)
+    c.save({"mold/conanfile.py": GenConanfile("mold", "1.0"),
+            "zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+            "cmake/conanfile.py": GenConanfile("cmake", "1.0").with_tool_requires("zlib/1.0"),
+            "gcc/conanfile.py": GenConanfile("gcc", "1.0").with_tool_requires("zlib/1.0"),
+            "app/conanfile.py": GenConanfile("app", "1.0"),
+            "profile_build": profile_build,
+            "profile": profile})
+    c.run("create mold")
+    c.run("create zlib")
+    c.run("create cmake")
+    c.run("create gcc")
+    c.run("graph info app -pr=profile -pr:b=profile_build --format=json")
+    graph = json.loads(c.stdout)
+    assert len(graph["graph"]["nodes"]) == 14
+    c.assert_listed_require({"cmake/1.0": "Cache",
+                             "gcc/1.0": "Cache",
+                             "mold/1.0": "Cache",
+                             "zlib/1.0": "Cache"}, build=True)

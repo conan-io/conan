@@ -121,6 +121,10 @@ class CMake:
 
         arg_list.append('"{}"'.format(cmakelist_folder))
 
+        extra_args = self._conanfile.conf.get("tools.cmake:configure_args", check_type=list,
+                                              default=[])
+        arg_list.extend(extra_args)
+
         if not cli_args or ("--log-level" not in cli_args and "--loglevel" not in cli_args):
             arg_list.extend(self._cmake_log_levels_args)
 

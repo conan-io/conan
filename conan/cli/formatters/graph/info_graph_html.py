@@ -87,7 +87,7 @@ graph_info_html = r"""
             function define_data(){
                 let nodes = [];
                 let edges = [];
-                let collapsed_packages = {};
+                let collapsed_packages = {"build": {}, "host": {}};
                 let targets = {};
                 global_edges = {};
                 let edge_counter = 0;
@@ -115,10 +115,10 @@ graph_info_html = r"""
                     else
                         label = node.recipe == "Consumer"? "conanfile": "CLI";
                     if (collapse_packages) {
-                        let existing = collapsed_packages[label];
+                        let existing = collapsed_packages[node.context][label];
                         targets[node_id] = existing;
                         if (existing) continue;
-                        collapsed_packages[label] = node_id;
+                        collapsed_packages[node.context][label] = node_id;
                     }
                     if (excluded_pkgs) {
                         let patterns = excluded_pkgs.split(',')
