@@ -1,3 +1,4 @@
+import os
 from collections import deque
 
 from conan.internal.cache.conan_reference_layout import BasicLayout
@@ -20,6 +21,7 @@ from conan.internal.model.version_range import VersionRange
 
 
 class DepsGraphBuilder:
+    ALLOW_ALIAS = False
 
     def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf):
         self._proxy = proxy
@@ -189,8 +191,17 @@ class DepsGraphBuilder:
 
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
+
         for pattern, tool_requires in profile.tool_requires.items():
-            if ref_matches(ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
+            is_consumer = conanfile._conan_is_consumer  # noqa
+            if pattern[0] in "!~" and pattern[1] == "(":  # This is a negated OR operation
+                assert pattern[-1] == ")", (f"Malformed profile OR expression without"
+                                            f" closing parenthesis: {pattern}")
+                parts = pattern[2:-1].split("|")
+                matched = not any(ref_matches(ref, p, is_consumer=is_consumer) for p in parts)
+            else:
+                matched = ref_matches(ref, pattern, is_consumer=is_consumer)
+            if matched:
                 for tool_require in tool_requires:  # Do the override
                     # Check if it is a self-loop of build-requires in build context and avoid it
                     if ref and tool_require.name == ref.name and tool_require.user == ref.user and \
@@ -219,6 +230,8 @@ class DepsGraphBuilder:
             result.append(require)
             alias = require.alias  # alias needs to be processed this early
             if alias is not None:
+                if not DepsGraphBuilder.ALLOW_ALIAS and os.getenv("CONAN_ALLOW_ALIAS") != "will_break_next":
+                    raise ConanException(f"Alias requirements have been removed: '{node}' requiring: '{alias}'")
                 resolved = False
                 if graph_lock is not None:
                     resolved = graph_lock.replace_alias(require, alias)
@@ -227,7 +240,7 @@ class DepsGraphBuilder:
                     self._resolve_alias(node, require, alias, graph)
             self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
             if graph_lock:
-                graph_lock.resolve_overrides(require)
+                graph_lock.resolve_overrides(require, node.context)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
         return result
 

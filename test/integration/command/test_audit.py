@@ -479,7 +479,7 @@ def test_audit_scan_threshold_error(severity_level, threshold, should_fail):
         severity_param = "" if threshold is None else f"-sl {threshold}"
         tc.run(f"audit scan --requires=foobar/0.1.0 {severity_param}", assert_error=should_fail)
         assert "foobar/0.1.0 1 vulnerability found" in tc.out
-        assert f"CVSS: {severity_level}" in tc.out
+        assert f"Critical - {severity_level}" in tc.out
         if should_fail:
             if threshold is None:
                 threshold = "9.0"
@@ -528,6 +528,90 @@ def test_audit_scan_context_filter(package_context, filter_context):
             assert "Requesting vulnerability info for: zlib/1.2.11" in tc.out
         else:
             assert "Requesting vulnerability info for: zlib/1.2.11" not in tc.out
+
+
+@pytest.mark.parametrize("score", [
+    {
+        "preferredBaseScore": 8.9,
+    },
+    {
+        "preferredBaseScore": 8.9,
+        "v3": {
+            "baseScore": 8.9
+        }
+    },
+    {
+        "preferredBaseScore": 8.9,
+        "v3": {
+            "baseScore": 8.9
+        },
+        "v4": {
+            "baseScore": 5.6
+        }
+    },
+])
+@pytest.mark.parametrize("out", ["html", "text"])
+def test_audit_cvss_versions(score, out):
+    """In case the severity level is equal or higher than the found for a CVE,
+           the command should output the information as usual, and exit with non-success code error.
+        """
+    successful_response = {
+        "data": {
+            "query": {
+                "vulnerabilities": {
+                    "totalCount": 1,
+                    "edges": [
+                        {
+                            "node": {
+                                "name": "CVE-2023-45853",
+                                "description": "Zip vulnerability",
+                                "severity": "Critical",
+                                "cvss": score,
+                                "aliases": [
+                                    "CVE-2023-45853",
+                                    "JFSA-2023-000272529"
+                                ],
+                                "advisories": [
+                                    {
+                                        "name": "CVE-2023-45853"
+                                    },
+                                    {
+                                        "name": "JFSA-2023-000272529"
+                                    }
+                                ],
+                                "references": [
+                                    "https://pypi.org/project/pyminizip/#history",
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    tc = TestClient(light=True)
+
+    tc.save({"conanfile.py": GenConanfile("foobar", "0.1.0")})
+    tc.run("export .")
+    tc.run("audit provider auth conancenter --token=valid_token")
+
+    with proxy_response(200, successful_response):
+        tc.run(f"audit scan --requires=foobar/0.1.0 -f={out}")
+        if out == "text":
+            assert "foobar/0.1.0 1 vulnerability found" in tc.out
+            assert f"Critical - {score['preferredBaseScore']}" in tc.out
+            if "v4" in score:
+                assert f'CVSS v4: {score["v4"]["baseScore"]}' in tc.out
+            if "v3" in score:
+                assert f'CVSS v3: {score["v3"]["baseScore"]}' in tc.out
+        else:
+            assert "CVE-2023-45853" in tc.out
+            assert f"Critical ({score['preferredBaseScore']})" in tc.out
+            if "v4" in score:
+                assert f'CVSS <i>v4</i>: {score["v4"]["baseScore"]}' in tc.out
+            if "v3" in score:
+                assert f'CVSS <i>v3</i>: {score["v3"]["baseScore"]}' in tc.out
 
 
 class TestAuditApiBranchouts:

@@ -121,9 +121,9 @@ class SourcesCachingDownloader:
             else:
                 self._output.warning(f"File {urls} not found in {backup_url}")
         except (AuthenticationException, ForbiddenException) as e:
-            raise ConanException(f"The source backup server '{backup_url}' "
-                                 f"needs authentication: {e}. "
-                                 f"Please provide 'source_credentials.json'")
+            raise ConanException(f"Authentication to source backup server '{backup_url}' "
+                                 f"failed: {e}. "
+                                 f"Please check your 'source_credentials.json'")
 
     def _download_from_urls(self, urls, file_path, retry, retry_wait, verify_ssl, auth, headers,
                             md5, sha1, sha256):

@@ -895,7 +895,6 @@ def test_runenv_info_propagated():
         from conan import ConanFile
         class TestTool(ConanFile):
             settings = "build_type"
-            test_type = "explicit"
             generators = "VirtualBuildEnv"
             def build_requirements(self):
                 self.tool_requires(self.tested_reference_str)
