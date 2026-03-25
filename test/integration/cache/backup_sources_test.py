@@ -809,6 +809,45 @@ class TestDownloadCacheBackupSources:
         self.client.run("source .")
 
     @pytest.mark.parametrize("exception", [Exception, ConanException])
+    @pytest.mark.parametrize("upload", [True, False])
+    def test_backup_source_dirty_download_handle(self, exception, upload):
+        def custom_download(this, *args, **kwargs):
+            raise exception()
+
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+
+        conanfile = textwrap.dedent(f"""
+           from conan import ConanFile
+           from conan.tools.files import download
+           class Pkg2(ConanFile):
+               name = "pkg"
+               version = "0.1"
+               def source(self):
+                   download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
+                            sha256="{sha256}")
+           """)
+
+        self.client.save_home(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
+                            f"tools.files.download:retry=0"})
+
+        self.client.save({"conanfile.py": conanfile})
+
+        with mock.patch("conan.internal.rest.file_downloader.FileDownloader._download_file",
+                        custom_download):
+            self.client.run("create .", assert_error=True)
+            # The mock does not actually download a file, let's add it for the test
+            # The dirty file now happens in user space, not the download cache
+        if upload:
+            self.client.run("cache backup-upload")
+        else:
+            self.client.run("create .")
+            assert "pkg/0.1: Source folder is corrupted, forcing removal" in self.client.out
+
+    @pytest.mark.parametrize("exception", [Exception, ConanException])
     def test_backup_source_upload_when_dirty(self, exception):
         def custom_download(this, *args, **kwargs):  # noqa
             raise exception()
