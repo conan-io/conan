@@ -260,3 +260,77 @@ def test_requirement_vendor():
 
     c.run("install --requires=app/0.1 --build=missing  -c tools.graph:vendor=build")
     assert "pkga" in c.out  # it works
+
+
+def test_requirement_vendor_transitive_dependencies():
+    """Graph app -> pkgc -> pkgb -> pkga (vendored) and app -> pkgd (not vendored).
+
+    When tools.graph:vendor=build propagates the vendor trait to transitive dependencies,
+    the app package can drop pkgc, pkgb, and pkga from the graph after packaging. Until
+    that exists, assertions that treat transitive deps like the vendored root may fail.
+    """
+    c = TestClient(light=True)
+    app = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy, save
+
+        class App(ConanFile):
+            name = "app"
+            version = "0.1"
+            package_type = "application"
+
+            def requirements(self):
+                self.requires("pkgc/0.1", vendor=True)
+                self.requires("pkgd/0.1")
+
+            def package(self):
+                # Full vendor closure along app -> pkgc -> pkgb -> pkga.
+                for pkg in ("pkgc", "pkgb", "pkga"):
+                    copy(self, "*", src=self.dependencies[pkg].package_folder,
+                         dst=self.package_folder)
+                save(self, os.path.join(self.package_folder, "app.exe"), "app")
+            """)
+
+    consumer = textwrap.dedent("""
+           import os
+           from conan import ConanFile
+           from conan.tools.files import copy, save
+
+           class App(ConanFile):
+               package_type = "application"
+
+               def requirements(self):
+                   self.requires("app/0.1")
+
+               def generate(self):
+                    for r, d in self.dependencies.items():
+                        self.output.info(f"DEPENDENCY! : {d.ref.name}!!!!")
+               """)
+
+    c.save({
+        "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_package_type("shared-library")
+        .with_package_file("pkga.dll", "dll"),
+        "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1")
+        .with_package_type("shared-library").with_package_file("pkgb.dll", "pkgb-dll"),
+        "pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1")
+        .with_package_type("shared-library").with_package_file("pkgc.dll", "pkgc-dll"),
+        "pkgd/conanfile.py": GenConanfile("pkgd", "0.1").with_package_type("shared-library")
+        .with_package_file("pkgd.dll", "pkgd-dll"),
+        "app/conanfile.py": app,
+        "consumer/conanfile.py": consumer
+    })
+    c.run("create pkga")
+    c.run("create pkgb")
+    c.run("create pkgc")
+    c.run("create pkgd")
+    c.run("export app")
+
+    # even if we build app vendoring its dependencies, they are not visible for consumer
+    # not propagated
+    c.run("install consumer --build=missing -c tools.graph:vendor=build")
+    assert "conanfile.py: DEPENDENCY! : app!!!!" in c.out
+    assert "conanfile.py: DEPENDENCY! : pkgd!!!!" in c.out
+    assert "pkga!!!" not in c.out
+    assert "pkgb!!!" not in c.out
+    assert "pkgc!!!" not in c.out

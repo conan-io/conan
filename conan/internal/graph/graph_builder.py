@@ -223,6 +223,7 @@ class DepsGraphBuilder:
         result = []
         skip_build = node.conanfile.conf.get("tools.graph:skip_build", check_type=bool)
         skip_test = node.conanfile.conf.get("tools.graph:skip_test", check_type=bool)
+        vendor_build = node.conanfile.conf.get("tools.graph:vendor", choices=("build",))
         for require in node.conanfile.requires.values():
             if not require.visible and not require.package_id_mode:
                 if skip_build and require.build:
@@ -230,6 +231,8 @@ class DepsGraphBuilder:
                     continue
                 if skip_test and require.test:
                     continue
+            if require.vendor and not vendor_build:  # Do not expand this require at all
+                continue
             result.append(require)
             alias = require.alias  # alias needs to be processed this early
             if alias is not None:
@@ -470,8 +473,7 @@ class DepsGraphBuilder:
     @staticmethod
     def _remove_overrides(dep_graph):
         for node in dep_graph.nodes:
-            build = node.conanfile.conf.get("tools.graph:vendor", choices=("build",))
-            to_remove = [r for r in node.transitive_deps if r.override or (r.vendor and not build)]
+            to_remove = [r for r in node.transitive_deps if r.override]
             for r in to_remove:
                 node.transitive_deps.pop(r)
 
