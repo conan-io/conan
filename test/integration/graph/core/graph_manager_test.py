@@ -792,8 +792,8 @@ class TestLinearFourLevels(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(libc, [
             (tool1, False, False, True, False),
-            (tool2, False, False, True, False),
             (liba1, False, False, True, False),
+            (tool2, False, False, True, False),
             (liba2, False, False, True, False)
         ])
 
