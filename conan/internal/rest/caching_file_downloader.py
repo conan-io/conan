@@ -38,6 +38,9 @@ class SourcesCachingDownloader:
             self._output.warning("Cannot cache download() without sha256 checksum")
             download_cache_folder = None  # Cannot cache
         source_origins = source_origins or ["origin"]
+        if None in source_origins:
+            raise ConanException("Trying to download sources from None backup remote."
+                                 f" Remotes were: {source_origins}")
 
         # First, see if it is already in the download cache
         if download_cache_folder:
@@ -46,6 +49,7 @@ class SourcesCachingDownloader:
             with download_cache.lock(sha256):
                 if os.path.exists(cached_path):
                     self._output.info(f"Source {urls} retrieved from local download cache")
+                    download_cache.update_backup_sources_json(cached_path, self._conanfile, urls)
                     mkdir(os.path.dirname(file_path))
                     shutil.copy2(cached_path, file_path)
                     return
@@ -56,23 +60,28 @@ class SourcesCachingDownloader:
                 try:
                     self._download_from_urls(urls, file_path, retry, retry_wait, verify_ssl, auth,
                                              headers, md5, sha1, sha256)
-                    self._output.info("Sources downloaded from the internet")
+                    self._output.info(f"Sources for {urls} found in origin")
                     break
-                except (Exception, ):
+                except Exception as e:
                     if backup_url is source_origins[-1]:
                         raise
-                    self._output.warning(f"File {urls} failed in 'origin'")
+                    self._output.warning(f"Sources for {urls} failed in 'origin': {e}")
             else:
                 try:
+                    self._output.warning(f"Checking backups: {backup_url}")
                     backup_url = backup_url if backup_url.endswith("/") else backup_url + "/"
-                    self._file_downloader.download(backup_url + sha256, file_path, sha256=sha256)
-                    self._file_downloader.download(backup_url + sha256 + ".json", file_path + ".json")
+                    self._file_downloader.download(backup_url + sha256, file_path, sha256=sha256,
+                                                   overwrite=True)
+                    self._file_downloader.download(backup_url + sha256 + ".json",
+                                                   file_path + ".json", overwrite=True)
                     self._output.info(f"Sources for {urls} found in remote backup {backup_url}")
                     break
                 except NotFoundException:
-                    self._output.warning(f"File {urls} not found in {backup_url}")
+                    msg = f"File {urls} not found in {backup_url}"
                     if backup_url is source_origins[-1]:
-                        raise
+                        raise NotFoundException(msg)
+                    else:
+                        self._output.warning(msg)
                 except (AuthenticationException, ForbiddenException) as e:
                     raise ConanException(f"Authentication to source backup server '{backup_url}' "
                                          f"failed: {e}. "
@@ -83,8 +92,11 @@ class SourcesCachingDownloader:
             download_cache = DownloadCache(download_cache_folder)
             cached_path = download_cache.source_path(sha256)
             with download_cache.lock(sha256):
+                os.makedirs(os.path.dirname(cached_path), exist_ok=True)
+                shutil.copy(file_path, cached_path)
+                if os.path.exists(file_path + ".json"):
+                    shutil.move(file_path + ".json", download_cache_folder)
                 download_cache.update_backup_sources_json(cached_path, self._conanfile, urls)
-                shutil.copy2(file_path, cached_path)
 
     def _download_from_urls(self, urls, file_path, retry, retry_wait, verify_ssl, auth, headers,
                             md5, sha1, sha256):
