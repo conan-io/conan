@@ -598,17 +598,20 @@ def test_audit_cvss_versions(score, out):
 
     with proxy_response(200, successful_response):
         tc.run(f"audit scan --requires=foobar/0.1.0 -f={out}")
-        if "v4" in score:
-            assert str(score["v4"]["baseScore"]) in tc.out
-        if "v3" in score:
-            assert str(score["v3"]["baseScore"]) in tc.out
-
         if out == "text":
             assert "foobar/0.1.0 1 vulnerability found" in tc.out
             assert f"Critical - {score['preferredBaseScore']}" in tc.out
+            if "v4" in score:
+                assert f'CVSS v4: {score["v4"]["baseScore"]}' in tc.out
+            if "v3" in score:
+                assert f'CVSS v3: {score["v3"]["baseScore"]}' in tc.out
         else:
             assert "CVE-2023-45853" in tc.out
             assert f"Critical ({score['preferredBaseScore']})" in tc.out
+            if "v4" in score:
+                assert f'CVSS <i>v4</i>: {score["v4"]["baseScore"]}' in tc.out
+            if "v3" in score:
+                assert f'CVSS <i>v3</i>: {score["v3"]["baseScore"]}' in tc.out
 
 
 class TestAuditApiBranchouts:

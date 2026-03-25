@@ -75,12 +75,6 @@ def text_vuln_formatter(result):
             cvss = node.get("cvss", {})
             preferred_score = cvss.get("preferredBaseScore")
             score_txt = f" - {preferred_score}" if preferred_score else ""
-            if "v3" in cvss and cvss["v3"].get("baseScore", 0) > 0:
-                score_v3 = cvss["v3"].get("baseScore", 0)
-                score_txt += f" - {score_v3} (v3)"
-            if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
-                score_v4 = cvss["v4"].get("baseScore", 0)
-                score_txt += f" - {score_v4} (v4)"
             desc = node.get("description", "")
             desc = (desc[:240] + "...") if len(desc) > 240 else desc
             desc_wrapped = wrap_and_indent(desc)
@@ -134,6 +128,17 @@ def text_vuln_formatter(result):
                 if fixVersions:
                     cli_out_write(f"  fixed in version(s): ", endline="", fg=Color.BRIGHT_BLUE)
                     cli_out_write(', '.join(fixVersions))
+
+            if "v3" in cvss and cvss["v3"].get("baseScore", 0) > 0:
+                score_v3 = cvss["v3"].get("baseScore", 0)
+                if score_v3:
+                    cli_out_write(f"  CVSS v3: ", endline="", fg=Color.BRIGHT_BLUE)
+                    cli_out_write(score_v3)
+            if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
+                score_v4 = cvss["v4"].get("baseScore", 0)
+                if score_v4:
+                    cli_out_write(f"  CVSS v4: ", endline="", fg=Color.BRIGHT_BLUE)
+                    cli_out_write(score_v4)
             cli_out_write("")
 
     color_for_total = Color.BRIGHT_RED if total_vulns else Color.BRIGHT_GREEN
