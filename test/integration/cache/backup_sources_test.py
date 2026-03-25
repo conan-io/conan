@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 import textwrap
 import uuid
 from unittest import mock
@@ -900,7 +899,7 @@ def test_new_in_server_approach():
 
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
-        from conan.tools.files import download
+        from conan.tools.files import download, load
         class Pkg2(ConanFile):
             name = "pkg"
             version = "1.0"
@@ -908,14 +907,28 @@ def test_new_in_server_approach():
                 download(self, "{file_server.fake_url}/internet/myfile.txt",
                         "myfile.txt",
                          sha256="{hello_world_sha256}")
+                content = load(self, "myfile.txt")
+                self.output.info("CONTENT=%s!!!!" % content)
         """)
 
-    c.save_home({"global.conf": "core.sources:download_cache=in-package"})
+    c.save_home({"global.conf": "core.sources:pkg_cache=True"})
     c.save({"conanfile.py": conanfile})
     c.run("create .")
-
+    assert "pkg/1.0: Source myfile.txt not found in download cache or recipe metadata" in c.out
+    assert "CONTENT=Hello, world!!!" in c.out
+    # Upload the metadata and remove the package locally
     c.run("upload * -c -r=default")
-    c.run("remove * -c")
-    shutil.rmtree(http_server_base_folder_internet)
-    c.run("create .")
 
+    # It can be build from sources, even if file_server is removed
+    # it will also cache in the default download cache
+    c2 = TestClient(servers={k: v for k, v in c.servers.items() if k != "file_server"})
+    c2.save_home({"global.conf": "core.sources:pkg_cache=True"})
+    c2.run("install --requires=pkg/1.0 --build=*")
+    assert "pkg/1.0: Source myfile.txt from remote 'default' metadata" in c2.out
+    assert "CONTENT=Hello, world!!!" in c2.out
+
+    # A new recipe revision can recover it from the download cache
+    c2.save({"conanfile.py": conanfile + "# just force recipe revision"})
+    c2.run("create .")
+    assert "pkg/1.0: Source myfile.txt from remote 'default' metadata" not in c2.out
+    assert "pkg/1.0: Source myfile.txt retrieved from local download cache" in c2.out
