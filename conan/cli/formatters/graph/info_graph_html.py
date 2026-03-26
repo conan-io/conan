@@ -70,14 +70,18 @@ graph_info_html = r"""
                     <input type="checkbox" onchange="collapsePackages()" id="collapse_packages"/>
                     <label for="collapse_packages">Group packages</label>
                 </div>
-                 <div>
+                <div>
                     <input type="checkbox" onchange="showPackageType()" id="show_package_type"/>
                     <label for="show_package_type">Show package type</label>
                 </div>
-                 <div>
+                <div>
+                    <input type="checkbox" onchange="showSubgraph()" id="show_subgraph"/>
+                    <label for="show_package_type">Show subgraph</label>
+                </div>
+                <div>
                     <input type="search" placeholder="Search packages..." oninput="searchPackages(this)" onkeydown="onSearchKeyDown(event)">
                 </div>
-                 <div>
+                <div>
                     <input type="search" placeholder="Exclude packages..." title="Add a comma to exclude an additional package" oninput="excludePackages(this)">
                 </div>
                 <div>
@@ -107,6 +111,7 @@ graph_info_html = r"""
             let excluded_pkgs = null;
             let collapse_packages = false;
             let show_package_type = false;
+            let show_subgraph = false;
             let color_map = {Cache: "SkyBlue",
                              Download: "LightGreen",
                              Build: "Yellow",
@@ -402,6 +407,22 @@ graph_info_html = r"""
                     let div2 = document.createElement('div');
                     div2.innerHTML = "<pre>" + div.innerHTML + "</pre>";
                     control.appendChild(div2);
+                    if (show_subgraph && graph_data["nodes"][ids[0]]) {
+                        let node_id_list = [ids[0]];
+                        let seen = [];
+                        while (node_id_list.length > 0) {
+                            const edge = node_id_list.pop();
+                            if (edge !== undefined && !seen.includes(edge)) {
+                                seen.push(edge);
+                                const deps = graph_data["nodes"][edge]["dependencies"];
+                                for (let dep in deps) {
+                                    node_id_list.push(dep);
+                                }
+                            }
+                        }
+                        network.selectNodes(seen);
+                    }
+
                 }
                 else {
                     control.innerHTML = "Click on one package or edge to show information";
@@ -460,6 +481,10 @@ graph_info_html = r"""
             }
             function showPackageType(e) {
                 show_package_type = !show_package_type;
+                draw();
+            }
+            function showSubgraph(e) {
+                show_subgraph = !show_subgraph;
                 draw();
             }
             function showhideclass(id) {
