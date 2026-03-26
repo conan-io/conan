@@ -22,7 +22,7 @@ class LocalAPI:
 
     @property
     def editable_packages(self):
-        return self._helpers.editable_packages
+        return self._helpers.global_editable_packages
 
     @staticmethod
     def get_conanfile_path(path, cwd, py):

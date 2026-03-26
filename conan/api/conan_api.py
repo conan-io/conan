@@ -185,6 +185,10 @@ class ConanAPI:
             return self._requester
 
         @property
+        def global_editable_packages(self):
+            return self._global_editable_packages
+
+        @property
         def editable_packages(self):
             # Recomputes it every time, to evaluate the Workspaces latest changes
             global_editables = self._global_editable_packages
