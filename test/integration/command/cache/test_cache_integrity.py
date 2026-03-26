@@ -10,7 +10,7 @@ from conan.internal.util.files import save
 @pytest.mark.parametrize("use_pkglist", [True, False])
 @pytest.mark.parametrize("output_pkglist", [True, False])
 def test_cache_integrity(use_pkglist, output_pkglist):
-    t = TestClient()
+    t = TestClient(light=True)
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name pkg1 --version 1.0")
     t.run("create . --name pkg2 --version=2.0")
@@ -25,6 +25,9 @@ def test_cache_integrity(use_pkglist, output_pkglist):
     layout = t.created_layout()
     conaninfo = os.path.join(layout.package(), "conaninfo.txt")
     save(conaninfo, "[settings]")
+    t.run("create . --name pkg5 --version=5.0")
+    layout = t.exported_layout()
+    save(layout.conanfile(), "empty")
 
     if use_pkglist:
         t.run("list *:*#* -f=json", redirect_stdout="pkglist.json")
@@ -47,6 +50,7 @@ def test_cache_integrity(use_pkglist, output_pkglist):
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: \nManifest mismatch" in t.out
     assert "pkg4/4.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: \nManifest mismatch" in t.out
+    assert "pkg5/5.0#4d670581ccb765839f2239cc8dff8fbd: ERROR: \nManifest mismatch" in t.out
 
     if output_pkglist:
         t.run("remove --list=pkglist.json -c")
@@ -54,6 +58,7 @@ def test_cache_integrity(use_pkglist, output_pkglist):
         t.run("remove pkg2/2.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
         t.run("remove pkg3/3.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
         t.run("remove pkg4/4.0:da39a3ee5e6b4b0d3255bfef95601890afd80709 -c")
+        t.run("remove pkg5/5.0 -c")
     t.run("cache check-integrity *")
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out

@@ -41,6 +41,8 @@ class TestPackageIDRequirementsModes:
                           ("major_mode", "6ac597ffb99c3747ed78699f206dc1041537a8df"),
                           # This is equal to semver_mode for 0.X.Y.Z..
                           ("full_version_mode", "13b9e753af3958dd1b2d4b3f935b04b8fb6b6760"),
+                          ("full_recipe_mode", "13b9e753af3958dd1b2d4b3f935b04b8fb6b6760"),
+                          ("full_package_mode", "19906d8a245d9f466d7d7f697c666222a9854a1a"),
                           ("revision_mode", "ae5b9eeb74880aeb1cfa3db7f84c007a05ce3a76"),
                           ("full_mode", "d1b2a9538cd69363b4bae7e66c9f900b8f4c58bb")])
 def test_modes(mode, pkg_id):

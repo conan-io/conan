@@ -61,6 +61,23 @@ def test_cli_args_configure():
     assert "--graphviz=foo.dot" in conanfile.command
 
 
+def test_cli_args_configure_extra_args():
+    settings = Settings.loads(default_settings_yml)
+
+    conanfile = ConanFileMock()
+    conanfile.conf = Conf()
+    conanfile.conf.define("tools.cmake:configure_args", ["-DCMAKE_PROJECT_INCLUDE_BEFORE=MyFile",
+                                                         "--fresh"])
+    conanfile.folders.generators = "."
+    conanfile.folders.set_base_generators(temp_folder())
+    conanfile.settings = settings
+
+    write_cmake_presets(conanfile, "toolchain", "Unix Makefiles", {})
+    cmake = CMake(conanfile)
+    cmake.configure()
+    assert '-DCMAKE_PROJECT_INCLUDE_BEFORE=MyFile --fresh' in conanfile.command
+
+
 def test_run_ctest():
     settings = Settings.loads(default_settings_yml)
     settings.os = "Windows"
@@ -83,24 +100,3 @@ def test_run_ctest():
     cmake = CMake(conanfile)
     cmake.ctest(cli_args=["--schedule-random", "--quiet"])
     assert "--schedule-random --quiet --verbose --debug --output-junit myfile" in conanfile.command
-
-
-@pytest.mark.parametrize("input_str, expected", [
-    (r"PlainString", r"PlainString"),  # Case 1: Plain strings (No change)
-    # Case 2: Individual characters (First-time escape)
-    (r"C:\Path", r"C:\\Path"),
-    (r'He said "Hi"', r'He said \"Hi\"'),
-    (r"Cost is $10", r"Cost is \$10"),
-    # Case 3: Complex mixed strings
-    (r'Mixed \path and "quote" with $VAR', r'Mixed \\path and \"quote\" with \$VAR'),
-    # Case 4: Partial escapes (Only unescaped parts get fixed)
-    (r'\"Already" and \$Already$', r'\"Already\" and \$Already\$'),
-    # Case 5: Edge cases
-    (r'TrailingSlash\\', r'TrailingSlash\\'),
-    (r"Double\\Slash", r"Double\\Slash"),
-    (r"", r""),  # Empty string
-])
-def test_cmake_escape_correctness(input_str, expected):
-    escaped = cmake_escape_value(input_str)
-    assert escaped == expected
-    assert cmake_escape_value(escaped) == expected

@@ -428,18 +428,16 @@ class TestApple(Base):
                 "CMAKE_INSTALL_NAME_DIR": ""
                 }
 
+        arch_flags = {
+            "CMAKE_C_FLAGS": "-m64",
+            "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",
+            "CMAKE_SHARED_LINKER_FLAGS": "-m64",
+            "CMAKE_EXE_LINKER_FLAGS": "-m64",
+        }
         host_profile = self.client.get_default_host_profile()
-        if host_profile.settings.get("arch") == "x86_64":
-            vals.update({
-                "CMAKE_C_FLAGS": "-m64",
-                "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",
-                "CMAKE_SHARED_LINKER_FLAGS": "-m64",
-                "CMAKE_EXE_LINKER_FLAGS": "-m64",
-            })
-        else:
-            vals.update({
-                "CMAKE_CXX_FLAGS": "-stdlib=libc++",
-            })
+        if host_profile.settings.get("arch") != "x86_64":
+            arch_flags = {"CMAKE_CXX_FLAGS": "-stdlib=libc++"}
+        vals.update(arch_flags)
 
         def _verify_out(marker=">>"):
             if shared:

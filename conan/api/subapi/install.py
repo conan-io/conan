@@ -40,7 +40,7 @@ class InstallAPI:
         :param return_install_error: If ``True``, do not raise an exception, but return it
         """
         app = ConanBasicApp(self._conan_api)
-        installer = BinaryInstaller(app, self._helpers.global_conf, app.editable_packages,
+        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, app.editable_packages,
                                     self._helpers.hook_manager)
         install_graph = InstallGraph(deps_graph)
         install_graph.raise_errors()
@@ -69,7 +69,7 @@ class InstallAPI:
         :param only_info: If ``True``, only reporting and checking of whether the system requirements are installed is performed.
         """
         app = ConanBasicApp(self._conan_api)
-        installer = BinaryInstaller(app, self._helpers.global_conf, app.editable_packages,
+        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, app.editable_packages,
                                     self._helpers.hook_manager)
         installer.install_system_requires(graph, only_info)
 
@@ -90,7 +90,7 @@ class InstallAPI:
         :param graph: Dependency graph to download sources from
         """
         app = ConanBasicApp(self._conan_api)
-        installer = BinaryInstaller(app, self._helpers.global_conf, app.editable_packages,
+        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, app.editable_packages,
                                     self._helpers.hook_manager)
         installer.install_sources(graph, remotes)
 

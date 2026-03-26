@@ -196,9 +196,9 @@ timer_cpp = textwrap.dedent("""
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
-         [('',),
-          ('-pr:b default -s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',),
-          ("-pr:b default -s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8",)])
+                         ['',
+                          '-s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',
+                          "-s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8"])
 def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 
@@ -429,7 +429,7 @@ class HelloConan(ConanFile):
 
         self.cpp_info.components["libhello"].frameworks.extend(["CoreFoundation"])
         """)
-    hello_cpp = textwrap.dedent("""
+    hello_cpp_core = textwrap.dedent("""
 #include <CoreFoundation/CoreFoundation.h>
 
 void hello_api()
@@ -441,7 +441,7 @@ void hello_api()
         CFRelease(dict);
 }
         """)
-    hello_h = textwrap.dedent("""
+    hello_h_core = textwrap.dedent("""
 void hello_api();
         """)
     cmakelists_txt = textwrap.dedent("""
@@ -511,8 +511,8 @@ target_link_libraries(${PROJECT_NAME} hello::libhello)
         """)
     t = TestClient()
     t.save({'conanfile.py': conanfile_py,
-            'hello.cpp': hello_cpp,
-            'hello.h': hello_h,
+            'hello.cpp': hello_cpp_core,
+            'hello.h': hello_h_core,
             'CMakeLists.txt': cmakelists_txt,
             'test_package/conanfile.py': test_conanfile_py,
             'test_package/CMakeLists.txt': test_cmakelists_txt,
@@ -554,7 +554,7 @@ def test_iphoneos_crossbuild():
     target_link_libraries(main hello::hello)
     """)
 
-    conanfile = textwrap.dedent("""
+    hello = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.cmake import CMake
 
@@ -570,7 +570,7 @@ def test_iphoneos_crossbuild():
                 cmake.build()
         """)
 
-    client.save({"conanfile.py": conanfile,
+    client.save({"conanfile.py": hello,
                  "CMakeLists.txt": cmakelists,
                  "main.cpp": main,
                  "ios-armv8": profile}, clean_first=True)
