@@ -58,6 +58,7 @@ def test_msys2():
     ("fedora", "dnf"),
     ("nobara", "dnf"),
     ("arch", "pacman"),
+    ("cachyos", "pacman"),
     ("opensuse", "zypper"),
     ("sles", "zypper"),
     ("opensuse", "zypper"),
