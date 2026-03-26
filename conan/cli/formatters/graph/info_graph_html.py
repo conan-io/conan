@@ -45,6 +45,10 @@ graph_info_html = r"""
                 overflow-y: auto;
                 padding: 5px 10px;
             }
+            #details {
+                background-color: #f3f3f3;
+                overflow-y: auto;
+            }
         </style>
 
         <div id="container">
@@ -403,34 +407,7 @@ graph_info_html = r"""
                     div2.innerHTML = "<pre>" + div.innerHTML + "</pre>";
                     control.appendChild(div2);
                     if (show_subgraph && graph_data["nodes"][ids[0]]) {
-                        let node_id_list = [ids[0]];
-                        let seen_nodes = [];
-                        let seen_edges = [];
-                        while (node_id_list.length > 0) {
-                            const node_id = node_id_list.pop();
-                            if (node_id !== undefined && !seen_nodes.includes(node_id)) {
-                                seen_nodes.push(node_id);
-                                const node = graph_data["nodes"][node_id];
-                                for (let dep_id in node["dependencies"]) {
-                                    if (collapse_packages) {
-                                        const dep_node = graph_data["nodes"][dep_id];
-                                        const context = dep_node["context"];
-                                        const label = getNodeLabel(dep_node);
-                                        dep_id = collapsed_packages[context][label];
-                                    }
-                                    node_id_list.push(dep_id);
-                                }
-                                const edges = network.getConnectedEdges(node_id);
-                                for (let edge_id of edges) {
-                                    const connectedNodes = network.getConnectedNodes(edge_id);
-                                    if (!seen_edges.includes(edge_id) && connectedNodes[0] === node_id) {
-                                        seen_edges.push(edge_id);
-                                    }
-                                }
-                            }
-                        }
-                        network.setSelection({nodes: seen_nodes, edges: seen_edges},
-                                            {unselectAll: true, highlightEdges: false});
+                        setSubgraphSelectionFromNode(ids[0]);
                     }
 
                 }
@@ -512,6 +489,40 @@ graph_info_html = r"""
                 else
                     label = node.recipe == "Consumer"? "conanfile": "CLI";
                 return label;
+            }
+            function setSubgraphSelectionFromNode(starting_node_id) {
+                let node_id_list = [starting_node_id];
+                let seen_nodes = [];
+                let seen_edges = [];
+                while (node_id_list.length > 0) {
+                    const node_id = node_id_list.pop();
+                    // The node might be hidden
+                    if (network.findNode(node_id).length == 0) continue;
+                    if (node_id !== undefined && !seen_nodes.includes(node_id)) {
+                        const node = graph_data["nodes"][node_id];
+                        seen_nodes.push(node_id);
+                        for (let dep_id in node["dependencies"]) {
+                            // Collapsed dependencies dont have an edge to the matching id, find which
+                            if (collapse_packages) {
+                                const dep_node = graph_data["nodes"][dep_id];
+                                const context = dep_node["context"];
+                                const label = getNodeLabel(dep_node);
+                                dep_id = collapsed_packages[context][label];
+                            }
+                            node_id_list.push(dep_id);
+                        }
+                        const edges = network.getConnectedEdges(node_id);
+                        for (let edge_id of edges) {
+                            const connectedNodes = network.getConnectedNodes(edge_id);
+                            // Only select edges that have a fromId (0th index) equal to current node
+                            if (!seen_edges.includes(edge_id) && connectedNodes[0] === node_id) {
+                                seen_edges.push(edge_id);
+                            }
+                        }
+                    }
+                }
+                network.setSelection({nodes: seen_nodes, edges: seen_edges},
+                                     {unselectAll: true, highlightEdges: false});
             }
             window.addEventListener("load", () => {
                draw();
