@@ -6,7 +6,6 @@ import sys
 import tarfile
 import time
 
-from conan.internal.conan_app import ConanApp
 from conan.api.output import ConanOutput
 from conan.internal.source import retrieve_exports_sources
 from conan.internal.errors import NotFoundException
@@ -104,8 +103,8 @@ def get_compress_level(compressformat, global_conf):
 
 
 class PackagePreparator:
-    def __init__(self, app: ConanApp, cache, remote_manager, global_conf):
-        self._app = app
+    def __init__(self, loader, cache, remote_manager, global_conf):
+        self._loader = loader
         self._remote_manager = remote_manager
         self._cache = cache
         self._global_conf = global_conf
@@ -120,7 +119,7 @@ class PackagePreparator:
         for ref, packages in pkg_list.items():
             recipe_layout = self._cache.recipe_layout(ref)
             conanfile_path = recipe_layout.conanfile()
-            conanfile = self._app.loader.load_basic(conanfile_path)
+            conanfile = self._loader.load_basic(conanfile_path)
             url = conanfile.conan_data.get("scm", {}).get("url") if conanfile.conan_data else None
             if local_url != "allow" and url is not None:
                 if not any(url.startswith(v) for v in ("ssh", "git", "http", "file")):

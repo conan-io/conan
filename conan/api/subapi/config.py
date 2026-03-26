@@ -3,7 +3,6 @@ import os
 from conan.api.output import ConanOutput
 
 from conan.internal.cache.home_paths import HomePaths
-from conan.internal.conan_app import ConanApp
 from conan.internal.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
 from conan.internal.graph.graph_builder import DepsGraphBuilder
 from conan.internal.graph.profile_node_definer import consumer_definer
@@ -212,7 +211,7 @@ class ConfigAPI:
         remotes = conan_api.remotes.list() if remotes is None else remotes
         profile_host = profile_build = profile or conan_api.profiles.get_profile([])
 
-        app = ConanApp(self._conan_api)
+        proxy, range_resolver, loader = self._helpers.get_loader()
         cache = self._helpers.cache
 
         ConanOutput().title("Fetching requested configuration packages")
@@ -220,13 +219,13 @@ class ConfigAPI:
         for ref in requires:
             # Computation of a very simple graph that requires "ref"
             # Need to convert input requires to RecipeReference
-            conanfile = app.loader.load_virtual(requires=[ref])
+            conanfile = loader.load_virtual(requires=[ref])
             consumer_definer(conanfile, profile_host, profile_build)
             root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST,
                              recipe=RECIPE_VIRTUAL)
             root_node.is_conf = True
             update = ["*"]
-            builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, cache, remotes,
+            builder = DepsGraphBuilder(proxy, loader, range_resolver, cache, remotes,
                                        update, update, self._helpers.global_conf)
             deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
 
