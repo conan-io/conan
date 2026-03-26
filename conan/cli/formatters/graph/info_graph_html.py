@@ -123,13 +123,14 @@ graph_info_html = r"""
                              Invalid: "Red",
                              Platform: "Violet"};
             let global_edges = {};
+            let collapsed_packages = null;
             function define_data(){
                 let nodes = [];
                 let edges = [];
-                let collapsed_packages = {"build": {}, "host": {}};
+                collapsed_packages = {"build": {}, "host": {}};
                 let targets = {};
                 global_edges = {};
-                let edge_counter = 0;
+                let edge_counter = Math.max(...Object.keys(graph_data["nodes"])) + 1;
                 let conflict=null;
                 let provide_conflict=null;
                 let missing_error=null;
@@ -146,13 +147,7 @@ graph_info_html = r"""
                     if (node.context == "build" && hide_build) continue;
                     if (node.test && hide_test) continue;
                     let shape = node.context == "build" || node.test ? "ellipse" : "box";
-                    let label = null;
-                    if (node["name"])
-                        label =  node["name"] + "/" + node["version"];
-                    else if (node["ref"])
-                        label = node["ref"];
-                    else
-                        label = node.recipe == "Consumer"? "conanfile": "CLI";
+                    const label = getNodeLabel(node);
                     if (collapse_packages) {
                         let existing = collapsed_packages[node.context][label];
                         targets[node_id] = existing;
@@ -409,18 +404,33 @@ graph_info_html = r"""
                     control.appendChild(div2);
                     if (show_subgraph && graph_data["nodes"][ids[0]]) {
                         let node_id_list = [ids[0]];
-                        let seen = [];
+                        let seen_nodes = [];
+                        let seen_edges = [];
                         while (node_id_list.length > 0) {
-                            const edge = node_id_list.pop();
-                            if (edge !== undefined && !seen.includes(edge)) {
-                                seen.push(edge);
-                                const deps = graph_data["nodes"][edge]["dependencies"];
-                                for (let dep in deps) {
-                                    node_id_list.push(dep);
+                            const node_id = node_id_list.pop();
+                            if (node_id !== undefined && !seen_nodes.includes(node_id)) {
+                                seen_nodes.push(node_id);
+                                const node = graph_data["nodes"][node_id];
+                                for (let dep_id in node["dependencies"]) {
+                                    if (collapse_packages) {
+                                        const dep_node = graph_data["nodes"][dep_id];
+                                        const context = dep_node["context"];
+                                        const label = getNodeLabel(dep_node);
+                                        dep_id = collapsed_packages[context][label];
+                                    }
+                                    node_id_list.push(dep_id);
+                                }
+                                const edges = network.getConnectedEdges(node_id);
+                                for (let edge_id of edges) {
+                                    const connectedNodes = network.getConnectedNodes(edge_id);
+                                    if (!seen_edges.includes(edge_id) && connectedNodes[0] === node_id) {
+                                        seen_edges.push(edge_id);
+                                    }
                                 }
                             }
                         }
-                        network.selectNodes(seen);
+                        network.setSelection({nodes: seen_nodes, edges: seen_edges},
+                                            {unselectAll: true, highlightEdges: false});
                     }
 
                 }
@@ -492,6 +502,16 @@ graph_info_html = r"""
                 for (let i = 0; i < elements.length; i++) {
                     elements[i].style.display = (elements[i].style.display != 'none') ? 'none' : 'block';
                 }
+            }
+            function getNodeLabel(node) {
+                let label = null;
+                if (node["name"])
+                    label =  node["name"] + "/" + node["version"];
+                else if (node["ref"])
+                    label = node["ref"];
+                else
+                    label = node.recipe == "Consumer"? "conanfile": "CLI";
+                return label;
             }
             window.addEventListener("load", () => {
                draw();
