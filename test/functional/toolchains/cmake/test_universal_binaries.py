@@ -121,10 +121,6 @@ def test_create_universal_binary_ninja():
         """)
 
     cmake = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.23)
         project(ninjatest NONE)
 

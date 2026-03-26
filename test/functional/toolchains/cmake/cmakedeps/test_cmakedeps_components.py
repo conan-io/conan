@@ -152,10 +152,6 @@ def test_components_system_libs():
     """)
 
     cmakelists = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(consumer NONE)
 
@@ -220,10 +216,6 @@ def test_components_exelinkflags():
     """)
 
     cmakelists = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(consumer NONE)
         find_package(requirement)
@@ -278,10 +270,6 @@ def test_components_sharedlinkflags():
     """)
 
     cmakelists = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(consumer NONE)
         find_package(requirement)
@@ -340,10 +328,6 @@ def test_cmake_add_subdirectory():
         """)
 
     cmakelists = textwrap.dedent("""
-            set(CMAKE_CXX_COMPILER_WORKS 1)
-            set(CMAKE_CXX_ABI_COMPILED 1)
-            set(CMAKE_C_COMPILER_WORKS 1)
-            set(CMAKE_C_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
             project(hello NONE)
             find_package(Boost CONFIG)

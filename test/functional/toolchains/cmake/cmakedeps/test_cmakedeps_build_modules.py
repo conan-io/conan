@@ -52,10 +52,6 @@ def test_build_modules_alias_target():
                 cmake.configure()
         """)
     cmakelists = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.0)
         project(test NONE)
         find_package(hello CONFIG)
@@ -116,10 +112,6 @@ def test_build_modules_custom_script():
                 cmake.configure()
         """)
     cmakelists = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.0)
         project(test NONE)
         find_package(myfunctions MODULE REQUIRED)
@@ -196,10 +188,6 @@ def test_build_modules_components_is_not_possible():
         """)
 
     cmakelists = textwrap.dedent("""
-            set(CMAKE_CXX_COMPILER_WORKS 1)
-            set(CMAKE_CXX_ABI_COMPILED 1)
-            set(CMAKE_C_COMPILER_WORKS 1)
-            set(CMAKE_C_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.0)
             project(test NONE)
             find_package(openssl CONFIG)
@@ -280,10 +268,6 @@ def test_build_modules_custom_script_editable(editable):
                 cmake.configure()
         """)
     cmakelists = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(test NONE)
         find_package(myfunctions CONFIG REQUIRED)
@@ -371,10 +355,6 @@ def test_build_modules_custom_script_editable_package(editable):
                 cmake.configure()
         """)
     cmakelists = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(test NONE)
         find_package(myfunctions CONFIG REQUIRED)

@@ -54,8 +54,6 @@ def test_cps(shared):
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(mypkg CXX)
 
@@ -86,8 +84,6 @@ def test_cps(shared):
     test_cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(PackageTest CXX)
 
@@ -192,8 +188,6 @@ def test_cps_components(shared):
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(mypkg CXX)
 
@@ -228,8 +222,6 @@ def test_cps_components(shared):
     test_package_cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(PackageTest CXX)
 
@@ -408,8 +400,6 @@ def test_cps_components_requires(kind):
     test_package_cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(PackageTest CXX)
 
@@ -538,8 +528,6 @@ def test_pure_cmake_shared():
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(myproj CXX)
 
@@ -639,8 +627,6 @@ def test_cps_name_mapping():
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(mypkg CXX)
 
@@ -676,8 +662,6 @@ def test_cps_name_mapping():
     test_cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(PackageTest CXX)
 

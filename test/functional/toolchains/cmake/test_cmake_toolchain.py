@@ -227,10 +227,6 @@ def test_cmaketoolchain_no_warnings():
             requires = "dep/0.1"
         """)
     consumer = textwrap.dedent("""
-       set(CMAKE_CXX_COMPILER_WORKS 1)
-       set(CMAKE_CXX_ABI_COMPILED 1)
-       set(CMAKE_C_COMPILER_WORKS 1)
-       set(CMAKE_C_ABI_COMPILED 1)
        cmake_minimum_required(VERSION 3.15)
        project(MyHello NONE)
 

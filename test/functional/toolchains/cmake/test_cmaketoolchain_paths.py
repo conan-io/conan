@@ -88,10 +88,6 @@ def test_cmaketoolchain_path_find_package(package, find_package, settings, find_
     client.run("create . --name={} --version=0.1 {}".format(package, settings))
 
     consumer = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
         find_package({package} REQUIRED)
@@ -140,10 +136,6 @@ def test_cmaketoolchain_path_find_package_editable():
         """)
 
     consumer = textwrap.dedent("""\
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
         find_package(hello REQUIRED)
@@ -212,10 +204,6 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
                 self.cpp_info.builddirs.append({})
         """.format(builddir))
     cmake = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
 
@@ -235,10 +223,6 @@ def test_cmaketoolchain_path_find_package_real_config(settings, find_root_path_m
     client.run("create . --name=hello --version=0.1 {}".format(settings))
 
     consumer = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
 
@@ -308,10 +292,6 @@ def test_cmaketoolchain_path_include_cmake_modules(require_type, settings, find_
             {require_type} = "hello/0.1"
     """.format(require_type=require_type))
     consumer = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
         include(myowncmake)
@@ -432,10 +412,6 @@ def test_cmaketoolchain_path_find_library(settings, find_root_path_modes):
             tool_requires = "hello_build/0.1"
     """)
     consumer = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
         find_library(HELLOLIB hello)
