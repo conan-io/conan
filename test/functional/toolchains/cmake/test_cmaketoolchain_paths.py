@@ -339,10 +339,6 @@ def test_cmaketoolchain_path_find_file_find_path(settings, find_root_path_modes)
     client.run("create . --name=hello --version=0.1 {}".format(settings))
 
     consumer = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
         find_file(HELLOFILE hello.h)
@@ -479,10 +475,6 @@ def test_cmaketoolchain_path_find_program(settings, find_root_path_modes):
             tool_requires = "hello_build/0.1"
     """)
     consumer = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyHello NONE)
         find_program(HELLOPROG hello)

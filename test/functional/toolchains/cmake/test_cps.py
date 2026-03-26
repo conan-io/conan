@@ -352,8 +352,6 @@ def test_cps_components_requires(kind):
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        set(CMAKE_C_COMPILER_WORKS 1)
-        set(CMAKE_C_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project({name} CXX)
 
