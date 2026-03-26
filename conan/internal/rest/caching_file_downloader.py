@@ -39,37 +39,37 @@ class SourcesCachingDownloader:
             download_cache_folder = None  # Cannot cache
         source_origins = source_origins or ["origin"]
         if None in source_origins:
-            raise ConanException("Trying to download sources from None backup remote."
-                                 f" Remotes were: {source_origins}")
+            raise ConanException(f"Incorrect 'core.sources:download_urls' contains invalid 'None'"
+                                 f"url: {source_origins}")
 
         # First, see if it is already in the download cache
         if download_cache_folder:
             download_cache = DownloadCache(download_cache_folder)
-            cached_path = download_cache.source_path(sha256)
+            download_path = download_cache.source_path(sha256)
             with download_cache.lock(sha256):
-                if os.path.exists(cached_path):
+                if os.path.exists(download_path):
                     self._output.info(f"Source {urls} retrieved from local download cache")
-                    download_cache.update_backup_sources_json(cached_path, self._conanfile, urls)
+                    download_cache.update_backup_sources_json(download_path, self._conanfile, urls)
                     mkdir(os.path.dirname(file_path))
-                    shutil.copy2(cached_path, file_path)
+                    shutil.copy2(download_path, file_path)
                     return
 
         # If it is not in the download cache, we need to download it, lets try
         for backup_url in source_origins:
-            if backup_url == "origin":
+            if backup_url == "origin":  # download from the internet
                 try:
                     self._download_from_urls(urls, file_path, retry, retry_wait, verify_ssl, auth,
                                              headers, md5, sha1, sha256)
-                    self._output.info(f"Sources for {urls} found in origin")
                     break
                 except Exception as e:
                     if backup_url is source_origins[-1]:
                         raise
                     self._output.warning(f"Sources for {urls} failed in 'origin': {e}")
-            else:
+            else:  # Download from a backup server
                 try:
-                    self._output.warning(f"Checking backups: {backup_url}")
+                    self._output.info(f"Checking backup: {backup_url}")
                     backup_url = backup_url if backup_url.endswith("/") else backup_url + "/"
+                    # The download happens to the user download folder, not to the download cache
                     self._file_downloader.download(backup_url + sha256, file_path, sha256=sha256,
                                                    overwrite=True)
                     self._file_downloader.download(backup_url + sha256 + ".json",
@@ -77,7 +77,7 @@ class SourcesCachingDownloader:
                     self._output.info(f"Sources for {urls} found in remote backup {backup_url}")
                     break
                 except NotFoundException:
-                    msg = f"File {urls} not found in {backup_url}"
+                    msg = f"Sources for {urls} not found in remote backup {backup_url}"
                     if backup_url is source_origins[-1]:
                         raise NotFoundException(msg)
                     else:
@@ -115,6 +115,7 @@ class SourcesCachingDownloader:
                 else:
                     self._file_downloader.download(url, file_path, retry, retry_wait, verify_ssl,
                                                    auth, True, headers, md5, sha1, sha256)
+                self._output.info(f"Sources correctly downloaded from {url}")
                 return  # Success! Return to caller
             except Exception as error:
                 if url != urls[-1]:  # If it is not the last one, do not raise, warn and move to next
