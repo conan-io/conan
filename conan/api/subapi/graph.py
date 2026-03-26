@@ -20,7 +20,7 @@ class GraphAPI:
                                       name=None, version=None, user=None, channel=None,
                                       update=None, remotes=None, lockfile=None,
                                       is_build_require=False):
-        loader = self._helpers.loader
+        _, _, loader = self._helpers.get_loader()
 
         if path.endswith(".py"):
             conanfile = loader.load_consumer(path,
@@ -66,7 +66,7 @@ class GraphAPI:
 
         # necessary for correct resolution and update of remote python_requires
 
-        loader = self._helpers.loader
+        _, _, loader = self._helpers.get_loader()
         profile_host.options.scope(tested_reference)
 
         # do not try apply lock_python_requires for test_package/conanfile.py consumer
@@ -90,7 +90,7 @@ class GraphAPI:
                                      python_requires=None):
         if not python_requires and not requires and not tool_requires:
             raise ConanException("Provide requires or tool_requires")
-        loader = self._helpers.loader
+        _, _, loader = self._helpers.get_loader()
         conanfile = loader.load_virtual(requires=requires,
                                         tool_requires=tool_requires,
                                         python_requires=python_requires,
