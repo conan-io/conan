@@ -48,6 +48,9 @@ graph_info_html = r"""
             #details {
                 background-color: #f3f3f3;
                 overflow-y: auto;
+                border: 1px solid #e4e4e4;
+                border-radius: 5px;
+                padding: 3px 5px;
             }
         </style>
 
