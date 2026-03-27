@@ -1,6 +1,5 @@
 import os.path
 import textwrap
-from collections import OrderedDict
 
 import pytest
 
@@ -43,7 +42,7 @@ class TestMetadataDeploy:
                                                                              d.ref.name))
            """)
 
-        servers = OrderedDict([("default", TestServer()), ("remote2", TestServer())])
+        servers = {"default": TestServer(), "remote2": TestServer()}
         c = TestClient(servers=servers, inputs=2 * ["admin", "password"], light=True)
         c.save({"conanfile.py": conanfile,
                 "deploy.py": deploy})
