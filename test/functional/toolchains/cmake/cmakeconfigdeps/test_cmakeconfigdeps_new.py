@@ -403,6 +403,44 @@ class TestLibsLinkageTraits:
         # it works
 
     @pytest.mark.tool("cmake", "3.27")
+    def test_transitive_libs(self):
+        shared = True
+        c = TestClient(light=False)
+        c.run("new cmake_lib -d name=matrix -d version=0.1")
+        c.run(f"create . -o *:shared={shared} -tf=")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1")
+        engine_h = c.load("include/engine.h")
+        engine_h = "#include <matrix.h>\n" + engine_h + "\nENGINE_EXPORT void engine_transitive() {matrix();}\n"
+        c.save({"include/engine.h": engine_h})
+        conanfile = c.load("conanfile.py")
+        conanfile = conanfile.replace('self.requires("matrix/0.1")',
+                                      'self.requires("matrix/0.1", transitive_headers=True, transitive_libs=True)')
+        conanfile = conanfile.replace('self.cpp_info.libs = ["engine"]',
+                                      'self.cpp_info.components["eng"].libs = ["engine"]\n        self.cpp_info.components["eng"].requires = ["matrix::matrix"]')
+        c.save({"conanfile.py": conanfile})
+        c.run(f"create . -o *:shared={shared} -tf=")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_lib -d name=game -d version=0.1 -d requires=engine/0.1")
+        game_h = c.load("include/game.h")
+        game_h = "#include <engine.h>\n" + game_h + "\nGAME_EXPORT void game_transitive() {engine();}\n"
+        c.save({"include/game.h": game_h})
+        conanfile = c.load("conanfile.py")
+        conanfile = conanfile.replace('self.requires("engine/0.1")',
+                                      'self.requires("engine/0.1", transitive_headers=True, transitive_libs=True)')
+        conanfile = conanfile.replace("def package_info(self):",
+                                      "def package_info(self):\n        self.cpp_info.requires = ['engine::eng']")
+        c.save({"conanfile.py": conanfile})
+        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value} -tf=")
+
+        c.save({}, clean_first=True)
+        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=game/0.1")
+        c.run(f"build . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
+        # it works
+
+    @pytest.mark.tool("cmake", "3.27")
     def test_link_features(self):
         tc = TestClient()
         tc.run("new cmake_lib -d name=matrix -d version=0.1")
