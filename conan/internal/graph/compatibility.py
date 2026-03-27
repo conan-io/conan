@@ -135,7 +135,7 @@ class BinaryCompatibility:
         if not compat_infos:
             return {}
 
-        result = OrderedDict()
+        result = {}
         original_info = conanfile.info
         original_settings = conanfile.settings
         original_settings_target = conanfile.settings_target
