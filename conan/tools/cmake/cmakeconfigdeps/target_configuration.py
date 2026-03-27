@@ -52,13 +52,14 @@ class TargetConfigurationTemplate2:
 
         if not requires and not components:  # global cpp_info without components definition
             # require the pkgname::pkgname base (user defined) or INTERFACE base target
-            for d in transitive_reqs.values():
+            for req, d in transitive_reqs.items():
                 if d.package_type is PackageType.APP:
                     continue
                 dep_target = self._cmakedeps.get_property("cmake_target_name", d)
                 dep_target = dep_target or f"{d.ref.name}::{d.ref.name}"
                 link_feature = self._cmakedeps.get_property("cmake_link_feature", d)
-                link = not (pkg_type is PackageType.SHARED and d.package_type is PackageType.SHARED)
+                link = (req.transitive_libs or
+                        not (pkg_type is PackageType.SHARED and d.package_type is PackageType.SHARED))
                 result[dep_target] = {
                     "link": link,
                     "link_feature": link_feature
@@ -83,6 +84,11 @@ class TargetConfigurationTemplate2:
             else:  # Different package
                 try:
                     dep = transitive_reqs[required_pkg]
+                    req = None
+                    for r, d in transitive_reqs.items():
+                        if d == dep:
+                            req = r
+                            break
                 except KeyError:  # The transitive dep might have been skipped
                     pass
                 else:
@@ -108,7 +114,7 @@ class TargetConfigurationTemplate2:
                         default_target = f"{required_pkg}::{required_comp}"
                         link = not (pkg_type is PackageType.SHARED and
                                     dep_comp.type is PackageType.SHARED)
-
+                    link = req.transitive_libs or link
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
                     dep_target = dep_target or default_target
                     link_feature = self._cmakedeps.get_property("cmake_link_feature", dep, comp)
