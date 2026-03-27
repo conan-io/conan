@@ -403,8 +403,8 @@ class TestLibsLinkageTraits:
         # it works
 
     @pytest.mark.tool("cmake", "3.27")
-    def test_transitive_libs(self):
-        shared = True
+    @pytest.mark.parametrize("shared", [False, True])
+    def test_transitive_libs(self, shared):
         c = TestClient(light=False)
         c.run("new cmake_lib -d name=matrix -d version=0.1")
         c.run(f"create . -o *:shared={shared} -tf=")
