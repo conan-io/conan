@@ -49,7 +49,7 @@ class _SystemPackageManagerTool:
                            "dnf": ["fedora", "rhel", "centos", "mageia", "nobara", "almalinux",
                                    "rocky", "oracle"],
                            "brew": ["Darwin"],
-                           "pacman": ["arch", "manjaro", "msys2", "endeavouros"],
+                           "pacman": ["arch", "manjaro", "msys2", "endeavouros", "cachyos"],
                            "choco": ["Windows"],
                            "zypper": ["opensuse", "sles"],
                            "pkg": ["freebsd"],
