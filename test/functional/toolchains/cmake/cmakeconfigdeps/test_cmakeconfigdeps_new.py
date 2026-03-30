@@ -412,7 +412,7 @@ class TestLibsLinkageTraits:
         c.save({}, clean_first=True)
         c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1")
         engine_h = c.load("include/engine.h")
-        engine_h = "#include <matrix.h>\n" + engine_h + "\nENGINE_EXPORT void engine_transitive() {matrix();}\n"
+        engine_h = engine_h + "#include <matrix.h>\n\nENGINE_EXPORT void engine_transitive() {matrix();}\n"
         c.save({"include/engine.h": engine_h})
         conanfile = c.load("conanfile.py")
         conanfile = conanfile.replace('self.requires("matrix/0.1")',
@@ -425,7 +425,7 @@ class TestLibsLinkageTraits:
         c.save({}, clean_first=True)
         c.run("new cmake_lib -d name=game -d version=0.1 -d requires=engine/0.1")
         game_h = c.load("include/game.h")
-        game_h = "#include <engine.h>\n" + game_h + "\nGAME_EXPORT void game_transitive() {engine();}\n"
+        game_h = game_h + "#include <engine.h>\n\nGAME_EXPORT void game_transitive() {engine();}\n"
         c.save({"include/game.h": game_h})
         conanfile = c.load("conanfile.py")
         conanfile = conanfile.replace('self.requires("engine/0.1")',
