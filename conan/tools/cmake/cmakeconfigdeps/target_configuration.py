@@ -83,7 +83,7 @@ class TargetConfigurationTemplate2:
                 }
             else:  # Different package
                 try:
-                    req, dep = transitive_reqs.about(required_pkg)
+                    req, dep = transitive_reqs.of(required_pkg)
                 except KeyError:  # The transitive dep might have been skipped
                     pass
                 else:
