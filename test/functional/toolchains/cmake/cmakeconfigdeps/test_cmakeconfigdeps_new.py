@@ -403,41 +403,57 @@ class TestLibsLinkageTraits:
         # it works
 
     @pytest.mark.tool("cmake", "3.27")
-    @pytest.mark.parametrize("shared", [False, True])
-    def test_transitive_libs(self, shared):
-        c = TestClient(light=False)
-        c.run("new cmake_lib -d name=matrix -d version=0.1")
-        c.run(f"create . -o *:shared={shared} -tf=")
+    def test_transitive_libs_and_shared(self):
+        """
+        Issue related: https://github.com/conan-io/conan/issues/19801
 
-        c.save({}, clean_first=True)
-        c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1")
-        engine_h = c.load("include/engine.h")
-        engine_h = engine_h + "#include <matrix.h>\n\nENGINE_EXPORT void engine_transitive() {matrix();}\n"
-        c.save({"include/engine.h": engine_h})
-        conanfile = c.load("conanfile.py")
-        conanfile = conanfile.replace('self.requires("matrix/0.1")',
-                                      'self.requires("matrix/0.1", transitive_headers=True, transitive_libs=True)')
-        conanfile = conanfile.replace('self.cpp_info.libs = ["engine"]',
-                                      'self.cpp_info.components["eng"].libs = ["engine"]\n        self.cpp_info.components["eng"].requires = ["matrix::matrix"]')
-        c.save({"conanfile.py": conanfile})
-        c.run(f"create . -o *:shared={shared} -tf=")
+        Testing the case when having ``transitive_libs=True`` on the intermediate
+        requirement and being built/consumed as SHARED.
 
-        c.save({}, clean_first=True)
-        c.run("new cmake_lib -d name=game -d version=0.1 -d requires=engine/0.1")
-        game_h = c.load("include/game.h")
-        game_h = game_h + "#include <engine.h>\n\nGAME_EXPORT void game_transitive() {engine();}\n"
-        c.save({"include/game.h": game_h})
-        conanfile = c.load("conanfile.py")
-        conanfile = conanfile.replace('self.requires("engine/0.1")',
-                                      'self.requires("engine/0.1", transitive_headers=True, transitive_libs=True)')
-        conanfile = conanfile.replace("def package_info(self):",
-                                      "def package_info(self):\n        self.cpp_info.requires = ['engine::eng']")
-        c.save({"conanfile.py": conanfile})
-        c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value} -tf=")
+        The consumer executable calls a symbol that only exists in ``matrix`` while CMake only
+        links ``engine::engine``; the link succeeds only when ``matrix::matrix`` is propagated.
+        """
+        c = TestClient()
+        c.run("new cmake_lib -d name=matrix -d version=0.1 -o matrix")
+        matrix_h = c.load("matrix/include/matrix.h").rstrip()
+        matrix_h += "\n\nMATRIX_EXPORT const char* matrix_transitive_marker();\n"
+        matrix_cpp = c.load("matrix/src/matrix.cpp").rstrip()
+        matrix_cpp += (
+            "\n\nconst char* matrix_transitive_marker() {\n"
+            '    return "MATRIX_TRANSITIVE_MARKER";\n'
+            "}\n"
+        )
+        c.save({"matrix/include/matrix.h": matrix_h, "matrix/src/matrix.cpp": matrix_cpp})
+        c.run(f"create matrix -o '*:shared=True' -c tools.cmake.cmakedeps:new={new_value} -tf=")
 
-        c.save({}, clean_first=True)
-        c.run("new cmake_exe -d name=app -d version=0.1 -d requires=game/0.1")
-        c.run(f"build . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
+        c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1 -o engine")
+        conanfile = c.load("engine/conanfile.py")
+        conanfile = conanfile.replace(
+            'self.requires("matrix/0.1")',
+            'self.requires("matrix/0.1", transitive_libs=True)',
+        )
+        c.save({"engine/conanfile.py": conanfile})
+        c.run(f"create engine -o '*:shared=True' -c tools.cmake.cmakedeps:new={new_value} -tf=")
+
+        c.run("new cmake_exe -d name=consumer -d version=0.1 -d requires=engine/0.1 -o consumer")
+        main_cpp = textwrap.dedent("""
+            #include "consumer.h"
+            #include <iostream>
+            #include <string>
+
+            const char* matrix_transitive_marker();
+
+            int main() {
+                consumer();
+                if (std::string(matrix_transitive_marker()) != "MATRIX_TRANSITIVE_MARKER") {
+                    std::cerr << "matrix_transitive_marker mismatch\\n";
+                    return 2;
+                }
+                return 0;
+            }
+            """)
+        c.save({"consumer/src/main.cpp": main_cpp})
+        c.run(f"build consumer -o '*:shared=True' -c tools.cmake.cmakedeps:new={new_value}")
         # it works
 
     @pytest.mark.tool("cmake", "3.27")
