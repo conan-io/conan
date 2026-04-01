@@ -1,6 +1,4 @@
-from collections import OrderedDict
-
-from conan.test.utils.tools import TestServer, GenConanfile, TestClient
+from conan.test.utils.tools import GenConanfile, TestClient
 
 
 def test_cascade():
@@ -8,9 +6,7 @@ def test_cascade():
     app -> E -> D -> B -> A
       \\-> F -> C -------/
     """
-    server = TestServer()
-    servers = OrderedDict([("default", server)])
-    c = TestClient(servers=servers)
+    c = TestClient(default_server_user=True)
     c.save({"a/conanfile.py": GenConanfile("liba", "1.0"),
             "b/conanfile.py": GenConanfile("libb", "1.0").with_requires("liba/1.0"),
             "c/conanfile.py": GenConanfile("libc", "1.0").with_requires("liba/1.0"),
