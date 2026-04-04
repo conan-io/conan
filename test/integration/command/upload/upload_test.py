@@ -3,7 +3,6 @@ import os
 import platform
 import stat
 import textwrap
-from collections import OrderedDict
 
 import pytest
 from unittest.mock import patch
@@ -374,10 +373,7 @@ class TestUpload:
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
         server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
-        servers = OrderedDict()
-        servers["server1"] = server1
-        servers["server2"] = server2
-        client = TestClient(servers=servers)
+        client = TestClient(servers={"server1": server1, "server2": server2}, light=True)
         client.save(files)
         client.run("create . --user=user --channel=testing")
         client.run("remote login server1 lasote -p mypass")
