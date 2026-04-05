@@ -31,6 +31,10 @@ class LayoutBase:
 
 
 class BasicLayout(LayoutBase):
+    def __init__(self, ref, base_folder, editable_output_folder=None):
+        super().__init__(ref, base_folder)
+        self.editable_output_folder = editable_output_folder
+
     # For editables and platform_requires
     def conanfile(self):
         # the full conanfile path (including other other.py names) for editables

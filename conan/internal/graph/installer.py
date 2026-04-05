@@ -351,12 +351,9 @@ class BinaryInstaller:
         # It will only run generation
         node = install_node.nodes[0]
         conanfile = node.conanfile
-        ref = node.ref
-        editable = self._editable_packages.get(ref)
-        conanfile_path = editable["path"]
-        output_folder = editable.get("output_folder")
 
-        base_path = os.path.dirname(conanfile_path)
+        output_folder = conanfile.editable_output_folder
+        base_path = conanfile.recipe_folder
 
         conanfile.folders.set_base_folders(base_path, output_folder)
 

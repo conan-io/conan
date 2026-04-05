@@ -290,6 +290,8 @@ class DepsGraphBuilder:
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
                                                     remotes=self._remotes, update=self._update,
                                                     check_update=self._check_update)
+        if getattr(layout, "editable_output_folder", None):
+            dep_conanfile.editable_output_folder = layout.editable_output_folder
         return layout, dep_conanfile, recipe_status, remote
 
     @staticmethod
