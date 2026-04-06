@@ -75,3 +75,32 @@ def test_info_editable():
     assert "RUNNING SOURCE" not in c.out
     c.run("graph info --requires=dep/0.1 -c tools.build:download_source=True")
     assert "RUNNING SOURCE" not in c.out  # BUT it doesn't crash, it used to crash
+
+
+def test_build_editable_with_download_source():
+    """ conan build with -b=editable and tools.build:download_source=True should not crash
+    # https://github.com/conan-io/conan/issues/19757
+    """
+    c = TestClient()
+    liba = textwrap.dedent("""
+        from conan import ConanFile
+
+        class LibA(ConanFile):
+            name = "liba"
+            version = "0.1"
+
+            def source(self):
+                self.output.info("RUNNING SOURCE!!")
+        """)
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Consumer(ConanFile):
+            requires = "liba/0.1"
+        """)
+
+    c.save({"liba/conanfile.py": liba,
+            "consumer/conanfile.py": consumer})
+    c.run("editable add liba")
+    c.run("build consumer -b=editable -c tools.build:download_source=True")
+    assert "RUNNING SOURCE" not in c.out

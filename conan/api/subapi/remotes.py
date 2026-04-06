@@ -7,7 +7,6 @@ from urllib.parse import urlparse
 from conan.api.model import Remote, LOCAL_RECIPES_INDEX
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
-from conan.internal.conan_app import ConanBasicApp
 from conan.internal.rest.remote_credentials import RemoteCredentials
 from conan.internal.rest.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
@@ -228,8 +227,7 @@ class RemotesAPI:
         :param username: the user login as ``str``
         :param password: password ``str``
         """
-        app = ConanBasicApp(self._conan_api)
-        app.remote_manager.authenticate(remote, username, password)
+        self._api_helpers.remote_manager.authenticate(remote, username, password)
 
     def login(self, remotes, username=None, password=None):
         creds = RemoteCredentials(self._conan_api.cache_folder, self._api_helpers.global_conf)
@@ -271,7 +269,6 @@ class RemotesAPI:
     def user_auth(self, remote: Remote, with_user=False, force=False):
         # TODO: Review
         localdb = LocalDB(self._home_folder)
-        app = ConanBasicApp(self._conan_api)
         if with_user:
             user, token, _ = localdb.get_login(remote.url)
             if not user:
@@ -279,7 +276,7 @@ class RemotesAPI:
                 user = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
             if not user:
                 return
-        app.remote_manager.check_credentials(remote, force)
+        self._api_helpers.remote_manager.check_credentials(remote, force)
         user, token, _ = localdb.get_login(remote.url)
         return user
 

@@ -43,7 +43,6 @@ def test_virtualenv(client):
             name = "app"
             version = "0.1"
             requires = "pkg/0.1"
-            apply_env = False
             settings = "os"  # Needs for the conanrun scope
 
             def build(self):

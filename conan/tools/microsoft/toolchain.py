@@ -40,6 +40,7 @@ class MSBuildToolchain:
             </Link>
             <ResourceCompile>
               <PreprocessorDefinitions>{{ defines }}%(PreprocessorDefinitions)</PreprocessorDefinitions>
+              {% if rc_flags %}<AdditionalOptions>{{ rc_flags }} %(AdditionalOptions)</AdditionalOptions>{% endif %}
             </ResourceCompile>
           </ItemDefinitionGroup>
           <PropertyGroup Label="Configuration">
@@ -69,6 +70,8 @@ class MSBuildToolchain:
         self.cflags = []
         #: List of all the LD linker flags
         self.ldflags = []
+        #: List of all the RC (resource compiler) flags
+        self.rcflags = []
         #: The build type. By default, the ``conanfile.settings.build_type`` value
         self.configuration = conanfile.settings.build_type
         #: The runtime flag. By default, it'll be based on the `compiler.runtime` setting.
@@ -123,13 +126,14 @@ class MSBuildToolchain:
         def format_macro(key, value):
             return '%s=%s' % (key, value) if value is not None else key
 
-        cxxflags, cflags, defines, sharedlinkflags, exelinkflags = self._get_extra_flags()
+        cxxflags, cflags, defines, sharedlinkflags, exelinkflags, rcflags = self._get_extra_flags()
         preprocessor_definitions = "".join(["%s;" % format_macro(k, v)
                                             for k, v in self.preprocessor_definitions.items()])
         defines = preprocessor_definitions + "".join("%s;" % d for d in defines)
         self.cxxflags.extend(cxxflags)
         self.cflags.extend(cflags)
         self.ldflags.extend(sharedlinkflags + exelinkflags)
+        self.rcflags.extend(rcflags)
 
         cppstd = "stdcpp%s" % self.cppstd if self.cppstd else ""
         cstd = f"stdc{self.cstd}" if self.cstd else ""
@@ -154,6 +158,7 @@ class MSBuildToolchain:
             'defines': defines,
             'compiler_flags': " ".join(self.cxxflags + self.cflags),
             'linker_flags': " ".join(self.ldflags),
+            'rc_flags': " ".join(self.rcflags),
             "cppstd": cppstd,
             "cstd": cstd,
             "runtime_library": runtime_library,
@@ -223,8 +228,9 @@ class MSBuildToolchain:
                                                    check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[],
                                                 check_type=list)
+        rcflags = self._conanfile.conf.get("tools.build:rcflags", default=[], check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
-        return cxxflags, cflags, defines, sharedlinkflags, exelinkflags
+        return cxxflags, cflags, defines, sharedlinkflags, exelinkflags, rcflags
 
 
 def _get_toolset_props(conanfile):

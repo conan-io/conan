@@ -1,5 +1,5 @@
 from conan.api.output import ConanOutput
-from conan.internal.conan_app import ConanApp, ConanBasicApp
+from conan.internal.conan_app import ConanApp
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import Node, RECIPE_CONSUMER, CONTEXT_HOST, RECIPE_VIRTUAL, \
     CONTEXT_BUILD, BINARY_MISSING, DepsGraph
@@ -188,7 +188,8 @@ class GraphAPI:
         assert profile_build is not None
 
         remotes = remotes or []
-        builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
+        cache = self._conan_api._api_helpers.cache # noqa
+        builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, cache, remotes,
                                    update, check_update, self._conan_api._api_helpers.global_conf)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
         return deps_graph
@@ -213,8 +214,10 @@ class GraphAPI:
         :param tested_graph: In case of a "test_package", the graph being tested
         """
         ConanOutput().title("Computing necessary packages")
-        conan_app = ConanBasicApp(self._conan_api)
-        binaries_analyzer = GraphBinariesAnalyzer(conan_app, self._conan_api._api_helpers.global_conf,
+        binaries_analyzer = GraphBinariesAnalyzer(self._helpers.cache,
+                                                  self._helpers.remote_manager,
+                                                  self._conan_api.home_folder,
+                                                  self._helpers.global_conf,
                                                   self._helpers.hook_manager)
         binaries_analyzer.evaluate_graph(graph, build_mode, lockfile, remotes, update,
                                          build_modes_test, tested_graph)

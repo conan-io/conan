@@ -21,6 +21,8 @@ from conan.api.subapi.remotes import RemotesAPI
 from conan.api.subapi.remove import RemoveAPI
 from conan.api.subapi.upload import UploadAPI
 from conan.errors import ConanException
+from conan.internal.api.remotes.localdb import LocalDB
+from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.hook_manager import HookManager
 from conan.internal.model.conf import load_global_conf, ConfDefinition, CORE_CONF_PATTERN
@@ -28,7 +30,9 @@ from conan.internal.model.settings import load_settings_yml
 from conan.internal.paths import get_conan_user_home
 from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version_range import validate_conan_version
+from conan.internal.rest.auth_manager import ConanApiAuthManager
 from conan.internal.rest.conan_requester import ConanRequester
+from conan.internal.rest.remote_manager import RemoteManager
 
 
 class ConanAPI:
@@ -62,19 +66,19 @@ class ConanAPI:
         self.remotes: RemotesAPI = RemotesAPI(self, self._api_helpers)
         self.command = CommandAPI(self)
         #: Used to get latest refs and list refs of recipes and packages
-        self.list: ListAPI = ListAPI(self)
+        self.list: ListAPI = ListAPI(self, self._api_helpers)
         self.profiles = ProfilesAPI(self, self._api_helpers)
         #: Used to install binaries, sources, deploy packages and more
         self.install: InstallAPI = InstallAPI(self, self._api_helpers)
         self.graph = GraphAPI(self, self._api_helpers)
         #: Used to export recipes and pre-compiled package binaries to the Conan cache
         self.export: ExportAPI = ExportAPI(self, self._api_helpers)
-        self.remove = RemoveAPI(self)
+        self.remove = RemoveAPI(self, self._api_helpers)
         self.new = NewAPI(self)
         #: Used to upload recipes and packages to remotes
         self.upload: UploadAPI = UploadAPI(self, self._api_helpers)
         #: Used to download recipes and packages from remotes
-        self.download: DownloadAPI = DownloadAPI(self)
+        self.download: DownloadAPI = DownloadAPI(self, self._api_helpers)
         #: Used to interact wit the packages storage cache
         self.cache: CacheAPI = CacheAPI(self, self._api_helpers)
         #: Used to read and manage lockfile files
@@ -107,18 +111,22 @@ class ConanAPI:
         # Migration system
         # TODO: A prettier refactoring of migrators would be nice
         from conan import conan_version
-        migrator = ClientMigrator(self.cache_folder, conan_version)
+        migrator = ClientMigrator(self._home_folder, conan_version)
         migrator.migrate()
 
     class _ApiHelpers:
+        # This is an internal implementation detail of Conan, DO NOT USE
         def __init__(self, conan_api):
             self._conan_api = conan_api
             self._cli_core_confs = None
             self._init_global_conf()
+            # TODO: Make uniform lazy vs non lazy collaborators
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
             # Wraps an http_requester to inject proxies, certs, etc
             self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
+            self.cache = PkgCache(self._conan_api.home_folder, self.global_conf)
             self._settings_yml = None
+            self._remote_manager = None
 
         def set_core_confs(self, core_confs):
             confs = ConfDefinition()
@@ -145,12 +153,25 @@ class ConanAPI:
             self.hook_manager.reinit()
             self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
             self._settings_yml = None
+            self.cache = PkgCache(self._conan_api.home_folder, self.global_conf)
+            self._remote_manager = None
 
         @property
         def settings_yml(self):
             if self._settings_yml is None:
                 self._settings_yml = load_settings_yml(self._conan_api.home_folder)
             return self._settings_yml
+
+        @property
+        def remote_manager(self):
+            if self._remote_manager is None:
+                home_folder = self._conan_api.home_folder
+                localdb = LocalDB(home_folder)
+                requester = self._conan_api._api_helpers.requester  # noqa
+                auth_manager = ConanApiAuthManager(requester, self._conan_api.home_folder, localdb,
+                                                   self.global_conf)
+                self._remote_manager = RemoteManager(self.cache, auth_manager, home_folder)
+            return self._remote_manager
 
         @property
         def requester(self):

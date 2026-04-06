@@ -89,6 +89,9 @@ def test_build_py_manager():
     assert "Found existing installation: hello 0.1.0" in client.out
     assert "Hello Test World!" in client.out
 
+    client.run("build pip -verror")
+    assert "Found existing installation" not in client.out
+
 
 def test_install_version_range():
     c = TestClient(path_with_spaces=False)
@@ -341,6 +344,25 @@ def test_build_deprecated_python_manager():
     assert "WARN: deprecated: 'PipEnv()' is deprecated, use 'PyEnv()'" in client.out
     assert "RUN: hello-world" in client.out
     assert "Hello Test World!" in client.out
+
+
+@pytest.mark.parametrize("verbosity", ["-verror", "-vstatus"])
+def test_pyenv_install_error_always_shown(verbosity):
+    conanfile_pyenv = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.system import PyEnv
+
+        class PyenvPackage(ConanFile):
+            def generate(self):
+                pyenv = PyEnv(self)
+                pyenv.install(["package_does_not_exist"])
+        """)
+
+    client = TestClient(path_with_spaces=False)
+    client.save({"conanfile.py": conanfile_pyenv})
+    client.run(f"build . {verbosity}", assert_error=True)
+    assert "package_does_not_exist" in client.out
+    assert "ERROR" in client.out
 
 
 def test_cmake_toolchain_configure_find_python():

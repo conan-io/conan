@@ -46,7 +46,6 @@ def client_with_special_chars():
             settings = 'os', 'arch', 'compiler', 'build_type'
             generators = "VirtualBuildEnv"
             tool_requires = "mytool/1.0"
-            apply_env = False # SUPER IMPORTANT, DO NOT REMOVE
 
             def build(self):
                 mycmd = "mytool.bat" if platform.system() == "Windows" else "mytool.sh"

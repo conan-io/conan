@@ -7,10 +7,10 @@ from conan.internal.model.version_range import VersionRange
 
 class RangeResolver:
 
-    def __init__(self, conan_app, global_conf, editable_packages):
-        self._cache = conan_app.cache
+    def __init__(self, cache, remote_manager, global_conf, editable_packages):
+        self._cache = cache
         self._editable_packages = editable_packages
-        self._remote_manager = conan_app.remote_manager
+        self._remote_manager = remote_manager
         self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
         self.resolved_ranges = {}

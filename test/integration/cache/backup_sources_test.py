@@ -414,8 +414,8 @@ class TestDownloadCacheBackupSources:
 
         client.save({"conanfile.py": conanfile})
         client.run("create .", assert_error=True)
-        assert f"ConanException: The source backup server '{http_server.fake_url}" \
-               f"/downloader/' needs authentication" in client.out
+        assert f"ConanException: Authentication to source backup server '{http_server.fake_url}" \
+               f"/downloader/' failed" in client.out
         content = {"credentials": [
             {"url": f"{http_server.fake_url}", "token": "mytoken"}
         ]}
@@ -424,8 +424,8 @@ class TestDownloadCacheBackupSources:
         client.run("create .")
         assert "CONTENT: Hello, world!" in client.out
         client.run("upload * -c -r=default", assert_error=True)
-        assert f"The source backup server '{http_server.fake_url}" \
-               f"/uploader/' needs authentication" in client.out
+        assert f"Authentication to source backup server '{http_server.fake_url}" \
+               f"/uploader/' failed" in client.out
         content = {"credentials": [
             {"url": f"{http_server.fake_url}", "token": "myuploadtoken"}
         ]}

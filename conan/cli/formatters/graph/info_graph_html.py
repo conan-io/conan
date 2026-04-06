@@ -36,6 +36,10 @@ graph_info_html = r"""
                     <label for="show_test_requires">Show test-requires</label>
                 </div>
                 <div>
+                    <input type="checkbox" onchange="switchTransitive()" id="show_transitive_requires"/>
+                    <label for="show_transitive_requires">Show transitive-requires</label>
+                </div>
+                <div>
                     <input type="checkbox" onchange="collapsePackages()" id="collapse_packages"/>
                     <label for="collapse_packages">Group packages</label>
                 </div>
@@ -63,6 +67,7 @@ graph_info_html = r"""
             const graph_data = {{ deps_graph | tojson }};
             let hide_build = false;
             let hide_test = false;
+            let show_transitive = false;
             let search_pkgs = null;
             let focus_search = false;
             let excluded_pkgs = null;
@@ -82,7 +87,7 @@ graph_info_html = r"""
             function define_data(){
                 let nodes = [];
                 let edges = [];
-                let collapsed_packages = {};
+                let collapsed_packages = {"build": {}, "host": {}};
                 let targets = {};
                 global_edges = {};
                 let edge_counter = 0;
@@ -110,10 +115,10 @@ graph_info_html = r"""
                     else
                         label = node.recipe == "Consumer"? "conanfile": "CLI";
                     if (collapse_packages) {
-                        let existing = collapsed_packages[label];
+                        let existing = collapsed_packages[node.context][label];
                         targets[node_id] = existing;
                         if (existing) continue;
-                        collapsed_packages[label] = node_id;
+                        collapsed_packages[node.context][label] = node_id;
                     }
                     if (excluded_pkgs) {
                         let patterns = excluded_pkgs.split(',')
@@ -184,6 +189,13 @@ graph_info_html = r"""
                             let target_id = targets[dep_id] || dep_id;
                             edges.push({id: edge_counter, from: node_id, to: target_id,
                                         color: {color: "SkyBlue", highlight: "Blue"}});
+                            global_edges[edge_counter++] = dep;
+                        }
+                        if (show_transitive && dep.direct === false){
+                            let target_id = targets[dep_id] || dep_id;
+                            edges.push({id: edge_counter, from: node_id, to: target_id,
+                                        color: {color: "LightGray", highlight: "Gray"},
+                                        dashes: true});
                             global_edges[edge_counter++] = dep;
                         }
                         if (loop_error && loop_error[1] == node["name"] && loop_error[0] == dep["ref"]) {
@@ -379,6 +391,10 @@ graph_info_html = r"""
             }
             function switchTest() {
                 hide_test = !hide_test;
+                draw();
+            }
+            function switchTransitive() {
+                show_transitive = !show_transitive;
                 draw();
             }
             function collapsePackages() {
