@@ -118,31 +118,33 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
     # if the user tries to instantiate a generator already present in generators
     conanfile.generators = old_generators
 
-    if hasattr(conanfile, "generate"):
-        conanfile.output.highlight("Calling generate()")
-        conanfile.output.info(f"Generators folder: {new_gen_folder}")
-        mkdir(new_gen_folder)
-        with chdir(new_gen_folder):
-            with conanfile_exception_formatter(conanfile, "generate"):
-                conanfile.generate()
-
-    if envs_generation is None:
-        if conanfile.virtualbuildenv:
+    with conanfile.output.scoped():
+        if hasattr(conanfile, "generate"):
+            conanfile.output.highlight("Calling generate()")
+            conanfile.output.info(f"Generators folder: {new_gen_folder}")
             mkdir(new_gen_folder)
             with chdir(new_gen_folder):
-                from conan.tools.env.virtualbuildenv import VirtualBuildEnv
-                env = VirtualBuildEnv(conanfile)
-                # TODO: Check length of env.vars().keys() when adding NotEmpty
-                env.generate()
-        if conanfile.virtualrunenv:
-            mkdir(new_gen_folder)
-            with chdir(new_gen_folder):
-                from conan.tools.env import VirtualRunEnv
-                env = VirtualRunEnv(conanfile)
-                env.generate()
+                with conanfile_exception_formatter(conanfile, "generate"):
+                    conanfile.generate()
 
-    from conan.tools.env.environment import generate_aggregated_env
-    generate_aggregated_env(conanfile)
+        if envs_generation is None:
+            if conanfile.virtualbuildenv:
+                mkdir(new_gen_folder)
+                with chdir(new_gen_folder):
+                    from conan.tools.env.virtualbuildenv import VirtualBuildEnv
+                    env = VirtualBuildEnv(conanfile)
+                    # TODO: Check length of env.vars().keys() when adding NotEmpty
+                    env.generate()
+            if conanfile.virtualrunenv:
+                mkdir(new_gen_folder)
+                with chdir(new_gen_folder):
+                    from conan.tools.env import VirtualRunEnv
+                    env = VirtualRunEnv(conanfile)
+                    env.generate()
+
+        from conan.tools.env.environment import generate_aggregated_env
+        generate_aggregated_env(conanfile)
+
     hook_manager.execute("post_generate", conanfile=conanfile)
 
 

@@ -2,6 +2,7 @@ import fnmatch
 import os
 import sys
 import time
+from contextlib import contextmanager
 from threading import Lock
 
 import colorama
@@ -101,6 +102,7 @@ class ConanOutput:
     _conan_output_level = LEVEL_STATUS
     _silent_warn_tags = []
     _warnings_as_errors = []
+    _in_context = False
     lock = Lock()
 
     def __init__(self, scope: str = ""):
@@ -165,6 +167,22 @@ class ConanOutput:
     def level_allowed(cls, level):
         return cls._conan_output_level <= level
 
+    @contextmanager
+    def scoped(self):
+        """Print this output's ``scope:`` line once, then child lines prefixed with ``|-``.
+
+        Use as ``with conanfile.output.scoped():`` around a block that logs several related
+        messages for the same conanfile reference.
+        """
+        cls = type(self)
+        cls._in_context = True
+        if self._scope:
+            self.writeln(f"{self._scope}:", fg=Color.BRIGHT_WHITE)
+        try:
+            yield self
+        finally:
+            cls._in_context = False
+
     @property
     def color(self):
         return self._color
@@ -212,7 +230,7 @@ class ConanOutput:
         self._write_message(msg, newline=newline)
         return self
 
-    def _write_message(self, msg, fg=None, bg=None, newline=True):
+    def _write_message(self, msg, fg=None, bg=None, newline=True, *, bypass_context=False):
         if isinstance(msg, dict):
             # For traces we can receive a dict already, we try to transform then into more natural
             # text
@@ -220,7 +238,12 @@ class ConanOutput:
             msg = "=> {}".format(msg)
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
-        if self._scope:
+        if self._in_context and not bypass_context:
+            if self._color:
+                ret = f"|- {fg or ''}{bg or ''}{msg}{Style.RESET_ALL}"
+            else:
+                ret = f"|- {msg}"
+        elif self._scope:
             if self._color:
                 ret = f"{fg or ''}{bg or ''}{self._scope}: {msg}{Style.RESET_ALL}"
             else:
@@ -293,14 +316,14 @@ class ConanOutput:
         """ Draws a title around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
             self._write_message("\n======== {} ========".format(msg),
-                                fg=Color.BRIGHT_MAGENTA)
+                                fg=Color.BRIGHT_MAGENTA, bypass_context=True)
         return self
 
     def subtitle(self, msg: str):
         """ Draws a subtitle around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
             self._write_message("\n-------- {} --------".format(msg),
-                                fg=Color.BRIGHT_MAGENTA)
+                                fg=Color.BRIGHT_MAGENTA, bypass_context=True)
         return self
 
     def highlight(self, msg: str):
