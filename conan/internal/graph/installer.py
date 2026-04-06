@@ -487,4 +487,4 @@ class BinaryInstaller:
                                                'finalize'):
                         conanfile.finalize()
 
-            conanfile.output.success(f"Finalized folder {finalize_folder}")
+                conanfile.output.success(f"Finalized folder {finalize_folder}")
