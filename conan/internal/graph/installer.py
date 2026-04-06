@@ -165,9 +165,8 @@ class BinaryInstaller:
     locally in case they are not found in remotes
     """
 
-    def __init__(self, api, global_conf, editable_packages, hook_manager):
+    def __init__(self, api, global_conf, hook_manager):
         helpers = api._api_helpers  # noqa
-        self._editable_packages = editable_packages
         self._cache = helpers.cache
         self._remote_manager = helpers.remote_manager
         self._hook_manager = hook_manager
@@ -352,7 +351,7 @@ class BinaryInstaller:
         node = install_node.nodes[0]
         conanfile = node.conanfile
 
-        output_folder = conanfile.editable_output_folder
+        output_folder = node.editable_output_folder
         base_path = conanfile.recipe_folder
 
         conanfile.folders.set_base_folders(base_path, output_folder)

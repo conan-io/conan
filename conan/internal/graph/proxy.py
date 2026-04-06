@@ -35,9 +35,8 @@ class ConanProxy:
         editable = self._editable_packages.get(reference)
         if editable is not None:
             path = editable["path"]
-            output_folder = editable["output_folder"]
-            return BasicLayout(reference, path,
-                               editable_output_folder=output_folder), RECIPE_EDITABLE, None
+            output_folder = editable.get("output_folder")
+            return BasicLayout(reference, path, output_folder), RECIPE_EDITABLE, None
 
         # check if it there's any revision of this recipe in the local cache
         try:

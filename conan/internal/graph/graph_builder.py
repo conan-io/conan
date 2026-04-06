@@ -290,8 +290,6 @@ class DepsGraphBuilder:
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
                                                     remotes=self._remotes, update=self._update,
                                                     check_update=self._check_update)
-        if getattr(layout, "editable_output_folder", None):
-            dep_conanfile.editable_output_folder = layout.editable_output_folder
         return layout, dep_conanfile, recipe_status, remote
 
     @staticmethod
@@ -420,6 +418,8 @@ class DepsGraphBuilder:
         new_node = Node(new_ref, dep_conanfile, context=context, test=require.test or node.test)
         new_node.recipe = recipe_status
         new_node.remote = remote
+        if isinstance(layout, BasicLayout):  # Store the editable_output_folder for BinaryInstaller
+            new_node.editable_output_folder = layout.editable_output_folder
 
         down_options = self._compute_down_options(node, require, new_ref)
 
