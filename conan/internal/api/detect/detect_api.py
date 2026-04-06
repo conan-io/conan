@@ -223,29 +223,28 @@ def detect_libcxx(compiler, version, compiler_exe=None):
         main = textwrap.dedent("""
             #include <string>
 
-            using namespace std;
             static_assert(sizeof(std::string) != sizeof(void*), "using libstdc++");
             int main(){}
             """)
-        t = tempfile.mkdtemp()
-        filename = os.path.join(t, "main.cpp")
-        save(filename, main)
-        old_path = os.getcwd()
-        os.chdir(t)
-        try:
-            error, out_str = detect_runner(f'"{executable}" main.cpp -std=c++11')
-            if error:
-                if "using libstdc++" in out_str:
-                    output.info("gcc C++ standard library: libstdc++")
-                    return "libstdc++"
-                # Other error, but can't know, lets keep libstdc++11
-                output.warning("compiler.libcxx check error: %s" % out_str)
-                output.warning("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
-            else:
-                output.info("gcc C++ standard library: libstdc++11")
-            return "libstdc++11"
-        finally:
-            os.chdir(old_path)
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as t:
+            filename = os.path.join(t, "main.cpp")
+            save(filename, main)
+            old_path = os.getcwd()
+            os.chdir(t)
+            try:
+                error, out_str = detect_runner(f'"{executable}" main.cpp -std=c++11')
+                if error:
+                    if "using libstdc++" in out_str:
+                        output.info("gcc C++ standard library: libstdc++")
+                        return "libstdc++"
+                    # Other error, but can't know, lets keep libstdc++11
+                    output.warning("compiler.libcxx check error: %s" % out_str)
+                    output.warning("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
+                else:
+                    output.info("gcc C++ standard library: libstdc++11")
+                return "libstdc++11"
+            finally:
+                os.chdir(old_path)
 
         # This is not really a detection in most cases
         # Get compiler C++ stdlib
