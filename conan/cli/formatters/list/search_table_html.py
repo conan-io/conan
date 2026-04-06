@@ -50,7 +50,7 @@ list_packages_html_template = r"""
                 second: "2-digit",
                 hour12: false
             };
-            return new Date(timeStamp * 1000).toLocaleDateString('en', options);
+            return new Date(timeStamp * 1000).toLocaleDateString(undefined, options);
         }
 
         function getInfoFieldsBadges(info) {
