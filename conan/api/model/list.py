@@ -314,9 +314,14 @@ class PackagesList:
     def items(self) -> Iterable[Tuple[RecipeReference, Dict[PkgReference, Dict]]]:
         """ Iterate the contents of the package list.
 
+        This method only iterates references if they contain at least a recipe revision,
+        and the packages values will only be filled if they contain a package revision,
+        else the returned dictionary will be empty.
+        Use ``serialize()`` to access the search results in cases where no revisions are returned.
+
         The first dictionary is the information directly belonging to the recipe-revision.
         The second dictionary contains PkgReference as keys, and a dictionary with the values
-        belonging to that specific package reference (settings, options, etc.).
+        belonging to that specific package revision reference (settings, options, etc.).
         """
         for ref, ref_dict in self._data.items():
             for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
