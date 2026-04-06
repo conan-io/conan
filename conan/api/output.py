@@ -169,11 +169,6 @@ class ConanOutput:
 
     @contextmanager
     def scoped(self):
-        """Print this output's ``scope:`` line once, then child lines prefixed with ``|-``.
-
-        Use as ``with conanfile.output.scoped():`` around a block that logs several related
-        messages for the same conanfile reference.
-        """
         cls = type(self)
         cls._in_context = True
         if self._scope:
@@ -230,6 +225,19 @@ class ConanOutput:
         self._write_message(msg, newline=newline)
         return self
 
+    def _format_scoped_message(self, msg, fg=None, bg=None):
+        fg = fg or ""
+        bg = bg or ""
+        lines = msg.split("\n")
+        parts = []
+        for i, line in enumerate(lines):
+            prefix = "|- " if i == 0 else "\n|  "
+            if self._color:
+                parts.append(f"{prefix}{fg}{bg}{line}{Style.RESET_ALL}")
+            else:
+                parts.append(f"{prefix}{line}")
+        return "".join(parts)
+
     def _write_message(self, msg, fg=None, bg=None, newline=True, *, bypass_context=False):
         if isinstance(msg, dict):
             # For traces we can receive a dict already, we try to transform then into more natural
@@ -239,10 +247,7 @@ class ConanOutput:
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
         if self._in_context and not bypass_context:
-            if self._color:
-                ret = f"|- {fg or ''}{bg or ''}{msg}{Style.RESET_ALL}"
-            else:
-                ret = f"|- {msg}"
+            ret = self._format_scoped_message(msg, fg, bg)
         elif self._scope:
             if self._color:
                 ret = f"{fg or ''}{bg or ''}{self._scope}: {msg}{Style.RESET_ALL}"
