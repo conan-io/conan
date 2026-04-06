@@ -63,8 +63,9 @@ class VirtualBuildEnv:
             if build_require.runenv_info:
                 self._buildenv.compose_env(build_require.runenv_info)
             # Then the implicit
-            os_name = self._conanfile.settings_build.get_safe("os")
-            self._buildenv.compose_env(runenv_from_cpp_info(build_require, os_name))
+            if require.run:
+                os_name = self._conanfile.settings_build.get_safe("os")
+                self._buildenv.compose_env(runenv_from_cpp_info(build_require, os_name))
 
         # Requires in host context can also bring some direct buildenv_info
         host_requires = self._conanfile.dependencies.host.topological_sort
