@@ -58,8 +58,7 @@ class TargetConfigurationTemplate2:
                 dep_target = self._cmakedeps.get_property("cmake_target_name", d)
                 dep_target = dep_target or f"{d.ref.name}::{d.ref.name}"
                 link_feature = self._cmakedeps.get_property("cmake_link_feature", d)
-                link = (req.libs or
-                        not (pkg_type is PackageType.SHARED and d.package_type is PackageType.SHARED))
+                link = req.libs
                 result[dep_target] = {
                     "link": link,
                     "link_feature": link_feature
@@ -109,7 +108,7 @@ class TargetConfigurationTemplate2:
                         default_target = f"{required_pkg}::{required_comp}"
                         link = not (pkg_type is PackageType.SHARED and
                                     dep_comp.type is PackageType.SHARED)
-                    link = req.libs or link
+                    link = req.libs
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
                     dep_target = dep_target or default_target
                     link_feature = self._cmakedeps.get_property("cmake_link_feature", dep, comp)
