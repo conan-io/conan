@@ -38,8 +38,7 @@ class InstallAPI:
         :param remotes: List of remotes to fetch packages from if necessary.
         :param return_install_error: If ``True``, do not raise an exception, but return it
         """
-        editable_packages = self._helpers.editable_packages
-        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, editable_packages,
+        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf,
                                     self._helpers.hook_manager)
         install_graph = InstallGraph(deps_graph)
         install_graph.raise_errors()
@@ -67,8 +66,7 @@ class InstallAPI:
         :param graph: Dependency graph to install system requirements for
         :param only_info: If ``True``, only reporting and checking of whether the system requirements are installed is performed.
         """
-        editable_packages = self._helpers.editable_packages
-        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, editable_packages,
+        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf,
                                     self._helpers.hook_manager)
         installer.install_system_requires(graph, only_info)
 
@@ -88,9 +86,7 @@ class InstallAPI:
         :param remotes: List of remotes where the ``exports_sources`` of the packages might be located
         :param graph: Dependency graph to download sources from
         """
-        editable_packages = self._helpers.editable_packages
-        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, editable_packages,
-                                    self._helpers.hook_manager)
+        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, self._helpers.hook_manager)
         installer.install_sources(graph, remotes)
 
     def install_consumer(self, deps_graph, generators: List[str] = None, source_folder=None,
@@ -146,7 +142,7 @@ class InstallAPI:
         write_generators(conanfile, hook_manager, self._conan_api.home_folder,
                          envs_generation=envs_generation)
 
-    def deploy(self, graph, deployer: List[str], deploy_package: List[str]=None,
+    def deploy(self, graph, deployer: List[str], deploy_package: List[str] = None,
                deploy_folder=None) -> None:
         """ Run the given deployer in the dependency graph.
 
