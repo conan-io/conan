@@ -267,16 +267,8 @@ class XcodeDeps:
                     XcodeDeps._follow_external(req, transitive_deps, collected, visited)
         elif not pkg_dep.cpp_info.has_components and cpp_info is pkg_dep.cpp_info:
             for _, d in pkg_dep.dependencies.direct_host.items():
-                ext_dep = transitive_deps.get(d.ref.name)
-                if ext_dep is None:
-                    continue
-                if ext_dep.cpp_info.has_components:
-                    for comp in ext_dep.cpp_info.get_sorted_components().values():
-                        XcodeDeps._collect_all_transitive(comp, ext_dep, transitive_deps,
-                                                          collected, visited)
-                else:
-                    XcodeDeps._collect_all_transitive(ext_dep.cpp_info, ext_dep,
-                                                      transitive_deps, collected, visited)
+                XcodeDeps._follow_external(f"{d.ref.name}::{d.ref.name}",
+                                           transitive_deps, collected, visited)
 
     @staticmethod
     def _follow_external(req, transitive_deps, collected, visited):
@@ -327,26 +319,24 @@ class XcodeDeps:
                     transitive_internal = []
                     self._collect_all_transitive(comp_cpp_info, dep, transitive_deps,
                                                  transitive_internal, set())
-                    transitive_external = []
 
                     # In case dep is editable and package_folder=None
                     pkg_folder = dep.package_folder or dep.recipe_folder
                     component_content = self.get_content_for_component(require, dep_name, comp_name,
                                                                        pkg_folder,
                                                                        transitive_internal,
-                                                                       transitive_external)
+                                                                       [])
                     include_components_names.append((dep_name, comp_name))
                     result.update(component_content)
             else:
                 transitive_internal = []
                 self._collect_all_transitive(dep.cpp_info, dep, transitive_deps,
                                              transitive_internal, set())
-                transitive_external = []
                 # In case dep is editable and package_folder=None
                 pkg_folder = dep.package_folder or dep.recipe_folder
                 root_content = self.get_content_for_component(require, dep_name, dep_name, pkg_folder,
                                                               transitive_internal,
-                                                              transitive_external)
+                                                              [])
                 include_components_names.append((dep_name, dep_name))
                 result.update(root_content)
 
