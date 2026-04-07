@@ -279,8 +279,6 @@ class XcodeDeps:
 
         ext_pkg, ext_comp = req.split("::", 1)
         ext_dep = all_deps.get(ext_pkg)
-        if ext_dep is None:
-            return
 
         if not ext_dep.cpp_info.has_components:
             # Package without components: use root cpp_info directly
