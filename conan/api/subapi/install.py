@@ -3,7 +3,6 @@ from typing import List
 
 from conan.api.model import Remote
 from conan.internal.api.install.generators import write_generators
-from conan.internal.conan_app import ConanBasicApp
 from conan.internal.deploy import do_deploys
 
 from conan.internal.graph.install_graph import InstallGraph
@@ -39,9 +38,7 @@ class InstallAPI:
         :param remotes: List of remotes to fetch packages from if necessary.
         :param return_install_error: If ``True``, do not raise an exception, but return it
         """
-        app = ConanBasicApp(self._conan_api)
-        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, app.editable_packages,
-                                    self._helpers.hook_manager)
+        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, self._helpers.hook_manager)
         install_graph = InstallGraph(deps_graph)
         install_graph.raise_errors()
         install_order = install_graph.install_order()
@@ -68,9 +65,7 @@ class InstallAPI:
         :param graph: Dependency graph to install system requirements for
         :param only_info: If ``True``, only reporting and checking of whether the system requirements are installed is performed.
         """
-        app = ConanBasicApp(self._conan_api)
-        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, app.editable_packages,
-                                    self._helpers.hook_manager)
+        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, self._helpers.hook_manager)
         installer.install_system_requires(graph, only_info)
 
     def install_sources(self, graph, remotes: List[Remote]):
@@ -89,9 +84,7 @@ class InstallAPI:
         :param remotes: List of remotes where the ``exports_sources`` of the packages might be located
         :param graph: Dependency graph to download sources from
         """
-        app = ConanBasicApp(self._conan_api)
-        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, app.editable_packages,
-                                    self._helpers.hook_manager)
+        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, self._helpers.hook_manager)
         installer.install_sources(graph, remotes)
 
     def install_consumer(self, deps_graph, generators: List[str] = None, source_folder=None,
