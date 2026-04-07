@@ -259,10 +259,8 @@ class XcodeDeps:
         visited.add(key)
         collected.append(cpp_info)
 
-        requires = cpp_info.requires or []
-
-        if requires:
-            for req in requires:
+        if cpp_info.requires:
+            for req in cpp_info.requires:
                 if "::" not in req:
                     XcodeDeps._collect_all_transitive(
                         pkg_dep.cpp_info.components.get(req), pkg_dep,
