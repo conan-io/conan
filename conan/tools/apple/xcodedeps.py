@@ -5,6 +5,7 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
+from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
 from conan.internal.model.dependencies import get_transitive_requires
@@ -242,6 +243,77 @@ class XcodeDeps:
         result[file_dep_name] = dep_content
         return result
 
+    @staticmethod
+    def _collect_all_transitive(cpp_info, pkg_dep, all_deps_by_name, collected, visited):
+        """Recursively collect CppInfo objects from a component and all its transitive
+        dependencies, both within the same package (internal) and across packages (external).
+        This produces a flat list of CppInfos that can be merged into a single props file,
+        eliminating the need for inter-package #include chains in xcconfig files."""
+        key = id(cpp_info)
+        if key in visited:
+            return
+        visited.add(key)
+        collected.append(cpp_info)
+        output = ConanOutput(scope="XcodeDeps")
+
+        requires = cpp_info.requires or []
+
+        if requires:
+            for req in requires:
+                if "::" not in req:
+                    ci = pkg_dep.cpp_info.components.get(req)
+                    if ci:
+                        XcodeDeps._collect_all_transitive(ci, pkg_dep, all_deps_by_name,
+                                                          collected, visited)
+                else:
+                    XcodeDeps._follow_external(req, all_deps_by_name, collected,
+                                               visited, output)
+        elif not pkg_dep.cpp_info.has_components and cpp_info is pkg_dep.cpp_info:
+            # No-component package without explicit cpp_info.requires:
+            # implicitly depends on all its visible direct host dependencies
+            for _, d in pkg_dep.dependencies.direct_host.items():
+                ext_dep = (all_deps_by_name.get(d.ref.name)
+                           or all_deps_by_name.get(_format_name(d.ref.name)))
+                if ext_dep is None:
+                    continue
+                if ext_dep.cpp_info.has_components:
+                    for comp in ext_dep.cpp_info.get_sorted_components().values():
+                        XcodeDeps._collect_all_transitive(comp, ext_dep, all_deps_by_name,
+                                                          collected, visited)
+                else:
+                    XcodeDeps._collect_all_transitive(ext_dep.cpp_info, ext_dep,
+                                                      all_deps_by_name,
+                                                      collected, visited)
+
+    @staticmethod
+    def _follow_external(req, all_deps_by_name, collected, visited, output):
+        """Resolve and follow an external requirement (pkg::comp)."""
+        ext_pkg, ext_comp = req.split("::", 1)
+        ext_dep = (all_deps_by_name.get(ext_pkg)
+                   or all_deps_by_name.get(_format_name(ext_pkg)))
+        if ext_dep is None:
+            output.warning(f"XcodeDeps: dependency '{ext_pkg}' not found in graph, "
+                           f"skipping '{req}'")
+            return
+
+        if not ext_dep.cpp_info.has_components:
+            XcodeDeps._collect_all_transitive(ext_dep.cpp_info, ext_dep, all_deps_by_name,
+                                              collected, visited)
+        elif ext_pkg == ext_comp or _format_name(ext_pkg) == _format_name(ext_comp):
+            for comp in ext_dep.cpp_info.get_sorted_components().values():
+                XcodeDeps._collect_all_transitive(comp, ext_dep, all_deps_by_name,
+                                                  collected, visited)
+        else:
+            ci = (ext_dep.cpp_info.components.get(ext_comp)
+                  or ext_dep.cpp_info.components.get(_format_name(ext_comp)))
+            if ci is None:
+                output.warning(
+                    f"XcodeDeps: component '{ext_comp}' not found in '{ext_pkg}', "
+                    f"skipping. Available: {list(ext_dep.cpp_info.components.keys())}")
+                return
+            XcodeDeps._collect_all_transitive(ci, ext_dep, all_deps_by_name,
+                                              collected, visited)
+
     def _content(self):
         result = {}
 
@@ -251,75 +323,42 @@ class XcodeDeps:
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
         requires = list(host_req.items()) + list(test_req.items())
+
         for require, dep in requires:
 
             dep_name = _format_name(dep.ref.name)
 
-            include_components_names = []
-            transitive_requires = [r for r, _ in
-                                   get_transitive_requires(self._conanfile, dep).items()]
-            if dep.cpp_info.has_components:
-                transitive_dep_names = [_format_name(dep.ref.name) for dep in transitive_requires]
+            # TODO: discuss if we should skip generating xcconfig files for transitive-only
+            # deps, since their data is now inlined and their files are never #include'd.
+            visible_deps = {}
+            for _, d in get_transitive_requires(self._conanfile, dep).items():
+                visible_deps[d.ref.name] = d
+                visible_deps[_format_name(d.ref.name)] = d
 
+            include_components_names = []
+            if dep.cpp_info.has_components:
                 sorted_components = dep.cpp_info.get_sorted_components().items()
                 for comp_name, comp_cpp_info in sorted_components:
                     comp_name = _format_name(comp_name)
 
-                    # returns: ("list of cpp infos from required components in same package",
-                    #           "list of names from required components from other packages")
-                    def _get_component_requires(component):
-                        requires_external = [(req.split("::")[0], req.split("::")[1]) for req in
-                                             component.requires if "::" in req
-                                             and req.split("::")[0] in transitive_dep_names]
-                        requires_internal = [dep.cpp_info.components.get(req) for req in
-                                             component.requires if "::" not in req]
-                        return requires_internal, requires_external
+                    collected = []
+                    self._collect_all_transitive(comp_cpp_info, dep, visible_deps,
+                                                 collected, set())
 
-                    # these are the transitive dependencies between components of the same package
-                    transitive_internal = []
-                    # these are the transitive dependencies to components from other packages
-                    transitive_external = []
-
-                    # return the internal cpp_infos and external components names
-                    def _transitive_components(component):
-                        requires_internal, requires_external = _get_component_requires(component)
-                        transitive_internal.append(component)
-                        transitive_internal.extend(requires_internal)
-                        transitive_external.extend(requires_external)
-                        for treq in requires_internal:
-                            _transitive_components(treq)
-
-                    _transitive_components(comp_cpp_info)
-
-                    # remove duplicates
-                    transitive_internal = list(OrderedDict.fromkeys(transitive_internal).keys())
-                    transitive_external = list(OrderedDict.fromkeys(transitive_external).keys())
-
-                    # In case dep is editable and package_folder=None
                     pkg_folder = dep.package_folder or dep.recipe_folder
                     component_content = self.get_content_for_component(require, dep_name, comp_name,
                                                                        pkg_folder,
-                                                                       transitive_internal,
-                                                                       transitive_external)
+                                                                       collected, [])
                     include_components_names.append((dep_name, comp_name))
                     result.update(component_content)
             else:
-                public_deps = []
-                for r, d in dep.dependencies.direct_host.items():
-                    if r not in transitive_requires:
-                        continue
-                    if d.cpp_info.has_components:
-                        sorted_components = d.cpp_info.get_sorted_components().items()
-                        for comp_name, comp_cpp_info in sorted_components:
-                            public_deps.append((_format_name(d.ref.name), _format_name(comp_name)))
-                    else:
-                        public_deps.append((_format_name(d.ref.name),) * 2)
+                collected = []
+                self._collect_all_transitive(dep.cpp_info, dep, visible_deps,
+                                             collected, set())
 
-                required_components = dep.cpp_info.required_components if dep.cpp_info.required_components else public_deps
-                # In case dep is editable and package_folder=None
                 pkg_folder = dep.package_folder or dep.recipe_folder
-                root_content = self.get_content_for_component(require, dep_name, dep_name, pkg_folder, [dep.cpp_info],
-                                                              required_components)
+                root_content = self.get_content_for_component(require, dep_name, dep_name,
+                                                              pkg_folder, collected, [])
                 include_components_names.append((dep_name, dep_name))
                 result.update(root_content)
 

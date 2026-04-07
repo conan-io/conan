@@ -207,7 +207,8 @@ def test_xcodedeps_aggregate_components():
         assert f"conan_libb_libb_comp{index}.xcconfig" in lib_entry
 
     component7_entry = client.load("conan_libb_libb_comp7.xcconfig")
-    assert '#include "conan_liba.xcconfig"' in component7_entry
+    # External deps are now inlined into the props file, no #include in wrapper
+    assert '#include "conan_liba.xcconfig"' not in component7_entry
 
     arch_setting = client.get_default_host_profile().settings['arch']
     arch = "arm64" if arch_setting == "armv8" else arch_setting
@@ -401,10 +402,10 @@ def test_xcodedeps_cppinfo_requires():
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
             def package_info(self):
-                self.cpp_info.components["cmp1"].includedirs = ["include"]
-                self.cpp_info.components["cmp2"].includedirs = ["include"]
-                self.cpp_info.components["cmp3"].includedirs = ["include"]
-                self.cpp_info.components["cmp4"].includedirs = ["include"]
+                self.cpp_info.components["cmp1"].includedirs = ["include_cmp1"]
+                self.cpp_info.components["cmp2"].includedirs = ["include_cmp2"]
+                self.cpp_info.components["cmp3"].includedirs = ["include_cmp3"]
+                self.cpp_info.components["cmp4"].includedirs = ["include_cmp4"]
         """)
 
     lib = textwrap.dedent("""
@@ -451,21 +452,21 @@ def test_xcodedeps_cppinfo_requires():
     So we will only link against the components specified in the cpp_info.requires of lib_b and lib_c
     """
 
-    lib_b = client.load(os.path.join("consumer", "conan_lib_b_lib_b.xcconfig"))
+    # Verify component data is inlined in the props files, not in wrapper #includes
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
 
-    # check that nothing from other components than the specified in the cpp_info.requires
-    # from lib_b and lib_c exist in the xcconfig that adds the includes from components
-    assert "cmp1" in lib_b
-    assert "cmp2" not in lib_b
-    assert "cmp3" not in lib_b
-    assert "cmp4" not in lib_b
+    lib_b_props = client.load(os.path.join("consumer", f"conan_lib_b_lib_b_release_{arch}.xcconfig"))
+    assert "include_cmp1" in lib_b_props
+    assert "include_cmp2" not in lib_b_props
+    assert "include_cmp3" not in lib_b_props
+    assert "include_cmp4" not in lib_b_props
 
-    lib_c = client.load(os.path.join("consumer", "conan_lib_c_lib_c.xcconfig"))
-
-    assert "cmp1" not in lib_c
-    assert "cmp2" in lib_c
-    assert "cmp3" not in lib_c
-    assert "cmp4" not in lib_c
+    lib_c_props = client.load(os.path.join("consumer", f"conan_lib_c_lib_c_release_{arch}.xcconfig"))
+    assert "include_cmp1" not in lib_c_props
+    assert "include_cmp2" in lib_c_props
+    assert "include_cmp3" not in lib_c_props
+    assert "include_cmp4" not in lib_c_props
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
@@ -508,9 +509,16 @@ def test_dependency_of_dependency_components():
 
     lib_b_xconfig = client.load("conan_lib_b_lib_b.xcconfig")
 
-    assert '#include "conan_lib_c_cmp1.xcconfig"' in lib_b_xconfig
-    assert '#include "conan_lib_c_cmp1.xcconfig"' in lib_b_xconfig
+    # External deps are now inlined into the props file, no #include in wrapper
+    assert '#include "conan_lib_c_cmp1.xcconfig"' not in lib_b_xconfig
     assert '#include "conan_lib_c_lib_c.xcconfig"' not in lib_b_xconfig
+
+    # Verify lib_c's component data is inlined in lib_b's props file
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
+    lib_b_props = client.load(f"conan_lib_b_lib_b_release_{arch}.xcconfig")
+    assert "include_cmp1" in lib_b_props
+    assert "include_cmp2" in lib_b_props
 
 
 def test_skipped_not_included():
@@ -576,8 +584,18 @@ def test_correctly_handle_transitive_components():
     assert '#include "conan_has_components.xcconfig"' not in conandeps
     assert '#include "conan_uses_components.xcconfig"' in conandeps
     conan_uses_xcconfig = client.load("conan_uses_components_uses_components.xcconfig")
-    assert '#include "conan_has_components_first.xcconfig"' in conan_uses_xcconfig
+    # External deps are now inlined into the props file, no #include in wrapper
+    assert '#include "conan_has_components_first.xcconfig"' not in conan_uses_xcconfig
     assert '#include "conan_has_components_second.xcconfig"' not in conan_uses_xcconfig
+
+    # Verify that 'first' component data is inlined in uses_components' props file
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
+    uses_props = client.load(f"conan_uses_components_uses_components_release_{arch}.xcconfig")
+    assert "-lfirst" in uses_props
+    assert "-luses_only_first" in uses_props
+    # 'second' component should NOT be inlined (not required)
+    assert "donottouch" not in uses_props
 
 
 def test_dont_add_skipped_xcconfigs_when_required_by_components():
@@ -627,8 +645,9 @@ def test_dont_add_skipped_xcconfigs_when_required_by_components():
     client.run("install --requires=regular_lib/1.0 -g XcodeDeps")
 
     conandeps = client.load("conan_regular_lib_component.xcconfig")
+    # External deps are now inlined into the props file, no #include in wrapper
     assert '#include "conan_header_skip.xcconfig"' not in conandeps
-    assert '#include "conan_header_transitive.xcconfig"' in conandeps
+    assert '#include "conan_header_transitive.xcconfig"' not in conandeps
 
     # Verify that header_skip xcconfig files are NOT generated (skipped dependency)
     skip_files = [f for f in os.listdir(client.current_folder) if 'header_skip' in f and f.endswith('.xcconfig')]
