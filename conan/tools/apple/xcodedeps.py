@@ -244,10 +244,8 @@ class XcodeDeps:
 
     @staticmethod
     def _collect_all_transitive(cpp_info, pkg_dep, transitive_deps, collected, visited):
-        """Recursively collect CppInfo objects from a component and all its transitive
-        dependencies, both within the same package (internal) and across packages (external).
-        This produces a flat list of CppInfos that can be merged into a single props file,
-        eliminating the need for inter-package #include chains in xcconfig files."""
+        """Recursively collect all transitive CppInfo objects (internal and external)
+        into a flat list."""
 
         key = id(cpp_info)
         if key in visited:
