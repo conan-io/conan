@@ -312,16 +312,30 @@ class PackagesList:
         return result
 
     def items(self) -> Iterable[Tuple[RecipeReference, Dict[PkgReference, Dict]]]:
-        """ Iterate the contents of the package list.
+        """Iterate over the contents of the package list.
 
-        This method only iterates references if they contain at least a recipe revision,
-        and the packages values will only be filled if they contain a package revision,
-        else the returned dictionary will be empty.
-        Use ``serialize()`` to access the search results in cases where no revisions are returned.
+        Yields tuples containing a recipe reference and a dictionary of its
+        associated package references content.
 
-        The first dictionary is the information directly belonging to the recipe-revision.
-        The second dictionary contains PkgReference as keys, and a dictionary with the values
-        belonging to that specific package revision reference (settings, options, etc.).
+        Returns:
+            An iterable of tuples where:
+            - The first element is a ``RecipeReference`` (representing the recipe revision).
+            - The second element is a dictionary mapping a ``PkgReference`` to a nested
+              dictionary of its specific attributes (e.g., settings, options).
+
+        Warning:
+            **Missing Revisions Behavior:**
+            This method filters out results that lack revision information.
+            - It will ONLY yield items if they contain at least a **recipe revision**.
+            - The nested package dictionary will be empty unless it contains a **package revision**.
+
+            **When to use serialize instead:**
+            If you perform a general search that does not fetch revisions (e.g., running
+            ``conan list *``), this method will yield nothing because no artifact references
+            are created. In these cases, use the ``serialize()`` method to access the results.
+
+            To successfully use ``items()``, your query must explicitly request revisions
+            (e.g., running ``conan list pkg/version#*:*#*``).
         """
         for ref, ref_dict in self._data.items():
             for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
