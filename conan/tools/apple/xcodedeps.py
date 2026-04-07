@@ -260,10 +260,9 @@ class XcodeDeps:
         if requires:
             for req in requires:
                 if "::" not in req:
-                    ci = pkg_dep.cpp_info.components.get(req)
-                    if ci:
-                        XcodeDeps._collect_all_transitive(ci, pkg_dep, transitive_deps,
-                                                          collected, visited)
+                    XcodeDeps._collect_all_transitive(
+                        pkg_dep.cpp_info.components.get(req), pkg_dep,
+                        transitive_deps, collected, visited)
                 else:
                     XcodeDeps._follow_external(req, transitive_deps, collected, visited)
         elif not pkg_dep.cpp_info.has_components and cpp_info is pkg_dep.cpp_info:
@@ -289,17 +288,19 @@ class XcodeDeps:
             return
 
         if not ext_dep.cpp_info.has_components:
+            # Package without components: use root cpp_info directly
             XcodeDeps._collect_all_transitive(ext_dep.cpp_info, ext_dep, transitive_deps,
                                               collected, visited)
         elif ext_pkg == ext_comp:
+            # Dependency on the whole package (pkg::pkg): collect all its components
             for comp in ext_dep.cpp_info.get_sorted_components().values():
                 XcodeDeps._collect_all_transitive(comp, ext_dep, transitive_deps,
                                                   collected, visited)
         else:
-            ci = ext_dep.cpp_info.components.get(ext_comp)
-            if ci:
-                XcodeDeps._collect_all_transitive(ci, ext_dep, transitive_deps,
-                                                  collected, visited)
+            # Dependency on a specific component (pkg::comp)
+            XcodeDeps._collect_all_transitive(
+                ext_dep.cpp_info.components.get(ext_comp), ext_dep,
+                transitive_deps, collected, visited)
 
     def _content(self):
         result = {}
