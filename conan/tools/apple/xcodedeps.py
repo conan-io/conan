@@ -248,6 +248,7 @@ class XcodeDeps:
         dependencies, both within the same package (internal) and across packages (external).
         This produces a flat list of CppInfos that can be merged into a single props file,
         eliminating the need for inter-package #include chains in xcconfig files."""
+
         key = id(cpp_info)
         if key in visited:
             return
@@ -281,6 +282,7 @@ class XcodeDeps:
     @staticmethod
     def _follow_external(req, transitive_deps, collected, visited):
         """Resolve and follow an external requirement (pkg::comp)."""
+
         ext_pkg, ext_comp = req.split("::", 1)
         ext_dep = transitive_deps.get(ext_pkg)
         if ext_dep is None:
