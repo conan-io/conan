@@ -86,7 +86,8 @@ class InstallAPI:
         :param remotes: List of remotes where the ``exports_sources`` of the packages might be located
         :param graph: Dependency graph to download sources from
         """
-        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf, self._helpers.hook_manager)
+        installer = BinaryInstaller(self._conan_api, self._helpers.global_conf,
+                                    self._helpers.hook_manager)
         installer.install_sources(graph, remotes)
 
     def install_consumer(self, deps_graph, generators: List[str] = None, source_folder=None,
