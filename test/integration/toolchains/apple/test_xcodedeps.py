@@ -517,6 +517,84 @@ def test_dependency_of_dependency_components():
     assert "include_cmp2" in lib_b_props
 
 
+def test_diamond_dependency_components():
+    """
+    Diamond: lib_e (with components core, utils) is reached through two paths.
+    lib_c::cmp1 depends only on lib_e::core, lib_d depends on all of lib_e.
+
+    lib_a -> lib_b -> lib_c (cmp1 -> lib_e::core) -> lib_e (core, utils)
+                   -> lib_d (-> lib_e::lib_e)      -> lib_e (core, utils)
+    """
+    client = TestClient()
+    lib_a = GenConanfile("lib_a", "1.0").with_require("lib_b/1.0").with_settings("os", "arch", "build_type", "compiler")
+
+    lib_b = textwrap.dedent("""
+        from conan import ConanFile
+        class lib_bConan(ConanFile):
+            name = "lib_b"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "lib_c/1.0", "lib_d/1.0"
+        """)
+
+    lib_c = textwrap.dedent("""
+        from conan import ConanFile
+        class lib_cConan(ConanFile):
+            name = "lib_c"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "lib_e/1.0"
+            def package_info(self):
+                self.cpp_info.components["cmp1"].includedirs = ["include_cmp1"]
+                self.cpp_info.components["cmp1"].requires = ["lib_e::core"]
+        """)
+
+    lib_d = textwrap.dedent("""
+        from conan import ConanFile
+        class lib_dConan(ConanFile):
+            name = "lib_d"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "lib_e/1.0"
+        """)
+
+    lib_e = textwrap.dedent("""
+        from conan import ConanFile
+        class lib_eConan(ConanFile):
+            name = "lib_e"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.components["core"].includedirs = ["include_e_core"]
+                self.cpp_info.components["utils"].includedirs = ["include_e_utils"]
+        """)
+
+    client.save({
+        'conanfile.py': lib_a,
+        'lib_b/conanfile.py': lib_b,
+        'lib_c/conanfile.py': lib_c,
+        'lib_d/conanfile.py': lib_d,
+        'lib_e/conanfile.py': lib_e,
+    })
+
+    client.run("create lib_e")
+    client.run("create lib_d")
+    client.run("create lib_c")
+    client.run("create lib_b")
+    client.run("install . -g XcodeDeps")
+
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
+
+    # lib_b inlines everything: lib_c::cmp1, lib_d, and all of lib_e
+    lib_b_props = client.load(f"conan_lib_b_lib_b_release_{arch}.xcconfig")
+    assert "include_cmp1" in lib_b_props
+    assert "include_e_core" in lib_b_props
+    assert "include_e_utils" in lib_b_props
+    # lib_e::core appears only once despite being reached via both lib_c and lib_d
+    assert lib_b_props.count("include_e_core") == 1
+
+
 def test_skipped_not_included():
     # https://github.com/conan-io/conan/issues/13818
     client = TestClient()
