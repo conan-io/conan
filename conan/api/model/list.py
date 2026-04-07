@@ -319,13 +319,15 @@ class PackagesList:
 
         Returns:
             An iterable of tuples where:
+
             - The first element is a ``RecipeReference`` (representing the recipe revision).
-            - The second element is a dictionary mapping a ``PkgReference`` to a nested
-              dictionary of its specific attributes (e.g., settings, options).
+            - The second element is a dictionary mapping a ``PkgReference`` to a nested dictionary of
+              its specific attributes (e.g., settings, options).
 
         Warning:
             **Missing Revisions Behavior:**
             This method filters out results that lack revision information.
+
             - It will ONLY yield items if they contain at least a **recipe revision**.
             - The nested package dictionary will be empty unless it contains a **package revision**.
 
