@@ -146,7 +146,7 @@ class Node:
                     e.dst = node
                     break
 
-        if self.conanfile.vendor:
+        if self.conanfile.vendor or require.vendor:
             return
         # Check if need to propagate downstream
         if not self.dependants:
@@ -199,7 +199,7 @@ class Node:
         # Check if need to propagate downstream
         # Then propagate downstream
 
-        if self.conanfile.vendor:
+        if self.conanfile.vendor or require.vendor:
             return result
         # Seems the algrithm depth-first, would only have 1 dependant at most to propagate down
         # at any given time

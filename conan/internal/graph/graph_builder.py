@@ -54,6 +54,9 @@ class DepsGraphBuilder:
                 (require, node) = open_requires.popleft()
                 if require.override:
                     continue
+                if require.vendor and not node.conanfile.conf.get("tools.graph:vendor",
+                                                                  choices=("build",)):
+                    continue
                 new_node = self._expand_require(require, node, dep_graph, profile_host,
                                                 profile_build, graph_lock)
                 if new_node and (not new_node.conanfile.vendor
@@ -220,6 +223,7 @@ class DepsGraphBuilder:
         result = []
         skip_build = node.conanfile.conf.get("tools.graph:skip_build", check_type=bool)
         skip_test = node.conanfile.conf.get("tools.graph:skip_test", check_type=bool)
+        vendor_build = node.conanfile.conf.get("tools.graph:vendor", choices=("build",))
         for require in node.conanfile.requires.values():
             if not require.visible and not require.package_id_mode:
                 if skip_build and require.build:
@@ -227,6 +231,8 @@ class DepsGraphBuilder:
                     continue
                 if skip_test and require.test:
                     continue
+            if require.vendor and not vendor_build:  # Do not expand this require at all
+                continue
             result.append(require)
             alias = require.alias  # alias needs to be processed this early
             if alias is not None:

@@ -21,6 +21,8 @@ def compute_package_id(node, modes, config_version, hook_manager):
     data = OrderedDict()
     build_data = OrderedDict()
     for require, transitive in node.transitive_deps.items():
+        if require.vendor:
+            continue
         dep_node = transitive.node
         require.deduce_package_id_mode(conanfile.package_type, dep_node,
                                        non_embed_mode, embed_mode, build_mode, unknown_mode)

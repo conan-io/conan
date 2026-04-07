@@ -9,7 +9,7 @@ class Requirement:
     """
     def __init__(self, ref, *, headers=None, libs=None, build=False, run=None, visible=None,
                  transitive_headers=None, transitive_libs=None, test=None, package_id_mode=None,
-                 force=None, override=None, direct=None, options=None, no_skip=False):
+                 force=None, override=None, direct=None, options=None, no_skip=False, vendor=False):
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
@@ -37,6 +37,7 @@ class Requirement:
         self.skip = False
         self.required_nodes = set()  # store which intermediate nodes are required, to compute "Skip"
         self.no_skip = no_skip
+        self.vendor = vendor
 
     @property
     def files(self):  # require needs some files in dependency package
@@ -156,7 +157,7 @@ class Requirement:
                   "require": str(self._required_ref)}
         serializable = ("run", "libs", "skip", "test", "force", "direct", "build",
                         "transitive_headers", "transitive_libs", "headers",
-                        "package_id_mode", "visible")
+                        "package_id_mode", "visible", "vendor")
         for attribute in serializable:
             result[attribute] = getattr(self, attribute)
         return result
@@ -281,7 +282,8 @@ class Requirement:
             # Build-requires will propagate its main trait for running exes/shared to downstream
             # consumers so run=require.run, irrespective of the 'self.run' trait
             downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                             run=require.run, visible=self.visible, direct=False)
+                                             run=require.run, visible=self.visible, direct=False,
+                                             vendor=self.vendor)
             return downstream_require
 
         if self.build:  # Build-requires
@@ -289,7 +291,8 @@ class Requirement:
             # visible=self.visible will further propagate it downstream
             if dep_pkg_type is PackageType.SHARED or require.run:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                                 run=True, visible=self.visible, direct=False)
+                                                 run=True, visible=self.visible, direct=False,
+                                                 vendor=self.vendor)
                 return downstream_require
             return
 
@@ -323,6 +326,8 @@ class Requirement:
                 downstream_require.headers = False
 
         assert require.visible, "at this point require should be visible"
+
+        downstream_require.vendor = self.vendor
 
         if require.transitive_headers is not None:
             downstream_require.headers = require.headers and require.transitive_headers
