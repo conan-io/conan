@@ -311,40 +311,44 @@ class XcodeDeps:
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
         requires = list(host_req.items()) + list(test_req.items())
-
         for require, dep in requires:
 
             dep_name = _format_name(dep.ref.name)
 
+            include_components_names = []
             visible_deps = {}
             for _, d in get_transitive_requires(self._conanfile, dep).items():
                 visible_deps[d.ref.name] = d
                 visible_deps[_format_name(d.ref.name)] = d
-
-            include_components_names = []
             if dep.cpp_info.has_components:
+
                 sorted_components = dep.cpp_info.get_sorted_components().items()
                 for comp_name, comp_cpp_info in sorted_components:
                     comp_name = _format_name(comp_name)
 
-                    collected = []
+                    transitive_internal = []
                     self._collect_all_transitive(comp_cpp_info, dep, visible_deps,
-                                                 collected, set())
+                                                 transitive_internal, set())
+                    transitive_external = []
 
+                    # In case dep is editable and package_folder=None
                     pkg_folder = dep.package_folder or dep.recipe_folder
                     component_content = self.get_content_for_component(require, dep_name, comp_name,
                                                                        pkg_folder,
-                                                                       collected, [])
+                                                                       transitive_internal,
+                                                                       transitive_external)
                     include_components_names.append((dep_name, comp_name))
                     result.update(component_content)
             else:
-                collected = []
+                transitive_internal = []
                 self._collect_all_transitive(dep.cpp_info, dep, visible_deps,
-                                             collected, set())
-
+                                             transitive_internal, set())
+                transitive_external = []
+                # In case dep is editable and package_folder=None
                 pkg_folder = dep.package_folder or dep.recipe_folder
-                root_content = self.get_content_for_component(require, dep_name, dep_name,
-                                                              pkg_folder, collected, [])
+                root_content = self.get_content_for_component(require, dep_name, dep_name, pkg_folder,
+                                                              transitive_internal,
+                                                              transitive_external)
                 include_components_names.append((dep_name, dep_name))
                 result.update(root_content)
 
