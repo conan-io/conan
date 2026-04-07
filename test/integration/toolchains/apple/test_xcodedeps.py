@@ -520,10 +520,11 @@ def test_dependency_of_dependency_components():
 def test_diamond_dependency_components():
     """
     Diamond: lib_e (with components core, utils) is reached through two paths.
-    lib_c::cmp1 depends only on lib_e::core, lib_d depends on all of lib_e.
+    lib_c has internal component deps (cmp1 -> base) and external (cmp1 -> lib_e::core).
+    lib_d depends on all of lib_e.
 
-    lib_a -> lib_b -> lib_c (cmp1 -> lib_e::core) -> lib_e (core, utils)
-                   -> lib_d (-> lib_e::lib_e)      -> lib_e (core, utils)
+    lib_a -> lib_b -> lib_c (cmp1 -> base, lib_e::core) -> lib_e (core, utils)
+                   -> lib_d                              -> lib_e (core, utils)
     """
     client = TestClient()
     lib_a = GenConanfile("lib_a", "1.0").with_require("lib_b/1.0").with_settings("os", "arch", "build_type", "compiler")
@@ -545,8 +546,9 @@ def test_diamond_dependency_components():
             settings = "os", "compiler", "build_type", "arch"
             requires = "lib_e/1.0"
             def package_info(self):
+                self.cpp_info.components["base"].includedirs = ["include_base"]
                 self.cpp_info.components["cmp1"].includedirs = ["include_cmp1"]
-                self.cpp_info.components["cmp1"].requires = ["lib_e::core"]
+                self.cpp_info.components["cmp1"].requires = ["base", "lib_e::core"]
         """)
 
     lib_d = textwrap.dedent("""
@@ -586,8 +588,9 @@ def test_diamond_dependency_components():
     arch_setting = client.get_default_host_profile().settings['arch']
     arch = "arm64" if arch_setting == "armv8" else arch_setting
 
-    # lib_b inlines everything: lib_c::cmp1, lib_d, and all of lib_e
+    # lib_b inlines everything: lib_c (base, cmp1), lib_d, and all of lib_e
     lib_b_props = client.load(f"conan_lib_b_lib_b_release_{arch}.xcconfig")
+    assert "include_base" in lib_b_props
     assert "include_cmp1" in lib_b_props
     assert "include_e_core" in lib_b_props
     assert "include_e_utils" in lib_b_props
