@@ -127,7 +127,7 @@ class ConanAPI:
             self._init_global_conf()
             # TODO: Make uniform lazy vs non lazy collaborators
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
-            self._global_editable_packages = EditablePackages(self._conan_api.home_folder)
+            self._editable_packages = EditablePackages(self._conan_api.home_folder)
             # Wraps an http_requester to inject proxies, certs, etc
             self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
             self.cache = PkgCache(self._conan_api.home_folder, self.global_conf)
@@ -161,7 +161,7 @@ class ConanAPI:
             self._settings_yml = None
             self.cache = PkgCache(self._conan_api.home_folder, self.global_conf)
             self._remote_manager = None
-            self._global_editable_packages = EditablePackages(self._conan_api.home_folder)
+            self._editable_packages = EditablePackages(self._conan_api.home_folder)
 
         @property
         def settings_yml(self):
@@ -185,21 +185,16 @@ class ConanAPI:
             return self._requester
 
         @property
-        def global_editable_packages(self):
-            return self._global_editable_packages
-
-        @property
         def editable_packages(self):
-            # Recomputes it every time, to evaluate the Workspaces latest changes
-            global_editables = self._global_editable_packages
-            ws_editables = self._conan_api.workspace.packages()
-            result = global_editables.update_copy(ws_editables)
-            return result
+            # These are just the global editables, not including workspace ones
+            return self._editable_packages
 
         def get_loader(self):
+            ws_editables = self._conan_api.workspace.packages()
+            editable_packages = self._editable_packages.update_copy(ws_editables)
+
             legacy_update = self.global_conf.get("core:update_policy", choices=["legacy"])
             # This proxy is caching information
-            editable_packages = self.editable_packages
             proxy = ConanProxy(self.cache, self.remote_manager, editable_packages,
                                legacy_update=legacy_update)
             # This is caching too

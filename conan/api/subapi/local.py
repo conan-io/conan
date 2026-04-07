@@ -20,10 +20,6 @@ class LocalAPI:
         self._conan_api = conan_api
         self._helpers = helpers
 
-    @property
-    def editable_packages(self):
-        return self._helpers.global_editable_packages
-
     @staticmethod
     def get_conanfile_path(path, cwd, py):
         """ Obtain the full path to a conanfile file, either .txt or .py, from the current
@@ -83,7 +79,7 @@ class LocalAPI:
         target_path = self.get_conanfile_path(path=path, cwd=cwd, py=True)
         output_folder = make_abs_path(output_folder) if output_folder else None
         # Check the conanfile is there, and name/version matches
-        self.editable_packages.add(ref, target_path, output_folder=output_folder)
+        self._helpers.editable_packages.add(ref, target_path, output_folder=output_folder)
         return ref
 
     def editable_remove(self, path=None, requires=None, cwd=None):
@@ -100,10 +96,10 @@ class LocalAPI:
         if path:
             path = make_abs_path(path, cwd)
             path = os.path.join(path, "conanfile.py")
-        return self.editable_packages.remove(path, requires)
+        return self._helpers.editable_packages.remove(path, requires)
 
     def editable_list(self):
-        return self.editable_packages.edited_refs
+        return self._helpers.editable_packages.edited_refs
 
     def source(self, path, name=None, version=None, user=None, channel=None,
                remotes: List[Remote] = None):
