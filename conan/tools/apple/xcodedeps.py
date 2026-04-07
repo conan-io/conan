@@ -5,7 +5,6 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
 from conan.internal.model.dependencies import get_transitive_requires
@@ -244,7 +243,7 @@ class XcodeDeps:
         return result
 
     @staticmethod
-    def _collect_all_transitive(cpp_info, pkg_dep, all_deps_by_name, collected, visited):
+    def _collect_all_transitive(cpp_info, pkg_dep, visible_deps, collected, visited):
         """Recursively collect CppInfo objects from a component and all its transitive
         dependencies, both within the same package (internal) and across packages (external).
         This produces a flat list of CppInfos that can be merged into a single props file,
@@ -254,7 +253,6 @@ class XcodeDeps:
             return
         visited.add(key)
         collected.append(cpp_info)
-        output = ConanOutput(scope="XcodeDeps")
 
         requires = cpp_info.requires or []
 
@@ -263,56 +261,46 @@ class XcodeDeps:
                 if "::" not in req:
                     ci = pkg_dep.cpp_info.components.get(req)
                     if ci:
-                        XcodeDeps._collect_all_transitive(ci, pkg_dep, all_deps_by_name,
+                        XcodeDeps._collect_all_transitive(ci, pkg_dep, visible_deps,
                                                           collected, visited)
                 else:
-                    XcodeDeps._follow_external(req, all_deps_by_name, collected,
-                                               visited, output)
+                    XcodeDeps._follow_external(req, visible_deps, collected, visited)
         elif not pkg_dep.cpp_info.has_components and cpp_info is pkg_dep.cpp_info:
-            # No-component package without explicit cpp_info.requires:
-            # implicitly depends on all its visible direct host dependencies
             for _, d in pkg_dep.dependencies.direct_host.items():
-                ext_dep = (all_deps_by_name.get(d.ref.name)
-                           or all_deps_by_name.get(_format_name(d.ref.name)))
+                ext_dep = (visible_deps.get(d.ref.name)
+                           or visible_deps.get(_format_name(d.ref.name)))
                 if ext_dep is None:
                     continue
                 if ext_dep.cpp_info.has_components:
                     for comp in ext_dep.cpp_info.get_sorted_components().values():
-                        XcodeDeps._collect_all_transitive(comp, ext_dep, all_deps_by_name,
+                        XcodeDeps._collect_all_transitive(comp, ext_dep, visible_deps,
                                                           collected, visited)
                 else:
                     XcodeDeps._collect_all_transitive(ext_dep.cpp_info, ext_dep,
-                                                      all_deps_by_name,
-                                                      collected, visited)
+                                                      visible_deps, collected, visited)
 
     @staticmethod
-    def _follow_external(req, all_deps_by_name, collected, visited, output):
+    def _follow_external(req, visible_deps, collected, visited):
         """Resolve and follow an external requirement (pkg::comp)."""
         ext_pkg, ext_comp = req.split("::", 1)
-        ext_dep = (all_deps_by_name.get(ext_pkg)
-                   or all_deps_by_name.get(_format_name(ext_pkg)))
+        ext_dep = (visible_deps.get(ext_pkg)
+                   or visible_deps.get(_format_name(ext_pkg)))
         if ext_dep is None:
-            output.warning(f"XcodeDeps: dependency '{ext_pkg}' not found in graph, "
-                           f"skipping '{req}'")
             return
 
         if not ext_dep.cpp_info.has_components:
-            XcodeDeps._collect_all_transitive(ext_dep.cpp_info, ext_dep, all_deps_by_name,
+            XcodeDeps._collect_all_transitive(ext_dep.cpp_info, ext_dep, visible_deps,
                                               collected, visited)
         elif ext_pkg == ext_comp or _format_name(ext_pkg) == _format_name(ext_comp):
             for comp in ext_dep.cpp_info.get_sorted_components().values():
-                XcodeDeps._collect_all_transitive(comp, ext_dep, all_deps_by_name,
+                XcodeDeps._collect_all_transitive(comp, ext_dep, visible_deps,
                                                   collected, visited)
         else:
             ci = (ext_dep.cpp_info.components.get(ext_comp)
                   or ext_dep.cpp_info.components.get(_format_name(ext_comp)))
-            if ci is None:
-                output.warning(
-                    f"XcodeDeps: component '{ext_comp}' not found in '{ext_pkg}', "
-                    f"skipping. Available: {list(ext_dep.cpp_info.components.keys())}")
-                return
-            XcodeDeps._collect_all_transitive(ci, ext_dep, all_deps_by_name,
-                                              collected, visited)
+            if ci:
+                XcodeDeps._collect_all_transitive(ci, ext_dep, visible_deps,
+                                                  collected, visited)
 
     def _content(self):
         result = {}
