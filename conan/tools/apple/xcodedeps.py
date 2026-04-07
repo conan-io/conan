@@ -7,7 +7,6 @@ from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
-from conan.internal.model.dependencies import get_transitive_requires
 from conan.internal.util.files import load, save
 from conan.tools.apple.apple import _to_apple_arch
 
@@ -243,7 +242,7 @@ class XcodeDeps:
         return result
 
     @staticmethod
-    def _collect_all_transitive(cpp_info, pkg_dep, transitive_deps, collected, visited):
+    def _collect_all_transitive(cpp_info, pkg_dep, all_deps, collected, visited):
         """Recursively collect all transitive CppInfo objects (internal and external)
         into a flat list."""
 
@@ -260,37 +259,37 @@ class XcodeDeps:
                 if "::" not in req:
                     XcodeDeps._collect_all_transitive(
                         pkg_dep.cpp_info.components.get(req), pkg_dep,
-                        transitive_deps, collected, visited)
+                        all_deps, collected, visited)
                 else:
-                    XcodeDeps._follow_external(req, transitive_deps, collected, visited)
+                    XcodeDeps._follow_external(req, all_deps, collected, visited)
         elif not pkg_dep.cpp_info.has_components and cpp_info is pkg_dep.cpp_info:
             for _, d in pkg_dep.dependencies.direct_host.items():
                 XcodeDeps._follow_external(f"{d.ref.name}::{d.ref.name}",
-                                           transitive_deps, collected, visited)
+                                           all_deps, collected, visited)
 
     @staticmethod
-    def _follow_external(req, transitive_deps, collected, visited):
+    def _follow_external(req, all_deps, collected, visited):
         """Resolve and follow an external requirement (pkg::comp)."""
 
         ext_pkg, ext_comp = req.split("::", 1)
-        ext_dep = transitive_deps.get(ext_pkg)
+        ext_dep = all_deps.get(ext_pkg)
         if ext_dep is None:
             return
 
         if not ext_dep.cpp_info.has_components:
             # Package without components: use root cpp_info directly
-            XcodeDeps._collect_all_transitive(ext_dep.cpp_info, ext_dep, transitive_deps,
+            XcodeDeps._collect_all_transitive(ext_dep.cpp_info, ext_dep, all_deps,
                                               collected, visited)
         elif ext_pkg == ext_comp:
             # Dependency on the whole package (pkg::pkg): collect all its components
             for comp in ext_dep.cpp_info.get_sorted_components().values():
-                XcodeDeps._collect_all_transitive(comp, ext_dep, transitive_deps,
+                XcodeDeps._collect_all_transitive(comp, ext_dep, all_deps,
                                                   collected, visited)
         else:
             # Dependency on a specific component (pkg::comp)
             XcodeDeps._collect_all_transitive(
                 ext_dep.cpp_info.components.get(ext_comp), ext_dep,
-                transitive_deps, collected, visited)
+                all_deps, collected, visited)
 
     def _content(self):
         result = {}
@@ -301,13 +300,12 @@ class XcodeDeps:
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
         requires = list(host_req.items()) + list(test_req.items())
+        all_deps = {dep.ref.name: dep for _, dep in requires}
         for require, dep in requires:
 
             dep_name = _format_name(dep.ref.name)
 
             include_components_names = []
-            transitive_deps = {d.ref.name: d for _, d in
-                               get_transitive_requires(self._conanfile, dep).items()}
             if dep.cpp_info.has_components:
 
                 sorted_components = dep.cpp_info.get_sorted_components().items()
@@ -315,7 +313,7 @@ class XcodeDeps:
                     comp_name = _format_name(comp_name)
 
                     transitive_internal = []
-                    self._collect_all_transitive(comp_cpp_info, dep, transitive_deps,
+                    self._collect_all_transitive(comp_cpp_info, dep, all_deps,
                                                  transitive_internal, set())
 
                     # In case dep is editable and package_folder=None
@@ -328,7 +326,7 @@ class XcodeDeps:
                     result.update(component_content)
             else:
                 transitive_internal = []
-                self._collect_all_transitive(dep.cpp_info, dep, transitive_deps,
+                self._collect_all_transitive(dep.cpp_info, dep, all_deps,
                                              transitive_internal, set())
                 # In case dep is editable and package_folder=None
                 pkg_folder = dep.package_folder or dep.recipe_folder
