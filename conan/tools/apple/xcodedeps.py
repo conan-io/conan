@@ -243,7 +243,7 @@ class XcodeDeps:
         return result
 
     @staticmethod
-    def _collect_all_transitive(cpp_info, pkg_dep, visible_deps, collected, visited):
+    def _collect_all_transitive(cpp_info, pkg_dep, transitive_deps, collected, visited):
         """Recursively collect CppInfo objects from a component and all its transitive
         dependencies, both within the same package (internal) and across packages (external).
         This produces a flat list of CppInfos that can be merged into a single props file,
@@ -261,42 +261,42 @@ class XcodeDeps:
                 if "::" not in req:
                     ci = pkg_dep.cpp_info.components.get(req)
                     if ci:
-                        XcodeDeps._collect_all_transitive(ci, pkg_dep, visible_deps,
+                        XcodeDeps._collect_all_transitive(ci, pkg_dep, transitive_deps,
                                                           collected, visited)
                 else:
-                    XcodeDeps._follow_external(req, visible_deps, collected, visited)
+                    XcodeDeps._follow_external(req, transitive_deps, collected, visited)
         elif not pkg_dep.cpp_info.has_components and cpp_info is pkg_dep.cpp_info:
             for _, d in pkg_dep.dependencies.direct_host.items():
-                ext_dep = visible_deps.get(d.ref.name)
+                ext_dep = transitive_deps.get(d.ref.name)
                 if ext_dep is None:
                     continue
                 if ext_dep.cpp_info.has_components:
                     for comp in ext_dep.cpp_info.get_sorted_components().values():
-                        XcodeDeps._collect_all_transitive(comp, ext_dep, visible_deps,
+                        XcodeDeps._collect_all_transitive(comp, ext_dep, transitive_deps,
                                                           collected, visited)
                 else:
                     XcodeDeps._collect_all_transitive(ext_dep.cpp_info, ext_dep,
-                                                      visible_deps, collected, visited)
+                                                      transitive_deps, collected, visited)
 
     @staticmethod
-    def _follow_external(req, visible_deps, collected, visited):
+    def _follow_external(req, transitive_deps, collected, visited):
         """Resolve and follow an external requirement (pkg::comp)."""
         ext_pkg, ext_comp = req.split("::", 1)
-        ext_dep = visible_deps.get(ext_pkg)
+        ext_dep = transitive_deps.get(ext_pkg)
         if ext_dep is None:
             return
 
         if not ext_dep.cpp_info.has_components:
-            XcodeDeps._collect_all_transitive(ext_dep.cpp_info, ext_dep, visible_deps,
+            XcodeDeps._collect_all_transitive(ext_dep.cpp_info, ext_dep, transitive_deps,
                                               collected, visited)
         elif ext_pkg == ext_comp:
             for comp in ext_dep.cpp_info.get_sorted_components().values():
-                XcodeDeps._collect_all_transitive(comp, ext_dep, visible_deps,
+                XcodeDeps._collect_all_transitive(comp, ext_dep, transitive_deps,
                                                   collected, visited)
         else:
             ci = ext_dep.cpp_info.components.get(ext_comp)
             if ci:
-                XcodeDeps._collect_all_transitive(ci, ext_dep, visible_deps,
+                XcodeDeps._collect_all_transitive(ci, ext_dep, transitive_deps,
                                                   collected, visited)
 
     def _content(self):
@@ -313,9 +313,8 @@ class XcodeDeps:
             dep_name = _format_name(dep.ref.name)
 
             include_components_names = []
-            visible_deps = {}
-            for _, d in get_transitive_requires(self._conanfile, dep).items():
-                visible_deps[d.ref.name] = d
+            transitive_deps = {d.ref.name: d for _, d in
+                               get_transitive_requires(self._conanfile, dep).items()}
             if dep.cpp_info.has_components:
 
                 sorted_components = dep.cpp_info.get_sorted_components().items()
@@ -323,7 +322,7 @@ class XcodeDeps:
                     comp_name = _format_name(comp_name)
 
                     transitive_internal = []
-                    self._collect_all_transitive(comp_cpp_info, dep, visible_deps,
+                    self._collect_all_transitive(comp_cpp_info, dep, transitive_deps,
                                                  transitive_internal, set())
                     transitive_external = []
 
@@ -337,7 +336,7 @@ class XcodeDeps:
                     result.update(component_content)
             else:
                 transitive_internal = []
-                self._collect_all_transitive(dep.cpp_info, dep, visible_deps,
+                self._collect_all_transitive(dep.cpp_info, dep, transitive_deps,
                                              transitive_internal, set())
                 transitive_external = []
                 # In case dep is editable and package_folder=None
