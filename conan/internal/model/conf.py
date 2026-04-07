@@ -7,8 +7,6 @@ import os
 import fnmatch
 import textwrap
 
-from collections import OrderedDict
-
 from jinja2 import Environment, FileSystemLoader
 
 from conan.errors import ConanException
@@ -345,19 +343,10 @@ class Conf:
 
     def __init__(self):
         # It being ordered allows for Windows case-insensitive composition
-        self._values = OrderedDict()  # {var_name: [] of values, including separators}
+        self._values = {}  # {var_name: [] of values, including separators}
 
     def __bool__(self):
         return bool(self._values)
-
-    def __repr__(self):
-        return "Conf: " + repr(self._values)
-
-    def __eq__(self, other):
-        """
-        :type other: Conf
-        """
-        return other._values == self._values
 
     def clear(self):
         self._values.clear()
@@ -387,7 +376,9 @@ class Conf:
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
-            if choices is not None and v not in choices and v is not None:
+            if v is None:  # value was unset
+                return default
+            if choices is not None and v not in choices:
                 raise ConanException(f"Unknown value '{v}' for '{conf_name}'")
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
@@ -398,9 +389,9 @@ class Conf:
                 raise ConanException(f"[conf] {conf_name} must be a boolean-like object "
                                      f"(true/false, 1/0, on/off) and value '{v}' does not match it.")
             elif check_type is str and not isinstance(v, str):
+                # TODO: this would be converting things like lists to strings without
+                #   proper error, is it worth trying to change it?
                 return str(v)
-            elif v is None:  # value was unset
-                return default
             elif (check_type is not None and not isinstance(v, check_type) or
                   check_type is int and isinstance(v, bool)):
                 raise ConanException(f"[conf] {conf_name} must be a "
@@ -429,13 +420,12 @@ class Conf:
 
     def copy(self):
         c = Conf()
-        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
+        c._values = {k: v.copy() for k, v in self._values.items()}
         return c
 
     def filter_core(self):
         c = Conf()
-        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items()
-                                if not CORE_CONF_PATTERN.match(k))
+        c._values = {k: v.copy() for k, v in self._values.items() if not CORE_CONF_PATTERN.match(k)}
         return c
 
     def dumps(self):
@@ -600,10 +590,7 @@ class ConfDefinition:
                ("=!", "unset"), ("*=", "update"), ("=", "define"))
 
     def __init__(self):
-        self._pattern_confs = OrderedDict()
-
-    def __repr__(self):
-        return "ConfDefinition: " + repr(self._pattern_confs)
+        self._pattern_confs = {}
 
     def __bool__(self):
         return bool(self._pattern_confs)
