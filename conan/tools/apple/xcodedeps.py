@@ -1,8 +1,6 @@
 import os
 import re
 import textwrap
-from collections import OrderedDict
-
 from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
@@ -129,7 +127,7 @@ class XcodeDeps:
         """
         def _merged_vars(name):
             merged = [var for cpp_info in transitive_cpp_infos for var in getattr(cpp_info, name)]
-            return list(OrderedDict.fromkeys(merged).keys())
+            return list(dict.fromkeys(merged))
 
         # TODO: Investigate if paths can be made relative to "root" folder
         fields = {
