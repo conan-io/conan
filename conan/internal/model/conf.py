@@ -7,8 +7,6 @@ import os
 import fnmatch
 import textwrap
 
-from collections import OrderedDict
-
 from jinja2 import Environment, FileSystemLoader
 
 from conan.errors import ConanException
@@ -345,19 +343,10 @@ class Conf:
 
     def __init__(self):
         # It being ordered allows for Windows case-insensitive composition
-        self._values = OrderedDict()  # {var_name: [] of values, including separators}
+        self._values = {}  # {var_name: [] of values, including separators}
 
     def __bool__(self):
         return bool(self._values)
-
-    def __repr__(self):
-        return "Conf: " + repr(self._values)
-
-    def __eq__(self, other):
-        """
-        :type other: Conf
-        """
-        return other._values == self._values
 
     def clear(self):
         self._values.clear()
@@ -429,13 +418,12 @@ class Conf:
 
     def copy(self):
         c = Conf()
-        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
+        c._values = {k: v.copy() for k, v in self._values.items()}
         return c
 
     def filter_core(self):
         c = Conf()
-        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items()
-                                if not CORE_CONF_PATTERN.match(k))
+        c._values = {k: v.copy() for k, v in self._values.items() if not CORE_CONF_PATTERN.match(k)}
         return c
 
     def dumps(self):
@@ -600,10 +588,7 @@ class ConfDefinition:
                ("=!", "unset"), ("*=", "update"), ("=", "define"))
 
     def __init__(self):
-        self._pattern_confs = OrderedDict()
-
-    def __repr__(self):
-        return "ConfDefinition: " + repr(self._pattern_confs)
+        self._pattern_confs = {}
 
     def __bool__(self):
         return bool(self._pattern_confs)
