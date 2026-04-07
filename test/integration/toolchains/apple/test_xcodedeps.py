@@ -588,26 +588,21 @@ def test_diamond_dependency_components():
     arch_setting = client.get_default_host_profile().settings['arch']
     arch = "arm64" if arch_setting == "armv8" else arch_setting
 
-    # engine inlines everything: graphics (common, client), audio, and all of math
+    # engine is the only direct dep of app — its props file must inline everything:
+    # graphics (common, client), audio, and all of math (vectors, matrices)
     engine_props = client.load(f"conan_engine_engine_release_{arch}.xcconfig")
     assert "include_common" in engine_props
     assert "include_client" in engine_props
     assert "include_vectors" in engine_props
     assert "include_matrices" in engine_props
-    # math::vectors appears only once despite being reached via both graphics and audio
+    # math::vectors is reached via both graphics and audio, but appears only once
     assert engine_props.count("include_vectors") == 1
 
-    # graphics::client inlines common (internal) and math::vectors (external)
-    # but NOT math::matrices (only depends on math::vectors, not all of math)
-    graphics_client_props = client.load(f"conan_graphics_client_release_{arch}.xcconfig")
-    assert "include_common" in graphics_client_props
-    assert "include_vectors" in graphics_client_props
-    assert "include_matrices" not in graphics_client_props
-
-    # audio inlines all of math (vectors + matrices) via implicit dependency
-    audio_props = client.load(f"conan_audio_audio_release_{arch}.xcconfig")
-    assert "include_vectors" in audio_props
-    assert "include_matrices" in audio_props
+    # no inter-package #includes in engine wrapper
+    engine_xcconfig = client.load("conan_engine_engine.xcconfig")
+    assert '#include "conan_graphics' not in engine_xcconfig
+    assert '#include "conan_audio' not in engine_xcconfig
+    assert '#include "conan_math' not in engine_xcconfig
 
 
 def test_skipped_not_included():

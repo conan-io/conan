@@ -305,6 +305,9 @@ class XcodeDeps:
         test_req = self._conanfile.dependencies.test
         requires = list(host_req.items()) + list(test_req.items())
         all_deps = {dep.ref.name: dep for _, dep in requires}
+
+        # TODO: since transitive data is now inlined, xcconfig files for transitive deps
+        # are no longer included automatically. Consider generating only for direct deps.
         for require, dep in requires:
 
             dep_name = _format_name(dep.ref.name)
