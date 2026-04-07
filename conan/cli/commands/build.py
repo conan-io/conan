@@ -71,12 +71,10 @@ def build(conan_api, parser, *args):
                                        envs_generation=args.envs_generation)
 
     out.title("Calling build()")
-
     conanfile = deps_graph.root.conanfile
-    with conanfile.output.scoped():
-        conan_api.local.build(conanfile)
+    conan_api.local.build(conanfile)
 
-        lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
-                                                      clean=args.lockfile_clean)
-        conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, source_folder)
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, source_folder)
     return {"graph": deps_graph}
