@@ -305,12 +305,15 @@ class XcodeDeps:
         # All components are included in the conan_pkgname.xcconfig file
         host_req = self._conanfile.dependencies.host
         test_req = self._conanfile.dependencies.test
-        requires = list(host_req.items()) + list(test_req.items())
-        all_deps = {dep.ref.name: dep for _, dep in requires}
+        all_deps = {dep.ref.name: dep
+                    for _, dep in list(host_req.items()) + list(test_req.items())}
 
-        # TODO: since transitive data is now inlined, xcconfig files for transitive deps
-        # are no longer included automatically. Consider generating only for direct deps.
-        for require, dep in requires:
+        # TODO: Discuss behavior change, only direct deps generate xcconfig files now,
+        # since transitive data is inlined into each component's props file.
+        direct_deps = self._conanfile.dependencies.filter({"direct": True,
+                                                           "build": False,
+                                                           "skip": False})
+        for require, dep in direct_deps.items():
 
             dep_name = _format_name(dep.ref.name)
 

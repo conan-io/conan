@@ -738,6 +738,6 @@ def test_dont_add_skipped_xcconfigs_when_required_by_components():
     skip_files = [f for f in os.listdir(client.current_folder) if 'header_skip' in f and f.endswith('.xcconfig')]
     assert len(skip_files) == 0, f"Header skip files should not be generated: {skip_files}"
 
-    # Verify that header_transitive xcconfig files ARE generated (transitive dependency)
+    # Transitive deps no longer generate their own xcconfig files (data is inlined)
     transitive_files = [f for f in os.listdir(client.current_folder) if 'header_transitive' in f and f.endswith('.xcconfig')]
-    assert len(transitive_files) > 0, f"Header transitive files should be generated: {transitive_files}"
+    assert len(transitive_files) == 0, f"Header transitive files should not be generated: {transitive_files}"
