@@ -519,12 +519,12 @@ def test_dependency_of_dependency_components():
 
 def test_diamond_dependency_components():
     """
-    Diamond: math (with components vectors, matrices) is reached through two paths.
-    graphics has internal component deps (client -> common) and external (client -> math::vectors).
-    audio depends on all of math.
+    Diamond: math (with components vectors, matrices, geometry) is reached through two paths.
+    graphics::client requires math::vectors. audio::audio requires math::matrices.
+    geometry is not required by anyone and must not be inlined.
 
-    app -> engine -> graphics (client -> common, math::vectors) -> math (vectors, matrices)
-                  -> audio                                      -> math (vectors, matrices)
+    app -> engine -> graphics (client -> common, math::vectors) -> math (vectors, matrices, geometry)
+                  -> audio (requires math::matrices)            -> math (vectors, matrices, geometry)
     """
     client = TestClient()
     app = GenConanfile("app", "1.0").with_require("engine/1.0").with_settings("os", "arch", "build_type", "compiler")
@@ -558,6 +558,9 @@ def test_diamond_dependency_components():
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
             requires = "math/1.0"
+            def package_info(self):
+                self.cpp_info.includedirs = ["include_audio"]
+                self.cpp_info.requires = ["math::matrices"]
         """)
 
     math = textwrap.dedent("""
@@ -569,6 +572,7 @@ def test_diamond_dependency_components():
             def package_info(self):
                 self.cpp_info.components["vectors"].includedirs = ["include_vectors"]
                 self.cpp_info.components["matrices"].includedirs = ["include_matrices"]
+                self.cpp_info.components["geometry"].includedirs = ["include_geometry"]
         """)
 
     client.save({
@@ -589,14 +593,15 @@ def test_diamond_dependency_components():
     arch = "arm64" if arch_setting == "armv8" else arch_setting
 
     # engine is the only direct dep of app — its props file must inline everything:
-    # graphics (common, client), audio, and all of math (vectors, matrices)
+    # graphics (common, client), audio, math::vectors (via graphics), math::matrices (via audio)
     engine_props = client.load(f"conan_engine_engine_release_{arch}.xcconfig")
     assert "include_common" in engine_props
     assert "include_client" in engine_props
+    assert "include_audio" in engine_props
     assert "include_vectors" in engine_props
     assert "include_matrices" in engine_props
-    # math::vectors is reached via both graphics and audio, but appears only once
-    assert engine_props.count("include_vectors") == 1
+    # math::geometry is not required by anyone, so it must NOT be inlined
+    assert "include_geometry" not in engine_props
 
     # no inter-package #includes in engine wrapper
     engine_xcconfig = client.load("conan_engine_engine.xcconfig")
