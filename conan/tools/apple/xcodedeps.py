@@ -262,18 +262,19 @@ class XcodeDeps:
         if cpp_info.requires:
             for req in cpp_info.requires:
                 if "::" not in req:
+                    # Internal component from the same package
                     XcodeDeps._collect_all_transitive(
                         pkg_dep.cpp_info.components.get(req), pkg_dep,
                         all_deps, collected, visited)
                 else:
-                    XcodeDeps._follow_external(req, all_deps, collected, visited)
+                    XcodeDeps._resolve_external(req, all_deps, collected, visited)
         elif not pkg_dep.cpp_info.has_components and cpp_info is pkg_dep.cpp_info:
             for _, d in pkg_dep.dependencies.direct_host.items():
-                XcodeDeps._follow_external(f"{d.ref.name}::{d.ref.name}",
+                XcodeDeps._resolve_external(f"{d.ref.name}::{d.ref.name}",
                                            all_deps, collected, visited)
 
     @staticmethod
-    def _follow_external(req, all_deps, collected, visited):
+    def _resolve_external(req, all_deps, collected, visited):
         """Resolve and follow an external requirement (pkg::comp)."""
 
         ext_pkg, ext_comp = req.split("::", 1)
