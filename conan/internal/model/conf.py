@@ -376,7 +376,9 @@ class Conf:
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
-            if choices is not None and v not in choices and v is not None:
+            if v is None:  # value was unset
+                return default
+            if choices is not None and v not in choices:
                 raise ConanException(f"Unknown value '{v}' for '{conf_name}'")
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
@@ -387,9 +389,9 @@ class Conf:
                 raise ConanException(f"[conf] {conf_name} must be a boolean-like object "
                                      f"(true/false, 1/0, on/off) and value '{v}' does not match it.")
             elif check_type is str and not isinstance(v, str):
+                # TODO: this would be converting things like lists to strings without
+                #   proper error, is it worth trying to change it?
                 return str(v)
-            elif v is None:  # value was unset
-                return default
             elif (check_type is not None and not isinstance(v, check_type) or
                   check_type is int and isinstance(v, bool)):
                 raise ConanException(f"[conf] {conf_name} must be a "
