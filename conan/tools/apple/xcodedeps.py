@@ -242,7 +242,7 @@ class XcodeDeps:
         return result
 
     @staticmethod
-    def _collect_all_transitive(cpp_info, pkg_dep, all_deps, collected, visited):
+    def _collect_all_transitive(cpp_info, pkg_dep, all_deps, collected, visited=None):
         """Recursively collect all transitive CppInfo objects (internal and external)
         into a flat list.
 
@@ -250,8 +250,10 @@ class XcodeDeps:
         :param pkg_dep: dependency object owning the cpp_info
         :param all_deps: dict {ref.name: dep} of all available host/test deps
         :param collected: output list accumulating the CppInfo objects
-        :param visited: set of id(cpp_info) already processed
+        :param visited: set of id(cpp_info) already processed (created automatically)
         """
+        if visited is None:
+            visited = set()
 
         key = id(cpp_info)
         if key in visited:
@@ -321,7 +323,7 @@ class XcodeDeps:
 
                     transitive_internal = []
                     self._collect_all_transitive(comp_cpp_info, dep, all_deps,
-                                                 transitive_internal, set())
+                                                 transitive_internal)
 
                     # In case dep is editable and package_folder=None
                     pkg_folder = dep.package_folder or dep.recipe_folder
@@ -334,7 +336,7 @@ class XcodeDeps:
             else:
                 transitive_internal = []
                 self._collect_all_transitive(dep.cpp_info, dep, all_deps,
-                                             transitive_internal, set())
+                                             transitive_internal)
                 # In case dep is editable and package_folder=None
                 pkg_folder = dep.package_folder or dep.recipe_folder
                 root_content = self.get_content_for_component(require, dep_name, dep_name, pkg_folder,
