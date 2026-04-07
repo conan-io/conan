@@ -207,7 +207,6 @@ def test_xcodedeps_aggregate_components():
         assert f"conan_libb_libb_comp{index}.xcconfig" in lib_entry
 
     component7_entry = client.load("conan_libb_libb_comp7.xcconfig")
-    # External deps are now inlined into the props file, no #include in wrapper
     assert '#include "conan_liba.xcconfig"' not in component7_entry
 
     arch_setting = client.get_default_host_profile().settings['arch']
@@ -452,7 +451,6 @@ def test_xcodedeps_cppinfo_requires():
     So we will only link against the components specified in the cpp_info.requires of lib_b and lib_c
     """
 
-    # Verify component data is inlined in the props files, not in wrapper #includes
     arch_setting = client.get_default_host_profile().settings['arch']
     arch = "arm64" if arch_setting == "armv8" else arch_setting
 
@@ -509,11 +507,9 @@ def test_dependency_of_dependency_components():
 
     lib_b_xconfig = client.load("conan_lib_b_lib_b.xcconfig")
 
-    # External deps are now inlined into the props file, no #include in wrapper
     assert '#include "conan_lib_c_cmp1.xcconfig"' not in lib_b_xconfig
     assert '#include "conan_lib_c_lib_c.xcconfig"' not in lib_b_xconfig
 
-    # Verify lib_c's component data is inlined in lib_b's props file
     arch_setting = client.get_default_host_profile().settings['arch']
     arch = "arm64" if arch_setting == "armv8" else arch_setting
     lib_b_props = client.load(f"conan_lib_b_lib_b_release_{arch}.xcconfig")
@@ -584,17 +580,14 @@ def test_correctly_handle_transitive_components():
     assert '#include "conan_has_components.xcconfig"' not in conandeps
     assert '#include "conan_uses_components.xcconfig"' in conandeps
     conan_uses_xcconfig = client.load("conan_uses_components_uses_components.xcconfig")
-    # External deps are now inlined into the props file, no #include in wrapper
     assert '#include "conan_has_components_first.xcconfig"' not in conan_uses_xcconfig
     assert '#include "conan_has_components_second.xcconfig"' not in conan_uses_xcconfig
 
-    # Verify that 'first' component data is inlined in uses_components' props file
     arch_setting = client.get_default_host_profile().settings['arch']
     arch = "arm64" if arch_setting == "armv8" else arch_setting
     uses_props = client.load(f"conan_uses_components_uses_components_release_{arch}.xcconfig")
     assert "-lfirst" in uses_props
     assert "-luses_only_first" in uses_props
-    # 'second' component should NOT be inlined (not required)
     assert "donottouch" not in uses_props
 
 
@@ -645,7 +638,6 @@ def test_dont_add_skipped_xcconfigs_when_required_by_components():
     client.run("install --requires=regular_lib/1.0 -g XcodeDeps")
 
     conandeps = client.load("conan_regular_lib_component.xcconfig")
-    # External deps are now inlined into the props file, no #include in wrapper
     assert '#include "conan_header_skip.xcconfig"' not in conandeps
     assert '#include "conan_header_transitive.xcconfig"' not in conandeps
 

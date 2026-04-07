@@ -188,7 +188,6 @@ def test_xcodedeps_components():
     client.run("install --requires=chat/1.0@ -g XcodeDeps --output-folder=conan "
                "-s build_type=Debug --build=missing")
     chat_xcconfig = client.load(os.path.join("conan", "conan_chat_chat.xcconfig"))
-    # External deps are now inlined into the props file, no #include in wrapper
     assert '#include "conan_network_client_test__.xcconfig"' not in chat_xcconfig
     assert '#include "conan_network_server.xcconfig"' not in chat_xcconfig
     assert '#include "conan_network_network.xcconfig"' not in chat_xcconfig
@@ -271,11 +270,9 @@ def test_cpp_info_require_whole_package():
     client.run("install --requires=libb/1.0 -g XcodeDeps -of=libb")
 
     libb_xcconfig = client.load(os.path.join("libb", "conan_libb_libb.xcconfig"))
-    # External deps are now inlined into the props file, no #include in wrapper
     assert '#include "conan_liba.xcconfig"' not in libb_xcconfig
     assert '#include "conan_liba_liba.xcconfig"' not in libb_xcconfig
 
-    # Verify liba data is inlined in libb's props file
     host_arch = client.get_default_host_profile().settings['arch']
     arch = "arm64" if host_arch == "armv8" else host_arch
     libb_props = client.load(os.path.join("libb", f"conan_libb_libb_release_{arch}.xcconfig"))
@@ -285,11 +282,9 @@ def test_cpp_info_require_whole_package():
     client.run("install --requires=libc/1.0 -g XcodeDeps -of=libc")
 
     libc_comp1_xcconfig = client.load(os.path.join("libc", "conan_libc_cmp1.xcconfig"))
-    # External deps are now inlined into the props file, no #include in wrapper
     assert '#include "conan_liba.xcconfig"' not in libc_comp1_xcconfig
     assert '#include "conan_liba_liba.xcconfig"' not in libc_comp1_xcconfig
 
-    # Verify liba data is inlined in libc cmp1's props file
     libc_cmp1_props = client.load(os.path.join("libc", f"conan_libc_cmp1_release_{arch}.xcconfig"))
     assert "cmp1" in libc_cmp1_props
     assert "cmp2" in libc_cmp1_props

@@ -316,8 +316,6 @@ class XcodeDeps:
 
             dep_name = _format_name(dep.ref.name)
 
-            # TODO: discuss if we should skip generating xcconfig files for transitive-only
-            # deps, since their data is now inlined and their files are never #include'd.
             visible_deps = {}
             for _, d in get_transitive_requires(self._conanfile, dep).items():
                 visible_deps[d.ref.name] = d
