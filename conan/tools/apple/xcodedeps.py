@@ -1,7 +1,6 @@
 import os
 import re
 import textwrap
-from collections import OrderedDict
 
 from jinja2 import Template
 
@@ -130,7 +129,7 @@ class XcodeDeps:
         """
         def _merged_vars(name):
             merged = [var for cpp_info in transitive_cpp_infos for var in getattr(cpp_info, name)]
-            return list(OrderedDict.fromkeys(merged).keys())
+            return list(dict.fromkeys(merged).keys())
 
         # TODO: Investigate if paths can be made relative to "root" folder
         fields = {
@@ -292,8 +291,8 @@ class XcodeDeps:
                     _transitive_components(comp_cpp_info)
 
                     # remove duplicates
-                    transitive_internal = list(OrderedDict.fromkeys(transitive_internal).keys())
-                    transitive_external = list(OrderedDict.fromkeys(transitive_external).keys())
+                    transitive_internal = list(dict.fromkeys(transitive_internal).keys())
+                    transitive_external = list(dict.fromkeys(transitive_external).keys())
 
                     # In case dep is editable and package_folder=None
                     pkg_folder = dep.package_folder or dep.recipe_folder
