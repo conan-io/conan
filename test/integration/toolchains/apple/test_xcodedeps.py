@@ -597,6 +597,18 @@ def test_diamond_dependency_components():
     # math::vectors appears only once despite being reached via both graphics and audio
     assert engine_props.count("include_vectors") == 1
 
+    # graphics::client inlines common (internal) and math::vectors (external)
+    # but NOT math::matrices (only depends on math::vectors, not all of math)
+    graphics_client_props = client.load(f"conan_graphics_client_release_{arch}.xcconfig")
+    assert "include_common" in graphics_client_props
+    assert "include_vectors" in graphics_client_props
+    assert "include_matrices" not in graphics_client_props
+
+    # audio inlines all of math (vectors + matrices) via implicit dependency
+    audio_props = client.load(f"conan_audio_audio_release_{arch}.xcconfig")
+    assert "include_vectors" in audio_props
+    assert "include_matrices" in audio_props
+
 
 def test_skipped_not_included():
     # https://github.com/conan-io/conan/issues/13818
