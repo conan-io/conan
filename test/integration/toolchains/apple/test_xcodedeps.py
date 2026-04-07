@@ -519,83 +519,83 @@ def test_dependency_of_dependency_components():
 
 def test_diamond_dependency_components():
     """
-    Diamond: lib_e (with components core, utils) is reached through two paths.
-    lib_c has internal component deps (cmp1 -> base) and external (cmp1 -> lib_e::core).
-    lib_d depends on all of lib_e.
+    Diamond: math (with components vectors, matrices) is reached through two paths.
+    graphics has internal component deps (client -> common) and external (client -> math::vectors).
+    audio depends on all of math.
 
-    lib_a -> lib_b -> lib_c (cmp1 -> base, lib_e::core) -> lib_e (core, utils)
-                   -> lib_d                              -> lib_e (core, utils)
+    app -> engine -> graphics (client -> common, math::vectors) -> math (vectors, matrices)
+                  -> audio                                      -> math (vectors, matrices)
     """
     client = TestClient()
-    lib_a = GenConanfile("lib_a", "1.0").with_require("lib_b/1.0").with_settings("os", "arch", "build_type", "compiler")
+    app = GenConanfile("app", "1.0").with_require("engine/1.0").with_settings("os", "arch", "build_type", "compiler")
 
-    lib_b = textwrap.dedent("""
+    engine = textwrap.dedent("""
         from conan import ConanFile
-        class lib_bConan(ConanFile):
-            name = "lib_b"
+        class EngineConan(ConanFile):
+            name = "engine"
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
-            requires = "lib_c/1.0", "lib_d/1.0"
+            requires = "graphics/1.0", "audio/1.0"
         """)
 
-    lib_c = textwrap.dedent("""
+    graphics = textwrap.dedent("""
         from conan import ConanFile
-        class lib_cConan(ConanFile):
-            name = "lib_c"
+        class GraphicsConan(ConanFile):
+            name = "graphics"
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
-            requires = "lib_e/1.0"
+            requires = "math/1.0"
             def package_info(self):
-                self.cpp_info.components["base"].includedirs = ["include_base"]
-                self.cpp_info.components["cmp1"].includedirs = ["include_cmp1"]
-                self.cpp_info.components["cmp1"].requires = ["base", "lib_e::core"]
+                self.cpp_info.components["common"].includedirs = ["include_common"]
+                self.cpp_info.components["client"].includedirs = ["include_client"]
+                self.cpp_info.components["client"].requires = ["common", "math::vectors"]
         """)
 
-    lib_d = textwrap.dedent("""
+    audio = textwrap.dedent("""
         from conan import ConanFile
-        class lib_dConan(ConanFile):
-            name = "lib_d"
+        class AudioConan(ConanFile):
+            name = "audio"
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
-            requires = "lib_e/1.0"
+            requires = "math/1.0"
         """)
 
-    lib_e = textwrap.dedent("""
+    math = textwrap.dedent("""
         from conan import ConanFile
-        class lib_eConan(ConanFile):
-            name = "lib_e"
+        class MathConan(ConanFile):
+            name = "math"
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
             def package_info(self):
-                self.cpp_info.components["core"].includedirs = ["include_e_core"]
-                self.cpp_info.components["utils"].includedirs = ["include_e_utils"]
+                self.cpp_info.components["vectors"].includedirs = ["include_vectors"]
+                self.cpp_info.components["matrices"].includedirs = ["include_matrices"]
         """)
 
     client.save({
-        'conanfile.py': lib_a,
-        'lib_b/conanfile.py': lib_b,
-        'lib_c/conanfile.py': lib_c,
-        'lib_d/conanfile.py': lib_d,
-        'lib_e/conanfile.py': lib_e,
+        'conanfile.py': app,
+        'engine/conanfile.py': engine,
+        'graphics/conanfile.py': graphics,
+        'audio/conanfile.py': audio,
+        'math/conanfile.py': math,
     })
 
-    client.run("create lib_e")
-    client.run("create lib_d")
-    client.run("create lib_c")
-    client.run("create lib_b")
+    client.run("create math")
+    client.run("create audio")
+    client.run("create graphics")
+    client.run("create engine")
     client.run("install . -g XcodeDeps")
 
     arch_setting = client.get_default_host_profile().settings['arch']
     arch = "arm64" if arch_setting == "armv8" else arch_setting
 
-    # lib_b inlines everything: lib_c (base, cmp1), lib_d, and all of lib_e
-    lib_b_props = client.load(f"conan_lib_b_lib_b_release_{arch}.xcconfig")
-    assert "include_base" in lib_b_props
-    assert "include_cmp1" in lib_b_props
-    assert "include_e_core" in lib_b_props
-    assert "include_e_utils" in lib_b_props
-    # lib_e::core appears only once despite being reached via both lib_c and lib_d
-    assert lib_b_props.count("include_e_core") == 1
+    # engine inlines everything: graphics (common, client), audio, and all of math
+    engine_props = client.load(f"conan_engine_engine_release_{arch}.xcconfig")
+    assert "include_common" in engine_props
+    assert "include_client" in engine_props
+    assert "include_vectors" in engine_props
+    assert "include_matrices" in engine_props
+    # math::vectors appears only once despite being reached via both graphics and audio
+    assert engine_props.count("include_vectors") == 1
 
 
 def test_skipped_not_included():
