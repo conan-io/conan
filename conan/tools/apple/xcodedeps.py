@@ -244,7 +244,14 @@ class XcodeDeps:
     @staticmethod
     def _collect_all_transitive(cpp_info, pkg_dep, all_deps, collected, visited):
         """Recursively collect all transitive CppInfo objects (internal and external)
-        into a flat list."""
+        into a flat list.
+
+        :param cpp_info: current CppInfo being processed (root or component)
+        :param pkg_dep: dependency object owning the cpp_info
+        :param all_deps: dict {ref.name: dep} of all available host/test deps
+        :param collected: output list accumulating the CppInfo objects
+        :param visited: set of id(cpp_info) already processed
+        """
 
         key = id(cpp_info)
         if key in visited:
