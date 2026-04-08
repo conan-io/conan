@@ -81,12 +81,19 @@ def test_require_different_versions_profile_override():
     wine = textwrap.dedent("""
         import os, platform
         from conan import ConanFile
+        from conan.tools.env import VirtualBuildEnv
         from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             name = "wine"
             version = "1.0"
             def build_requirements(self):
                 self.tool_requires("gcc/1.0", run=False)
+
+            def generate(self):
+                venv = VirtualBuildEnv(self)
+                gcc1 = self.dependencies.build["gcc/1.0"]
+                venv.environment().prepend_path("PATH", gcc1.cpp_info.bindir)
+                venv.generate()
 
             def build(self):
                 ext = "bat" if platform.system() == "Windows" else "sh"
