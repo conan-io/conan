@@ -1,4 +1,6 @@
 import os
+import sys
+import time
 import pytest
 
 from conan.api.model import Remote
@@ -17,28 +19,78 @@ from conan.internal.rest.rest_client import RestApiClient
 from conan.internal.util.files import md5, save
 
 
+class _RestApiProfile:
+    """Lightweight segment timer for setup_class (CI / local debugging)."""
+
+    def __init__(self):
+        self._t0 = time.perf_counter()
+        self._last = self._t0
+        self._lines = []
+
+    def mark(self, label):
+        now = time.perf_counter()
+        seg = now - self._last
+        total = now - self._t0
+        line = f"{label}: +{seg:.3f}s (total {total:.3f}s)"
+        self._lines.append(line)
+        msg = f"[rest_api_test profile] {line}"
+        print(msg, file=sys.stderr, flush=True)
+
+    def finish(self):
+        if not self._lines:
+            return
+        summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+        if not summary_path:
+            return
+        try:
+            with open(summary_path, "a", encoding="utf-8") as f:
+                f.write("### `TestRestApi` setup timing\n\n")
+                f.write("| Segment | Time |\n")
+                f.write("| --- | --- |\n")
+                for line in self._lines:
+                    # line is "label: +Xs (total Ys)"
+                    parts = line.split(":", 1)
+                    if len(parts) == 2:
+                        f.write(f"| {parts[0].strip()} | `{parts[1].strip()}` |\n")
+                    else:
+                        f.write(f"| | `{line}` |\n")
+                f.write("\n")
+        except OSError:
+            pass
+
+
 class TestRestApi:
     """Open a real server (sockets) to test rest_api function."""
 
     @pytest.fixture(scope="class", autouse=True)
     def setup_class(self):
-        with environment_update({"CONAN_SERVER_PORT": str(get_free_port())}):
+        prof = _RestApiProfile()
+        port = get_free_port()
+        prof.mark("get_free_port")
+        with environment_update({"CONAN_SERVER_PORT": str(port)}):
+            prof.mark("environment_update entered")
             read_perms = [("*/*@*/*", "private_user")]
             write_perms = [("*/*@*/*", "private_user")]
             self.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'],
                                              read_permissions=read_perms,
                                              write_permissions=write_perms)
+            prof.mark("after TestServerLauncher()")
             self.server.start()
+            prof.mark("after server.start()")
 
             config = ConfDefinition()
             requester = ConanRequester(config)
+            prof.mark("after ConfDefinition + ConanRequester")
 
             remote = Remote("myremote", f"http://127.0.0.1:{self.server.port}", True, True)
             self.api = RestApiClient(remote, None, requester, config)
+            prof.mark("after RestApiClient()")
             self.api._token = self.api.authenticate(user="private_user", password="private_pass")
+            prof.mark("after authenticate()")
             # Necessary for setup_class approach
             TestRestApi.api = self.api
             TestRestApi.server = self.server
+        prof.finish()
         yield
 
         self.server.stop()
