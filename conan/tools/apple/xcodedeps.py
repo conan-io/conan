@@ -308,8 +308,6 @@ class XcodeDeps:
         all_deps = {dep.ref.name: dep
                     for _, dep in list(host_req.items()) + list(test_req.items())}
 
-        # TODO: Discuss behavior change, only direct deps generate xcconfig files now,
-        # since transitive data is inlined into each component's props file.
         direct_deps = self._conanfile.dependencies.filter({"direct": True,
                                                            "build": False,
                                                            "skip": False})
