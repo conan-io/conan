@@ -442,3 +442,69 @@ class TestTransitiveBuild:
         # No conflict, because both protobufs are run=False,
         # so the shared-library abseil is not propagated with run=True in any of the branches
         assert "Install finished successfully" in c.out
+
+    def test_require_different_versions_transitive_conflict_require_run_own_ld(self):
+        c = TestClient(light=True)
+
+        project = textwrap.dedent("""
+        from io import StringIO
+        from conan import ConanFile
+        from conan.tools.files import save, copy
+        from conan.tools.env import VirtualBuildEnv
+        class Pkg(ConanFile):
+            def build_requirements(self):
+                self.build_requires("protobuf/1.0", run=False)
+                self.build_requires("protobuf/2.0", run=False)
+
+            def generate(self):
+                proto1 = self.dependencies.build["protobuf/1.0"]
+                proto2 = self.dependencies.build["protobuf/2.0"]
+
+                # UNDOCUMENTED, just to show that it would be possible
+                venv1 = VirtualBuildEnv(proto1._conanfile)
+                venv2 = VirtualBuildEnv(proto2._conanfile)
+
+                venv1.environment().vars(self, scope=None).save_script("proto1")
+                venv2.environment().vars(self, scope=None).save_script("proto2")
+
+
+            def build(self):
+                out = StringIO()
+                proto1_path = self.dependencies.build["protobuf/1.0"].package_folder
+                proto2_path = self.dependencies.build["protobuf/2.0"].package_folder
+
+                absl1_path = self.dependencies.build["abseil/1.0"].package_folder
+                absl2_path = self.dependencies.build["abseil/2.0"].package_folder
+
+                self.run("set", env=["conanbuild", "proto1"], stdout=out)
+                assert proto1_path in out.getvalue()
+                assert absl1_path in out.getvalue()
+                assert proto2_path not in out.getvalue()
+                assert absl2_path not in out.getvalue()
+
+                out = StringIO()
+                self.run("set", env=["conanbuild", "proto2"], stdout=out)
+                assert proto1_path not in out.getvalue()
+                assert absl1_path not in out.getvalue()
+                assert proto2_path in out.getvalue()
+                assert absl2_path in out.getvalue()
+        """)
+
+        c.save({"abseil/conanfile.py": GenConanfile("abseil")
+               .with_package_file("libs/libabseil.so", "content")
+               .with_package_info(cpp_info={"libs": ["abseil"]})
+               .with_package_type("shared-library"),
+                "protobuf1/conanfile.py": GenConanfile("protobuf", "1.0")
+               .with_requirement("abseil/[~1]"),
+                "protobuf2/conanfile.py": GenConanfile("protobuf", "2.0")
+               .with_requirement("abseil/[~2]"),
+                "project/conanfile.py": project})
+
+        c.run("create abseil --version=1.0")
+        c.run("create abseil --version=2.0")
+        c.run("create protobuf1")
+        c.run("create protobuf2")
+        c.run("install project")
+        # No conflict, because both protobufs are run=False,
+        # so the shared-library abseil is not propagated with run=True in any of the branches
+        assert "Install finished successfully" in c.out
