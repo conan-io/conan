@@ -1,7 +1,9 @@
 """Temporary timing for REST tests (remove when done debugging)."""
 import os
+import pstats
 import sys
 import time
+from io import StringIO
 
 
 def _github_summary_append(content: str) -> None:
@@ -29,6 +31,22 @@ def log(message: str) -> None:
     text = f"[rest_api_test profile] {message}"
     print(text, file=sys.stderr, flush=True)
     _github_summary_append(f"- {text}\n")
+
+
+def dump_cprofile_authenticate(profile, topn: int = 50) -> None:
+    """Print cProfile stats sorted by cumulative time (authenticate HTTP call)."""
+    stream = StringIO()
+    pstats.Stats(profile, stream=stream).sort_stats("cumtime").print_stats(topn)
+    body = stream.getvalue()
+    banner = "[rest_api_test profile] cProfile cumtime (authenticate Session.get)\n"
+    print(banner + body, file=sys.stderr, flush=True)
+    # Summary: truncated — full stats are in the job log (stderr).
+    max_summary = 6000
+    snippet = body if len(body) <= max_summary else body[:max_summary] + "\n… [truncated]\n"
+    _github_summary_append(
+        "### cProfile `cumtime` (authenticate `Session.get`)\n\n"
+        f"```\n{snippet}\n```\n\n"
+    )
 
 
 class RestApiProfile:

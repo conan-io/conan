@@ -1,3 +1,4 @@
+import cProfile
 import fnmatch
 import json
 import logging
@@ -202,11 +203,26 @@ class ConanRequester:
                 )
             else:
                 t_http_start = None
-            tmp = getattr(self._http_requester, method)(url, **all_kwargs)
-            if t_http_start is not None:
-                rest_ci_profile.log(
-                    f"auth deep: ConanRequester requests.Session.{method} +{time.perf_counter() - t_http_start:.3f}s"
-                )
+            if _prof_auth:
+                pr = cProfile.Profile()
+                pr.enable()
+                try:
+                    tmp = getattr(self._http_requester, method)(url, **all_kwargs)
+                finally:
+                    pr.disable()
+                    rest_ci_profile.dump_cprofile_authenticate(pr)
+                if t_http_start is not None:
+                    rest_ci_profile.log(
+                        f"auth deep: ConanRequester requests.Session.{method} "
+                        f"+{time.perf_counter() - t_http_start:.3f}s"
+                    )
+            else:
+                tmp = getattr(self._http_requester, method)(url, **all_kwargs)
+                if t_http_start is not None:
+                    rest_ci_profile.log(
+                        f"auth deep: ConanRequester requests.Session.{method} "
+                        f"+{time.perf_counter() - t_http_start:.3f}s"
+                    )
             return tmp
         finally:
             if popped:
