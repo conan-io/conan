@@ -467,12 +467,19 @@ class TestRemoteAuth:
         c.run("remote auth * --strict")
         assert "user: myuser" in c.out
 
-        # Partial failure -> exit != 0, reports failed remotes
+        # Partial failure without --strict -> exit 0
         c2 = TestClient(light=True, servers=servers,
                         inputs=["myuser", "mypassword",
                                 "wrong", "wrong", "wrong", "wrong", "wrong", "wrong"])
-        c2.run("remote auth * --strict", assert_error=True)
-        assert "Authentication error in remotes: bad" in c2.out
+        c2.run("remote auth *")
+        assert "error" in c2.out
+
+        # Partial failure with --strict -> exit != 0
+        c3 = TestClient(light=True, servers=servers,
+                        inputs=["myuser", "mypassword",
+                                "wrong", "wrong", "wrong", "wrong", "wrong", "wrong"])
+        c3.run("remote auth * --strict", assert_error=True)
+        assert "Authentication error in remotes: bad" in c3.out
 
     def test_auth_after_logout(self):
         server = TestServer(users={"myuser": "password"})
