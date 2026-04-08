@@ -155,6 +155,7 @@ def test_require_different_options():
     wine = textwrap.dedent("""
         import os, platform
         from conan import ConanFile
+        from conan.tools.env import VirtualBuildEnv
         from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             name = "wine"
@@ -164,10 +165,16 @@ def test_require_different_options():
                 self.tool_requires("gcc/1.0", run=False, options={"myoption": 2})
 
             def generate(self):
+                venv = VirtualBuildEnv(self)
                 gcc1 = self.dependencies.build.get("gcc", options={"myoption": 1})
                 assert gcc1.options.myoption == "1"
                 gcc2 = self.dependencies.build.get("gcc", options={"myoption": 2})
                 assert gcc2.options.myoption == "2"
+                env = venv.environment()
+                env.prepend_path("PATH", gcc1.cpp_info.bindir)
+                env.prepend_path("PATH", gcc2.cpp_info.bindir)
+                venv.generate()
+
 
             def build(self):
                 ext = "bat" if platform.system() == "Windows" else "sh"
