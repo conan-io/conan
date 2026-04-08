@@ -32,9 +32,11 @@ class ConanProxy:
     def _get_recipe(self, reference, remotes, update, check_update):
         output = ConanOutput(scope=str(reference))
 
-        conanfile_path = self._editable_packages.get_path(reference)
-        if conanfile_path is not None:
-            return BasicLayout(reference, conanfile_path), RECIPE_EDITABLE, None
+        editable = self._editable_packages.get(reference)
+        if editable is not None:
+            path = editable["path"]
+            output_folder = editable.get("output_folder")
+            return BasicLayout(reference, path, output_folder), RECIPE_EDITABLE, None
 
         # check if it there's any revision of this recipe in the local cache
         try:

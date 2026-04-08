@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer
 
@@ -7,14 +5,9 @@ from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServe
 class TestRemoteChecks:
 
     def test_binary_defines_remote(self):
-        servers = OrderedDict([("server1", TestServer()),
-                               ("server2", TestServer()),
-                               ("server3", TestServer())])
+        servers = {"server1": TestServer(), "server2": TestServer(), "server3": TestServer()}
         client = TestClient(servers=servers, inputs=3*["admin", "password"])
-        conanfile = """from conan import ConanFile
-class Pkg(ConanFile):
-    pass"""
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
         client.run("upload pkg* -r=server1 --confirm")
         client.run("upload pkg* -r=server2 --confirm")
@@ -28,7 +21,7 @@ class Pkg(ConanFile):
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server1)")})
         assert "pkg/0.1@lasote/testing: Retrieving package " \
-                      "%s from remote 'server1'" % NO_SETTINGS_PACKAGE_ID in client.out
+               "%s from remote 'server1'" % NO_SETTINGS_PACKAGE_ID in client.out
 
         # Explicit remote also defines the remote
         client.run("remove * -c")
@@ -37,7 +30,7 @@ class Pkg(ConanFile):
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
         assert "pkg/0.1@lasote/testing: Retrieving package " \
-                      "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID in client.out
+               "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID in client.out
 
         # Ordered search of binary works
         client.run("remove * -c")
@@ -47,7 +40,7 @@ class Pkg(ConanFile):
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
         assert "pkg/0.1@lasote/testing: Retrieving package " \
-                      "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID in client.out
+               "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID in client.out
 
         # Download recipe and binary from the remote2 by iterating
         client.run("remove * -c")
@@ -56,42 +49,35 @@ class Pkg(ConanFile):
         client.assert_listed_binary(
             {"pkg/0.1@lasote/testing": (NO_SETTINGS_PACKAGE_ID, "Download (server2)")})
         assert "pkg/0.1@lasote/testing: Retrieving package " \
-                      "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID in client.out
+               "%s from remote 'server2'" % NO_SETTINGS_PACKAGE_ID in client.out
 
     def test_binaries_from_different_remotes(self):
-        servers = OrderedDict()
-        servers["server1"] = TestServer()
-        servers["server2"] = TestServer()
+        servers = {"server1": TestServer(), "server2": TestServer()}
         client = TestClient(servers=servers, inputs=2*["admin", "password"])
-        conanfile = """from conan import ConanFile
-class Pkg(ConanFile):
-    options = {"opt": [1, 2, 3]}
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg/*:opt=1")
+        client.save({"conanfile.py": GenConanfile().with_option("opt", [1, 2, 3])})
+        client.run("create . --name=pkg --version=0.1 -o pkg/*:opt=1")
         client.run("upload pkg* -r=server1 --confirm")
         client.run("remove *:* -c")
-        client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -o pkg/*:opt=2")
-        package_id2 = client.created_package_id("pkg/0.1@lasote/testing")
+        client.run("create . --name=pkg --version=0.1 -o pkg/*:opt=2")
+        package_id2 = client.created_package_id("pkg/0.1")
         client.run("upload pkg* -r=server2 --confirm")
         client.run("remove *:* -c")
 
         # recipe is cached, takes binary from server2
-        client.run("install --requires=pkg/0.1@lasote/testing -o pkg/*:opt=2 -r=server2")
-        client.assert_listed_binary({"pkg/0.1@lasote/testing": (package_id2, "Download (server2)")})
-        assert f"pkg/0.1@lasote/testing: Retrieving package {package_id2} " \
-                      "from remote 'server2'" in client.out
+        client.run("install --requires=pkg/0.1 -o pkg/*:opt=2 -r=server2")
+        client.assert_listed_binary({"pkg/0.1": (package_id2, "Download (server2)")})
+        assert f"pkg/0.1: Retrieving package {package_id2} from remote 'server2'" in client.out
 
         # Nothing to update
-        client.run("install --requires=pkg/0.1@lasote/testing -o pkg/*:opt=2 -r=server2 -u")
-        client.assert_listed_binary({"pkg/0.1@lasote/testing": (package_id2, "Cache")})
+        client.run("install --requires=pkg/0.1 -o pkg/*:opt=2 -r=server2 -u")
+        client.assert_listed_binary({"pkg/0.1": (package_id2, "Cache")})
 
         # Build missing
-        client.run("install --requires=pkg/0.1@lasote/testing -o pkg/*:opt=3 -r=server2", assert_error=True)
-        assert "ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'" in client.out
+        client.run("install --requires=pkg/0.1 -o pkg/*:opt=3 -r=server2", assert_error=True)
+        assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out
 
-        client.run("install --requires=pkg/0.1@lasote/testing -o pkg/*:opt=3", assert_error=True)
-        assert "ERROR: Missing prebuilt package for 'pkg/0.1@lasote/testing'" in client.out
+        client.run("install --requires=pkg/0.1 -o pkg/*:opt=3", assert_error=True)
+        assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in client.out
 
 
 def test_version_range_multi_remote():
@@ -100,9 +86,7 @@ def test_version_range_multi_remote():
       valid is found in the first server, it is return
     - Using --update forces to really update to the latest version available, anywhere
     """
-    servers = OrderedDict([("server1", TestServer()),
-                           ("server2", TestServer()),
-                           ("server3", TestServer())])
+    servers = {"server1": TestServer(), "server2": TestServer(), "server3": TestServer()}
     client = TestClient(servers=servers, inputs=3*["admin", "password"])
     client.save({"conanfile.py": GenConanfile()})
     for i in (1, 2, 3):

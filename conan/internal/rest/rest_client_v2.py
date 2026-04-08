@@ -309,7 +309,7 @@ class RestV2Methods:
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         retry = self._config.get("core.download:retry", check_type=int, default=2)
-        retry_wait = self._config.get("core.download:retry_wait", check_type=int, default=0)
+        retry_wait = self._config.get("core.download:retry_wait", check_type=int, default=1)
         downloader = ConanInternalCacheDownloader(self.requester, self._config, scope=scope)
         threads = []
 
