@@ -2,6 +2,7 @@
 from conan.internal import check_duplicated_generator
 from conan.tools.build.flags import build_type_flags, cppstd_flag, build_type_link_flags
 from conan.tools.env import Environment
+from conan.tools.microsoft.nmakedeps import format_defines
 from conan.tools.microsoft.visual import msvc_runtime_flag, VCVars
 
 
@@ -28,20 +29,6 @@ class NMakeToolchain:
     @staticmethod
     def _format_options(options):
         return [f"{opt[0].replace('-', '/')}{opt[1:]}" for opt in options if len(opt) > 1]
-
-    @staticmethod
-    def _format_defines(defines):
-        formated_defines = []
-        for define in defines:
-            if "=" in define:
-                # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
-                # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
-                macro, value = define.split("=", 1)
-                if value and not value.isnumeric():
-                    value = f'\\"{value}\\"'
-                define = f"{macro}#{value}"
-            formated_defines.append(f"/D\"{define}\"")
-        return formated_defines
 
     @property
     def _cl(self):
@@ -71,7 +58,7 @@ class NMakeToolchain:
         defines.extend(self.extra_defines)
 
         return (["/nologo"] + self._format_options(bt_flags + rt_flags + cflags + cxxflags) +
-                self._format_defines(defines))
+                format_defines(defines))
 
     @property
     def _link(self):
@@ -88,6 +75,11 @@ class NMakeToolchain:
 
         return ["/nologo"] + self._format_options(ldflags)
 
+    @property
+    def _rcflags(self):
+        rcflags = self._conanfile.conf.get("tools.build:rcflags", default=[], check_type=list)
+        return self._format_options(rcflags) if rcflags else []
+
     def environment(self):
         env = Environment()
         # Injection of compile flags in CL env-var:
@@ -96,6 +88,8 @@ class NMakeToolchain:
         # Injection of link flags in _LINK_ env-var:
         # https://learn.microsoft.com/en-us/cpp/build/reference/linking
         env.append("_LINK_", self._link)
+        if self._rcflags:
+            env.append("RCFLAGS", self._rcflags)
         # Also define some special env-vars which can override special NMake macros:
         # https://learn.microsoft.com/en-us/cpp/build/reference/special-nmake-macros
         conf_compilers = self._conanfile.conf.get("tools.build:compiler_executables", default={},

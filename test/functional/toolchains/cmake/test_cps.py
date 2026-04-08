@@ -52,6 +52,8 @@ def test_cps(shared):
         """)
 
     cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(mypkg CXX)
 
@@ -80,6 +82,8 @@ def test_cps(shared):
 
     # Lets consume directly with CPS
     test_cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(PackageTest CXX)
 
@@ -182,6 +186,8 @@ def test_cps_components(shared):
         """)
 
     cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(mypkg CXX)
 
@@ -214,6 +220,8 @@ def test_cps_components(shared):
 
     # Create test_package files for the two components
     test_package_cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(PackageTest CXX)
 
@@ -342,6 +350,8 @@ def test_cps_components_requires(kind):
 
     lib_type = "PUBLIC" if "public" in kind else "PRIVATE"
     cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project({name} CXX)
 
@@ -386,6 +396,8 @@ def test_cps_components_requires(kind):
 
     # Create test_package files for the two components
     test_package_cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(PackageTest CXX)
 
@@ -512,6 +524,8 @@ def test_pure_cmake_shared():
     c = TestClient()
 
     cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(myproj CXX)
 
@@ -609,6 +623,8 @@ def test_cps_name_mapping():
         """)
 
     cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(mypkg CXX)
 
@@ -642,6 +658,8 @@ def test_cps_name_mapping():
 
     # Lets consume directly with CPS
     test_cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(PackageTest CXX)
 

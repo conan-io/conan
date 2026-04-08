@@ -159,7 +159,8 @@ class WorkspaceAPI:
             conanfile.output.warning("conandata doesn't contain 'scm' information\n"
                                      "doing a local copy!!!")
             shutil.copytree(layout.export(), dst_path)
-            retrieve_exports_sources(app.remote_manager, layout, conanfile, ref, remotes)
+            remote_manager = self._conan_api._api_helpers.remote_manager # noqa
+            retrieve_exports_sources(remote_manager, layout, conanfile, ref, remotes)
             export_sources = layout.export_sources()
             if os.path.exists(export_sources):
                 conanfile.output.warning("There are export-sources, copying them, but the location"

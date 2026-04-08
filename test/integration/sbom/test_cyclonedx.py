@@ -353,3 +353,81 @@ class TestCyclonedx:
         }.get(cyclone_version)
         tc.run(f"install {install} --deployer=cyclone_{method}")
         assert os.path.exists(os.path.join(tc.current_folder, f"sbom-cyclonedx-{method}.json"))
+
+
+class TestCyclonedx2:
+    # Using the sbom tool with "conan create"
+    sbom_hook_post_package = textwrap.dedent("""
+        import json
+        import os
+        from conan.errors import ConanException
+        from conan.api.output import ConanOutput
+        from conan.tools.sbom import cyclonedx_1_4, cyclonedx_1_6
+
+        def post_package(conanfile):
+            sbom_cyclonedx_1_4 = cyclonedx_1_4(conanfile, add_build=True, add_tests=True)
+            sbom_cyclonedx_1_6 = cyclonedx_1_6(conanfile, add_build=True, add_tests=True)
+            with open(os.path.join(conanfile.package_metadata_folder, "sbom14.cdx.json"), 'w') as f:
+                json.dump(sbom_cyclonedx_1_4, f, indent=4)
+            with open(os.path.join(conanfile.package_metadata_folder, "sbom16.cdx.json"), 'w') as f:
+                json.dump(sbom_cyclonedx_1_6, f, indent=4)
+        """)
+
+    @pytest.fixture()
+    def sbom_hook_client(self):
+        tc = TestClient(light=True)
+        hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
+        save(hook_path, self.sbom_hook_post_package)
+        return tc
+
+    def test_sbom_generation_create(self, sbom_hook_client):
+        tc = sbom_hook_client
+        # bar -> engine/1.0 -> matrix/1.0 (same graph as cmake_lib + transitive_libraries, no CMake)
+        tc.save({
+            "matrix/conanfile.py": GenConanfile("matrix", "1.0"),
+            "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("matrix/1.0"),
+            "conanfile.py": GenConanfile("bar", "1.0").with_requires("engine/1.0"),
+        })
+        tc.run("create matrix")
+        tc.run("create engine")
+        tc.run("create . -tf=")
+        bar_layout = tc.created_layout()
+        assert os.path.exists(os.path.join(bar_layout.metadata(), "sbom14.cdx.json"))
+        assert os.path.exists(os.path.join(bar_layout.metadata(), "sbom16.cdx.json"))
+
+    @pytest.mark.parametrize("user, channel, user_dep, channel_dep",
+                             [("user", None, "user_dep", None),
+                              ("user", "channel", "user_dep", "channel_dep")])
+    def test_sbom_user_path(self, user, channel, user_dep, channel_dep):
+        tc = TestClient(light=True)
+        hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
+        save(hook_path, self.sbom_hook_post_package)
+        channel_ref = f"/{channel_dep}" if channel_dep else ""
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+                 "conanfile.py": GenConanfile("main", "1.0").with_requires(
+                     f"dep/1.0@{user_dep}{channel_ref}")})
+        command = "create dep"
+        if user:
+            command += f" --user={user_dep}"
+        if channel:
+            command += f" --channel={channel_dep}"
+
+        tc.run(command)
+
+        command = "create ."
+        if user:
+            command += f" --user={user}"
+        if channel:
+            command += f" --channel={channel}"
+        tc.run(command)
+
+        for version in ("14", "16"):
+            create_layout = tc.created_layout()
+            cyclone_path = os.path.join(create_layout.metadata(), f"sbom{version}.cdx.json")
+            content = tc.load(cyclone_path)
+            content_json = json.loads(content)
+
+            assert content_json["components"][0]["bom-ref"].split("&user=")[
+                       1] == f"{user}&channel={channel}" if channel else user
+            assert content_json["dependencies"][0]["dependsOn"][0].split("&user=")[
+                       1] == f"{user_dep}&channel={channel_dep}" if channel_dep else user_dep

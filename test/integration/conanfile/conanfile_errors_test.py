@@ -137,6 +137,16 @@ class TestConanfileErrors:
         client.run("export .", assert_error=True)
         assert "Duplicated requirement" in client.out
 
+    @pytest.mark.parametrize("version", ["0.1", "[*]"])
+    def test_error_requirement_casing(self, version):
+        # https://github.com/conan-io/conan/issues/19796
+        c = TestClient(light=True)
+        c.save({"mypkg/conanfile.py": GenConanfile("mypkg", "0.1"),
+                "app/conanfile.py": GenConanfile("app", "0.1").with_requires(f"myPkg/{version}")})
+        c.run("create mypkg")
+        c.run("install app", assert_error=True)
+        assert f"ERROR: Package 'myPkg/{version}' not resolved" in c.out
+
 
 class TestWrongMethods:
     # https://github.com/conan-io/conan/issues/12961

@@ -21,15 +21,15 @@ from conan.internal.model.pkg_type import PackageType
 
 class GraphBinariesAnalyzer:
 
-    def __init__(self, conan_app, global_conf, hook_manager):
-        self._cache = conan_app.cache
-        self._home_folder = conan_app.cache_folder
+    def __init__(self, cache, remote_manager, home_folder, global_conf, hook_manager):
+        self._cache = cache
+        self._home_folder = home_folder
         self._global_conf = global_conf
-        self._remote_manager = conan_app.remote_manager
+        self._remote_manager = remote_manager
         self._hook_manager = hook_manager
         # These are the nodes with pref (not including PREV) that have been evaluated
         self._evaluated = {}  # {pref: [nodes]}
-        compat_folder = HomePaths(conan_app.cache_folder).compatibility_plugin_path
+        compat_folder = HomePaths(home_folder).compatibility_plugin_path
         self._compatibility = BinaryCompatibility(compat_folder, hook_manager)
         unknown_mode = global_conf.get("core.package_id:default_unknown_mode", default="semver_mode")
         non_embed = global_conf.get("core.package_id:default_non_embed_mode", default="minor_mode")
@@ -475,11 +475,6 @@ class GraphBinariesAnalyzer:
             test_mode = BuildMode(build_mode_test)
             mainprefs = [str(n.pref) for n in tested_graph.nodes
                          if n.recipe not in (RECIPE_CONSUMER, RECIPE_VIRTUAL)]
-
-        if main_mode.cascade:
-            ConanOutput().warning("Using build-mode 'cascade' is generally inefficient and it "
-                                  "shouldn't be used. Use 'package_id' and 'package_id_modes' for"
-                                  "more efficient re-builds")
 
         def _evaluate_single(n):
             mode = main_mode if mainprefs is None or str(n.pref) in mainprefs else test_mode

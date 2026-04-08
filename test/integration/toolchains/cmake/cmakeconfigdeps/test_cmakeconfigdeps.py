@@ -791,16 +791,71 @@ class TestLinkFeatures:
         assert "# Requirement dep::dep -> pkg::compA (Full link: True)\n# Link feature: MYFET" in targets
 
 
-def test_legacy_defines():
-    # We used not to populate this.
-    # We do for backward compatibility with old check_symbol_exists and similar CMake code
-    tc = TestClient()
-    tc.save({"conanfile.py": GenConanfile("mypkg", "1.0")
-             .with_package_info({"defines": ["MY_DEFINE", "MYVAR=1"]})})
-    tc.run("create")
-    tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
-    mypkg_config = tc.load("mypkg-config.cmake")
-    assert 'set(mypkg_DEFINITIONS "-DMY_DEFINE;-DMYVAR=1" )' in mypkg_config
+class TestLegacyVariables:
+    def test_legacy_defines(self):
+        # We used not to populate this.
+        # We do for backward compatibility with old check_symbol_exists and similar CMake code
+        tc = TestClient()
+        tc.save({"conanfile.py": GenConanfile("mypkg", "1.0")
+                .with_package_info({"defines": ["MY_DEFINE", "MYVAR=1"]})})
+        tc.run("create")
+        tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
+        mypkg_config = tc.load("mypkg-config.cmake")
+        assert 'set(mypkg_DEFINITIONS "-DMY_DEFINE;-DMYVAR=1" )' in mypkg_config
+
+    def test_legacy_defines_multiple_components(self):
+        tc = TestClient()
+        tc.save({"conanfile.py": GenConanfile("mypkg", "1.0")
+                 .with_package_info({"components": {"mypkg": {"defines": ["MY_DEFINE", "MYVAR=1"]},
+                                                    "lib2": {"defines": ["MY_DEFINE2", "MYVAR2=1"]}}})
+                 })
+        tc.run("create")
+        tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
+        mypkg_config = tc.load("mypkg-config.cmake")
+        assert 'set(mypkg_DEFINITIONS "-DMY_DEFINE2;-DMYVAR2=1;-DMY_DEFINE;-DMYVAR=1" )' in mypkg_config
+
+    def test_legacy_libraries(self):
+        tc = TestClient()
+        tc.save({"conanfile.py": GenConanfile("mypkg", "1.0")
+                 .with_package_file("lib/mylib1.a", "library")
+                 .with_package_file("lib/mylib2.a", "library")
+                 .with_package_info({"components": {"mypkg": {"libs": ["mylib1"]},
+                                                    "lib2": {"libs": ["mylib2"]}}})
+        })
+        tc.run("create")
+        tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
+        mypkg_config = tc.load("mypkg-config.cmake")
+        # If there's no interface global target
+        # mypkg::lib2 is not added to the list of libraries
+        assert "set(mypkg_LIBRARIES mypkg::mypkg mypkg::lib2 )" in mypkg_config
+
+
+class TestPropertiesBuildContext:
+    def test_property_build_context(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeConfigDeps
+
+            class PackageConan(ConanFile):
+                name = "package"
+                settings = "os", "arch", "compiler", "build_type"
+
+                def requirements(self):
+                    self.requires("zlib/1.3.1")
+
+                def generate(self):
+                    deps = CMakeConfigDeps(self)
+                    deps.set_property("zlib", "cmake_file_name", "MyZlibName")
+                    deps.generate()
+            """)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.3.1"),
+                "pkg/conanfile.py": conanfile})
+        c.run("create zlib")
+        c.run("install pkg --build-require")
+        assert "find_package(MyZlibName)" in c.out
+        config = c.load("pkg/MyZlibNameConfig.cmake")
+        assert 'set(MyZlibName_VERSION_STRING "1.3.1")' in config
 
 
 class TestExtraFindExtraVariants:
