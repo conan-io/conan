@@ -26,7 +26,7 @@ class _SystemPackageManagerTool:
         :param conanfile: The current recipe object. Always use ``self``.
         """
         self._conanfile = conanfile
-        self._active_tool = self._conanfile.conf.get("tools.system.package_manager:tool", default=self.get_default_tool())
+        self._active_tool = self._conanfile.conf.get("tools.system.package_manager:tool") or self.get_default_tool()
         self._sudo = self._conanfile.conf.get("tools.system.package_manager:sudo", default=False, check_type=bool)
         self._sudo_askpass = self._conanfile.conf.get("tools.system.package_manager:sudo_askpass", default=False, check_type=bool)
         self._mode = self._conanfile.conf.get("tools.system.package_manager:mode", default=self.mode_check)
