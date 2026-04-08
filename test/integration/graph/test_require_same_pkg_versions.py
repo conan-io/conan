@@ -27,6 +27,7 @@ def test_require_different_versions():
     wine = textwrap.dedent("""
         import os, platform
         from conan import ConanFile
+        from conan.tools.env import VirtualBuildEnv
         from conan.tools.files import save, chdir
         class Pkg(ConanFile):
             name = "wine"
@@ -36,10 +37,15 @@ def test_require_different_versions():
                 self.tool_requires("gcc/2.0", run=False)
 
             def generate(self):
+                venv = VirtualBuildEnv(self)
                 gcc1 = self.dependencies.build["gcc/1.0"]
                 assert gcc1.ref.version == "1.0"
                 gcc2 = self.dependencies.build["gcc/2.0"]
                 assert gcc2.ref.version == "2.0"
+                env = venv.environment()
+                env.prepend_path("PATH", gcc1.cpp_info.bindir)
+                env.prepend_path("PATH", gcc2.cpp_info.bindir)
+                venv.generate()
 
             def build(self):
                 ext = "bat" if platform.system() == "Windows" else "sh"
