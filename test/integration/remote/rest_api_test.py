@@ -1,6 +1,4 @@
 import os
-import sys
-import time
 import pytest
 
 from conan.api.model import Remote
@@ -15,48 +13,9 @@ from conan.test.utils.server_launcher import TestServerLauncher
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import get_free_port
 from conan.internal.rest.conan_requester import ConanRequester
+from conan.internal.rest.rest_ci_profile import RestApiProfile
 from conan.internal.rest.rest_client import RestApiClient
 from conan.internal.util.files import md5, save
-
-
-class _RestApiProfile:
-    """Lightweight segment timer for setup_class (CI / local debugging)."""
-
-    def __init__(self):
-        self._t0 = time.perf_counter()
-        self._last = self._t0
-        self._lines = []
-
-    def mark(self, label):
-        now = time.perf_counter()
-        seg = now - self._last
-        total = now - self._t0
-        line = f"{label}: +{seg:.3f}s (total {total:.3f}s)"
-        self._lines.append(line)
-        msg = f"[rest_api_test profile] {line}"
-        print(msg, file=sys.stderr, flush=True)
-
-    def finish(self):
-        if not self._lines:
-            return
-        summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
-        if not summary_path:
-            return
-        try:
-            with open(summary_path, "a", encoding="utf-8") as f:
-                f.write("### `TestRestApi` setup timing\n\n")
-                f.write("| Segment | Time |\n")
-                f.write("| --- | --- |\n")
-                for line in self._lines:
-                    # line is "label: +Xs (total Ys)"
-                    parts = line.split(":", 1)
-                    if len(parts) == 2:
-                        f.write(f"| {parts[0].strip()} | `{parts[1].strip()}` |\n")
-                    else:
-                        f.write(f"| | `{line}` |\n")
-                f.write("\n")
-        except OSError:
-            pass
 
 
 class TestRestApi:
@@ -64,7 +23,7 @@ class TestRestApi:
 
     @pytest.fixture(scope="class", autouse=True)
     def setup_class(self):
-        prof = _RestApiProfile()
+        prof = RestApiProfile()
         port = get_free_port()
         prof.mark("get_free_port")
         with environment_update({"CONAN_SERVER_PORT": str(port)}):
