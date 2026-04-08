@@ -3,6 +3,7 @@ import fnmatch
 import hashlib
 import json
 import os
+import time
 from threading import Thread
 
 from requests.auth import AuthBase, HTTPBasicAuth
@@ -12,7 +13,7 @@ from conan.api.output import ConanOutput
 from conan.internal.paths import EXPORT_SOURCES_FILE_NAME, CONANINFO, CONAN_MANIFEST, \
     EXPORT_FILE_NAME, PACKAGE_FILE_NAME
 from conan.internal.rest.caching_file_downloader import ConanInternalCacheDownloader
-from conan.internal.rest import response_to_str
+from conan.internal.rest import response_to_str, rest_ci_profile
 from conan.internal.rest.client_routes import ClientV2Router
 from conan.internal.rest.file_uploader import FileUploader
 from conan.internal.errors import AuthenticationException, ForbiddenException, NotFoundException, \
@@ -97,14 +98,25 @@ class RestV2Methods:
         """Sends user + password to get:
           - A plain response with a regular token (not supported refresh in the remote) and None
         """
+        t0 = time.perf_counter()
         auth = HTTPBasicAuth(user, password)
         url = self.router.common_authenticate()
+        rest_ci_profile.log(
+            f"auth deep: router + basic auth prep +{time.perf_counter() - t0:.3f}s | url={url}"
+        )
+        t0 = time.perf_counter()
         # logger.debug("REST: Authenticate to get access_token: %s" % url)
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
+        rest_ci_profile.log(f"auth deep: requester.get (total) +{time.perf_counter() - t0:.3f}s")
+        t0 = time.perf_counter()
 
         self._check_error_response(ret)
-        return ret.content.decode()
+        rest_ci_profile.log(f"auth deep: _check_error_response +{time.perf_counter() - t0:.3f}s")
+        t0 = time.perf_counter()
+        decoded = ret.content.decode()
+        rest_ci_profile.log(f"auth deep: ret.content.decode() +{time.perf_counter() - t0:.3f}s")
+        return decoded
 
     def check_credentials(self, force_auth=False):
         """If token is not valid will raise AuthenticationException.

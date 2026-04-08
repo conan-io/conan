@@ -1,4 +1,7 @@
+import time
+
 from conan.internal import REVISIONS
+from conan.internal.rest import rest_ci_profile
 from conan.internal.rest.rest_client_v2 import RestV2Methods
 from conan.errors import ConanException
 
@@ -57,9 +60,13 @@ class RestApiClient:
 
     def authenticate(self, user, password):
         # BYPASS capabilities, in case v1/ping is protected
+        t0 = time.perf_counter()
         api_v2 = RestV2Methods(self._remote_url, self._token,
                                self._requester, self._config, self._verify_ssl)
+        rest_ci_profile.log(f"auth deep: RestV2Methods() +{time.perf_counter() - t0:.3f}s")
+        t0 = time.perf_counter()
         token = api_v2.authenticate(user, password)
+        rest_ci_profile.log(f"auth deep: RestV2Methods.authenticate() +{time.perf_counter() - t0:.3f}s")
         return token
 
     def check_credentials(self, force_auth=False):

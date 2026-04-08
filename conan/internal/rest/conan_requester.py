@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import platform
+import time
 
 import requests
 import urllib3
@@ -10,6 +11,7 @@ from jinja2 import Template
 from requests.adapters import HTTPAdapter
 
 from conan.api.output import ConanOutput
+from conan.internal.rest import rest_ci_profile
 from conan.internal.cache.home_paths import HomePaths
 
 from conan import __version__
@@ -190,8 +192,21 @@ class ConanRequester:
                 popped = True if os.environ.pop(var_name.upper(), None) else popped
         ConanOutput(scope="HttpRequest").trace(f"{method}: {url}")
         try:
+            _prof_auth = method == "get" and "/users/authenticate" in url
+            t_add_start = time.perf_counter() if _prof_auth else None
             all_kwargs = self._add_kwargs(url, kwargs)
+            if t_add_start is not None:
+                t_http_start = time.perf_counter()
+                rest_ci_profile.log(
+                    f"auth deep: ConanRequester._add_kwargs +{t_http_start - t_add_start:.3f}s"
+                )
+            else:
+                t_http_start = None
             tmp = getattr(self._http_requester, method)(url, **all_kwargs)
+            if t_http_start is not None:
+                rest_ci_profile.log(
+                    f"auth deep: ConanRequester requests.Session.{method} +{time.perf_counter() - t_http_start:.3f}s"
+                )
             return tmp
         finally:
             if popped:
