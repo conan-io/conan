@@ -1,7 +1,6 @@
 import os
 import re
 import textwrap
-from collections import OrderedDict
 
 from jinja2 import Template
 
@@ -13,7 +12,7 @@ from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
-from conan.tools.cmake.utils import is_multi_configuration, cmake_escape_value
+from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version, msvc_platform_from_arch
 from conan.internal.api.install.generators import relativize_path
@@ -1390,7 +1389,7 @@ class PreprocessorBlock(Block):
 
 class ToolchainBlocks:
     def __init__(self, conanfile, toolchain, items=None):
-        self._blocks = OrderedDict()
+        self._blocks = {}
         self._conanfile = conanfile
         self._toolchain = toolchain
         if items:
@@ -1416,14 +1415,14 @@ class ToolchainBlocks:
         self._conanfile.output.warning("CMakeToolchain.select is deprecated. Use blocks.enabled()"
                                        " instead", warn_tag="deprecated")
         to_keep = [name] + list(args) + ["variables", "preprocessor"]
-        self._blocks = OrderedDict((k, v) for k, v in self._blocks.items() if k in to_keep)
+        self._blocks = {k: v for k, v in self._blocks.items() if k in to_keep}
 
     def enabled(self, name, *args):
         """
         keep the blocks provided as arguments, remove the others
         """
         to_keep = [name] + list(args)
-        self._blocks = OrderedDict((k, v) for k, v in self._blocks.items() if k in to_keep)
+        self._blocks = {k: v for k, v in self._blocks.items() if k in to_keep}
 
     def __setitem__(self, name, block_type):
         # Create a new class inheriting Block with the elements of the provided one
@@ -1438,7 +1437,7 @@ class ToolchainBlocks:
                                           check_type=list)
         if blocks is not None:
             try:
-                new_blocks = OrderedDict((b, self._blocks[b]) for b in blocks)
+                new_blocks = {b: self._blocks[b] for b in blocks}
             except KeyError as e:
                 raise ConanException(f"Block {e} defined in tools.cmake.cmaketoolchain"
                                      f":enabled_blocks doesn't exist in {list(self._blocks.keys())}")

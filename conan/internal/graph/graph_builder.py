@@ -418,6 +418,8 @@ class DepsGraphBuilder:
         new_node = Node(new_ref, dep_conanfile, context=context, test=require.test or node.test)
         new_node.recipe = recipe_status
         new_node.remote = remote
+        if isinstance(layout, BasicLayout):  # Store the editable_output_folder for BinaryInstaller
+            new_node.editable_output_folder = layout.editable_output_folder
 
         down_options = self._compute_down_options(node, require, new_ref)
 

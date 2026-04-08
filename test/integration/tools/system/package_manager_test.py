@@ -84,6 +84,18 @@ def test_package_manager_distro(distro, tool):
                 assert tool == manager.get_default_tool()
 
 
+def test_conf_tool_skips_default_detection_message_on_unknown_distro():
+    """If ``tools.system.package_manager:tool`` is set, ``get_default_tool`` shall never be invoked"""
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        conanfile.conf.define("tools.system.package_manager:tool", "apt-get")
+        with mock.patch.object(_SystemPackageManagerTool, "get_default_tool") as get_default_mock:
+            Apt(conanfile)
+        get_default_mock.assert_not_called()
+
+
 @pytest.mark.parametrize("sudo, sudo_askpass, expected_str", [
     (True, True, "sudo -A "),
     (True, False, "sudo "),

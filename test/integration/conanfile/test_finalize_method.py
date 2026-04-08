@@ -319,6 +319,27 @@ class TestToolRequiresFlows:
         assert "There are corrupted artifacts" not in tc.out
 
 
+    def test_multiple_instances_of_finalized_package(self):
+        tc = TestClient(light=True)
+        tc.save({"tool/conanfile.py": GenConanfile("tool", "1.0")
+                    .with_package_type("application")
+                    .with_finalize("self.output.info('RUNNING MY FINALIZE')"),
+                "liba/conanfile.py": GenConanfile("liba", "1.0").with_tool_requires("tool/1.0"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_tool_requires("tool/1.0"),
+                "consumer/conanfile.py": GenConanfile("consummer", "1.0")
+                    .with_requires("liba/1.0")
+                    .with_requires("libb/1.0")})
+
+        tc.run("export tool")
+        tc.run("export liba")
+        tc.run("export libb")
+        tc.run("install consumer -c:a tools.graph:skip_binaries=False -b missing")
+
+        # The finalize() method of the tool should only be called once, even if multiple packages depend on it
+        assert tc.out.count("RUNNING MY FINALIZE") == 1
+        # Finalize folder conan output should be printed only once
+        assert tc.out.count("Finalized folder ") == 1
+
 class TestRemoteFlows:
 
     @pytest.fixture
