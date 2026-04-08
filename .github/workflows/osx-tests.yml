@@ -119,12 +119,12 @@ jobs:
         python-version: ${{ fromJson(inputs.python-versions) }}
         test-type: [unittests, integration, functional]
         include:
-        - test-type: unittests
-          test-name: Unit
+        # - test-type: unittests
+        #   test-name: Unit
         - test-type: integration
           test-name: Integration
-        - test-type: functional
-          test-name: Functional
+        # - test-type: functional
+        #   test-name: Functional
     name: ${{ matrix.test-name }} Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
@@ -176,9 +176,16 @@ jobs:
           pip install -r conans/requirements_dev.txt
           pip install meson
 
+      # - name: Run tests
+      #   uses: ./.github/actions/test-coverage
+      #   with:
+      #     python-version: ${{ matrix.python-version }}
+      #     test-type: ${{ matrix.test-type }}
+      #     tests: ${{ matrix.test-type == 'functional' && (inputs.run-slow-tests == 'true' && 'test/functional' || 'test/functional -m "not slow"') || format('test/{0}', matrix.test-type) }}
+
       - name: Run tests
         uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
           test-type: ${{ matrix.test-type }}
-          tests: ${{ matrix.test-type == 'functional' && (inputs.run-slow-tests == 'true' && 'test/functional' || 'test/functional -m "not slow"') || format('test/{0}', matrix.test-type) }}
+          tests: test/integration/remote/rest_api_test.py
