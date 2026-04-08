@@ -501,6 +501,8 @@ class GraphBinariesAnalyzer:
             for pref, pref_nodes in nodes.items():
                 _evaluate_single(pref_nodes[0])
             # END OF PARALLEL
+            main_mode.warn_unused()
+
             # Evaluate the possible nodes with repeated "prefs" that haven't been evaluated
             for pref, pref_nodes in nodes.items():
                 for n in pref_nodes[1:]:

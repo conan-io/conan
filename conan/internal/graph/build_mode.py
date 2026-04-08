@@ -20,6 +20,8 @@ class BuildMode:
         self._build_compatible_patterns = []
         self._build_compatible_excluded = []
         self._excluded_patterns = []
+
+        self._used_patterns = set()
         if params is None:
             return
 
@@ -74,6 +76,7 @@ class BuildMode:
         for pattern in self._excluded_patterns:
             if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):  # noqa
                 conan_file.output.info("Excluded build from source")
+                self._used_patterns.add(pattern)
                 return False
 
         if conan_file.build_policy == "never":  # this package has been export-pkg
@@ -92,6 +95,7 @@ class BuildMode:
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self._patterns:
             if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):  # noqa
+                self._used_patterns.add(pattern)
                 return True
         return False
 
@@ -131,3 +135,22 @@ class BuildMode:
         for pattern in self._build_missing_patterns:
             if ref_matches(conanfile.ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
                 return True
+
+    def warn_unused(self):
+        unused_patterns = []
+        for pattern in self._patterns:
+            if pattern not in self._used_patterns:
+                unused_patterns.append(pattern)
+
+        unused_excluded_patterns = []
+        for exclude_pattern in self._excluded_patterns:
+            if exclude_pattern not in self._used_patterns:
+                unused_excluded_patterns.append(exclude_pattern)
+
+        if unused_patterns:
+            ConanOutput().warning("The following patterns in --build have not been used: {}".format(
+                ", ".join(p for p in unused_patterns)), warn_tag="risk")
+
+        if unused_excluded_patterns:
+            ConanOutput().warning("The following exclusion patterns in --build have not been used: {}".format(
+                ", ".join(p for p in unused_excluded_patterns)), warn_tag="risk")
