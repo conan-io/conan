@@ -139,7 +139,7 @@ def test_tools_install_mode_check(tool_class):
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
         with pytest.raises(ConanException) as exc_info:
-            def fake_check(*args, **kwargs):
+            def fake_check(*args, **kwargs):  # noqa
                 return ["package1", "package2"]
             from conan.tools.system.package_manager import _SystemPackageManagerTool
             with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
@@ -196,8 +196,8 @@ def test_dnf_yum_return_code_100(tool_class, result):
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
 
-        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,
-                     quiet=False):
+        def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,  # noqa
+                     quiet=False):  # noqa
             assert command == result
             return 100 if "check-update" in command else 0
 
@@ -252,7 +252,7 @@ def test_tools_install_mode_install_different_archs(tool_class, arch_host, resul
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
 
-        def fake_check(*args, **kwargs):
+        def fake_check(*args, **kwargs):  # noqa
             return ["package1", "package2"]
         from conan.tools.system.package_manager import _SystemPackageManagerTool
         with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
@@ -294,7 +294,7 @@ def test_tools_install_mode_install_different_archs_with_version(tool_class, arc
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
 
-        def fake_check(*args, **kwargs):
+        def fake_check(*args, **kwargs):  # noqa
             return ["package1=0.1", "package2=0.2"]
         from conan.tools.system.package_manager import _SystemPackageManagerTool
         with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
@@ -335,7 +335,7 @@ def test_tools_install_mode_install_to_build_machine_arch(tool_class, arch_host,
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
 
-        def fake_check(*args, **kwargs):
+        def fake_check(*args, **kwargs):  # noqa
             return ["package1", "package2"]
         from conan.tools.system.package_manager import _SystemPackageManagerTool
         with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
@@ -377,7 +377,7 @@ def test_tools_install_mode_install_to_build_machine_arch_with_version(tool_clas
         context_mock.return_value = "host"
         tool = tool_class(conanfile)
 
-        def fake_check(*args, **kwargs):
+        def fake_check(*args, **kwargs):  # noqa
             return ["package1=0.1", "package2=0.2"]
         from conan.tools.system.package_manager import _SystemPackageManagerTool
         with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
@@ -404,7 +404,7 @@ def test_tools_install_archless(tool_class, result):
         context_mock.return_value = "host"
         tool = tool_class(conanfile, arch_names={})
 
-        def fake_check(*args, **kwargs):
+        def fake_check(*args, **kwargs):  # noqa
             return ["package1", "package2"]
         from conan.tools.system.package_manager import _SystemPackageManagerTool
         with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):
@@ -431,7 +431,7 @@ def test_tools_install_archless_with_version(tool_class, result):
         context_mock.return_value = "host"
         tool = tool_class(conanfile, arch_names={})
 
-        def fake_check(*args, **kwargs):
+        def fake_check(*args, **kwargs):  # noqa
             return ["package1=0.1", "package2=0.2"]
         from conan.tools.system.package_manager import _SystemPackageManagerTool
         with patch.object(_SystemPackageManagerTool, 'check', MagicMock(side_effect=fake_check)):

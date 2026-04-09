@@ -4,7 +4,7 @@ import platform
 import pytest
 
 from conan.errors import ConanMigrationError
-from conans.migrations import Migrator
+from conan.internal.api.migrations import Migrator
 from conan.test.utils.test_files import temp_folder
 
 

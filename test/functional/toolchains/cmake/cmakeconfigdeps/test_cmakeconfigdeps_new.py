@@ -832,7 +832,7 @@ class TestLibsComponents:
             """)
         c.save({"CMakeLists.txt": cmake,
                 "src/app.cpp": app_cpp})
-        c.run(f"create .")
+        c.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
         assert "Conan: Target declared imported STATIC library 'matrix::_mycomp_vector'" in c.out
         assert "Conan: Target declared imported STATIC library 'matrix::_mycomp_module'" in c.out
         assert "Conan: Target declared imported INTERFACE library 'MyMatrix::MyMatrix'" in c.out
@@ -1522,7 +1522,8 @@ class TestCppInfoChecks:
         c.save({"conanfile.py": dep})
         c.run("create .")
         c.run(f"install --requires=dep/0.1 -g CMakeConfigDeps", assert_error=True)
-        assert "Error in generator 'CMakeDeps': dep/0.1 " 'cpp_info has both .exe and .libs' in c.out
+        assert ("Error in generator 'CMakeConfigDeps': dep/0.1 "
+                'cpp_info has both .exe and .libs' in c.out)
 
     def test_exe_no_location(self):
         c = TestClient()
@@ -1537,7 +1538,8 @@ class TestCppInfoChecks:
         c.save({"conanfile.py": dep})
         c.run("create .")
         c.run(f"install --requires=dep/0.1 -g CMakeConfigDeps", assert_error=True)
-        assert "Error in generator 'CMakeDeps': dep/0.1 cpp_info has .exe and no .location" in c.out
+        assert ("Error in generator 'CMakeConfigDeps': "
+                "dep/0.1 cpp_info has .exe and no .location") in c.out
 
     def test_check_exe_wrong_type(self):
         c = TestClient()

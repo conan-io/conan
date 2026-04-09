@@ -173,7 +173,8 @@ def test_graph_conflict_loop():
     c.run("export lib_c")
     c.run("graph info lib_x --format=html", assert_error=True, redirect_stdout="graph.html")
     # checked manually
-    #c.open("graph.html")
+    # c.open("graph.html")
+
 
 def test_graph_missing_error():
     c = TestClient()
