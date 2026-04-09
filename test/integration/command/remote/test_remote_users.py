@@ -456,6 +456,31 @@ class TestRemoteAuth:
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out
 
+    def test_remote_auth_strict(self):
+        servers = {
+            "good": TestServer(users={"myuser": "mypassword"}),
+            "bad": TestServer(users={"myuser": "mypassword"}),
+        }
+        # All succeed -> exit 0
+        c = TestClient(light=True, servers=servers,
+                       inputs=["myuser", "mypassword", "myuser", "mypassword"])
+        c.run("remote auth * --strict")
+        assert "user: myuser" in c.out
+
+        # Partial failure without --strict -> exit 0
+        c2 = TestClient(light=True, servers=servers,
+                        inputs=["myuser", "mypassword",
+                                "wrong", "wrong", "wrong", "wrong", "wrong", "wrong"])
+        c2.run("remote auth *")
+        assert "error" in c2.out
+
+        # Partial failure with --strict -> exit != 0
+        c3 = TestClient(light=True, servers=servers,
+                        inputs=["myuser", "mypassword",
+                                "wrong", "wrong", "wrong", "wrong", "wrong", "wrong"])
+        c3.run("remote auth * --strict", assert_error=True)
+        assert "Authentication error in remotes: bad" in c3.out
+
     def test_auth_after_logout(self):
         server = TestServer(users={"myuser": "password"})
         c = TestClient(light=True, servers={"default": server}, inputs=["myuser", "password"]*2)
