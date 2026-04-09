@@ -351,6 +351,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     # If we don't disable the workspace, then, the packages are not created in the Conan cache,
     # but locally in the user folders, are they are intercepted as editables
     conan_api.workspace.enable(False)
+    conan_api._api_helpers.enable_ws = False
 
     install_order = conan_api.workspace.build_order(packages, profile_host, profile_build,
                                                     build_mode, lockfile, remotes, args,
@@ -387,6 +388,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                         ConanOutput().info(f"Conan create command: {cmd}\n")
                         conan_api.command.run(cmd)
 
+    conan_api._api_helpers.enable_ws = True
 
 @conan_subcommand()
 def workspace_source(conan_api: ConanAPI, parser, subparser, *args):

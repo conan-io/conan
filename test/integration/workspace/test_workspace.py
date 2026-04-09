@@ -1482,3 +1482,95 @@ def test_workspace_python_error():
             "conanws.py": workspace})
     c.run("workspace info", assert_error=True)
     assert "ERROR: Workspace conanws.py file: Error in packages() method, line 5" in c.out
+
+
+class TestPyRequires:
+    def test_ws_python_requires(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+
+        pyreq = textwrap.dedent("""\
+            from conan import ConanFile
+
+            def mygen(conanfile):
+                conanfile.output.info("HELLO!!!")
+
+            class TestPackage(ConanFile):
+                name = "pyreq"
+                version = "0.1"
+                package_type = "python-require"
+            """)
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class TestPackage(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                python_requires = "pyreq/0.1"
+                def generate(self):
+                    self.python_requires["pyreq"].module.mygen(self)
+            """)
+        ws = textwrap.dedent("""\
+            packages:
+               - path: pyreq
+               - path: pkg
+               """)
+        c.save({"pyreq/conanfile.py": pyreq,
+                "pkg/conanfile.py": pkg,
+                "conanws.yml": ws})
+
+        c.run("workspace info --format=json")
+        ws = json.loads(c.stdout)
+        assert ws["packages"] == [{'path': 'pyreq'}, {'path': 'pkg'}]
+
+        c.run("workspace install")
+        assert "conanfile.py (pkg/0.1): HELLO!!!" in c.out
+
+    def test_ws_python_requires_extend(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+
+        pyreq = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class BaseConan:
+                options = {"base": [True, False]}
+                default_options = {"base": True}
+                def generate(self):
+                    self.output.info("HELLO!!!")
+
+            class TestPackage(ConanFile):
+                name = "pyreq"
+                version = "0.1"
+                package_type = "python-require"
+            """)
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class TestPackage(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                python_requires = "pyreq/0.1"
+                python_requires_extend = "pyreq.BaseConan"
+
+                options = {"derived": [True, False]}
+                default_options = {"derived": False}
+
+                def init(self):
+                    base = self.python_requires["pyreq"].module.BaseConan
+                    # Note we pass the base options and default_options
+                    self.options.update(base.options, base.default_options)
+            """)
+        ws = textwrap.dedent("""\
+           packages:
+              - path: pyreq
+              - path: pkg
+              """)
+        c.save({"pyreq/conanfile.py": pyreq,
+                "pkg/conanfile.py": pkg,
+                "conanws.yml": ws})
+
+        c.run("workspace info --format=json")
+        ws = json.loads(c.stdout)
+        assert ws["packages"] == [{'path': 'pyreq'}, {'path': 'pkg'}]
+
+        c.run("workspace install")
+        assert "conanfile.py (pkg/0.1): HELLO!!!" in c.out

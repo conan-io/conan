@@ -111,33 +111,8 @@ class WorkspaceAPI:
         """
         if not self._folder or not self._enabled:
             return
-        packages = {}
-        for editable_info in self._ws.packages():
-            rel_path = editable_info["path"]
-            path = os.path.normpath(os.path.join(self._folder, rel_path, "conanfile.py"))
-            if not os.path.isfile(path):
-                raise ConanException(f"Workspace package not found: {path}")
-            ref = editable_info.get("ref")
-            try:
-                if ref is None:
-                    conanfile = self._ws.load_conanfile(rel_path)
-                    reference = RecipeReference(name=conanfile.name, version=conanfile.version,
-                                                user=conanfile.user, channel=conanfile.channel)
-                else:
-                    reference = RecipeReference.loads(ref)
-                reference.validate_ref(reference)
-            except Exception as e:
-                raise ConanException(f"Workspace package reference could not be deduced by"
-                                     f" {rel_path}/conanfile.py or it is not"
-                                     f" correctly defined in the conanws.yml file: {e}")
-            if reference in packages:
-                raise ConanException(f"Workspace package '{str(reference)}' already exists.")
-            packages[reference] = {"path": path}
-            if editable_info.get("output_folder"):
-                packages[reference]["output_folder"] = (
-                    os.path.normpath(os.path.join(self._folder, editable_info["output_folder"]))
-                )
-        return packages
+        _, _, loader = self._conan_api._api_helpers.get_loader()  # noqa
+        return loader.ws_packages
 
     def open(self, ref, remotes, cwd=None):
         cwd = cwd or os.getcwd()
@@ -277,6 +252,8 @@ class WorkspaceAPI:
 
     def info(self):
         self._check_ws()
+        _, _, loader = self._conan_api._api_helpers.get_loader()  # noqa
+        self._ws._loader = loader
         return {"name": self._ws.name(),
                 "folder": self._folder,
                 "packages": self._ws.packages()}
