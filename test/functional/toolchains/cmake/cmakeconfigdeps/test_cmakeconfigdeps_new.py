@@ -71,13 +71,13 @@ class TestExes:
         for requires in ("tool_requires", "requires"):
             consumer = textwrap.dedent(f"""
                 from conan import ConanFile
-                from conan.tools.cmake import CMakeDeps, CMakeToolchain, CMake, cmake_layout
+                from conan.tools.cmake import CMakeConfigDeps, CMakeToolchain, CMake, cmake_layout
                 class Consumer(ConanFile):
                     settings = "os", "compiler", "arch", "build_type"
                     {requires} = "mytool/0.1"
 
                     def generate(self):
-                        deps = CMakeDeps(self)
+                        deps = CMakeConfigDeps(self)
                         deps.generate()
                         tc = CMakeToolchain(self)
                         tc.generate()
@@ -101,7 +101,7 @@ class TestExes:
                 """)
             c.save({f"consumer_{requires}/conanfile.py": consumer,
                     f"consumer_{requires}/CMakeLists.txt": cmake})
-            c.run(f"build consumer_{requires} -c tools.cmake.cmakedeps:new={new_value}")
+            c.run(f"build consumer_{requires}")
             assert "find_package(mytool)" in c.out
             assert "target_link_libraries(..." not in c.out
             assert "Conan: Target declared imported executable 'MyTool::myexe'" in c.out
@@ -169,13 +169,13 @@ class TestExes:
 
         consumer = textwrap.dedent("""
             from conan import ConanFile
-            from conan.tools.cmake import CMakeDeps, CMakeToolchain, CMake, cmake_layout
+            from conan.tools.cmake import CMakeConfigDeps, CMakeToolchain, CMake, cmake_layout
             class Consumer(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
                 tool_requires = "mytool/0.1"
 
                 def generate(self):
-                    deps = CMakeDeps(self)
+                    deps = CMakeConfigDeps(self)
                     deps.generate()
                     tc = CMakeToolchain(self)
                     tc.generate()
@@ -199,7 +199,7 @@ class TestExes:
             """)
         c.save({"conanfile.py": consumer,
                 "CMakeLists.txt": cmake}, clean_first=True)
-        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"build .")
         assert "Conan: Target declared imported executable 'MyTool::my1exe'" in c.out
         assert "Mytool1 generating out1.c!!!!!" in c.out
         assert "Conan: Target declared imported executable 'MyTool::my2exe'" in c.out
@@ -324,9 +324,8 @@ class TestLibsIntegration:
                                                   .with_settings("build_type")})
 
         c.run("create dep")
-        c.run(f"install app -c tools.cmake.cmakedeps:new={new_value} -g CMakeDeps",
-              assert_error=True)
-        assert "ERROR: Error in generator 'CMakeDeps': dep/0.1: Cannot obtain 'location' " \
+        c.run(f"install app -g CMakeConfigDeps", assert_error=True)
+        assert "ERROR: Error in generator 'CMakeConfigDeps': dep/0.1: Cannot obtain 'location' " \
                "for library 'dep'" in c.out
 
     def test_custom_file_targetname(self):
@@ -350,7 +349,7 @@ class TestLibsIntegration:
 
         c.run("create dep")
         c.run("create pkg")
-        c.run(f"install app -c tools.cmake.cmakedeps:new={new_value} -g CMakeDeps")
+        c.run(f"install app -g CMakeConfigDeps")
         targets_cmake = c.load("app/pkg-Targets-release.cmake")
         assert "find_dependency(MyDep REQUIRED CONFIG)" in targets_cmake
         assert 'set_property(TARGET pkg::pkg APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n' \
@@ -772,7 +771,7 @@ class TestLibsComponents:
                 generators = "CMakeToolchain"
                 exports_sources = "src/*", "CMakeLists.txt"
 
-                generators = "CMakeDeps", "CMakeToolchain"
+                generators = "CMakeConfigDeps", "CMakeToolchain"
 
                 def build(self):
                     cmake = CMake(self)
@@ -902,7 +901,7 @@ class TestHeaders:
             class EngineHeader(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
                 requires = "engine/1.0"
-                generators = "CMakeDeps", "CMakeToolchain"
+                generators = "CMakeConfigDeps", "CMakeToolchain"
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
@@ -921,7 +920,7 @@ class TestHeaders:
                 "CMakeLists.txt": cmake,
                 "src/app.cpp": gen_function_cpp(name="main", includes=["engine"], calls=["engine"])},
                clean_first=True)
-        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"build .")
         assert "Conan: Target declared imported STATIC library 'matrix::matrix'" in c.out
         assert "Conan: Target declared imported INTERFACE library 'engine::engine'" in c.out
 
@@ -962,7 +961,7 @@ class TestHeaders:
             from conan.tools.cmake import CMake, cmake_layout
             class EngineHeader(ConanFile):
                 settings = "os", "compiler", "build_type", "arch"
-                generators = "CMakeDeps", "CMakeToolchain"
+                generators = "CMakeConfigDeps", "CMakeToolchain"
                 def requirements(self):
                     v = "1_0" if self.settings.build_type == "Debug" else "1_1"
                     self.requires(f"engine/{v}")
@@ -987,13 +986,13 @@ class TestHeaders:
                 "CMakeLists.txt": cmake,
                 "src/app.cpp": gen_function_cpp(name="main", includes=["engine"], calls=["engine"])},
                clean_first=True)
-        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"build .")
         assert "engine/1_1" in c.out
         assert "engine/1_0" not in c.out
         assert "Conan: Target declared imported INTERFACE library 'engine::engine'" in c.out
         assert "Engine 1_1!" in c.out
 
-        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value} -s build_type=Debug")
+        c.run(f"build . -s build_type=Debug")
         assert "engine/1_1" not in c.out
         assert "engine/1_0" in c.out
         assert "Conan: Target declared imported INTERFACE library 'engine::engine'" in c.out
@@ -1010,7 +1009,7 @@ class TestToolRequires:
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_settings("build_type")
                                                               .with_tool_requires("tool/0.1")})
         c.run("create tool")
-        c.run(f"install pkg -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"install pkg -g CMakeConfigDeps")
         assert "find_package(tool) # Optional. This is a tool-require, " \
                "can't link its targets" in c.out
         assert "target_link_libraries" not in c.out
@@ -1070,7 +1069,7 @@ def test_build_modules_custom_script(tool_requires):
 
         class Conan(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            generators = "CMakeToolchain", "CMakeDeps"
+            generators = "CMakeToolchain", "CMakeConfigDeps"
             {requires} = "myfunctions/1.0"
 
             def build(self):
@@ -1086,7 +1085,7 @@ def test_build_modules_custom_script(tool_requires):
     client.save({"conanfile.py": consumer,
                  "CMakeLists.txt": cmakelists},
                 clean_first=True)
-    client.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"build .")
     assert "Hello myfunction!!!!" in client.out
 
 
@@ -1170,7 +1169,7 @@ class TestProtobuf:
             class Consumer(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
                 requires = "protobuf/0.1"
-                generators = "CMakeToolchain", "CMakeDeps"
+                generators = "CMakeToolchain", "CMakeConfigDeps"
 
                 def layout(self):
                     cmake_layout(self)
@@ -1209,7 +1208,7 @@ class TestProtobuf:
 
     def test_requires(self, protobuf):
         c = protobuf
-        c.run(f"build . --build=missing -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"build . --build=missing")
         assert "Conan: Target declared imported STATIC library 'protobuf::protobuf'" in c.out
         assert "Conan: Target declared imported executable 'Protobuf::Protocompile'" in c.out
         assert "Protoc RELEASE generating out.c!!!!!" in c.out
@@ -1224,7 +1223,7 @@ class TestProtobuf:
                 settings = "os", "compiler", "arch", "build_type"
                 requires = "protobuf/0.1"
                 tool_requires = "protobuf/0.1"
-                generators = "CMakeToolchain", "CMakeDeps"
+                generators = "CMakeToolchain", "CMakeConfigDeps"
 
                 def layout(self):
                     cmake_layout(self)
@@ -1235,8 +1234,7 @@ class TestProtobuf:
             """)
         c = protobuf
         c.save({"conanfile.py": consumer})
-        c.run("build . -s:h build_type=Debug --build=missing "
-              f"-c tools.cmake.cmakedeps:new={new_value}")
+        c.run("build . -s:h build_type=Debug --build=missing")
 
         assert "Conan: Target declared imported STATIC library 'protobuf::protobuf'" in c.out
         assert "Conan: Target declared imported executable 'Protobuf::Protocompile'" in c.out
@@ -1250,8 +1248,7 @@ class TestProtobuf:
         assert "protobuf: Debug!" in c.out
         assert "protobuf: Release!" not in c.out
 
-        c.run("build . --build=missing "
-              f"-c tools.cmake.cmakedeps:new={new_value}")
+        c.run("build . --build=missing")
 
         assert "Conan: Target declared imported STATIC library 'protobuf::protobuf'" in c.out
         assert "Conan: Target declared imported executable 'Protobuf::Protocompile'" in c.out
@@ -1393,13 +1390,13 @@ class TestCMakeTry:
 
         consumer = textwrap.dedent("""
             from conan import ConanFile
-            from conan.tools.cmake import CMakeDeps
+            from conan.tools.cmake import CMakeConfigDeps
             class PkgConan(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
                 requires = "matrix/1.0"
                 generators = "CMakeToolchain",
                 def generate(self):
-                    deps = CMakeDeps(self)
+                    deps = CMakeConfigDeps(self)
                     deps.set_property("matrix", "cmake_additional_variables_prefixes", ["MyMatrix"])
                     deps.generate()
             """)
@@ -1421,7 +1418,7 @@ class TestCMakeTry:
 
         c.save({"conanfile.py": consumer,
                 "CMakeLists.txt": cmakelist}, clean_first=True)
-        c.run(f"install . -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"install .")
 
         preset = "conan-default" if platform.system() == "Windows" else "conan-release"
         c.run_command(f"cmake --preset {preset} ")
@@ -1451,7 +1448,7 @@ class TestCMakeComponents:
             class PkgConan(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
                 requires = "dep/0.1"
-                generators = "CMakeToolchain", "CMakeDeps"
+                generators = "CMakeToolchain", "CMakeConfigDeps"
                 def build(self):
                     deps = CMake(self)
                     deps.configure()
@@ -1466,7 +1463,7 @@ class TestCMakeComponents:
 
         c.save({"conanfile.py": consumer,
                 "CMakeLists.txt": cmakelist}, clean_first=True)
-        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}", assert_error=not found)
+        c.run(f"build .", assert_error=not found)
         if not found:
             assert f"Conan: Error: 'dep' required COMPONENT '{components}' not found" in c.out
 
@@ -1486,7 +1483,7 @@ class TestCMakeComponents:
             """)
         c.save({"conanfile.py": dep})
         c.run("create .")
-        c.run(f"install --requires=dep/0.1 -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"install --requires=dep/0.1 -g CMakeConfigDeps")
         cmake = c.load("dep-config.cmake")
         assert 'set(dep_PACKAGE_PROVIDED_COMPONENTS MyC1 MyC2 c3)' in cmake
 
@@ -1505,7 +1502,7 @@ class TestCMakeComponents:
             """)
         c.save({"conanfile.py": dep})
         c.run("create .")
-        c.run(f"install --requires=dep/0.1 -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"install --requires=dep/0.1 -g CMakeConfigDeps")
         cmake = c.load("dep-config.cmake")
         assert 'set(dep_PACKAGE_PROVIDED_COMPONENTS MyCompC1 MyC2 c3)' in cmake
 
@@ -1524,9 +1521,9 @@ class TestCppInfoChecks:
             """)
         c.save({"conanfile.py": dep})
         c.run("create .")
-        args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
-        c.run(f"install --requires=dep/0.1 {args}", assert_error=True)
-        assert "Error in generator 'CMakeDeps': dep/0.1 " 'cpp_info has both .exe and .libs' in c.out
+        c.run(f"install --requires=dep/0.1 -g CMakeConfigDeps", assert_error=True)
+        assert ("Error in generator 'CMakeConfigDeps': dep/0.1 "
+                'cpp_info has both .exe and .libs' in c.out)
 
     def test_exe_no_location(self):
         c = TestClient()
@@ -1540,9 +1537,9 @@ class TestCppInfoChecks:
             """)
         c.save({"conanfile.py": dep})
         c.run("create .")
-        args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
-        c.run(f"install --requires=dep/0.1 {args}", assert_error=True)
-        assert "Error in generator 'CMakeDeps': dep/0.1 cpp_info has .exe and no .location" in c.out
+        c.run(f"install --requires=dep/0.1 -g CMakeConfigDeps", assert_error=True)
+        assert ("Error in generator 'CMakeConfigDeps': "
+                "dep/0.1 cpp_info has .exe and no .location") in c.out
 
     def test_check_exe_wrong_type(self):
         c = TestClient()
@@ -1557,8 +1554,7 @@ class TestCppInfoChecks:
             """)
         c.save({"conanfile.py": dep})
         c.run("create .")
-        args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
-        c.run(f"install --requires=dep/0.1 {args}", assert_error=True)
+        c.run(f"install --requires=dep/0.1 -g CMakeConfigDeps", assert_error=True)
         assert "dep/0.1 cpp_info incorrect .type shared-library for .exe myexe" in c.out
 
 
@@ -1593,7 +1589,7 @@ def test_multiple_find_package_subfolder():
         from conan.tools.cmake import CMake
         class Pkg(ConanFile):
             requires = "matrix/1.0"
-            generators = "CMakeToolchain", "CMakeDeps"
+            generators = "CMakeToolchain", "CMakeConfigDeps"
             settings = "os", "compiler", "build_type", "arch"
             def build(self):
                 cmake = CMake(self)
@@ -1603,7 +1599,7 @@ def test_multiple_find_package_subfolder():
             "CMakeLists.txt": cmake,
             "subdir/CMakeLists.txt": subcmake}, clean_first=True)
 
-    c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+    c.run(f"build .")
     assert "find_package(matrix)" in c.out
     assert "target_link_libraries(... matrix::matrix)" in c.out
     assert "Conan: Target declared imported INTERFACE library 'matrix::matrix'" in c.out
@@ -1630,7 +1626,7 @@ def test_find_package_casing_non_fallback():
        from conan.tools.cmake import CMake, cmake_layout
        class Pkg(ConanFile):
            requires = "hello/1.0"
-           generators = "CMakeToolchain", "CMakeDeps"
+           generators = "CMakeToolchain", "CMakeConfigDeps"
            settings = "os", "compiler", "build_type", "arch"
            def layout(self):
                cmake_layout(self)
@@ -1644,7 +1640,7 @@ def test_find_package_casing_non_fallback():
     client.run(f"create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"build . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
+    client.run(f"build .", assert_error=True)
     assert 'Could not find a package configuration file provided by "HellO"' in client.out
 
 

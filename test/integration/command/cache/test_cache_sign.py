@@ -20,6 +20,7 @@ PLUGIN_CONTENT = textwrap.dedent("""
         pass
 """)
 
+
 def test_pkg_sign_no_plugin():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
