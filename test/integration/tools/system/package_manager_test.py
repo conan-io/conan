@@ -96,6 +96,37 @@ def test_conf_tool_skips_default_detection_message_on_unknown_distro():
         get_default_mock.assert_not_called()
 
 
+def test_no_default_package_manager_raises():
+    """When no tool is configured and default detection yields nothing, fail early."""
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        conanfile = ConanFileMock()
+        conanfile.settings = Settings()
+        with mock.patch.object(_SystemPackageManagerTool, "get_default_tool", return_value=None):
+            with pytest.raises(ConanException) as exc_info:
+                Apt(conanfile)
+    msg = str(exc_info.value)
+    assert "default system package manager couldn't be found" in msg
+    assert "tools.system.package_manager:tool" in msg
+
+
+@pytest.mark.parametrize("tool_class", [Apt, Apk, Brew])
+def test_package_manager_binary_not_in_path_raises(tool_class):
+    """When the resolved tool is absent from PATH, construction must raise ConanException."""
+    conanfile = ConanFileMock()
+    conanfile.settings = Settings()
+    conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        with mock.patch("conan.tools.system.package_manager.shutil.which", return_value=None):
+            with pytest.raises(ConanException) as exc_info:
+                tool_class(conanfile)
+    msg = str(exc_info.value)
+    assert "not found in PATH" in msg
+    assert "tools.system.package_manager:tool" in msg
+    assert tool_class.tool_name in msg
+
+
 @pytest.mark.parametrize("sudo, sudo_askpass, expected_str", [
     (True, True, "sudo -A "),
     (True, False, "sudo "),

@@ -1,4 +1,5 @@
 import platform
+import shutil
 
 from conan.tools.build import cross_building
 from conan.internal.graph.graph import CONTEXT_BUILD
@@ -27,6 +28,7 @@ class _SystemPackageManagerTool:
         """
         self._conanfile = conanfile
         self._active_tool = self._conanfile.conf.get("tools.system.package_manager:tool") or self.get_default_tool()
+        self._check_package_manager_in_path()
         self._sudo = self._conanfile.conf.get("tools.system.package_manager:sudo", default=False, check_type=bool)
         self._sudo_askpass = self._conanfile.conf.get("tools.system.package_manager:sudo_askpass", default=False, check_type=bool)
         self._mode = self._conanfile.conf.get("tools.system.package_manager:mode", default=self.mode_check)
@@ -66,10 +68,20 @@ class _SystemPackageManagerTool:
                 if d in os_name:
                     return tool
 
-        # No default package manager was found for the system,
-        # so notify the user
-        self._conanfile.output.info("A default system package manager couldn't be found for {}, "
-                                    "system packages will not be installed.".format(os_name))
+
+    def _check_package_manager_in_path(self):
+        if not self._active_tool:
+            raise ConanException(
+                "System requirements: A default system package manager couldn't be found in your system. "
+                "Verify your installation or define the package manager to use with "
+                "'tools.system.package_manager:tool' configuration."
+            )
+        if not shutil.which(self._active_tool):
+            raise ConanException(
+                f"System requirements: '{self.tool_name}' is not found in PATH, system packages cannot be installed. "
+                f"Please install '{self.tool_name}' or change the package manager tool using "
+                f"'tools.system.package_manager:tool' configuration."
+            )
 
     def _split_package_name(self, package, host_package):
 
