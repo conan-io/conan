@@ -110,13 +110,9 @@ class _SystemPackageManagerTool:
     def _conanfile_run(self, command, accepted_returns, quiet=True):
         # When checking multiple packages, this is too noisy
         # Capture output and show it only on failure.
-        if quiet:
-            stdout_buf = StringIO()
-            stderr_buf = StringIO()
-            ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet,
-                                      stdout=stdout_buf, stderr=stderr_buf)
-        else:
-            ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet)
+        stdout_buf = StringIO() if quiet else None
+        stderr_buf = StringIO() if quiet else None
+        ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet, stdout=stdout_buf, stderr=stderr_buf)
         if ret not in accepted_returns:
             msg = f"Command '{command}' failed with exit code {ret}"
             if quiet:
