@@ -2,7 +2,6 @@ import os
 
 from conan.internal.api.local.editable import EditablePackages
 from conan.internal.cache.cache import PkgCache
-from conan.internal.cache.home_paths import HomePaths
 from conan.internal.model.conf import ConfDefinition
 from conan.internal.graph.proxy import ConanProxy
 from conan.internal.graph.python_requires import PyRequireLoader

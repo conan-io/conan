@@ -6,7 +6,6 @@ from typing import List
 from conan.api.model import PackagesList, Remote
 from conan.api.output import ConanOutput
 from conan.internal.api.upload import add_urls
-from conan.internal.conan_app import ConanApp
 from conan.internal.api.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.rest.file_uploader import FileUploader
@@ -36,11 +35,11 @@ class UploadAPI:
         :parameter force: If ``True``, it will skip the check and mark that all items need to be
             uploaded. A ``force_upload`` key will be added to the entries that will be uploaded.
         """
-        app = ConanApp(self._conan_api)
+        _, _, loader = self._api_helpers.get_loader()
         for ref, _ in package_list.items():
             layout = self._api_helpers.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
-            conanfile = app.loader.load_basic(conanfile_path, remotes=enabled_remotes)
+            conanfile = loader.load_basic(conanfile_path, remotes=enabled_remotes)
             if conanfile.upload_policy == "skip":
                 ConanOutput().info(f"{ref}: Skipping upload of binaries, "
                                    "because upload_policy='skip'")
@@ -63,8 +62,9 @@ class UploadAPI:
             it means that no metadata files should be uploaded."""
         if metadata and metadata != [''] and '' in metadata:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
-        app = ConanApp(self._conan_api)
-        preparator = PackagePreparator(app, self._api_helpers.cache,
+
+        _, _, loader = self._api_helpers.get_loader()
+        preparator = PackagePreparator(loader, self._api_helpers.cache,
                                        self._api_helpers.remote_manager,
                                        self._api_helpers.global_conf)
         preparator.prepare(package_list, enabled_remotes, metadata)

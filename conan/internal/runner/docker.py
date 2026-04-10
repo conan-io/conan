@@ -16,7 +16,6 @@ from pathlib import Path
 from conan.internal.model.profile import Profile
 from conan.internal.model.version import Version
 from conan.internal.runner.output import RunnerOutput
-from conan.internal.conan_app import ConanApp
 
 
 class _ContainerConfig(NamedTuple):
@@ -245,9 +244,9 @@ class DockerRunner:
         return stdout_log, stderr_log
 
     def _get_volumes_and_docker_path(self) -> tuple[dict, str]:
-        app = ConanApp(self.conan_api)
+        _, _, loader = self.conan_api._api_helpers.get_loader()  # noqa
         remotes = self.conan_api.remotes.list(self.args.remote) if not self.args.no_remote else []
-        conanfile = app.loader.load_consumer(self.abs_host_path / "conanfile.py", remotes=remotes)
+        conanfile = loader.load_consumer(self.abs_host_path / "conanfile.py", remotes=remotes)
         abs_docker_base_path = Path('/') / self.docker_user_name / 'conanrunner'
         # Check if recipe has defined a root folder
         # In this case, mount the root folder as the base path and update the abs_docker_path to the

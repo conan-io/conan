@@ -19,7 +19,6 @@ from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.api.uploader import PackagePreparator
-from conan.internal.conan_app import ConanApp
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.util.dates import revision_timestamp_now
 from conan.internal.util.files import rmdir, mkdir, remove, save
@@ -194,8 +193,8 @@ class CacheAPI:
                 "information on how to configure the plugin, please read the documentation at "
                 "https://docs.conan.io/2/reference/extensions/package_signing.html.")
 
-        app = ConanApp(self._conan_api)
-        preparator = PackagePreparator(app, self._api_helpers.cache,
+        _, _, loader = self._api_helpers.get_loader()
+        preparator = PackagePreparator(loader, self._api_helpers.cache,
                                        self._api_helpers.remote_manager,
                                        self._api_helpers.global_conf)
         # Some packages can have missing sources/exports_sources

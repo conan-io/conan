@@ -5,7 +5,6 @@ from conan import ConanFile
 from conan.api.output import ConanOutput
 from conan.cli.printers.graph import print_graph_basic
 from conan.internal.cache.cache import PkgCache
-from conan.internal.conan_app import ConanApp
 from conan.internal.api.export import cmd_export
 from conan.internal.methods import run_package_method
 from conan.internal.graph.graph import BINARY_BUILD, RECIPE_INCACHE
@@ -44,9 +43,9 @@ class ExportAPI:
         :return: A tuple of the exported RecipeReference and a ConanFile object
         """
         ConanOutput().title("Exporting recipe to the cache")
-        app = ConanApp(self._conan_api)
+        _, _, loader = self._helpers.get_loader()
         hook_manager = self._helpers.hook_manager
-        return cmd_export(app.loader,self._helpers.cache, hook_manager, self._helpers.global_conf, path,
+        return cmd_export(loader,self._helpers.cache, hook_manager, self._helpers.global_conf, path,
                           name, version, user, channel, graph_lock=lockfile, remotes=remotes)
 
     def export_pkg_graph(self, path, ref: RecipeReference, profile_host, profile_build,

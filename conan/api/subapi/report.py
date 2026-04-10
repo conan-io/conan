@@ -5,7 +5,6 @@ from io import StringIO
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.api.model import RecipeReference
-from conan.internal.conan_app import ConanApp
 from conan.internal.errors import conanfile_exception_formatter
 from conan.internal.graph.graph import CONTEXT_HOST
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
@@ -86,10 +85,10 @@ class ReportAPI:
 
 
 def _configure_source(conan_api, hook_manager, conanfile_path, ref, remotes):
-    app = ConanApp(conan_api)
-    conanfile = app.loader.load_consumer(conanfile_path, name=ref.name, version=str(ref.version),
-                                         user=ref.user, channel=ref.channel, graph_lock=None,
-                                         remotes=remotes)
+    _, _, loader = conan_api._api_helpers.get_loader()  # noqa
+    conanfile = loader.load_consumer(conanfile_path, name=ref.name, version=str(ref.version),
+                                     user=ref.user, channel=ref.channel, graph_lock=None,
+                                     remotes=remotes)
     # This profile is empty, but with the conf from global.conf
     profile = conan_api.profiles.get_profile([])
     initialize_conanfile_profile(conanfile, profile, profile, CONTEXT_HOST, False)

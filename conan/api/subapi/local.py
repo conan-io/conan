@@ -2,8 +2,6 @@ import os
 from typing import List
 
 from conan.cli import make_abs_path
-from conan.internal.conan_app import ConanApp
-from conan.internal.api.local.editable import EditablePackages
 from conan.internal.methods import run_build_method, run_source_method
 from conan.internal.graph.graph import CONTEXT_HOST
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
@@ -21,7 +19,6 @@ class LocalAPI:
     def __init__(self, conan_api, helpers):
         self._conan_api = conan_api
         self._helpers = helpers
-        self.editable_packages = EditablePackages(conan_api.home_folder)
 
     @staticmethod
     def get_conanfile_path(path, cwd, py):
@@ -73,8 +70,8 @@ class LocalAPI:
         :return: RecipeReference of the added package
         """
         path = self.get_conanfile_path(path, cwd, py=True)
-        app = ConanApp(self._conan_api)
-        conanfile = app.loader.load_named(path, name, version, user, channel, remotes=remotes)
+        _, _, loader = self._helpers.get_loader()
+        conanfile = loader.load_named(path, name, version, user, channel, remotes=remotes)
         if conanfile.name is None or conanfile.version is None:
             raise ConanException("Editable package recipe should declare its name and version")
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
@@ -82,7 +79,7 @@ class LocalAPI:
         target_path = self.get_conanfile_path(path=path, cwd=cwd, py=True)
         output_folder = make_abs_path(output_folder) if output_folder else None
         # Check the conanfile is there, and name/version matches
-        self.editable_packages.add(ref, target_path, output_folder=output_folder)
+        self._helpers.editable_packages.add(ref, target_path, output_folder=output_folder)
         return ref
 
     def editable_remove(self, path=None, requires=None, cwd=None):
@@ -99,10 +96,10 @@ class LocalAPI:
         if path:
             path = make_abs_path(path, cwd)
             path = os.path.join(path, "conanfile.py")
-        return self.editable_packages.remove(path, requires)
+        return self._helpers.editable_packages.remove(path, requires)
 
     def editable_list(self):
-        return self.editable_packages.edited_refs
+        return self._helpers.editable_packages.edited_refs
 
     def source(self, path, name=None, version=None, user=None, channel=None,
                remotes: List[Remote] = None):
@@ -118,10 +115,10 @@ class LocalAPI:
         :param channel: The channel of the package. If not defined, it is taken from conanfile
         :param remotes: The remotes to resolve possible ``python-requires`` for this recipe if needed.
         """
-        app = ConanApp(self._conan_api)
-        conanfile = app.loader.load_consumer(path, name=name, version=version,
-                                             user=user, channel=channel, graph_lock=None,
-                                             remotes=remotes)
+        _, _, loader = self._helpers.get_loader()
+        conanfile = loader.load_consumer(path, name=name, version=version,
+                                         user=user, channel=channel, graph_lock=None,
+                                         remotes=remotes)
         # This profile is empty, but with the conf from global.conf
         profile = self._conan_api.profiles.get_profile([])
         initialize_conanfile_profile(conanfile, profile, profile, CONTEXT_HOST, False)
@@ -184,10 +181,7 @@ class LocalAPI:
 
     def inspect(self, conanfile_path, remotes, lockfile, name=None, version=None, user=None,
                 channel=None):
-        app = ConanApp(self._conan_api)
-        conanfile = app.loader.load_named(conanfile_path, name=name, version=version, user=user,
-                                          channel=channel, remotes=remotes, graph_lock=lockfile)
+        _, _, loader = self._helpers.get_loader()
+        conanfile = loader.load_named(conanfile_path, name=name, version=version, user=user,
+                                      channel=channel, remotes=remotes, graph_lock=lockfile)
         return conanfile
-
-    def reinit(self):
-        self.editable_packages = EditablePackages(self._conan_api.home_folder)
