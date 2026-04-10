@@ -115,13 +115,8 @@ class _SystemPackageManagerTool:
         ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet, stdout=stdout_buf, stderr=stderr_buf)
         if ret not in accepted_returns:
             msg = f"Command '{command}' failed with exit code {ret}"
-            if quiet:
-                err = stderr_buf.getvalue().strip()
-                out = stdout_buf.getvalue().strip()
-                if err:
-                    msg += f"\nstderr:\n{err}"
-                if out:
-                    msg += f"\nstdout:\n{out}"
+            msg += f"\nstderr:\n{stderr_buf.getvalue().strip()}" if stderr_buf is not None else ""
+            msg += f"\nstdout:\n{stdout_buf.getvalue().strip()}" if stdout_buf is not None else ""
             raise ConanException(msg)
         return ret
 
