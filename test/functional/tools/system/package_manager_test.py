@@ -146,9 +146,6 @@ def test_brew_install_install_mode():
     assert "Error: No formulae found in taps." in client.out
 
 
-@pytest.mark.tool("brew")
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires brew")
-@pytest.mark.skip(reason="brew update takes a lot of time")
 def test_collect_system_requirements():
     """ we can know the system_requires for every package because they are part of the graph,
     this naturally execute at ``install``, but we can also prove that with ``graph info`` we can

@@ -1,5 +1,5 @@
 import platform
-import shutil
+from io import StringIO
 
 from conan.tools.build import cross_building
 from conan.internal.graph.graph import CONTEXT_BUILD
@@ -28,7 +28,6 @@ class _SystemPackageManagerTool:
         """
         self._conanfile = conanfile
         self._active_tool = self._conanfile.conf.get("tools.system.package_manager:tool") or self.get_default_tool()
-        self._check_package_manager_in_path()
         self._sudo = self._conanfile.conf.get("tools.system.package_manager:sudo", default=False, check_type=bool)
         self._sudo_askpass = self._conanfile.conf.get("tools.system.package_manager:sudo_askpass", default=False, check_type=bool)
         self._mode = self._conanfile.conf.get("tools.system.package_manager:mode", default=self.mode_check)
@@ -68,20 +67,10 @@ class _SystemPackageManagerTool:
                 if d in os_name:
                     return tool
 
-
-    def _check_package_manager_in_path(self):
-        if not self._active_tool:
-            raise ConanException(
-                "System requirements: A default system package manager couldn't be found in your system. "
-                "Verify your installation or define the package manager to use with "
-                "'tools.system.package_manager:tool' configuration."
-            )
-        if not shutil.which(self._active_tool):
-            raise ConanException(
-                f"System requirements: '{self.tool_name}' is not found in PATH, system packages cannot be installed. "
-                f"Please install '{self.tool_name}' or change the package manager tool using "
-                f"'tools.system.package_manager:tool' configuration."
-            )
+        # No default package manager was found for the system,
+        # so notify the user
+        self._conanfile.output.info("A default system package manager couldn't be found for {}, "
+                                    "system packages will not be installed.".format(os_name))
 
     def _split_package_name(self, package, host_package):
 
@@ -120,9 +109,24 @@ class _SystemPackageManagerTool:
 
     def _conanfile_run(self, command, accepted_returns, quiet=True):
         # When checking multiple packages, this is too noisy
-        ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet)
+        # Capture output and show it only on failure.
+        if quiet:
+            stdout_buf = StringIO()
+            stderr_buf = StringIO()
+            ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet,
+                                      stdout=stdout_buf, stderr=stderr_buf)
+        else:
+            ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet)
         if ret not in accepted_returns:
-            raise ConanException("Command '%s' failed" % command)
+            msg = f"Command '{command}' failed with exit code {ret}"
+            if quiet:
+                err = stderr_buf.getvalue().strip()
+                out = stdout_buf.getvalue().strip()
+                if err:
+                    msg += f"\nstderr:\n{err}"
+                if out:
+                    msg += f"\nstdout:\n{out}"
+            raise ConanException(msg)
         return ret
 
     def install_substitutes(self, *args, **kwargs):
