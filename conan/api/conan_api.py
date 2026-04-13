@@ -195,8 +195,7 @@ class ConanAPI:
             return load
 
         def get_loader(self):
-            ws_editables = self._conan_api.workspace.packages()
-            editable_packages = self._editable_packages.update_copy(ws_editables)
+            editable_packages = self._editable_packages.copy()
 
             legacy_update = self.global_conf.get("core:update_policy", choices=["legacy"])
             # This proxy is caching information
@@ -217,4 +216,4 @@ class ConanAPI:
             ws_packages = self._conan_api.workspace._load_packages(loader, editable_packages)  # noqa
 
             # Last None will be space for workspace packages
-            return proxy, range_resolver, loader, None
+            return proxy, range_resolver, loader, ws_packages

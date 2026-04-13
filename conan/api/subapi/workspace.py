@@ -111,7 +111,8 @@ class WorkspaceAPI:
         """
         if not self._folder or not self._enabled:
             return
-        return self._conan_api._api_helpers.get_ws_packages()  # noqa
+        _, _, _, ws_packages = self._conan_api._api_helpers.get_loader() # noqa
+        return ws_packages
 
     def _load_packages(self, loader, editable_packages):
         if not self._folder or not self._enabled:
@@ -285,7 +286,7 @@ class WorkspaceAPI:
 
     def info(self):
         self._check_ws()
-        _, _, loader = self._conan_api._api_helpers.get_loader()  # noqa
+        loader = self._conan_api._api_helpers.loader  # noqa
         self._ws.set_loader(loader)  # Just in case the user needs load_conanfile()
         return {"name": self._ws.name(),
                 "folder": self._folder,
