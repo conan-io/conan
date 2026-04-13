@@ -24,7 +24,7 @@ def format_defines(defines, toolchain=False):
                 # value quotes are escaped
                 value = f'\\"{value}\\"' if toolchain else f'\"{value}\"'
             define = f"{macro}#{value}"
-        formated_defines.append(f'/D\"{define}\"')
+        formated_defines.append(f'/D"{define}"')
     return formated_defines
 
 
