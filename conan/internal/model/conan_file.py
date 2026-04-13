@@ -75,6 +75,7 @@ class ConanFile:
     buildenv_info = None
     runenv_info = None
     conf_info = None
+    conf = None
     generator_info = None
     conan_data = None
 

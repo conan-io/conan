@@ -14,7 +14,6 @@ from conan.cli.formatters.audit.vulnerabilities import text_vuln_formatter, json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_basic
 from conan.errors import ConanException
-from conan.internal.util.files import load
 
 
 def _add_provider_arg(subparser):
@@ -134,7 +133,8 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
             ConanOutput().warning("Nothing to list, package list does not contain recipe revisions")
     elif args.sbom:
         sbom_file = make_abs_path(args.sbom)
-        sbom = json.loads(load(sbom_file))
+        with open(sbom_file, 'r') as f:
+            sbom = json.load(f)
         if sbom.get("bomFormat") != "CycloneDX":
             raise ConanException(f"Unsupported SBOM format, only CycloneDX is supported.")
         purls = [component["purl"] for component in sbom["components"]]

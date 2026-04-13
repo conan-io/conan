@@ -1,7 +1,6 @@
 import fnmatch
 import json
 import os
-from collections import OrderedDict
 
 from conan.api.output import ConanOutput
 from conan.internal.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD, Overrides
@@ -21,7 +20,7 @@ class _LockRequires:
     otherwise it could be a bare list
     """
     def __init__(self):
-        self._requires = OrderedDict()  # {require: package_ids}
+        self._requires = {}  # {require: package_ids}
 
     def refs(self):
         return self._requires.keys()
@@ -53,9 +52,9 @@ class _LockRequires:
             old_package_ids = self._requires.pop(ref, None)  # Get existing one
             if old_package_ids is not None:
                 if package_ids is not None:
-                    package_ids = old_package_ids.update(package_ids)
-                else:
-                    package_ids = old_package_ids
+                    assert isinstance(old_package_ids, dict)
+                    old_package_ids.update(package_ids)
+                package_ids = old_package_ids
             self._requires[ref] = package_ids
         else:  # Manual addition of something without revision
             existing = {r: r for r in self._requires}.get(ref)
@@ -77,7 +76,7 @@ class _LockRequires:
                         remove.append(k)
         else:
             remove = [k for k in self._requires if k.matches(pattern, False)]
-        self._requires = OrderedDict((k, v) for k, v in self._requires.items() if k not in remove)
+        self._requires = {k: v for k, v in self._requires.items() if k not in remove}
         return remove
 
     def update(self, refs, name):
@@ -96,7 +95,7 @@ class _LockRequires:
         self.sort()
 
     def sort(self):
-        self._requires = OrderedDict(reversed(sorted(self._requires.items())))
+        self._requires = dict(reversed(sorted(self._requires.items())))
 
     def merge(self, other):
         """
@@ -293,7 +292,7 @@ class Lockfile:
                 ConanOutput().error(msg, error_type="exception")
             raise
 
-    def resolve_overrides(self, require):
+    def resolve_overrides(self, require, context):
         """ The lockfile contains the overrides to be able to inject them when the lockfile is
         applied to upstream dependencies, that have the overrides downstream
         """
@@ -303,6 +302,9 @@ class Lockfile:
         overriden = self._overrides.get(require.ref)
         if overriden and len(overriden) == 1:
             override_ref = next(iter(overriden))
+            locked_refs = self._build_requires.refs() if context == "build" else self._requires.refs()
+            if override_ref not in locked_refs:
+                return  # The override came from the other context
             require.overriden_ref = require.overriden_ref or require.ref.copy()
             require.override_ref = override_ref
             require.ref = override_ref

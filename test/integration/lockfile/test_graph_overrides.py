@@ -65,6 +65,8 @@ def test_overrides_half_diamond_ranges(override, force):
     c.run("graph info pkgc --lockfile=pkgc/conan.lock")
     assert "pkga/0.2" in c.out
     assert "pkga/0.1" not in c.out
+    c.run("graph info pkgb --lockfile=pkgc/conan.lock")
+    # should work
 
 
 @pytest.mark.parametrize("override, force", [(True, False), (False, True)])
@@ -94,6 +96,8 @@ def test_overrides_half_diamond_ranges_inverted(override, force):
     c.run("graph info pkgc --lockfile=pkgc/conan.lock")
     assert "pkga/0.1" in c.out
     assert "pkga/0.2" not in c.out
+    c.run("graph info pkgb --lockfile=pkgc/conan.lock")
+    # should work
 
 
 @pytest.mark.parametrize("override, force", [(True, False), (False, True)])
@@ -224,6 +228,8 @@ def test_overrides_multiple(override1, force1, override2, force2):
     assert "pkga/0.3" in c.out
     assert "pkga/0.2#" not in c.out
     assert "pkga/0.1#" not in c.out  # appears in override information
+    c.run("graph info pkgb --lockfile=pkgd/conan.lock")
+    # should work
 
 
 def test_graph_different_overrides():
@@ -351,8 +357,12 @@ def test_command_line_lockfile_overrides():
     c.run('install pkgc --lockfile-overrides="{\'pkga/0.1\': [\'pkga/0.2\']}"', assert_error=True)
     assert "Cannot define overrides without a lockfile" in c.out
     c.run('lock create pkgc')
-    c.run('install pkgc --lockfile-overrides="{\'pkga/0.1\': [\'pkga/0.2\']}"', assert_error=True)
-    assert "Requirement 'pkga/0.2' not in lockfile" in c.out
+    c.run('install pkgc --lockfile-overrides="{\'pkga/0.1\': [\'pkga/0.2\']}"')
+    # From https://github.com/conan-io/conan/issues/19738 it is simply ignored
+    # Not a hard "protection" error, still users can't inject a dependency to pkga/0.2 if not
+    # in the lockfile already
+    assert "pka/0.2" not in c.out
+    assert "pkga/0.1" in c.out
 
 
 def test_consecutive_installs():
@@ -371,3 +381,43 @@ def test_consecutive_installs():
     # This used to crash when overrides were not managed
     c.run("install pkgc --build=missing --lockfile=conan.lock --lockfile-out=conan.lock")
     c.assert_overrides({"pkga/0.1": ["pkga/0.2"]})
+
+
+class TestOverrideContextError:
+    # https://github.com/conan-io/conan/issues/19738
+    def test_error_lockfile_override_build_require(self):
+        # The override that comes from the host context is breaking the build locking
+        c = TestClient(light=True)
+        c.save({"abseil/conanfile.py": GenConanfile("abseil"),
+                "protobuf/conanfile.py": GenConanfile("protobuf", "0.1").with_requires("abseil/[*]"),
+                "app/conanfile.py": GenConanfile("pkgd", "0.1").with_requirement("protobuf/0.1")
+                                                               .with_requirement("abseil/0.1",
+                                                                                 override=True)
+                                                               .with_tool_requires("protobuf/0.1")
+                })
+        c.run("create abseil --version=0.1")
+        c.run("create abseil --version=0.2")
+        c.run("create protobuf")
+        c.run("lock create app")
+        c.run("install app --build=missing --lockfile=app/conan.lock")
+        # It doesnt fail
+
+    def test_error_lockfile_override_build_require_build(self):
+        # Same as the above, but now the override is in the "build" context, affecting the
+        # host one that shouldn't be overriden
+        c = TestClient(light=True)
+        c.save({"pkga/conanfile.py": GenConanfile("pkga"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/[*]"),
+                "toolb/conanfile.py": GenConanfile("toolb", "0.1").with_requirement("pkgb/0.1")
+                                                                  .with_requirement("pkga/0.1",
+                                                                                    override=True),
+                "app/conanfile.py": GenConanfile("pkgd", "0.1").with_requirement("pkgb/0.1")
+                                                               .with_tool_requires("toolb/0.1")
+                })
+        c.run("create pkga --version=0.1")
+        c.run("create pkga --version=0.2")
+        c.run("create pkgb")
+        c.run("create toolb --build=missing")
+        c.run("lock create app")
+        c.run("install app --lockfile=app/conan.lock")
+        # It doesnt fail

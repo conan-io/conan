@@ -60,6 +60,32 @@ def test_extra_flags_via_conf():
     assert 'defines { "define1=0", "_GLIBCXX_USE_CXX11_ABI=0" }' in content
 
 
+def test_premaketoolchain_rcflags():
+    """Test that tools.build:rcflags is applied to buildoptions for **.rc files."""
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=9
+        compiler.libcxx=libstdc++
+        build_type=Release
+
+        [conf]
+        tools.build:rcflags=["-rcflag1", "-rcflag2"]
+        """)
+    tc = TestClient()
+    tc.save({
+        "conanfile.txt": "[generators]\nPremakeToolchain",
+        "profile": profile,
+    })
+    tc.run("install . -pr:a=profile")
+    content = tc.load(PremakeToolchain.filename)
+    assert '**.rc' in content
+    assert "-rcflag1" in content
+    assert "-rcflag2" in content
+
+
 def test_project_configuration():
     tc = TestClient(path_with_spaces=False)
     profile = textwrap.dedent(

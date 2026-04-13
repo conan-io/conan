@@ -3,7 +3,6 @@ import os
 import re
 import textwrap
 import time
-from collections import OrderedDict
 from unittest.mock import patch, Mock
 
 import pytest
@@ -85,9 +84,8 @@ class TestParamErrors:
 
 @pytest.fixture(scope="module")
 def client():
-    servers = OrderedDict([("default", TestServer()),
-                           ("other", TestServer())])
-    c = TestClient(servers=servers, inputs=2*["admin", "password"])
+    c = TestClient(servers={"default": TestServer(), "other": TestServer()},
+                   inputs=2*["admin", "password"])
     c.save({
         "zlib.py": GenConanfile("zlib"),
         "zlib_ng.py": GenConanfile("zlib_ng", "1.0.0"),

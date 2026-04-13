@@ -1,5 +1,4 @@
 import json
-from collections import OrderedDict
 
 import pytest
 
@@ -106,11 +105,7 @@ def test_two_remotes():
     # remote1: zlib/1.0, libcurl/2.0, foo/1.0
     # remote2: zlib/[1.0, 2.0], libcurl/1.0, foo/1.0
     # local cache: zlib/1.0, libcurl/1.0, foo/1.0
-    servers = OrderedDict()
-    for i in [1, 2]:
-        test_server = TestServer()
-        servers["remote%d" % i] = test_server
-
+    servers = {f"remote{i}": TestServer() for i in (1, 2)}
     tc = TestClient(servers=servers, inputs=2 * ["admin", "password"], light=True)
 
     tc.save({"conanfile.py": GenConanfile()})
@@ -150,7 +145,7 @@ def test_two_remotes():
 
 
 def test_duplicated_tool_requires():
-    tc = TestClient(default_server_user=True)
+    tc = TestClient(default_server_user=True, light=True)
     # Create libraries needed to generate the dependency graph
     tc.save({"conanfile.py": GenConanfile()})
     tc.run("create . --name=cmake --version=1.0")
@@ -176,7 +171,7 @@ def test_duplicated_tool_requires():
 
 
 def test_no_outdated_dependencies():
-    tc = TestClient(default_server_user=True)
+    tc = TestClient(default_server_user=True, light=True)
 
     tc.save({"conanfile.py": GenConanfile()})
     tc.run("create . --name=foo --version=1.0")

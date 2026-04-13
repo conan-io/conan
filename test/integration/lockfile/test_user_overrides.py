@@ -419,7 +419,7 @@ class TestLockUpgrade:
         c.run(f"export libb --version=1.2")
         c.run(f"export libc --version=1.1")
         c.run(f"export libd --version=1.1")
-        c.run("lock upgrade . --update-requires=liba/1.0 --update-requires=libb/[*] --update-build-requires=libc/[*] --update-python-requires=libd/1.0")
+        c.run("lock upgrade . -ur=liba/1.0 -ur=libb/[*] -ubr=libc/[*] -upr=libd/1.0")
         lock = c.load("conan.lock")
         assert "liba/1.9" in lock
         assert "libb/1.1" in lock
