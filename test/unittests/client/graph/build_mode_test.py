@@ -172,3 +172,47 @@ def test_pattern_matching(conanfile):
         assert build_mode.forced(conanfile, reference) is True
         reference = RecipeReference.loads("pythontool/0.1@lasote/stable")
         assert build_mode.forced(conanfile, reference) is False
+
+
+def test_name_matching(conanfile):
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        build_mode = BuildMode(["boost"])
+        reference = RecipeReference.loads("boost/1.69.0@user/stable")
+        assert (build_mode.forced(conanfile, reference)) is True
+        reference = RecipeReference.loads("boost_addons/1.0.0@user/stable")
+        assert (build_mode.forced(conanfile, reference)) is False
+        reference = RecipeReference.loads("myboost/1.0@user/stable")
+        assert (build_mode.forced(conanfile, reference)) is False
+        reference = RecipeReference.loads("foo/boost@user/stable")
+        assert (build_mode.forced(conanfile, reference)) is False
+        reference = RecipeReference.loads("foo/1.0@boost/stable")
+        assert (build_mode.forced(conanfile, reference)) is False
+        reference = RecipeReference.loads("foo/1.0@user/boost")
+        assert build_mode.forced(conanfile, reference) is False
+
+        build_mode = BuildMode(["foo"])
+        reference = RecipeReference.loads("foo/1.0.0@user/stable")
+        assert build_mode.forced(conanfile, reference) is True
+        reference = RecipeReference.loads("foo/1.0@user/stable")
+        assert build_mode.forced(conanfile, reference) is True
+        reference = RecipeReference.loads("foo/1.0.0-abcdefg@user/stable")
+        assert build_mode.forced(conanfile, reference) is True
+
+        build_mode = BuildMode(["bar"])
+        reference = RecipeReference.loads("foo/1.0.0@user/stable")
+        assert build_mode.forced(conanfile, reference) is False
+        reference = RecipeReference.loads("bar/1.0@user/stable")
+        assert build_mode.forced(conanfile, reference) is True
+        reference = RecipeReference.loads("foo/1.0.0-abcdefg@user/stable")
+        assert build_mode.forced(conanfile, reference) is False
+        reference = RecipeReference.loads("foo/1.0.0@NewUser/stable")
+        assert build_mode.forced(conanfile, reference) is False
+
+        build_mode = BuildMode(["tool"])
+        reference = RecipeReference.loads("tool/0.1@lasote/stable")
+        assert build_mode.forced(conanfile, reference) is True
+        reference = RecipeReference.loads("pythontool/0.1@lasote/stable")
+        assert build_mode.forced(conanfile, reference) is False
+        reference = RecipeReference.loads("sometool/1.2@user/channel")
+        assert build_mode.forced(conanfile, reference) is False

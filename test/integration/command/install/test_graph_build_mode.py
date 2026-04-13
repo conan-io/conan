@@ -40,10 +40,11 @@ def check_if_build_from_sources(refs_modes, output):
             assert "{}/1.0@user/testing: Forced build from source".format(ref) not in output
 
 
-def test_install_build_single(build_all):
+@pytest.mark.parametrize("ref", ["foo/*", "foo"])
+def test_install_build_single(build_all, ref):
     """ When only --build=<ref> is passed, only <ref> must be built
     """
-    build_all.run("install --requires=foobar/1.0@user/testing --build=foo/*")
+    build_all.run(f"install --requires=foobar/1.0@user/testing --build={ref}")
     build_all.assert_listed_binary({"bar/1.0@user/testing": (bar_id, "Cache"),
                                     "foo/1.0@user/testing": (foo_id, "Build"),
                                     "foobar/1.0@user/testing": (foobar_id, "Cache"),

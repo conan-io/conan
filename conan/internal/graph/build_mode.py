@@ -63,6 +63,10 @@ class BuildMode:
             if self._never and (self._missing or self._patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
 
+    @staticmethod
+    def ref_matches(ref, pattern, is_consumer=None):
+        return ref.name == pattern or ref_matches(ref, pattern, is_consumer)
+
     @property
     def editable(self):
         # we can make this conditional on the context in the future
@@ -72,7 +76,7 @@ class BuildMode:
         # TODO: ref can be obtained from conan_file
 
         for pattern in self._excluded_patterns:
-            if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):  # noqa
+            if self.ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):  # noqa
                 conan_file.output.info("Excluded build from source")
                 return False
 
@@ -91,7 +95,7 @@ class BuildMode:
 
         # Patterns to match, if package matches pattern, build is forced
         for pattern in self._patterns:
-            if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):  # noqa
+            if self.ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):  # noqa
                 return True
         return False
 
@@ -113,21 +117,21 @@ class BuildMode:
     def allowed_compatible(self, conanfile):
         if self._build_compatible_excluded:
             for pattern in self._build_compatible_excluded:
-                if ref_matches(conanfile.ref, pattern, is_consumer=False):
+                if self.ref_matches(conanfile.ref, pattern, is_consumer=False):
                     return False
             return True  # If it has not been excluded by the negated patterns, it is included
 
         for pattern in self._build_compatible_patterns:
-            if ref_matches(conanfile.ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
+            if self.ref_matches(conanfile.ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
                 return True
 
     def should_build_missing(self, conanfile):
         if self._build_missing_excluded:
             for pattern in self._build_missing_excluded:
-                if ref_matches(conanfile.ref, pattern, is_consumer=False):
+                if self.ref_matches(conanfile.ref, pattern, is_consumer=False):
                     return False
             return True  # If it has not been excluded by the negated patterns, it is included
 
         for pattern in self._build_missing_patterns:
-            if ref_matches(conanfile.ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
+            if self.ref_matches(conanfile.ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
                 return True
