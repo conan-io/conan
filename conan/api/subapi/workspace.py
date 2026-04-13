@@ -111,15 +111,14 @@ class WorkspaceAPI:
         """
         if not self._folder or not self._enabled:
             return
-        _, _, loader = self._conan_api._api_helpers.get_loader()  # noqa
-        return loader.ws_packages
+        return self._conan_api._api_helpers.get_ws_packages()  # noqa
 
     def _load_packages(self, loader, editable_packages):
         if not self._folder or not self._enabled:
             return
         # explicitly undocumented, not public
         packages = {}
-        self._ws._loader = loader  # To make it available for load_conanfile()
+        self._ws.set_loader(loader)  # To make it available for load_conanfile()
         for editable_info in self._ws.packages():
             rel_path = editable_info["path"]
             path = os.path.normpath(os.path.join(self._folder, rel_path, "conanfile.py"))
@@ -287,7 +286,7 @@ class WorkspaceAPI:
     def info(self):
         self._check_ws()
         _, _, loader = self._conan_api._api_helpers.get_loader()  # noqa
-        self._ws._loader = loader
+        self._ws.set_loader(loader)  # Just in case the user needs load_conanfile()
         return {"name": self._ws.name(),
                 "folder": self._folder,
                 "packages": self._ws.packages()}

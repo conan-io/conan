@@ -25,6 +25,10 @@ class Workspace:
         self.conan_data = self._conan_load_data()
         self._conan_api = conan_api
         self.output = ConanOutput(scope=f"Workspace '{self.name()}'")
+        self._loader = None
+
+    def set_loader(self, loader):
+        self._loader = loader
 
     def __getattribute__(self, item):
         # Return a protected wrapper around workspace overridable callables in order to
@@ -112,6 +116,7 @@ class Workspace:
         return self.conan_data.get("packages", [])
 
     def load_conanfile(self, conanfile_path):
+        assert self._loader is not None, "Internal error, self._loader not defined, report to Github"
         conanfile_path = os.path.join(self.folder, conanfile_path, "conanfile.py")
         conanfile = self._loader.load_named(conanfile_path, name=None, version=None, user=None,
                                             channel=None, remotes=None, graph_lock=None)

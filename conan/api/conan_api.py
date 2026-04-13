@@ -189,7 +189,7 @@ class ConanAPI:
             # These are just the global editables, not including workspace ones
             return self._editable_packages
 
-        def get_loader(self):
+        def get_loader(self, full=True):
             # TODO: Just force a copy to not corrupt the global ones
             editable_packages = self._editable_packages.copy()
 
@@ -210,5 +210,7 @@ class ConanAPI:
             loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
 
             ws_packages = self._conan_api.workspace._load_packages(loader, editable_packages)  # noqa
-            loader.ws_packages = ws_packages
-            return proxy, range_resolver, loader
+
+            if full:
+                return proxy, range_resolver, loader
+            return ws_packages
