@@ -1,4 +1,7 @@
+from email.policy import default
+
 from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE, LEVEL_DEBUG
+from conan.errors import ConanException
 
 
 def print_graph_basic(graph):
@@ -60,16 +63,23 @@ def print_graph_basic(graph):
             output.info("    {}: {}".format(k, v), Color.BRIGHT_CYAN)
 
     _format_resolved("Resolved alias", graph.aliased)
+    allowed_deprecated_policies = graph.root.conanfile.conf.get("tools.policies:allow_deprecated",
+                                                                check_type=list(), default=[])
     if graph.aliased:
         output.warning("'alias' is a Conan 1.X legacy, unsupported and undocumented feature, "
                        "completely discouraged. "
                        "It might be removed in future Conan versions", warn_tag="deprecated")
         output.warning("Consider using version-ranges instead.")
+
+        if "alias" not in allowed_deprecated_policies:
+            raise ConanException("")
     _format_resolved("Resolved version ranges", graph.resolved_ranges)
     for req in graph.resolved_ranges:
         if str(req.version) == "[]":
-            output.warning("Empty version range usage is discouraged. Use [*] instead",
+            output.warning("Empty version range usage is deprecated. Use [*] instead",
                            warn_tag="deprecated")
+            if "empty_version_ranges" not in allowed_deprecated_policies:
+                raise ConanException("")
             break
 
     overrides = graph.overrides()

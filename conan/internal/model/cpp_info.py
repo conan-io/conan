@@ -848,11 +848,15 @@ class CppInfo:
         if conanfile.cpp_info.has_components and (conanfile.cpp_info.exe or conanfile.cpp_info.libs):
             raise ConanException(f"{conanfile}: 'cpp_info' contains components and .exe or .libs")
 
+        allowed_deprecated_policies = conanfile.conf.get("tools.policies:allow_deprecated",
+                                                         check_type=list(), default=[])
         result = CppInfo()  # clone it
         if self.libs and len(self.libs) > 1:  # expand in multiple components
             ConanOutput(scope=str(conanfile)).warning(
                 "The 'cpp_info.libs' contain more than 1 library. "
                 "Define 'cpp_info.components' instead.", warn_tag="deprecated")
+            if "multilibs_components" not in allowed_deprecated_policies:
+                raise ConanException("")
             assert not self.components, f"{conanfile} cpp_info shouldn't have .libs and .components"
             common = self._package.clone()
             common.libs = []
@@ -877,6 +881,8 @@ class CppInfo:
                     ConanOutput(scope=str(conanfile)).warning(
                         f"The 'cpp_info.components[{k}] contains more than 1 library. "
                         "Define 1 component for each library instead.", warn_tag="deprecated")
+                    if "multilibs_components" not in allowed_deprecated_policies:
+                        raise ConanException("")
                     # Now the root, empty one
                     common = v.clone()
                     common.libs = []

@@ -159,6 +159,7 @@ BUILT_IN_CONFS = {
     "tools.build:install_strip": "(boolean) Strip the binaries when installing them with CMake, Meson and Autotools",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
+    "tools.policies:allow_deprecated": "List of deprecated policies and behaviours that are allowed and won't raise a warning."
 }
 
 BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
