@@ -43,9 +43,9 @@ def test_nmakedeps():
     # Checking that defines are added to CL
     for flag in (
         r'/D"TEST_DEFINITION1"', '/D"TEST_DEFINITION2#0"',
-        r'/D"TEST_DEFINITION3#"', r'/D"TEST_DEFINITION4#\"foo\""',
-        r'/D"TEST_DEFINITION5#\"__declspec(dllexport)\""',
-        r'/D"TEST_DEFINITION6#\"foo bar\""',
+        r'/D"TEST_DEFINITION3#"', '/D"TEST_DEFINITION4#"foo""',
+        r'/D"TEST_DEFINITION5#"__declspec(dllexport)""',
+        r'/D"TEST_DEFINITION6#"foo bar""',
         r'/D"TEST_DEFINITION7#7"',
         r'/D"TEST_WINVER#0x0601"'
     ):
