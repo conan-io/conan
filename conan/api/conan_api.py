@@ -24,10 +24,16 @@ from conan.errors import ConanException
 from conan.internal.api.remotes.localdb import LocalDB
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
+from conan.internal.conan_app import ConanFileHelpers, CmdWrapper
+from conan.internal.graph.proxy import ConanProxy
+from conan.internal.graph.python_requires import PyRequireLoader
+from conan.internal.graph.range_resolver import RangeResolver
 from conan.internal.hook_manager import HookManager
+from conan.internal.loader import ConanFileLoader
 from conan.internal.model.conf import load_global_conf, ConfDefinition, CORE_CONF_PATTERN
 from conan.internal.model.settings import load_settings_yml
 from conan.internal.paths import get_conan_user_home
+from conan.internal.api.local.editable import EditablePackages
 from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version_range import validate_conan_version
 from conan.internal.rest.auth_manager import ConanApiAuthManager
@@ -105,7 +111,6 @@ class ConanAPI:
         Reinitialize the Conan API. This is useful when the configuration changes.
         """
         self._api_helpers.reinit()
-        self.local.reinit()
 
     def migrate(self):
         # Migration system
@@ -122,6 +127,7 @@ class ConanAPI:
             self._init_global_conf()
             # TODO: Make uniform lazy vs non lazy collaborators
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+            self._editable_packages = EditablePackages(self._conan_api.home_folder)
             # Wraps an http_requester to inject proxies, certs, etc
             self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
             self.cache = PkgCache(self._conan_api.home_folder, self.global_conf)
@@ -155,6 +161,7 @@ class ConanAPI:
             self._settings_yml = None
             self.cache = PkgCache(self._conan_api.home_folder, self.global_conf)
             self._remote_manager = None
+            self._editable_packages = EditablePackages(self._conan_api.home_folder)
 
         @property
         def settings_yml(self):
@@ -176,3 +183,29 @@ class ConanAPI:
         @property
         def requester(self):
             return self._requester
+
+        @property
+        def editable_packages(self):
+            # These are just the global editables, not including workspace ones
+            return self._editable_packages
+
+        def get_loader(self):
+            ws_editables = self._conan_api.workspace.packages()
+            editable_packages = self._editable_packages.update_copy(ws_editables)
+
+            legacy_update = self.global_conf.get("core:update_policy", choices=["legacy"])
+            # This proxy is caching information
+            proxy = ConanProxy(self.cache, self.remote_manager, editable_packages,
+                               legacy_update=legacy_update)
+            # This is caching too
+            range_resolver = RangeResolver(self.cache, self.remote_manager, self.global_conf,
+                                           editable_packages)
+
+            cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
+            conanfile_helpers = ConanFileHelpers(self._requester, cmd_wrap, self.global_conf,
+                                                 self.cache, self._conan_api.home_folder,
+                                                 self._conan_api)
+            pyreq_loader = PyRequireLoader(proxy, range_resolver, self.global_conf)
+            # This is caching too!
+            loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
+            return proxy, range_resolver, loader

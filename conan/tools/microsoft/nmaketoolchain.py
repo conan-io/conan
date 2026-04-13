@@ -58,7 +58,7 @@ class NMakeToolchain:
         defines.extend(self.extra_defines)
 
         return (["/nologo"] + self._format_options(bt_flags + rt_flags + cflags + cxxflags) +
-                format_defines(defines))
+                format_defines(defines, toolchain=True))
 
     @property
     def _link(self):
