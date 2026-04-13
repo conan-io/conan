@@ -245,6 +245,25 @@ class TestWarningHandling:
         assert "WARN: Untagged warning" not in t.out
         assert "WARN: tag: Tagged warning" not in t.out
 
+    def test_warning_errors(self):
+        t = TestClient(light=True)
+        t.save({"conanfile.py": GenConanfile("foo", "1.0").with_package(*self.warning_lines)})
+
+        t.save_home({"global.conf": "core:warnings_as_errors=[]"})
+        t.run("create .")
+        assert "WARN: tag: Tagged warning" in t.out
+        assert "WARN: Untagged warning" in t.out
+
+        t.save_home({"global.conf": "core:warnings_as_errors=['*']"})
+        t.run("create .", assert_error=True)
+        assert "ConanException: tag: Tagged warning" in t.out
+        t.run("create . -verror", assert_error=True)
+        assert "ConanException: tag: Tagged warning" in t.out
+
+        t.save_home({"global.conf": "core:warnings_as_errors=['tag']"})
+        t.run("create .", assert_error=True)
+        assert "ConanException: tag: Tagged warning" in t.out
+
     def test_exception_errors(self):
         t = TestClient(light=True)
         t.save({"conanfile.py": GenConanfile("foo", "1.0").with_package(*self.error_lines)})

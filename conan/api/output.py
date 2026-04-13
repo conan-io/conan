@@ -335,18 +335,17 @@ class ConanOutput:
         Notice that if the tag matches the pattern in the ``core:warnings_as_errors`` configuration,
         and is not skipped, this will be upgraded to an error, and raise an exception
         when the output is printed, so that the error does not pass unnoticed."""
-        _treat_as_error = self._warn_tag_matches(warn_tag, self._warnings_as_errors)
-        if (self._conan_output_level <= LEVEL_WARNING or
-                (_treat_as_error and self._conan_output_level <= LEVEL_ERROR)):
-            if self._warn_tag_matches(warn_tag, self._silent_warn_tags):
-                return self
-            warn_tag_msg = "" if warn_tag is None else f"{warn_tag}: "
-            output = f"{warn_tag_msg}{msg}"
+        if self._warn_tag_matches(warn_tag, self._silent_warn_tags):
+            return self
 
-            if _treat_as_error:
-                self.error(output)
-            else:
-                self._write_message(f"WARN: {output}", Color.YELLOW)
+        warn_tag_msg = "" if warn_tag is None else f"{warn_tag}: "
+        output = f"{warn_tag_msg}{msg}"
+
+        if self._warn_tag_matches(warn_tag, self._warnings_as_errors):
+            return self.error(output)
+
+        if self._conan_output_level <= LEVEL_WARNING:
+            self._write_message(f"WARN: {output}", Color.YELLOW)
         return self
 
     def error(self, msg: str, error_type: str = None):
