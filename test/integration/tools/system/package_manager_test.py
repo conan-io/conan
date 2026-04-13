@@ -95,6 +95,35 @@ def test_conf_tool_skips_default_detection_message_on_unknown_distro():
             Apt(conanfile)
         get_default_mock.assert_not_called()
 
+@pytest.mark.parametrize("use_quiet_check", [True, False])
+def test_package_manager_not_found(use_quiet_check):
+    """Failed runs surface the shell's error (e.g. command not found) when output is captured."""
+    conanfile = ConanFileMock()
+    conanfile.settings = Settings()
+    conanfile.conf.define("tools.system.package_manager:tool", "apt-get")
+    conanfile.conf.define("tools.system.package_manager:mode", "install")
+
+    def fake_run(command, stdout=None, stderr=None, ignore_errors=False, env="", quiet=False, **kwargs):
+        if quiet and stderr is not None:
+            stderr.write("sh: apt-get: command not found\n")
+        return 127
+
+    conanfile.run = fake_run
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = Apt(conanfile)
+        with pytest.raises(ConanException) as exc_info:
+            if use_quiet_check:
+                tool.check(["pkg"])
+            else:
+                tool.install(["pkg"], check=False)
+
+    msg = str(exc_info.value)
+    assert "failed with exit code 127" in msg
+    if use_quiet_check:
+        assert "stderr:" in msg
+        assert "sh: apt-get: command not found" in msg
+
 
 @pytest.mark.parametrize("sudo, sudo_askpass, expected_str", [
     (True, True, "sudo -A "),
@@ -197,7 +226,7 @@ def test_dnf_yum_return_code_100(tool_class, result):
         tool = tool_class(conanfile)
 
         def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,  # noqa
-                     quiet=False):  # noqa
+                     quiet=False, **kwargs):  # noqa
             assert command == result
             return 100 if "check-update" in command else 0
 
@@ -210,13 +239,13 @@ def test_dnf_yum_return_code_100(tool_class, result):
         tool = tool_class(conanfile)
 
         def fake_run(command, win_bash=False, subsystem=None, env=None, ignore_errors=False,
-                     quiet=False):
+                     quiet=False, **kwargs):
             return 55 if "check-update" in command else 0
 
         conanfile.run = fake_run
         with pytest.raises(ConanException) as exc_info:
             tool.update()
-        assert f"Command '{result}' failed" == str(exc_info.value)
+        assert f"Command '{result}' failed with exit code 55" == str(exc_info.value)
 
 
 @pytest.mark.parametrize("tool_class, arch_host, result", [

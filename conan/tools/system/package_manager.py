@@ -1,4 +1,5 @@
 import platform
+from io import StringIO
 
 from conan.tools.build import cross_building
 from conan.internal.graph.graph import CONTEXT_BUILD
@@ -108,9 +109,17 @@ class _SystemPackageManagerTool:
 
     def _conanfile_run(self, command, accepted_returns, quiet=True):
         # When checking multiple packages, this is too noisy
-        ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet)
+        # Capture output and show it only on failure.
+        stdout_buf = StringIO() if quiet else None
+        stderr_buf = StringIO() if quiet else None
+        ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet, stdout=stdout_buf, stderr=stderr_buf)
         if ret not in accepted_returns:
-            raise ConanException("Command '%s' failed" % command)
+            msg = f"Command '{command}' failed with exit code {ret}"
+            if stderr_buf is not None and stderr_buf.getvalue():
+                msg += f"\nstderr: {stderr_buf.getvalue().strip()}"
+            if stdout_buf is not None and stdout_buf.getvalue():
+                msg += f"\nstdout: {stdout_buf.getvalue().strip()}"
+            raise ConanException(msg)
         return ret
 
     def install_substitutes(self, *args, **kwargs):
