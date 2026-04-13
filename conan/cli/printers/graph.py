@@ -1,5 +1,3 @@
-from email.policy import default
-
 from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE, LEVEL_DEBUG
 from conan.errors import ConanException
 
