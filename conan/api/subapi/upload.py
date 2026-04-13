@@ -35,7 +35,7 @@ class UploadAPI:
         :parameter force: If ``True``, it will skip the check and mark that all items need to be
             uploaded. A ``force_upload`` key will be added to the entries that will be uploaded.
         """
-        _, _, loader = self._api_helpers.get_loader()
+        loader = self._api_helpers.loader
         for ref, _ in package_list.items():
             layout = self._api_helpers.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
@@ -63,7 +63,7 @@ class UploadAPI:
         if metadata and metadata != [''] and '' in metadata:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
 
-        _, _, loader = self._api_helpers.get_loader()
+        loader = self._api_helpers.loader
         preparator = PackagePreparator(loader, self._api_helpers.cache,
                                        self._api_helpers.remote_manager,
                                        self._api_helpers.global_conf)

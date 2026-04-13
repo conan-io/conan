@@ -189,9 +189,14 @@ class ConanAPI:
             # These are just the global editables, not including workspace ones
             return self._editable_packages
 
-        def get_loader(self, full=True):
-            # TODO: Just force a copy to not corrupt the global ones
-            editable_packages = self._editable_packages.copy()
+        @property
+        def loader(self):
+            _, _, load, _ = self.get_loader()
+            return load
+
+        def get_loader(self):
+            ws_editables = self._conan_api.workspace.packages()
+            editable_packages = self._editable_packages.update_copy(ws_editables)
 
             legacy_update = self.global_conf.get("core:update_policy", choices=["legacy"])
             # This proxy is caching information
@@ -211,6 +216,5 @@ class ConanAPI:
 
             ws_packages = self._conan_api.workspace._load_packages(loader, editable_packages)  # noqa
 
-            if full:
-                return proxy, range_resolver, loader
-            return ws_packages
+            # Last None will be space for workspace packages
+            return proxy, range_resolver, loader, None
