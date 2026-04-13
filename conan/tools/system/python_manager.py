@@ -64,6 +64,7 @@ class PyEnv:
             ConanOutput().warning("'tools.system.pipenv:python_interpreter' "
                                   "is deprecated, use 'tools.system.pyenv:python_interpreter'",
                                   warn_tag="deprecated")
+
         if not self._default_python:
             python = "python" if platform.system() == "Windows" else "python3"
             default_python = shutil.which(python)
