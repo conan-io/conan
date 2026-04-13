@@ -133,7 +133,6 @@ class ConanAPI:
             self.cache = PkgCache(self._conan_api.home_folder, self.global_conf)
             self._settings_yml = None
             self._remote_manager = None
-            self.enable_ws = True
 
         def set_core_confs(self, core_confs):
             confs = ConfDefinition()
@@ -191,9 +190,8 @@ class ConanAPI:
             return self._editable_packages
 
         def get_loader(self):
-            # ws_editables = self._conan_api.workspace.packages()
             # TODO: Just force a copy to not corrupt the global ones
-            editable_packages = self._editable_packages.update_copy({})
+            editable_packages = self._editable_packages.copy()
 
             legacy_update = self.global_conf.get("core:update_policy", choices=["legacy"])
             # This proxy is caching information
@@ -211,9 +209,6 @@ class ConanAPI:
             # This is caching too!
             loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
 
-            ws = getattr(self._conan_api.workspace, '_ws', None)
-            if self.enable_ws and ws is not None:
-                ws_packages = ws.load_packages(loader, editable_packages)
-                loader.ws_packages = ws_packages
-
+            ws_packages = self._conan_api.workspace._load_packages(loader, editable_packages)  # noqa
+            loader.ws_packages = ws_packages
             return proxy, range_resolver, loader

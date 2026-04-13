@@ -114,6 +114,40 @@ class WorkspaceAPI:
         _, _, loader = self._conan_api._api_helpers.get_loader()  # noqa
         return loader.ws_packages
 
+    def _load_packages(self, loader, editable_packages):
+        if not self._folder or not self._enabled:
+            return
+        # explicitly undocumented, not public
+        packages = {}
+        self._ws._loader = loader  # To make it available for load_conanfile()
+        for editable_info in self._ws.packages():
+            rel_path = editable_info["path"]
+            path = os.path.normpath(os.path.join(self._folder, rel_path, "conanfile.py"))
+            if not os.path.isfile(path):
+                raise ConanException(f"Workspace package not found: {path}")
+            ref = editable_info.get("ref")
+            try:
+                if ref is None:
+                    conanfile = self._ws.load_conanfile(rel_path)
+                    reference = RecipeReference(name=conanfile.name, version=conanfile.version,
+                                                user=conanfile.user, channel=conanfile.channel)
+                else:
+                    reference = RecipeReference.loads(ref)
+                reference.validate_ref(reference)
+            except Exception as e:
+                raise ConanException(f"Workspace package reference could not be deduced by"
+                                     f" {rel_path}/conanfile.py or it is not"
+                                     f" correctly defined in the conanws.yml file: {e}")
+            if reference in packages:
+                raise ConanException(f"Workspace package '{str(reference)}' already exists.")
+            packages[reference] = {"path": path}
+            if editable_info.get("output_folder"):
+                packages[reference]["output_folder"] = (
+                    os.path.normpath(os.path.join(self._folder, editable_info["output_folder"]))
+                )
+            editable_packages.edited_refs.update({reference: packages[reference]})
+        return packages
+
     def open(self, ref, remotes, cwd=None):
         cwd = cwd or os.getcwd()
         proxy, _, loader = self._conan_api._api_helpers.get_loader()  # noqa

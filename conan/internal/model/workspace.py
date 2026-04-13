@@ -3,7 +3,6 @@ import shutil
 
 import yaml
 
-from conan.api.model import RecipeReference
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.errors import scoped_traceback
@@ -26,40 +25,6 @@ class Workspace:
         self.conan_data = self._conan_load_data()
         self._conan_api = conan_api
         self.output = ConanOutput(scope=f"Workspace '{self.name()}'")
-
-    def load_packages(self, loader, editable_packages):
-        """
-        @return: Returns {RecipeReference: {"path": full abs-path, "output_folder": abs-path}}
-        """
-        packages = {}
-        self._loader = loader  # To make it available for load_conanfile()
-        for editable_info in self.packages():
-            rel_path = editable_info["path"]
-            path = os.path.normpath(os.path.join(self.folder, rel_path, "conanfile.py"))
-            if not os.path.isfile(path):
-                raise ConanException(f"Workspace package not found: {path}")
-            ref = editable_info.get("ref")
-            try:
-                if ref is None:
-                    conanfile = self.load_conanfile(rel_path)
-                    reference = RecipeReference(name=conanfile.name, version=conanfile.version,
-                                                user=conanfile.user, channel=conanfile.channel)
-                else:
-                    reference = RecipeReference.loads(ref)
-                reference.validate_ref(reference)
-            except Exception as e:
-                raise ConanException(f"Workspace package reference could not be deduced by"
-                                     f" {rel_path}/conanfile.py or it is not"
-                                     f" correctly defined in the conanws.yml file: {e}")
-            if reference in packages:
-                raise ConanException(f"Workspace package '{str(reference)}' already exists.")
-            packages[reference] = {"path": path}
-            if editable_info.get("output_folder"):
-                packages[reference]["output_folder"] = (
-                    os.path.normpath(os.path.join(self.folder, editable_info["output_folder"]))
-                )
-            editable_packages.edited_refs.update({reference: packages[reference]})
-        return packages
 
     def __getattribute__(self, item):
         # Return a protected wrapper around workspace overridable callables in order to
