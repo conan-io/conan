@@ -211,7 +211,7 @@ class ConfigAPI:
         remotes = conan_api.remotes.list() if remotes is None else remotes
         profile_host = profile_build = profile or conan_api.profiles.get_profile([])
 
-        proxy, range_resolver, loader = self._helpers.get_loader()
+        proxy, range_resolver, loader, _ = self._helpers.get_loader()
         cache = self._helpers.cache
 
         ConanOutput().title("Fetching requested configuration packages")

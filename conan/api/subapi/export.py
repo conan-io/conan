@@ -43,7 +43,7 @@ class ExportAPI:
         :return: A tuple of the exported RecipeReference and a ConanFile object
         """
         ConanOutput().title("Exporting recipe to the cache")
-        _, _, loader = self._helpers.get_loader()
+        loader = self._helpers.loader
         hook_manager = self._helpers.hook_manager
         return cmd_export(loader,self._helpers.cache, hook_manager, self._helpers.global_conf, path,
                           name, version, user, channel, graph_lock=lockfile, remotes=remotes)

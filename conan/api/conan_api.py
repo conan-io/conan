@@ -189,6 +189,11 @@ class ConanAPI:
             # These are just the global editables, not including workspace ones
             return self._editable_packages
 
+        @property
+        def loader(self):
+            _, _, load, _ = self.get_loader()
+            return load
+
         def get_loader(self):
             ws_editables = self._conan_api.workspace.packages()
             editable_packages = self._editable_packages.update_copy(ws_editables)
@@ -208,4 +213,4 @@ class ConanAPI:
             pyreq_loader = PyRequireLoader(proxy, range_resolver, self.global_conf)
             # This is caching too!
             loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
-            return proxy, range_resolver, loader
+            return proxy, range_resolver, loader, None
