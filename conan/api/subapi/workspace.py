@@ -108,6 +108,10 @@ class WorkspaceAPI:
     def packages(self):
         """
         @return: Returns {RecipeReference: {"path": full abs-path, "output_folder": abs-path}}
+
+        Exclusively packages that are NOT python-requires, and that can be made part of a monolith,
+        an orchestrated build, etc. Python-requires packages are just editables in the workspace
+        but not full packages
         """
         if not self._folder or not self._enabled:
             return
@@ -127,8 +131,8 @@ class WorkspaceAPI:
                 raise ConanException(f"Workspace package not found: {path}")
             ref = editable_info.get("ref")
             try:
+                conanfile = self._ws.load_conanfile(rel_path)
                 if ref is None:
-                    conanfile = self._ws.load_conanfile(rel_path)
                     reference = RecipeReference(name=conanfile.name, version=conanfile.version,
                                                 user=conanfile.user, channel=conanfile.channel)
                 else:
@@ -144,7 +148,10 @@ class WorkspaceAPI:
             output_folder = editable_info.get("output_folder")
             if output_folder:
                 pkg["output_folder"] = os.path.normpath(os.path.join(self._folder, output_folder))
-            packages[reference] = pkg
+            # Python-requires are editable packages, but not part of the returned "ws-packages"
+            # as they don't have to be sourced, not part of build-order, etc.
+            if conanfile.package_type != "python-require":
+                packages[reference] = pkg
             # This needs to be incremental, in the loop, so loaded ones are made available
             # for next iterations that might require python-requires in their ws.load_conanfile
             editable_packages.edited_refs[reference] = pkg
@@ -409,10 +416,19 @@ class WorkspaceAPI:
 
     def export(self, lockfile=None, remotes=None):
         self._check_ws()
+        loader = self._conan_api._api_helpers.loader  # noqa
+        self._ws.set_loader(loader)  # Just in case the user needs load_conanfile()
         exported = []
-        for ref, info in self.packages().items():
-            exported_ref = self._conan_api.export.export(info["path"], ref.name, str(ref.version),
-                                                         ref.user, ref.channel,
+        for editable_info in self._ws.packages():
+            rel_path = editable_info["path"]
+            path = os.path.normpath(os.path.join(self._folder, rel_path, "conanfile.py"))
+            ref = editable_info.get("ref")
+            if ref:
+                ref = RecipeReference.loads(ref)
+                name, version, user, channel = ref.name, ref.version, ref.user, ref.channel
+            else:
+                name, version, user, channel = None, None, None, None
+            exported_ref = self._conan_api.export.export(path, name, str(version), user, channel,
                                                          lockfile=lockfile, remotes=remotes)
             ref, _ = exported_ref
             exported.append(ref)
