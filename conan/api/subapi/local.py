@@ -70,7 +70,7 @@ class LocalAPI:
         :return: RecipeReference of the added package
         """
         path = self.get_conanfile_path(path, cwd, py=True)
-        _, _, loader = self._helpers.get_loader()
+        loader = self._helpers.loader
         conanfile = loader.load_named(path, name, version, user, channel, remotes=remotes)
         if conanfile.name is None or conanfile.version is None:
             raise ConanException("Editable package recipe should declare its name and version")
@@ -115,7 +115,7 @@ class LocalAPI:
         :param channel: The channel of the package. If not defined, it is taken from conanfile
         :param remotes: The remotes to resolve possible ``python-requires`` for this recipe if needed.
         """
-        _, _, loader = self._helpers.get_loader()
+        loader = self._helpers.loader
         conanfile = loader.load_consumer(path, name=name, version=version,
                                          user=user, channel=channel, graph_lock=None,
                                          remotes=remotes)
@@ -181,7 +181,7 @@ class LocalAPI:
 
     def inspect(self, conanfile_path, remotes, lockfile, name=None, version=None, user=None,
                 channel=None):
-        _, _, loader = self._helpers.get_loader()
+        loader = self._helpers.loader
         conanfile = loader.load_named(conanfile_path, name=name, version=version, user=user,
                                       channel=channel, remotes=remotes, graph_lock=lockfile)
         return conanfile

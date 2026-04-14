@@ -85,7 +85,7 @@ class ReportAPI:
 
 
 def _configure_source(conan_api, hook_manager, conanfile_path, ref, remotes):
-    _, _, loader = conan_api._api_helpers.get_loader()  # noqa
+    loader = conan_api._api_helpers.loader  # noqa
     conanfile = loader.load_consumer(conanfile_path, name=ref.name, version=str(ref.version),
                                      user=ref.user, channel=ref.channel, graph_lock=None,
                                      remotes=remotes)
