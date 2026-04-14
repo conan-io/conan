@@ -62,7 +62,7 @@ def print_graph_basic(graph):
 
     _format_resolved("Resolved alias", graph.aliased)
     allowed_deprecated_policies = graph.root.conanfile.conf.get("tools.policies:allow_deprecated",
-                                                                check_type=list(), default=[])
+                                                                check_type=list, default=[])
     if graph.aliased:
         output.warning("'alias' is a Conan 1.X legacy, unsupported and undocumented feature, "
                        "completely discouraged. "

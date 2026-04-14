@@ -849,7 +849,7 @@ class CppInfo:
             raise ConanException(f"{conanfile}: 'cpp_info' contains components and .exe or .libs")
 
         allowed_deprecated_policies = conanfile.conf.get("tools.policies:allow_deprecated",
-                                                         check_type=list(), default=[])
+                                                         check_type=list, default=[])
         result = CppInfo()  # clone it
         if self.libs and len(self.libs) > 1:  # expand in multiple components
             ConanOutput(scope=str(conanfile)).warning(

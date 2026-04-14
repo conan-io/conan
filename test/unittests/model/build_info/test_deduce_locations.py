@@ -133,6 +133,7 @@ def test_windows_several_shared_link_locations(lib_info, conanfile):
     """
     Tests a real model as LIBICONV with several libs defined in the root component
     """
+    conanfile.conf.define("tools.policies:allow_deprecated", ["multilibs_components"])
     folder = temp_folder()
     locations = {}
     is_windows = False
