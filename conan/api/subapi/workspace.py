@@ -140,12 +140,14 @@ class WorkspaceAPI:
                                      f" correctly defined in the conanws.yml file: {e}")
             if reference in packages:
                 raise ConanException(f"Workspace package '{str(reference)}' already exists.")
-            packages[reference] = {"path": path}
-            if editable_info.get("output_folder"):
-                packages[reference]["output_folder"] = (
-                    os.path.normpath(os.path.join(self._folder, editable_info["output_folder"]))
-                )
-            editable_packages.edited_refs.update({reference: packages[reference]})
+            pkg = {"path": path}
+            output_folder = editable_info.get("output_folder")
+            if output_folder:
+                pkg["output_folder"] = os.path.normpath(os.path.join(self._folder, output_folder))
+            packages[reference] = pkg
+            # This needs to be incremental, in the loop, so loaded ones are made available
+            # for next iterations that might require python-requires in their ws.load_conanfile
+            editable_packages.edited_refs[reference] = pkg
         return packages
 
     def open(self, ref, remotes, cwd=None):

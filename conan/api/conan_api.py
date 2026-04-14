@@ -212,8 +212,5 @@ class ConanAPI:
             pyreq_loader = PyRequireLoader(proxy, range_resolver, self.global_conf)
             # This is caching too!
             loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
-
             ws_packages = self._conan_api.workspace._load_packages(loader, editable_packages)  # noqa
-
-            # Last None will be space for workspace packages
             return proxy, range_resolver, loader, ws_packages
