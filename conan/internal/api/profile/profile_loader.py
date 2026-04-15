@@ -229,7 +229,6 @@ class _ProfileValueParser:
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
         doc = TextINIParse(profile_text, allowed_fields=["tool_requires",
-                                                         "system_tools",  # DEPRECATED: platform_tool_requires
                                                          "platform_requires",
                                                          "platform_tool_requires", "settings",
                                                          "options", "conf", "buildenv", "runenv",
@@ -241,10 +240,7 @@ class _ProfileValueParser:
         tool_requires = _ProfileValueParser._parse_tool_requires(doc)
 
         doc_platform_requires = doc.platform_requires or ""
-        doc_platform_tool_requires = doc.platform_tool_requires or doc.system_tools or ""
-        if doc.system_tools:
-            ConanOutput().warning("Profile [system_tools] is deprecated,"
-                                  " please use [platform_tool_requires]", warn_tag="deprecated")
+        doc_platform_tool_requires = doc.platform_tool_requires or ""
 
         def parse_replaces(replaces):
             result = [RecipeReference.loads(r) for r in replaces.splitlines()]
