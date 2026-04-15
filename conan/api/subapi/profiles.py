@@ -79,6 +79,16 @@ class ProfilesAPI:
         """ Computes a Profile as the result of aggregating all the user arguments, first it
         loads the "profiles", composing them in order (last profile has priority), and
         finally adding the individual settings, options (priority over the profiles)
+
+        :param profiles: the list of profiles to load
+        :param settings: list of "key=value" settings to define the profile. Patterns allowed as
+           "pkg-pattern:key=value"
+        :param options: list of "key=value" options. Patterns allowed as "pkg-pattern:key=value"
+        :param conf: list of "key=value" configurations. Following "conf" definitions, patterns
+           are allowed as "pkg-pattern:key=value", values that are lists or dictionaries might be
+           allowed, and configuration operations like ``+=`` for appending are allowed.
+        :param cwd: the current working directory. If None, os.getcwd() will be used.
+        :param context: the context, "build" or "host" to which this profile belongs
         """
         assert isinstance(profiles, list), "Please provide a list of profiles"
         global_conf = self._api_helpers.global_conf
