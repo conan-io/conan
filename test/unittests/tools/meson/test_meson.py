@@ -67,12 +67,16 @@ def test_meson_to_cppstd_flag(compiler, compiler_version, cppstd, expected):
     assert to_cppstd_flag(ConanFileMock(), compiler, compiler_version, cppstd) == expected
 
 
-def test_meson_install_strip():
-    """When the configuration `tools.build:install_strip` is set to True,
-        the Meson install command should include the `--strip` option.
-    """
+@pytest.mark.parametrize("conf_line, expect_strip", [
+    ("tools.build:install_strip=True", True),
+    ("tools.build:install_strip=False", False),
+    ("tools.build:install_strip=['meson', 'cmake']", True),
+    ("tools.build:install_strip=['autotools', 'autotools']", False),
+])
+def test_meson_install_strip(conf_line, expect_strip):
+    """``tools.build:install_strip`` as True or a list containing ``meson`` adds ``--strip``."""
     c = ConfDefinition()
-    c.loads("tools.build:install_strip=True")
+    c.loads(conf_line)
 
     settings = MockSettings({"build_type": "Release",
                              "compiler": "gcc",
@@ -89,7 +93,7 @@ def test_meson_install_strip():
     meson = Meson(conanfile)
     meson.install()
 
-    assert '--strip' in str(conanfile.command)
+    assert ('--strip' in str(conanfile.command)) == expect_strip
 
 def test_meson_install_cli_args():
     """When the `cli_args` are provided, the Meson install command should include them.

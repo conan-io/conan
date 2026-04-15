@@ -39,10 +39,12 @@ def test_run_install_component():
     assert "--component foo" in conanfile.command
 
 
-@pytest.mark.parametrize("config, deprecated",
-                         [("tools.cmake:install_strip", True),
-                          ("tools.build:install_strip", False),])
-def test_run_install_strip(config, deprecated):
+@pytest.mark.parametrize("config, value, deprecated, strip",
+                         [("tools.cmake:install_strip", True, True, True),
+                          ("tools.build:install_strip", True, False, True),
+                          ("tools.build:install_strip", ['cmake', 'meson'], False, True),
+                          ("tools.build:install_strip", ['autotools'], False, False)])
+def test_run_install_strip(config, value, deprecated, strip):
     """
     Testing that the install/strip rule is called
     Issue related: https://github.com/conan-io/conan/issues/14166
@@ -58,7 +60,7 @@ def test_run_install_strip(config, deprecated):
     conanfile = ConanFileMock()
 
     conanfile.conf = Conf()
-    conanfile.conf.define(config, True)
+    conanfile.conf.define(config, value)
 
     conanfile.folders.generators = "."
     conanfile.folders.set_base_generators(temp_folder())
@@ -77,7 +79,7 @@ def test_run_install_strip(config, deprecated):
                " 'tools.build:install_strip' instead" in stderr
     else:
         assert "tools.cmake:install_strip" not in stderr
-    assert "--strip" in conanfile.command
+    assert "--strip" in conanfile.command if strip else "--strip" not in conanfile.command
 
 
 def test_run_install_cli_args():
