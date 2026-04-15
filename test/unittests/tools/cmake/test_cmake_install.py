@@ -1,5 +1,6 @@
 import pytest
 
+from conan.errors import ConanException
 from conan.internal.default_settings import default_settings_yml
 from conan.tools.cmake import CMake
 from conan.tools.cmake.presets import write_cmake_presets
@@ -39,12 +40,10 @@ def test_run_install_component():
     assert "--component foo" in conanfile.command
 
 
-@pytest.mark.parametrize("config, value, deprecated, strip",
-                         [("tools.cmake:install_strip", True, True, True),
-                          ("tools.build:install_strip", True, False, True),
-                          ("tools.build:install_strip", ['cmake', 'meson'], False, True),
-                          ("tools.build:install_strip", ['autotools'], False, False)])
-def test_run_install_strip(config, value, deprecated, strip):
+@pytest.mark.parametrize("config, deprecated",
+                         [("tools.cmake:install_strip", True),
+                          ("tools.build:install_strip", False),])
+def test_run_install_strip(config, deprecated):
     """
     Testing that the install/strip rule is called
     Issue related: https://github.com/conan-io/conan/issues/14166
@@ -60,7 +59,7 @@ def test_run_install_strip(config, value, deprecated, strip):
     conanfile = ConanFileMock()
 
     conanfile.conf = Conf()
-    conanfile.conf.define(config, value)
+    conanfile.conf.define(config, True)
 
     conanfile.folders.generators = "."
     conanfile.folders.set_base_generators(temp_folder())
@@ -79,7 +78,43 @@ def test_run_install_strip(config, value, deprecated, strip):
                " 'tools.build:install_strip' instead" in stderr
     else:
         assert "tools.cmake:install_strip" not in stderr
-    assert "--strip" in conanfile.command if strip else "--strip" not in conanfile.command
+    assert "--strip" in conanfile.command
+
+
+@pytest.mark.parametrize("value, do_raise, do_strip",
+                         [("cmake", True, False),
+                          ("{'cmake': True', 'meson': False}", True, False),
+                          (None, False, False),
+                          ("['cmake']", True, True),
+                          ("['autotools', 'meson']", True, False)])
+def test_run_install_strip_check_conf_values(value, do_raise, do_strip):
+    """
+    Testing that ``tools.build:install_strip`` only accepts bool or list,
+    and that the install/strip rule is called when the value is correct.
+    """
+    settings = Settings.loads(default_settings_yml)
+    settings.os = "Linux"
+    settings.arch = "x86_64"
+    settings.build_type = "Release"
+    settings.compiler = "gcc"
+    settings.compiler.version = "11"
+
+    conanfile = ConanFileMock()
+    conanfile.conf = Conf()
+    conanfile.conf.define("tools.build:install_strip", value)
+    conanfile.folders.generators = "."
+    conanfile.folders.set_base_generators(temp_folder())
+    conanfile.settings = settings
+    conanfile.folders.set_base_package(temp_folder())
+    write_cmake_presets(conanfile, "toolchain", "Unix Makefiles", {})
+    cmake = CMake(conanfile)
+    if do_raise:
+        with pytest.raises(ConanException) as exc_info:
+            cmake.install()
+        assert "tools.build:install_strip must be a list-like object" in str(exc_info.value)
+    else:
+        cmake.install()
+        assert "--strip" not in conanfile.command if not do_strip else "--strip" in conanfile.command
 
 
 def test_run_install_cli_args():
