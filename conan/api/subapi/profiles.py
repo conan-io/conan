@@ -13,6 +13,8 @@ DEFAULT_PROFILE_NAME = "default"
 
 
 class ProfilesAPI:
+    """ This ProfilesAPI is used to list, manage and load Conan profiles
+    """
 
     def __init__(self, conan_api, api_helpers):
         self._conan_api = conan_api
@@ -127,7 +129,8 @@ class ProfilesAPI:
 
     def list(self):
         """
-        List all the profiles file sin the cache
+        List all the profiles files in the cache
+
         :return: an alphabetically ordered list of profile files in the default cache location
         """
         # List is to be extended (directories should not have a trailing slash)
@@ -151,6 +154,11 @@ class ProfilesAPI:
     @staticmethod
     def detect():
         """
+        Detects a possible default profile.
+
+        The output of this detection is not guaranteed to be complete or stable, it might
+        change in future releases, following the same rules as the "conan profile detect" command.
+
         :return: an automatically detected Profile, with a "best guess" of the system settings
         """
         profile = Profile()
