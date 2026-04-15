@@ -52,8 +52,7 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
         raise ConanException("Cannot wrap command with different envs,"
                              "{} - {}".format(bats+ps1s, shs))
 
-    powershell = conanfile.conf.get("tools.env.virtualenv:powershell") or "powershell.exe"
-    powershell = "powershell.exe" if powershell is True else powershell
+    powershell = conanfile.conf.get("tools.env.virtualenv:powershell", default="powershell.exe")
 
     if bats:
         launchers = " && ".join('"{}"'.format(b) for b in bats)
@@ -586,19 +585,7 @@ class EnvVars:
             is_ps1 = ext == ".ps1"
         else:  # Need to deduce it automatically
             is_bat = self._subsystem == WINDOWS
-            try:
-                is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=bool)
-                if is_ps1 is not None:
-                    ConanOutput().warning(
-                        "Boolean values for 'tools.env.virtualenv:powershell' are deprecated. "
-                        "Please specify 'powershell.exe' or 'pwsh' instead, appending arguments if needed "
-                        "(for example: 'powershell.exe -argument'). "
-                        "To unset this configuration, use `tools.env.virtualenv:powershell=!`, which matches "
-                        "the previous 'False' behavior.",
-                        warn_tag="deprecated"
-                    )
-            except ConanException:
-                is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str)
+            is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str)
             if is_ps1:
                 filename = filename + ".ps1"
                 is_bat = False

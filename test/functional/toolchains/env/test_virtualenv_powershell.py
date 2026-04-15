@@ -164,7 +164,7 @@ def test_vcvars(powershell):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
-@pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh", "powershell.exe -NoProfile", "pwsh -NoProfile"])
+@pytest.mark.parametrize("powershell", ["powershell.exe", "pwsh", "powershell.exe -NoProfile", "pwsh -NoProfile"])
 def test_concatenate_build_and_run_env(powershell):
     # this tests that if we have both build and run env, they are concatenated correctly when using
     # powershell
