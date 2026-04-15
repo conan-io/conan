@@ -54,7 +54,7 @@ class SourcesCachingDownloader:
         # regular local shared download cache, not using Conan backup sources servers
         backups_urls = backups_urls or ["origin"]
         if download_cache_folder and not os.path.isabs(download_cache_folder):
-            raise ConanException("core.download:download_cache must be an absolute path")
+            raise ConanException("core.sources:download_cache must be an absolute path")
 
         download_cache = DownloadCache(download_cache_folder)
         cached_path = download_cache.source_path(sha256)
