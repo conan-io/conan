@@ -1,3 +1,5 @@
+from fnmatch import fnmatch
+
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conan.internal.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
@@ -180,4 +182,5 @@ def should_update_reference(reference, update):
     if isinstance(update, bool):
         return update
     # Legacy syntax had --update without pattern, it manifests as a "*" pattern
-    return any(name == "*" or reference.name == name for name in update)
+    return any(fnmatch(reference.name, pattern)
+               for pattern in update)
