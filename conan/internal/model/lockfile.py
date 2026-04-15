@@ -317,6 +317,27 @@ class Lockfile:
         if prevs:
             return prevs.get(node.package_id)
 
+    def check_config_requires(self, installed_refs):
+        refs = {}
+        for r in self._conf_requires.refs():
+            refs.setdefault(r.name, []).append(r)
+
+        if not refs:
+            return  # If lockfile is not locking config_requires, do nothing, would break
+
+        for installed in installed_refs:
+            lock_refs = refs.get(installed.name)
+            if lock_refs is None:
+                if not self.partial:
+                    raise ConanException(
+                        f"Installed config '{installed.repr_notime()}' is not in the lockfile. "
+                        f"Use 'conan lock add --config-requires' to add it, "
+                        f"or use --lockfile-partial to allow unlocked configurations."
+                    )
+            elif installed not in lock_refs:
+                raise ConanException(f"Installed config '{installed.repr_notime()}' doesn't match "
+                                     f"the lockfile entries {lock_refs}")
+
     def _resolve(self, require, locked_refs, resolve_prereleases, kind):
         version_range = require.version_range
         ref = require.ref

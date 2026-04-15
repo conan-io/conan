@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest test/functional/command/test_config_install_pkg.py::TestInstallLockfileConfigRequires -v)"
+    ]
+  }
+}

@@ -185,6 +185,19 @@ class TestConfigInstallPkg:
         result = json.loads(c.load("config.lock"))
         assert "myconf_a/0.2" in result["config_requires"][0]
 
+    def test_lockfile_multiple(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("config install-pkg myconf_a/0.1 --lockfile-out=config.lock")
+        c.run("config install-pkg myconf_a/0.2 --lockfile=config.lock --lockfile-out=config.lock "
+              "--lockfile-partial")
+        _check_conf(c, "myconf_a/0.2")
+        _check_conf_file(c, ["myconf_a/0.2"])
+
+        # The lockfile can contain both, not ideal, but possible
+        result = json.loads(c.load("config.lock"))
+        assert "myconf_a/0.2" in result["config_requires"][0]
+        assert "myconf_a/0.1" in result["config_requires"][1]
+
     def test_package_id_effect(self):
         # full integration, as "test_config_package_id.py" tests from hardcoded cache json files
         c = TestClient(light=True)
@@ -504,3 +517,107 @@ class TestConfigInstallPkgOptions:
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my2value" in c.out
+
+
+class TestInstallLockfileConfigRequires:
+    """Tests for the alignment check between lockfile config_requires and installed configs."""
+
+    def test_install_no_lockfile(self):
+        """conan install without a lockfile skips the check entirely."""
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+                "conan.lock": ""})  # empty string opts out auto-loading
+        c.save_home({"config_version.json": json.dumps(
+            {"config_version": ["myconf/1.0#aabbcc"]})})
+        # No --lockfile argument, and conan.lock is empty string which disables auto-loading.
+        # Use --lockfile="" to disable auto-loading
+        c.run("install . --lockfile=")
+        assert "ERROR" not in c.out
+
+    def test_install_lockfile_no_config_installed(self):
+        """Lockfile with config_requires but nothing installed -> passes (nothing to check)."""
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+                "conan.lock": json.dumps({
+                    "version": "0.5",
+                    "config_requires": ["myconf/1.0#aabbcc"]
+                })})
+        # No config_version.json in home
+        c.run("install . --lockfile=conan.lock")
+        assert "ERROR" not in c.out
+
+    def test_install_lockfile_config_match(self):
+        """Installed config matches lockfile entry -> passes."""
+        rev = "aabbccddeeff112233445566"
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+                "conan.lock": json.dumps({
+                    "version": "0.5",
+                    "config_requires": [f"myconf/1.0#{rev}"]
+                })})
+        c.save_home({"config_version.json": json.dumps(
+            {"config_version": [f"myconf/1.0#{rev}"]})})
+        c.run("install . --lockfile=conan.lock")
+        assert "ERROR" not in c.out
+
+    def test_install_lockfile_config_revision_mismatch(self):
+        """Installed config has different revision than lockfile -> error."""
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+                "conan.lock": json.dumps({
+                    "version": "0.5",
+                    "config_requires": ["myconf/1.0#rev_in_lockfile"]
+                })})
+        c.save_home({"config_version.json": json.dumps(
+            {"config_version": ["myconf/1.0#rev_installed"]})})
+        c.run("install . --lockfile=conan.lock", assert_error=True)
+        assert "Installed config 'myconf/1.0#rev_installed' doesn't match " \
+               "the lockfile entries [myconf/1.0#rev_in_lockfile]" in c.out
+
+    def test_install_lockfile_config_requires_empty(self):
+        """If lockfile doesn't contain config_requires, do nothing"""
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+                "conan.lock": json.dumps({"version": "0.5"})})  # no config_requires
+        c.save_home({"config_version.json": json.dumps(
+            {"config_version": ["myconf/1.0#aabbcc"]})})
+        c.run("install . --lockfile=conan.lock")
+        assert "Install finished successfully" in c.out
+
+    def test_install_partial_lockfile_config_not_in_lockfile(self):
+        """With --lockfile-partial, installed config absent from lockfile -> passes."""
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+                "conan.lock": json.dumps({"version": "0.5"})})  # no config_requires
+        c.save_home({"config_version.json": json.dumps(
+            {"config_version": ["myconf/1.0#aabbcc"]})})
+        c.run("install . --lockfile=conan.lock --lockfile-partial")
+        assert "ERROR" not in c.out
+
+    def test_install_lockfile_config_version_mismatch(self):
+        """Installed config has different version than lockfile entry -> error."""
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+                "conan.lock": json.dumps({
+                    "version": "0.5",
+                    "config_requires": ["myconf/2.0#aabbcc"]
+                })})
+        c.save_home({"config_version.json": json.dumps(
+            {"config_version": ["myconf/1.0#aabbcc"]})})
+        c.run("install . --lockfile=conan.lock", assert_error=True)
+        assert "Installed config 'myconf/1.0#aabbcc' doesn't match " \
+               "the lockfile entries [myconf/2.0#aabbcc]" in c.out
+
+    def test_install_partial_lockfile_config_revision_mismatch(self):
+        """With --lockfile-partial, installed config IS in lockfile but revision differs -> error."""
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0"),
+                "conan.lock": json.dumps({
+                    "version": "0.5",
+                    "config_requires": ["myconf/1.0#rev_in_lockfile"]
+                })})
+        c.save_home({"config_version.json": json.dumps(
+            {"config_version": ["myconf/1.0#rev_installed"]})})
+        c.run("install . --lockfile=conan.lock --lockfile-partial", assert_error=True)
+        assert "Installed config 'myconf/1.0#rev_installed' doesn't match " \
+               "the lockfile entries [myconf/1.0#rev_in_lockfile]" in c.out
