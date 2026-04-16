@@ -37,11 +37,18 @@ def test_source_folder_works(chdir_mock):
     assert conanfile.command == 'autoreconf -bar foo'
 
 
-@pytest.mark.parametrize("install_strip", [False, True])
-def test_install_strip(install_strip):
+@pytest.mark.parametrize("install_strip, expect_strip", [
+    (False, False),
+    (True, True),
+    (["autotools"], True),
+    (["cmake"], False),
+    (["meson"], False),
+    (["cmake", "meson", "autotools"], True),
+])
+def test_install_strip(install_strip, expect_strip):
     """
-    When the configuration `tools.build:install_strip` is set to True,
-    the Autotools install command should invoke the `install-strip` target.
+    When `tools.build:install_strip` is True or lists ``autotools``, the install command
+    should use the ``install-strip`` target; list values only strip for named backends.
     """
     folder = temp_folder()
     os.chdir(folder)
@@ -59,7 +66,7 @@ def test_install_strip(install_strip):
     autotools = Autotools(conanfile)
     autotools.install()
 
-    assert ('install-strip' in str(conanfile.command)) == install_strip
+    assert ('install-strip' in str(conanfile.command)) == expect_strip
 
 
 def test_configure_arguments():

@@ -260,3 +260,15 @@ def test_verbosity_flag():
 
     assert "/verbosity:Detailed" in tc.out
     assert "-verbosity:Detailed" not in tc.out
+
+
+def test_powershell_deactivation():
+    # https://github.com/conan-io/conan/issues/19819
+    c = TestClient(light=True)
+    c.save({"conanfile.txt": ""})
+    c.run('install . -c tools.env.virtualenv:powershell=!')
+    files = os.listdir(c.current_folder)
+    assert "conanrun.ps1" not in files
+    assert "conanbuild.ps1" not in files
+    assert "conanrunenv.ps1" not in files
+    assert "conanbuildenv.ps1" not in files

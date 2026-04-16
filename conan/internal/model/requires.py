@@ -289,7 +289,7 @@ class Requirement:
             # visible=self.visible will further propagate it downstream
             if dep_pkg_type is PackageType.SHARED or require.run:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                                 run=True, visible=self.visible, direct=False)
+                                                 run=self.run, visible=self.visible, direct=False)
                 return downstream_require
             return
 

@@ -54,10 +54,12 @@ def add_common_install_arguments(parser):
                                  help='Do not use remote, resolve exclusively in the cache')
 
     update_help = ("Will install newer versions and/or revisions in the local cache "
-                   "for the given reference name, or all references in the graph if no argument is supplied. "
+                   "for the given references whose name matches the given pattern, "
+                   "or all references in the graph if no argument is supplied. "
                    "When using version ranges, it will install the latest version that "
                    "satisfies the range. It will update to the "
-                   "latest revision for the resolved version range.")
+                   "latest revision for the resolved version range. "
+                   "The consumer pattern (&) has no effect, and users should not specify versions.")
 
     group.add_argument("-u", "--update", action="append", nargs="?", help=update_help, const="*")
     add_profiles_args(parser)

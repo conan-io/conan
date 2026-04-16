@@ -319,9 +319,10 @@ def test_single_config_decentralized(client_setup):
 
     # Now lets build the application, to see everything ok
     c.run("graph build-order --requires=app1/0.1@ --lockfile=app1_b_changed.lock "
-          "--build=missing --format=json -s os=Windows", redirect_stdout="build_order.json")
+          "--build=missing --format=json -s os=Windows --order-by=recipe",
+          redirect_stdout="build_order.json")
     json_file = c.load("build_order.json")
-    to_build = json.loads(json_file)
+    to_build = json.loads(json_file)['order']
     level0 = to_build[0]
     assert len(level0) == 1
     pkgawin = level0[0]
@@ -384,14 +385,16 @@ def test_multi_config_decentralized(client_setup):
 
     # Now lets build the application, to see everything ok, for all the configs
     c.run("graph build-order --requires=app1/0.1@ --lockfile=app1_win.lock "
-          "--build=missing --format=json -s os=Windows", redirect_stdout="app1_win.json")
+          "--build=missing --format=json -s os=Windows --order-by=recipe",
+          redirect_stdout="app1_win.json")
     c.run("graph build-order --requires=app1/0.1@ --lockfile=app1_nix.lock "
-          "--build=missing --format=json -s os=Linux", redirect_stdout="app1_nix.json")
+          "--build=missing --format=json -s os=Linux --order-by=recipe",
+          redirect_stdout="app1_nix.json")
     c.run("graph build-order-merge --file=app1_win.json --file=app1_nix.json"
           " --format=json", redirect_stdout="build_order.json")
 
     json_file = c.load("build_order.json")
-    to_build = json.loads(json_file)
+    to_build = json.loads(json_file)['order']
     level0 = to_build[0]
     assert len(level0) == 2
     pkgawin = level0[0]

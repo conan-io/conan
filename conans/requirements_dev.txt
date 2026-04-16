@@ -1,4 +1,4 @@
-pytest>=7, <8.0.0
+pytest
 pytest-xdist  # To launch in N cores with pytest -n
 WebTest>=3.0.0, <4
 bottle

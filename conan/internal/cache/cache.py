@@ -201,13 +201,13 @@ class PkgCache:
         assert ref.timestamp
         self._db.update_recipe_timestamp(ref)
 
-    def search_recipes(self, pattern=None, ignorecase=True):
+    def search_recipes(self, pattern=None):
         # Conan references in main storage
         if pattern:
             if isinstance(pattern, RecipeReference):
                 pattern = repr(pattern)
             pattern = translate(pattern)
-            pattern = re.compile(pattern, re.IGNORECASE if ignorecase else 0)
+            pattern = re.compile(pattern)
 
         return self._db.list_references(pattern)
 

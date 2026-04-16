@@ -1,7 +1,6 @@
 import os
 import re
 import textwrap
-from collections import OrderedDict
 
 import pytest
 
@@ -72,12 +71,8 @@ class Pkg(ConanFile):
 
     def test_source_warning_os_build(self):
         # https://github.com/conan-io/conan/issues/2368
-        conanfile = '''from conan import ConanFile
-class ConanLib(ConanFile):
-    pass
-'''
         client = TestClient(light=True)
-        client.save({CONANFILE: conanfile})
+        client.save({CONANFILE: GenConanfile()})
         client.run("source .")
         assert "This package defines both 'os' and 'os_build'" not in client.out
 
@@ -87,8 +82,8 @@ class ConanLib(ConanFile):
 
         # Path with conanfile.txt
         client.run("source conanfile.txt", assert_error=True)
-        assert "A conanfile.py is needed, %s is not acceptable" \
-                      % os.path.join(client.current_folder, "conanfile.txt") in client.out
+        assert ("A conanfile.py is needed, %s is not acceptable"
+                % os.path.join(client.current_folder, "conanfile.txt") in client.out)
 
     def test_source_local_cwd(self):
         conanfile = '''
@@ -175,7 +170,7 @@ class ConanLib(ConanFile):
         # For Conan 2.0 if we install a package from a remote and we want to upload to other
         # remote we need to download the sources, as we consider revisions immutable, let's
         # iterate through the remotes to get the sources from the first match
-        servers = OrderedDict()
+        servers = {}
         for index in range(2):
             servers[f"server{index}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                                    users={"user": "password"})

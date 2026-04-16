@@ -33,7 +33,7 @@ class SourcesCachingDownloader:
         if source_origins and not download_cache_folder:
             download_cache_folder = HomePaths(self._home_folder).default_sources_backup_folder
         if download_cache_folder and not os.path.isabs(download_cache_folder):
-            raise ConanException("core.download:download_cache must be an absolute path")
+            raise ConanException("core.sources:download_cache must be an absolute path")
         if download_cache_folder and not sha256:
             self._output.warning("Cannot cache download() without sha256 checksum")
             download_cache_folder = None  # Cannot cache
