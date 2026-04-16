@@ -66,6 +66,6 @@ def test_reuse_buildenv(client_with_special_chars):
 @pytest.mark.skipif(platform.system() != "Windows", reason="powershell only win")
 def test_reuse_buildenv_powershell(client_with_special_chars):
     c = client_with_special_chars
-    c.run("create . -c tools.env.virtualenv:powershell=True")
+    c.run("create . -c tools.env.virtualenv:powershell=powershell.exe")
     assert _path_chars in c.out
     assert "MYTOOL WORKS!!" in c.out

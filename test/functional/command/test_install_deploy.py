@@ -62,7 +62,7 @@ def test_install_deploy(client, powershell):
             "CMakeLists.txt": cmake,
             "main.cpp": gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])},
            clean_first=True)
-    pwsh = "-c tools.env.virtualenv:powershell=True" if powershell else ""
+    pwsh = "-c tools.env.virtualenv:powershell=powershell.exe" if powershell else ""
     c.run("install . -o *:shared=True "
           f"--deployer=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps {pwsh}")
     c.run("remove * -c")  # Make sure the cache is clean, no deps there
