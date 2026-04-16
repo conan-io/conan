@@ -464,8 +464,6 @@ class TestBuildTrackHost:
         test = textwrap.dedent("""
                 from conan import ConanFile
                 class Test(ConanFile):
-                    test_type = "explicit"
-
                     def build_requirements(self):
                         self.tool_requires(self.tested_reference_str)
                     def test(self):

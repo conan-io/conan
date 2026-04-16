@@ -7,8 +7,6 @@ import os
 import fnmatch
 import textwrap
 
-from collections import OrderedDict
-
 from jinja2 import Environment, FileSystemLoader
 
 from conan.errors import ConanException
@@ -30,12 +28,12 @@ BUILT_IN_CONFS = {
     "core:default_build_profile": "Defines the default build profile ('default' by default)",
     "core:allow_uppercase_pkg_names": "Temporarily (will be removed in 2.X) allow uppercase names",
     "core.version_ranges:resolve_prereleases": "Whether version ranges can resolve to pre-releases or not",
-    "core.upload:retry": "Number of retries in case of failure when uploading to Conan server",
-    "core.upload:retry_wait": "Seconds to wait between upload attempts to Conan server",
+    "core.upload:retry": "(int, default: 1) Number of retries in case of failure when uploading to Conan server",
+    "core.upload:retry_wait": "(int, default: 5s) Seconds to wait between upload attempts to Conan server",
     "core.upload:parallel": "Number of concurrent threads to upload packages",
     "core.download:parallel": "Number of concurrent threads to download packages",
-    "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
-    "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
+    "core.download:retry": " (int, default: 2) Number of retries in case of failure when downloading from Conan server",
+    "core.download:retry_wait": "(int, default: 1s) Seconds to wait between download attempts from Conan server",
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
@@ -77,6 +75,7 @@ BUILT_IN_CONFS = {
     "tools.build:download_source": "Force download of sources for every package",
     "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
     "tools.build:sysroot": "Pass the --sysroot=<tools.build:sysroot> flag if available. (None by default)",
+    "tools.build:add_rpath_link": "Add -Wl,-rpath-link flags pointing to all lib directories for host dependencies (CMake and Meson toolchains)",
     "tools.build.cross_building:can_run": "(boolean) Indicates whether is possible to run a non-native app on the same architecture. It's used by 'can_run' tool",
     "tools.build.cross_building:cross_build": "(boolean) Decides whether cross-building or not regardless of arch/OS settings. Used by 'cross_building' tool",
     "tools.build:verbosity": "Verbosity of build systems if set. Possible values are 'quiet' and 'verbose'",
@@ -99,11 +98,12 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
-    "tools.cmake:ctest_args": "To inject list of arguments to CMake.ctest() runner",
+    "tools.cmake:ctest_args": "Add extra arguments to CMake.ctest() runner command line",
+    "tools.cmake:configure_args": "Add extra arguments to CMake.configure() command line ",
     "tools.cmake:install_strip": "(Deprecated) Add --strip to cmake.install(). Use tools.build:install_strip instead",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
-    "tools.files.download:retry": "Number of retries in case of failure when downloading",
-    "tools.files.download:retry_wait": "Seconds to wait between download attempts",
+    "tools.files.download:retry": "(int, default: 2) Number of retries in case of failure when downloading",
+    "tools.files.download:retry_wait": "(int, default: 5s) Seconds to wait between download attempts",
     "tools.files.download:verify": "If set, overrides recipes on whether to perform SSL verification for their downloaded files. Only recommended to be set while testing",
     "tools.files.unzip:filter": "Define tar extraction filter: 'fully_trusted', 'tar', 'data'",
     "tools.graph:vendor": "(Experimental) If 'build', enables the computation of dependencies of vendoring packages to build them",
@@ -153,14 +153,22 @@ BUILT_IN_CONFS = {
     "tools.build:defines": "List of extra definition flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:sharedlinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:exelinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:rcflags": "List of extra RC (resource compiler) flags used by different toolchains like CMakeToolchain, MSBuildToolchain and MesonToolchain",
     "tools.build:linker_scripts": "List of linker script files to pass to the linker used by different toolchains like CMakeToolchain, AutotoolsToolchain, and MesonToolchain",
     # Toolchain installation
-    "tools.build:install_strip": "(boolean) Strip the binaries when installing them with CMake, Meson and Autotools",
+    "tools.build:install_strip": "(boolean or list) True/False to strip on install for every CMake, Meson and Autotools "
+                                 "integration, or a list of 'cmake', 'meson', 'autotools' to strip only for those.",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
 }
 
 BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
+
+
+_BUILT_IN_CONFS_TYPES = {
+    "core:required_conan_version": str,
+    "tools.microsoft:msvc_update": str
+}
 
 CORE_CONF_PATTERN = re.compile(r"^(core\..+|core):.*")
 TOOLS_CONF_PATTERN = re.compile(r"^(tools\..+|tools):.*")
@@ -180,16 +188,22 @@ class _ConfVarPlaceHolder:
 
 class _ConfValue:
 
-    def __init__(self, name, value, path=False, update=None):
-        if name != name.lower():
-            raise ConanException("Conf '{}' must be lowercase".format(name))
-        self._name = name
+    def __init__(self, name, value, path=False, update=None, important=False):
+        self.name = name
+        self._important = important
         self._value = value
         self._value_type = type(value)
-        if isinstance(value, (_PackageOption, SettingsItem)):
-            raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
         self._path = path
         self._update = update
+
+    @staticmethod
+    def parse(name, value, path=False, update=None):
+        if name != name.lower():
+            raise ConanException("Conf '{}' must be lowercase".format(name))
+        name, important = (name[:-1], True) if name[-1] == "!" else (name, False)
+        if isinstance(value, (_PackageOption, SettingsItem)):
+            raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
+        return _ConfValue(name, value, path=path, update=update, important=important)
 
     def __repr__(self):
         return repr(self._value)
@@ -204,19 +218,22 @@ class _ConfValue:
 
     def copy(self):
         # Using copy for when self._value is a mutable list
-        return _ConfValue(self._name, copy.copy(self._value), self._path, self._update)
+        return _ConfValue(self.name, copy.copy(self._value), self._path, self._update,
+                          self._important)
 
     def dumps(self):
+        name = f"{self.name}!" if self._important else self.name
         if self._value is None:
-            return "{}=!".format(self._name)  # unset
+            return "{}=!".format(name)  # unset
         elif self._value_type is list and _ConfVarPlaceHolder in self._value:
             v = self._value[:]
             v.remove(_ConfVarPlaceHolder)
-            return "{}={}".format(self._name, v)
+            return "{}={}".format(name, v)
         else:
-            return "{}={}".format(self._name, self._value)
+            return "{}={}".format(name, self._value)
 
     def serialize(self):
+        name = f"{self.name}!" if self._important else self.name
         if self._value is None:
             _value = "!"  # unset
         elif self._value_type is list and _ConfVarPlaceHolder in self._value:
@@ -225,7 +242,7 @@ class _ConfValue:
             _value = v
         else:
             _value = self._value
-        return {self._name: _value}
+        return {name: _value}
 
     def update(self, value):
         assert self._value_type is dict, "Only dicts can be updated"
@@ -268,33 +285,45 @@ class _ConfValue:
         """
         v_type = self._value_type
         o_type = other._value_type
+
+        important = other._important and not self._important
         if v_type is list and o_type is list:
+            # If important, we swap values to prioritize the other
+            v1, v2 = (other._value, self._value) if important else (self._value, other._value)
             try:
-                index = self._value.index(_ConfVarPlaceHolder)
+                index = v1.index(_ConfVarPlaceHolder)
             except ValueError:  # It doesn't have placeholder
-                pass
+                if important:
+                    self._value = other._value
             else:
-                new_value = self._value[:]  # do a copy
-                new_value[index:index + 1] = other._value  # replace the placeholder
+                new_value = v1[:]  # do a copy
+                new_value[index:index + 1] = v2  # replace the placeholder
                 self._value = new_value
         elif v_type is dict and o_type is dict:
             if self._update:
                 # only if the current one is marked as "*=" update, otherwise it remains
                 # as this is a "compose" operation, self has priority, it is the one updating
-                new_value = other._value.copy()
-                new_value.update(self._value)
+                # If important, we swap values to prioritize the other
+                v1, v2 = (other._value, self._value) if important else (self._value, other._value)
+                new_value = v2.copy()
+                new_value.update(v1)
                 self._value = new_value
-        elif issubclass(v_type, numbers.Number) and issubclass(o_type, numbers.Number):
-            # They might be different kind of numbers, so skip the check below
-            pass
-        elif self._value is None or other._value is None:
+            elif important:
+                self._value = other._value
+        elif ((issubclass(v_type, numbers.Number) and issubclass(o_type, numbers.Number)) or
+              # They might be different kind of numbers, so skip the check below
+              self._value is None or other._value is None):
             # It means any of those values were an "unset" so doing nothing because we don't
             # really know the original value type
-            pass
+            if important:
+                self._value = other._value
+                self._value_type = other._value_type
         elif o_type != v_type:
             raise ConanException("It's not possible to compose {} values "
                                  "and {} ones.".format(v_type.__name__, o_type.__name__))
         # TODO: In case of any other object types?
+        elif important:  # equal type, but just string
+            self._value = other._value
 
     def set_relative_base_folder(self, folder):
         if not self._path:
@@ -315,19 +344,10 @@ class Conf:
 
     def __init__(self):
         # It being ordered allows for Windows case-insensitive composition
-        self._values = OrderedDict()  # {var_name: [] of values, including separators}
+        self._values = {}  # {var_name: [] of values, including separators}
 
     def __bool__(self):
         return bool(self._values)
-
-    def __repr__(self):
-        return "Conf: " + repr(self._values)
-
-    def __eq__(self, other):
-        """
-        :type other: Conf
-        """
-        return other._values == self._values
 
     def clear(self):
         self._values.clear()
@@ -357,7 +377,9 @@ class Conf:
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
-            if choices is not None and v not in choices and v is not None:
+            if v is None:  # value was unset
+                return default
+            if choices is not None and v not in choices:
                 raise ConanException(f"Unknown value '{v}' for '{conf_name}'")
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
@@ -368,9 +390,9 @@ class Conf:
                 raise ConanException(f"[conf] {conf_name} must be a boolean-like object "
                                      f"(true/false, 1/0, on/off) and value '{v}' does not match it.")
             elif check_type is str and not isinstance(v, str):
+                # TODO: this would be converting things like lists to strings without
+                #   proper error, is it worth trying to change it?
                 return str(v)
-            elif v is None:  # value was unset
-                return default
             elif (check_type is not None and not isinstance(v, check_type) or
                   check_type is int and isinstance(v, bool)):
                 raise ConanException(f"[conf] {conf_name} must be a "
@@ -399,20 +421,19 @@ class Conf:
 
     def copy(self):
         c = Conf()
-        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
+        c._values = {k: v.copy() for k, v in self._values.items()}
         return c
 
     def filter_core(self):
         c = Conf()
-        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items()
-                                if not CORE_CONF_PATTERN.match(k))
+        c._values = {k: v.copy() for k, v in self._values.items() if not CORE_CONF_PATTERN.match(k)}
         return c
 
     def dumps(self):
         """
         Returns a string with the format ``name=conf-value``
         """
-        return "\n".join([v.dumps() for v in sorted(self._values.values(), key=lambda x: x._name)])
+        return "\n".join([v.dumps() for v in sorted(self._values.values(), key=lambda x: x.name)])
 
     def serialize(self):
         """
@@ -430,10 +451,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value of the configuration.
         """
-        self._values[name] = _ConfValue(name, value)
+        v = _ConfValue.parse(name, value)
+        self._values[v.name] = v
 
     def define_path(self, name, value):
-        self._values[name] = _ConfValue(name, value, path=True)
+        v = _ConfValue.parse(name, value, path=True)
+        self._values[v.name] = v
 
     def unset(self, name):
         """
@@ -441,7 +464,8 @@ class Conf:
 
         :param name: Name of the configuration.
         """
-        self._values[name] = _ConfValue(name, None)
+        v = _ConfValue.parse(name, None)
+        self._values[v.name] = v
 
     def update(self, name, value):
         """
@@ -451,12 +475,12 @@ class Conf:
         :param value: Value of the configuration.
         """
         # Placeholder trick is not good for dict update, so we need to explicitly update=True
-        conf_value = _ConfValue(name, {}, update=True)
-        self._values.setdefault(name, conf_value).update(value)
+        conf_value = _ConfValue.parse(name, {}, update=True)
+        self._values.setdefault(conf_value.name, conf_value).update(value)
 
     def update_path(self, name, value):
-        conf_value = _ConfValue(name, {}, path=True, update=True)
-        self._values.setdefault(name, conf_value).update(value)
+        conf_value = _ConfValue.parse(name, {}, path=True, update=True)
+        self._values.setdefault(conf_value.name, conf_value).update(value)
 
     def append(self, name, value):
         """
@@ -465,12 +489,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value to append.
         """
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
-        self._values.setdefault(name, conf_value).append(value)
+        conf_value = _ConfValue.parse(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(conf_value.name, conf_value).append(value)
 
     def append_path(self, name, value):
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
-        self._values.setdefault(name, conf_value).append(value)
+        conf_value = _ConfValue.parse(name, [_ConfVarPlaceHolder], path=True)
+        self._values.setdefault(conf_value.name, conf_value).append(value)
 
     def prepend(self, name, value):
         """
@@ -479,12 +503,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value to prepend.
         """
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
-        self._values.setdefault(name, conf_value).prepend(value)
+        conf_value = _ConfValue.parse(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(conf_value.name, conf_value).prepend(value)
 
     def prepend_path(self, name, value):
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
-        self._values.setdefault(name, conf_value).prepend(value)
+        conf_value = _ConfValue.parse(name, [_ConfVarPlaceHolder], path=True)
+        self._values.setdefault(conf_value.name, conf_value).prepend(value)
 
     def remove(self, name, value):
         """
@@ -567,10 +591,7 @@ class ConfDefinition:
                ("=!", "unset"), ("*=", "update"), ("=", "define"))
 
     def __init__(self):
-        self._pattern_confs = OrderedDict()
-
-    def __repr__(self):
-        return "ConfDefinition: " + repr(self._pattern_confs)
+        self._pattern_confs = {}
 
     def __bool__(self):
         return bool(self._pattern_confs)
@@ -711,7 +732,7 @@ class ConfDefinition:
         """
         try:
             value = eval(_v)  # This destroys Windows path strings with backslash
-        except:  # It means eval() failed because of a string without quotes
+        except (Exception,):  # It means eval() failed because of a string without quotes
             value = _v.strip()
         else:
             if not isinstance(value, (numbers.Number, bool, dict, list, set, tuple)) \
@@ -732,7 +753,10 @@ class ConfDefinition:
                 if len(tokens) != 2:
                     continue
                 pattern_name, value = tokens
-                parsed_value = ConfDefinition._get_evaluated_value(value)
+                _, name = self._split_pattern_name(pattern_name)
+                # We only implement str type at the moment
+                isstr = _BUILT_IN_CONFS_TYPES.get(name) is str
+                parsed_value = value.strip() if isstr else ConfDefinition._get_evaluated_value(value)
                 self.update(pattern_name, parsed_value, profile=profile, method=method)
                 break
             else:

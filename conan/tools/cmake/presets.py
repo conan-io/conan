@@ -296,17 +296,11 @@ class _IncludingPresets:
         if not os.path.exists(user_presets_path):
             data = {"version": 4,
                     "vendor": {"conan": dict()}}
-            for preset, inherits in inherited_user.items():
-                for i in inherits:
-                    data.setdefault(preset, []).append({"name": i})
         else:
             data = json.loads(load(user_presets_path))
             if "conan" not in data.get("vendor", {}):
                 # The file is not ours, we cannot overwrite it
                 return
-
-        if inherited_user:
-            _IncludingPresets._clean_user_inherits(data, preset_data)
 
         if not absolute_paths:
             try:  # Make it relative to the CMakeUserPresets.json if possible
@@ -318,9 +312,49 @@ class _IncludingPresets:
                 pass
         data = _IncludingPresets._append_user_preset_path(data, preset_path, output_dir)
 
+        if inherited_user:
+            data = _IncludingPresets._update_stubs(data, inherited_user, output_dir, absolute_paths)
+
         data = json.dumps(data, indent=4)
         ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {user_presets_path}")
         save(user_presets_path, data)
+
+    @staticmethod
+    def _update_stubs(data, inherited_user, output_dir, absolute_paths):
+        """
+        Set configurePresets/buildPresets/testPresets to stubs for conan-* presets
+        that the user inherits but that don't have a real preset of the same type in the includes.
+        """
+        real_preset_names_by_type = {
+            "configurePresets": set(),
+            "buildPresets": set(),
+            "testPresets": set(),
+        }
+        for inc in data.get("include", []):
+            inc_path = os.path.join(output_dir, inc) if not absolute_paths else inc
+            assert os.path.exists(inc_path), f"Presets include must point to an existing file: '{inc_path}'"
+            try:
+                inc_json = json.loads(load(inc_path))
+            except Exception:
+                continue
+            for preset_type in ("configurePresets", "buildPresets", "testPresets"):
+                for p in inc_json.get(preset_type, []):
+                    name = p.get("name")
+                    if name:
+                        real_preset_names_by_type[preset_type].add(name)
+
+        for preset_type in ("configurePresets", "buildPresets", "testPresets"):
+            real_names = real_preset_names_by_type[preset_type]
+            stubs = []
+            for name in inherited_user.get(preset_type, []):
+                if name not in real_names:
+                    stub = {"name": name}
+                    if preset_type in ("buildPresets", "testPresets"):
+                        stub["configurePreset"] = name
+                    stubs.append(stub)
+            data[preset_type] = stubs
+
+        return data
 
     @staticmethod
     def _collect_user_inherits(output_dir, preset_prefix):
@@ -345,14 +379,6 @@ class _IncludingPresets:
                                     existing.append(i)
 
         return collected_targets
-
-    @staticmethod
-    def _clean_user_inherits(data, preset_data):
-        for preset_type in "configurePresets", "buildPresets", "testPresets":
-            presets = preset_data.get(preset_type, [])
-            presets_names = [p["name"] for p in presets]
-            other = data.get(preset_type, [])
-            other[:] = [p for p in other if p["name"] not in presets_names]
 
     @staticmethod
     def _append_user_preset_path(data, preset_path, output_dir):

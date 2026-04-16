@@ -284,6 +284,8 @@ def remote_auth(conan_api, parser, subparser, *args):
     no CONAN_LOGIN* and CONAN_PASSWORD* variables available which could be used.
     Usually you'd use this method over conan remote login for scripting which needs to run in CI
     and locally.
+    By default, this command returns exit code 0 even if authentication fails for some remotes.
+    Use --strict to return exit code 1 if authentication fails for any remote.
     """
     subparser.add_argument("remote", help="Pattern or name of the remote/s to authenticate against."
                                           " The pattern uses 'fnmatch' style wildcards.")
@@ -296,6 +298,8 @@ def remote_auth(conan_api, parser, subparser, *args):
                                 "instance has anonymous access enabled and Conan would not ask "
                                 "for username and password even for non-anonymous repositories "
                                 "if not yet authenticated.")
+    subparser.add_argument("--strict", action="store_true",
+                           help="Return exit code 1 if authentication fails for any remote.")
     args = parser.parse_args(*args)
     remotes = conan_api.remotes.list(pattern=args.remote)
     if not remotes:
@@ -307,6 +311,11 @@ def remote_auth(conan_api, parser, subparser, *args):
             results[r.name] = {"user": conan_api.remotes.user_auth(r, args.with_user, args.force)}
         except Exception as e:
             results[r.name] = {"error": str(e)}
+
+    if args.strict:
+        failed = [name for name, v in results.items() if "error" in v]
+        if failed:
+            raise ConanException("Authentication error in remotes: {}".format(", ".join(failed)))
     return results
 
 

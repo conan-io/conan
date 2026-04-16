@@ -45,6 +45,7 @@ class ConanApiAuthManager:
     def __init__(self, requester, cache_folder, localdb, global_conf):
         self._requester = requester
         self._creds = _RemoteCreds(localdb)
+        self._remote_creds = None
         self._global_conf = global_conf
         self._cache_folder = cache_folder
 
@@ -69,11 +70,17 @@ class ConanApiAuthManager:
             if self._get_credentials_and_authenticate(rest_client, user, remote):
                 return self.call_rest_api_method(remote, method_name, *args, **kwargs)
 
+    def _get_remote_creds(self):
+        if self._remote_creds is None:
+            self._remote_creds = RemoteCredentials(self._cache_folder, self._global_conf)
+        return self._remote_creds
+
     def _get_credentials_and_authenticate(self, rest_client, user, remote):
         """Try LOGIN_RETRIES to obtain a password from user input for which
         we can get a valid token from api_client. If a token is returned,
         credentials are stored in localdb and rest method is called"""
-        creds = RemoteCredentials(self._cache_folder, self._global_conf)
+        creds = self._get_remote_creds()
+
         for _ in range(LOGIN_RETRIES):
             input_user, input_password, interactive = creds.auth(remote)
             try:

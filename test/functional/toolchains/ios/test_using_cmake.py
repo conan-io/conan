@@ -8,6 +8,7 @@ from conan.test.utils.tools import TestClient
 from ._utils import create_library
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires XCode")
 @pytest.mark.tool("cmake", "3.19")
 def test_xcode_ios_generator():

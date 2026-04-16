@@ -34,11 +34,11 @@ def build_id(conan_file):
 
 class _PackageBuilder:
 
-    def __init__(self, app, hook_manager):
-        self._cache = app.cache
+    def __init__(self, cache, remote_manager, cache_folder, hook_manager):
+        self._cache = cache
         self._hook_manager = hook_manager
-        self._remote_manager = app.remote_manager
-        self._home_folder = app.cache_folder
+        self._remote_manager = remote_manager
+        self._home_folder = cache_folder
 
     def _get_build_folder(self, conanfile, package_layout):
         # Build folder can use a different package_ID if build_id() is defined.
@@ -165,14 +165,13 @@ class BinaryInstaller:
     locally in case they are not found in remotes
     """
 
-    def __init__(self, app, global_conf, editable_packages, hook_manager):
-        self._app = app
-        self._editable_packages = editable_packages
-        self._cache = app.cache
-        self._remote_manager = app.remote_manager
+    def __init__(self, api, global_conf, hook_manager):
+        helpers = api._api_helpers  # noqa
+        self._cache = helpers.cache
+        self._remote_manager = helpers.remote_manager
         self._hook_manager = hook_manager
         self._global_conf = global_conf
-        self._home_folder = app.cache_folder
+        self._home_folder = api.home_folder
 
     def _install_source(self, node, remotes, need_conf=False):
         conanfile = node.conanfile
@@ -182,7 +181,7 @@ class BinaryInstaller:
             return
 
         conanfile = node.conanfile
-        if node.binary == BINARY_EDITABLE:
+        if node.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
             return
 
         recipe_layout = self._cache.recipe_layout(node.ref)
@@ -351,12 +350,9 @@ class BinaryInstaller:
         # It will only run generation
         node = install_node.nodes[0]
         conanfile = node.conanfile
-        ref = node.ref
-        editable = self._editable_packages.get(ref)
-        conanfile_path = editable["path"]
-        output_folder = editable.get("output_folder")
 
-        base_path = os.path.dirname(conanfile_path)
+        output_folder = node.editable_output_folder
+        base_path = conanfile.recipe_folder
 
         conanfile.folders.set_base_folders(base_path, output_folder)
 
@@ -394,7 +390,8 @@ class BinaryInstaller:
         with pkg_layout.package_lock():
             pkg_layout.package_remove()
             with pkg_layout.set_dirty_context_manager():
-                builder = _PackageBuilder(self._app, self._hook_manager)
+                builder = _PackageBuilder(self._cache, self._remote_manager, self._home_folder,
+                                          self._hook_manager)
                 pref = builder.build_package(node, recipe_layout, pkg_layout)
             assert node.prev, "Node PREV shouldn't be empty"
             assert node.pref.revision, "Node PREF revision shouldn't be empty"
@@ -486,4 +483,4 @@ class BinaryInstaller:
                                                'finalize'):
                         conanfile.finalize()
 
-            conanfile.output.success(f"Finalized folder {finalize_folder}")
+                conanfile.output.success(f"Finalized folder {finalize_folder}")

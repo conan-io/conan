@@ -1,7 +1,6 @@
 import json
 import os
 import pytest
-from collections import OrderedDict
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
@@ -12,12 +11,8 @@ class TestRemoteServer:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.servers = OrderedDict()
-        for i in range(3):
-            test_server = TestServer()
-            self.servers["remote%d" % i] = test_server
-
-        self.client = TestClient(servers=self.servers, inputs=3 * ["admin", "password"], light=True)
+        self.client = TestClient(servers={f"remote{i}": TestServer() for i in range(3)},
+                                 inputs=3 * ["admin", "password"], light=True)
 
     def test_list_json(self):
         self.client.run("remote list --format=json")

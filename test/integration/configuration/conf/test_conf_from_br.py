@@ -55,6 +55,164 @@ def test_basic():
     assert "conanfile.py: NDK: MY-SYSTEM-NDK!!!" in client.out
 
 
+def test_basic_append():
+    c = TestClient()
+    tool = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.conf_info.append("user.myorg:myconf", "myorgconf!!!")
+        """)
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            tool_requires = "tool/1.0"
+
+            def generate(self):
+                self.output.info("user.myorg:myconf: %s" % self.conf.get("user.myorg:myconf"))
+        """)
+
+    c.save({"tool/conanfile.py": tool,
+            "consumer/conanfile.py": consumer})
+    c.run("create tool --name=tool --version=1.0")
+    c.run("install consumer")
+    assert "conanfile.py: user.myorg:myconf: ['myorgconf!!!']" in c.out
+
+    c.run("install consumer -c user.myorg:myconf=value", assert_error=True)
+    assert "ERROR: It's not possible to compose str values and list ones" in c.out
+
+    c.run("install consumer -c user.myorg:myconf=+value")
+    assert "conanfile.py: user.myorg:myconf: ['value', 'myorgconf!!!']" in c.out
+
+
+class TestImportant:
+
+    @staticmethod
+    def client(action, value):
+        value = '' if not value else f', {value}'
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                def package_info(self):
+                    self.conf_info.{action}("tools.android:ndk_path!"{value})
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                tool_requires = "android_ndk/1.0"
+                def generate(self):
+                    self.output.info("NDK: %s" % self.conf.get("tools.android:ndk_path"))
+            """)
+        c = TestClient(light=True)
+        c.save({"conanfile.py": conanfile})
+        c.run("create . --name=android_ndk --version=1.0")
+        c.save({"conanfile.py": app}, clean_first=True)
+        return c
+
+    @pytest.mark.parametrize("action", ["define", "define_path"])
+    def test_important_define(self, action):
+        c = self.client(action, '"MY-NDK!!"')
+        c.run("install")
+        assert "conanfile.py: NDK: MY-NDK!!" in c.out
+
+        c.run("install -c tools.android:ndk_path=OTHERNDK!!")
+        assert "conanfile.py: NDK: MY-NDK!!" in c.out
+
+        c.run("install -c tools.android:ndk_path+=OTHERNDK!!", assert_error=True)
+        assert "ERROR: It's not possible to compose list values and str ones." in c.out
+
+        c.run("install -c tools.android:ndk_path!=OTHERNDK!!")
+        assert "conanfile.py: NDK: OTHERNDK!!" in c.out
+
+    @pytest.mark.parametrize("action", ["define", "define_path"])
+    def test_important_define_list(self, action):
+        c = self.client(action, '["MY-NDK!!"]')
+        c.run("install")
+        assert "conanfile.py: NDK: ['MY-NDK!!']" in c.out
+
+        c.run("install -c tools.android:ndk_path=OTHERNDK!!", assert_error=True)
+        assert "ERROR: It's not possible to compose str values and list ones." in c.out
+
+        c.run("install -c tools.android:ndk_path+=OTHER! -c tools.android:ndk_path=+OTHER2!")
+        assert "conanfile.py: NDK: ['MY-NDK!!']" in c.out
+
+        c.run("install -c tools.android:ndk_path!=OTHERNDK!!", assert_error=True)
+        assert "ERROR: It's not possible to compose str values and list ones." in c.out
+
+        c.run("install -c tools.android:ndk_path!+=OTHER! -c tools.android:ndk_path!=+OTHER2!")
+        assert "conanfile.py: NDK: ['OTHER2!', 'MY-NDK!!', 'OTHER!']" in c.out
+
+    @pytest.mark.parametrize("action", ["append", "append_path"])
+    def test_important_append(self, action):
+        c = self.client(action, '"MY-NDK!!"')
+        c.run("install")
+        assert "conanfile.py: NDK: ['MY-NDK!!']" in c.out
+
+        c.run("install -c tools.android:ndk_path=OTHER!", assert_error=True)
+        assert "ERROR: It's not possible to compose str values and list ones." in c.out
+
+        c.run("install -c tools.android:ndk_path+=OTHER! -c tools.android:ndk_path=+OTHER2!")
+        assert "conanfile.py: NDK: ['OTHER2!', 'OTHER!', 'MY-NDK!!']" in c.out
+
+        c.run("install -c tools.android:ndk_path!+=OTHER! -c tools.android:ndk_path!=+OTHER2!")
+        assert "conanfile.py: NDK: ['OTHER2!', 'MY-NDK!!', 'OTHER!']" in c.out
+
+    @pytest.mark.parametrize("action", ["prepend", "prepend_path"])
+    def test_important_prepend(self, action):
+        c = self.client(action, '"MY-NDK!!"')
+        c.run("install")
+        assert "conanfile.py: NDK: ['MY-NDK!!']" in c.out
+        c.run("install -c tools.android:ndk_path=OTHER!", assert_error=True)
+        assert "ERROR: It's not possible to compose str values and list ones." in c.out
+
+        c.run("install -c tools.android:ndk_path+=OTHER! -c tools.android:ndk_path=+OTHER2!")
+        assert "conanfile.py: NDK: ['MY-NDK!!', 'OTHER2!', 'OTHER!']" in c.out
+
+        c.run("install -c tools.android:ndk_path!+=OTHER! -c tools.android:ndk_path!=+OTHER2!")
+        assert "conanfile.py: NDK: ['OTHER2!', 'MY-NDK!!', 'OTHER!']" in c.out
+
+    def test_important_unset(self):
+        c = self.client("unset", "")
+        c.run("install")
+        assert "conanfile.py: NDK: None" in c.out
+
+        c.run("install -c tools.android:ndk_path=OTHER!")
+        assert "conanfile.py: NDK: None" in c.out
+
+        c.run("install -c tools.android:ndk_path+=OTHER! -c tools.android:ndk_path=+OTHER2!")
+        assert "conanfile.py: NDK: None" in c.out
+
+        c.run("install -c tools.android:ndk_path!=OTHER!")
+        assert "conanfile.py: NDK: OTHER!" in c.out
+
+        c.run("install -c tools.android:ndk_path!+=OTHER! -c tools.android:ndk_path!=+OTHER2!")
+        assert "conanfile.py: NDK: ['OTHER2!', 'OTHER!']" in c.out
+
+    @pytest.mark.parametrize("action", ["update", "update_path"])
+    def test_important_update(self, action):
+        c = self.client(action, {"MYVALUE": "MY-NDK!!"})
+        c.run("install")
+        assert "conanfile.py: NDK: {'MYVALUE': 'MY-NDK!!'}" in c.out
+
+        c.run("install -c tools.android:ndk_path=OTHER!", assert_error=True)
+        assert "ERROR: It's not possible to compose str values and dict ones." in c.out
+
+        c.run("install -c tools.android:ndk_path=\"{'MYVALUE': 'OTHERVALUE!!', 'V2': 'O2!!'}\"")
+        assert "conanfile.py: NDK: {'MYVALUE': 'MY-NDK!!'}" in c.out
+
+        c.run("install -c tools.android:ndk_path*=\"{'MYVALUE': 'OTHERVALUE!!', 'V2': 'O2!!'}\"")
+        assert "conanfile.py: NDK: {'MYVALUE': 'MY-NDK!!', 'V2': 'O2!!'}" in c.out
+
+        c.run("install -c tools.android:ndk_path!=OTHER!", assert_error=True)
+        assert "ERROR: It's not possible to compose str values and dict ones." in c.out
+
+        c.run("install -c tools.android:ndk_path!=\"{'MYVALUE': 'OTHERVALUE!!', 'V2': 'O2!!'}\"")
+        assert "conanfile.py: NDK: {'MYVALUE': 'OTHERVALUE!!', 'V2': 'O2!!'}" in c.out
+
+        c.run("install -c tools.android:ndk_path!*=\"{'MYVALUE': 'OTHERVALUE!!', 'V2': 'O2!!'}\"")
+        assert "conanfile.py: NDK: {'MYVALUE': 'OTHERVALUE!!', 'V2': 'O2!!'}" in c.out
+
+
 def test_basic_conf_through_cli():
     client = TestClient()
     conanfile = textwrap.dedent("""
