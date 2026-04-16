@@ -2,7 +2,6 @@ import glob
 import os
 import re
 import textwrap
-from collections import defaultdict
 
 from jinja2 import Template
 
@@ -11,12 +10,12 @@ from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
+from conan.internal.util.files import load
 from conan.tools.cmake.cmakeconfigdeps.config import ConfigTemplate2
 from conan.tools.cmake.cmakeconfigdeps.config_version import ConfigVersionTemplate2
 from conan.tools.cmake.cmakeconfigdeps.target_configuration import TargetConfigurationTemplate2
 from conan.tools.cmake.cmakeconfigdeps.targets import TargetsTemplate2
 from conan.tools.files import save
-from conan.internal.util.files import load
 
 FIND_MODE_MODULE = "module"
 FIND_MODE_CONFIG = "config"
@@ -120,16 +119,15 @@ class CMakeConfigDeps:
             if require.direct:
                 direct_deps.append((require, dep))
             full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
-            for cmake_file_name, config_comp_names in self.get_cmake_filenames(dep, components=full_cpp_info.components).items():
-                config = ConfigTemplate2(self, require, dep, full_cpp_info, config_comp_names[0], cmake_file_name)
+            for cmake_file_name, global_info in self.get_cmake_filenames_info(dep, full_cpp_info).items():
+                config = ConfigTemplate2(self, require, dep, cmake_file_name, global_info)
                 ret[config.filename] = config.content()
-                config_version = ConfigVersionTemplate2(self, dep, config_comp_names[0], cmake_file_name)
+                config_version = ConfigVersionTemplate2(self, dep, cmake_file_name, global_info)
                 ret[config_version.filename] = config_version.content()
 
-                targets = TargetsTemplate2(self, dep, config_comp_names[0], cmake_file_name)
+                targets = TargetsTemplate2(self, dep, cmake_file_name, global_info)
                 ret[targets.filename] = targets.content()
-                target_configuration = TargetConfigurationTemplate2(self, dep, require, full_cpp_info,
-                                                                    config_comp_names, cmake_file_name)
+                target_configuration = TargetConfigurationTemplate2(self, dep, require, cmake_file_name, global_info)
                 ret[target_configuration.filename] = target_configuration.content()
 
         self._print_help(direct_deps)
@@ -142,7 +140,7 @@ class CMakeConfigDeps:
             for (require, dep) in direct_deps:
                 note = " # Optional. This is a tool-require, can't link its targets" \
                     if require.build else ""
-                for cmake_file_name, _ in self.get_cmake_filenames(dep).items():
+                for cmake_file_name, _ in self.get_cmake_filenames_info(dep).items():
                     msg.append(f"    find_package({cmake_file_name}){note}")
                 if not require.build and not dep.cpp_info.exe:
                     target_name = self.get_property("cmake_target_name", dep)
@@ -167,7 +165,17 @@ class CMakeConfigDeps:
         build_suffix = "&build" if build_context else ""
         self._properties.setdefault(f"{dep}{build_suffix}", {}).update({prop: value})
 
-    def get_property(self, prop, dep, comp_name=None, check_type=None):
+    def get_property(self, prop, dep, comp_name=None, check_type=None, custom_props=None):
+        def _check_type(v):
+            if check_type is not None and not isinstance(v, check_type):
+                raise ConanException(f'The expected type for {prop} is "{check_type.__name__}", '
+                                     f'but "{type(v).__name__}" was found')
+
+        if custom_props is not None:
+            value = custom_props.get(prop)
+            _check_type(value)
+            return value
+
         dep_name = dep.ref.name
         # Find the requirement that points to this "dep".
         # TODO: It would probably be more explicit if it was an argument as "dep", but to keep
@@ -177,9 +185,7 @@ class CMakeConfigDeps:
         dep_comp = f"{str(dep_name)}::{comp_name}" if comp_name else f"{str(dep_name)}"
         try:
             value = self._properties[f"{dep_comp}{build_suffix}"][prop]
-            if check_type is not None and not isinstance(value, check_type):
-                raise ConanException(f'The expected type for {prop} is "{check_type.__name__}", '
-                                     f'but "{type(value).__name__}" was found')
+            _check_type(value)
             return value
         except KeyError:
             # Here we are not using the cpp_info = deduce_cpp_info(dep) because it is not
@@ -190,7 +196,7 @@ class CMakeConfigDeps:
             if comp is not None:
                 return comp.get_property(prop, check_type=check_type)
 
-    def get_cmake_filenames(self, dep, components=None):
+    def get_cmake_filenames_info(self, dep, full_cpp_info=None):
         """
         Get the name of the files for the find_package(XXX) for the root and the rest of
         the components.
@@ -202,39 +208,45 @@ class CMakeConfigDeps:
         This method creates a map for the root/components belonging to each XXX-config file.
         It also reads the properties:
             - cmake_file_name: name for the root config file.
-            - cmake_file_component_names: dict-like object to define the cmake_file_name and the
+            - cmake_file_name_components: dict-like object to define the cmake_file_name and the
                                           components belonging to it. The first one mentioned in the
                                           list will act as the root one. For example:
-                                          self.cpp_info.set_property("cmake_file_component_names", {
+                                          self.cpp_info.set_property("cmake_file_name_components", {
                                               "CMAKE_FILE_NAME1": ["COMP1", "COMP2"],
                                               "CMAKE_FILE_NAME2": ["COMP3"],
                                               ...
                                           })
         """
-        ret = defaultdict(list)
-        components = components or dep.cpp_info.components
-        components_in_dep = list(components.keys())
+        ret = {}
+        components = full_cpp_info.components if full_cpp_info else dep.cpp_info.components
+        left_components_in_dep = list(components.keys())
         default_components = dep.cpp_info.default_components or []
         # Component filenames mapping
-        components_file_names = self.get_property("cmake_file_component_names", dep) or {}
-        for filename, components in components_file_names.items():
-            for name in components:
+        components_file_info = self.get_property("cmake_file_name_components", dep) or {}
+        for filename, global_cpp_info in components_file_info.items():
+            cmps_per_file = global_cpp_info.get("components", [])
+            for name in cmps_per_file:
                 if name in default_components:
                     raise ConanException(f"The default component '{name}' is defined in "
                                          f"another CMake Config file. Check the "
-                                         f"'cmake_file_component_names' property.")
-                elif name not in components_in_dep:
+                                         f"'cmake_file_name_components' property.")
+                elif name not in left_components_in_dep:
                     raise ConanException(f"Component '{name}' does not exist. Check the "
-                                         f"'cmake_file_component_names' property definition.")
+                                         f"'cmake_file_name_components' property definition.")
                 else:
-                    ret[filename].append(name)
-                    components_in_dep.remove(name)  # total of components within the root Config file
+                    left_components_in_dep.remove(name)  # total of components within the root Config file
+            ret[filename] = {"components": cmps_per_file,
+                             "full_cpp_info": full_cpp_info,
+                             "properties": global_cpp_info.get("properties", {}),
+                             "is_root": False}
         # Root filename (if needed)
-        if not dep.cpp_info.has_components or components_in_dep:
+        if not dep.cpp_info.has_components or left_components_in_dep:
             # Then let's add the root global cmake_file_name
             root_filename = self.get_property("cmake_file_name", dep) or dep.ref.name
             if root_filename not in ret:
-                ret[root_filename] = [None] + components_in_dep
+                ret[root_filename] = {"components": left_components_in_dep,
+                                      "full_cpp_info": full_cpp_info,
+                                      "is_root": True}
         return ret
 
     def _get_find_mode(self, dep, comp_name=None):
@@ -284,9 +296,11 @@ class _PathGenerator:
             paths[req.ref.name] = cppinfo_dirs
         return [d for dirs in paths.values() for d in dirs]
 
-    def _get_cmake_extra_variants(self, dep, comp_name, cmake_filename):
+    def _get_cmake_extra_variants(self, dep, cmake_filename, cmake_filename_info):
+        custom_props = cmake_filename_info.get("properties")
         extra_variants = self._cmakedeps.get_property("cmake_file_name_variants", dep,
-                                                      comp_name=comp_name, check_type=list) or []
+                                                      custom_props=custom_props,
+                                                      check_type=list) or []
         lowercase_variants = {variant.lower() for variant in extra_variants}
         if len(lowercase_variants) > 1:
             raise ConanException(
@@ -295,8 +309,8 @@ class _PathGenerator:
         if lowercase_variants:
             if cmake_filename.lower() not in lowercase_variants:
                 is_cmake_filename_defined = self._cmakedeps.get_property("cmake_file_name", dep,
-                                                                         comp_name=comp_name) is not None
-                ref = f"{dep.ref}" if comp_name is None else f"{dep.ref} ({comp_name})"
+                                                                         custom_props=custom_props) is not None
+                ref = f"{dep.ref}"
                 if is_cmake_filename_defined:
                     extra_variants = []
                     msg = (f"'{ref}' 'cmake_file_name_variants' property contains names "
@@ -370,10 +384,9 @@ class _PathGenerator:
             cmake_find_mode = cmake_find_mode or FIND_MODE_CONFIG
             cmake_find_mode = cmake_find_mode.lower()
 
-            all_names = self._cmakedeps.get_cmake_filenames(dep)
-            for cmake_filename, comp_names in all_names.items():
-                comp_name = comp_names[0]  # root one
-                pkg_names = set([cmake_filename] + self._get_cmake_extra_variants(dep, comp_name, cmake_filename))
+            for cmake_filename, cmake_filename_info in self._cmakedeps.get_cmake_filenames_info(dep).items():
+                pkg_names = set([cmake_filename] + self._get_cmake_extra_variants(dep, cmake_filename,
+                                                                                  cmake_filename_info))
                 # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
                 if cmake_find_mode == FIND_MODE_NONE:
                     cps = glob.glob(os.path.join(dep.package_folder, f"**/{cmake_filename}.cps"),

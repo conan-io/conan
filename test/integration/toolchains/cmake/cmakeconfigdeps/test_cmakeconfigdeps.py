@@ -1020,11 +1020,11 @@ def test_requires_only_component_target_generation():
     assert "# Requirement pkg::pkg -> pkg::compB (Full link: True)" in target
 
 
-class TestCmakeFileComponentNames:
-    """Tests for cmake_file_component_names property - components define their own cmake_file_name."""
+class TestCmakeConfigProperties:
+    """Tests for cmake_config_properties — components grouped per CMake config file."""
 
     def test_generates_multiple_config_files(self):
-        """Package with cmake_file_component_names generates separate config files per group."""
+        """Package with cmake_config_properties generates separate config files per group."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1036,9 +1036,14 @@ class TestCmakeFileComponentNames:
 
                 def package_info(self):
                     # CMake File names for components
-                    self.cpp_info.set_property("cmake_file_component_names", {
-                        "greetings": ["hello", "hello-helpers"],
-                        "adieu": ["bye", "bye-helpers"],
+                    self.cpp_info.set_property("cmake_config_properties", {
+                        "greetings": {
+                            "components": ["hello", "hello-helpers"],
+                            "properties": {},
+                        },
+                        "adieu": {
+                            "components": ["bye", "bye-helpers"],
+                        },
                     })
 
                     self.cpp_info.components["hello"].libs = ["hello"]
@@ -1087,11 +1092,11 @@ class TestCmakeFileComponentNames:
         assert "# Requirement pkg::bye -> greet (Full link: False)" in adieu_targets
         assert "# Requirement pkg::bye -> pkg::bye-helpers (Full link: True)" in adieu_targets
 
-        # No root pkg config when all components are in cmake_file_component_names
+        # No root pkg config when all components are listed in cmake_config_properties
         assert not os.path.exists(os.path.join(tc.current_folder, "pkg-config.cmake"))
 
     def test_paths_include_cmake_file_names(self):
-        """conan_cmakedeps_paths.cmake sets DIR for each cmake_file_name from cmake_file_component_names."""
+        """conan_cmakedeps_paths.cmake sets DIR for each cmake file from cmake_config_properties."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1108,8 +1113,8 @@ class TestCmakeFileComponentNames:
                     self.cpp_info.components["compB"].libs = ["b"]
                     self.cpp_info.components["compB"].type = "static-library"
                     self.cpp_info.components["compB"].location = "lib/libb.a"
-                    self.cpp_info.set_property("cmake_file_component_names", {
-                        "MyLib": ["compA", "compB"],
+                    self.cpp_info.set_property("cmake_config_properties", {
+                        "MyLib": {"components": ["compA", "compB"]},
                     })
         """)
         tc.save({"conanfile.py": dep})
@@ -1118,11 +1123,11 @@ class TestCmakeFileComponentNames:
 
         paths = tc.load("conan_cmakedeps_paths.cmake")
         assert "set(MyLib_DIR" in paths
-        # pkg_DIR should not exist when all components are in cmake_file_component_names
+        # pkg_DIR should not exist when all components are in cmake_config_properties
         assert "set(pkg_DIR" not in paths
 
     def test_error_nonexistent_component(self):
-        """Using a non-existent component in cmake_file_component_names raises ConanException."""
+        """Using a non-existent component in cmake_config_properties raises ConanException."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1136,8 +1141,8 @@ class TestCmakeFileComponentNames:
                     self.cpp_info.components["compA"].libs = ["a"]
                     self.cpp_info.components["compA"].type = "static-library"
                     self.cpp_info.components["compA"].location = "lib/liba.a"
-                    self.cpp_info.set_property("cmake_file_component_names", {
-                        "MyLib": ["compA", "nonexistent"],
+                    self.cpp_info.set_property("cmake_config_properties", {
+                        "MyLib": {"components": ["compA", "nonexistent"]},
                     })
         """)
         tc.save({"conanfile.py": dep})
@@ -1145,10 +1150,10 @@ class TestCmakeFileComponentNames:
         tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps",
                assert_error=True)
         assert "Component 'nonexistent' does not exist" in tc.out
-        assert "cmake_file_component_names" in tc.out
+        assert "cmake_config_properties" in tc.out
 
     def test_error_default_component_in_another_file(self):
-        """Default component in cmake_file_component_names raises ConanException."""
+        """Default component in cmake_config_properties raises ConanException."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1166,8 +1171,8 @@ class TestCmakeFileComponentNames:
                     self.cpp_info.components["compB"].type = "static-library"
                     self.cpp_info.components["compB"].location = "lib/libb.a"
                     self.cpp_info.default_components = ["compA"]
-                    self.cpp_info.set_property("cmake_file_component_names", {
-                        "MyLib": ["compA", "compB"],
+                    self.cpp_info.set_property("cmake_config_properties", {
+                        "MyLib": {"components": ["compA", "compB"]},
                     })
         """)
         tc.save({"conanfile.py": dep})
@@ -1175,10 +1180,10 @@ class TestCmakeFileComponentNames:
         tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps",
                assert_error=True)
         assert "default component 'compA' is defined in another CMake Config file" in tc.out
-        assert "cmake_file_component_names" in tc.out
+        assert "cmake_config_properties" in tc.out
 
     def test_mixed_root_and_component_files(self):
-        """Some components in cmake_file_component_names, rest in root config file."""
+        """Some components in cmake_config_properties, rest in root config file."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1195,8 +1200,8 @@ class TestCmakeFileComponentNames:
                     self.cpp_info.components["extra"].libs = ["extra"]
                     self.cpp_info.components["extra"].type = "static-library"
                     self.cpp_info.components["extra"].location = "lib/libextra.a"
-                    self.cpp_info.set_property("cmake_file_component_names", {
-                        "Extra": ["extra"],
+                    self.cpp_info.set_property("cmake_config_properties", {
+                        "Extra": {"components": ["extra"]},
                     })
         """)
         tc.save({"conanfile.py": dep})
@@ -1218,7 +1223,7 @@ class TestCmakeFileComponentNames:
         assert "set(Extra_DIR" in paths
 
     def test_find_dependency_uses_correct_names(self):
-        """Transitive find_dependency uses cmake_file_name from cmake_file_component_names."""
+        """Transitive find_dependency uses cmake file name from cmake_config_properties."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1232,8 +1237,8 @@ class TestCmakeFileComponentNames:
                     self.cpp_info.components["lib"].libs = ["dep"]
                     self.cpp_info.components["lib"].type = "static-library"
                     self.cpp_info.components["lib"].location = "lib/libdep.a"
-                    self.cpp_info.set_property("cmake_file_component_names", {
-                        "DepLib": ["lib"],
+                    self.cpp_info.set_property("cmake_config_properties", {
+                        "DepLib": {"components": ["lib"]},
                     })
         """)
         consumer = textwrap.dedent("""

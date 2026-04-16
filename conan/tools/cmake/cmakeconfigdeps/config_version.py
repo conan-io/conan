@@ -10,11 +10,11 @@ class ConfigVersionTemplate2:
     """
     foo-config-version.cmake
     """
-    def __init__(self, cmakedeps, conanfile, config_comp_name, cmake_file_name):
+    def __init__(self, cmakedeps, conanfile, cmake_file_name, cmake_file_info):
         self._cmakedeps = cmakedeps
         self._conanfile = conanfile
-        self._config_comp_name = config_comp_name
         self._cmake_file_name = cmake_file_name
+        self._cmake_file_info = cmake_file_info
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
@@ -29,12 +29,13 @@ class ConfigVersionTemplate2:
     @property
     def _context(self):
         policy = self._cmakedeps.get_property("cmake_config_version_compat", self._conanfile,
-                                              comp_name=self._config_comp_name)
+                                              custom_props=self._cmake_file_info.get("properties"))
         if policy is None:
             policy = "SameMajorVersion"
         if policy not in ("AnyNewerVersion", "SameMajorVersion", "SameMinorVersion", "ExactVersion"):
             raise ConanException(f"Unknown cmake_config_version_compat={policy} in {self._conanfile}")
-        version = (self._cmakedeps.get_property("system_package_version", self._conanfile, comp_name=self._config_comp_name) or
+        version = (self._cmakedeps.get_property("system_package_version", self._conanfile,
+                                                custom_props=self._cmake_file_info.get("properties")) or
                    self._conanfile.ref.version)
         return {"version": version,
                 "policy": policy}

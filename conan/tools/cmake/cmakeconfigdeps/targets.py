@@ -8,11 +8,11 @@ class TargetsTemplate2:
     """
     FooTargets.cmake
     """
-    def __init__(self, cmakedeps, conanfile, config_comp_name, cmake_file_name):
+    def __init__(self, cmakedeps, conanfile, cmake_file_name, cmake_file_info):
         self._cmakedeps = cmakedeps
         self._conanfile = conanfile
-        self._config_comp_name = config_comp_name
         self._cmake_file_name = cmake_file_name
+        self._cmake_file_info = cmake_file_info
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
@@ -26,7 +26,8 @@ class TargetsTemplate2:
 
     @property
     def _context(self):
-        ret = {"ref": f"{str(self._conanfile.ref)} (Component: {self._config_comp_name})" if self._config_comp_name else str(self._conanfile.ref),
+        ret = {"ref": (",".join(self._cmake_file_info["components"]) if not self._cmake_file_info["is_root"]
+                       else str(self._conanfile.ref)),
                "filename": self._cmake_file_name}
         return ret
 

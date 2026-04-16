@@ -767,7 +767,7 @@ class CppInfo:
             opened = new_open
         return result
 
-    def aggregated_components(self):
+    def aggregated_components(self, components=None):
         """Aggregates all the components as global values, returning a new CppInfo
         Used by many generators to obtain a unified, aggregated view of all components
         """
@@ -777,7 +777,9 @@ class CppInfo:
         if self.has_components:
             result = _Component()
             # Reversed to make more dependant first
-            for component in reversed(self.get_sorted_components().values()):
+            for cmp_name, component in reversed(self.get_sorted_components().items()):
+                if components is not None and cmp_name not in components:
+                    continue
                 result.merge(component)
             # NOTE: The properties are not aggregated because they might refer only to the
             # component like "cmake_target_name" describing the target name FOR THE component
