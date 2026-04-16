@@ -146,26 +146,12 @@ class _Component:
                      either a dict of value->nested_definitions or value->list (final result).
         Returns the list of items that match the consumer's settings/options.
         """
-        assert isinstance(definitions, dict)
-        assert len(definitions) == 1, definitions
-        condition, values = next(iter(definitions.items()))
-        # One condition key per level (e.g. "settings.os")
-
-        assert isinstance(values, dict)
-        if condition.startswith("settings."):
-            setting_key = condition[len("settings."):]
-            value = conanfile.settings.get_safe(setting_key)
-        else:
-            assert condition.startswith("options.")
-            option_key = condition[len("options."):]
-            value = conanfile.options.get_safe(option_key)
-
-        result = values.get(value) or values.get("*")
-        if isinstance(result, list):
-            return result
-        if isinstance(result, dict):
-            return _Component._evaluate_cond(result, conanfile)
-        return []
+        if conanfile is None:
+            return definitions
+        plugin = conanfile._conan_helpers.flags_plugin  # noqa
+        if plugin is None:
+            return definitions
+        return plugin(definitions, conanfile)
 
     @staticmethod
     def deserialize(contents):
@@ -374,11 +360,9 @@ class _Component:
 
     @property
     def cflags(self):
-        if isinstance(self._cflags, dict):
-            return self._evaluate_cond(self._cflags, self._consumer_conanfile)
         if self._cflags is None:
             self._cflags = []
-        return self._cflags
+        return self._evaluate_cond(self._cflags, self._consumer_conanfile)
 
     @cflags.setter
     def cflags(self, value):
@@ -386,11 +370,9 @@ class _Component:
 
     @property
     def cxxflags(self):
-        if isinstance(self._cxxflags, dict):
-            return self._evaluate_cond(self._cxxflags, self._consumer_conanfile)
         if self._cxxflags is None:
             self._cxxflags = []
-        return self._cxxflags
+        return self._evaluate_cond(self._cxxflags, self._consumer_conanfile)
 
     @cxxflags.setter
     def cxxflags(self, value):
@@ -398,11 +380,9 @@ class _Component:
 
     @property
     def sharedlinkflags(self):
-        if isinstance(self._sharedlinkflags, dict):
-            return self._evaluate_cond(self._sharedlinkflags, self._consumer_conanfile)
         if self._sharedlinkflags is None:
             self._sharedlinkflags = []
-        return self._sharedlinkflags
+        return self._evaluate_cond(self._sharedlinkflags, self._consumer_conanfile)
 
     @sharedlinkflags.setter
     def sharedlinkflags(self, value):
@@ -410,11 +390,9 @@ class _Component:
 
     @property
     def exelinkflags(self):
-        if isinstance(self._exelinkflags, dict):
-            return self._evaluate_cond(self._exelinkflags, self._consumer_conanfile)
         if self._exelinkflags is None:
             self._exelinkflags = []
-        return self._exelinkflags
+        return self._evaluate_cond(self._exelinkflags, self._consumer_conanfile)
 
     @exelinkflags.setter
     def exelinkflags(self, value):

@@ -1075,18 +1075,27 @@ class TestCompatibleFlags:
                         return [{"settings": [("os", "Linux")]}]
 
                 def package_info(self):
-                    myflags = {
-                                "settings.os": {
-                                    "Windows": ["-mywinflag"],
-                                    "Linux": ["-mylinuxflag"],
-                                    "*": ["-other-os-flag"]
-                                }
-                    }
-                    self.cpp_info.cxxflags = myflags
-                    self.cpp_info.cflags = myflags
-                    self.cpp_info.sharedlinkflags = myflags
-                    self.cpp_info.exelinkflags = myflags
+                    self.cpp_info.cxxflags = ["-mywinflag"]
+                    self.cpp_info.cflags = ["-mywinflag"]
+                    self.cpp_info.sharedlinkflags = ["-mywinflag"]
+                    self.cpp_info.exelinkflags = ["-mywinflag"]
            """)
+        plugin = textwrap.dedent("""\
+            def flags_plugin(definitions, conanfile):
+                result = []
+                for d in definitions:
+                    if d == "-mywinflag":
+                        if conanfile.settings.get_safe("os") == "Linux":
+                            result.append("-mylinuxflag")
+                        elif conanfile.settings.get_safe("os") != "Windows":
+                            result.append("-other-os-flag")
+                        else:
+                            result.append(d)
+                    else:
+                        result.append(d)
+                return result
+                """)
+        c.save_home({"extensions/plugins/flags.py": plugin})
         if components:
             conanfile = conanfile.replace(".cpp_info.", ".cpp_info.components['mycomp'].")
 
@@ -1095,13 +1104,7 @@ class TestCompatibleFlags:
 
         c.run("create pkg --name=pkg --version=0.1 -s os=Linux --format=json")
         pkg_json = json.loads(c.stdout)
-        expected_serial = {
-            "settings.os": {
-                "Windows": ["-mywinflag"],
-                "Linux": ["-mylinuxflag"],
-                "*": ["-other-os-flag"]
-            }
-        }
+        expected_serial = ["-mywinflag"]  # The flag at creation time is the original one
         if not components:
             assert pkg_json["graph"]["nodes"]["1"]["cpp_info"]["root"]["cflags"] == expected_serial
 
@@ -1143,10 +1146,10 @@ class TestCompatibleFlags:
 
             class Pkg(ConanFile):
                 def layout(self):
-                    self.cpp.source.cxxflags = {"settings.compiler": {"msvc": ["-mywineditflag"]}}
+                    self.cpp.source.cxxflags = ["-mywineditflag"]
 
                 def package_info(self):
-                    self.cpp_info.cxxflags = {"settings.compiler": {"msvc": ["-mywinflag"]}}
+                    self.cpp_info.cxxflags = ["-mywinflag"]
            """)
         consumer = textwrap.dedent("""
             from conan import ConanFile
@@ -1157,6 +1160,18 @@ class TestCompatibleFlags:
                     cpp_info = self.dependencies["pkg"].cpp_info
                     self.output.info(f"CXXFLAGS: {cpp_info.cxxflags}!!!")
                 """)
+        plugin = textwrap.dedent("""\
+            def flags_plugin(definitions, conanfile):
+                result = []
+                for d in definitions:
+                    if "mywin" in d:
+                        if conanfile.settings.get_safe("compiler") == "msvc":
+                            result.append(d)
+                    else:
+                        result.append(d)
+                return result
+                """)
+        c.save_home({"extensions/plugins/flags.py": plugin})
         c.save({"pkg/conanfile.py": conanfile,
                 "consumer/conanfile.py": consumer})
 
@@ -1165,38 +1180,6 @@ class TestCompatibleFlags:
 
         c.run(f"install consumer {settings}")
         assert f"conanfile.py: CXXFLAGS: ['-mywineditflag']!!!" in c.out
-        c.run(f"install consumer {settings} -s &:compiler=clang -s &:compiler.version=19")
-        assert f"conanfile.py: CXXFLAGS: []!!!" in c.out
-
-    def test_simple_lambda(self):
-        """ same as above, but more compact condition
-        """
-        c = TestClient()
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            from conan.tools.microsoft import is_msvc
-
-            class Pkg(ConanFile):
-                def package_info(self):
-                    self.cpp_info.cxxflags = {"settings.compiler": {"msvc": ["-mywinflag"]}}
-           """)
-        consumer = textwrap.dedent("""
-            from conan import ConanFile
-            class Pkg(ConanFile):
-                settings = "compiler"
-                requires = "pkg/0.1"
-                def generate(self):
-                    cpp_info = self.dependencies["pkg"].cpp_info
-                    self.output.info(f"CXXFLAGS: {cpp_info.cxxflags}!!!")
-                """)
-        c.save({"pkg/conanfile.py": conanfile,
-                "consumer/conanfile.py": consumer})
-
-        settings = "-s compiler=msvc -s compiler.version=193 -s compiler.runtime=dynamic"
-        c.run(f"create pkg --name=pkg --version=0.1 {settings}")
-
-        c.run(f"install consumer {settings}")
-        assert f"conanfile.py: CXXFLAGS: ['-mywinflag']!!!" in c.out
         c.run(f"install consumer {settings} -s &:compiler=clang -s &:compiler.version=19")
         assert f"conanfile.py: CXXFLAGS: []!!!" in c.out
 
@@ -1209,14 +1192,7 @@ class TestCompatibleFlags:
 
             class Pkg(ConanFile):
                 def package_info(self):
-                    myflags = {
-                                "settings.os": {
-                                    "Windows": ["-mywinflag"],
-                                    "Linux": ["-mylinuxflag"],
-                                    "*": ["-other-os-flag"]
-                                }
-                    }
-                    self.cpp_info.cxxflags = myflags
+                    self.cpp_info.cxxflags = ["-mywinflag"]
            """)
         consumer = textwrap.dedent("""
             from conan import ConanFile
@@ -1227,6 +1203,23 @@ class TestCompatibleFlags:
                     cpp_info = self.dependencies["pkg"].cpp_info
                     self.output.info(f"FLAGS: {cpp_info.cxxflags}!!!")
                 """)
+        plugin = textwrap.dedent("""\
+            def flags_plugin(definitions, conanfile):
+                result = []
+                for d in definitions:
+                    if d == "-mywinflag":
+                        if conanfile.settings.get_safe("os") == "Linux":
+                            result.append("-mylinuxflag")
+                        elif conanfile.settings.get_safe("os") != "Windows":
+                            result.append("-other-os-flag")
+                        else:
+                            result.append(d)
+                    else:
+                        result.append(d)
+                return result
+                """)
+        c.save_home({"extensions/plugins/flags.py": plugin})
+
         c.save({"pkg/conanfile.py": conanfile,
                 "consumer/conanfile.py": consumer})
 
