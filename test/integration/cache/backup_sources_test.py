@@ -194,7 +194,7 @@ class TestDownloadCacheBackupSources:
         assert (f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in "
                 f"remote backup") in self.client.out
         assert (f"Sources for {self.file_server.fake_url}/mycompanystorage/mycompanyfile.txt not "
-                f"found in {self.file_server.fake_url}/backups/") in self.client.out
+                f"found in remote backup {self.file_server.fake_url}/backups/") in self.client.out
 
         # Ensure defaults backup folder works if it's not set in global.conf
         # (The rest is needed to exercise the rest of the code)
@@ -205,7 +205,7 @@ class TestDownloadCacheBackupSources:
         assert (f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in "
                 f"remote backup") in self.client.out
         assert (f"Sources for {self.file_server.fake_url}/mycompanystorage/mycompanyfile.txt not "
-                f"found in {self.file_server.fake_url}/backups/") in self.client.out
+                f"found in remote backup {self.file_server.fake_url}/backups/") in self.client.out
 
     def test_unknown_handling(self):
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
@@ -840,8 +840,6 @@ class TestDownloadCacheBackupSources:
            from conan import ConanFile
            from conan.tools.files import download
            class Pkg2(ConanFile):
-               name = "pkg"
-               version = "0.1"
                def source(self):
                    download(self, "{self.file_server.fake_url}/internet/myfile.txt", "myfile.txt",
                             sha256="{sha256}")
@@ -855,14 +853,18 @@ class TestDownloadCacheBackupSources:
 
         with mock.patch("conan.internal.rest.file_downloader.FileDownloader._download_file",
                         custom_download):
-            self.client.run("create .", assert_error=True)
+            self.client.run("source .", assert_error=True)
             # The mock does not actually download a file, let's add it for the test
-            # The dirty file now happens in user space, not the download cache
+            save(os.path.join(self.download_cache_folder, "s", sha256), "__corrupted download__")
+            # Check that the dirty file was not removed.
+            # This check should go away once we refactor dirty handling
+            assert os.path.exists(os.path.join(self.download_cache_folder, "s", f"{sha256}.dirty"))
+
         if upload:
             self.client.run("cache backup-upload")
         else:
-            self.client.run("create .")
-            assert "pkg/0.1: Source folder is corrupted, forcing removal" in self.client.out
+            self.client.run("source .")
+        assert f"{sha256} is dirty, removing it" in self.client.out
 
     @pytest.mark.parametrize("exception", [Exception, ConanException])
     def test_backup_source_upload_when_dirty(self, exception):

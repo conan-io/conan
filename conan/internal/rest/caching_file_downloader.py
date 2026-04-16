@@ -31,6 +31,7 @@ class SourcesCachingDownloader:
         download_cache_folder = self._global_conf.get("core.sources:download_cache")
         source_origins = self._global_conf.get("core.sources:download_urls", check_type=list)
         if source_origins and not download_cache_folder:
+            # If backups are defined, but the download cache is not defined, use a default one
             download_cache_folder = HomePaths(self._home_folder).default_sources_backup_folder
         if download_cache_folder and not os.path.isabs(download_cache_folder):
             raise ConanException("core.sources:download_cache must be an absolute path")
@@ -47,20 +48,34 @@ class SourcesCachingDownloader:
             download_cache = DownloadCache(download_cache_folder)
             download_path = download_cache.source_path(sha256)
             with download_cache.lock(sha256):
+                remove_if_dirty(download_path)
+
                 if os.path.exists(download_path):
                     self._output.info(f"Source {urls} retrieved from local download cache")
-                    download_cache.update_backup_sources_json(download_path, self._conanfile, urls)
-                    mkdir(os.path.dirname(file_path))
-                    shutil.copy2(download_path, file_path)
-                    return
+                else:
+                    # not in cache, we need to actually download from internet or backup servers
+                    with set_dirty_context_manager(download_path):
+                        self._do_download(source_origins, urls, download_path, retry, retry_wait,
+                                          verify_ssl, auth, headers, md5, sha1, sha256)
 
-        # If it is not in the download cache, we need to download it, lets try
+                # copy it to the package "source" folder
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                shutil.copy2(download_path, file_path)
+                download_cache.update_backup_sources_json(download_path, self._conanfile, urls)
+        else:
+            # This doesn't need to be dirty-protected, as the full "source" folder is protected
+            self._do_download(source_origins, urls, file_path, retry, retry_wait, verify_ssl, auth,
+                              headers, md5, sha1, sha256)
+
+    def _do_download(self, source_origins, urls, download_path, retry, retry_wait, verify_ssl,
+                     auth, headers, md5, sha1, sha256):
+        # iterates the origins until one works
         for backup_url in source_origins:
             if backup_url == "origin":  # download from the internet
                 try:
-                    self._download_from_urls(urls, file_path, retry, retry_wait, verify_ssl, auth,
-                                             headers, md5, sha1, sha256)
-                    break
+                    self._download_from_urls(urls, download_path, retry, retry_wait, verify_ssl,
+                                             auth, headers, md5, sha1, sha256)
+                    return
                 except Exception as e:
                     if backup_url is source_origins[-1]:
                         raise
@@ -70,12 +85,12 @@ class SourcesCachingDownloader:
                     self._output.info(f"Checking backup: {backup_url}")
                     backup_url = backup_url if backup_url.endswith("/") else backup_url + "/"
                     # The download happens to the user download folder, not to the download cache
-                    self._file_downloader.download(backup_url + sha256, file_path, sha256=sha256,
-                                                   overwrite=True)
+                    self._file_downloader.download(backup_url + sha256, download_path,
+                                                   sha256=sha256, overwrite=True)
                     self._file_downloader.download(backup_url + sha256 + ".json",
-                                                   file_path + ".json", overwrite=True)
+                                                   download_path + ".json", overwrite=True)
                     self._output.info(f"Sources for {urls} found in remote backup {backup_url}")
-                    break
+                    return
                 except NotFoundException:
                     msg = f"Sources for {urls} not found in remote backup {backup_url}"
                     if backup_url is source_origins[-1]:
@@ -86,17 +101,6 @@ class SourcesCachingDownloader:
                     raise ConanException(f"Authentication to source backup server '{backup_url}' "
                                          f"failed: {e}. "
                                          f"Please check your 'source_credentials.json'")
-
-        # We might need to put it in the download cache
-        if download_cache_folder:
-            download_cache = DownloadCache(download_cache_folder)
-            cached_path = download_cache.source_path(sha256)
-            with download_cache.lock(sha256):
-                os.makedirs(os.path.dirname(cached_path), exist_ok=True)
-                shutil.copy(file_path, cached_path)
-                if os.path.exists(file_path + ".json"):
-                    shutil.move(file_path + ".json", download_cache_folder)
-                download_cache.update_backup_sources_json(cached_path, self._conanfile, urls)
 
     def _download_from_urls(self, urls, file_path, retry, retry_wait, verify_ssl, auth, headers,
                             md5, sha1, sha256):
