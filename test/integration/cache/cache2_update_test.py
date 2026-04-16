@@ -443,6 +443,8 @@ class TestUpdateFlows:
 
 @pytest.mark.parametrize("update,result",
                          [
+                             ["*", {"liba/1.1": "Downloaded (default)",
+                                    "libb/1.1": "Downloaded (default)"}],
                              ["libc", {"liba/1.0": "Cache",
                                        "libb/1.0": "Cache"}],
                              ["liba", {"liba/1.1": "Downloaded (default)",
@@ -455,17 +457,11 @@ class TestUpdateFlows:
                                                                             "libb/1.0": "Cache"}],
                              ["", {"liba/1.0": "Cache",
                                    "libb/1.0": "Cache"}],
-                             # Patterns supported
-                             ["*", {"liba/1.1": "Downloaded (default)",
-                                    "libb/1.1": "Downloaded (default)"}],
+                             # Patterns supported, but only on name
                              ["lib*", {"liba/1.1": "Downloaded (default)",
                                        "libb/1.1": "Downloaded (default)"}],
-                             # But not version ones
-                             # ["liba/*", {"liba/1.1": "Downloaded (default)",
-                             #             "libb/1.0": "Cache"}],
-                             # But not consumer
-                             ["&", {"liba/1.0": "Cache",
-                                    "libb/1.0": "Cache"}],
+                             ["liba/*", {"liba/1.0": "Cache",
+                                         "libb/1.0": "Cache"}],
                              # None only passes legacy --update without args,
                              # to ensure it works, it should be the same as passing *
                              [None, {"liba/1.1": "Downloaded (default)",
