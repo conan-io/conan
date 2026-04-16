@@ -140,12 +140,6 @@ class _Component:
 
     @staticmethod
     def _evaluate_cond(definitions, conanfile):
-        """
-        Evaluate conditional definitions against the consumer conanfile.
-        definitions: dict with a single key (e.g. "settings.os", "options.shared") mapping to
-                     either a dict of value->nested_definitions or value->list (final result).
-        Returns the list of items that match the consumer's settings/options.
-        """
         if conanfile is None:
             return definitions
         plugin = conanfile._conan_helpers.flags_plugin  # noqa
@@ -480,26 +474,12 @@ class _Component:
 
         for varname in _ALL_NAMES:
             other_values = getattr(other, varname)
-            if other_values is None:
-                continue
-            if overwrite:
-                setattr(self, varname, other_values)
-                continue
-            if other._consumer_conanfile is None:  # package_info() editable merge
-                assert self._consumer_conanfile is None
-                if isinstance(other_values, dict) or isinstance(getattr(self, varname), dict):
-                    setattr(self, varname, other_values)  # overwite, dicts cannot be merged
-                else:
+            if other_values is not None:
+                if not overwrite:
                     current_values = self.get_init(varname, [])
                     merge_list(other_values, current_values)
-            else:  # component aggregation merge, lists can be evaluated
-                if isinstance(other_values, dict):
-                    other_values = self._evaluate_cond(other_values, other._consumer_conanfile)
-                current_values = getattr(self, varname) or []
-                if isinstance(current_values, dict):
-                    current_values = self._evaluate_cond(current_values, self._consumer_conanfile)
-                merge_list(other_values, current_values)
-                setattr(self, varname, current_values)
+                else:
+                    setattr(self, varname, other_values)
 
         for varname in _SINGLE_VALUE_VARS:  # To allow editable of .exe/.location
             other_values = getattr(other, varname)
