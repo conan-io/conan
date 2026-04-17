@@ -30,7 +30,6 @@ def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
     conanfile.display_name = str(ref)
     conanfile.output.scope = conanfile.display_name
     scoped_output = conanfile.output
-    scoped_output.indent_push()
     # Even though the package_id_non_embed_mode is minor_mode by default,
     # and package_id_unknown_mode is semver_mode by default,
     # recipes with buggy versions that do not define the attribute will have
@@ -105,7 +104,6 @@ def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
             set_dirty(source_folder)
 
     scoped_output.success(f"Exported: {ref.repr_humantime()}")
-    scoped_output.indent_pop()
     return ref, conanfile
 
 
