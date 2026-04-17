@@ -69,13 +69,10 @@ class LockfileAPI:
             return
 
         config_version_path = HomePaths(self._conan_api.home_folder).config_version_path
-        if not os.path.exists(config_version_path):
-            return
-
-        installed_refs = loadconanconfig(config_version_path)
-        if not installed_refs:
-            return
-
+        if os.path.exists(config_version_path):
+            installed_refs = loadconanconfig(config_version_path)
+        else:
+            installed_refs = []
         lockfile.check_config_requires(installed_refs)
 
     def update_lockfile_export(self, lockfile, conanfile, ref, is_build_require=False):
