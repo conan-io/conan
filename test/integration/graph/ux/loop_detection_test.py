@@ -42,7 +42,7 @@ def test_install_order_infinite_loop():
     assert "tool/1.0 (Build) -> ['fmt/1.0']" in c.out
 
     # Graph build-order fails in the same way
-    c.run("graph build-order tool -pr:h=tool_profile -b=missing",
+    c.run("graph build-order tool -pr:h=tool_profile -b=missing --order-by=recipe",
           assert_error=True)
     assert "ERROR: There is a loop in the graph" in c.out
     assert "fmt/1.0 (Build) -> ['tool/1.0']" in c.out
