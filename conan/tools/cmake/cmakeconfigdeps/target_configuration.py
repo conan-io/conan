@@ -222,7 +222,7 @@ class TargetConfigurationTemplate2:
                 target["cmake_target_aliases"] = cmake_target_aliases
                 libs[target_name] = target
         # Root cpp_info without components: a single pkg::pkg (or renamed) target
-        if self._cmake_file_info["is_root"] and not self._full_cpp_info.has_components:
+        if not self._full_cpp_info.has_components:
             target_name = self._get_cmake_target_name(pkg_name)
             target = self._get_cmake_lib(self._full_cpp_info, pkg_folder, pkg_folder_var,
                                          requires=requires_map.get(target_name))
@@ -345,6 +345,13 @@ class TargetConfigurationTemplate2:
             if comp.exe or comp.type is PackageType.APP:
                 target = self._get_cmake_target_name(pkg_name, comp_name=name)
                 exe_location = self._path(comp.location, pkg_folder, pkg_folder_var)
+                exes[target] = exe_location
+        # Root cpp_info.exe / application without components
+        if not self._full_cpp_info.has_components:
+            cpp_info = self._full_cpp_info
+            if cpp_info.exe:
+                target = self._get_cmake_target_name(pkg_name)
+                exe_location = self._path(cpp_info.location, pkg_folder, pkg_folder_var)
                 exes[target] = exe_location
         return exes
 
