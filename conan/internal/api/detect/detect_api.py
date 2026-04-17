@@ -522,13 +522,6 @@ def detect_gcc_compiler(compiler_exe="gcc"):
         return None, None, None
 
 
-def detect_compiler():
-    ConanOutput(scope="detect_api").warning("detect_compiler() is deprecated, "
-                                            "use detect_default_compiler()", warn_tag="deprecated")
-    compiler, version, _ = detect_default_compiler()
-    return compiler, version
-
-
 def detect_intel_compiler(compiler_exe="icx"):
     try:
         ret, out = detect_runner(f'"{compiler_exe}" --version')

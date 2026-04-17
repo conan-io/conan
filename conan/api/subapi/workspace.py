@@ -141,7 +141,7 @@ class WorkspaceAPI:
 
     def open(self, ref, remotes, cwd=None):
         cwd = cwd or os.getcwd()
-        proxy, _, loader = self._conan_api._api_helpers.get_loader()  # noqa
+        proxy, _, loader, _ = self._conan_api._api_helpers.get_loader()  # noqa
         ref = RecipeReference.loads(ref) if isinstance(ref, str) else ref
         recipe = proxy.get_recipe(ref, remotes, update=False, check_update=False)
 
@@ -193,7 +193,7 @@ class WorkspaceAPI:
         """
         self._check_ws()
         full_path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
-        _, _, loader = self._conan_api._api_helpers.get_loader()  # noqa
+        loader = self._conan_api._api_helpers.loader  # noqa
         conanfile = loader.load_named(full_path, name, version, user, channel, remotes=remotes)
         if conanfile.name is None or conanfile.version is None:
             raise ConanException("Editable package recipe should declare its name and version")
@@ -329,7 +329,7 @@ class WorkspaceAPI:
         if root_class is not None:
             conanfile = root_class(f"{WORKSPACE_PY} base project Conanfile")
             # To inject things like cmd_wrapper to the consumer conanfile, so self.run() works
-            _, _, loader = self._conan_api._api_helpers.get_loader()  # noqa
+            loader = self._conan_api._api_helpers.loader  # noqa
             helpers = loader._conanfile_helpers  # noqa
             conanfile._conan_helpers = helpers
             conanfile._conan_is_consumer = True

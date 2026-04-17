@@ -62,7 +62,7 @@ def test_install_deploy(client, powershell):
             "CMakeLists.txt": cmake,
             "main.cpp": gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])},
            clean_first=True)
-    pwsh = "-c tools.env.virtualenv:powershell=True" if powershell else ""
+    pwsh = "-c tools.env.virtualenv:powershell=powershell.exe" if powershell else ""
     c.run("install . -o *:shared=True "
           f"--deployer=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps {pwsh}")
     c.run("remove * -c")  # Make sure the cache is clean, no deps there
@@ -184,9 +184,9 @@ def test_multi_deploy():
             conanfile = graph.root.conanfile
             conanfile.output.info("deploy cache!!")
         """)
-    save(os.path.join(c.cache_folder, "extensions", "deploy", "deploy_cache.py"), deploy_cache)
+    save(os.path.join(c.cache_folder, "extensions", "deployers", "deploy_cache.py"), deploy_cache)
     # This should never be called in this test, always the local is found first
-    save(os.path.join(c.cache_folder, "extensions", "deploy", "mydeploy.py"), "CRASH!!!!")
+    save(os.path.join(c.cache_folder, "extensions", "deployers", "mydeploy.py"), "CRASH!!!!")
     c.save({"conanfile.txt": "",
             "mydeploy.py": deploy1,
             "sub/mydeploy2.py": deploy2})

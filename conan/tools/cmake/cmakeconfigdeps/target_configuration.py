@@ -26,15 +26,6 @@ class TargetConfigurationTemplate2:
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
-        auto_link = self._cmakedeps.get_property("cmake_set_interface_link_directories",
-                                                 self._conanfile,
-                                                 custom_props=self._cmake_file_info.get("properties"),
-                                                 check_type=bool)
-        if auto_link:
-            out = self._cmakedeps._conanfile.output  # noqa
-            out.warning("CMakeConfigDeps: cmake_set_interface_link_directories deprecated and "
-                        "invalid. The package 'package_info()' must correctly define the (CPS) "
-                        "information", warn_tag="deprecated")
         return t.render(self._context)
 
     @property
