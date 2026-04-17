@@ -12,7 +12,7 @@ from conan.internal.model.version import Version
 
 def _compute_fix_transitive(conanfile):
     # fix for transitive static libraries
-    recipe_require_conan_version = conanfile._conan_required_conan_version  # noqa
+    recipe_require_conan_version = conanfile._conan_required_version  # noqa
     if recipe_require_conan_version:
         version_range = VersionRange(recipe_require_conan_version)
         for conditions in version_range.condition_sets:
