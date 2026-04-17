@@ -184,9 +184,9 @@ def test_multi_deploy():
             conanfile = graph.root.conanfile
             conanfile.output.info("deploy cache!!")
         """)
-    save(os.path.join(c.cache_folder, "extensions", "deploy", "deploy_cache.py"), deploy_cache)
+    save(os.path.join(c.cache_folder, "extensions", "deployers", "deploy_cache.py"), deploy_cache)
     # This should never be called in this test, always the local is found first
-    save(os.path.join(c.cache_folder, "extensions", "deploy", "mydeploy.py"), "CRASH!!!!")
+    save(os.path.join(c.cache_folder, "extensions", "deployers", "mydeploy.py"), "CRASH!!!!")
     c.save({"conanfile.txt": "",
             "mydeploy.py": deploy1,
             "sub/mydeploy2.py": deploy2})
