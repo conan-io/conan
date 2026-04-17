@@ -71,6 +71,7 @@ class Node:
         self.is_conf = False
         self.replaced_requires = {}  # To track the replaced requires for self.edges[old-ref]
         self.skipped_build_requires = False
+        self.editable_output_folder = None  # In case this node is editable
 
     @property
     def dependencies(self):

@@ -314,6 +314,12 @@ class TestMSVCToolset:
         c = CMakeToolchain(conanfile_msvc)
         assert 'set(CMAKE_GENERATOR_TOOLSET "v143,version=14.48" CACHE STRING "" FORCE)' in c.content
 
+    def test_toolset_exact(self, conanfile_msvc):
+        conanfile_msvc.settings.compiler.version = "195"
+        conanfile_msvc.conf.define("tools.microsoft:msvc_update", "0.35717")
+        c = CMakeToolchain(conanfile_msvc)
+        assert 'set(CMAKE_GENERATOR_TOOLSET "v145,version=14.50.35717"' in c.content
+
     def test_toolset_x64(self, conanfile_msvc):
         # https://github.com/conan-io/conan/issues/11144
         conanfile_msvc.conf.define("tools.cmake.cmaketoolchain:toolset_arch", "x64")

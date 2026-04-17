@@ -5,8 +5,6 @@ import pytest
 
 from conan.test.utils.tools import TestClient
 
-new_value = "will_break_next"
-
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_package_framework_needs_location():
@@ -40,8 +38,9 @@ def test_package_framework_needs_location():
         'test_package/conanfile.py': test_conanfile,
         'conanfile.py': conanfile
     })
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
-    assert "Error in generator 'CMakeConfigDeps': cpp_info.location missing for framework MyFramework" in client.out
+    client.run(f"create .", assert_error=True)
+    assert ("Error in generator 'CMakeConfigDeps': cpp_info.location"
+            " missing for framework MyFramework") in client.out
 
 
 def test_framework_only_component_generates_target():
@@ -63,6 +62,6 @@ def test_framework_only_component_generates_target():
     tc = TestClient()
     tc.save({"conanfile.py": conanfile})
     tc.run("create .")
-    tc.run(f"install --requires=frame/1.0 -g CMakeConfigDeps -c=tools.cmake.cmakedeps:new={new_value}")
+    tc.run(f"install --requires=frame/1.0 -g CMakeConfigDeps")
     targets = tc.load("frame-Targets-release.cmake")
     assert "add_library(frame::frame INTERFACE IMPORTED)" in targets

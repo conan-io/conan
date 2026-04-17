@@ -139,7 +139,7 @@ class DownloadCache:
             urls = [urls]
         existing_urls = summary["references"].setdefault(summary_key, [])
         existing_urls.extend(url for url in urls if url not in existing_urls)
-        conanfile.output.verbose(f"Updating ${summary_path} summary file")
+        conanfile.output.verbose(f"Updating {summary_path} summary file")
         summary_dump = json.dumps(summary)
         conanfile.output.debug(f"New summary: ${summary_dump}")
         save(summary_path, json.dumps(summary))
