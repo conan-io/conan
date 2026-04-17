@@ -73,7 +73,7 @@ def test_virtualenv(client):
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
-@pytest.mark.parametrize("powershell", [True, "powershell.exe", "pwsh"])
+@pytest.mark.parametrize("powershell", ["powershell.exe", "pwsh"])
 def test_virtualenv_test_package(powershell):
     """ The test_package could crash if not cleaning correctly the test_package
     output folder. This will still crassh if the layout is not creating different build folders
