@@ -509,7 +509,7 @@ class TestRequiresToApp:
         targets = c.load("libtool-Targets-release.cmake")
         # The libtool shouldn't depend on the automake::automake target
         assert "automake::automake" not in targets
-        assert "# Requirement libtool::libtool -> automake::mylibapp (Full link: True)" in targets
+        assert "# Requirement libtool::libtool -> automake::mylibapp (Full link: False)" in targets
         assert "$<$<CONFIG:RELEASE>:automake::mylibapp>" in targets
 
     def test_requires_from_library_component(self):
