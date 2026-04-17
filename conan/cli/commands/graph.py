@@ -73,8 +73,6 @@ def graph_build_order(conan_api, parser, subparser, *args):
                                 'only if the result will not be merged later with other build-order')
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
-    if args.order_by is None:
-        ConanOutput().warning("Please specify --order-by argument", warn_tag="deprecated")
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
@@ -88,6 +86,20 @@ def graph_build_order(conan_api, parser, subparser, *args):
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
+
+    deprecated_policies = profile_host.conf.get("user.policies:name", check_type=list, default=list())
+    if args.order_by is None:
+        if "build_order_args" in deprecated_policies:
+            ConanOutput().warning("Please specify --order-by argument. "
+                                  "This behaviour is kept enabled because 'build_order_args' "
+                                  "is present in the 'user.policies:name' conf list. "
+                                  "The fallback will be removed in Conan 2.32.",
+                                  warn_tag="deprecated")
+        else:
+            raise ConanException("Please specify --order-by argument. "
+                                 "The old behaviour can be reenabled by adding 'build_order_args' "
+                                 "to the 'user.policies:name' conf list until Conan 2.32, "
+                                 "where it will be removed.")
 
     if path:
         deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
