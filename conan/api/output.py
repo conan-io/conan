@@ -101,12 +101,9 @@ class ConanOutput:
     _conan_output_level = LEVEL_STATUS
     _silent_warn_tags = []
     _warnings_as_errors = []
-    lock = Lock()
-    # Each line of contextual output is prefixed with this gutter (spaces only).
     _INDENT_BODY_PREFIX = "  "
-    # Last recipe scope for which the underlined header was emitted (class-wide; set on first
-    # :meth:`_write_message` for that scope, not on construction).
     _last_scope_header = None
+    lock = Lock()
 
     def __init__(self, scope: str = ""):
         """ Initialize the ConanOutput instance.
@@ -121,7 +118,7 @@ class ConanOutput:
         #         stream to capture it, so colorama is not there to strip the color bytes
         self._color = _color_enabled(self.stream)
         if not scope:
-            type(self)._last_scope_header = None
+            ConanOutput._last_scope_header = None
 
     @classmethod
     def define_silence_warnings(cls, warnings):
@@ -172,27 +169,13 @@ class ConanOutput:
     def level_allowed(cls, level):
         return cls._conan_output_level <= level
 
-    def _print_scope_header(self, scope: str):
-        if self._conan_output_level > LEVEL_NOTICE:
-            return
-        if self._color:
-            data = f"{Color.BRIGHT_WHITE}\033[4m{scope}{Style.RESET_ALL}\n"
-        else:
-            data = f"{scope}\n"
-        with self.lock:
-            self.stream.write(data)
-            self.stream.flush()
-
-    def _maybe_emit_scope_header_before_write(self):
-        """Emit underlined scope once when it changes, only when a message is about to be written."""
-        cls = type(self)
+    def _emit_scope_line_if_new(self):
+        """Print ``scope:`` once per scope change, when a message is about to be written."""
         scope = self._scope
-        if not scope:
+        if not scope or scope == ConanOutput._last_scope_header:
             return
-        if scope == cls._last_scope_header:
-            return
-        self._print_scope_header(scope)
-        cls._last_scope_header = scope
+        self.writeln(f"{scope}:", fg=Color.BRIGHT_BLUE)
+        ConanOutput._last_scope_header = scope
 
     @property
     def color(self):
@@ -207,9 +190,8 @@ class ConanOutput:
         if out_scope == self._scope:
             return
         self._scope = out_scope
-        cls = type(self)
         if not out_scope:
-            cls._last_scope_header = None
+            ConanOutput._last_scope_header = None
 
     @property
     def is_terminal(self):
@@ -270,9 +252,9 @@ class ConanOutput:
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
         if self._scope and not ignore_indent:
-            self._maybe_emit_scope_header_before_write()
+            self._emit_scope_line_if_new()
 
-        if (self._scope and self._scope == type(self)._last_scope_header
+        if (self._scope and self._scope == ConanOutput._last_scope_header
                 and not ignore_indent):
             ret = self._format_scoped_message(msg, fg, bg)
         elif self._scope:
@@ -347,7 +329,7 @@ class ConanOutput:
     def title(self, msg: str):
         """ Draws a title around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
-            type(self)._last_scope_header = None
+            ConanOutput._last_scope_header = None
             self._write_message("\n======== {} ========".format(msg),
                                 fg=Color.BRIGHT_MAGENTA, ignore_indent=True)
         return self
@@ -355,7 +337,7 @@ class ConanOutput:
     def subtitle(self, msg: str):
         """ Draws a subtitle around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
-            type(self)._last_scope_header = None
+            ConanOutput._last_scope_header = None
             self._write_message("\n-------- {} --------".format(msg),
                                 fg=Color.BRIGHT_MAGENTA, ignore_indent=True)
         return self
