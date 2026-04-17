@@ -102,8 +102,8 @@ class ConanOutput:
     _silent_warn_tags = []
     _warnings_as_errors = []
     lock = Lock()
-    # Each line of contextual output is prefixed with this gutter (spaces only, no tree glyphs).
-    _INDENT_BODY_PREFIX = "  "
+    # Each line of contextual output is prefixed with this gutter before the message text.
+    _INDENT_BODY_PREFIX = "=> "
 
     def __init__(self, scope: str = ""):
         """ Initialize the ConanOutput instance.
@@ -173,8 +173,15 @@ class ConanOutput:
         if self._indented:
             return self
         if self._scope:
-            self.writeln(f"{self._scope}", fg=Color.BRIGHT_WHITE)
-            self.writeln("-" * len(self._scope), fg=Color.BRIGHT_WHITE)
+            # self.writeln(f"{self._scope}", fg=Color.BRIGHT_WHITE)
+            # self.writeln("-" * len(self._scope), fg=Color.BRIGHT_WHITE)
+
+            data = f"{Color.BRIGHT_WHITE}\033[4m{self._scope}{Style.RESET_ALL}\n"
+            with self.lock:
+                self.stream.write(data)
+                self.stream.flush()
+
+
         self._indented = True
         return self
 
@@ -231,7 +238,7 @@ class ConanOutput:
         return self
 
     def _format_scoped_message(self, msg, fg=None, bg=None):
-        """Prefix every physical line with a short space gutter (block under the scope header)."""
+        """Prefix every physical line with ``=> `` (block under the scope header)."""
         fg = fg or ""
         bg = bg or ""
         gutter = self._INDENT_BODY_PREFIX
