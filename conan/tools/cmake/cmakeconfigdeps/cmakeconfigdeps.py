@@ -207,7 +207,7 @@ class CMakeConfigDeps:
 
         This method creates a map for the root/components belonging to each XXX-config file.
         It also reads the properties:
-            - cmake_config_properties: dict mapping each CMake package file name to a dict with
+            - cmake_file_component_names: dict mapping each CMake package file name to a dict with
               ``components`` (list of component names) and optional ``properties`` (per-file
               overrides for CMakeConfigDeps global properties).
             - cmake_file_name: name for the root config file.
@@ -216,17 +216,17 @@ class CMakeConfigDeps:
         components = full_cpp_info.components if full_cpp_info else dep.cpp_info.components
         left_components_in_dep = list(components.keys())
         default_components = dep.cpp_info.default_components or []
-        components_file_info = self.get_property("cmake_config_properties", dep) or {}
+        components_file_info = self.get_property("cmake_file_component_names", dep) or {}
         for filename, global_cpp_info in components_file_info.items():
             cmps_per_file = global_cpp_info.get("components", [])
             for name in cmps_per_file:
                 if name in default_components:
                     raise ConanException(f"The default component '{name}' is defined in "
                                          f"another CMake Config file. Check the "
-                                         f"'cmake_config_properties' property.")
+                                         f"'cmake_file_component_names' property.")
                 elif name not in left_components_in_dep:
                     raise ConanException(f"Component '{name}' does not exist. Check the "
-                                         f"'cmake_config_properties' property definition.")
+                                         f"'cmake_file_component_names' property definition.")
                 else:
                     left_components_in_dep.remove(name)  # total of components within the root Config file
             ret[filename] = {"components": cmps_per_file,
