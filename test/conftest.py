@@ -75,28 +75,29 @@ tools_locations = {
         "default": "3.15",
         "3.15": {
             "path": {'Windows': 'C:/tools/cmake/3.15.7/cmake-3.15.7-win64-x64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/3.15.7/bin',
-                     'Linux': '/usr/share/cmake-3.15.7/bin'}
+                     'Darwin': f'{homebrew_root}/bin',
+                     # Linux: None = use cmake from PATH (distro layout varies; see conftest docstring)
+                     'Linux': None}
         },
         "3.19": {
             "path": {'Windows': 'C:/tools/cmake/3.19.7/cmake-3.19.7-win64-x64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/3.19.7/bin',
-                     'Linux': '/usr/share/cmake-3.19.7/bin'}
+                     'Darwin': f'{homebrew_root}/bin',
+                     'Linux': None}
         },
         "3.23": {
             "path": {'Windows': 'C:/tools/cmake/3.23.5/cmake-3.23.5-windows-x86_64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/3.23.5/bin',
-                     'Linux': "/usr/share/cmake-3.23.5/bin"}
+                     'Darwin': f'{homebrew_root}/bin',
+                     'Linux': None}
         },
         "3.27": {
             "path": {'Windows': 'C:/tools/cmake/3.27.9/cmake-3.27.9-windows-x86_64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/3.27.9/bin',
-                     'Linux': "/usr/share/cmake-3.27.9/bin"}
+                     'Darwin': f'{homebrew_root}/bin',
+                     'Linux': None}
         },
         "4.2": {
             "path": {'Windows': 'C:/tools/cmake/4.2.1/cmake-4.2.1-windows-x86_64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/4.2.1/bin',
-                     'Linux': "/usr/share/cmake-4.2.1/bin"}
+                     'Darwin': f'{homebrew_root}/bin',
+                     'Linux': None}
         }
     },
     'ninja': {

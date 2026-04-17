@@ -1262,3 +1262,117 @@ class TestCmakeConfigProperties:
         consumer_targets = tc.load("consumer-Targets-release.cmake")
         assert "find_dependency(DepLib" in consumer_targets
         assert "find_dependency(dep " not in consumer_targets
+
+    def test_cmake_component_properties_version_and_compat(self):
+        """Per-file ``properties`` can override config-version (system_package_version, compat)."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import save
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package(self):
+                    save(self, os.path.join(self.package_folder, "lib", "libw.a"), "")
+
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_config_properties", {
+                        "widgets": {
+                            "components": ["widgets"],
+                            "properties": {
+                                "system_package_version": "88.1.2",
+                                "cmake_config_version_compat": "ExactVersion",
+                            },
+                        },
+                    })
+                    self.cpp_info.components["widgets"].libs = ["w"]
+                    self.cpp_info.components["widgets"].type = "static-library"
+                    self.cpp_info.components["widgets"].location = "lib/libw.a"
+        """)
+        tc.save({"conanfile.py": dep})
+        tc.run("create .")
+        tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps")
+        ver = tc.load("widgets-config-version.cmake")
+        assert 'set(PACKAGE_VERSION "88.1.2")' in ver
+        assert "PACKAGE_FIND_VERSION_MAJOR STREQUAL CVF_VERSION_MAJOR" in ver
+
+    def test_cmake_component_properties_build_modules_extra_variables_prefixes(self):
+        """Per-file ``properties``: build modules, extra CMake variables, legacy prefixes."""
+        tc = TestClient()
+        dep = textwrap.dedent(r"""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import save
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package(self):
+                    p = self.package_folder
+                    save(self, os.path.join(p, "lib", "libcore.a"), "")
+                    save(self, os.path.join(p, "share", "cmake", "pkg_hook.cmake"),
+                         "# hook for tests\n")
+
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_config_properties", {
+                        "CoreKit": {
+                            "components": ["core"],
+                            "properties": {
+                                "cmake_build_modules": ["share/cmake/pkg_hook.cmake"],
+                                "cmake_extra_variables": {"PKG_HOOK_FLAG": 1},
+                                "cmake_additional_variables_prefixes": ["CoreLegacy"],
+                            },
+                        },
+                    })
+                    self.cpp_info.components["core"].libs = ["core"]
+                    self.cpp_info.components["core"].type = "static-library"
+                    self.cpp_info.components["core"].location = "lib/libcore.a"
+        """)
+        tc.save({"conanfile.py": dep})
+        tc.run("create .")
+        tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps")
+        cfg = tc.load("CoreKitConfig.cmake")
+        assert "pkg_hook.cmake" in cfg
+        assert "set(PKG_HOOK_FLAG 1)" in cfg
+        assert 'set(CoreLegacy_VERSION_STRING "1.0")' in cfg
+        assert 'set(CoreKit_VERSION_STRING "1.0")' in cfg
+
+    def test_cmake_component_properties_extra_dependencies(self):
+        """Per-file ``properties``: cmake_extra_dependencies only affects that config's targets."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_config_properties", {
+                        "PartA": {
+                            "components": ["a"],
+                            "properties": {"cmake_extra_dependencies": ["Protoc"]},
+                        },
+                        "PartB": {"components": ["b"], "properties": {}},
+                    })
+                    self.cpp_info.components["a"].libs = ["a"]
+                    self.cpp_info.components["a"].type = "static-library"
+                    self.cpp_info.components["a"].location = "lib/liba.a"
+                    self.cpp_info.components["b"].libs = ["b"]
+                    self.cpp_info.components["b"].type = "static-library"
+                    self.cpp_info.components["b"].location = "lib/libb.a"
+        """)
+        tc.save({"conanfile.py": dep})
+        tc.run("create .")
+        tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps")
+        part_a = tc.load("PartA-Targets-release.cmake")
+        part_b = tc.load("PartB-Targets-release.cmake")
+        assert "find_dependency(Protoc" in part_a
+        assert "find_dependency(Protoc" not in part_b
