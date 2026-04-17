@@ -102,6 +102,8 @@ class ConanOutput:
     _silent_warn_tags = []
     _warnings_as_errors = []
     lock = Lock()
+    # Each line of contextual output is prefixed with this gutter (spaces only, no tree glyphs).
+    _INDENT_BODY_PREFIX = "  "
 
     def __init__(self, scope: str = ""):
         """ Initialize the ConanOutput instance.
@@ -112,7 +114,7 @@ class ConanOutput:
         """
         self.stream = sys.stderr
         self._scope = scope
-        self._indent_level = 0
+        self._indented = False
         # FIXME:  This is needed because in testing we are redirecting the sys.stderr to a buffer
         #         stream to capture it, so colorama is not there to strip the color bytes
         self._color = _color_enabled(self.stream)
@@ -167,14 +169,18 @@ class ConanOutput:
         return cls._conan_output_level <= level
 
     def indent_push(self):
-        if self._indent_level == 0 and self._scope:
+        """Enter contextual indented output for this instance; at most one level."""
+        if self._indented:
+            return self
+        if self._scope:
             self.writeln(f"{self._scope}", fg=Color.BRIGHT_WHITE)
             self.writeln("-" * len(self._scope), fg=Color.BRIGHT_WHITE)
-        self._indent_level += 1
+        self._indented = True
         return self
 
     def indent_pop(self):
-        self._indent_level = max(0, self._indent_level - 1)
+        """Leave contextual output (paired with :meth:`indent_push`)."""
+        self._indented = False
         return self
 
     @property
@@ -225,16 +231,18 @@ class ConanOutput:
         return self
 
     def _format_scoped_message(self, msg, fg=None, bg=None):
+        """Prefix every physical line with a short space gutter (block under the scope header)."""
         fg = fg or ""
         bg = bg or ""
-        lines = msg.split("\n")
+        gutter = self._INDENT_BODY_PREFIX
+        lines = msg.splitlines()
         parts = []
         for i, line in enumerate(lines):
-            prefix = "|- " if i == 0 else "\n|  "
+            lead = "" if i == 0 else "\n"
             if self._color:
-                parts.append(f"{prefix}{fg}{bg}{line}{Style.RESET_ALL}")
+                parts.append(f"{lead}{gutter}{fg}{bg}{line}{Style.RESET_ALL}")
             else:
-                parts.append(f"{prefix}{line}")
+                parts.append(f"{lead}{gutter}{line}")
         return "".join(parts)
 
     def _write_message(self, msg, fg=None, bg=None, newline=True, *, ignore_indent=False):
@@ -245,7 +253,7 @@ class ConanOutput:
             msg = "=> {}".format(msg)
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
-        if self._indent_level > 0 and not ignore_indent:
+        if self._indented and not ignore_indent:
             ret = self._format_scoped_message(msg, fg, bg)
         elif self._scope:
             if self._color:
@@ -319,6 +327,7 @@ class ConanOutput:
     def title(self, msg: str):
         """ Draws a title around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
+            self._indented = False
             self._write_message("\n======== {} ========".format(msg),
                                 fg=Color.BRIGHT_MAGENTA, ignore_indent=True)
         return self
@@ -326,6 +335,7 @@ class ConanOutput:
     def subtitle(self, msg: str):
         """ Draws a subtitle around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
+            self._indented = False
             self._write_message("\n-------- {} --------".format(msg),
                                 fg=Color.BRIGHT_MAGENTA, ignore_indent=True)
         return self
