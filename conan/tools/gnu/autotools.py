@@ -1,6 +1,7 @@
 import os
 import re
 
+from conan.errors import ConanException
 from conan.tools.build import build_jobs, cmd_args_to_string, load_toolchain_args
 from conan.internal.subsystems import subsystem_path, deduce_subsystem
 from conan.tools.files import chdir
@@ -99,7 +100,10 @@ class Autotools:
         """
         if target is None:
             target = "install"
-            do_strip = self._conanfile.conf.get("tools.build:install_strip", check_type=bool)
+            try:
+                do_strip = self._conanfile.conf.get("tools.build:install_strip", check_type=bool)
+            except ConanException:
+                do_strip = "autotools" in self._conanfile.conf.get("tools.build:install_strip", check_type=list)
             if do_strip:
                 target += "-strip"
         args = args if args else []

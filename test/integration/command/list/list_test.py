@@ -995,3 +995,10 @@ def test_list_local_recipe_index():
     assert "ERROR: Recipe 'pkg/0.1@a' not found" in c.out
     c.run("list 'pkg%0.1#a@b/c' -r=local")
     assert "ERROR: Recipe 'pkg%0.1' not found" in c.out
+
+def test_list_error_option():
+    c = TestClient(default_server_user=False)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_option("my_error_option", [1, 2])})
+    c.run("create . -o my_error_option=1")
+    c.run("list pkg/1.0#*:*")
+    assert "my_error_option: 1" in c.out
