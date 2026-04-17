@@ -399,7 +399,7 @@ class Requirement:
                         if not warned:
                             msg = ("Transitive dependencies with 'headers=False' effect in "
                                    "'package_id' is not necessary. Use "
-                                   "package_id_fix_transitive_static=True attribute to optimize it.")
+                                   "required_conan_version>=2.28 to optimize it.")
                             conanfile.output.warning(msg, warn_tag="risk")
                             conanfile._conan_fix_transitive_static = True
                 else:

@@ -221,14 +221,21 @@ class TestRequirementPackageId:
     def test_transitive_statics(self, apply_fix):
         # https://github.com/conan-io/conan/issues/19664
         c = TestClient(light=True)
-        pkgtype = "static-library"
-        fix = "package_id_fix_transitive_static=True" if apply_fix else ""
-        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type(pkgtype),
-                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type(pkgtype)
+        version = "2.28" if apply_fix else "2.27"
+        libc = textwrap.dedent(f"""\
+            from conan import ConanFile
+
+            required_conan_version = ">={version}"
+            class LibcConan(ConanFile):
+                name = "libc"
+                version = "1.0"
+                package_type = "static-library"
+                requires = "libb/1.0"
+            """)
+        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type("static-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
                                                                 .with_requires("liba/1.0"),
-                "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type(pkgtype)
-                                                                .with_requires("libb/1.0")
-                                                                .with_class_attribute(fix)
+                "libc/conanfile.py": libc
                 })
         c.run("create liba")
         c.run("create libb")

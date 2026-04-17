@@ -6,6 +6,18 @@ from conan.internal.methods import auto_header_only_package_id
 from conan.internal.model.info import (ConanInfo, RequirementsInfo, RequirementInfo,
                                        PythonRequiresInfo)
 from conan.internal.model.pkg_type import PackageType
+from conan.internal.model.version_range import VersionRange
+from conan.internal.model.version import Version
+
+
+def _compute_fix_transitive(conanfile):
+    # fix for transitive static libraries
+    recipe_require_conan_version = conanfile._conan_required_conan_version  # noqa
+    if recipe_require_conan_version:
+        version_range = VersionRange(recipe_require_conan_version)
+        for conditions in version_range.condition_sets:
+            conditions.prerelease = True
+        return not version_range.contains(Version("2.27.9"), resolve_prerelease=None)
 
 
 def compute_package_id(node, modes, config_version, hook_manager):
@@ -20,7 +32,9 @@ def compute_package_id(node, modes, config_version, hook_manager):
 
     data = OrderedDict()
     build_data = OrderedDict()
-    fix_transitive_static = getattr(conanfile, "package_id_fix_transitive_static", False)
+
+    fix_transitive_static = _compute_fix_transitive(conanfile)
+
     for require, transitive in node.transitive_deps.items():
         dep_node = transitive.node
         require.deduce_package_id_mode(conanfile, dep_node,
