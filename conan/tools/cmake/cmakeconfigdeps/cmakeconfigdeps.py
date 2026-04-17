@@ -121,10 +121,13 @@ class CMakeConfigDeps:
             full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
             config = ConfigTemplate2(self, require, dep, full_cpp_info)
             ret[config.filename] = config.content()
-            config_version = ConfigVersionTemplate2(self, dep)
+            base_filename = self.get_cmake_filename(dep)
+            properties = {"cmake_config_version_compat": self.get_property("cmake_config_version_compat", dep),
+                          "system_package_version": self.get_property("system_package_version", dep)}
+            config_version = ConfigVersionTemplate2(base_filename, dep.ref.version, properties)
             ret[config_version.filename] = config_version.content()
 
-            targets = TargetsTemplate2(self, dep)
+            targets = TargetsTemplate2(base_filename)
             ret[targets.filename] = targets.content()
             target_configuration = TargetConfigurationTemplate2(self, dep, require, full_cpp_info)
             ret[target_configuration.filename] = target_configuration.content()
