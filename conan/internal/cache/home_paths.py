@@ -22,11 +22,6 @@ class HomePaths:
 
     @property
     def deployers_path(self):
-        deploy = os.path.join(self._home, _EXTENSIONS_FOLDER, "deploy")
-        if os.path.exists(deploy):
-            ConanOutput().warning("Use 'deployers' cache folder for deployers instead of 'deploy'",
-                                  warn_tag="deprecated")
-            return deploy
         return os.path.join(self._home, _EXTENSIONS_FOLDER, "deployers")
 
     @property
