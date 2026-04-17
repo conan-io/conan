@@ -1069,8 +1069,8 @@ class TestCmakeConfigProperties:
         assert os.path.exists(os.path.join(tc.current_folder, "greetings-Targets-release.cmake"))
         assert os.path.exists(os.path.join(tc.current_folder, "greetings-config-version.cmake"))
         # Targets contain the expected components
-        adieu_config = tc.load("greetings-config.cmake")
-        assert "set(greetings_LIBRARIES greet )" in adieu_config
+        greetings_config = tc.load("greetings-config.cmake")
+        assert "set(greetings_LIBRARIES greet pkg::hello-helpers )" in greetings_config
         # Targets contain the expected components
         greetings_targets = tc.load("greetings-Targets-release.cmake")
         assert "add_library(greet SHARED IMPORTED)" in greetings_targets
@@ -1083,7 +1083,7 @@ class TestCmakeConfigProperties:
         assert os.path.exists(os.path.join(tc.current_folder, "adieu-config-version.cmake"))
         # Targets contain the expected components
         adieu_config = tc.load("adieu-config.cmake")
-        assert "set(adieu_LIBRARIES pkg::bye )" in adieu_config
+        assert "set(adieu_LIBRARIES pkg::bye pkg::bye-helpers )" in adieu_config
         # Targets contain the expected components
         adieu_targets = tc.load("adieu-Targets-release.cmake")
         assert "find_dependency(greetings REQUIRED CONFIG)" in adieu_targets

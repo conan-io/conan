@@ -171,8 +171,8 @@ class CMakeConfigDeps:
                 raise ConanException(f'The expected type for {prop} is "{check_type.__name__}", '
                                      f'but "{type(v).__name__}" was found')
 
-        if custom_props is not None:
-            value = custom_props.get(prop)
+        if custom_props is not None and prop in custom_props:
+            value = custom_props[prop]
             _check_type(value)
             return value
 
@@ -207,32 +207,26 @@ class CMakeConfigDeps:
 
         This method creates a map for the root/components belonging to each XXX-config file.
         It also reads the properties:
+            - cmake_config_properties: dict mapping each CMake package file name to a dict with
+              ``components`` (list of component names) and optional ``properties`` (per-file
+              overrides for CMakeConfigDeps global properties).
             - cmake_file_name: name for the root config file.
-            - cmake_file_name_components: dict-like object to define the cmake_file_name and the
-                                          components belonging to it. The first one mentioned in the
-                                          list will act as the root one. For example:
-                                          self.cpp_info.set_property("cmake_file_name_components", {
-                                              "CMAKE_FILE_NAME1": ["COMP1", "COMP2"],
-                                              "CMAKE_FILE_NAME2": ["COMP3"],
-                                              ...
-                                          })
         """
         ret = {}
         components = full_cpp_info.components if full_cpp_info else dep.cpp_info.components
         left_components_in_dep = list(components.keys())
         default_components = dep.cpp_info.default_components or []
-        # Component filenames mapping
-        components_file_info = self.get_property("cmake_file_name_components", dep) or {}
+        components_file_info = self.get_property("cmake_config_properties", dep) or {}
         for filename, global_cpp_info in components_file_info.items():
             cmps_per_file = global_cpp_info.get("components", [])
             for name in cmps_per_file:
                 if name in default_components:
                     raise ConanException(f"The default component '{name}' is defined in "
                                          f"another CMake Config file. Check the "
-                                         f"'cmake_file_name_components' property.")
+                                         f"'cmake_config_properties' property.")
                 elif name not in left_components_in_dep:
                     raise ConanException(f"Component '{name}' does not exist. Check the "
-                                         f"'cmake_file_name_components' property definition.")
+                                         f"'cmake_config_properties' property definition.")
                 else:
                     left_components_in_dep.remove(name)  # total of components within the root Config file
             ret[filename] = {"components": cmps_per_file,

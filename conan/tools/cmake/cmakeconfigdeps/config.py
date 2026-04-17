@@ -107,8 +107,9 @@ class ConfigTemplate2:
             include_dirs = ";".join(relativize_path(i.replace("\\", "/"),
                                                      self._cmakedeps._conanfile,
                                                      "${CMAKE_CURRENT_LIST_DIR}")
-                                    for i in set(aggregated_cppinfo.includedirs))
-            definitions = ";".join("-D" + cmake_escape_value(d) for d in set(aggregated_cppinfo.defines))
+                                    for i in aggregated_cppinfo.includedirs)
+            definitions = ";".join("-D" + cmake_escape_value(d)
+                                   for d in aggregated_cppinfo.defines)
 
             libraries = []
             if self._full_cpp_info.has_components:

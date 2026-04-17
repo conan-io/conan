@@ -221,6 +221,15 @@ class TargetConfigurationTemplate2:
                 cmake_target_aliases = self._get_aliases(name)
                 target["cmake_target_aliases"] = cmake_target_aliases
                 libs[target_name] = target
+        # Root cpp_info without components: a single pkg::pkg (or renamed) target
+        if self._cmake_file_info["is_root"] and not self._full_cpp_info.has_components:
+            target_name = self._get_cmake_target_name(pkg_name)
+            target = self._get_cmake_lib(self._full_cpp_info, pkg_folder, pkg_folder_var,
+                                         requires=requires_map.get(target_name))
+            if target is not None:
+                cmake_target_aliases = self._get_aliases()
+                target["cmake_target_aliases"] = cmake_target_aliases
+                libs[target_name] = target
         return libs
 
     def _get_cmake_target_name(self, pkg_name, comp_name=None) -> str:
@@ -228,8 +237,10 @@ class TargetConfigurationTemplate2:
         return target_name or (f"{pkg_name}::{comp_name}" if comp_name else f"{pkg_name}::{pkg_name}")
 
     def _get_cmake_lib(self, info, pkg_folder, pkg_folder_var, comp_name=None, requires=None):
+        extra_libs = self._cmakedeps.get_property("cmake_extra_interface_libs", self._conanfile,
+                                                  comp_name=comp_name, check_type=list) or []
         if info.exe or not (info.package_framework or info.frameworks or info.includedirs or info.libs
-                            or info.system_libs or info.defines or info.requires):
+                            or info.system_libs or info.defines or info.requires or extra_libs):
             return
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
@@ -238,8 +249,6 @@ class TargetConfigurationTemplate2:
         # FIXME: Filter by lib traits!!!!!
         if not self._require.headers:  # If not depending on headers, paths and
             includedirs = defines = None
-        extra_libs = self._cmakedeps.get_property("cmake_extra_interface_libs", self._conanfile,
-                                                  comp_name=comp_name, check_type=list) or []
         sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
         target = {"type": "INTERFACE",
                   "comp_name": comp_name,
