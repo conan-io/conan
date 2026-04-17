@@ -581,7 +581,8 @@ class TestWorkspaceBuild:
                     result = []
                     for f in os.listdir(self.folder):
                         if os.path.isdir(os.path.join(self.folder, f)):
-                            result.append({"path": f, "ref": f"{f}/0.1"})
+                            result.append({"path": f, "ref": f"{f}/0.1",
+                                           "output_folder": f"{f}/myout"})
                     return result
            """)
         c = TestClient(light=True)
@@ -590,6 +591,7 @@ class TestWorkspaceBuild:
         c.run("workspace info")
         assert "pkga/0.1" in c.out
         c.run("workspace build")
+        assert "metadata" in os.listdir(os.path.join(c.current_folder, "pkga", "myout"))
         assert "conanfile.py (pkga/0.1): Building pkga AND 0.1!!!" in c.out
 
     def test_build_with_external_editable_python_requires(self):

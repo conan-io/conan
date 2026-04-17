@@ -3,7 +3,6 @@ import pytest
 
 from conan.test.utils.tools import TestClient
 
-new_value = "will_break_next"
 
 consumer = textwrap.dedent("""
 from conan import ConanFile
@@ -13,7 +12,7 @@ class Consumer(ConanFile):
     name = "consumer"
     version = "1.0"
     settings = "os", "compiler", "build_type", "arch"
-    generators = "CMakeDeps", "CMakeToolchain"
+    generators = "CMakeConfigDeps", "CMakeToolchain"
     exports_sources = ["CMakeLists.txt"]
     requires = "hello/1.0"
 
@@ -50,10 +49,10 @@ def test_global_alias():
 
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"create .")
 
     assert "hello aliased target: hello::hello" in client.out
 
@@ -84,10 +83,10 @@ def test_component_alias():
 
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"create .")
 
     assert "hola::adios aliased target: hello::buy" in client.out
 
@@ -119,10 +118,10 @@ def test_global_and_component_alias():
 
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"create .")
 
     assert "hola::hola aliased target: hello::hello" in client.out
 
@@ -153,10 +152,10 @@ def test_custom_name():
 
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"create .")
 
     assert "hello aliased target: ola::comprar" in client.out
 
@@ -184,10 +183,10 @@ def test_collide_component_alias():
 
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
+    client.run(f"create .", assert_error=True)
 
     assert "Alias 'hello::buy' already defined as a target in hello/1.0" in client.out
 
@@ -216,10 +215,10 @@ def test_collide_component_alias_to_alias():
 
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
+    client.run(f"create .", assert_error=True)
 
     assert "Alias 'hello::foo' already defined in hello/1.0" in client.out
 
@@ -227,7 +226,8 @@ def test_collide_component_alias_to_alias():
 @pytest.mark.tool("cmake", "3.27")
 @pytest.mark.parametrize("root_target", ["hello::custom", None])
 def test_skip_global_if_aliased(root_target):
-    target_line = f'self.cpp_info.set_property("cmake_target_name", "{root_target}")' if root_target else ""
+    target_line = f'self.cpp_info.set_property("cmake_target_name", "{root_target}")' \
+        if root_target else ""
     target_name = root_target or "hello::hello"
     conanfile = textwrap.dedent(f"""
     from conan import ConanFile
@@ -253,9 +253,10 @@ def test_skip_global_if_aliased(root_target):
 
     client = TestClient()
     client.save({"conanfile.py": conanfile})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
+    client.run(f"create .", assert_error=True)
 
-    assert f"Can't define an alias '{target_name}' for the root target '{target_name}' in hello/1.0" in client.out
+    assert (f"Can't define an alias '{target_name}' for the root "
+            f"target '{target_name}' in hello/1.0") in client.out

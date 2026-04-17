@@ -325,6 +325,11 @@ class GnuToolchain:
         ret = [self.ndebug, self.gcc_cxx11_abi] + self.extra_defines + conf_flags
         return self._filter_list_empty_fields(ret)
 
+    @property
+    def rcflags(self):
+        conf_flags = self._conanfile.conf.get("tools.build:rcflags", default=[], check_type=list)
+        return self._filter_list_empty_fields(conf_flags)
+
     def _get_default_configure_shared_flags(self):
         args = {}
         # Just add these flags if there's a shared option defined (never add to exe's)
@@ -373,6 +378,8 @@ class GnuToolchain:
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
+        if self.rcflags:
+            env.append("RCFLAGS", self.rcflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
         # Objective C/C++
         self._include_obj_arc_flags(env)

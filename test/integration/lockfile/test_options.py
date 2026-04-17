@@ -34,10 +34,10 @@ def test_options():
     client.run("lock create --requires=nano/1.0@ --build=*")
     client.run("graph build-order --requires=nano/1.0@ "
                "--lockfile-out=conan.lock --build=missing "
-               "--format=json", redirect_stdout="build_order.json")
+               "--format=json --order-by=recipe", redirect_stdout="build_order.json")
 
     json_file = client.load("build_order.json")
-    to_build = json.loads(json_file)
+    to_build = json.loads(json_file)['order']
     ffmpeg = to_build[0][0]
     ref = ffmpeg["ref"]
     options = " ".join(f"-o {option}" for option in ffmpeg["packages"][0][0]["options"])

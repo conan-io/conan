@@ -18,16 +18,15 @@ class TestToolRequires:
         assert f"tool/1.0{revision or '#platform'} - Platform" in client.out
 
     def test_system_tool_require_non_matching(self):
-        """ if what is specified in [system_tool_require] doesn't match what the recipe requires, then
-        the system_tool_require will not be used, and the recipe will use its declared version
+        """ if what is specified in [platform_tool_requires] doesn't match what the recipe requires, then
+        the platform_tool_requires will not be used, and the recipe will use its declared version
         """
         client = TestClient(light=True)
         client.save({"tool/conanfile.py": GenConanfile("tool", "1.0"),
                      "conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/1.0"),
-                     "profile": "[system_tools]\ntool/1.1"})
+                     "profile": "[platform_tool_requires]\ntool/1.1"})
         client.run("create tool")
         client.run("create . -pr=profile")
-        assert "WARN: Profile [system_tools] is deprecated" in client.out
         assert "tool/1.0#60ed6e65eae112df86da7f6d790887fd - Cache" in client.out
 
     @pytest.mark.parametrize("revision", ["", "#myrev"])
@@ -156,6 +155,26 @@ class TestToolRequires:
         c.run("export libcurl")
         c.run("install app -pr:b=profile_build --build=missing")
         assert "Install finished successfully" in c.out
+
+    def test_platform_requires_error(self):
+        """
+        https://github.com/conan-io/conan/issues/19745
+        """
+        c = TestClient(light=True)
+        profile = textwrap.dedent("""\
+            include(default)
+
+            [platform_tool_requires]
+            cmake/[*]
+            """)
+        c.save({"conanfile.py": GenConanfile("catch2").with_tool_requires("cmake/[*]"),
+                "profile": profile})
+
+        c.run("create  --version=3.6.0 -pr=profile", assert_error=True)
+        assert "AssertionError" not in c.out
+        assert ("ERROR: Error reading 'profile' profile: Profile [platform_requires]/"
+                "[platform_tool_requires] must be exact versions, "
+                "not version ranges: [cmake/[*]]") in c.out
 
 
 class TestToolRequiresLock:

@@ -1,4 +1,3 @@
-from collections import OrderedDict
 import pytest
 
 from conan.api.model import Remote
@@ -278,10 +277,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         deps_graph = self.build_consumer(consumer, install=False)
 
         assert type(deps_graph.error) is GraphConflictError
-
         assert 2 == len(deps_graph.nodes)
-        app = deps_graph.root
-        libb = app.edges[0].dst
 
     def test_transitive_fixed_conflict_forced(self):
         # app ---> libb/0.1 -----------> liba/1.2
@@ -391,18 +387,15 @@ def test_remote_version_ranges():
 
 
 def test_different_user_channel_resolved_correctly():
-    server1 = TestServer()
-    server2 = TestServer()
-    servers = OrderedDict([("server1", server1), ("server2", server2)])
-
-    client = TestClient(servers=servers, inputs=2*["admin", "password"], light=True)
+    client = TestClient(servers={"server1": TestServer(), "server2": TestServer()},
+                        inputs=2*["admin", "password"], light=True)
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=lib --version=1.0 --user=conan --channel=stable")
     client.run("create . --name=lib --version=1.0 --user=conan --channel=testing")
     client.run("upload lib/1.0@conan/stable -r=server1")
     client.run("upload lib/1.0@conan/testing -r=server2")
 
-    client2 = TestClient(servers=servers, light=True)
+    client2 = TestClient(servers=client.servers, light=True)
     client2.run("install --requires=lib/[>=1.0]@conan/testing")
     assert f"lib/1.0@conan/testing: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
            f"from remote 'server2' " in client2.out

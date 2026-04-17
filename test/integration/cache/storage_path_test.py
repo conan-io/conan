@@ -22,7 +22,7 @@ def test_storage_path():
 def test_wrong_home_error():
     client = TestClient(light=True)
     client.save_home({"global.conf": "core.cache:storage_path=//"})
-    client.run("list *")
+    client.run("list *", assert_error=True)
     assert "Couldn't initialize storage in" in client.out
 
 
