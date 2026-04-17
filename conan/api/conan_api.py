@@ -70,10 +70,12 @@ class ConanAPI:
         self.config: ConfigAPI = ConfigAPI(self, self._api_helpers)
         #: Used to interact with remotes
         self.remotes: RemotesAPI = RemotesAPI(self, self._api_helpers)
-        self.command = CommandAPI(self)
+        #: Used to call other commands
+        self.command: CommandAPI = CommandAPI(self)
         #: Used to get latest refs and list refs of recipes and packages
         self.list: ListAPI = ListAPI(self, self._api_helpers)
-        self.profiles = ProfilesAPI(self, self._api_helpers)
+        #: Used to process and load Conan profiles
+        self.profiles: ProfilesAPI = ProfilesAPI(self, self._api_helpers)
         #: Used to install binaries, sources, deploy packages and more
         self.install: InstallAPI = InstallAPI(self, self._api_helpers)
         self.graph = GraphAPI(self, self._api_helpers)

@@ -899,3 +899,19 @@ class TestDownloadCacheBackupSources:
         self.client.run("upload * -c -r=default")
         assert "No backup sources files to upload" in self.client.out
         assert sha256 + ".dirty" not in os.listdir(os.path.join(self.download_cache_folder, "s"))
+
+    def test_absolute_core_sources_conf(self):
+        client = TestClient(light=True)
+        client.save_home(
+            {"global.conf": f"core.sources:download_cache=relative\n"
+                            "core.sources:download_urls=['origin']"})
+        conanfile = textwrap.dedent(f"""
+                        from conan import ConanFile
+                        from conan.tools.files import download
+                        class Pkg(ConanFile):
+                           def source(self):
+                               download(self, "badbad", "myfile.txt", sha256="sha256")
+                        """)
+        client.save({"conanfile.py": conanfile})
+        client.run("source .", assert_error=True)
+        assert "core.sources:download_cache must be an absolute path" in client.out

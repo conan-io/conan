@@ -6,6 +6,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from conan.internal.api.remotes.localdb import LocalDB
+from conan.internal.rest.rest_client_v2 import RestV2Methods
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
 from conan.test.utils.env import environment_update
@@ -492,3 +493,31 @@ class TestRemoteAuth:
         c.run("remote auth *")
         assert "Remote 'default' needs authentication, obtaining credentials" in c.out
         assert "user: myuser" in c.out
+
+    def test_remote_auth_env_vars_anonymous_warning(self):
+        """https://github.com/conan-io/conan/issues/19807
+        Warn when env vars are set but server accepts anonymous access"""
+        server = TestServer(users={"admin": "password"})
+        c = TestClient(light=True, servers={"default": server})
+
+        # env vars set + anonymous server → warning with var names
+        with patch.object(RestV2Methods, "check_credentials", return_value=None):
+            with environment_update({"CONAN_LOGIN_USERNAME": "admin", "CONAN_PASSWORD": "password"}):
+                c.run("remote auth default")
+
+        assert "CONAN_LOGIN_USERNAME" in c.out
+        assert "environment variables were not used. Use '--force'" in c.out
+
+        # env vars set + --force → authenticated, no warning
+        with environment_update({"CONAN_LOGIN_USERNAME": "admin", "CONAN_PASSWORD": "password"}):
+            c.run("remote auth default --force")
+
+        assert "user: admin" in c.out
+        assert "environment variables were not used" not in c.out
+
+        # no env vars + anonymous server → no warning
+        c.run("remote logout default")
+        with patch.object(RestV2Methods, "check_credentials", return_value=None):
+            c.run("remote auth default")
+
+        assert "environment variables were not used" not in c.out

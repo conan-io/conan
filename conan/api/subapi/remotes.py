@@ -278,6 +278,16 @@ class RemotesAPI:
                 return
         self._api_helpers.remote_manager.check_credentials(remote, force)
         user, token, _ = localdb.get_login(remote.url)
+        if not force and user is None:
+            remote_upper = remote.name.replace("-", "_").upper()
+            candidate_vars = [f"CONAN_LOGIN_USERNAME_{remote_upper}", "CONAN_LOGIN_USERNAME",
+                              f"CONAN_PASSWORD_{remote_upper}", "CONAN_PASSWORD"]
+            found_vars = [v for v in candidate_vars if os.getenv(v)]
+            if found_vars:
+                ConanOutput().warning(
+                    f"Remote '{remote.name}' accepted anonymous access. {', '.join(found_vars)} "
+                    f"environment variables were not used. Use '--force' to force authentication."
+                )
         return user
 
 
