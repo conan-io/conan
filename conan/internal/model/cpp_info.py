@@ -139,13 +139,13 @@ class _Component:
         }
 
     @staticmethod
-    def _evaluate_cond(definitions, conanfile):
+    def _evaluate_cond(item, elements, conanfile):
         if conanfile is None:
-            return definitions
+            return elements
         plugin = conanfile._conan_helpers.flags_plugin  # noqa
         if plugin is None:
-            return definitions
-        return plugin(definitions, conanfile)
+            return elements
+        return plugin(conanfile=conanfile, item=item, elements=elements)
 
     @staticmethod
     def deserialize(contents):
@@ -356,7 +356,7 @@ class _Component:
     def cflags(self):
         if self._cflags is None:
             self._cflags = []
-        return self._evaluate_cond(self._cflags, self._consumer_conanfile)
+        return self._evaluate_cond("cflags", self._cflags, self._consumer_conanfile)
 
     @cflags.setter
     def cflags(self, value):
@@ -366,7 +366,7 @@ class _Component:
     def cxxflags(self):
         if self._cxxflags is None:
             self._cxxflags = []
-        return self._evaluate_cond(self._cxxflags, self._consumer_conanfile)
+        return self._evaluate_cond("cxxflags", self._cxxflags, self._consumer_conanfile)
 
     @cxxflags.setter
     def cxxflags(self, value):
@@ -376,7 +376,8 @@ class _Component:
     def sharedlinkflags(self):
         if self._sharedlinkflags is None:
             self._sharedlinkflags = []
-        return self._evaluate_cond(self._sharedlinkflags, self._consumer_conanfile)
+        return self._evaluate_cond("sharedlinkflags", self._sharedlinkflags,
+                                   self._consumer_conanfile)
 
     @sharedlinkflags.setter
     def sharedlinkflags(self, value):
@@ -386,7 +387,7 @@ class _Component:
     def exelinkflags(self):
         if self._exelinkflags is None:
             self._exelinkflags = []
-        return self._evaluate_cond(self._exelinkflags, self._consumer_conanfile)
+        return self._evaluate_cond("exelinkflags", self._exelinkflags, self._consumer_conanfile)
 
     @exelinkflags.setter
     def exelinkflags(self, value):

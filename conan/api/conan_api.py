@@ -202,20 +202,7 @@ class ConanAPI:
             if os.path.isfile(plugin_path):
                 mod, _ = load_python_file(plugin_path)
                 return mod.flags_plugin
-
-            # TODO: Maybe make this a file in the cache like compatibility.py?
-            def flags_plugin(definitions, conanfile):
-                compiler = conanfile.settings.get_safe("compiler")
-                result = []
-                for d in definitions:
-                    if d == "/Zc:__cplusplus":
-                        if compiler != "msvc":
-                            result.append(d)
-                    else:
-                        result.append(d)
-                return result
-
-            return flags_plugin
+            return None
 
         def get_loader(self):
             ws_editables = self._conan_api.workspace.packages()
