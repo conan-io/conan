@@ -318,6 +318,11 @@ class Lockfile:
             return prevs.get(node.package_id)
 
     def check_config_requires(self, installed_refs):
+        # Validates that the given installed configuration packages satisfy the current lockfile
+        # For that to happen, the installed conf packages must match the lockfile ones
+        # Lockfile ones can be partial, like not containing recipe-revision
+        # And also all 'config_requires' in the lockfile must have a configuration package for them
+        # In case of a lockfile containing several constraints, one per package name must exist
         lockfile_refs = set(self._conf_requires.refs())
         if not lockfile_refs:
             return  # If lockfile is not locking config_requires, do nothing, would break
