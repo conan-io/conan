@@ -509,6 +509,7 @@ diff_html = r"""
 
             function initializeExtensionsFilter() {
                 const exts = [];
+                let addNoExtension = false;
                 for (let path in data) {
                     const bits = path.split("/");
                     const file = bits.pop();
@@ -518,9 +519,15 @@ diff_html = r"""
                             exts.push(ext);
                             extensions[ext] = false;
                         }
+                    } else {
+                        addNoExtension = true;
                     }
                 }
                 exts.sort();
+                if (addNoExtension) {
+                    exts.unshift(null);
+                    extensions[null] = false;
+                }
 
                 /* example: <div class="file-tree-more-option">
                                 <input type="checkbox" id="show-moved-files" checked
@@ -541,12 +548,16 @@ diff_html = r"""
                     checkbox.type = "checkbox"
                     checkbox.checked = true;
                     checkbox.dataset.extension = ext;
-                    checkbox.onclick = (event) => {
+                    checkbox.onchange = (event) => {
                         onExtensionsChange(event);
                     }
 
                     label.for = id;
-                    label.innerText = "." + ext;
+                    if (ext != null) {
+                        label.innerText = "." + ext;
+                    } else {
+                        label.innerText = "No extension";
+                    }
 
                     optionDiv.appendChild(checkbox);
                     optionDiv.appendChild(label);
@@ -742,7 +753,7 @@ diff_html = r"""
             let includeSearchQuery = new RegExp(".*", "i")
             let excludeSearchQuery = new RegExp("", "i");
 
-            async function onSearchInput(event) {
+            async function onSearchInput() {
                 const sidebar = document.querySelectorAll(".sidebar li");
                 const fileList = document.querySelector(".file-list");
                 const content = document.querySelectorAll(".content .diff-container .diff-content");
@@ -759,7 +770,6 @@ diff_html = r"""
                     "new": document.getElementById("show-new-files").checked,
                     "old": document.getElementById("show-old-files").checked,
                 };
-
                 sidebar.forEach(async function(item) {
                     if (item.dataset.path === undefined) {
                         // A folder, those are handled later
@@ -767,7 +777,11 @@ diff_html = r"""
                     }
                     const text = item.dataset.path.toLowerCase();
                     const bits = text.split("/");
-                    const extension = bits.pop().split(".").pop();
+                    const filenameParts = bits.pop().split(".")
+                    let extension = null;
+                    if (filenameParts.length > 1) {
+                        extension = filenameParts.pop();
+                    }
                     const shouldInclude = includeSearchQuery.test(text) && extensions[extension] === true;
                     let shouldExclude = excludeSearchQuery.test(text) && extensions[extension] === false;
                     const associatedId = item.querySelector("a").getAttribute("href").substring(1)
@@ -829,7 +843,7 @@ diff_html = r"""
             async function onExcludeSearchInput(event) {
                 let expr = event.currentTarget.value.toLowerCase();
                 excludeSearchQuery = new RegExp(expr, "i")
-                debouncedOnSearchInput(event);
+                debouncedOnSearchInput();
             }
 
             async function onIncludeSearchInput(event) {
@@ -838,14 +852,14 @@ diff_html = r"""
                     expr = ".*";
                 }
                 includeSearchQuery = new RegExp(expr, "i")
-                debouncedOnSearchInput(event);
+                debouncedOnSearchInput();
             }
 
             function onExtensionsChange(event) {
                 const ext = event.currentTarget.dataset.extension;
                 const value = event.currentTarget.checked;
                 extensions[ext] = value;
-                debouncedOnSearchInput(event);
+                debouncedOnSearchInput();
             }
 
             function onExtensionsToggle(value) {
@@ -853,6 +867,19 @@ diff_html = r"""
                 const checkboxes = container.getElementsByTagName("input");
                 for (let checkbox of checkboxes) {
                     checkbox.checked = value;
+                    extensions[checkbox.dataset.extension] = value;
+                }
+                debouncedOnSearchInput();
+            }
+
+            function onExtensionsSearch(event) {
+                const filter = event.currentTarget.value.toLowerCase();
+                const container = document.getElementById("file-tree-more-extensions");
+                const checkboxes = container.getElementsByTagName("input");
+                for (let checkbox of checkboxes) {
+                    const ext = checkbox.dataset.extension;
+                    const display = filter == "" || ext.includes(filter) ? "block" : "none";
+                    checkbox.parentElement.style.display = display;
                 }
             }
 
@@ -974,6 +1001,7 @@ diff_html = r"""
                                 <label for="show-moved-files">Moved files</label>
                             </div>
                             <h4>Extensions</h4>
+                            <input type="search" class="search-field" oninput="onExtensionsSearch(event);" placeholder="Search extension"></input>
                             <button onclick="onExtensionsToggle(true);">Check all</button>
                             <button onclick="onExtensionsToggle(false);">Uncheck all</button>
                             <div id="file-tree-more-extensions"></div>
