@@ -66,41 +66,41 @@ diff_html = r"""
         <style>
             /* --- Colors --- */
             :root {
-                --body-bgColor: #f8f8f8;
-                --sidebar-bgColor: #f4f4f466;
-                --sidebar-borderColor: #ccc;
-                --sidebar-contents-bgColor: #f4f4f4;
-                --content-bgColor: #f8f8f8;
-                --search-area-borderColor: #ccc;
-                --search-field-borderColor: #ccc;
-                --file-list-borderColor: #ddd;
-                --folder-summary-hover-bgColor: #e0e0e033;
-                --folder-ul-hover-borderColor: #00000066;
-                --sidebar-li-a-hover-bgColor: #e0e0e0;
+                --body-bgColor: #ffffff;
+                --sidebar-bgColor: #f4f6fbcc;
+                --sidebar-borderColor: #d0d7de;
+                --sidebar-contents-bgColor: #f4f6fb;
+                --content-bgColor: #ffffff;
+                --search-area-borderColor: #d0d7de;
+                --search-field-borderColor: #d0d7de;
+                --file-list-borderColor: #eaecef;
+                --folder-summary-hover-bgColor: #e5eaf3cc;
+                --folder-ul-hover-borderColor: #b6b6b6cc;
+                --sidebar-li-a-hover-bgColor: #e5eaf3;
                 --sidebar-button-hover-bgColor: var(--sidebar-li-a-hover-bgColor);
-                --sidebar-link-color: black;
+                --sidebar-link-color: #22272e;
                 --sidebar-link-hover-color: var(--sidebar-link-color);
                 --sidebar-link-visited-color: var(--sidebar-link-color);
-                --sidebar-file-new-color: green;
-                --sidebar-file-old-color: gray;
-                --sidebar-file-deleted-color: red;
-                --diff-content-borderColor: black;
-                --diff-content-bgColor: white;
-                --diff-container-linked-borderColor: #0078d7;
-                --diff-summary-borderColor: #ccc;
-                --diff-summary-bgColor: #f8f8f8;
-                --diff-summary-hover-bgColor: #f0f0f0;
-                --new-lines-count-color: green;
-                --old-lines-count-color: black;
-                --context-line-color: #888;
-                --context-chunk-header-bgColor: #cef8ff;
+                --sidebar-file-new-color: #1a7f37;
+                --sidebar-file-old-color: #6e7781;
+                --sidebar-file-deleted-color: #d1242f;
+                --diff-content-borderColor: #d0d7de;
+                --diff-content-bgColor: #fff;
+                --diff-container-linked-borderColor: #0969da;
+                --diff-summary-borderColor: #d0d7de;
+                --diff-summary-bgColor: #f6f8fa;
+                --diff-summary-hover-bgColor: #eaeef2;
+                --new-lines-count-color: #1a7f37;
+                --old-lines-count-color: #6e7781;
+                --context-line-color: #6e7781;
+                --context-chunk-header-bgColor: #e7f6ff;
                 --context-chunk-header-color: var(--context-line-color);
-                --added-line-bgColor: #cbfcd9;
-                --added-line-color: black;
+                --added-line-bgColor: #dafbe1;
+                --added-line-color: #1a7f37;
                 --deleted-line-bgColor: #ffebe9;
-                --deleted-line-color: black;
-                --line-number-added-bgColor: #76ffbb;
-                --line-number-deleted-bgColor: #fdb9c1;
+                --deleted-line-color: #d1242f;
+                --line-number-added-bgColor: #b6f4bb;
+                --line-number-deleted-bgColor: #ffd6d5;
                 --shadow: 0 2px 8px 0 #0001;
                 --radius: 10px;
                 --transition: 0.15s cubic-bezier(.4,0,.2,1);
@@ -144,8 +144,6 @@ diff_html = r"""
                 background: var(--content-bgColor);
                 width: 100%;
                 border-radius: var(--radius);
-                box-shadow: var(--shadow);
-                transition: box-shadow var(--transition);
             }
 
             /* --- Sidebar & File Tree --- */
@@ -669,7 +667,9 @@ diff_html = r"""
                         } else {
                             const spanSymbol = document.createElement("span");
                             spanSymbol.className = "diff-symbol";
-                            spanLine.textContent = line;
+                            // Removes the empty space from the beginning of the line,
+                            // to match layout of removed char for diff lines
+                            spanLine.textContent = line.substring(1);
                             spanLine.prepend(spanSymbol);
                         }
 
