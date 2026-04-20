@@ -231,15 +231,13 @@ class ConanOutput:
         """Prefix every physical line with a short space gutter (block under the scope header).
         Splitlines is used for handling multi-line messages, ensuring a gutter is added to each line
         """
-        lines = msg.splitlines()
         parts = []
-        for i, line in enumerate(lines):
-            lead = "" if i == 0 else "\n"
+        for line in msg.splitlines():
             if self._color:
-                parts.append(f"{lead}  {fg or ''}{bg or ''}{line}{Style.RESET_ALL}")
+                parts.append(f"  {fg or ''}{bg or ''}{line}{Style.RESET_ALL}")
             else:
-                parts.append(f"{lead}  {line}")
-        return "".join(parts)
+                parts.append(f"  {line}")
+        return "\n".join(parts)
 
     def _write_message(self, msg, fg=None, bg=None, newline=True, *, ignore_indent=False):
         if isinstance(msg, dict):

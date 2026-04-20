@@ -43,6 +43,8 @@ def export(conan_api, parser, *args):
                         help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
+    # Only enable scoped output if None. If it is False, it means that
+    # we have explicitly disabled (e.g. tests), so we should not enable it
     if ConanOutput._scoped_recipe_output is None:
         ConanOutput._scoped_recipe_output = True
     cwd = os.getcwd()
