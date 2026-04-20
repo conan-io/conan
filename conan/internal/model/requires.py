@@ -395,11 +395,12 @@ class Requirement:
                 elif self.headers or not fix_transitive_static:
                     self.package_id_mode = non_embed_mode
                     if not self.headers and not fix_transitive_static:
+                        # Just to avoid multiple repeated warnings
                         warned = getattr(conanfile, "_conan_fix_transitive_static", False)
                         if not warned:
                             msg = ("Transitive dependencies with 'headers=False' effect in "
-                                   "'package_id' is not necessary. Use "
-                                   "required_conan_version>=2.28 to optimize it.")
+                                   "'package_id' is not necessary and suboptimal. Use "
+                                   "required_conan_version='>=2.28' to activate it")
                             conanfile.output.warning(msg, warn_tag="risk")
                             conanfile._conan_fix_transitive_static = True
                 else:
