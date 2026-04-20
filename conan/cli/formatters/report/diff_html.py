@@ -517,7 +517,7 @@ diff_html = r"""
                         const ext = file.split('.').pop();
                         if (extensions[ext] === undefined) {
                             exts.push(ext);
-                            extensions[ext] = false;
+                            extensions[ext] = true;
                         }
                     } else {
                         addNoExtension = true;
@@ -526,7 +526,7 @@ diff_html = r"""
                 exts.sort();
                 if (addNoExtension) {
                     exts.unshift(null);
-                    extensions[null] = false;
+                    extensions[null] = true;
                 }
 
                 /* example: <div class="file-tree-more-option">
@@ -750,8 +750,8 @@ diff_html = r"""
                     }, delay);
                 };
             }
-            let includeSearchQuery = new RegExp(".*", "i")
-            let excludeSearchQuery = new RegExp("", "i");
+            let includeSearchQuery = "";
+            let excludeSearchQuery = "";
 
             async function onSearchInput() {
                 const sidebar = document.querySelectorAll(".sidebar li");
@@ -770,6 +770,8 @@ diff_html = r"""
                     "new": document.getElementById("show-new-files").checked,
                     "old": document.getElementById("show-old-files").checked,
                 };
+                console.log("Include", includeSearchQuery);
+                console.log("Exclude", excludeSearchQuery);
                 sidebar.forEach(async function(item) {
                     if (item.dataset.path === undefined) {
                         // A folder, those are handled later
@@ -782,8 +784,8 @@ diff_html = r"""
                     if (filenameParts.length > 1) {
                         extension = filenameParts.pop();
                     }
-                    const shouldInclude = includeSearchQuery.test(text) && extensions[extension] === true;
-                    let shouldExclude = excludeSearchQuery.test(text) && extensions[extension] === false;
+                    const shouldInclude = (includeSearchQuery === "" || text.includes(includeSearchQuery)) && extensions[extension] === true;
+                    let shouldExclude = (excludeSearchQuery !== "" && text.includes(excludeSearchQuery)) && extensions[extension] === false;
                     const associatedId = item.querySelector("a").getAttribute("href").substring(1)
                     const contentItem = document.getElementById(associatedId);
 
@@ -791,6 +793,8 @@ diff_html = r"""
                     const isTypeVisible = typeVisibility[fileType] !== false;
 
                     shouldExclude = shouldExclude || !isTypeVisible;
+
+                    console.log(text, shouldInclude, includeSearchQuery === "", text.includes(includeSearchQuery), extensions[extension] === true, extension);
 
                     if (shouldInclude) {
                         if (shouldExclude) {
@@ -841,17 +845,12 @@ diff_html = r"""
             const debouncedOnSearchInput = debounce(onSearchInput, 300);
 
             async function onExcludeSearchInput(event) {
-                let expr = event.currentTarget.value.toLowerCase();
-                excludeSearchQuery = new RegExp(expr, "i")
+                excludeSearchQuery = event.currentTarget.value.toLowerCase();
                 debouncedOnSearchInput();
             }
 
             async function onIncludeSearchInput(event) {
-                let expr = event.currentTarget.value.toLowerCase();
-                if (expr === "") {
-                    expr = ".*";
-                }
-                includeSearchQuery = new RegExp(expr, "i")
+                includeSearchQuery = event.currentTarget.value.toLowerCase();
                 debouncedOnSearchInput();
             }
 
