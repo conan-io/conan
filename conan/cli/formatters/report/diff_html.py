@@ -770,8 +770,6 @@ diff_html = r"""
                     "new": document.getElementById("show-new-files").checked,
                     "old": document.getElementById("show-old-files").checked,
                 };
-                console.log("Include", includeSearchQuery);
-                console.log("Exclude", excludeSearchQuery);
                 sidebar.forEach(async function(item) {
                     if (item.dataset.path === undefined) {
                         // A folder, those are handled later
@@ -793,8 +791,6 @@ diff_html = r"""
                     const isTypeVisible = typeVisibility[fileType] !== false;
 
                     shouldExclude = shouldExclude || !isTypeVisible;
-
-                    console.log(text, shouldInclude, includeSearchQuery === "", text.includes(includeSearchQuery), extensions[extension] === true, extension);
 
                     if (shouldInclude) {
                         if (shouldExclude) {
