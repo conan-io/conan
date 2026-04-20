@@ -614,8 +614,8 @@ class TestCompatibleBuild:
         c.run("export libb")
         settings = "-s os=Windows -s compiler=gcc -s compiler.version=11 " \
                    "-s compiler.libcxx=libstdc++11 -s compiler.cppstd=11"
-        c.run(f"graph build-order --requires=libb/0.1 {settings} --format=json", assert_error=True,
-              redirect_stdout="build_order.json")
+        c.run(f"graph build-order --requires=libb/0.1 {settings} --format=json --order-by=recipe",
+              assert_error=True)
         c.assert_listed_binary({"liba/0.1": ("bb33db23c961978d08dc0cdd6bc786b45b3e5943", "Missing"),
                                 "libb/0.1": ("144910d65b27bcbf7d544201f5578555bbd0376e", "Missing")})
 

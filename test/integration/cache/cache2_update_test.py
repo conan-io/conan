@@ -443,7 +443,6 @@ class TestUpdateFlows:
 
 @pytest.mark.parametrize("update,result",
                          [
-                             # Not a real pattern, works to support legacy syntax
                              ["*", {"liba/1.1": "Downloaded (default)",
                                     "libb/1.1": "Downloaded (default)"}],
                              ["libc", {"liba/1.0": "Cache",
@@ -458,9 +457,9 @@ class TestUpdateFlows:
                                                                             "libb/1.0": "Cache"}],
                              ["", {"liba/1.0": "Cache",
                                    "libb/1.0": "Cache"}],
-                             # Patterns not supported, only full name match
-                             ["lib*", {"liba/1.0": "Cache",
-                                       "libb/1.0": "Cache"}],
+                             # Patterns supported, but only on name
+                             ["lib*", {"liba/1.1": "Downloaded (default)",
+                                       "libb/1.1": "Downloaded (default)"}],
                              ["liba/*", {"liba/1.0": "Cache",
                                          "libb/1.0": "Cache"}],
                              # None only passes legacy --update without args,
