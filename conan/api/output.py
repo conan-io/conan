@@ -239,7 +239,7 @@ class ConanOutput:
                 parts.append(f"  {line}")
         return "\n".join(parts)
 
-    def _write_message(self, msg, fg=None, bg=None, newline=True, *, ignore_indent=False):
+    def _write_message(self, msg, fg=None, bg=None, newline=True):
         if isinstance(msg, dict):
             # For traces we can receive a dict already, we try to transform then into more natural
             # text
@@ -247,7 +247,7 @@ class ConanOutput:
             msg = "=> {}".format(msg)
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
-        if ConanOutput._scoped_recipe_output and self._scope and not ignore_indent:
+        if ConanOutput._scoped_recipe_output and self._scope:
             self._emit_scope_line_if_new()
             ret = self._format_scoped_message(msg, fg, bg)
         elif self._scope:
@@ -323,16 +323,22 @@ class ConanOutput:
         """ Draws a title around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
             ConanOutput._last_scope_header = None
+            prev_scope = self._scope
+            self._scope = ""
             self._write_message("\n======== {} ========".format(msg),
-                                fg=Color.BRIGHT_MAGENTA, ignore_indent=True)
+                                fg=Color.BRIGHT_MAGENTA)
+            self._scope = prev_scope
         return self
 
     def subtitle(self, msg: str):
         """ Draws a subtitle around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
             ConanOutput._last_scope_header = None
+            prev_scope = self._scope
+            self._scope = ""
             self._write_message("\n-------- {} --------".format(msg),
-                                fg=Color.BRIGHT_MAGENTA, ignore_indent=True)
+                                fg=Color.BRIGHT_MAGENTA)
+            self._scope = prev_scope
         return self
 
     def highlight(self, msg: str):
