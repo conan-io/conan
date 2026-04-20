@@ -2,7 +2,7 @@ import json
 import os
 
 from conan.api.model import MultiPackagesList, PackagesList
-from conan.api.output import cli_out_write
+from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.args import add_reference_args
 
@@ -43,6 +43,8 @@ def export(conan_api, parser, *args):
                         help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
+    if ConanOutput._scoped_recipe_output is None:
+        ConanOutput._scoped_recipe_output = True
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []

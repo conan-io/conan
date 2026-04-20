@@ -101,8 +101,9 @@ class ConanOutput:
     _conan_output_level = LEVEL_STATUS
     _silent_warn_tags = []
     _warnings_as_errors = []
-    _INDENT_BODY_PREFIX = "  "
     _last_scope_header = None
+    # Flag to enable/disable new ConanOutput contextual behavior
+    _scoped_recipe_output = None
     lock = Lock()
 
     def __init__(self, scope: str = ""):
@@ -187,8 +188,6 @@ class ConanOutput:
 
     @scope.setter
     def scope(self, out_scope):
-        if out_scope == self._scope:
-            return
         self._scope = out_scope
         if not out_scope:
             ConanOutput._last_scope_header = None
@@ -229,18 +228,17 @@ class ConanOutput:
         return self
 
     def _format_scoped_message(self, msg, fg=None, bg=None):
-        """Prefix every physical line with a short space gutter (block under the scope header)."""
-        fg = fg or ""
-        bg = bg or ""
-        gutter = self._INDENT_BODY_PREFIX
+        """Prefix every physical line with a short space gutter (block under the scope header).
+        Splitlines is used for handling multi-line messages, ensuring a gutter is added to each line
+        """
         lines = msg.splitlines()
         parts = []
         for i, line in enumerate(lines):
             lead = "" if i == 0 else "\n"
             if self._color:
-                parts.append(f"{lead}{gutter}{fg}{bg}{line}{Style.RESET_ALL}")
+                parts.append(f"{lead}  {fg or ""}{bg or ""}{line}{Style.RESET_ALL}")
             else:
-                parts.append(f"{lead}{gutter}{line}")
+                parts.append(f"{lead}  {line}")
         return "".join(parts)
 
     def _write_message(self, msg, fg=None, bg=None, newline=True, *, ignore_indent=False):
@@ -251,11 +249,8 @@ class ConanOutput:
             msg = "=> {}".format(msg)
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
-        if self._scope and not ignore_indent:
+        if ConanOutput._scoped_recipe_output and self._scope and not ignore_indent:
             self._emit_scope_line_if_new()
-
-        if (self._scope and self._scope == ConanOutput._last_scope_header
-                and not ignore_indent):
             ret = self._format_scoped_message(msg, fg, bg)
         elif self._scope:
             if self._color:
