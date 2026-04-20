@@ -101,6 +101,9 @@ diff_html = r"""
                 --deleted-line-color: black;
                 --line-number-added-bgColor: #76ffbb;
                 --line-number-deleted-bgColor: #fdb9c1;
+                --shadow: 0 2px 8px 0 #0001;
+                --radius: 10px;
+                --transition: 0.15s cubic-bezier(.4,0,.2,1);
             }
 
             /* --- Global Styles --- */
@@ -117,6 +120,7 @@ diff_html = r"""
                 display: flex;
                 height: 100%;
                 overflow: scroll;
+                background: var(--body-bgColor);
             }
 
             .sidebar {
@@ -130,19 +134,25 @@ diff_html = r"""
                 resize: horizontal;
                 position: sticky;
                 top: 0;
+                box-shadow: var(--shadow);
+                border-radius: 0 var(--radius) var(--radius) 0;
+                transition: box-shadow var(--transition);
             }
 
             .content {
                 padding: 20px;
                 background: var(--content-bgColor);
                 width: 100%;
+                border-radius: var(--radius);
+                box-shadow: var(--shadow);
+                transition: box-shadow var(--transition);
             }
 
             /* --- Sidebar & File Tree --- */
 
             #sidebar-contents {
                 background: var(--sidebar-contents-bgColor);
-                border-radius: 7px;
+                border-radius: var(--radius);
                 overflow-y: hidden;
                 padding-top: 5px;
             }
@@ -164,7 +174,7 @@ diff_html = r"""
 
             .search-field {
                 border: 1px solid var(--search-field-borderColor);
-                border-radius: 5px;
+                border-radius: var(--radius);
                 padding: 5px;
                 margin: 5px;
                 width: 80%;
@@ -189,7 +199,7 @@ diff_html = r"""
             .file-tree-more button {
                 cursor: pointer;
                 border: 0px solid var(--search-field-borderColor);
-                border-radius: 5px;
+                border-radius: var(--radius);
                 background: none;
                 padding: 5px;
                 min-width: 3ch;
@@ -216,7 +226,7 @@ diff_html = r"""
                 max-height: 200px;
                 overflow-y: scroll;
                 border: 1px solid var(--file-list-borderColor);
-                border-radius: 5px;
+                border-radius: var(--radius);
             }
 
             .file-list {
@@ -278,14 +288,17 @@ diff_html = r"""
                 text-decoration: none;
                 padding: 5px;
                 color: var(--sidebar-link-color);
+                border-radius: var(--radius);
+                transition: background-color var(--transition), color var(--transition);
             }
 
             .sidebar li a:hover {
                 text-decoration: none;
-                border-radius: 5px;
+                border-radius: var(--radius);
                 background-color: var(--sidebar-li-a-hover-bgColor);
                 padding: 5px;
                 color: var(--sidebar-link-hover-color);
+                box-shadow: 0 1px 4px 0 #0001;
             }
 
             .sidebar li a:visited {
@@ -337,9 +350,11 @@ diff_html = r"""
             .diff-content {
                 padding-bottom: 7px;
                 border: 1px solid var(--diff-content-borderColor);
-                border-radius: 7px;
+                border-radius: var(--radius);
                 margin-bottom: 10px;
                 background-color: var(--diff-content-bgColor);
+                box-shadow: var(--shadow);
+                transition: box-shadow var(--transition);
             }
 
             .diff-container[data-is-linked="true"] .diff-content {
@@ -356,7 +371,7 @@ diff_html = r"""
                 position: sticky;
                 top: 0;
                 background-color: var(--diff-summary-bgColor);
-                border-radius: 7px 7px 0px 0px;
+                border-radius: var(--radius) var(--radius) 0px 0px;
             }
 
             details.diff-details summary.diff-summary:hover {
