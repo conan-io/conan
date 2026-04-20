@@ -236,7 +236,7 @@ class ConanOutput:
         for i, line in enumerate(lines):
             lead = "" if i == 0 else "\n"
             if self._color:
-                parts.append(f"{lead}  {fg or ""}{bg or ""}{line}{Style.RESET_ALL}")
+                parts.append(f"{lead}  {fg or ''}{bg or ''}{line}{Style.RESET_ALL}")
             else:
                 parts.append(f"{lead}  {line}")
         return "".join(parts)
