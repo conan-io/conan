@@ -67,7 +67,6 @@ def test_output_scoped():
         output.highlight("Frog")
         output = ConanOutput(scope="Other package")
         output.info("Hello")
-    print(stderr.getvalue())
     assert textwrap.dedent("""\
     My package:
       Hello
