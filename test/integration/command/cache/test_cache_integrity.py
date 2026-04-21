@@ -45,12 +45,12 @@ def test_cache_integrity(use_pkglist, output_pkglist):
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
            "#0ba8627bd47edc3a501e8f0eb9a79e5e: Integrity check: ok" in t.out
     assert "pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
-           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: \nManifest mismatch" in t.out
+           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR:\nManifest mismatch" in t.out
     assert "pkg3/3.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
-           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: \nManifest mismatch" in t.out
+           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR:\nManifest mismatch" in t.out
     assert "pkg4/4.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
-           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: \nManifest mismatch" in t.out
-    assert "pkg5/5.0#4d670581ccb765839f2239cc8dff8fbd: ERROR: \nManifest mismatch" in t.out
+           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR:\nManifest mismatch" in t.out
+    assert "pkg5/5.0#4d670581ccb765839f2239cc8dff8fbd: ERROR:\nManifest mismatch" in t.out
 
     if output_pkglist:
         t.run("remove --list=pkglist.json -c")
@@ -139,7 +139,7 @@ def test_cache_integrity_missing_package_conaninfo(output_pkglist):
         t.run("cache check-integrity *", assert_error=True)
     assert "pkg1/1.0#4d670581ccb765839f2239cc8dff8fbd: Integrity check: ok" in t.out
     assert "pkg2/2.0#4d670581ccb765839f2239cc8dff8fbd:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
-           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR: \nManifest mismatch" in t.out
+           "#0ba8627bd47edc3a501e8f0eb9a79e5e: ERROR:\nManifest mismatch" in t.out
 
     t.run(f"remove {'--list pkglist.json' if output_pkglist else 'pkg2*'}  -c")
     t.run("cache check-integrity *")
@@ -156,7 +156,7 @@ def test_cache_integrity_missing_package_file():
 
     t.run("cache check-integrity *", assert_error=True)
     assert "pkg/1.0#2f2609c8e5c87bf836c3fdaa6096b55d:da39a3ee5e6b4b0d3255bfef95601890afd80709" \
-           "#d950d0cd76f6bba62c8add9c68d1aeb3: ERROR: \nManifest mismatch" in t.out
+           "#d950d0cd76f6bba62c8add9c68d1aeb3: ERROR:\nManifest mismatch" in t.out
 
 
 def test_cache_integrity_export_sources():

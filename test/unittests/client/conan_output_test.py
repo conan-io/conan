@@ -81,3 +81,11 @@ def test_output_scoped():
     Other package:
       Hello
     """) == stderr.getvalue()
+
+
+def test_output_no_trim():
+    stderr = RedirectedTestOutput()
+    with redirect_output(stderr):
+        ConanOutput().write("Hello ", newline=False)
+        ConanOutput().write("world ", newline=True)
+    assert "Hello world " in stderr.getvalue()
