@@ -89,3 +89,14 @@ def test_output_no_trim():
         ConanOutput().write("Hello ", newline=False)
         ConanOutput().write("world ", newline=True)
     assert "Hello world " in stderr.getvalue()
+
+
+    with redirect_output(stderr):
+        output = ConanOutput()
+        output.write("Hello ", Color.BRIGHT_CYAN)
+        output.writeln("world ", Color.BRIGHT_YELLOW)
+        msg = "my "
+        msg += "package"
+        output.info(msg)
+    assert "Hello world " in stderr.getvalue()
+    assert "my package" in stderr.getvalue()
