@@ -193,7 +193,10 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
     order = install_order.install_build_order()
 
     profile_args = ProfileArgs.from_args(args)
-    lockfile_args = [f"--lockfile={args.lockfile}"] if args.lockfile else ["--lockfile="]
+    # Use explicit user lockfile argument, the one in the current folder or explicitly
+    # avoid using any lockfile that could be inside workspace packages folders
+    lock = args.lockfile if args.lockfile else ("conan.lock" if lockfile else "")
+    lockfile_args = [f"--lockfile={lock}"]
     if args.lockfile_partial:
         lockfile_args.append("--lockfile-partial")
     lockfile_args = " ".join(lockfile_args)

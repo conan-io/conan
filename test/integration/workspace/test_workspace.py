@@ -1389,7 +1389,7 @@ class TestInstall:
         c.run("workspace add app")
         c.run("workspace build --build=missing")
 
-    def test_build_ignore_use_auto_lockfile(self):
+    def test_build_use_auto_lockfile(self):
         c = TestClient()
         c.save({"hello/conanfile.py": GenConanfile("hello", "0.1"),
                 "app/conanfile.py": GenConanfile("app", "0.1").with_requires("hello/0.1")})
@@ -1411,6 +1411,7 @@ class TestInstall:
         c.run("workspace build --build=missing --lockfile-partial")
         assert "Using lockfile" in c.out
         assert f"hello/0.1#{rev1}" in c.out
+        assert rev2 not in c.out
 
 
 def test_keep_core_conf():
