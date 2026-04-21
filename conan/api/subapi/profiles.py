@@ -64,7 +64,6 @@ class ProfilesAPI:
         host_profiles = args.profile_host or [self.get_default_host()]
 
         global_conf = self._api_helpers.global_conf
-        global_conf.validate()  # TODO: Remove this from here
         cache_settings = self._api_helpers.settings_yml
         profile_plugin = self._load_profile_plugin()
         cwd = os.getcwd()
@@ -92,7 +91,6 @@ class ProfilesAPI:
         """
         assert isinstance(profiles, list), "Please provide a list of profiles"
         global_conf = self._api_helpers.global_conf
-        global_conf.validate()  # TODO: Remove this from here
         cache_settings = self._api_helpers.settings_yml
         profile_plugin = self._load_profile_plugin()
 
