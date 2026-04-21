@@ -29,101 +29,78 @@ class SourcesCachingDownloader:
     def download(self, urls, file_path,
                  retry, retry_wait, verify_ssl, auth, headers, md5, sha1, sha256):
         download_cache_folder = self._global_conf.get("core.sources:download_cache")
-        backups_urls = self._global_conf.get("core.sources:download_urls", check_type=list)
-        if not (backups_urls or download_cache_folder) or not sha256:
-            # regular, non backup/caching download
-            if backups_urls or download_cache_folder:
-                self._output.warning("Cannot cache download() without sha256 checksum")
-            self._download_from_urls(urls, file_path, retry, retry_wait, verify_ssl, auth, headers,
-                                     md5, sha1, sha256)
-        else:
-            self._caching_download(urls, file_path,
-                                   retry, retry_wait, verify_ssl, auth, headers, md5, sha1, sha256,
-                                   download_cache_folder, backups_urls)
-
-    def _caching_download(self, urls, file_path,
-                          retry, retry_wait, verify_ssl, auth, headers, md5, sha1, sha256,
-                          download_cache_folder, backups_urls):
-        """
-        this download will first check in the local cache, if not there, it will go to the list
-        of backup_urls defined by user conf (by default ["origin"]), and iterate it until
-        something is found.
-        """
-        # We are going to use the download_urls definition for backups
-        download_cache_folder = download_cache_folder or HomePaths(self._home_folder).default_sources_backup_folder
-        # regular local shared download cache, not using Conan backup sources servers
-        backups_urls = backups_urls or ["origin"]
+        source_origins = self._global_conf.get("core.sources:download_urls", check_type=list)
+        if source_origins and not download_cache_folder:
+            # If backups are defined, but the download cache is not defined, use a default one
+            download_cache_folder = HomePaths(self._home_folder).default_sources_backup_folder
         if download_cache_folder and not os.path.isabs(download_cache_folder):
             raise ConanException("core.sources:download_cache must be an absolute path")
+        if download_cache_folder and not sha256:
+            self._output.warning("Cannot cache download() without sha256 checksum")
+            download_cache_folder = None  # Cannot cache
+        source_origins = source_origins or ["origin"]
+        if None in source_origins:
+            raise ConanException(f"Incorrect 'core.sources:download_urls' contains invalid 'None'"
+                                 f"url: {source_origins}")
 
-        download_cache = DownloadCache(download_cache_folder)
-        cached_path = download_cache.source_path(sha256)
-        with download_cache.lock(sha256):
-            remove_if_dirty(cached_path)
+        # First, see if it is already in the download cache
+        if download_cache_folder:
+            download_cache = DownloadCache(download_cache_folder)
+            download_path = download_cache.source_path(sha256)
+            with download_cache.lock(sha256):
+                remove_if_dirty(download_path)
 
-            if os.path.exists(cached_path):
-                self._output.info(f"Source {urls} retrieved from local download cache")
-            else:
-                with set_dirty_context_manager(cached_path):
-                    if None in backups_urls:
-                        raise ConanException("Trying to download sources from None backup remote."
-                                             f" Remotes were: {backups_urls}")
-                    for backup_url in backups_urls:
-                        is_last = backup_url is backups_urls[-1]
-                        if backup_url == "origin":  # recipe defined URLs
-                            if self._origin_download(urls, cached_path, retry, retry_wait,
-                                                     verify_ssl, auth, headers, md5, sha1, sha256,
-                                                     is_last):
-                                break
-                        else:
-                            if self._backup_download(backup_url, backups_urls, sha256, cached_path,
-                                                     urls, is_last):
-                                break
+                if os.path.exists(download_path):
+                    self._output.info(f"Source {urls} retrieved from local download cache")
+                else:
+                    # not in cache, we need to actually download from internet or backup servers
+                    with set_dirty_context_manager(download_path):
+                        self._do_download(source_origins, urls, download_path, retry, retry_wait,
+                                          verify_ssl, auth, headers, md5, sha1, sha256)
 
-            download_cache.update_backup_sources_json(cached_path, self._conanfile, urls)
-            # Everything good, file in the cache, just copy it to final destination
-            mkdir(os.path.dirname(file_path))
-            shutil.copy2(cached_path, file_path)
-
-    def _origin_download(self, urls, cached_path, retry, retry_wait,
-                         verify_ssl, auth, headers, md5, sha1, sha256, is_last):
-        """ download from the internet, the urls provided by the recipe (mirrors).
-        """
-        try:
-            self._download_from_urls(urls, cached_path, retry, retry_wait,
-                                     verify_ssl, auth, headers, md5, sha1, sha256)
-        except ConanException as e:
-            if is_last:
-                raise
-            else:
-                # TODO: Improve printing of AuthenticationException
-                self._output.warning(f"Sources for {urls} failed in 'origin': {e}")
-                self._output.warning("Checking backups")
+                # copy it to the package "source" folder
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                shutil.copy2(download_path, file_path)
+                download_cache.update_backup_sources_json(download_path, self._conanfile, urls)
         else:
-            if not is_last:
-                self._output.info(f"Sources for {urls} found in origin")
-            return True
+            # This doesn't need to be dirty-protected, as the full "source" folder is protected
+            self._do_download(source_origins, urls, file_path, retry, retry_wait, verify_ssl, auth,
+                              headers, md5, sha1, sha256)
 
-    def _backup_download(self, backup_url, backups_urls, sha256, cached_path, urls, is_last):
-        """ download from a Conan backup sources file server, like an Artifactory generic repo
-        All failures are bad, except NotFound. The server must be live, working and auth, we
-        don't want silently skipping a backup because it is down.
-        """
-        try:
-            backup_url = backup_url if backup_url.endswith("/") else backup_url + "/"
-            self._file_downloader.download(backup_url + sha256, cached_path, sha256=sha256)
-            self._file_downloader.download(backup_url + sha256 + ".json", cached_path + ".json")
-            self._output.info(f"Sources for {urls} found in remote backup {backup_url}")
-            return True
-        except NotFoundException:
-            if is_last:
-                raise NotFoundException(f"File {urls} not found in {backups_urls}")
-            else:
-                self._output.warning(f"File {urls} not found in {backup_url}")
-        except (AuthenticationException, ForbiddenException) as e:
-            raise ConanException(f"Authentication to source backup server '{backup_url}' "
-                                 f"failed: {e}. "
-                                 f"Please check your 'source_credentials.json'")
+    def _do_download(self, source_origins, urls, download_path, retry, retry_wait, verify_ssl,
+                     auth, headers, md5, sha1, sha256):
+        # iterates the origins until one works
+        for backup_url in source_origins:
+            if backup_url == "origin":  # download from the internet
+                try:
+                    self._download_from_urls(urls, download_path, retry, retry_wait, verify_ssl,
+                                             auth, headers, md5, sha1, sha256)
+                    return
+                except Exception as e:
+                    if backup_url is source_origins[-1]:
+                        raise
+                    self._output.warning(f"Sources for {urls} failed in 'origin': {e}")
+            else:  # Download from a backup server
+                try:
+                    self._output.info(f"Checking backup: {backup_url}")
+                    backup_url = backup_url if backup_url.endswith("/") else backup_url + "/"
+                    # The download happens to the user download folder, not to the download cache
+                    self._file_downloader.download(backup_url + sha256, download_path,
+                                                   sha256=sha256, overwrite=True)
+                    self._file_downloader.download(backup_url + sha256 + ".json",
+                                                   download_path + ".json", overwrite=True)
+                    self._output.info(f"Sources for {urls} found in remote backup {backup_url}")
+                    return
+                except NotFoundException:
+                    msg = f"Sources for {urls} not found in remote backup {backup_url}"
+                    if backup_url is source_origins[-1]:
+                        raise NotFoundException(msg)
+                    else:
+                        self._output.warning(msg)
+                except (AuthenticationException, ForbiddenException) as e:
+                    raise ConanException(f"Authentication to source backup server '{backup_url}' "
+                                         f"failed: {e}. "
+                                         f"Please check your 'source_credentials.json'")
 
     def _download_from_urls(self, urls, file_path, retry, retry_wait, verify_ssl, auth, headers,
                             md5, sha1, sha256):
@@ -142,6 +119,7 @@ class SourcesCachingDownloader:
                 else:
                     self._file_downloader.download(url, file_path, retry, retry_wait, verify_ssl,
                                                    auth, True, headers, md5, sha1, sha256)
+                self._output.info(f"Sources correctly downloaded from {url}")
                 return  # Success! Return to caller
             except Exception as error:
                 if url != urls[-1]:  # If it is not the last one, do not raise, warn and move to next

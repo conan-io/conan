@@ -453,8 +453,9 @@ class GraphBinariesAnalyzer:
                                  f" file in cache: {self._home_folder}: {e}")
         return RequirementsInfo(result)
 
-    def _evaluate_package_id(self, node, config_version):
-        compute_package_id(node, self._modes, config_version, self._hook_manager)
+    def _evaluate_package_id(self, node, config_version, global_required_conan):
+        compute_package_id(node, self._modes, config_version, self._hook_manager,
+                           global_required_conan)
 
         # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
         # it could even be delayed until installation time, but if we got enough info here for
@@ -490,9 +491,10 @@ class GraphBinariesAnalyzer:
         root_pkg_type = deps_graph.root.edges[0].dst.conanfile.package_type \
             if deps_graph.root.edges else None
         config_version = self._config_version() if root_pkg_type is not PackageType.CONF else None
+        global_required_conan = self._global_conf.get("core:required_conan_version")
         for level in levels[:-1]:  # all levels but the last one, which is the single consumer
             for node in level:
-                self._evaluate_package_id(node, config_version)
+                self._evaluate_package_id(node, config_version, global_required_conan)
             # group by pref to paralelize, so evaluation is done only 1 per pref
             nodes = {}
             for node in level:
@@ -521,7 +523,8 @@ class GraphBinariesAnalyzer:
         if node.path is not None:
             if node.path.endswith(".py"):
                 # For .py we keep evaluating the package_id, validate(), etc
-                compute_package_id(node, self._modes, config_version, self._hook_manager)
+                compute_package_id(node, self._modes, config_version, self._hook_manager,
+                                   global_required_conan)
             # To support the ``[layout]`` in conanfile.txt
             if hasattr(node.conanfile, "layout"):
                 with conanfile_exception_formatter(node.conanfile, "layout"):

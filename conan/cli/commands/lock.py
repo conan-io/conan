@@ -35,6 +35,7 @@ def lock_create(conan_api, parser, subparser, *args):
     overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=path,
                                                cwd=cwd, partial=True, overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -204,6 +205,7 @@ def lock_upgrade(conan_api, parser, subparser, *args):
                                                cwd=cwd, partial=True, overrides=overrides)
     if lockfile is None:
         raise ConanException("No lockfile specified and default conan.lock not found")
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     # Remove the lockfile entries that will be updated

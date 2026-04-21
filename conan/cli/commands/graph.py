@@ -85,6 +85,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     deprecated_policies = profile_host.conf.get("user.policies:name", check_type=list, default=list())
@@ -197,6 +198,7 @@ def graph_info(conan_api, parser, subparser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
@@ -278,6 +280,7 @@ def graph_explain(conan_api, parser,  subparser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -359,6 +362,7 @@ def graph_outdated(conan_api, parser, subparser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:

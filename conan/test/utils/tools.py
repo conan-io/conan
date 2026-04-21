@@ -23,6 +23,7 @@ from unittest.mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
+from conan.api.output import ConanOutput
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS
@@ -531,6 +532,7 @@ class TestClient:
                     yield
 
     def _run_cli(self, command_line, assert_error=False):
+        ConanOutput._scoped_recipe_output = False
         args = shlex.split(command_line)
         error = SUCCESS
         trace = None
