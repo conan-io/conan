@@ -100,7 +100,10 @@ class VirtualBuildEnv:
 def _compute_propagate_run(conanfile):
     from conan.tools.scm import Version
     from conan.internal.model.version_range import VersionRange
-    global_required_conan = conanfile._conan_helpers.global_conf.get("core:required_conan_version")  # noqa
+    try:
+        global_required_conan = conanfile._conan_helpers.global_conf.get("core:required_conan_version")  # noqa
+    except AttributeError:
+        return False  # This can happen for virtual conanfiles without helpers
     recipe_require_conan_version = global_required_conan or conanfile._conan_required_version  # noqa
     if recipe_require_conan_version:
         version_range = VersionRange(recipe_require_conan_version)
