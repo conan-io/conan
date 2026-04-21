@@ -21,12 +21,46 @@ graph_info_html = r"""
                 display: inline-block;
                 font-size: 18px;
             }
+            label {
+                user-select: none
+            }
+
+            #container {
+                display: grid;
+                grid-template-columns: 75% 25%;
+                grid-template-rows: 50px auto;
+                height: 100vh;
+            }
+            #mylegend {
+                border-bottom: 2px solid #f2f2f2;
+                grid-column-end: span 1;
+                font-size: 14px;
+                height: 100%;
+            }
+            #empty-sidebar, #sidebar {
+                background-color: #f9f9fe;
+                border: none;
+                min-height:100%;
+                height:0;
+                overflow-y: auto;
+                padding: 5px 10px;
+            }
+            #details {
+                background-color: #f3f3f3;
+                overflow-y: auto;
+                border: 1px solid #e4e4e4;
+                border-radius: 5px;
+                padding: 3px 5px;
+            }
         </style>
 
-        <div style="display: grid; grid-template-columns: 75% 25%; grid-template-rows: 30px auto; height: 100vh;">
-            <div id="mylegend" style="background-color: lightgrey; grid-column-end: span 2;height: 100%"></div>
+        <div id="container">
+            <div id="mylegend"></div>
+            <div id="empty-sidebar">
+                <h3>Controls</h3>
+            </div>
             <div id="mynetwork"></div>
-            <div style="background-color: lightgrey;min-height:100%;height:0;overflow-y: auto;">
+            <div id="sidebar">
                 <div>
                     <input type="checkbox" onchange="switchBuild()" id="show_build_requires" checked />
                     <label for="show_build_requires">Show build-requires</label>
@@ -43,22 +77,33 @@ graph_info_html = r"""
                     <input type="checkbox" onchange="collapsePackages()" id="collapse_packages"/>
                     <label for="collapse_packages">Group packages</label>
                 </div>
-                 <div>
+                <div>
                     <input type="checkbox" onchange="showPackageType()" id="show_package_type"/>
                     <label for="show_package_type">Show package type</label>
                 </div>
-                 <div>
+                <div>
+                    <input type="checkbox" onchange="showSubgraph()" id="show_subgraph"/>
+                    <label for="show_package_type">Show subgraph</label>
+                </div>
+                <div>
                     <input type="search" placeholder="Search packages..." oninput="searchPackages(this)" onkeydown="onSearchKeyDown(event)">
                 </div>
-                 <div>
+                <div>
                     <input type="search" placeholder="Exclude packages..." title="Add a comma to exclude an additional package" oninput="excludePackages(this)">
                 </div>
                 <div>
-                    <input type="checkbox" onchange="showhideclass('controls')" id="show_controls"/>
-                    <label for="show_controls">Show graph controls</label>
+                    <details>
+                    <summary>Extra graph controls</summary>
+                    <div id="controls" class="controls" style="padding: 5;"></div>
+                    </details>
                 </div>
-                <div id="controls" class="controls" style="padding:5; display:none"></div>
-                <div id="details"  style="padding:10;" class="noPrint">Package info: Click on one package to show information</div>
+
+                <div id="details-container" style="padding:10;" class="noPrint">
+                    <h3>Information</h3>
+                    <div id="details">
+                    Click on one package or edge to show information
+                    </div>
+                </div>
                 <div id="error" style="padding:10;" class="noPrint"></div>
             </div>
         </div>
@@ -73,6 +118,7 @@ graph_info_html = r"""
             let excluded_pkgs = null;
             let collapse_packages = false;
             let show_package_type = false;
+            let show_subgraph = false;
             let color_map = {Cache: "SkyBlue",
                              Download: "LightGreen",
                              Build: "Yellow",
@@ -84,13 +130,14 @@ graph_info_html = r"""
                              Invalid: "Red",
                              Platform: "Violet"};
             let global_edges = {};
+            let collapsed_packages = null;
             function define_data(){
                 let nodes = [];
                 let edges = [];
-                let collapsed_packages = {"build": {}, "host": {}};
+                collapsed_packages = {"build": {}, "host": {}};
                 let targets = {};
                 global_edges = {};
-                let edge_counter = 0;
+                let edge_counter = Math.max(...Object.keys(graph_data["nodes"])) + 1;
                 let conflict=null;
                 let provide_conflict=null;
                 let missing_error=null;
@@ -107,13 +154,7 @@ graph_info_html = r"""
                     if (node.context == "build" && hide_build) continue;
                     if (node.test && hide_test) continue;
                     let shape = node.context == "build" || node.test ? "ellipse" : "box";
-                    let label = null;
-                    if (node["name"])
-                        label =  node["name"] + "/" + node["version"];
-                    else if (node["ref"])
-                        label = node["ref"];
-                    else
-                        label = node.recipe == "Consumer"? "conanfile": "CLI";
+                    const label = getNodeLabel(node);
                     if (collapse_packages) {
                         let existing = collapsed_packages[node.context][label];
                         targets[node_id] = existing;
@@ -368,9 +409,13 @@ graph_info_html = r"""
                     let div2 = document.createElement('div');
                     div2.innerHTML = "<pre>" + div.innerHTML + "</pre>";
                     control.appendChild(div2);
+                    if (show_subgraph && graph_data["nodes"][ids[0]]) {
+                        setSubgraphSelectionFromNode(ids[0]);
+                    }
+
                 }
                 else {
-                    control.innerHTML = "<b>Info</b>: Click on a package or edge for more info";
+                    control.innerHTML = "Click on one package or edge to show information";
                 }
             });
             function draw() {
@@ -428,11 +473,59 @@ graph_info_html = r"""
                 show_package_type = !show_package_type;
                 draw();
             }
+            function showSubgraph(e) {
+                show_subgraph = !show_subgraph;
+                draw();
+            }
             function showhideclass(id) {
                 let elements = document.getElementsByClassName(id)
                 for (let i = 0; i < elements.length; i++) {
                     elements[i].style.display = (elements[i].style.display != 'none') ? 'none' : 'block';
                 }
+            }
+            function getNodeLabel(node) {
+                let label = null;
+                if (node["name"])
+                    label =  node["name"] + "/" + node["version"];
+                else if (node["ref"])
+                    label = node["ref"];
+                else
+                    label = node.recipe == "Consumer"? "conanfile": "CLI";
+                return label;
+            }
+            function setSubgraphSelectionFromNode(starting_node_id) {
+                let node_id_list = [starting_node_id];
+                let seen_nodes = [];
+                let seen_edges = [];
+                while (node_id_list.length > 0) {
+                    const node_id = node_id_list.pop();
+                    // The node might be hidden
+                    if (network.findNode(node_id).length == 0) continue;
+                    if (node_id !== undefined && !seen_nodes.includes(node_id)) {
+                        const node = graph_data["nodes"][node_id];
+                        seen_nodes.push(node_id);
+                        for (let dep_id in node["dependencies"]) {
+                            // Collapsed dependencies dont have an edge to the matching id, find which
+                            if (collapse_packages) {
+                                const dep_node = graph_data["nodes"][dep_id];
+                                const context = dep_node["context"];
+                                const label = getNodeLabel(dep_node);
+                                dep_id = collapsed_packages[context][label];
+                            }
+                            node_id_list.push(dep_id);
+                        }
+                        const edges = network.getConnectedEdges(node_id);
+                        for (let edge_id of edges) {
+                            const connectedNodes = network.getConnectedNodes(edge_id);
+                            // Only select edges that have a fromId (0th index) equal to current node
+                            if (!seen_edges.includes(edge_id) && connectedNodes[0] === node_id) {
+                                seen_edges.push(edge_id);
+                            }
+                        }
+                    }
+                }
+                network.setSelection({nodes: seen_nodes, edges: seen_edges},
+                                     {unselectAll: true, highlightEdges: false});
             }
             window.addEventListener("load", () => {
                draw();

@@ -66,41 +66,44 @@ diff_html = r"""
         <style>
             /* --- Colors --- */
             :root {
-                --body-bgColor: #f8f8f8;
-                --sidebar-bgColor: #f4f4f466;
-                --sidebar-borderColor: #ccc;
-                --sidebar-contents-bgColor: #f4f4f4;
-                --content-bgColor: #f8f8f8;
-                --search-area-borderColor: #ccc;
-                --search-field-borderColor: #ccc;
-                --file-list-borderColor: #ddd;
-                --folder-summary-hover-bgColor: #e0e0e033;
-                --folder-ul-hover-borderColor: #00000066;
-                --sidebar-li-a-hover-bgColor: #e0e0e0;
+                --body-bgColor: #ffffff;
+                --sidebar-bgColor: #f4f6fbcc;
+                --sidebar-borderColor: #d0d7de;
+                --sidebar-contents-bgColor: #f4f6fb;
+                --content-bgColor: #ffffff;
+                --search-area-borderColor: #d0d7de;
+                --search-field-borderColor: #d0d7de;
+                --file-list-borderColor: #eaecef;
+                --folder-summary-hover-bgColor: #e5eaf3cc;
+                --folder-ul-hover-borderColor: #b6b6b6cc;
+                --sidebar-li-a-hover-bgColor: #e5eaf3;
                 --sidebar-button-hover-bgColor: var(--sidebar-li-a-hover-bgColor);
-                --sidebar-link-color: black;
+                --sidebar-link-color: #22272e;
                 --sidebar-link-hover-color: var(--sidebar-link-color);
                 --sidebar-link-visited-color: var(--sidebar-link-color);
-                --sidebar-file-new-color: green;
-                --sidebar-file-old-color: gray;
-                --sidebar-file-deleted-color: red;
-                --diff-content-borderColor: black;
-                --diff-content-bgColor: white;
-                --diff-container-linked-borderColor: #0078d7;
-                --diff-summary-borderColor: #ccc;
-                --diff-summary-bgColor: #f8f8f8;
-                --diff-summary-hover-bgColor: #f0f0f0;
-                --new-lines-count-color: green;
-                --old-lines-count-color: black;
-                --context-line-color: #888;
-                --context-chunk-header-bgColor: #cef8ff;
+                --sidebar-file-new-color: #1a7f37;
+                --sidebar-file-old-color: #6e7781;
+                --sidebar-file-deleted-color: #d1242f;
+                --diff-content-borderColor: #d0d7de;
+                --diff-content-bgColor: #fff;
+                --diff-container-linked-borderColor: #0969da;
+                --diff-summary-borderColor: #d0d7de;
+                --diff-summary-bgColor: #f6f8fa;
+                --diff-summary-hover-bgColor: #eaeef2;
+                --new-lines-count-color: #1a7f37;
+                --old-lines-count-color: #6e7781;
+                --context-line-color: #6e7781;
+                --context-chunk-header-bgColor: #e7f6ff;
                 --context-chunk-header-color: var(--context-line-color);
-                --added-line-bgColor: #cbfcd9;
+                --added-line-bgColor: #dafbe1;
                 --added-line-color: black;
                 --deleted-line-bgColor: #ffebe9;
                 --deleted-line-color: black;
-                --line-number-added-bgColor: #76ffbb;
-                --line-number-deleted-bgColor: #fdb9c1;
+                --line-number-added-bgColor: #b6f4bb;
+                --line-number-deleted-bgColor: #ffd6d5;
+                --shadow: 0 2px 8px 0 #0001;
+                --radius: 10px;
+                --transition: 0.15s cubic-bezier(.4,0,.2,1);
             }
 
             /* --- Global Styles --- */
@@ -117,6 +120,7 @@ diff_html = r"""
                 display: flex;
                 height: 100%;
                 overflow: scroll;
+                background: var(--body-bgColor);
             }
 
             .sidebar {
@@ -130,19 +134,23 @@ diff_html = r"""
                 resize: horizontal;
                 position: sticky;
                 top: 0;
+                box-shadow: var(--shadow);
+                border-radius: 0 var(--radius) var(--radius) 0;
+                transition: box-shadow var(--transition);
             }
 
             .content {
                 padding: 20px;
                 background: var(--content-bgColor);
                 width: 100%;
+                border-radius: var(--radius);
             }
 
             /* --- Sidebar & File Tree --- */
 
             #sidebar-contents {
                 background: var(--sidebar-contents-bgColor);
-                border-radius: 7px;
+                border-radius: var(--radius);
                 overflow-y: hidden;
                 padding-top: 5px;
             }
@@ -164,7 +172,7 @@ diff_html = r"""
 
             .search-field {
                 border: 1px solid var(--search-field-borderColor);
-                border-radius: 5px;
+                border-radius: var(--radius);
                 padding: 5px;
                 margin: 5px;
                 width: 80%;
@@ -185,10 +193,11 @@ diff_html = r"""
 
             .file-tree-controls button,
             .sidebar-reveal button,
-            .search-header button {
+            .search-header button,
+            .file-tree-more button {
                 cursor: pointer;
                 border: 0px solid var(--search-field-borderColor);
-                border-radius: 5px;
+                border-radius: var(--radius);
                 background: none;
                 padding: 5px;
                 min-width: 3ch;
@@ -196,7 +205,8 @@ diff_html = r"""
 
             .file-tree-controls button:hover,
             .sidebar-reveal button:hover,
-            .search-header button:hover {
+            .search-header button:hover,
+            .file-tree-more button:hover {
                 background-color: var(--sidebar-li-a-hover-bgColor);
             }
 
@@ -208,6 +218,13 @@ diff_html = r"""
 
             .file-tree-more-option {
                 display: block;
+            }
+
+            #file-tree-more-extensions {
+                max-height: 200px;
+                overflow-y: scroll;
+                border: 1px solid var(--file-list-borderColor);
+                border-radius: var(--radius);
             }
 
             .file-list {
@@ -269,14 +286,17 @@ diff_html = r"""
                 text-decoration: none;
                 padding: 5px;
                 color: var(--sidebar-link-color);
+                border-radius: var(--radius);
+                transition: background-color var(--transition), color var(--transition);
             }
 
             .sidebar li a:hover {
                 text-decoration: none;
-                border-radius: 5px;
+                border-radius: var(--radius);
                 background-color: var(--sidebar-li-a-hover-bgColor);
                 padding: 5px;
                 color: var(--sidebar-link-hover-color);
+                box-shadow: 0 1px 4px 0 #0001;
             }
 
             .sidebar li a:visited {
@@ -328,9 +348,11 @@ diff_html = r"""
             .diff-content {
                 padding-bottom: 7px;
                 border: 1px solid var(--diff-content-borderColor);
-                border-radius: 7px;
+                border-radius: var(--radius);
                 margin-bottom: 10px;
                 background-color: var(--diff-content-bgColor);
+                box-shadow: var(--shadow);
+                transition: box-shadow var(--transition);
             }
 
             .diff-container[data-is-linked="true"] .diff-content {
@@ -347,7 +369,7 @@ diff_html = r"""
                 position: sticky;
                 top: 0;
                 background-color: var(--diff-summary-bgColor);
-                border-radius: 7px 7px 0px 0px;
+                border-radius: var(--radius) var(--radius) 0px 0px;
             }
 
             details.diff-details summary.diff-summary:hover {
@@ -496,6 +518,67 @@ diff_html = r"""
                 return [parseInt(match[1]), parseInt(match[2])];
             }
 
+            let extensions = {}
+
+            function initializeExtensionsFilter() {
+                const exts = [];
+                let addNoExtension = false;
+                for (let path in data) {
+                    const bits = path.split("/");
+                    const file = bits.pop();
+                    if (file.includes(".")) {
+                        const ext = file.split('.').pop();
+                        if (extensions[ext] === undefined) {
+                            exts.push(ext);
+                            extensions[ext] = true;
+                        }
+                    } else {
+                        addNoExtension = true;
+                    }
+                }
+                exts.sort();
+                if (addNoExtension) {
+                    exts.unshift(null);
+                    extensions[null] = true;
+                }
+
+                /* example: <div class="file-tree-more-option">
+                                <input type="checkbox" id="show-moved-files" checked
+                                    onclick="debouncedOnSearchInput(event)"/>
+                                <label for="show-moved-files">Moved files</label>
+                            </div> */
+                const container = document.getElementById("file-tree-more-extensions");
+                for (let ext of exts) {
+                    const optionDiv = document.createElement("div");
+                    const checkbox = document.createElement("input")
+                    const label = document.createElement("label")
+
+                    const id = "show-ext-" + ext;
+
+                    optionDiv.classList.add("file-tree-more-option");
+
+                    checkbox.id = id;
+                    checkbox.type = "checkbox"
+                    checkbox.checked = true;
+                    checkbox.dataset.extension = ext;
+                    checkbox.onchange = (event) => {
+                        onExtensionsChange(event);
+                    }
+
+                    label.for = id;
+                    if (ext != null) {
+                        label.innerText = "." + ext;
+                    } else {
+                        label.innerText = "No extension";
+                    }
+
+                    optionDiv.appendChild(checkbox);
+                    optionDiv.appendChild(label);
+
+                    container.appendChild(optionDiv);
+                }
+
+            }
 
             function makeDiffLines(lines) {
                 const element = document.createElement("div");
@@ -584,7 +667,9 @@ diff_html = r"""
                         } else {
                             const spanSymbol = document.createElement("span");
                             spanSymbol.className = "diff-symbol";
-                            spanLine.textContent = line;
+                            // Removes the empty space from the beginning of the line,
+                            // to match layout of removed char for diff lines
+                            spanLine.textContent = line.substring(1);
                             spanLine.prepend(spanSymbol);
                         }
 
@@ -667,6 +752,7 @@ diff_html = r"""
                 document.querySelectorAll('.diff-container').forEach((section) => {
                     observer.observe(section);
                 });
+                initializeExtensionsFilter();
             });
 
             function debounce(func, delay) {
@@ -682,7 +768,7 @@ diff_html = r"""
             let includeSearchQuery = "";
             let excludeSearchQuery = "";
 
-            async function onSearchInput(event) {
+            async function onSearchInput() {
                 const sidebar = document.querySelectorAll(".sidebar li");
                 const fileList = document.querySelector(".file-list");
                 const content = document.querySelectorAll(".content .diff-container .diff-content");
@@ -699,15 +785,20 @@ diff_html = r"""
                     "new": document.getElementById("show-new-files").checked,
                     "old": document.getElementById("show-old-files").checked,
                 };
-
                 sidebar.forEach(async function(item) {
                     if (item.dataset.path === undefined) {
                         // A folder, those are handled later
                         return;
                     }
                     const text = item.dataset.path.toLowerCase();
-                    const shouldInclude = includeSearchQuery === "" || text.includes(includeSearchQuery);
-                    let shouldExclude = excludeSearchQuery !== "" && text.includes(excludeSearchQuery);
+                    const bits = text.split("/");
+                    const filenameParts = bits.pop().split(".")
+                    let extension = null;
+                    if (filenameParts.length > 1) {
+                        extension = filenameParts.pop();
+                    }
+                    const shouldInclude = (includeSearchQuery === "" || text.includes(includeSearchQuery)) && extensions[extension] === true;
+                    let shouldExclude = (excludeSearchQuery !== "" && text.includes(excludeSearchQuery)) && extensions[extension] === false;
                     const associatedId = item.querySelector("a").getAttribute("href").substring(1)
                     const contentItem = document.getElementById(associatedId);
 
@@ -766,12 +857,40 @@ diff_html = r"""
 
             async function onExcludeSearchInput(event) {
                 excludeSearchQuery = event.currentTarget.value.toLowerCase();
-                debouncedOnSearchInput(event);
+                debouncedOnSearchInput();
             }
 
             async function onIncludeSearchInput(event) {
                 includeSearchQuery = event.currentTarget.value.toLowerCase();
-                debouncedOnSearchInput(event);
+                debouncedOnSearchInput();
+            }
+
+            function onExtensionsChange(event) {
+                const ext = event.currentTarget.dataset.extension;
+                const value = event.currentTarget.checked;
+                extensions[ext] = value;
+                debouncedOnSearchInput();
+            }
+
+            function onExtensionsToggle(value) {
+                const container = document.getElementById("file-tree-more-extensions");
+                const checkboxes = container.getElementsByTagName("input");
+                for (let checkbox of checkboxes) {
+                    checkbox.checked = value;
+                    extensions[checkbox.dataset.extension] = value;
+                }
+                debouncedOnSearchInput();
+            }
+
+            function onExtensionsSearch(event) {
+                const filter = event.currentTarget.value.toLowerCase();
+                const container = document.getElementById("file-tree-more-extensions");
+                const checkboxes = container.getElementsByTagName("input");
+                for (let checkbox of checkboxes) {
+                    const ext = checkbox.dataset.extension;
+                    const display = filter == "" || ext.includes(filter) ? "block" : "none";
+                    checkbox.parentElement.style.display = display;
+                }
             }
 
             function setDataIsLinked(event) {
@@ -820,7 +939,6 @@ diff_html = r"""
 
             function toggleMoreFileTree() {
                 const moreOptions = document.querySelector('.file-tree-more');
-                console.log(moreOptions.style.display);
                 const show = moreOptions.style.display !== 'block';
                 if (show) {
                     moreOptions.style.display = 'block';
@@ -892,6 +1010,11 @@ diff_html = r"""
                                     onclick="debouncedOnSearchInput(event)"/>
                                 <label for="show-moved-files">Moved files</label>
                             </div>
+                            <h4>Extensions</h4>
+                            <input type="search" class="search-field" oninput="onExtensionsSearch(event);" placeholder="Search extension"></input>
+                            <button onclick="onExtensionsToggle(true);">Check all</button>
+                            <button onclick="onExtensionsToggle(false);">Uncheck all</button>
+                            <div id="file-tree-more-extensions"></div>
                         </div>
                         <ul class="file-list">
                             {{ render_sidebar_folder("", per_folder) }}
