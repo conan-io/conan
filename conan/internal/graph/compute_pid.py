@@ -12,7 +12,10 @@ from conan.internal.model.version import Version
 
 def _compute_fix_transitive(conanfile):
     # fix for transitive static libraries
-    global_conf = conanfile._conan_helpers.global_conf  # noqa
+    try:
+        global_conf = conanfile._conan_helpers.global_conf  # noqa
+    except AttributeError:
+        return False  # This can happen for PLATFORM deps without _conan_helpers
     global_required_conan = global_conf.get("core:required_conan_version")
     recipe_require_conan_version = global_required_conan or conanfile._conan_required_version  # noqa
     if recipe_require_conan_version:
