@@ -61,6 +61,7 @@ def test_output_scoped():
         output = ConanOutput(scope="My package")
         output.info("Hello")
         output.highlight("Conan")
+        output = ConanOutput()
         output.title("Title")
         output.info("Package manager!")
         output.subtitle("Subtitle")
@@ -73,12 +74,10 @@ def test_output_scoped():
       Conan
 
     ======== Title ========
-    My package:
-      Package manager!
+    Package manager!
 
     -------- Subtitle --------
-    My package:
-      Frog
+    Frog
     Other package:
       Hello
     """) == stderr.getvalue()
