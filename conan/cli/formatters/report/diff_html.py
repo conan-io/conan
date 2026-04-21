@@ -96,9 +96,9 @@ diff_html = r"""
                 --context-chunk-header-bgColor: #e7f6ff;
                 --context-chunk-header-color: var(--context-line-color);
                 --added-line-bgColor: #dafbe1;
-                --added-line-color: #1a7f37;
+                --added-line-color: black;
                 --deleted-line-bgColor: #ffebe9;
-                --deleted-line-color: #d1242f;
+                --deleted-line-color: black;
                 --line-number-added-bgColor: #b6f4bb;
                 --line-number-deleted-bgColor: #ffd6d5;
                 --shadow: 0 2px 8px 0 #0001;
