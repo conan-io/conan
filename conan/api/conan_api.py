@@ -155,6 +155,7 @@ class ConanAPI:
             required_range_new = self.global_conf.get("core:required_conan_version")
             if required_range_new:
                 validate_conan_version(required_range_new)
+            self.global_conf.validate()
 
         def reinit(self):
             self._init_global_conf()

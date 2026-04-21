@@ -216,3 +216,60 @@ class TestRequirementPackageId:
         c.run("create pkg")
         c.run("list pkg:*")
         assert f"liba/{pattern}" in c.out
+
+
+class TestTransitiveStatic:
+    @pytest.mark.parametrize("apply_fix", [True, False, "conf"])
+    def test_transitive_statics(self, apply_fix):
+        # https://github.com/conan-io/conan/issues/19664
+        c = TestClient(light=True)
+        required_conan_version = 'required_conan_version = ">=2.28"' if apply_fix is True else ""
+        if apply_fix == "conf":
+            c.save_home({"global.conf": "core:required_conan_version=>=2.28"})
+        libc = textwrap.dedent(f"""\
+            from conan import ConanFile
+
+            {required_conan_version}
+            class LibcConan(ConanFile):
+                name = "libc"
+                version = "1.0"
+                package_type = "static-library"
+                requires = "libb/1.0"
+            """)
+        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type("static-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
+                                                                .with_requires("liba/1.0"),
+                "libc/conanfile.py": libc
+                })
+        c.run("create liba")
+        c.run("create libb")
+        c.run(f"create libc")
+        if not apply_fix:
+            assert ("libc/1.0: WARN: risk: Transitive dependencies with "
+                    "'headers=False' effect in 'package_id'") in c.out
+        c.run("list libc:*")
+        assert "libb/1.0.Z" in c.out
+        if apply_fix:
+            assert "liba/" not in c.out
+        else:
+            assert "liba/" in c.out
+
+    def test_transitive_shared(self):
+        # https://github.com/conan-io/conan/issues/19664
+        # This doesn't happen by default because the transitive shared do not propagate .libs
+        # linkage requirement trait
+        c = TestClient(light=True)
+        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type("shared-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("shared-library")
+               .with_requires("liba/1.0"),
+                "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+               .with_requires("libb/1.0"),
+                })
+        c.run("create liba")
+        c.run("create libb")
+        c.run("create libc")
+
+        assert "libc/1.0: WARN" not in c.out
+        c.run("list libc:*")
+        assert "libb/1.0.Z" in c.out
+        assert "liba/" not in c.out
