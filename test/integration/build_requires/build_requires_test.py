@@ -780,7 +780,7 @@ def test_build_run_false(min_conan_version, should_propagate):
     required_conan_version_line = ""
     if min_conan_version:
         required_conan_version_line = f"required_conan_version='{min_conan_version}'"
-    tc = TestClient(light=True)
+    tc = TestClient()
     cmake = textwrap.dedent("""
     from conan import ConanFile
     from conan.tools.files import save
