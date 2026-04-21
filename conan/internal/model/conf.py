@@ -19,8 +19,11 @@ from conan.internal.util.files import load, save
 
 required_conan_version_msg = """\
 Raise if current version does not match the defined range.
-   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id is applied
-   These behaviors also apply for 'required_conan_version' in recipes, but the global one has precedence."""
+Applies the following behaviors based on the minimum specified version:
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19849 for VirtualBuildEnv path propagation based on requirement run trait
+   These behaviors also apply for 'required_conan_version' in recipes, but the global one has precedence.
+"""
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": required_conan_version_msg,
