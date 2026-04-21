@@ -13,7 +13,7 @@ def test_require_different_versions(min_conan_version):
 
     https://github.com/conan-io/conan/issues/13521
     """
-    c = TestClient(light=True)
+    c = TestClient()
     required_conan_version_line = ""
     if min_conan_version:
         required_conan_version_line = f"required_conan_version='{min_conan_version}'"
