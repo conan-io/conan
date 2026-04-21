@@ -94,6 +94,7 @@ def workspace_complete(conan_api: ConanAPI, parser, subparser, *args):
     ws_folder = conan_api.workspace.folder()
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
                                                cwd=None, partial=args.lockfile_partial)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
@@ -171,6 +172,7 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
     ws_folder = conan_api.workspace.folder()
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
                                                cwd=None, partial=args.lockfile_partial)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
@@ -257,6 +259,7 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
                                                cwd=None,
                                                partial=args.lockfile_partial, overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
@@ -337,6 +340,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     ws_folder = conan_api.workspace.folder()
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
                                                cwd=None, partial=args.lockfile_partial)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
