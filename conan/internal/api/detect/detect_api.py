@@ -1,6 +1,7 @@
 import os
 import platform
 import re
+import subprocess
 import tempfile
 import textwrap
 
@@ -223,29 +224,25 @@ def detect_libcxx(compiler, version, compiler_exe=None):
         main = textwrap.dedent("""
             #include <string>
 
-            using namespace std;
             static_assert(sizeof(std::string) != sizeof(void*), "using libstdc++");
             int main(){}
             """)
-        t = tempfile.mkdtemp()
-        filename = os.path.join(t, "main.cpp")
-        save(filename, main)
-        old_path = os.getcwd()
-        os.chdir(t)
-        try:
-            error, out_str = detect_runner(f'"{executable}" main.cpp -std=c++11')
-            if error:
-                if "using libstdc++" in out_str:
-                    output.info("gcc C++ standard library: libstdc++")
-                    return "libstdc++"
-                # Other error, but can't know, lets keep libstdc++11
-                output.warning("compiler.libcxx check error: %s" % out_str)
-                output.warning("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
-            else:
-                output.info("gcc C++ standard library: libstdc++11")
-            return "libstdc++11"
-        finally:
-            os.chdir(old_path)
+        # -fsyntax-only to omit the output and stop early (but enough for our static_assert).
+        # -xc++ and - to tell the compiler to compile code from stdin and treat it as C++.
+        completed_process = subprocess.run([executable, "-std=c++11", "-fsyntax-only", "-xc++", "-"],
+                                           input=main, stdout=subprocess.PIPE,
+                                           stderr=subprocess.STDOUT, text=True)
+        error, out_str = completed_process.returncode, completed_process.stdout
+        if error:
+            if "using libstdc++" in out_str:
+                output.info("gcc C++ standard library: libstdc++")
+                return "libstdc++"
+            # Other error, but can't know, lets keep libstdc++11
+            output.warning("compiler.libcxx check error: %s" % out_str)
+            output.warning("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
+        else:
+            output.info("gcc C++ standard library: libstdc++11")
+        return "libstdc++11"
 
         # This is not really a detection in most cases
         # Get compiler C++ stdlib
