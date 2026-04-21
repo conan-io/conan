@@ -93,8 +93,8 @@ def test_output_no_trim():
 
     with redirect_output(stderr):
         output = ConanOutput()
-        output.write("Hello ", Color.BRIGHT_CYAN)
-        output.writeln("world ", Color.BRIGHT_YELLOW)
+        output.write("Hello ")
+        output.writeln("world ")
         msg = "my "
         msg += "package"
         output.info(msg)
