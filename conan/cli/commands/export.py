@@ -2,7 +2,7 @@ import json
 import os
 
 from conan.api.model import MultiPackagesList, PackagesList
-from conan.api.output import cli_out_write
+from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.args import add_reference_args
 
@@ -43,6 +43,10 @@ def export(conan_api, parser, *args):
                         help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
+    # Only enable scoped output if None. If it is False, it means that
+    # we have explicitly disabled (e.g. tests), so we should not enable it
+    if ConanOutput._scoped_recipe_output is None:
+        ConanOutput._scoped_recipe_output = True
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
@@ -64,6 +68,7 @@ def export(conan_api, parser, *args):
 
     pkglist = MultiPackagesList()
     pkglist.add("Local Cache", exported_list)
+    ConanOutput._scoped_recipe_output = None
 
     return {
         "pkglist": pkglist.serialize(),
