@@ -68,6 +68,7 @@ def export(conan_api, parser, *args):
 
     pkglist = MultiPackagesList()
     pkglist.add("Local Cache", exported_list)
+    ConanOutput._scoped_recipe_output = None
 
     return {
         "pkglist": pkglist.serialize(),
