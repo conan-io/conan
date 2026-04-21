@@ -1366,7 +1366,7 @@ class TestInstall:
         # https://github.com/conan-io/conan/issues/19891
         c = TestClient()
         c.run("workspace init .")
-        c.run("new cmake_exe -d name=app -d version=1.0 -o app")
+        c.save({"app/conanfile.py": GenConanfile("app", "1.0")})
         c.run("workspace add app")
         c.run("lock create app")
         c.run("workspace build --lockfile=app/conan.lock --lockfile-partial")
