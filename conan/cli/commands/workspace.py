@@ -193,7 +193,7 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
     order = install_order.install_build_order()
 
     profile_args = ProfileArgs.from_args(args)
-    lockfile_args = [f"--lockfile={args.lockfile}"] if args.lockfile else []
+    lockfile_args = [f"--lockfile={args.lockfile}"] if args.lockfile else ["--lockfile="]
     if args.lockfile_partial:
         lockfile_args.append("--lockfile-partial")
     lockfile_args = " ".join(lockfile_args)

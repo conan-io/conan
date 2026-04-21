@@ -1372,6 +1372,23 @@ class TestInstall:
         c.run("workspace build --lockfile=app/conan.lock --lockfile-partial")
         # it doesn't fail
 
+    def test_install_error(self):
+        c = TestClient()
+        c.save({"hello/conanfile.py": GenConanfile("hello", "0.1"),
+                "app/conanfile.py": GenConanfile("app", "0.1").with_requires("hello/0.1")})
+        c.run("export hello")
+        c.run("lock create app")
+
+        # make some kind of change in hello/conanfile.py
+        c.save({"hello/conanfile.py": GenConanfile("hello", "0.1").with_class_attribute("v=1")})
+        c.run("export hello")  # (new revision)
+ 
+        # rm -rf hello/ (no longer needed)
+        shutil.rmtree(os.path.join(c.current_folder, "hello"))
+        c.run("workspace init .")
+        c.run("workspace add app")
+        c.run("workspace build --build=missing")
+
 
 def test_keep_core_conf():
     c = TestClient()
