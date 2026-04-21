@@ -98,7 +98,6 @@ class VirtualBuildEnv:
 
 
 def _compute_propagate_run(conanfile):
-    # fix for transitive static libraries
     from conan.tools.scm import Version
     from conan.internal.model.version_range import VersionRange
     global_required_conan = conanfile._conan_helpers.global_conf.get("core:required_conan_version")  # noqa
