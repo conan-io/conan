@@ -1362,6 +1362,16 @@ class TestInstall:
         c.run("workspace create --lockfile-out=conan.lock", assert_error=True)
         assert "error: unrecognized arguments: --lockfile-out=conan.lock" in c.out
 
+    def test_install_with_lockfile(self):
+        # https://github.com/conan-io/conan/issues/19891
+        c = TestClient()
+        c.run("workspace init .")
+        c.run("new cmake_exe -d name=app -d version=1.0 -o app")
+        c.run("workspace add app")
+        c.run("lock create app")
+        c.run("workspace build --lockfile=app/conan.lock --lockfile-partial")
+        # it doesn't fail
+
 
 def test_keep_core_conf():
     c = TestClient()
