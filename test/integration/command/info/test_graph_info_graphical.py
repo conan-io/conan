@@ -98,7 +98,6 @@ class TestInfo:
         self.client.run("graph info . --format=html", redirect_stdout="graph.html")
         # Just make sure it doesn't crash
         assert "<body>" in self.client.load("graph.html")
-        self.client.open("graph.html")
 
 
 def test_user_templates():
