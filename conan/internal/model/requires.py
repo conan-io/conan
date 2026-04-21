@@ -418,9 +418,11 @@ class BuildRequirements:
     # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
     def __init__(self, requires):
         self._requires = requires
+        self._called = False
 
     def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None,
                  override=None):
+        self._called = True
         # TODO: Check which arguments could be user-defined
         self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
                                      options=options, override=override)
@@ -513,7 +515,6 @@ class Requirements:
     def values(self):
         return self._requires.values()
 
-    # TODO: Plan the interface for smooth transition from 1.X
     def __call__(self, str_ref, **kwargs):
         if str_ref is None:
             return

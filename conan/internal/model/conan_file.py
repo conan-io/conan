@@ -105,6 +105,10 @@ class ConanFile:
             self.settings = [self.settings]
         self.requires = Requirements(self.requires, self.build_requires, self.test_requires,
                                      self.tool_requires)
+        if self.build_requires:
+            self.output.warning(
+                "build_requires is deprecated, prefer to use tool_requires with correct traits",
+                warn_tag="deprecated")
 
         self.options = Options(self.options or {}, self.default_options)
 

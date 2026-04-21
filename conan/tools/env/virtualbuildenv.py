@@ -63,8 +63,13 @@ class VirtualBuildEnv:
             if build_require.runenv_info:
                 self._buildenv.compose_env(build_require.runenv_info)
             # Then the implicit
-            os_name = self._conanfile.settings_build.get_safe("os")
-            self._buildenv.compose_env(runenv_from_cpp_info(build_require, os_name))
+            propagate_runenv = True
+            if _compute_propagate_run(self._conanfile):
+                if not require.run:
+                    propagate_runenv = False
+            if propagate_runenv:
+                os_name = self._conanfile.settings_build.get_safe("os")
+                self._buildenv.compose_env(runenv_from_cpp_info(build_require, os_name))
 
         # Requires in host context can also bring some direct buildenv_info
         host_requires = self._conanfile.dependencies.host.topological_sort
@@ -90,3 +95,17 @@ class VirtualBuildEnv:
         check_duplicated_generator(self, self._conanfile)
         build_env = self.environment()
         build_env.vars(self._conanfile, scope=scope).save_script(self._filename)
+
+
+def _compute_propagate_run(conanfile):
+    # fix for transitive static libraries
+    from conan.tools.scm import Version
+    from conan.internal.model.version_range import VersionRange
+    global_required_conan = conanfile._conan_helpers.global_conf.get("core:required_conan_version")  # noqa
+    recipe_require_conan_version = global_required_conan or conanfile._conan_required_version  # noqa
+    if recipe_require_conan_version:
+        version_range = VersionRange(recipe_require_conan_version)
+        for conditions in version_range.condition_sets:
+            conditions.prerelease = True
+        return not version_range.contains(Version("2.27.9"), resolve_prerelease=None)
+    return False
