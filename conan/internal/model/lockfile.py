@@ -317,6 +317,34 @@ class Lockfile:
         if prevs:
             return prevs.get(node.package_id)
 
+    def check_config_requires(self, installed_refs):
+        # Validates that the given installed configuration packages satisfy the current lockfile
+        # For that to happen, the installed conf packages must match the lockfile ones
+        # Lockfile ones can be partial, like not containing recipe-revision
+        # And also all 'config_requires' in the lockfile must have a configuration package for them
+        # In case of a lockfile containing several constraints, one per package name must exist
+        lockfile_refs = set(self._conf_requires.refs())
+        if not lockfile_refs:
+            return  # If lockfile is not locking config_requires, do nothing, would break
+
+        # Existing installed config packages must exist in the lockfile
+        not_locked = [r for r in installed_refs if r not in lockfile_refs]
+        if not_locked:
+            raise ConanException(f"Installed config packages {not_locked} not in the lockfile")
+
+        # Config-requires in the lockfile must be installed, at least 1 per package name
+        # so first, group by package name
+        lockfile_refs_by_name = {}
+        for r in self._conf_requires.refs():
+            lockfile_refs_by_name.setdefault(r.name, []).append(r)
+        not_installed = []
+        for refs in lockfile_refs_by_name.values():
+            if not any(r in installed_refs for r in refs):
+                not_installed.extend(refs)
+        if not_installed:
+            raise ConanException("There are config packages in lockfile "
+                                 f"'config_requires' not installed: {not_installed}")
+
     def _resolve(self, require, locked_refs, resolve_prereleases, kind):
         version_range = require.version_range
         ref = require.ref

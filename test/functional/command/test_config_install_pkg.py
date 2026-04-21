@@ -185,6 +185,19 @@ class TestConfigInstallPkg:
         result = json.loads(c.load("config.lock"))
         assert "myconf_a/0.2" in result["config_requires"][0]
 
+    def test_lockfile_multiple(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("config install-pkg myconf_a/0.1 --lockfile-out=config.lock")
+        c.run("config install-pkg myconf_a/0.2 --lockfile=config.lock --lockfile-out=config.lock "
+              "--lockfile-partial")
+        _check_conf(c, "myconf_a/0.2")
+        _check_conf_file(c, ["myconf_a/0.2"])
+
+        # The lockfile can contain both, not ideal, but possible
+        result = json.loads(c.load("config.lock"))
+        assert "myconf_a/0.2" in result["config_requires"][0]
+        assert "myconf_a/0.1" in result["config_requires"][1]
+
     def test_package_id_effect(self):
         # full integration, as "test_config_package_id.py" tests from hardcoded cache json files
         c = TestClient(light=True)
