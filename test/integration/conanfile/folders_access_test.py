@@ -132,6 +132,14 @@ class TestFoldersAccess:
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("create . --user=conan --channel=stable --build='*'")
 
+    def test_deprecated_access_no_conf(self):
+        self.client.save_home({"global.conf": ""})
+        c1 = conanfile % {"no_copy_source": False,
+                          "local_command": False}
+        self.client.save({"conanfile.py": c1}, clean_first=True)
+        self.client.run("create . --user=conan --channel=stable --build='*'", assert_error=True)
+        assert "This behaviour can be reenabled by adding 'conanfile_path_methods'" in self.client.out
+
 
 class TestRecipeFolder:
     recipe_conanfile = textwrap.dedent("""
