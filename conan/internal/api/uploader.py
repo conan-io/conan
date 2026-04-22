@@ -103,7 +103,7 @@ def get_compress_level(compressformat, global_conf):
 
 
 class PackagePreparator:
-    def __init__(self, loader, cache, remote_manager, global_conf):
+    def __init__(self, loader, cache, remote_manager, global_conf, compress_plugin):
         self._loader = loader
         self._remote_manager = remote_manager
         self._cache = cache
@@ -113,7 +113,7 @@ class PackagePreparator:
         compresslevel = get_compress_level(compressformat, global_conf)
         self._compressformat = compressformat
         self._compresslevel = compresslevel
-        plugin = app.conan_api._api_helpers.compression_plugin  # noqa
+        plugin = compress_plugin  # noqa
         self._compress_plugin = getattr(plugin, "tar_compress", None) if plugin else None
 
     def prepare(self, pkg_list, enabled_remotes, metadata, force=False):

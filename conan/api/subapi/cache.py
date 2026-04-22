@@ -194,9 +194,10 @@ class CacheAPI:
                 "https://docs.conan.io/2/reference/extensions/package_signing.html.")
 
         loader = self._api_helpers.loader
+        compress_plugin = self._api_helpers.compression_plugin
         preparator = PackagePreparator(loader, self._api_helpers.cache,
                                        self._api_helpers.remote_manager,
-                                       self._api_helpers.global_conf)
+                                       self._api_helpers.global_conf, compress_plugin)
         # Some packages can have missing sources/exports_sources
         enabled_remotes = self._conan_api.remotes.list()
         preparator.prepare(package_list, enabled_remotes, None, force=True)

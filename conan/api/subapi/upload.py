@@ -64,9 +64,10 @@ class UploadAPI:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
 
         loader = self._api_helpers.loader
+        compress_plugin = self._api_helpers.compression_plugin
         preparator = PackagePreparator(loader, self._api_helpers.cache,
                                        self._api_helpers.remote_manager,
-                                       self._api_helpers.global_conf)
+                                       self._api_helpers.global_conf, compress_plugin)
         preparator.prepare(package_list, enabled_remotes, metadata)
         signer = PkgSignaturesPlugin(self._api_helpers.cache, self._conan_api.home_folder)
         if signer.is_sign_configured:
