@@ -513,11 +513,7 @@ def test():
         class HostRecipe(ConanFile):
             name = "libzip"
             version = "1.11.3"
-            package_type = "library"
-
-            settings = "os", "compiler", "build_type", "arch"
-            options = {"shared": [True, False], "fPIC": [True, False]}
-            default_options = {"shared": False, "fPIC": True}
+            package_type = "static-library"
 
             def requirements(self):
                 self.requires("zlib/[>=1.2.11 <2]")
@@ -529,11 +525,7 @@ def test():
         class HostRecipe(ConanFile):
             name = "minizip"
             version = "1.3.1"
-            package_type = "library"
-
-            settings = "os", "compiler", "build_type", "arch"
-            options = {"shared": [True, False], "fPIC": [True, False]}
-            default_options = {"shared": False, "fPIC": True}
+            package_type = "static-library"
 
             def requirements(self):
                 self.requires("zlib/[>=1.2.11 <2]")
@@ -545,11 +537,7 @@ def test():
         class HostRecipe(ConanFile):
             name = "host"
             version = "0.1"
-            package_type = "library"
-
-            settings = "os", "compiler", "build_type", "arch"
-            options = {"shared": [True, False], "fPIC": [True, False]}
-            default_options = {"shared": True, "fPIC": True, "*:shared": True}
+            package_type = "shared-library"
 
             def requirements(self):
                 self.requires("libzip/1.11.3")
@@ -560,14 +548,7 @@ def test():
         class HostRecipe(ConanFile):
             name = "lib"
             version = "0.1"
-            package_type = "library"
-
-            # Binary configuration
-            settings = "os", "compiler", "build_type", "arch"
-            options = {"shared": [True, False], "fPIC": [True, False]}
-            default_options = {"shared": True, "fPIC": True, "*:shared": True}
-
-            implements = ["auto_shared_fpic"]
+            package_type = "shared-library"
 
             def requirements(self):
                 self.requires("minizip/1.3.1")
@@ -578,14 +559,7 @@ def test():
         class pluginRecipe(ConanFile):
             name = "plugin"
             version = "0.1"
-            package_type = "library"
-
-            # Binary configuration
-            settings = "os", "compiler", "build_type", "arch"
-            options = {"shared": [True, False], "fPIC": [True, False]}
-            default_options = {"shared": False, "fPIC": True}
-
-            implements = ["auto_shared_fpic"]
+            package_type = "static-library"
 
             def requirements(self):
                 self.requires("host/0.1", visible=False)
