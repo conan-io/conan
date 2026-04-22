@@ -27,6 +27,9 @@ Policies are a set of opt-in behaviors that can be defined in the configuration 
 They are intended to be used for temporary opt-in to new behaviors, optimizations or fixes that might be not fully backward compatible,
 but that we want to make available for users to try and give feedback before they become the default behavior in future Conan versions.
 
+conanfile_path_methods
+build_order_args
+empty_version_range
 
 Policies are expected to be removed in future versions once the new behavior is the default one,
 so they should not be used for long-term opt-in to behaviors or features."""
