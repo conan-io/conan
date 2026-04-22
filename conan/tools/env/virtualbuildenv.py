@@ -63,7 +63,7 @@ class VirtualBuildEnv:
             if build_require.runenv_info:
                 self._buildenv.compose_env(build_require.runenv_info)
             # Then the implicit
-            if require.run or not _skip_propagate_run(self_conanfile):
+            if require.run or _propagate_run(self_conanfile):
                 os_name = self._conanfile.settings_build.get_safe("os")
                 self._buildenv.compose_env(runenv_from_cpp_info(build_require, os_name))
 
@@ -93,17 +93,17 @@ class VirtualBuildEnv:
         build_env.vars(self._conanfile, scope=scope).save_script(self._filename)
 
 
-def _skip_propagate_run(conanfile):
+def _propagate_run(conanfile):
     from conan.tools.scm import Version
     from conan.internal.model.version_range import VersionRange
     try:
         global_required_conan = conanfile._conan_helpers.global_conf.get("core:required_conan_version")  # noqa
     except AttributeError:
-        return False  # This can happen for virtual conanfiles without helpers
+        return True  # This can happen for virtual conanfiles without helpers
     recipe_require_conan_version = global_required_conan or conanfile._conan_required_version  # noqa
     if recipe_require_conan_version:
         version_range = VersionRange(recipe_require_conan_version)
         for conditions in version_range.condition_sets:
             conditions.prerelease = True
-        return not version_range.contains(Version("2.27.9"), resolve_prerelease=None)
-    return False
+        return version_range.contains(Version("2.27.9"), resolve_prerelease=None)
+    return True
