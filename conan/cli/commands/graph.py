@@ -83,7 +83,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
                                   warn_tag="deprecated")
         else:
             raise ConanException("Please specify --order-by argument. "
-                                 "The old behaviour can be reenabled by adding 'deprecated_build_order_args' "
+                                 "The old behaviour can be re-enabled by adding 'deprecated_build_order_args' "
                                  "to the 'core:policies' conf list until Conan 2.32, "
                                  "where it will be removed.")
 

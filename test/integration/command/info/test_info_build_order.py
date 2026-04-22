@@ -927,4 +927,4 @@ def test_build_order_order_by_missing_deprecated():
     tc = TestClient(light=True)
     tc.save({"conanfile.py": GenConanfile("dep", "0.1")})
     tc.run("graph build-order", assert_error=True)
-    assert "The old behaviour can be reenabled by adding 'deprecated_build_order_args'" in tc.out
+    assert "The old behaviour can be re-enabled by adding 'deprecated_build_order_args'" in tc.out

@@ -364,6 +364,7 @@ def test_mixed_user_channel():
 def test_remote_version_ranges():
     t = TestClient(default_server_user=True, light=True)
     t.save({"conanfile.py": GenConanfile()})
+    t.save_home({"global.conf": "core:policies=['deprecated_empty_version_range']"})
     for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
         t.run(f"create . --name=dep --version={v}")
     t.run("upload * --confirm -r default")
@@ -437,6 +438,11 @@ def test_deprecated_empty_version_ranger():
     tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0"),
              "app/conanfile.py": GenConanfile("app", "1.0").with_requires("lib/[]")})
     tc.run("export lib")
+    tc.run("graph info app", assert_error=True)
+    assert "lib/[]: lib/1.0" in tc.out
+    assert "Empty version range usage is disabled" in tc.out
+
+    tc.save_home({"global.conf": "core:policies=['deprecated_empty_version_range']"})
     tc.run("graph info app")
     assert "lib/[]: lib/1.0" in tc.out
     assert "Empty version range usage is discouraged" in tc.out
