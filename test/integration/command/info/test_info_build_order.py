@@ -16,7 +16,7 @@ def test_info_build_order():
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
     # Old legacy syntax
-    c.run("graph build-order consumer --build=missing --format=json -cc 'core:policies=[\"build_order_args\"]'")
+    c.run("graph build-order consumer --build=missing --format=json -cc 'core:policies=[\"deprecated_build_order_args\"]'")
     bo_json = json.loads(c.stdout)
 
     result = [
@@ -78,7 +78,7 @@ def test_info_build_order():
 
     # test html format
     # old legacy syntax
-    c.run("graph build-order consumer --build=missing --format=html -cc 'core:policies=[\"build_order_args\"]'")
+    c.run("graph build-order consumer --build=missing --format=html -cc 'core:policies=[\"deprecated_build_order_args\"]'")
     assert "<body>" in c.stdout
     c.run("graph build-order consumer --order-by=recipe --build=missing --format=html")
     assert "<body>" in c.stdout
@@ -730,7 +730,7 @@ class TestBuildOrderReduce:
     def test_error_different_orders(self):
         c = TestClient()
         c.save({"conanfile.py": GenConanfile("liba", "0.1")})
-        c.save_home({"global.conf": "core:policies=['build_order_args']"})
+        c.save_home({"global.conf": "core:policies=['deprecated_build_order_args']"})
         # old syntax
         c.run("graph build-order . --format=json", redirect_stdout="bo1.json")
         c.run("graph build-order . --order-by=recipe --format=json", redirect_stdout="bo2.json")
@@ -927,4 +927,4 @@ def test_build_order_order_by_missing_deprecated():
     tc = TestClient(light=True)
     tc.save({"conanfile.py": GenConanfile("dep", "0.1")})
     tc.run("graph build-order", assert_error=True)
-    assert "The old behaviour can be reenabled by adding 'build_order_args'" in tc.out
+    assert "The old behaviour can be reenabled by adding 'deprecated_build_order_args'" in tc.out

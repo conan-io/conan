@@ -23,16 +23,11 @@ Raise if current version does not match the defined range.
    These behaviors also apply for 'required_conan_version' in recipes, but the global one has precedence."""
 
 policies_msg = """\
-Policies are a set of opt-in behaviors that can be defined in the configuration to control specific aspects of Conan's behavior.
-They are intended to be used for temporary opt-in to new behaviors, optimizations or fixes that might be not fully backward compatible,
-but that we want to make available for users to try and give feedback before they become the default behavior in future Conan versions.
-
-conanfile_path_methods
-build_order_args
-empty_version_range
-
-Policies are expected to be removed in future versions once the new behavior is the default one,
-so they should not be used for long-term opt-in to behaviors or features."""
+A list of opt-in behaviors that can be defined in the configuration to control specific aspects of Conan's behavior,
+such as keeping deprecated behaviours:
+   - deprecated_conanfile_path_methods: Allow using deprecated Path accessors in recipes - To be removed in Conan 2.32
+   - deprecated_build_order_args: Allow deprecated skipping of --order-by argument in conan graph build-order - To be removed in Conan 2.32
+   - deprecated_deprecated_empty_version_range: Allow using deprecated empty version range expressions - To be removed in Conan 2.32"""
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": required_conan_version_msg,

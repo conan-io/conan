@@ -432,7 +432,7 @@ def test_bad_options_syntax(version_range, should_warn):
         assert "its presence unconditionally enables prereleases" not in tc.out
 
 
-def test_empty_version_ranger():
+def test_deprecated_empty_version_ranger():
     tc = TestClient(light=True)
     tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0"),
              "app/conanfile.py": GenConanfile("app", "1.0").with_requires("lib/[]")})

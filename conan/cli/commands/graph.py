@@ -75,15 +75,15 @@ def graph_build_order(conan_api, parser, subparser, *args):
     validate_common_graph_args(args)
     deprecated_policies = conan_api.config.get("core:policies", check_type=list, default=list())
     if args.order_by is None:
-        if "build_order_args" in deprecated_policies:
+        if "deprecated_build_order_args" in deprecated_policies:
             ConanOutput().warning("Please specify --order-by argument. "
-                                  "This behaviour is kept enabled because 'build_order_args' "
+                                  "This behaviour is kept enabled because 'deprecated_build_order_args' "
                                   "is present in the 'core:policies' conf list. "
                                   "The fallback will be removed in Conan 2.32.",
                                   warn_tag="deprecated")
         else:
             raise ConanException("Please specify --order-by argument. "
-                                 "The old behaviour can be reenabled by adding 'build_order_args' "
+                                 "The old behaviour can be reenabled by adding 'deprecated_build_order_args' "
                                  "to the 'core:policies' conf list until Conan 2.32, "
                                  "where it will be removed.")
 

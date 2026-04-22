@@ -259,15 +259,15 @@ class ConanFile:
     @property
     def source_path(self) -> Path:
         policies = self.conf.get("core:policies", check_type=list, default=list())
-        if "conanfile_path_methods" not in policies:
+        if "deprecated_conanfile_path_methods" not in policies:
             raise ConanException(
                 "Use of 'source_path' is deprecated, please use 'source_folder' instead. "
-                "This behaviour can be reenabled by adding 'conanfile_path_methods' to the "
+                "This behaviour can be reenabled by adding 'deprecated_conanfile_path_methods' to the "
                 "'core:policies' conf list until Conan 2.32, where it will be removed.")
         else:
             self.output.warning(
                 f"Use of 'source_path' is deprecated, please use 'source_folder' instead. "
-                f"This behaviour is kept enabled because 'conanfile_path_methods' is present in the "
+                f"This behaviour is kept enabled because 'deprecated_conanfile_path_methods' is present in the "
                 "'core:policies' conf list. The fallback will be removed in Conan 2.32.",
                 warn_tag="deprecated")
         assert self.source_folder is not None, "`source_folder` is `None`"
@@ -291,15 +291,15 @@ class ConanFile:
     @property
     def export_sources_path(self) -> Path:
         policies = self.conf.get("core:policies", check_type=list, default=list())
-        if "conanfile_path_methods" not in policies:
+        if "deprecated_conanfile_path_methods" not in policies:
             raise ConanException(
                 "Use of 'export_sources_path' is deprecated, please use 'export_sources_folder' instead. "
-                "This behaviour can be reenabled by adding 'conanfile_path_methods' to the "
+                "This behaviour can be reenabled by adding 'deprecated_conanfile_path_methods' to the "
                 "'core:policies' conf list until Conan 2.32, where it will be removed.")
         else:
             self.output.warning(
                 f"Use of 'export_sources_path' is deprecated, please use 'export_sources_folder' instead. "
-                f"This behaviour is kept enabled because 'conanfile_path_methods' is present in the "
+                f"This behaviour is kept enabled because 'deprecated_conanfile_path_methods' is present in the "
                 "'core:policies' conf list. The fallback will be removed in Conan 2.32.",
                 warn_tag="deprecated")
         assert self.export_sources_folder is not None, "`export_sources_folder` is `None`"
@@ -312,15 +312,15 @@ class ConanFile:
     @property
     def export_path(self) -> Path:
         policies = self.conf.get("core:policies", check_type=list, default=list())
-        if "conanfile_path_methods" not in policies:
+        if "deprecated_conanfile_path_methods" not in policies:
             raise ConanException(
                 "Use of 'export_path' is deprecated, please use 'export_folder' instead. "
-                "This behaviour can be reenabled by adding 'conanfile_path_methods' to the "
+                "This behaviour can be reenabled by adding 'deprecated_conanfile_path_methods' to the "
                 "'core:policies' conf list until Conan 2.32, where it will be removed.")
         else:
             self.output.warning(
                 f"Use of 'export_path' is deprecated, please use 'export_folder' instead. "
-                f"This behaviour is kept enabled because 'conanfile_path_methods' is present in the "
+                f"This behaviour is kept enabled because 'deprecated_conanfile_path_methods' is present in the "
                 "'core:policies' conf list. The fallback will be removed in Conan 2.32.",
                 warn_tag="deprecated")
 
@@ -349,15 +349,15 @@ class ConanFile:
     @property
     def build_path(self) -> Path:
         policies = self.conf.get("core:policies", check_type=list, default=list())
-        if "conanfile_path_methods" not in policies:
+        if "deprecated_conanfile_path_methods" not in policies:
             raise ConanException(
                 "Use of 'build_path' is deprecated, please use 'build_folder' instead. "
-                "This behaviour can be reenabled by adding 'conanfile_path_methods' to the "
+                "This behaviour can be reenabled by adding 'deprecated_conanfile_path_methods' to the "
                 "'core:policies' conf list until Conan 2.32, where it will be removed.")
         else:
             self.output.warning(
                 f"Use of 'build_path' is deprecated, please use 'build_folder' instead. "
-                f"This behaviour is kept enabled because 'conanfile_path_methods' is present in the "
+                f"This behaviour is kept enabled because 'deprecated_conanfile_path_methods' is present in the "
                 "'core:policies' conf list. The fallback will be removed in Conan 2.32.",
                 warn_tag="deprecated")
         assert self.build_folder is not None, "`build_folder` is `None`"
@@ -384,15 +384,15 @@ class ConanFile:
     @property
     def package_path(self) -> Path:
         policies = self.conf.get("core:policies", check_type=list, default=list())
-        if "conanfile_path_methods" not in policies:
+        if "deprecated_conanfile_path_methods" not in policies:
             raise ConanException(
                 "Use of 'package_path' is deprecated, please use 'package_folder' instead. "
-                "This behaviour can be reenabled by adding 'conanfile_path_methods' to the "
+                "This behaviour can be reenabled by adding 'deprecated_conanfile_path_methods' to the "
                 "'core:policies' conf list until Conan 2.32, where it will be removed.")
         else:
             self.output.warning(
                 f"Use of 'package_path' is deprecated, please use 'package_folder' instead. "
-                f"This behaviour is kept enabled because 'conanfile_path_methods' is present in the "
+                f"This behaviour is kept enabled because 'deprecated_conanfile_path_methods' is present in the "
                 "'core:policies' conf list. The fallback will be removed in Conan 2.32.",
                 warn_tag="deprecated")
 
@@ -402,15 +402,15 @@ class ConanFile:
     @property
     def generators_path(self) -> Path:
         policies = self.conf.get("core:policies", check_type=list, default=list())
-        if "conanfile_path_methods" not in policies:
+        if "deprecated_conanfile_path_methods" not in policies:
             raise ConanException(
                 "Use of 'generators_path' is deprecated, please use 'generators_folder' instead. "
-                "This behaviour can be reenabled by adding 'conanfile_path_methods' to the "
+                "This behaviour can be reenabled by adding 'deprecated_conanfile_path_methods' to the "
                 "'core:policies' conf list until Conan 2.32, where it will be removed.")
         else:
             self.output.warning(
                 f"Use of 'generators_path' is deprecated, please use 'generators_folder' instead. "
-                f"This behaviour is kept enabled because 'conanfile_path_methods' is present in the "
+                f"This behaviour is kept enabled because 'deprecated_conanfile_path_methods' is present in the "
                 "'core:policies' conf list. The fallback will be removed in Conan 2.32.",
                 warn_tag="deprecated")
 

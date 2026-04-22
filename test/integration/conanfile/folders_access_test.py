@@ -94,7 +94,7 @@ class TestFoldersAccess:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.client = TestClient(light=True)
-        self.client.save_home({"global.conf": "core:policies=['conanfile_path_methods']"})
+        self.client.save_home({"global.conf": "core:policies=['deprecated_conanfile_path_methods']"})
         self.client.save({"conanfile.py": conanfile_parent})
         self.client.run("export . --user=conan --channel=stable")
 
@@ -138,7 +138,7 @@ class TestFoldersAccess:
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("create . --user=conan --channel=stable --build='*'", assert_error=True)
-        assert "This behaviour can be reenabled by adding 'conanfile_path_methods'" in self.client.out
+        assert "This behaviour can be reenabled by adding 'deprecated_conanfile_path_methods'" in self.client.out
 
 
 class TestRecipeFolder:

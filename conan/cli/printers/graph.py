@@ -71,16 +71,16 @@ def print_graph_basic(graph):
         if str(req.version) == "[]":
             deprecated_policies = graph.root.conanfile.conf.get("core:policies", check_type=list,
                                                                 default=list())
-            if "empty_version_range" in deprecated_policies:
+            if "deprecated_empty_version_range" in deprecated_policies:
                 output.warning("Empty version range usage is discouraged. Use [*] instead. "
-                               "This behaviour is kept enabled because 'empty_version_range' "
+                               "This behaviour is kept enabled because 'deprecated_empty_version_range' "
                                "is present in the 'core:policies' conf list. "
                                "The fallback will be removed in Conan 2.32.",
                                warn_tag="deprecated")
             else:
                 raise ConanException("Empty version range usage is disabled. Use [*] instead. "
                                      "The old behaviour can be reenabled by adding "
-                                     "'empty_version_range' in the 'core:policies' conf list "
+                                     "'deprecated_empty_version_range' in the 'core:policies' conf list "
                                      "until Conan 2.3, where it will be removed.")
             break
 
