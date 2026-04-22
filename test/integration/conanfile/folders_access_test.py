@@ -138,7 +138,7 @@ class TestFoldersAccess:
                           "local_command": False}
         self.client.save({"conanfile.py": c1}, clean_first=True)
         self.client.run("create . --user=conan --channel=stable --build='*'", assert_error=True)
-        assert "This behaviour can be reenabled by adding 'deprecated_conanfile_path_methods'" in self.client.out
+        assert "This behaviour can be re-enabled by adding 'deprecated_conanfile_path_methods'" in self.client.out
 
 
 class TestRecipeFolder:
