@@ -18,6 +18,7 @@ def required_conan_version_policy(conanfile, limit_version):
         return not version_range.contains(Version(limit_version), resolve_prerelease=None)
     return False
 
+
 @total_ordering
 class _Condition:
     def __init__(self, operator, version):
