@@ -1388,6 +1388,14 @@ class TestInstall:
         c.run("workspace init .")
         c.run("workspace add app")
         c.run("workspace build --build=missing")
+        assert "Using lockfile" not in c.out
+
+        c.run("lock create --requires=app/0.1 --lockfile-out=conan.lock")
+        c.run("workspace build --build=missing")
+        assert "Using lockfile" in c.out
+
+        c.run("workspace build --build=missing --lockfile=")
+        assert "Using lockfile" not in c.out
 
     def test_build_use_auto_lockfile(self):
         c = TestClient()
