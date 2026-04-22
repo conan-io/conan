@@ -140,19 +140,19 @@ def print_graph_packages(graph):
         output.info(title, Color.BRIGHT_YELLOW)
         for pref, (status, remote, info) in sorted(reqs_to_print.items(), key=repr):
             name = pref.repr_notime() if status != "Platform" else str(pref.ref)
-            msg = f"{tab}{name} -"
+            msg = f"{tab}{name} - "
             if status == "Skip":
                 skipped_requires.append(str(pref.ref))
-                output.verbose(f"{msg} {status}", Color.BRIGHT_CYAN)
+                output.verbose(f"{msg}{status}", Color.BRIGHT_CYAN)
             elif status == "Missing" or status == "Invalid":
                 output.write(msg, Color.BRIGHT_CYAN)
-                output.writeln(f" {status}", Color.BRIGHT_RED)
+                output.writeln(status, Color.BRIGHT_RED)
             elif status == "Build":
                 output.write(msg, Color.BRIGHT_CYAN)
-                output.writeln(f" {status}", Color.BRIGHT_YELLOW)
+                output.writeln(status, Color.BRIGHT_YELLOW)
             else:
                 # Support python36
-                msg = f"{msg} {status}"
+                msg += status
                 if remote:
                     msg += f" ({remote.name})"
                 output.info(msg, Color.BRIGHT_CYAN)
