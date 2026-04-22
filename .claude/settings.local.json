@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(xargs grep *)",
-      "Bash(../.envs/conan2_312/Scripts/python -m pytest test/functional/command/test_config_install_pkg.py::TestConanConfigYmlInsecureParsing test/functional/command/test_config_install_pkg.py::TestConfigInstallPkgInsecure -v)"
-    ]
-  }
-}
