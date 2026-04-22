@@ -97,7 +97,7 @@ class VirtualBuildEnv:
         build_env.vars(self._conanfile, scope=scope).save_script(self._filename)
 
 
-def _compute_propagate_run(conanfile):
+def _skip_propagate_run(conanfile):
     from conan.tools.scm import Version
     from conan.internal.model.version_range import VersionRange
     try:
