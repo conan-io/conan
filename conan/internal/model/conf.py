@@ -22,6 +22,15 @@ Raise if current version does not match the defined range.
    - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id is applied
    These behaviors also apply for 'required_conan_version' in recipes, but the global one has precedence."""
 
+policies_msg = """\
+Policies are a set of opt-in behaviors that can be defined in the configuration to control specific aspects of Conan's behavior.
+They are intended to be used for temporary opt-in to new behaviors, optimizations or fixes that might be not fully backward compatible,
+but that we want to make available for users to try and give feedback before they become the default behavior in future Conan versions.
+
+
+Policies are expected to be removed in future versions once the new behavior is the default one,
+so they should not be used for long-term opt-in to behaviors or features."""
+
 BUILT_IN_CONFS = {
     "core:required_conan_version": required_conan_version_msg,
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
@@ -42,6 +51,7 @@ BUILT_IN_CONFS = {
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
+    "core:policies": policies_msg,
     # Sources backup
     "core.sources:download_cache": "Folder to store the sources backup",
     "core.sources:download_urls": "List of URLs to download backup sources from",

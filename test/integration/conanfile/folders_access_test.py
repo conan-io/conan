@@ -94,7 +94,7 @@ class TestFoldersAccess:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.client = TestClient(light=True)
-        self.client.save_home({"global.conf": "user.policies:name=['conanfile_path_methods']"})
+        self.client.save_home({"global.conf": "core:policies=['conanfile_path_methods']"})
         self.client.save({"conanfile.py": conanfile_parent})
         self.client.run("export . --user=conan --channel=stable")
 
