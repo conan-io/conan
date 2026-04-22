@@ -6,7 +6,6 @@ from conan.errors import ConanException
 
 
 def required_conan_version_policy(conanfile, limit_version):
-    # fix for transitive static libraries
     try:
         global_conf = conanfile._conan_helpers.global_conf  # noqa
     except AttributeError:
