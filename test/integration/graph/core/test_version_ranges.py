@@ -398,7 +398,7 @@ def test_different_user_channel_resolved_correctly():
     client2 = TestClient(servers=client.servers, light=True)
     client2.run("install --requires=lib/[>=1.0]@conan/testing")
     assert f"lib/1.0@conan/testing: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
-           f"from remote 'server2' " in client2.out
+           f"from remote 'server2'" in client2.out
 
 
 def test_unknown_options():

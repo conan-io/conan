@@ -61,6 +61,7 @@ def test_output_scoped():
         output = ConanOutput(scope="My package")
         output.info("Hello")
         output.highlight("Conan")
+        output = ConanOutput()
         output.title("Title")
         output.info("Package manager!")
         output.subtitle("Subtitle")
@@ -73,12 +74,29 @@ def test_output_scoped():
       Conan
 
     ======== Title ========
-    My package:
-      Package manager!
+    Package manager!
 
     -------- Subtitle --------
-    My package:
-      Frog
+    Frog
     Other package:
       Hello
     """) == stderr.getvalue()
+
+
+def test_output_no_trim():
+    stderr = RedirectedTestOutput()
+    with redirect_output(stderr):
+        ConanOutput().write("Hello ", newline=False)
+        ConanOutput().write("world ", newline=True)
+    assert "Hello world " in stderr.getvalue()
+
+
+    with redirect_output(stderr):
+        output = ConanOutput()
+        output.write("Hello ")
+        output.writeln("world ")
+        msg = "my "
+        msg += "package"
+        output.info(msg)
+    assert "Hello world " in stderr.getvalue()
+    assert "my package" in stderr.getvalue()

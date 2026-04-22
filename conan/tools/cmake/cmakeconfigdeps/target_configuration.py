@@ -65,12 +65,10 @@ class TargetConfigurationTemplate2:
                 dep_target = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                           required_comp)
                 dep_target = dep_target or f"{pkg_name}::{required_comp}"
-                link = not (pkg_type is PackageType.SHARED and
-                            dep_comp.type is PackageType.SHARED)
                 link_feature = self._cmakedeps.get_property("cmake_link_feature", self._conanfile,
-                                                              required_comp)
+                                                            required_comp)
                 result[dep_target] = {
-                    "link": link,
+                    "link": True,  # Components of same package have PUBLIC dependency
                     "link_feature": link_feature
                 }
             else:  # Different package

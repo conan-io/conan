@@ -10,8 +10,13 @@ from conan.internal.model.version_range import VersionRange
 from conan.internal.model.version import Version
 
 
-def _compute_fix_transitive(conanfile, global_required_conan):
+def _compute_fix_transitive(conanfile):
     # fix for transitive static libraries
+    try:
+        global_conf = conanfile._conan_helpers.global_conf  # noqa
+    except AttributeError:
+        return False  # This can happen for PLATFORM deps without _conan_helpers
+    global_required_conan = global_conf.get("core:required_conan_version")
     recipe_require_conan_version = global_required_conan or conanfile._conan_required_version  # noqa
     if recipe_require_conan_version:
         version_range = VersionRange(recipe_require_conan_version)
@@ -20,7 +25,7 @@ def _compute_fix_transitive(conanfile, global_required_conan):
         return not version_range.contains(Version("2.27.9"), resolve_prerelease=None)
 
 
-def compute_package_id(node, modes, config_version, hook_manager, global_required_conan):
+def compute_package_id(node, modes, config_version, hook_manager):
     """
     Compute the binary package ID of this node
     """
@@ -33,7 +38,7 @@ def compute_package_id(node, modes, config_version, hook_manager, global_require
     data = OrderedDict()
     build_data = OrderedDict()
 
-    fix_transitive_static = _compute_fix_transitive(conanfile, global_required_conan)
+    fix_transitive_static = _compute_fix_transitive(conanfile)
 
     for require, transitive in node.transitive_deps.items():
         dep_node = transitive.node

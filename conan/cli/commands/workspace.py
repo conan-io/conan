@@ -170,8 +170,8 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     # The lockfile by default if not defined will be read from the root workspace folder
     ws_folder = conan_api.workspace.folder()
-    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
-                                               cwd=None, partial=args.lockfile_partial)
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, cwd=ws_folder,
+                                               partial=args.lockfile_partial)
     conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
@@ -193,7 +193,10 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
     order = install_order.install_build_order()
 
     profile_args = ProfileArgs.from_args(args)
-    lockfile_args = [f"--lockfile={a}" for a in args.lockfile or []]
+    # Use explicit user lockfile argument, the one in the current folder or explicitly
+    # avoid using any lockfile that could be inside workspace packages folders
+    lock = args.lockfile if args.lockfile else ("conan.lock" if lockfile else "")
+    lockfile_args = [f"--lockfile={lock}"]
     if args.lockfile_partial:
         lockfile_args.append("--lockfile-partial")
     lockfile_args = " ".join(lockfile_args)
