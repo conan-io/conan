@@ -98,8 +98,9 @@ class ConfigAPI:
             path = os.path.join(path, "conanconfig.yml")
         requested_requires, urls = loadconanconfig_yml(path)
         if urls:
-            new_remotes = [Remote(f"config_install_url{'_' + str(i)}", url=url)
-                           for i, url in enumerate(urls)]
+            new_remotes = [Remote(f"config_install_url{'_' + str(i)}", url=url,
+                                  verify_ssl=url_verify_ssl)
+                           for i, (url, url_verify_ssl) in enumerate(urls)]
             remotes = remotes or []
             remotes += new_remotes
         return requested_requires, remotes
