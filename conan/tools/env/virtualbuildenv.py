@@ -63,11 +63,7 @@ class VirtualBuildEnv:
             if build_require.runenv_info:
                 self._buildenv.compose_env(build_require.runenv_info)
             # Then the implicit
-            propagate_runenv = True
-            if _compute_propagate_run(self._conanfile):
-                if not require.run:
-                    propagate_runenv = False
-            if propagate_runenv:
+            if require.run or not _skip_propagate_run(self_conanfile):
                 os_name = self._conanfile.settings_build.get_safe("os")
                 self._buildenv.compose_env(runenv_from_cpp_info(build_require, os_name))
 
