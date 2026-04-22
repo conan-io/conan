@@ -425,7 +425,7 @@ class TestReplaceRequiresTransitiveGenerators:
                 settings = "build_type", "arch"
                 requires = "openssl/0.1", {zlib}
                 package_type = "application"
-                generators = "CMakeDeps", "PkgConfigDeps", "MSBuildDeps"
+                generators = "CMakeConfigDeps", "PkgConfigDeps", "MSBuildDeps"
             """)
         profile = textwrap.dedent("""
             [settings]
@@ -442,7 +442,7 @@ class TestReplaceRequiresTransitiveGenerators:
 
         c.run("create zlibng")
         c.run("create openssl -pr=profile")
-        c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
+        c.run("install app -pr=profile")
         assert "zlib/0.1: zlib-ng/0.1" in c.out
 
         pc_content = c.load("app/ZLIB.pc")
@@ -505,7 +505,7 @@ class TestReplaceRequiresTransitiveGenerators:
                 settings = "build_type", "arch"
                 requires = "openssl/0.1", {zlib}
                 package_type = "application"
-                generators = "CMakeDeps", "PkgConfigDeps", "MSBuildDeps"
+                generators = "CMakeConfigDeps", "PkgConfigDeps", "MSBuildDeps"
             """)
         profile = textwrap.dedent("""
             [settings]
@@ -522,7 +522,7 @@ class TestReplaceRequiresTransitiveGenerators:
 
         c.run("create zlibng")
         c.run("create openssl -pr=profile")
-        c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
+        c.run("install app -pr=profile")
         assert "zlib/0.1: zlib-ng/0.1" in c.out
 
         pc_content = c.load("app/ZLIB.pc")
@@ -589,7 +589,7 @@ class TestReplaceRequiresTransitiveGenerators:
                 settings = "build_type", "arch"
                 requires = "openssl/0.1", {zlib}
                 package_type = "application"
-                generators = "CMakeDeps", "PkgConfigDeps", "MSBuildDeps"
+                generators = "CMakeConfigDeps", "PkgConfigDeps", "MSBuildDeps"
             """)
         profile = textwrap.dedent("""
             [settings]
@@ -606,7 +606,7 @@ class TestReplaceRequiresTransitiveGenerators:
 
         c.run("create zlibng")
         c.run("create openssl -pr=profile")
-        c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
+        c.run("install app -pr=profile")
         assert "zlib/0.1: zlib-ng/0.1" in c.out
 
         pc_content = c.load("app/zlib-ng.pc")
@@ -679,7 +679,7 @@ class TestReplaceRequiresTransitiveGenerators:
                 settings = "build_type", "arch"
                 requires = "openssl/0.1", {zlib}
                 package_type = "application"
-                generators = "CMakeDeps", "PkgConfigDeps", "MSBuildDeps"
+                generators = "CMakeConfigDeps", "PkgConfigDeps", "MSBuildDeps"
             """)
         profile = textwrap.dedent("""
             [settings]
@@ -696,7 +696,7 @@ class TestReplaceRequiresTransitiveGenerators:
 
         c.run("create zlibng")
         c.run("create openssl -pr=profile")
-        c.run("install app -pr=profile -c tools.cmake.cmakedeps:new=will_break_next")
+        c.run("install app -pr=profile")
         assert "zlib/0.1: zlib-ng/0.1" in c.out
 
         pc_content = c.load("app/zlib-ng.pc")

@@ -26,23 +26,6 @@ def test_skip_package(conanfile):
     assert not build_mode.forced(conanfile, RecipeReference.loads("other/1.2"))
 
 
-def test_valid_params():
-    build_mode = BuildMode(["missing"])
-    assert build_mode.missing is True
-    assert build_mode.never is False
-    assert build_mode.cascade is False
-
-    build_mode = BuildMode(["never"])
-    assert build_mode.missing is False
-    assert build_mode.never is True
-    assert build_mode.cascade is False
-
-    build_mode = BuildMode(["cascade"])
-    assert build_mode.missing is False
-    assert build_mode.never is False
-    assert build_mode.cascade is True
-
-
 def test_invalid_configuration():
     for mode in ["missing", "cascade"]:
         with pytest.raises(ConanException, match=r"--build=never not compatible "

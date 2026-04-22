@@ -35,6 +35,7 @@ def lock_create(conan_api, parser, subparser, *args):
     overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=path,
                                                cwd=cwd, partial=True, overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -180,11 +181,11 @@ def lock_upgrade(conan_api, parser, subparser, *args):
     given a conanfile or a reference.
     """
     common_graph_args(subparser)
-    subparser.add_argument('--update-requires', action="append",
+    subparser.add_argument('-ur', '--update-requires', action="append",
                            help='Update requires from lockfile')
-    subparser.add_argument('--update-build-requires', action="append",
+    subparser.add_argument('-ubr', '--update-build-requires', action="append",
                            help='Update build-requires from lockfile')
-    subparser.add_argument('--update-python-requires', action="append",
+    subparser.add_argument('-upr', '--update-python-requires', action="append",
                            help='Update python-requires from lockfile')
     subparser.add_argument('--build-require', action='store_true', default=False,
                            help='Whether the provided reference is a build-require')
@@ -204,6 +205,7 @@ def lock_upgrade(conan_api, parser, subparser, *args):
                                                cwd=cwd, partial=True, overrides=overrides)
     if lockfile is None:
         raise ConanException("No lockfile specified and default conan.lock not found")
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     # Remove the lockfile entries that will be updated

@@ -144,8 +144,9 @@ def test_single_config_decentralized_overrides():
     assert len(lock["overrides"]) == 1
     assert set(lock["overrides"]["toolc/1.0"]) == {"toolc/3.0", "toolc/2.0", None}
 
-    c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=missing")
-    to_build = json.loads(c.stdout)
+    c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=missing"
+          " --order-by=recipe")
+    to_build = json.loads(c.stdout)['order']
     for level in to_build:
         for elem in level:
             for package in elem["packages"][0]:  # assumes no dependencies between packages
@@ -195,8 +196,9 @@ def test_single_config_decentralized_overrides_nested():
     assert lock["overrides"] == {"libf/1.0": ["libf/3.0"],
                                  "libf/2.0": ["libf/3.0"]}
 
-    c.run("graph build-order pkga --lockfile=pkga/conan.lock --format=json --build=missing")
-    to_build = json.loads(c.stdout)
+    c.run("graph build-order pkga --lockfile=pkga/conan.lock --format=json --build=missing"
+          " --order-by=recipe")
+    to_build = json.loads(c.stdout)['order']
     for level in to_build:
         for elem in level:
             ref = elem["ref"]
@@ -278,8 +280,9 @@ def test_single_config_decentralized_overrides_multi(forced):
     else:
         assert set(lock["overrides"]["libf/2.0"]) == {"libf/4.0", "libf/3.0"}
 
-    c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=missing")
-    to_build = json.loads(c.stdout)
+    c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json --build=missing"
+          " --order-by=recipe")
+    to_build = json.loads(c.stdout)['order']
     for level in to_build:
         for elem in level:
             ref = elem["ref"]
@@ -359,9 +362,9 @@ def test_single_config_decentralized_overrides_multi_replace_requires(replace_pa
 
     # overrides will be different everytime, just checking that things can be built
     c.run("graph build-order pkgc --lockfile=pkgc/conan.lock --format=json -pr:b=profile "
-          "--build=missing")
+          "--build=missing --order-by=recipe")
 
-    to_build = json.loads(c.stdout)
+    to_build = json.loads(c.stdout)['order']
     for level in to_build:
         for elem in level:
             ref = elem["ref"]

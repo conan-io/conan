@@ -173,7 +173,7 @@ class Profile:
         """Mix the specified settings with the current profile.
         Specified settings are prioritized to profile"""
 
-        assert isinstance(new_settings, OrderedDict)
+        assert isinstance(new_settings, (OrderedDict, dict))
 
         # apply the current profile
         res = copy.copy(self.settings)

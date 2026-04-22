@@ -308,7 +308,7 @@ class Requirement:
             # visible=self.visible will further propagate it downstream
             if dep_pkg_type is PackageType.SHARED or require.run:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                                 run=True, visible=self.visible, direct=False,
+                                                 run=self.run, visible=self.visible, direct=False,
                                                  # require.consistent is always True
                                                  consistent=self.consistent)
                 return downstream_require
@@ -380,8 +380,8 @@ class Requirement:
         downstream_require.direct = False
         return downstream_require
 
-    def deduce_package_id_mode(self, pkg_type, dep_node, non_embed_mode, embed_mode, build_mode,
-                               unknown_mode):
+    def deduce_package_id_mode(self, conanfile, dep_node, non_embed_mode, embed_mode, build_mode,
+                               unknown_mode, fix_transitive_static):
         # If defined by the ``require(package_id_mode=xxx)`` trait, that is higher priority
         # The "conf" values are defaults, no hard overrides
         if self.package_id_mode:
@@ -397,6 +397,7 @@ class Requirement:
                 self.package_id_mode = build_mode
             return
 
+        pkg_type = conanfile.package_type
         if pkg_type is PackageType.HEADER:
             self.package_id_mode = "unrelated_mode"
             return
@@ -414,8 +415,20 @@ class Requirement:
             elif pkg_type is PackageType.STATIC:
                 if dep_pkg_type is PackageType.HEADER:
                     self.package_id_mode = embed_mode
-                else:
+                elif self.headers or not fix_transitive_static:
                     self.package_id_mode = non_embed_mode
+                    if not self.headers and not fix_transitive_static:
+                        # Just to avoid multiple repeated warnings
+                        warned = getattr(conanfile, "_conan_fix_transitive_static", False)
+                        if not warned:
+                            msg = ("Transitive dependencies with 'headers=False' effect in "
+                                   "'package_id' is not necessary and suboptimal. Use "
+                                   "required_conan_version='>=2.28' to activate it")
+                            conanfile.output.warning(msg, warn_tag="risk")
+                            conanfile._conan_fix_transitive_static = True
+                else:
+                    self.package_id_mode = None
+                return
 
             if self.package_id_mode is None:
                 self.package_id_mode = unknown_mode
@@ -428,9 +441,11 @@ class BuildRequirements:
     # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
     def __init__(self, requires):
         self._requires = requires
+        self._called = False
 
     def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None,
                  override=None):
+        self._called = True
         # TODO: Check which arguments could be user-defined
         self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
                                      options=options, override=override)
@@ -523,7 +538,6 @@ class Requirements:
     def values(self):
         return self._requires.values()
 
-    # TODO: Plan the interface for smooth transition from 1.X
     def __call__(self, str_ref, **kwargs):
         if str_ref is None:
             return

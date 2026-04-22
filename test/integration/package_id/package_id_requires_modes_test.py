@@ -41,6 +41,8 @@ class TestPackageIDRequirementsModes:
                           ("major_mode", "6ac597ffb99c3747ed78699f206dc1041537a8df"),
                           # This is equal to semver_mode for 0.X.Y.Z..
                           ("full_version_mode", "13b9e753af3958dd1b2d4b3f935b04b8fb6b6760"),
+                          ("full_recipe_mode", "13b9e753af3958dd1b2d4b3f935b04b8fb6b6760"),
+                          ("full_package_mode", "19906d8a245d9f466d7d7f697c666222a9854a1a"),
                           ("revision_mode", "ae5b9eeb74880aeb1cfa3db7f84c007a05ce3a76"),
                           ("full_mode", "d1b2a9538cd69363b4bae7e66c9f900b8f4c58bb")])
 def test_modes(mode, pkg_id):
@@ -214,3 +216,60 @@ class TestRequirementPackageId:
         c.run("create pkg")
         c.run("list pkg:*")
         assert f"liba/{pattern}" in c.out
+
+
+class TestTransitiveStatic:
+    @pytest.mark.parametrize("apply_fix", [True, False, "conf"])
+    def test_transitive_statics(self, apply_fix):
+        # https://github.com/conan-io/conan/issues/19664
+        c = TestClient(light=True)
+        required_conan_version = 'required_conan_version = ">=2.28"' if apply_fix is True else ""
+        if apply_fix == "conf":
+            c.save_home({"global.conf": "core:required_conan_version=>=2.28"})
+        libc = textwrap.dedent(f"""\
+            from conan import ConanFile
+
+            {required_conan_version}
+            class LibcConan(ConanFile):
+                name = "libc"
+                version = "1.0"
+                package_type = "static-library"
+                requires = "libb/1.0"
+            """)
+        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type("static-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
+                                                                .with_requires("liba/1.0"),
+                "libc/conanfile.py": libc
+                })
+        c.run("create liba")
+        c.run("create libb")
+        c.run(f"create libc")
+        if not apply_fix:
+            assert ("libc/1.0: WARN: risk: Transitive dependencies with "
+                    "'headers=False' effect in 'package_id'") in c.out
+        c.run("list libc:*")
+        assert "libb/1.0.Z" in c.out
+        if apply_fix:
+            assert "liba/" not in c.out
+        else:
+            assert "liba/" in c.out
+
+    def test_transitive_shared(self):
+        # https://github.com/conan-io/conan/issues/19664
+        # This doesn't happen by default because the transitive shared do not propagate .libs
+        # linkage requirement trait
+        c = TestClient(light=True)
+        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type("shared-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("shared-library")
+               .with_requires("liba/1.0"),
+                "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+               .with_requires("libb/1.0"),
+                })
+        c.run("create liba")
+        c.run("create libb")
+        c.run("create libc")
+
+        assert "libc/1.0: WARN" not in c.out
+        c.run("list libc:*")
+        assert "libb/1.0.Z" in c.out
+        assert "liba/" not in c.out

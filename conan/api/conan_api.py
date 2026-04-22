@@ -21,14 +21,24 @@ from conan.api.subapi.remotes import RemotesAPI
 from conan.api.subapi.remove import RemoveAPI
 from conan.api.subapi.upload import UploadAPI
 from conan.errors import ConanException
+from conan.internal.api.remotes.localdb import LocalDB
+from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
+from conan.internal.conan_app import ConanFileHelpers, CmdWrapper
+from conan.internal.graph.proxy import ConanProxy
+from conan.internal.graph.python_requires import PyRequireLoader
+from conan.internal.graph.range_resolver import RangeResolver
 from conan.internal.hook_manager import HookManager
+from conan.internal.loader import ConanFileLoader
 from conan.internal.model.conf import load_global_conf, ConfDefinition, CORE_CONF_PATTERN
 from conan.internal.model.settings import load_settings_yml
 from conan.internal.paths import get_conan_user_home
+from conan.internal.api.local.editable import EditablePackages
 from conan.internal.api.migrations import ClientMigrator
 from conan.internal.model.version_range import validate_conan_version
+from conan.internal.rest.auth_manager import ConanApiAuthManager
 from conan.internal.rest.conan_requester import ConanRequester
+from conan.internal.rest.remote_manager import RemoteManager
 
 
 class ConanAPI:
@@ -60,21 +70,23 @@ class ConanAPI:
         self.config: ConfigAPI = ConfigAPI(self, self._api_helpers)
         #: Used to interact with remotes
         self.remotes: RemotesAPI = RemotesAPI(self, self._api_helpers)
-        self.command = CommandAPI(self)
+        #: Used to call other commands
+        self.command: CommandAPI = CommandAPI(self)
         #: Used to get latest refs and list refs of recipes and packages
-        self.list: ListAPI = ListAPI(self)
-        self.profiles = ProfilesAPI(self, self._api_helpers)
+        self.list: ListAPI = ListAPI(self, self._api_helpers)
+        #: Used to process and load Conan profiles
+        self.profiles: ProfilesAPI = ProfilesAPI(self, self._api_helpers)
         #: Used to install binaries, sources, deploy packages and more
         self.install: InstallAPI = InstallAPI(self, self._api_helpers)
         self.graph = GraphAPI(self, self._api_helpers)
         #: Used to export recipes and pre-compiled package binaries to the Conan cache
         self.export: ExportAPI = ExportAPI(self, self._api_helpers)
-        self.remove = RemoveAPI(self)
+        self.remove = RemoveAPI(self, self._api_helpers)
         self.new = NewAPI(self)
         #: Used to upload recipes and packages to remotes
         self.upload: UploadAPI = UploadAPI(self, self._api_helpers)
         #: Used to download recipes and packages from remotes
-        self.download: DownloadAPI = DownloadAPI(self)
+        self.download: DownloadAPI = DownloadAPI(self, self._api_helpers)
         #: Used to interact wit the packages storage cache
         self.cache: CacheAPI = CacheAPI(self, self._api_helpers)
         #: Used to read and manage lockfile files
@@ -101,24 +113,28 @@ class ConanAPI:
         Reinitialize the Conan API. This is useful when the configuration changes.
         """
         self._api_helpers.reinit()
-        self.local.reinit()
 
     def migrate(self):
         # Migration system
         # TODO: A prettier refactoring of migrators would be nice
         from conan import conan_version
-        migrator = ClientMigrator(self.cache_folder, conan_version)
+        migrator = ClientMigrator(self._home_folder, conan_version)
         migrator.migrate()
 
     class _ApiHelpers:
+        # This is an internal implementation detail of Conan, DO NOT USE
         def __init__(self, conan_api):
             self._conan_api = conan_api
             self._cli_core_confs = None
             self._init_global_conf()
+            # TODO: Make uniform lazy vs non lazy collaborators
             self.hook_manager = HookManager(HomePaths(self._conan_api.home_folder).hooks_path)
+            self._editable_packages = EditablePackages(self._conan_api.home_folder)
             # Wraps an http_requester to inject proxies, certs, etc
             self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
+            self.cache = PkgCache(self._conan_api.home_folder, self.global_conf)
             self._settings_yml = None
+            self._remote_manager = None
 
         def set_core_confs(self, core_confs):
             confs = ConfDefinition()
@@ -139,12 +155,16 @@ class ConanAPI:
             required_range_new = self.global_conf.get("core:required_conan_version")
             if required_range_new:
                 validate_conan_version(required_range_new)
+            self.global_conf.validate()
 
         def reinit(self):
             self._init_global_conf()
             self.hook_manager.reinit()
             self._requester = ConanRequester(self.global_conf, self._conan_api.home_folder)
             self._settings_yml = None
+            self.cache = PkgCache(self._conan_api.home_folder, self.global_conf)
+            self._remote_manager = None
+            self._editable_packages = EditablePackages(self._conan_api.home_folder)
 
         @property
         def settings_yml(self):
@@ -153,5 +173,47 @@ class ConanAPI:
             return self._settings_yml
 
         @property
+        def remote_manager(self):
+            if self._remote_manager is None:
+                home_folder = self._conan_api.home_folder
+                localdb = LocalDB(home_folder)
+                requester = self._conan_api._api_helpers.requester  # noqa
+                auth_manager = ConanApiAuthManager(requester, self._conan_api.home_folder, localdb,
+                                                   self.global_conf)
+                self._remote_manager = RemoteManager(self.cache, auth_manager, home_folder)
+            return self._remote_manager
+
+        @property
         def requester(self):
             return self._requester
+
+        @property
+        def editable_packages(self):
+            # These are just the global editables, not including workspace ones
+            return self._editable_packages
+
+        @property
+        def loader(self):
+            _, _, load, _ = self.get_loader()
+            return load
+
+        def get_loader(self):
+            ws_editables = self._conan_api.workspace.packages()
+            editable_packages = self._editable_packages.update_copy(ws_editables)
+
+            legacy_update = self.global_conf.get("core:update_policy", choices=["legacy"])
+            # This proxy is caching information
+            proxy = ConanProxy(self.cache, self.remote_manager, editable_packages,
+                               legacy_update=legacy_update)
+            # This is caching too
+            range_resolver = RangeResolver(self.cache, self.remote_manager, self.global_conf,
+                                           editable_packages)
+
+            cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
+            conanfile_helpers = ConanFileHelpers(self._requester, cmd_wrap, self.global_conf,
+                                                 self.cache, self._conan_api.home_folder,
+                                                 self._conan_api)
+            pyreq_loader = PyRequireLoader(proxy, range_resolver, self.global_conf)
+            # This is caching too!
+            loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
+            return proxy, range_resolver, loader, None

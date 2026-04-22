@@ -2,7 +2,8 @@ import platform
 import textwrap
 import pytest
 
-from conan.test.assets.sources import gen_function_c, gen_function_h
+from conan.test.assets.genconanfile import GenConanfile
+from conan.test.assets.sources import gen_function_c, gen_function_h, gen_function_cpp
 from conan.test.utils.tools import TestClient
 
 
@@ -161,3 +162,112 @@ def test_auto_cppstd(matrix_c_interface_client):
             "app.c": app}, clean_first=True)
     c.run(f"build .")
     assert "Hello Matrix!" in c.out
+
+
+@pytest.mark.tool("cmake", "3.27")
+def test_inter_component_vis():
+    tc = TestClient()
+    matrix_cpp = gen_function_cpp(name="matrix")
+    matrix_h = gen_function_h(name="matrix")
+
+    engine_cpp = gen_function_cpp(name="engine", includes=["matrix"], calls=["matrix"])
+    engine_h = gen_function_h(name="engine")
+
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.27)
+        project(mylib CXX)
+
+        add_library(matrix src/matrix.cpp src/matrix.h)
+        add_library(engine src/engine.cpp src/engine.h)
+
+        set_target_properties(matrix PROPERTIES PUBLIC_HEADER src/matrix.h)
+        set_target_properties(engine PROPERTIES PUBLIC_HEADER src/engine.h)
+
+        target_link_libraries(engine PRIVATE matrix)
+
+        include(GNUInstallDirs)
+        install(TARGETS matrix engine
+                EXPORT mylibTargets
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+                LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+                PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+        """)
+
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+
+        class HelloConan(ConanFile):
+            name = 'mylib'
+            version = '0.1'
+            exports_sources = "CMakeLists.txt", "src/*"
+            generators = "CMakeConfigDeps", "CMakeToolchain"
+            settings = "os", "compiler", "arch", "build_type"
+            options = {"shared": [True, False]}
+            default_options = {"shared": True}
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+
+            def package_info(self):
+                self.cpp_info.components["matrix"].libs = ['matrix']
+                self.cpp_info.components["engine"].libs = ['engine']
+                self.cpp_info.components["engine"].requires = ['matrix']
+        """)
+
+    test_package_cml = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(test_package CXX)
+
+        find_package(mylib CONFIG REQUIRED)
+        add_executable(example src/main.cpp)
+
+        # Uses matrix too, but only links to engine.
+        # Note that old CMakeDeps used to transitively link matrix
+        target_link_libraries(example PRIVATE mylib::engine)
+        """)
+    test_package_cpp = gen_function_cpp(name="main", includes=["engine", "matrix"],
+                                        calls=["engine", "matrix"])
+    test_conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, cmake_layout
+
+        class TestPkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "CMakeConfigDeps", "CMakeToolchain"
+
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def test(self):
+                cmd = os.path.join(self.cpp.build.bindir, "example")
+                self.run(cmd, env="conanrun")
+        """)
+
+    tc.save({"CMakeLists.txt": cmakelists,
+             "src/matrix.cpp": matrix_cpp,
+             "src/matrix.h": matrix_h,
+             "src/engine.cpp": engine_cpp,
+             "src/engine.h": engine_h,
+             "conanfile.py": conanfile,
+             "test_package/CMakeLists.txt": test_package_cml,
+             "test_package/src/main.cpp": test_package_cpp,
+             "test_package/conanfile.py": test_conanfile})
+
+    tc.run("create")

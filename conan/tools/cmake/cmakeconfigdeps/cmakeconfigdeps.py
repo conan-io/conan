@@ -165,7 +165,11 @@ class CMakeConfigDeps:
 
     def get_property(self, prop, dep, comp_name=None, check_type=None):
         dep_name = dep.ref.name
-        build_suffix = "&build" if dep.context == "build" else ""
+        # Find the requirement that points to this "dep".
+        # TODO: It would probably be more explicit if it was an argument as "dep", but to keep
+        #   diff minimal
+        require = next(iter(r for r, d in self._conanfile.dependencies.items() if d is dep))
+        build_suffix = "&build" if require.build else ""
         dep_comp = f"{str(dep_name)}::{comp_name}" if comp_name else f"{str(dep_name)}"
         try:
             value = self._properties[f"{dep_comp}{build_suffix}"][prop]

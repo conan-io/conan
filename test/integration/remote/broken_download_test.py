@@ -114,13 +114,13 @@ def test_client_retries():
     client.run("install --requires=lib/1.0@lasote/stable")
     assert "WARN: network: Error downloading file" in client.out
     assert 'Fake connection error exception' in client.out
-    assert 1 == str(client.out).count("Waiting 0 seconds to retry...")
+    assert 1 == str(client.out).count("Waiting 1 seconds to retry...")
 
     client = TestClient(servers=servers, inputs=["admin", "password"],
                         requester_class=DownloadFilesBrokenRequesterTimesOne)
-    client.save_home({"global.conf": "core.download:retry_wait=1"})
+    client.save_home({"global.conf": "core.download:retry_wait=2"})
     client.run("install --requires=lib/1.0@lasote/stable")
-    assert 1 == str(client.out).count("Waiting 1 seconds to retry...")
+    assert 1 == str(client.out).count("Waiting 2 seconds to retry...")
 
     def DownloadFilesBrokenRequesterTimesTen(*args, **kwargs):  # noqa
         return DownloadFilesBrokenRequester(10, *args, **kwargs)

@@ -59,6 +59,7 @@ class ConanFile:
     win_bash_run = None  # For run scope
 
     _conan_is_consumer = False
+    _conan_required_version = None
 
     # #### Requirements
     requires = None
@@ -75,6 +76,7 @@ class ConanFile:
     buildenv_info = None
     runenv_info = None
     conf_info = None
+    conf = None
     generator_info = None
     conan_data = None
 
@@ -103,6 +105,10 @@ class ConanFile:
             self.settings = [self.settings]
         self.requires = Requirements(self.requires, self.build_requires, self.test_requires,
                                      self.tool_requires)
+        if self.build_requires:
+            self.output.warning(
+                "build_requires is deprecated, prefer to use tool_requires with correct traits",
+                warn_tag="deprecated")
 
         self.options = Options(self.options or {}, self.default_options)
 

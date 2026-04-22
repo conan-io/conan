@@ -6,7 +6,6 @@ from typing import List
 from conan.api.model import PackagesList, Remote
 from conan.api.output import ConanOutput
 from conan.internal.api.upload import add_urls
-from conan.internal.conan_app import ConanApp
 from conan.internal.api.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.rest.file_uploader import FileUploader
@@ -36,17 +35,17 @@ class UploadAPI:
         :parameter force: If ``True``, it will skip the check and mark that all items need to be
             uploaded. A ``force_upload`` key will be added to the entries that will be uploaded.
         """
-        app = ConanApp(self._conan_api)
+        loader = self._api_helpers.loader
         for ref, _ in package_list.items():
-            layout = app.cache.recipe_layout(ref)
+            layout = self._api_helpers.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
-            conanfile = app.loader.load_basic(conanfile_path, remotes=enabled_remotes)
+            conanfile = loader.load_basic(conanfile_path, remotes=enabled_remotes)
             if conanfile.upload_policy == "skip":
                 ConanOutput().info(f"{ref}: Skipping upload of binaries, "
                                    "because upload_policy='skip'")
                 package_list.recipe_dict(ref)["packages"] = {}
 
-        UploadUpstreamChecker(app).check(package_list, remote, force)
+        UploadUpstreamChecker(self._api_helpers.remote_manager).check(package_list, remote, force)
 
     def prepare(self, package_list: PackagesList, enabled_remotes: List[Remote],
                 metadata: List[str] = None):
@@ -63,19 +62,21 @@ class UploadAPI:
             it means that no metadata files should be uploaded."""
         if metadata and metadata != [''] and '' in metadata:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
-        app = ConanApp(self._conan_api)
-        preparator = PackagePreparator(app, self._api_helpers.global_conf)
+
+        loader = self._api_helpers.loader
+        preparator = PackagePreparator(loader, self._api_helpers.cache,
+                                       self._api_helpers.remote_manager,
+                                       self._api_helpers.global_conf)
         preparator.prepare(package_list, enabled_remotes, metadata)
-        signer = PkgSignaturesPlugin(app.cache, app.cache_folder)
+        signer = PkgSignaturesPlugin(self._api_helpers.cache, self._conan_api.home_folder)
         if signer.is_sign_configured:
             ConanOutput().warning("[Package sign] Implicitly signing packages in the upload "
                                   "command has been removed. Use 'conan cache sign' command before "
                                   "uploading instead.", warn_tag="deprecated")
 
     def _upload(self, package_list, remote):
-        app = ConanApp(self._conan_api)
-        app.remote_manager.check_credentials(remote)
-        executor = UploadExecutor(app)
+        self._api_helpers.remote_manager.check_credentials(remote)
+        executor = UploadExecutor(self._api_helpers.remote_manager)
         executor.upload(package_list, remote)
 
     def upload_full(self, package_list: PackagesList, remote: Remote, enabled_remotes: List[Remote],
@@ -183,7 +184,7 @@ class UploadAPI:
                                    "Skipping updating file but continuing with upload. "
                                    f"Missing permissions?: {e}")
                 else:
-                    raise ConanException(f"The source backup server '{url}' needs authentication"
-                                         f"/permissions, please provide 'source_credentials.json': {e}")
+                    raise ConanException(f"Authentication to source backup server '{url}' failed, "
+                                         f"please check your 'source_credentials.json': {e}")
 
         output.success("Upload backup sources complete\n")
