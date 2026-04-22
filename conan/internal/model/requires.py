@@ -40,6 +40,7 @@ class Requirement:
         self.required_nodes = set()  # store which intermediate nodes are required, to compute "Skip"
         self.no_skip = no_skip
         # computed ones, not default ones
+        self.consistent_policy_new = False
         if self.visible and not self.consistent:
             raise ConanException(f"Requirement {ref} with visible=True and consistent=False is not"
                                  f" supported. Please open a Github ticket to report it")
@@ -110,7 +111,11 @@ class Requirement:
 
     @property
     def consistent(self):
-        default_consistent = self.visible or self.test
+        # Host by default has to be consistent too
+        if self.consistent_policy_new:
+            default_consistent = self.visible or self.test or not self.build
+        else:
+            default_consistent = self.visible or self.test
         return self._default_if_none(self._consistent, default_consistent)
 
     @consistent.setter
@@ -171,7 +176,7 @@ class Requirement:
                   "require": str(self._required_ref)}
         serializable = ("run", "libs", "skip", "test", "force", "direct", "build",
                         "transitive_headers", "transitive_libs", "headers",
-                        "package_id_mode", "visible", "consistent")
+                        "package_id_mode", "visible")
         for attribute in serializable:
             result[attribute] = getattr(self, attribute)
         return result
@@ -299,7 +304,7 @@ class Requirement:
             # consumers so run=require.run, irrespective of the 'self.run' trait
             downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
                                              run=require.run, visible=self.visible, direct=False,
-                                             # require.consistent is always True
+                                             # require.consistent is True, cause require.visible=True
                                              consistent=self.consistent)
             return downstream_require
 
@@ -309,7 +314,7 @@ class Requirement:
             if dep_pkg_type is PackageType.SHARED or require.run:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
                                                  run=self.run, visible=self.visible, direct=False,
-                                                 # require.consistent is always True
+                                                 # require.visible=True => require.consistent=True
                                                  consistent=self.consistent)
                 return downstream_require
             return

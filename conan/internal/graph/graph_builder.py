@@ -18,6 +18,7 @@ from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
 from conan.internal.model.requires import Requirement
 from conan.internal.model.version_range import VersionRange
+from conan.internal.model.version import Version
 
 
 class DepsGraphBuilder:
@@ -216,11 +217,28 @@ class DepsGraphBuilder:
                     node.conanfile.requires.tool_require(tool_require.repr_notime(),
                                                          raise_if_duplicated=False)
 
+    @staticmethod
+    def _consistent_policy_new(conanfile):
+        # fix for transitive static libraries
+        try:
+            global_conf = conanfile._conan_helpers.global_conf  # noqa
+        except AttributeError:
+            return False  # This can happen for PLATFORM deps without _conan_helpers
+        global_required_conan = global_conf.get("core:required_conan_version")
+        recipe_require_conan_version = global_required_conan or conanfile._conan_required_version  # noqa
+        if recipe_require_conan_version:
+            version_range = VersionRange(recipe_require_conan_version)
+            for conditions in version_range.condition_sets:
+                conditions.prerelease = True
+            return not version_range.contains(Version("2.27.9"), resolve_prerelease=None)
+
     def _initialize_requires(self, node, graph, graph_lock, profile_build, profile_host):
         result = []
         skip_build = node.conanfile.conf.get("tools.graph:skip_build", check_type=bool)
         skip_test = node.conanfile.conf.get("tools.graph:skip_test", check_type=bool)
+        consistent_policy_new = self._consistent_policy_new(node.conanfile)
         for require in node.conanfile.requires.values():
+            require.consistent_policy_new = consistent_policy_new
             if not require.visible and not require.package_id_mode:
                 if skip_build and require.build:
                     node.skipped_build_requires = True
