@@ -92,6 +92,9 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     path = path if os.path.exists(path) else None
     if path is None and args.reference is None:
         raise ConanException("Must provide a package reference or a path to a conanconfig.yml file")
+    if not args.verify_ssl and not args.url:
+        raise ConanException("'--insecure' argument requires '--url' argument. For conanconfig.yml "
+                             "files, the 'insecure' argument is provided in the file")
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                partial=args.lockfile_partial)

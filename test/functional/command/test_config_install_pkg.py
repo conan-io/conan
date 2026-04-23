@@ -623,6 +623,16 @@ class TestConfigInstallPkgInsecure:
         _check_conf(c, "myconf_a/0.1")
         _check_conf_file(c, ["myconf_a/0.1"])
 
+    def test_with_url_insecure_error(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("remote remove default")
+        server_url = servers["default"].fake_url
+        conanconfig = yaml.dump({"packages": ["myconf_a/0.1"],
+                                 "urls": [{"url": server_url}]})
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg . --insecure", assert_error=True)
+        assert "'--insecure' argument requires '--url' argument" in c.out
+
     def test_install_from_file_with_url_dict_form(self, servers):
         c = TestClient(servers=servers, light=True)
         c.run("remote remove default")
