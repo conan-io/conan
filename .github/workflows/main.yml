@@ -203,16 +203,17 @@ jobs:
           python -m venv /tmp/venv
           /tmp/venv/bin/pip install "$FLAG" "${{ matrix.package }}" "${{ matrix.package }}==${VERSION}" \
             || (sleep 20 && /tmp/venv/bin/pip install "$FLAG" "${{ matrix.package }}" "${{ matrix.package }}==${VERSION}")
+          echo "/tmp/venv/bin" >> "$GITHUB_PATH"
 
       - name: Test conan
         if: matrix.package == 'conan'
         run: |
-          /tmp/venv/bin/conan --version
-          /tmp/venv/bin/conan profile detect --force
+          conan --version
+          conan profile detect --force
           mkdir -p /tmp/sample && cd /tmp/sample
-          /tmp/venv/bin/conan new cmake_lib -d name=x -d version=1.0 -f
-          /tmp/venv/bin/conan install .
+          conan new cmake_lib -d name=x -d version=1.0 -f
+          conan install .
 
       - name: Test conan-server
         if: matrix.package == 'conan-server'
-        run: /tmp/venv/bin/conan_server --help
+        run: conan_server --help
