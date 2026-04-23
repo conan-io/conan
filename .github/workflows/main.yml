@@ -204,7 +204,7 @@ jobs:
           /tmp/venv/bin/pip install "$FLAG" "${{ matrix.package }}" "${{ matrix.package }}==${VERSION}" \
             || (sleep 20 && /tmp/venv/bin/pip install "$FLAG" "${{ matrix.package }}" "${{ matrix.package }}==${VERSION}")
 
-      - name: Smoke test conan
+      - name: Test conan
         if: matrix.package == 'conan'
         run: |
           /tmp/venv/bin/conan --version
@@ -213,6 +213,6 @@ jobs:
           /tmp/venv/bin/conan new cmake_lib -d name=x -d version=1.0 -f
           /tmp/venv/bin/conan install .
 
-      - name: Smoke test conan-server
+      - name: Test conan-server
         if: matrix.package == 'conan-server'
         run: /tmp/venv/bin/conan_server --help
