@@ -219,26 +219,6 @@ def test_system_wrappers():
            '             $<$<CONFIG:RELEASE>:my_system_cool_lib>)' in cmake
 
 
-def test_autolink_pragma():
-    """https://github.com/conan-io/conan/issues/10837"""
-    c = TestClient()
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-        class Pkg(ConanFile):
-            def package_info(self):
-                self.cpp_info.set_property("cmake_set_interface_link_directories", True)
-        """)
-    c.save({"conanfile.py": conanfile,
-            "test_package/conanfile.py": GenConanfile().with_test("pass")
-                                                       .with_settings("build_type")
-                                                       .with_generator("CMakeConfigDeps")})
-    c.run("create . --name=pkg --version=0.1")
-    assert "CMakeConfigDeps: cmake_set_interface_link_directories deprecated" in c.out
-    c.run(f"create . --name=pkg --version=0.1")
-    assert "CMakeConfigDeps: cmake_set_interface_link_directories deprecated and invalid. " \
-           "The package 'package_info()' must correctly define the (CPS) information" in c.out
-
-
 def test_consuming_cpp_info_with_components_dependency_from_same_package():
     c = TestClient()
     conanfile = textwrap.dedent("""

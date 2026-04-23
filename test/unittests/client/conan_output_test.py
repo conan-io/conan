@@ -2,6 +2,7 @@ import sys
 from unittest import mock
 
 import pytest
+import textwrap
 
 from conan.api.output import ConanOutput, init_colorama
 from conan.test.utils.mocks import RedirectedTestOutput
@@ -48,3 +49,54 @@ def test_output_chainable():
     assert "My title" in stderr.getvalue()
     assert "Worked" in stderr.getvalue()
     assert "But there was more that needed to be said" in stderr.getvalue()
+
+
+def test_output_scoped():
+    """
+    Test that when scoped output is enabled, the scope is only printed once per scope change or title/subtitle is emitted
+    """
+    stderr = RedirectedTestOutput()
+    with redirect_output(stderr):
+        ConanOutput._scoped_recipe_output = True
+        output = ConanOutput(scope="My package")
+        output.info("Hello")
+        output.highlight("Conan")
+        output = ConanOutput()
+        output.title("Title")
+        output.info("Package manager!")
+        output.subtitle("Subtitle")
+        output.highlight("Frog")
+        output = ConanOutput(scope="Other package")
+        output.info("Hello")
+    assert textwrap.dedent("""\
+    My package:
+      Hello
+      Conan
+
+    ======== Title ========
+    Package manager!
+
+    -------- Subtitle --------
+    Frog
+    Other package:
+      Hello
+    """) == stderr.getvalue()
+
+
+def test_output_no_trim():
+    stderr = RedirectedTestOutput()
+    with redirect_output(stderr):
+        ConanOutput().write("Hello ", newline=False)
+        ConanOutput().write("world ", newline=True)
+    assert "Hello world " in stderr.getvalue()
+
+
+    with redirect_output(stderr):
+        output = ConanOutput()
+        output.write("Hello ")
+        output.writeln("world ")
+        msg = "my "
+        msg += "package"
+        output.info(msg)
+    assert "Hello world " in stderr.getvalue()
+    assert "my package" in stderr.getvalue()

@@ -538,7 +538,7 @@ class GraphBinariesAnalyzer:
             if node.binary in (BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_EDITABLE):
                 if node.skipped_build_requires:
                     raise ConanException(f"Package {node.ref} skipped its test/tool requires with "
-                                         f"tools.graph:skip_build, but was marked to be built ")
+                                         f"tools.graph:skip_build, but was marked to be built")
                 can_skip = node.conanfile.conf.get("tools.graph:skip_binaries",
                                                    check_type=bool, default=True)
                 # Only those that are forced to build, not only "missing"

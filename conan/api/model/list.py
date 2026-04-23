@@ -246,13 +246,6 @@ class PackagesList:
             for rrev_dict in ref_dict.get("revisions", {}).values():
                 rrev_dict.pop("packages", None)
 
-    def add_refs(self, refs):
-        ConanOutput().warning("PackagesLists.add_refs() non-public, non-documented method will be "
-                              "removed, use .add_ref() instead", warn_tag="deprecated")
-        # RREVS alreday come in ASCENDING order, so upload does older revisions first
-        for ref in refs:
-            self.add_ref(ref)
-
     def add_ref(self, ref: RecipeReference) -> None:
         """
         Adds a new RecipeReference to a package list
@@ -263,13 +256,6 @@ class PackagesList:
             rev_dict = revs_dict.setdefault(ref.revision, {})
             if ref.timestamp:
                 rev_dict["timestamp"] = ref.timestamp
-
-    def add_prefs(self, rrev, prefs):
-        ConanOutput().warning("PackageLists.add_prefs() non-public, non-documented method will be "
-                              "removed, use .add_pref() instead", warn_tag="deprecated")
-        # Prevs already come in ASCENDING order, so upload does older revisions first
-        for p in prefs:
-            self.add_pref(p)
 
     def add_pref(self, pref: PkgReference, pkg_info: dict = None) -> None:
         """
@@ -286,30 +272,6 @@ class PackagesList:
                 prev_dict["timestamp"] = pref.timestamp
         if pkg_info is not None:
             package_dict["info"] = pkg_info
-
-    def add_configurations(self, confs):
-        ConanOutput().warning("PackageLists.add_configurations() non-public, non-documented method "
-                              "will be removed, use .add_pref() instead",
-                              warn_tag="deprecated")
-        for pref, conf in confs.items():
-            rev_dict = self.recipe_dict(pref.ref)
-            try:
-                rev_dict["packages"][pref.package_id]["info"] = conf
-            except KeyError:  # If package_id does not exist, do nothing, only add to existing prefs
-                pass
-
-    def refs(self):
-        ConanOutput().warning("PackageLists.refs() non-public, non-documented method will be "
-                              "removed, use .items() instead", warn_tag="deprecated")
-        result = {}
-        for ref, ref_dict in self._data.items():
-            for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
-                t = rrev_dict.get("timestamp")
-                recipe = RecipeReference.loads(f"{ref}#{rrev}")  # TODO: optimize this
-                if t is not None:
-                    recipe.timestamp = t
-                result[recipe] = rrev_dict
-        return result
 
     def items(self) -> Iterable[Tuple[RecipeReference, Dict[PkgReference, Dict]]]:
         """Iterate over the contents of the package list.
@@ -370,19 +332,6 @@ class PackagesList:
         """
         ref_dict = self.recipe_dict(pref.ref)
         return ref_dict["packages"][pref.package_id]["revisions"][pref.revision]
-
-    @staticmethod
-    def prefs(ref, recipe_bundle):
-        ConanOutput().warning("PackageLists.prefs() non-public, non-documented method will be "
-                              "removed, use .items() instead", warn_tag="deprecated")
-        result = {}
-        for package_id, pkg_bundle in recipe_bundle.get("packages", {}).items():
-            prevs = pkg_bundle.get("revisions", {})
-            for prev, prev_bundle in prevs.items():
-                t = prev_bundle.get("timestamp")
-                pref = PkgReference(ref, package_id, prev, t)
-                result[pref] = prev_bundle
-        return result
 
     def serialize(self):
         """ Serialize the instance to a dictionary."""

@@ -1,7 +1,7 @@
 import os
 
 from conan.api.model import Remote
-from conan.api.output import cli_out_write
+from conan.api.output import cli_out_write, Color
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.formatters import default_json_formatter
@@ -115,7 +115,8 @@ def config_install_pkg(conan_api, parser, subparser, *args):
 
 def _list_text_formatter(confs):
     for k, v in confs.items():
-        cli_out_write(f"{k}: {v}")
+        cli_out_write(f"{k}: ", fg=Color.CYAN, endline="")
+        cli_out_write(v)
 
 
 @conan_subcommand(formatters={"text": cli_out_write})

@@ -22,13 +22,6 @@ class TargetConfigurationTemplate2:
         self._full_cpp_info = full_cpp_info
 
     def content(self):
-        auto_link = self._cmakedeps.get_property("cmake_set_interface_link_directories",
-                                                 self._conanfile, check_type=bool)
-        if auto_link:
-            out = self._cmakedeps._conanfile.output  # noqa
-            out.warning("CMakeConfigDeps: cmake_set_interface_link_directories deprecated and "
-                        "invalid. The package 'package_info()' must correctly define the (CPS) "
-                        "information", warn_tag="deprecated")
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
         return t.render(self._context)
@@ -72,12 +65,10 @@ class TargetConfigurationTemplate2:
                 dep_target = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                           required_comp)
                 dep_target = dep_target or f"{pkg_name}::{required_comp}"
-                link = not (pkg_type is PackageType.SHARED and
-                            dep_comp.type is PackageType.SHARED)
                 link_feature = self._cmakedeps.get_property("cmake_link_feature", self._conanfile,
-                                                              required_comp)
+                                                            required_comp)
                 result[dep_target] = {
-                    "link": link,
+                    "link": True,  # Components of same package have PUBLIC dependency
                     "link_feature": link_feature
                 }
             else:  # Different package
