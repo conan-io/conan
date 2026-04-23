@@ -81,7 +81,7 @@ def print_graph_basic(graph):
                 raise ConanException("Empty version range usage is disabled. Use [*] instead. "
                                      "The old behaviour can be re-enabled by adding "
                                      "'deprecated_empty_version_range' in the 'core:policies' conf list "
-                                     "until Conan 2.3, where it will be removed.")
+                                     "until Conan 2.32, where it will be removed.")
             break
 
     overrides = graph.overrides()
