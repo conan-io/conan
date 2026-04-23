@@ -34,7 +34,7 @@ def print_serial(item, indent=None, color_index=None):
     if isinstance(item, dict):
         for k, v in item.items():
             if isinstance(v, (str, int)):
-                if "error" in k.lower():
+                if k.lower() in ("error", "pkgsign_error"):
                     color = Color.BRIGHT_RED
                     k = "ERROR"
                 elif k.lower() == "warning":

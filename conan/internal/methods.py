@@ -132,6 +132,11 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
         with conanfile_exception_formatter(conanfile, "build_requirements"):
             conanfile.build_requirements()
 
+    if conanfile.build_requires._called:  # noqa
+        conanfile.output.warning(
+            "build_requires is deprecated, prefer to use tool_requires with correct traits",
+            warn_tag="deprecated")
+
 
 def auto_shared_fpic_config_options(conanfile):
     if conanfile.settings.get_safe("os") == "Windows":

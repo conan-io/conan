@@ -98,8 +98,9 @@ class ConfigAPI:
             path = os.path.join(path, "conanconfig.yml")
         requested_requires, urls = loadconanconfig_yml(path)
         if urls:
-            new_remotes = [Remote(f"config_install_url{'_' + str(i)}", url=url)
-                           for i, url in enumerate(urls)]
+            new_remotes = [Remote(f"config_install_url{'_' + str(i)}", url=url,
+                                  verify_ssl=url_verify_ssl)
+                           for i, (url, url_verify_ssl) in enumerate(urls)]
             remotes = remotes or []
             remotes += new_remotes
         return requested_requires, remotes
@@ -211,7 +212,7 @@ class ConfigAPI:
         remotes = conan_api.remotes.list() if remotes is None else remotes
         profile_host = profile_build = profile or conan_api.profiles.get_profile([])
 
-        proxy, range_resolver, loader = self._helpers.get_loader()
+        proxy, range_resolver, loader, _ = self._helpers.get_loader()
         cache = self._helpers.cache
 
         ConanOutput().title("Fetching requested configuration packages")

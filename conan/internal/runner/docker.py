@@ -244,7 +244,7 @@ class DockerRunner:
         return stdout_log, stderr_log
 
     def _get_volumes_and_docker_path(self) -> tuple[dict, str]:
-        _, _, loader = self.conan_api._api_helpers.get_loader()  # noqa
+        loader = self.conan_api._api_helpers.loader  # noqa
         remotes = self.conan_api.remotes.list(self.args.remote) if not self.args.no_remote else []
         conanfile = loader.load_consumer(self.abs_host_path / "conanfile.py", remotes=remotes)
         abs_docker_base_path = Path('/') / self.docker_user_name / 'conanrunner'

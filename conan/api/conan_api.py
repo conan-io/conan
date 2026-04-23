@@ -70,10 +70,12 @@ class ConanAPI:
         self.config: ConfigAPI = ConfigAPI(self, self._api_helpers)
         #: Used to interact with remotes
         self.remotes: RemotesAPI = RemotesAPI(self, self._api_helpers)
-        self.command = CommandAPI(self)
+        #: Used to call other commands
+        self.command: CommandAPI = CommandAPI(self)
         #: Used to get latest refs and list refs of recipes and packages
         self.list: ListAPI = ListAPI(self, self._api_helpers)
-        self.profiles = ProfilesAPI(self, self._api_helpers)
+        #: Used to process and load Conan profiles
+        self.profiles: ProfilesAPI = ProfilesAPI(self, self._api_helpers)
         #: Used to install binaries, sources, deploy packages and more
         self.install: InstallAPI = InstallAPI(self, self._api_helpers)
         self.graph = GraphAPI(self, self._api_helpers)
@@ -153,6 +155,7 @@ class ConanAPI:
             required_range_new = self.global_conf.get("core:required_conan_version")
             if required_range_new:
                 validate_conan_version(required_range_new)
+            self.global_conf.validate()
 
         def reinit(self):
             self._init_global_conf()
@@ -189,6 +192,11 @@ class ConanAPI:
             # These are just the global editables, not including workspace ones
             return self._editable_packages
 
+        @property
+        def loader(self):
+            _, _, load, _ = self.get_loader()
+            return load
+
         def get_loader(self):
             ws_editables = self._conan_api.workspace.packages()
             editable_packages = self._editable_packages.update_copy(ws_editables)
@@ -208,4 +216,4 @@ class ConanAPI:
             pyreq_loader = PyRequireLoader(proxy, range_resolver, self.global_conf)
             # This is caching too!
             loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
-            return proxy, range_resolver, loader
+            return proxy, range_resolver, loader, None

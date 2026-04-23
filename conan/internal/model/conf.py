@@ -17,8 +17,16 @@ from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.model.settings import SettingsItem
 from conan.internal.util.files import load, save
 
+required_conan_version_msg = """\
+Raise if current version does not match the defined range.
+Applies the following behaviors based on the minimum specified version:
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19849 for VirtualBuildEnv bindir path propagation based on requirement run trait
+   These behaviors also apply for 'required_conan_version' in recipes, but the global one has precedence.
+"""
+
 BUILT_IN_CONFS = {
-    "core:required_conan_version": "Raise if current version does not match the defined range.",
+    "core:required_conan_version": required_conan_version_msg,
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core:warnings_as_errors": "Treat warnings matching any of the patterns in this list as errors and then raise an exception. "
                                "Current warning tags are 'network', 'deprecated'",
@@ -99,7 +107,7 @@ BUILT_IN_CONFS = {
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
     "tools.cmake:ctest_args": "Add extra arguments to CMake.ctest() runner command line",
-    "tools.cmake:configure_args": "Add extra arguments to CMake.configure() command line ",
+    "tools.cmake:configure_args": "Add extra arguments to CMake.configure() command line",
     "tools.cmake:install_strip": "(Deprecated) Add --strip to cmake.install(). Use tools.build:install_strip instead",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "(int, default: 2) Number of retries in case of failure when downloading",
@@ -143,7 +151,7 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_bitcode": "(boolean) Enable/Disable Bitcode Apple Clang flags",
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
-    "tools.env.virtualenv:powershell": "If specified, it generates PowerShell launchers (.ps1). Use this configuration setting the PowerShell executable you want to use (e.g., 'powershell.exe' or 'pwsh'). Setting it to True or False is deprecated as of Conan 2.11.0.",
+    "tools.env.virtualenv:powershell": "If specified, it generates PowerShell launchers (.ps1). Use this configuration setting the PowerShell executable you want to use (e.g., 'powershell.exe' or 'pwsh')",
     "tools.env:dotenv": "(Experimental) Generate dotenv environment files",
     "tools.env:deactivation_mode": "(Experimental) If 'function', generate a deactivate function instead of a script to unset the environment variables",
     # Compilers/Flags configurations
@@ -156,7 +164,8 @@ BUILT_IN_CONFS = {
     "tools.build:rcflags": "List of extra RC (resource compiler) flags used by different toolchains like CMakeToolchain, MSBuildToolchain and MesonToolchain",
     "tools.build:linker_scripts": "List of linker script files to pass to the linker used by different toolchains like CMakeToolchain, AutotoolsToolchain, and MesonToolchain",
     # Toolchain installation
-    "tools.build:install_strip": "(boolean) Strip the binaries when installing them with CMake, Meson and Autotools",
+    "tools.build:install_strip": "(boolean or list) True/False to strip on install for every CMake, Meson and Autotools "
+                                 "integration, or a list of 'cmake', 'meson', 'autotools' to strip only for those.",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
 }
