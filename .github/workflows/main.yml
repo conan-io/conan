@@ -193,7 +193,6 @@ jobs:
       VERSION: ${{ needs.deploy_to_pypi_test.outputs.version }}
       PIP_INDEX_URL: https://test.pypi.org/simple/
       PIP_EXTRA_INDEX_URL: https://pypi.org/simple/
-      PIP_ONLY_BINARY: ":all:"
     steps:
       - uses: actions/setup-python@v5
         with:
@@ -202,7 +201,7 @@ jobs:
       - name: Verify conan wheel
         run: |
           python -m venv /tmp/vconan
-          /tmp/vconan/bin/pip install "conan==${VERSION}" || (sleep 20 && /tmp/vconan/bin/pip install "conan==${VERSION}")
+          /tmp/vconan/bin/pip install --only-binary conan "conan==${VERSION}" || (sleep 20 && /tmp/vconan/bin/pip install --only-binary conan "conan==${VERSION}")
           /tmp/vconan/bin/conan --version
           /tmp/vconan/bin/conan profile detect --force
           mkdir -p /tmp/sample_wheel && cd /tmp/sample_wheel
@@ -212,15 +211,13 @@ jobs:
       - name: Verify conan-server wheel
         run: |
           python -m venv /tmp/vserver
-          /tmp/vserver/bin/pip install "conan-server==${VERSION}" || (sleep 20 && /tmp/vserver/bin/pip install "conan-server==${VERSION}")
+          /tmp/vserver/bin/pip install --only-binary conan-server "conan-server==${VERSION}" || (sleep 20 && /tmp/vserver/bin/pip install --only-binary conan-server "conan-server==${VERSION}")
           /tmp/vserver/bin/conan_server --help
 
       - name: Verify conan sdist
-        env:
-          PIP_NO_BINARY: conan
         run: |
           python -m venv /tmp/vconan_sdist
-          /tmp/vconan_sdist/bin/pip install "conan==${VERSION}" || (sleep 20 && /tmp/vconan_sdist/bin/pip install "conan==${VERSION}")
+          /tmp/vconan_sdist/bin/pip install --no-binary conan "conan==${VERSION}" || (sleep 20 && /tmp/vconan_sdist/bin/pip install --no-binary conan "conan==${VERSION}")
           /tmp/vconan_sdist/bin/conan --version
           /tmp/vconan_sdist/bin/conan profile detect --force
           mkdir -p /tmp/sample_sdist && cd /tmp/sample_sdist
@@ -228,9 +225,7 @@ jobs:
           /tmp/vconan_sdist/bin/conan install .
 
       - name: Verify conan-server sdist
-        env:
-          PIP_NO_BINARY: conan-server
         run: |
           python -m venv /tmp/vserver_sdist
-          /tmp/vserver_sdist/bin/pip install "conan-server==${VERSION}" || (sleep 20 && /tmp/vserver_sdist/bin/pip install "conan-server==${VERSION}")
+          /tmp/vserver_sdist/bin/pip install --no-binary conan-server "conan-server==${VERSION}" || (sleep 20 && /tmp/vserver_sdist/bin/pip install --no-binary conan-server "conan-server==${VERSION}")
           /tmp/vserver_sdist/bin/conan_server --help
