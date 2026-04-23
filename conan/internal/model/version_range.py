@@ -10,10 +10,11 @@ def required_conan_version_policy(conanfile, limit_version):
         global_conf = conanfile._conan_helpers.global_conf  # noqa
     except AttributeError:
         return False  # This can happen for PLATFORM deps without _conan_helpers
-    global_required_conan = global_conf.get("core:required_conan_version")
-    recipe_require_conan_version = global_required_conan or conanfile._conan_required_version  # noqa
-    if recipe_require_conan_version:
-        version_range = VersionRange(recipe_require_conan_version)
+    global_required_conan = global_conf.get("core:policy_conan_version")
+    # The global policy_conan_version one has priority
+    require_conan_version = global_required_conan or conanfile._conan_required_version # noqa
+    if require_conan_version:
+        version_range = VersionRange(require_conan_version)
         # No need to check pre-releases
         return not version_range.contains(Version(limit_version), resolve_prerelease=None)
     return False

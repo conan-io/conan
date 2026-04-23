@@ -219,13 +219,27 @@ class TestRequirementPackageId:
 
 
 class TestTransitiveStatic:
-    @pytest.mark.parametrize("apply_fix", [True, False, "conf"])
-    def test_transitive_statics(self, apply_fix):
+    @pytest.mark.parametrize("approach, fix",
+                             [("none", False),
+                              ("recipe_2_28", True),
+                              ("recipe_2_27", False),
+                              ("global_2_28", True),
+                              ("global_2_27", False),
+                              ("recipe_2_28_global_2_27", False),
+                              ("recipe_2_27_global_2_28", True)  # global has priority
+                              ])
+    def test_transitive_statics(self, approach, fix):
         # https://github.com/conan-io/conan/issues/19664
         c = TestClient(light=True)
-        required_conan_version = 'required_conan_version = ">=2.28"' if apply_fix is True else ""
-        if apply_fix == "conf":
-            c.save_home({"global.conf": "core:required_conan_version=>=2.28"})
+        required_conan_version = ''
+        if "recipe_2_27" in approach:
+            required_conan_version = 'required_conan_version = ">=2.27"'
+        elif "recipe_2_28" in approach:
+            required_conan_version = 'required_conan_version = ">=2.28"'
+        if "global_2_27" in approach:
+            c.save_home({"global.conf": "core:policy_conan_version=>=2.27"})
+        if "global_2_28" in approach:
+            c.save_home({"global.conf": "core:policy_conan_version=>=2.28"})
         libc = textwrap.dedent(f"""\
             from conan import ConanFile
 
@@ -244,12 +258,12 @@ class TestTransitiveStatic:
         c.run("create liba")
         c.run("create libb")
         c.run(f"create libc")
-        if not apply_fix:
+        if not fix:
             assert ("libc/1.0: WARN: risk: Transitive dependencies with "
                     "'headers=False' effect in 'package_id'") in c.out
         c.run("list libc:*")
         assert "libb/1.0.Z" in c.out
-        if apply_fix:
+        if fix:
             assert "liba/" not in c.out
         else:
             assert "liba/" in c.out
