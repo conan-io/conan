@@ -183,6 +183,11 @@ jobs:
     name: Verify TestPyPI wheel
     if: github.ref == 'refs/heads/develop2'
     needs: [deploy_to_pypi_test]
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [conan, conan-server]
+        mode: [wheel, sdist]
     env:
       VERSION: ${{ needs.deploy_to_pypi_test.outputs.version }}
       PIP_INDEX_URL: https://test.pypi.org/simple/
@@ -192,34 +197,22 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Verify conan wheel
+      - name: Install ${{ matrix.package }} (${{ matrix.mode }})
         run: |
-          python -m venv /tmp/vconan
-          /tmp/vconan/bin/pip install --only-binary conan "conan==${VERSION}" || (sleep 20 && /tmp/vconan/bin/pip install --only-binary conan "conan==${VERSION}")
-          /tmp/vconan/bin/conan --version
-          /tmp/vconan/bin/conan profile detect --force
-          mkdir -p /tmp/sample_wheel && cd /tmp/sample_wheel
-          /tmp/vconan/bin/conan new cmake_lib -d name=x -d version=1.0 -f
-          /tmp/vconan/bin/conan install .
+          FLAG=$([ "${{ matrix.mode }}" = "wheel" ] && echo "--only-binary" || echo "--no-binary")
+          python -m venv /tmp/venv
+          /tmp/venv/bin/pip install "$FLAG" "${{ matrix.package }}" "${{ matrix.package }}==${VERSION}" \
+            || (sleep 20 && /tmp/venv/bin/pip install "$FLAG" "${{ matrix.package }}" "${{ matrix.package }}==${VERSION}")
 
-      - name: Verify conan-server wheel
+      - name: Smoke test conan
+        if: matrix.package == 'conan'
         run: |
-          python -m venv /tmp/vserver
-          /tmp/vserver/bin/pip install --only-binary conan-server "conan-server==${VERSION}" || (sleep 20 && /tmp/vserver/bin/pip install --only-binary conan-server "conan-server==${VERSION}")
-          /tmp/vserver/bin/conan_server --help
+          /tmp/venv/bin/conan --version
+          /tmp/venv/bin/conan profile detect --force
+          mkdir -p /tmp/sample && cd /tmp/sample
+          /tmp/venv/bin/conan new cmake_lib -d name=x -d version=1.0 -f
+          /tmp/venv/bin/conan install .
 
-      - name: Verify conan sdist
-        run: |
-          python -m venv /tmp/vconan_sdist
-          /tmp/vconan_sdist/bin/pip install --no-binary conan "conan==${VERSION}" || (sleep 20 && /tmp/vconan_sdist/bin/pip install --no-binary conan "conan==${VERSION}")
-          /tmp/vconan_sdist/bin/conan --version
-          /tmp/vconan_sdist/bin/conan profile detect --force
-          mkdir -p /tmp/sample_sdist && cd /tmp/sample_sdist
-          /tmp/vconan_sdist/bin/conan new cmake_lib -d name=x -d version=1.0 -f
-          /tmp/vconan_sdist/bin/conan install .
-
-      - name: Verify conan-server sdist
-        run: |
-          python -m venv /tmp/vserver_sdist
-          /tmp/vserver_sdist/bin/pip install --no-binary conan-server "conan-server==${VERSION}" || (sleep 20 && /tmp/vserver_sdist/bin/pip install --no-binary conan-server "conan-server==${VERSION}")
-          /tmp/vserver_sdist/bin/conan_server --help
+      - name: Smoke test conan-server
+        if: matrix.package == 'conan-server'
+        run: /tmp/venv/bin/conan_server --help
