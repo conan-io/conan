@@ -154,7 +154,7 @@ graph_info_html = r"""
                     if (node.context == "build" && hide_build) continue;
                     if (node.test && hide_test) continue;
                     let shape = node.context == "build" || node.test ? "ellipse" : "box";
-                    const label = getNodeLabel(node);
+                    let label = getNodeLabel(node);
                     if (collapse_packages) {
                         let existing = collapsed_packages[node.context][label];
                         targets[node_id] = existing;
