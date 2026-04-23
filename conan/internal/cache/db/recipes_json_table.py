@@ -11,6 +11,7 @@ Lock-free, designed for shared folders with eventual consistency:
 import hashlib
 import json
 import os
+import shutil
 import time
 from typing import List
 
@@ -136,15 +137,9 @@ class RecipesJsonTable:
 
     def remove(self, ref: RecipeReference):
         rev_dir = self._revision_dir(ref)
-        rev_data_path = self._revision_data_path(ref)
-        if os.path.isfile(rev_data_path):
-            try:
-                os.remove(rev_data_path)
-            except OSError:
-                pass
         if os.path.isdir(rev_dir):
             try:
-                os.rmdir(rev_dir)
+                shutil.rmtree(rev_dir)
             except OSError:
                 pass
         ref_dir = self._ref_dir(ref)

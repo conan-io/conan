@@ -18,7 +18,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
     t = TestClient(light=True)
     # Any command that checks the package cache generates the DB
     t.run("list")
-    assert os.path.exists(os.path.join(t.cache_folder, "p", "cache.sqlite3"))
+    assert os.path.exists(os.path.join(t.cache_folder, "p", "db"))
 
     profile_plugin_path = os.path.join(t.cache_folder, "extensions", "plugins", plugin_path)
     contents = load(profile_plugin_path)
@@ -26,7 +26,7 @@ def test_migration_profile_checker_plugin(plugin_path, string_replace, new_strin
     # Let's change the version
     version_txt_file_path = os.path.join(t.cache_folder, "version.txt")
     save(version_txt_file_path, "1.0.0")
-    assert os.path.exists(os.path.join(t.cache_folder, "p", "cache.sqlite3"))
+    assert os.path.exists(os.path.join(t.cache_folder, "p", "db"))
 
     # Do a modification to the profile plugin without changing the comment
     contents = contents.replace(string_replace, new_string)

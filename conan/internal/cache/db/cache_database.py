@@ -1,27 +1,17 @@
 import os
-import sqlite3
 
-from conan.api.output import ConanOutput
-from conan.internal.cache.db.packages_table import PackagesDBTable
+from conan.internal.cache.db.packages_json_table import PackagesJsonTable
 from conan.internal.cache.db.recipes_json_table import RecipesJsonTable
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conan.internal.model.version import Version
 
 
 class CacheDatabase:
 
     def __init__(self, filename):
-        version = sqlite3.sqlite_version
-        if Version(version) < "3.7.11":
-            ConanOutput().error(f"Your sqlite3 '{version} < 3.7.11' version is not supported")
-        # Recipes: JSON file-based table under Conan home "db" folder (shareable, no SQLite)
         db_folder = os.path.join(os.path.dirname(filename), "db")
         self._recipes = RecipesJsonTable(db_folder)
-        # Packages: still SQLite for now
-        self._packages = PackagesDBTable(filename)
-        if not os.path.isfile(filename):
-            self._packages.create_table()
+        self._packages = PackagesJsonTable(db_folder)
 
     def exists_prev(self, ref):
         return self._packages.get_package_revisions_reference_exists(ref)
