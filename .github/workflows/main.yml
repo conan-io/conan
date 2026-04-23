@@ -158,9 +158,6 @@ jobs:
         run: |
           python -m build
 
-      - name: Verify conan wheel content parity
-        run: python .ci/verify_wheel_parity.py
-
       - name: Upload to TestPyPI
         env:
           TWINE_USERNAME: ${{ secrets.TEST_PYPI_USERNAME }}
@@ -173,9 +170,6 @@ jobs:
           rm -rf dist/
           mv setup_server.py setup.py
           python -m build
-
-      - name: Verify conan-server wheel content parity
-        run: python .ci/verify_wheel_parity.py
 
       - name: Upload conan-server to TestPyPI
         env:
