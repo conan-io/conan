@@ -217,7 +217,7 @@ class PackagesJsonTable:
             for e in ([entries[0]] if only_latest_prev else entries):
                 result.append(self._make_result(ref, pkgid_data, e))
 
-        result.sort(key=lambda x: x["pref"].timestamp, reverse=True)
+        result.sort(key=lambda x: x["pref"].timestamp)
         return result
 
     def get_package_references_with_build_id_match(self, ref: RecipeReference,
