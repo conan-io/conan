@@ -184,15 +184,38 @@ class VCVars:
             create_env_script(conanfile, content_ps1, conan_vcvars_ps1, scope)
             _create_deactivate_vcvars_file(conanfile, conan_vcvars_ps1)
 
+        is_nu = self._conanfile.conf.get("tools.env.virtualenv:nushell", check_type=str)
+        if is_nu:
+            # Nushell wrapper: runs conanvcvars.bat via cmd and captures environment
+            bat_path = os.path.join(conanfile.generators_folder, conan_vcvars_bat).replace('\\', '/')
+            content_nu = textwrap.dedent(f"""\
+                if not ("VSCMD_ARG_VCVARS_VER" in $env) {{
+                    let env_out = (^cmd /c $'"{bat_path}" >nul 2>&1 && set')
+                    for line in ($env_out | lines) {{
+                        let parts = ($line | split row "=" --number 2)
+                        if ($parts | length) >= 2 {{
+                            let key = ($parts | first)
+                            let val = ($parts | skip 1 | str join "=")
+                            load-env {{($key): $val}}
+                        }}
+                    }}
+                    print "conanvcvars.nu: Activated environment"
+                }}
+                """)
+            conan_vcvars_nu = f"{CONAN_VCVARS}.nu"
+            create_env_script(conanfile, content_nu, conan_vcvars_nu, scope)
+            _create_deactivate_vcvars_file(conanfile, conan_vcvars_nu)
+
 
 def _create_deactivate_vcvars_file(conanfile, filename):
     if conanfile.conf.get("tools.env:deactivation_mode") == "function":
         return
     deactivate_filename = f"deactivate_{filename}"
-    message = f"[{deactivate_filename}]: *** vcvars env cannot be deactivated ***\n"
-    is_ps1 = filename.endswith(".ps1")
-    if is_ps1:
+    message = f"[{deactivate_filename}]: *** vcvars env cannot be deactivated ***"
+    if filename.endswith(".ps1"):
         content = f"Write-Host {message}"
+    elif filename.endswith(".nu"):
+        content = f'print "{message}"'
     else:
         content = f"echo {message}"
     path = os.path.join(conanfile.generators_folder, deactivate_filename)
