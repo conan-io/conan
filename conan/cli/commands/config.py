@@ -76,6 +76,8 @@ def config_install_pkg(conan_api, parser, subparser, *args):
                            help="Filename of the updated lockfile")
     subparser.add_argument("-f", "--force", action='store_true',
                            help="Force the re-installation of configuration")
+    subparser.add_argument("--insecure", action="store_false", default=True, dest="verify_ssl",
+                           help="Allow insecure server connections when using SSL")
     subparser.add_argument("--url", action=OnceArgument,
                            help="(Experimental) Provide Conan repository URL "
                                 "(for first install without remotes)")
@@ -90,6 +92,9 @@ def config_install_pkg(conan_api, parser, subparser, *args):
     path = path if os.path.exists(path) else None
     if path is None and args.reference is None:
         raise ConanException("Must provide a package reference or a path to a conanconfig.yml file")
+    if not args.verify_ssl and not args.url:
+        raise ConanException("'--insecure' argument requires '--url' argument. For conanconfig.yml "
+                             "files, the 'insecure' argument is provided in the file")
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile,
                                                partial=args.lockfile_partial)
@@ -100,7 +105,8 @@ def config_install_pkg(conan_api, parser, subparser, *args):
         default_profile = None
     profiles = [default_profile] if default_profile else []
     profile = conan_api.profiles.get_profile(profiles, args.settings, args.options)
-    remotes = [Remote("config_install_url", url=args.url)] if args.url else None
+    remotes = [Remote("config_install_url", url=args.url,
+                      verify_ssl=args.verify_ssl)] if args.url else None
 
     if path:
         conanconfig = path
