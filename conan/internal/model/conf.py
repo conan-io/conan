@@ -17,16 +17,16 @@ from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.model.settings import SettingsItem
 from conan.internal.util.files import load, save
 
-policy_conan_version_msg = """\
+required_conan_version_msg = """\
+Raise if current version does not match the defined range.
 Applies the following behaviors based on the minimum specified version:
-   - If policy_conan_version=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id
-   - If policy_conan_version=2.28, bugfix https://github.com/conan-io/conan/pull/19849 for VirtualBuildEnv bindir path propagation based on requirement run trait
-   These behaviors also apply for 'required_conan_version' in recipes, but this global one has precedence.
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19849 for VirtualBuildEnv bindir path propagation based on requirement run trait
+   These behaviors also apply for 'required_conan_version' in recipes, but the global one has precedence.
 """
 
 BUILT_IN_CONFS = {
-    "core:required_conan_version": "Raise if current version does not match the defined range.",
-    "core:policy_conan_version": policy_conan_version_msg,
+    "core:required_conan_version": required_conan_version_msg,
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core:warnings_as_errors": "Treat warnings matching any of the patterns in this list as errors and then raise an exception. "
                                "Current warning tags are 'network', 'deprecated'",

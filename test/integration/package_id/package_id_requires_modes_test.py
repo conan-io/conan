@@ -225,8 +225,8 @@ class TestTransitiveStatic:
                               ("recipe_2_27", False),
                               ("global_2_28", True),
                               ("global_2_27", False),
-                              ("recipe_2_28_global_2_27", False),
-                              ("recipe_2_27_global_2_28", True)  # global has priority
+                              ("recipe_2_28_global_2_27", True), # OR, both work
+                              ("recipe_2_27_global_2_28", True)  # OR, both work
                               ])
     def test_transitive_statics(self, approach, fix):
         # https://github.com/conan-io/conan/issues/19664
@@ -237,9 +237,9 @@ class TestTransitiveStatic:
         elif "recipe_2_28" in approach:
             required_conan_version = 'required_conan_version = ">=2.28"'
         if "global_2_27" in approach:
-            c.save_home({"global.conf": "core:policy_conan_version=>=2.27"})
+            c.save_home({"global.conf": "core:required_conan_version=>=2.27"})
         if "global_2_28" in approach:
-            c.save_home({"global.conf": "core:policy_conan_version=>=2.28"})
+            c.save_home({"global.conf": "core:required_conan_version=>=2.28"})
         libc = textwrap.dedent(f"""\
             from conan import ConanFile
 
