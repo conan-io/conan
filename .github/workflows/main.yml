@@ -131,6 +131,8 @@ jobs:
     name: Deploy to TestPyPI
     if: github.ref == 'refs/heads/develop2'
     needs: [linux_suite, osx_suite, windows_suite]
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -143,15 +145,18 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install twine
+          pip install build twine
 
       - name: Bump Dev Version
+        id: bump
         run: |
-          python .ci/bump_dev_version.py
+          VERSION=$(python .ci/bump_dev_version.py)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Bumped to: $VERSION"
 
       - name: Build Package
         run: |
-          python setup.py sdist
+          python -m build
 
       - name: Upload to TestPyPI
         env:
@@ -160,12 +165,55 @@ jobs:
         run: |
           python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
 
-      - name: Deploy conan-server to TestPyPI
+      - name: Build conan-server Package
+        run: |
+          rm -rf dist/
+          mv setup_server.py setup.py
+          python -m build
+
+      - name: Upload conan-server to TestPyPI
         env:
           TWINE_USERNAME: ${{ secrets.TEST_PYPI_SERVER_USERNAME }}
           TWINE_PASSWORD: ${{ secrets.TEST_PYPI_SERVER_PASSWORD }}
         run: |
-          rm -rf dist/
-          mv setup_server.py setup.py
-          python setup.py sdist
           python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
+
+  verify_testpypi:
+    runs-on: ubuntu-latest
+    name: Verify TestPyPI wheel
+    if: github.ref == 'refs/heads/develop2'
+    needs: [deploy_to_pypi_test]
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [conan, conan-server]
+        mode: [wheel, sdist]
+    env:
+      VERSION: ${{ needs.deploy_to_pypi_test.outputs.version }}
+      PIP_INDEX_URL: https://test.pypi.org/simple/
+      PIP_EXTRA_INDEX_URL: https://pypi.org/simple/
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.9
+
+      - name: Install ${{ matrix.package }} (${{ matrix.mode }})
+        run: |
+          FLAG=$([ "${{ matrix.mode }}" = "wheel" ] && echo "--only-binary" || echo "--no-binary")
+          python -m venv /tmp/venv
+          /tmp/venv/bin/pip install "$FLAG" "${{ matrix.package }}" "${{ matrix.package }}==${VERSION}" \
+            || (sleep 20 && /tmp/venv/bin/pip install "$FLAG" "${{ matrix.package }}" "${{ matrix.package }}==${VERSION}")
+          echo "/tmp/venv/bin" >> "$GITHUB_PATH"
+
+      - name: Test conan
+        if: matrix.package == 'conan'
+        run: |
+          conan --version
+          conan profile detect --force
+          mkdir -p /tmp/sample && cd /tmp/sample
+          conan new cmake_lib -d name=x -d version=1.0 -f
+          conan install .
+
+      - name: Test conan-server
+        if: matrix.package == 'conan-server'
+        run: conan_server --help
