@@ -8,63 +8,13 @@ Lock-free, designed for shared folders with eventual consistency:
 - Updates are rare; concurrent reads dominate. Occasional read-during-write is handled by retry.
 """
 
-import hashlib
-import json
 import os
 import shutil
-import time
 from typing import List
 
 from conan.api.model import RecipeReference
-from conan.errors import ConanException
+from conan.internal.cache.db.json_db import ref_hash, write_json_atomic, read_json_with_retry
 from conan.internal.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
-
-# Retry when reading data.json and parent dir exists (incomplete write by another process)
-_READ_JSON_MAX_RETRIES = 10
-_READ_JSON_INITIAL_DELAY_S = 0.01
-_READ_JSON_MAX_DELAY_S = 0.5
-
-
-def _ref_hash(ref_str: str) -> str:
-    """Path-safe hash for reference (name/version@user/channel). Matches cache path style."""
-    h = hashlib.sha256(ref_str.encode("utf-8")).hexdigest()
-    return h[:13]
-
-
-def _read_json_with_retry(filepath: str) -> dict:
-    """
-    Read JSON file. If parent_dir is set and exists, retry on failure (incomplete write elsewhere).
-    Returns None if file missing or invalid after retries.
-    """
-    for attempt in range(_READ_JSON_MAX_RETRIES):
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, OSError):
-            time.sleep(min(
-                _READ_JSON_INITIAL_DELAY_S * (2 ** attempt),
-                _READ_JSON_MAX_DELAY_S
-            ))
-    raise ConanException("Concurrency error in RecipesDBJson")
-
-
-def _write_json_atomic(filepath: str, data: dict) -> None:
-    """Write JSON atomically via a .tmp file and replace."""
-    tmp = filepath + ".tmp"
-    msg = None
-    for attempt in range(_READ_JSON_MAX_RETRIES):
-        try:
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(data, f)
-            os.replace(tmp, filepath)
-            return
-        except OSError as e:
-            time.sleep(min(
-                _READ_JSON_INITIAL_DELAY_S * (2 ** attempt),
-                _READ_JSON_MAX_DELAY_S
-            ))
-            msg = str(e)
-    raise ConanException(f"Conan write error in RecipesDBJson: {msg}")
 
 
 class RecipesJsonTable:
@@ -83,10 +33,10 @@ class RecipesJsonTable:
 
     def _ref_dir(self, ref: RecipeReference) -> str:
         ref_str = str(ref)
-        return os.path.join(self._db_folder, _ref_hash(ref_str))
+        return os.path.join(self._db_folder, ref_hash(ref_str))
 
     def _revision_dir(self, ref: RecipeReference) -> str:
-        return os.path.join(self._ref_dir(ref), _ref_hash(ref.revision or ""))
+        return os.path.join(self._ref_dir(ref), ref_hash(ref.revision or ""))
 
     def _ref_data_path(self, ref: RecipeReference) -> str:
         return os.path.join(self._ref_dir(ref), "data.json")
@@ -111,11 +61,11 @@ class RecipesJsonTable:
         if not os.path.isdir(ref_dir):
             os.makedirs(ref_dir, exist_ok=True)
             ref_data_path = os.path.join(ref_dir, "data.json")
-            _write_json_atomic(ref_data_path, {"ref": str(ref)})
+            write_json_atomic(ref_data_path, {"ref": str(ref)})
 
         os.makedirs(rev_dir, exist_ok=True)
         rev_data_path = self._revision_data_path(ref)
-        _write_json_atomic(rev_data_path, {
+        write_json_atomic(rev_data_path, {
             "revision": ref.revision,
             "timestamp": ref.timestamp,
             "path": path,
@@ -129,11 +79,11 @@ class RecipesJsonTable:
         rev_data_path = self._revision_data_path(ref)
         if not os.path.isdir(rev_dir):
             return
-        data = _read_json_with_retry(rev_data_path)
+        data = read_json_with_retry(rev_data_path)
         if data is None:
             return
         data["timestamp"] = ref.timestamp
-        _write_json_atomic(rev_data_path, data)
+        write_json_atomic(rev_data_path, data)
 
     def remove(self, ref: RecipeReference):
         rev_dir = self._revision_dir(ref)
@@ -159,7 +109,7 @@ class RecipesJsonTable:
             if not os.path.isdir(ref_dir):
                 continue
             data_path = os.path.join(ref_dir, "data.json")
-            data = _read_json_with_retry(data_path)
+            data = read_json_with_retry(data_path)
             refs.add(data["ref"])
         return [RecipeReference.loads(r) for r in refs]
 
@@ -169,7 +119,7 @@ class RecipesJsonTable:
             raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref.repr_notime()}' not found")
 
         rev_data_path = self._revision_data_path(ref)
-        rev_data = _read_json_with_retry(rev_data_path)
+        rev_data = read_json_with_retry(rev_data_path)
         result = ref.copy()
         result.revision = rev_data["revision"]
         result.timestamp = rev_data["timestamp"]
@@ -190,7 +140,7 @@ class RecipesJsonTable:
                 continue
             rev_dir = os.path.join(ref_dir, name)
             rev_data_path = os.path.join(rev_dir, "data.json")
-            rev_data = _read_json_with_retry(rev_data_path)
+            rev_data = read_json_with_retry(rev_data_path)
             ts = rev_data["timestamp"]
             if best_ts is None or ts > best_ts:
                 best_ts = ts
@@ -212,7 +162,7 @@ class RecipesJsonTable:
         ref_dir = self._ref_dir(ref)
         if not os.path.isdir(ref_dir):
             return []
-        ref_data = _read_json_with_retry(self._ref_data_path(ref),)
+        ref_data = read_json_with_retry(self._ref_data_path(ref),)
         if ref_data is None:
             return []
 
@@ -221,7 +171,7 @@ class RecipesJsonTable:
             if name == "data.json":
                 continue
             rev_data_path = os.path.join(ref_dir, name, "data.json")
-            rev_data = _read_json_with_retry(rev_data_path)
+            rev_data = read_json_with_retry(rev_data_path)
             if rev_data is None:
                 continue
             revs.append((rev_data["timestamp"], rev_data["revision"]))
@@ -242,7 +192,7 @@ class RecipesJsonTable:
             ref_dir = os.path.join(self._db_folder, ref_hash_dir)
             if not os.path.isdir(ref_dir):
                 continue
-            ref_data = _read_json_with_retry(os.path.join(ref_dir, "data.json"))
+            ref_data = read_json_with_retry(os.path.join(ref_dir, "data.json"))
             if ref_data is None:
                 continue
             reference = ref_data["ref"]
@@ -250,7 +200,7 @@ class RecipesJsonTable:
                 if name == "data.json":
                     continue
                 rev_dir = os.path.join(ref_dir, name)
-                rev_data = _read_json_with_retry(os.path.join(rev_dir, "data.json"))
+                rev_data = read_json_with_retry(os.path.join(rev_dir, "data.json"))
                 if rev_data is None:
                     continue
                 if rev_data.get("path") == path:

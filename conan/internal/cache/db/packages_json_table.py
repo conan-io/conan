@@ -3,9 +3,8 @@ import shutil
 from typing import List, Optional
 
 from conan.api.model import PkgReference, RecipeReference
+from conan.internal.cache.db.json_db import read_json_with_retry, write_json_atomic, ref_hash
 from conan.internal.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
-from conan.internal.cache.db.recipes_json_table import _ref_hash, _read_json_with_retry, \
-    _write_json_atomic
 
 
 class PackagesJsonTable:
@@ -31,15 +30,15 @@ class PackagesJsonTable:
     # ------------------------------------------------------------------
 
     def _pkgs_dir(self, ref: RecipeReference) -> str:
-        ref_hash = _ref_hash(str(ref))
-        rrev_hash = _ref_hash(ref.revision or "")
-        return os.path.join(self._db_folder, ref_hash, rrev_hash, "pkgs")
+        ref_h = ref_hash(str(ref))
+        rrev_hash = ref_hash(ref.revision or "")
+        return os.path.join(self._db_folder, ref_h, rrev_hash, "pkgs")
 
     def _pkgid_dir(self, pref: PkgReference) -> str:
-        return os.path.join(self._pkgs_dir(pref.ref), _ref_hash(pref.package_id or ""))
+        return os.path.join(self._pkgs_dir(pref.ref), ref_hash(pref.package_id or ""))
 
     def _prev_dir(self, pref: PkgReference) -> str:
-        return os.path.join(self._pkgid_dir(pref), _ref_hash(pref.revision or ""))
+        return os.path.join(self._pkgid_dir(pref), ref_hash(pref.revision or ""))
 
     def _pkgid_data_path(self, pref: PkgReference) -> str:
         return os.path.join(self._pkgid_dir(pref), "data.json")
@@ -56,7 +55,7 @@ class PackagesJsonTable:
         data_path = os.path.join(pkgid_dir, "data.json")
         if not os.path.isfile(data_path):
             return None
-        return _read_json_with_retry(data_path)
+        return read_json_with_retry(data_path)
 
     @staticmethod
     def _read_prev_entries(pkgid_dir: str) -> List[dict]:
@@ -67,7 +66,7 @@ class PackagesJsonTable:
             prev_dir = os.path.join(pkgid_dir, name)
             if not os.path.isdir(prev_dir):
                 continue
-            prev_data = _read_json_with_retry(os.path.join(prev_dir, "data.json"))
+            prev_data = read_json_with_retry(os.path.join(prev_dir, "data.json"))
             entries.append(prev_data)
         return entries
 
@@ -96,10 +95,10 @@ class PackagesJsonTable:
         pkgid_dir = self._pkgid_dir(pref)
         if not os.path.isdir(pkgid_dir):
             os.makedirs(pkgid_dir, exist_ok=True)
-            _write_json_atomic(self._pkgid_data_path(pref), {"package_id": pref.package_id})
+            write_json_atomic(self._pkgid_data_path(pref), {"package_id": pref.package_id})
 
         os.makedirs(prev_dir, exist_ok=True)
-        _write_json_atomic(self._prev_data_path(pref), {
+        write_json_atomic(self._prev_data_path(pref), {
             "revision": pref.revision,
             "timestamp": pref.timestamp,
             "path": path,
@@ -110,8 +109,8 @@ class PackagesJsonTable:
         if not os.path.isdir(self._prev_dir(pref)):
             raise ConanReferenceDoesNotExistInDB(f"No entry for package '{repr(pref)}'")
 
-        pkgid_data = _read_json_with_retry(self._pkgid_data_path(pref))
-        prev_data = _read_json_with_retry(self._prev_data_path(pref))
+        pkgid_data = read_json_with_retry(self._pkgid_data_path(pref))
+        prev_data = read_json_with_retry(self._prev_data_path(pref))
         return self._make_result(pref.ref, pkgid_data, prev_data)
 
     def update_timestamp(self, pref: PkgReference, path: str, build_id: str):
@@ -121,18 +120,18 @@ class PackagesJsonTable:
         if not os.path.isdir(self._prev_dir(pref)):
             return
 
-        prev_data = _read_json_with_retry(self._prev_data_path(pref))
+        prev_data = read_json_with_retry(self._prev_data_path(pref))
         prev_data["timestamp"] = pref.timestamp
         prev_data["path"] = path
         prev_data["build_id"] = build_id
-        _write_json_atomic(self._prev_data_path(pref), prev_data)
+        write_json_atomic(self._prev_data_path(pref), prev_data)
 
     def remove_build_id(self, pref: PkgReference):
         if not os.path.isdir(self._prev_dir(pref)):
             return
-        prev_data = _read_json_with_retry(self._prev_data_path(pref))
+        prev_data = read_json_with_retry(self._prev_data_path(pref))
         prev_data["build_id"] = None
-        _write_json_atomic(self._prev_data_path(pref), prev_data)
+        write_json_atomic(self._prev_data_path(pref), prev_data)
 
     def remove_recipe(self, ref: RecipeReference):
         """No-op: packages are nested under the recipe revision dir and removed with it."""
@@ -256,7 +255,7 @@ class PackagesJsonTable:
             ref_dir = os.path.join(self._db_folder, ref_hash_dir)
             if not os.path.isdir(ref_dir):
                 continue
-            ref_data = _read_json_with_retry(os.path.join(ref_dir, "data.json"))
+            ref_data = read_json_with_retry(os.path.join(ref_dir, "data.json"))
 
             for rrev_hash in os.listdir(ref_dir):
                 if rrev_hash == "data.json":
@@ -267,7 +266,7 @@ class PackagesJsonTable:
                 pkgs_dir = os.path.join(rrev_dir, "pkgs")
                 if not os.path.isdir(pkgs_dir):
                     continue
-                rrev_data = _read_json_with_retry(os.path.join(rrev_dir, "data.json"))
+                rrev_data = read_json_with_retry(os.path.join(rrev_dir, "data.json"))
 
                 for pkgid_hash in os.listdir(pkgs_dir):
                     pkgid_dir = os.path.join(pkgs_dir, pkgid_hash)
@@ -283,7 +282,7 @@ class PackagesJsonTable:
                         prev_dir = os.path.join(pkgid_dir, prev_hash)
                         if not os.path.isdir(prev_dir):
                             continue
-                        prev_data = _read_json_with_retry(os.path.join(prev_dir, "data.json"))
+                        prev_data = read_json_with_retry(os.path.join(prev_dir, "data.json"))
                         if prev_data and prev_data.get("path") == path:
                             ref = RecipeReference.loads(ref_data["ref"])
                             ref.revision = rrev_data["revision"]
