@@ -414,41 +414,67 @@ class TestLibsLinkageTraits:
         """
         c = TestClient()
         c.run("new cmake_lib -d name=matrix -d version=0.1 -o matrix")
-        matrix_h = c.load("matrix/include/matrix.h").rstrip()
-        matrix_h += "\n\nMATRIX_EXPORT const char* matrix_transitive_marker();\n"
-        matrix_cpp = c.load("matrix/src/matrix.cpp").rstrip()
-        matrix_cpp += (
-            "\n\nconst char* matrix_transitive_marker() {\n"
-            '    return "MATRIX_TRANSITIVE_MARKER";\n'
-            "}\n"
-        )
+        matrix_h = textwrap.dedent("""\
+            #pragma once
+            #ifdef _WIN32
+              #define MATRIX_EXPORT __declspec(dllexport)
+            #else
+              #define MATRIX_EXPORT
+            #endif
+            MATRIX_EXPORT void matrix();
+            MATRIX_EXPORT void matrix_embedded();
+        """)
+        c.load("matrix/include/matrix.h").rstrip()
+        matrix_cpp = textwrap.dedent(r"""\
+            #include <iostream>
+            #include <matrix.h>
+            void matrix(){ std::cout << "MATRIX!!!!\n"; }
+            void matrix_embedded(){ std::cout << "MATRIX EMBEDDED!!!!\n";}
+            """)
         c.save({"matrix/include/matrix.h": matrix_h, "matrix/src/matrix.cpp": matrix_cpp})
         c.run(f"create matrix -o '*:shared=True' -c tools.cmake.cmakedeps:new={new_value} -tf=")
 
         c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1 -o engine")
+
         conanfile = c.load("engine/conanfile.py")
         conanfile = conanfile.replace(
             'self.requires("matrix/0.1")',
-            'self.requires("matrix/0.1", transitive_libs=True)',
+            'self.requires("matrix/0.1", transitive_headers=True, transitive_libs=True)',
         )
-        c.save({"engine/conanfile.py": conanfile})
+
+        engine_h = textwrap.dedent("""\
+            #pragma once
+            # include <matrix.h>
+            #ifdef _WIN32
+              #define ENGINE_EXPORT __declspec(dllexport)
+            #else
+              #define ENGINE_EXPORT
+            #endif
+            ENGINE_EXPORT void engine();
+
+            static void engine_embedded(){
+                matrix_embedded();
+            }
+        """)
+        engine_cpp = textwrap.dedent(r"""\
+            #include <iostream>
+            #include <engine.h>
+            void engine(){ std::cout << "ENGINE!!!!\n"; }
+            """)
+        c.save({"engine/conanfile.py": conanfile,
+                "engine/include/engine.h": engine_h,
+                "engine/src/engine.cpp": engine_cpp})
         c.run(f"create engine -o '*:shared=True' -c tools.cmake.cmakedeps:new={new_value} -tf=")
 
         c.run("new cmake_exe -d name=consumer -d version=0.1 -d requires=engine/0.1 -o consumer")
         main_cpp = textwrap.dedent("""
             #include "consumer.h"
-            #include <iostream>
-            #include <string>
-
-            const char* matrix_transitive_marker();
+            #include "engine.h"
 
             int main() {
                 consumer();
-                if (std::string(matrix_transitive_marker()) != "MATRIX_TRANSITIVE_MARKER") {
-                    std::cerr << "matrix_transitive_marker mismatch\\n";
-                    return 2;
-                }
-                return 0;
+                engine();
+                engine_embedded();
             }
             """)
         c.save({"consumer/src/main.cpp": main_cpp})
