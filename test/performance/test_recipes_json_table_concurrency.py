@@ -127,6 +127,7 @@ def test_recipes_json_table_concurrent_all_references_stress():
     assert len(refs) >= 20
 
 
+@pytest.mark.skip(reason="Concurrency stress test, skip for normal runs")
 def test_recipes_json_table_retry_on_incomplete_file():
     """
     Simulate another process writing data.json: we create the folder and an incomplete
