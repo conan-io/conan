@@ -219,27 +219,24 @@ class TestRequirementPackageId:
 
 
 class TestTransitiveStatic:
-    @pytest.mark.parametrize("approach, fix",
-                             [("none", False),
-                              ("recipe_2_28", True),
-                              ("recipe_2_27", False),
-                              ("global_2_28", True),
-                              ("global_2_27", False),
-                              ("recipe_2_28_global_2_27", True), # OR, both work
-                              ("recipe_2_27_global_2_28", True)  # OR, both work
+    @pytest.mark.parametrize("recipe_approach, conf_approach, fix",
+                             [(None, None, False),
+                              ("2.28", None, True),
+                              ("2.27", None, False),
+                              (None, "2.28", True),
+                              (None, "2.27", False),
+                              ("2.28", "2.27", True),  # OR, both work
+                              ("2.27", "2.28", True),  # OR, both work
+                              ("2.27", "2.27", False)  # Does not apply if both say no
                               ])
-    def test_transitive_statics(self, approach, fix):
+    def test_transitive_statics(self, recipe_approach, conf_approach, fix):
         # https://github.com/conan-io/conan/issues/19664
         c = TestClient(light=True)
         required_conan_version = ''
-        if "recipe_2_27" in approach:
-            required_conan_version = 'required_conan_version = ">=2.27"'
-        elif "recipe_2_28" in approach:
-            required_conan_version = 'required_conan_version = ">=2.28"'
-        if "global_2_27" in approach:
-            c.save_home({"global.conf": "core:required_conan_version=>=2.27"})
-        if "global_2_28" in approach:
-            c.save_home({"global.conf": "core:required_conan_version=>=2.28"})
+        if recipe_approach is not None:
+            required_conan_version = f'required_conan_version = ">={recipe_approach}"'
+        if conf_approach is not None:
+            c.save_home({"global.conf": f"core:required_conan_version=>={conf_approach}"})
         libc = textwrap.dedent(f"""\
             from conan import ConanFile
 
