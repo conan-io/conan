@@ -219,7 +219,7 @@ class TestRequirementPackageId:
 
 
 class TestTransitiveStatic:
-    @pytest.mark.parametrize("recipe_approach, conf_approach, fix",
+    @pytest.mark.parametrize("recipe_approach, conf_approach, apply_fix",
                              [(None, None, False),
                               ("2.28", None, True),
                               ("2.27", None, False),
@@ -229,7 +229,7 @@ class TestTransitiveStatic:
                               ("2.27", "2.28", True),  # OR, both work
                               ("2.27", "2.27", False)  # Does not apply if both say no
                               ])
-    def test_transitive_statics(self, recipe_approach, conf_approach, fix):
+    def test_transitive_statics(self, recipe_approach, conf_approach, apply_fix):
         # https://github.com/conan-io/conan/issues/19664
         c = TestClient(light=True)
         required_conan_version = ''
@@ -255,12 +255,12 @@ class TestTransitiveStatic:
         c.run("create liba")
         c.run("create libb")
         c.run(f"create libc")
-        if not fix:
+        if not apply_fix:
             assert ("libc/1.0: WARN: risk: Transitive dependencies with "
                     "'headers=False' effect in 'package_id'") in c.out
         c.run("list libc:*")
         assert "libb/1.0.Z" in c.out
-        if fix:
+        if apply_fix:
             assert "liba/" not in c.out
         else:
             assert "liba/" in c.out
