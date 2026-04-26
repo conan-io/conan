@@ -41,10 +41,8 @@ class RecipesJsonTable:
 
     def _revision_dir(self, ref: RecipeReference) -> str:
         # The revision string itself is a safe hex value — use it directly as folder name.
-        return os.path.join(self._ref_dir(ref), ref.revision or "")
-
-    def _ref_data_path(self, ref: RecipeReference) -> str:
-        return os.path.join(self._ref_dir(ref), "data.json")
+        assert ref.revision
+        return os.path.join(self._ref_dir(ref), ref.revision)
 
     def _revision_data_path(self, ref: RecipeReference) -> str:
         return os.path.join(self._revision_dir(ref), "data.json")
@@ -62,7 +60,7 @@ class RecipesJsonTable:
         ref_dir = self._ref_dir(ref)
         if not os.path.isdir(ref_dir):
             os.makedirs(ref_dir, exist_ok=True)
-            write_json_atomic(self._ref_data_path(ref), {"ref": str(ref)})
+            write_json_atomic(os.path.join(ref_dir, "data.json"), {"ref": str(ref)})
 
         os.makedirs(rev_dir, exist_ok=True)
         # The revision is the folder name — no need to store it in the file too.
@@ -160,8 +158,6 @@ class RecipesJsonTable:
         assert ref.revision is None
         ref_dir = self._ref_dir(ref)
         if not os.path.isdir(ref_dir):
-            return []
-        if not read_json_with_retry(self._ref_data_path(ref)):
             return []
 
         revs = []

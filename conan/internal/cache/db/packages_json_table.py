@@ -29,16 +29,19 @@ class PackagesJsonTable:
     # ------------------------------------------------------------------
 
     def _rrev_dir(self, ref: RecipeReference) -> str:
+        assert ref.revision
         # ref is hashed (contains special chars); revision is a safe hex string used directly.
-        return os.path.join(self._db_folder, ref_hash(str(ref)), ref.revision or "")
+        return os.path.join(self._db_folder, ref_hash(str(ref)), ref.revision)
 
     def _pkgid_dir(self, pref: PkgReference) -> str:
         # package_id is a safe hex string — use it directly as the folder name.
-        return os.path.join(self._rrev_dir(pref.ref), pref.package_id or "")
+        assert pref.package_id
+        return os.path.join(self._rrev_dir(pref.ref), pref.package_id)
 
     def _prev_dir(self, pref: PkgReference) -> str:
         # package revision is a safe hex string — use it directly as the folder name.
-        return os.path.join(self._pkgid_dir(pref), pref.revision or "")
+        assert pref.revision
+        return os.path.join(self._pkgid_dir(pref), pref.revision)
 
     def _prev_data_path(self, pref: PkgReference) -> str:
         return os.path.join(self._prev_dir(pref), "data.json")
