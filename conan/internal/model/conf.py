@@ -25,6 +25,13 @@ Applies the following behaviors based on the minimum specified version:
    These behaviors also apply for 'required_conan_version' in recipes, but the global one has precedence.
 """
 
+policies_msg = """\
+A list of opt-in behaviors that can be defined in the configuration to control specific aspects of Conan's behavior,
+such as keeping deprecated behaviours:
+   - deprecated_conanfile_path_methods: Allow using deprecated Path accessors in recipes - To be removed in Conan 2.32
+   - deprecated_build_order_args: Allow deprecated skipping of --order-by argument in conan graph build-order - To be removed in Conan 2.32
+   - deprecated_empty_version_range: Allow using deprecated empty version range expressions - To be removed in Conan 2.32"""
+
 BUILT_IN_CONFS = {
     "core:required_conan_version": required_conan_version_msg,
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
@@ -45,6 +52,7 @@ BUILT_IN_CONFS = {
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
+    "core:policies": policies_msg,
     # Sources backup
     "core.sources:download_cache": "Folder to store the sources backup",
     "core.sources:download_urls": "List of URLs to download backup sources from",
