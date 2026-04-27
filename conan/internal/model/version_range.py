@@ -11,12 +11,15 @@ def required_conan_version_policy(conanfile, limit_version):
     except AttributeError:
         pass  # This can happen for PLATFORM deps without _conan_helpers
     else:
-        global_required_conan = global_conf.get("core:required_conan_version")
+        policies = global_conf.get("core:policies")
         # The global policy_conan_version one has priority
-        if global_required_conan:
-            version_range = VersionRange(global_required_conan)
-            if not version_range.contains(Version(limit_version), resolve_prerelease=None):
-                return True
+        if policies:
+            policy = next(iter(p for p in policies if p.startswith("required_conan_version")), None)
+            if policy:
+                version = policy.split("=", 1)[1]
+                version_range = VersionRange(version)
+                if not version_range.contains(Version(limit_version), resolve_prerelease=None):
+                    return True
 
     conanfile_version = conanfile._conan_required_version # noqa
     if conanfile_version:

@@ -236,7 +236,8 @@ class TestTransitiveStatic:
         if recipe_approach is not None:
             required_conan_version = f'required_conan_version = ">={recipe_approach}"'
         if conf_approach is not None:
-            c.save_home({"global.conf": f"core:required_conan_version=>={conf_approach}"})
+            c.save_home({"global.conf":
+                             f'core:policies=["required_conan_version=>={conf_approach}"]'})
         libc = textwrap.dedent(f"""\
             from conan import ConanFile
 
