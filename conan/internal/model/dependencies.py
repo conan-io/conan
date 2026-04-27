@@ -84,6 +84,10 @@ class UserRequirementsDict:
             # so it's definitely in the dict
             return True
 
+    def of(self, ref, build=None, **kwargs):
+        # TODO: come up with a better name
+        return self._get(ref, build, **kwargs)
+
 
 class ConanFileDependencies(UserRequirementsDict):
 
