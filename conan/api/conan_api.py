@@ -217,5 +217,6 @@ class ConanAPI:
             # This is caching too!
             loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
             ws_packages = self._conan_api.workspace._load_packages(loader)  # noqa
-            editable_packages._edited_refs.update(ws_packages)
+            if ws_packages:
+                editable_packages._edited_refs.update(ws_packages)
             return proxy, range_resolver, loader, ws_packages
