@@ -928,3 +928,12 @@ def test_build_order_order_by_missing_deprecated():
     tc.save({"conanfile.py": GenConanfile("dep", "0.1")})
     tc.run("graph build-order", assert_error=True)
     assert "The old behaviour can be re-enabled by adding 'deprecated_build_order_args'" in tc.out
+
+
+def test_build_order_deprecated_build_order_version_check():
+    from conan import __version__ as conan_version
+    from conan.tools.scm import Version
+    from conan.internal.model.version_range import VersionRange
+    r = VersionRange(f">=2.32,include_prerelease")
+    assert not r.contains(Version(conan_version), None), \
+        "Remove --order-by deprecated behaviour in this version"

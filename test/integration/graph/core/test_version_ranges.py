@@ -446,3 +446,10 @@ def test_deprecated_empty_version_ranger():
     tc.run("graph info app")
     assert "lib/[]: lib/1.0" in tc.out
     assert "Empty version range usage is discouraged" in tc.out
+
+    from conan import __version__ as conan_version
+    from conan.tools.scm import Version
+    from conan.internal.model.version_range import VersionRange
+    r = VersionRange(f">=2.32,include_prerelease")
+    assert not r.contains(Version(conan_version), None), \
+        "Remove empty version range support"
