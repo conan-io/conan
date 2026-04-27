@@ -402,7 +402,8 @@ class TestLibsLinkageTraits:
         # it works
 
     @pytest.mark.tool("cmake", "3.27")
-    def test_transitive_libs_and_shared(self):
+    @pytest.mark.parametrize("shared", [False, True])
+    def test_transitive_libs_and_shared(self, shared):
         """
         Issue related: https://github.com/conan-io/conan/issues/19801
 
@@ -412,6 +413,7 @@ class TestLibsLinkageTraits:
         The consumer executable calls a symbol that only exists in ``matrix`` while CMake only
         links ``engine::engine``; the link succeeds only when ``matrix::matrix`` is propagated.
         """
+        shared_flag = "-o '*:shared=True'" if shared else ""
         c = TestClient()
         c.run("new cmake_lib -d name=matrix -d version=0.1 -o matrix")
         matrix_h = textwrap.dedent("""\
@@ -432,7 +434,7 @@ class TestLibsLinkageTraits:
             void matrix_embedded(){ std::cout << "MATRIX EMBEDDED!!!!\n";}
             """)
         c.save({"matrix/include/matrix.h": matrix_h, "matrix/src/matrix.cpp": matrix_cpp})
-        c.run(f"create matrix -o '*:shared=True' -c tools.cmake.cmakedeps:new={new_value} -tf=")
+        c.run(f"create matrix {shared_flag} -c tools.cmake.cmakedeps:new={new_value} -tf=")
 
         c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1 -o engine")
 
@@ -464,7 +466,7 @@ class TestLibsLinkageTraits:
         c.save({"engine/conanfile.py": conanfile,
                 "engine/include/engine.h": engine_h,
                 "engine/src/engine.cpp": engine_cpp})
-        c.run(f"create engine -o '*:shared=True' -c tools.cmake.cmakedeps:new={new_value} -tf=")
+        c.run(f"create engine {shared_flag} -c tools.cmake.cmakedeps:new={new_value} -tf=")
 
         c.run("new cmake_exe -d name=consumer -d version=0.1 -d requires=engine/0.1 -o consumer")
         main_cpp = textwrap.dedent("""
@@ -478,7 +480,7 @@ class TestLibsLinkageTraits:
             }
             """)
         c.save({"consumer/src/main.cpp": main_cpp})
-        c.run(f"build consumer -o '*:shared=True' -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"build consumer {shared_flag} -c tools.cmake.cmakedeps:new={new_value}")
         # it works
 
     @pytest.mark.tool("cmake", "3.27")
