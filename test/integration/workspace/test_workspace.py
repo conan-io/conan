@@ -1569,8 +1569,9 @@ class TestPyRequires:
                     self.python_requires["pyreq"].module.mygen(self)
             """)
         ws = textwrap.dedent("""\
-            packages:
+            python_requires:
                - path: pyreq
+            packages:
                - path: pkg
                """)
         c.save({"pyreq/conanfile.py": pyreq,
@@ -1579,7 +1580,8 @@ class TestPyRequires:
 
         c.run("workspace info --format=json")
         ws = json.loads(c.stdout)
-        assert ws["packages"] == [{'path': 'pyreq'}, {'path': 'pkg'}]
+        assert ws["python_requires"] == [{'path': 'pyreq'}]
+        assert ws["packages"] == [{'path': 'pkg'}]
 
         c.run("workspace install")
         assert "conanfile.py (pkg/0.1): HELLO!!!" in c.out
@@ -1619,8 +1621,9 @@ class TestPyRequires:
                     self.options.update(base.options, base.default_options)
             """)
         ws = textwrap.dedent("""\
-           packages:
+           python_requires:
               - path: pyreq
+           packages:
               - path: pkg
               """)
         c.save({"pyreq/conanfile.py": pyreq,
@@ -1629,7 +1632,8 @@ class TestPyRequires:
 
         c.run("workspace info --format=json")
         ws = json.loads(c.stdout)
-        assert ws["packages"] == [{'path': 'pyreq'}, {'path': 'pkg'}]
+        assert ws["python_requires"] == [{'path': 'pyreq'}]
+        assert ws["packages"] == [{'path': 'pkg'}]
 
         c.run("workspace install")
         assert "conanfile.py (pkg/0.1): HELLO!!!" in c.out
@@ -1637,12 +1641,12 @@ class TestPyRequires:
     def test_super_install(self):
         c = TestClient()
 
-        c.save({"conanws.yml": "",
+        c.save({"conanws.yml": "python_requires:\n    - path: dep",
                 "dep/conanfile.py": GenConanfile("dep","0.1").with_package_type("python-require"),
                 "liba/conanfile.py": GenConanfile("liba", "0.1").with_python_requires("dep/0.1"),
                 "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1")})
 
-        c.run("workspace add dep")  # This checks it is a python-requires and add it accordingly
+        # c.run("workspace add dep")  # This checks it is a python-requires and add it accordingly
         c.run("workspace add liba")
         c.run("workspace add libb")
 

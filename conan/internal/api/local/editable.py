@@ -25,12 +25,15 @@ class EditablePackages:
         else:
             self._edited_refs = {}  # {ref: {"path": path, "layout": layout}}
 
-    def copy(self):
+    def update_copy(self, ws_editables):
         """
-        Create a new instance
+        Create a new instance with the union of the editable packages of self and other
         """
+        if ws_editables is None:
+            return self
         result = EditablePackages()
         result._edited_refs = self._edited_refs.copy()
+        result._edited_refs.update(ws_editables)
         return result
 
     @property

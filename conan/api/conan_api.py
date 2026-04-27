@@ -198,7 +198,8 @@ class ConanAPI:
             return load
 
         def get_loader(self):
-            editable_packages = self._editable_packages.copy()
+            pyreqs_ws = self._conan_api.workspace.python_requires()
+            editable_packages = self._editable_packages.update_copy(pyreqs_ws)
 
             legacy_update = self.global_conf.get("core:update_policy", choices=["legacy"])
             # This proxy is caching information
@@ -215,5 +216,6 @@ class ConanAPI:
             pyreq_loader = PyRequireLoader(proxy, range_resolver, self.global_conf)
             # This is caching too!
             loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
-            ws_packages = self._conan_api.workspace._load_packages(loader, editable_packages)  # noqa
+            ws_packages = self._conan_api.workspace._load_packages(loader)  # noqa
+            editable_packages._edited_refs.update(ws_packages)
             return proxy, range_resolver, loader, ws_packages

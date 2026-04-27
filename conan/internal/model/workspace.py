@@ -34,7 +34,8 @@ class Workspace:
         # Return a protected wrapper around workspace overridable callables in order to
         # be able to have clean errors if user errors in conanws.py code
         myattr = object.__getattribute__(self, item)
-        if item not in ("name", "packages", "add", "remove", "clean", "build_order"):
+        if item not in ("name", "packages", "python_requires", "add", "remove", "clean",
+                        "build_order"):
             return myattr
 
         def wrapper(*args, **kwargs):
@@ -115,11 +116,27 @@ class Workspace:
     def packages(self):
         return self.conan_data.get("packages", [])
 
+    def python_requires(self):
+        return self.conan_data.get("python_requires", [])
+
     def load_conanfile(self, conanfile_path):
         assert self._loader is not None, "Internal error, self._loader not defined, report to Github"
         conanfile_path = os.path.join(self.folder, conanfile_path, "conanfile.py")
         conanfile = self._loader.load_named(conanfile_path, name=None, version=None, user=None,
                                             channel=None, remotes=None, graph_lock=None)
+        return conanfile
+
+    def load_conanfile_base(self, conanfile_path):
+        from conan.internal.loader import ConanFileLoader
+        from conan.internal.cache.home_paths import HomePaths
+        from conan.internal.conan_app import ConanFileHelpers, CmdWrapper
+        cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
+        helpers = ConanFileHelpers(None, cmd_wrap, self._conan_api._api_helpers.global_conf,
+                                   cache=None, home_folder=self._conan_api.home_folder,
+                                   conan_api = self._conan_api)
+        loader = ConanFileLoader(pyreq_loader=None, conanfile_helpers=helpers)
+        conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
+                                      channel=None, remotes=None, graph_lock=None)
         return conanfile
 
     def root_conanfile(self):  # noqa

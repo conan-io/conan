@@ -118,7 +118,34 @@ class WorkspaceAPI:
         _, _, _, ws_packages = self._conan_api._api_helpers.get_loader() # noqa
         return ws_packages
 
-    def _load_packages(self, loader, editable_packages):
+    def python_requires(self):
+        """
+        @return: Returns {RecipeReference: {"path": full abs-path}}
+        """
+        packages = {}
+        for editable_info in self._ws.python_requires():
+            rel_path = editable_info["path"]
+            path = os.path.normpath(os.path.join(self._folder, rel_path, "conanfile.py"))
+            if not os.path.isfile(path):
+                raise ConanException(f"Workspace package not found: {path}")
+            ref = editable_info.get("ref")
+            try:
+                if ref is None:
+                    conanfile = self._ws.load_conanfile_base(path)
+                    reference = RecipeReference(name=conanfile.name, version=conanfile.version,
+                                                user=conanfile.user, channel=conanfile.channel)
+                else:
+                    reference = RecipeReference.loads(ref)
+                reference.validate_ref(reference)
+            except Exception as e:
+                raise ConanException(f"Workspace package reference could not be deduced by"
+                                     f" {rel_path}/conanfile.py or it is not"
+                                     f" correctly defined in the conanws.yml file: {e}")
+            pkg = {"path": path}
+            packages[reference] = pkg
+        return packages
+
+    def _load_packages(self, loader):
         if not self._folder or not self._enabled:
             return
         # explicitly undocumented, not public
@@ -148,13 +175,7 @@ class WorkspaceAPI:
             output_folder = editable_info.get("output_folder")
             if output_folder:
                 pkg["output_folder"] = os.path.normpath(os.path.join(self._folder, output_folder))
-            # Python-requires are editable packages, but not part of the returned "ws-packages"
-            # as they don't have to be sourced, not part of build-order, etc.
-            if conanfile.package_type != "python-require":
-                packages[reference] = pkg
-            # This needs to be incremental, in the loop, so loaded ones are made available
-            # for next iterations that might require python-requires in their ws.load_conanfile
-            editable_packages.edited_refs[reference] = pkg
+            packages[reference] = pkg
         return packages
 
     def open(self, ref, remotes, cwd=None):
@@ -299,6 +320,7 @@ class WorkspaceAPI:
         self._ws.set_loader(loader)  # Just in case the user needs load_conanfile()
         return {"name": self._ws.name(),
                 "folder": self._folder,
+                "python_requires": self._ws.python_requires(),
                 "packages": self._ws.packages()}
 
     @staticmethod
