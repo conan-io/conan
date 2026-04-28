@@ -47,3 +47,20 @@ def test_meson_exe_template():
 
     client.run("create . -s build_type=Debug")
     assert "greet/0.1: Hello World Debug!" in client.out
+
+
+@pytest.mark.tool("ninja")
+@pytest.mark.tool("meson")
+def test_meson_templates_with_requires():
+    client = TestClient(path_with_spaces=False)
+    client.run("new meson_lib -d name=liba -d version=0.1 -o liba")
+    client.run("new meson_lib -d name=libb -d version=0.1 -d requires=liba/0.1 -o libb")
+    client.run("new meson_exe -d name=consumer -d version=0.1 -d requires=libb/0.1 -o consumer")
+
+    client.run("export liba")
+    client.run("export libb")
+    client.run("create consumer --build=missing")
+
+    assert "liba/0.1: Hello World Release!" in client.out
+    assert "libb/0.1: Hello World Release!" in client.out
+    assert "consumer/0.1: Hello World Release!" in client.out
