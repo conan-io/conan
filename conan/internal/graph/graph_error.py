@@ -43,6 +43,13 @@ class GraphLoopError(GraphError):
         self.require = require
         self.ancestor = ancestor
 
+    def serialize(self):
+        return {"type": "loop",
+                "require": {**self.require.serialize(), "name": str(self.require.ref).split("/")[0]},
+                "node": self.node.serialize(),
+                "ancestor": self.ancestor.serialize()
+                }
+
     def __str__(self):
         return "There is a cycle/loop in the graph:\n" \
                f"    Initial ancestor: {self.ancestor}\n" \

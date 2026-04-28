@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
 
@@ -70,10 +68,8 @@ class TestVersionRangesUpdatingTest:
 class TestVersionRangesMultiRemote:
 
     def test_multi_remote(self):
-        servers = OrderedDict()
-        servers["default"] = TestServer()
-        servers["other"] = TestServer()
-        client = TestClient(light=True, servers=servers, inputs=2*["admin", "password"])
+        client = TestClient(light=True, servers={"default": TestServer(), "other": TestServer()},
+                            inputs=2 * ["admin", "password"])
         client.save({"hello0/conanfile.py": GenConanfile("hello0"),
                      "hello1/conanfile.py": GenConanfile("hello1").with_requires("hello0/[*]")})
         client.run("export hello0 --version=0.1")

@@ -1,18 +1,20 @@
+from fnmatch import fnmatch
+
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conan.internal.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                         RECIPE_NOT_IN_REMOTE, RECIPE_UPDATED, RECIPE_EDITABLE,
                                         RECIPE_INCACHE_DATE_UPDATED, RECIPE_UPDATEABLE)
-from conan.internal.errors import NotFoundException
+from conan.internal.errors import NotFoundException, ConanReferenceAlreadyExistsInDB
 from conan.errors import ConanException
 
 
 class ConanProxy:
-    def __init__(self, conan_app, editable_packages, legacy_update=None):
+    def __init__(self, cache, remote_manager, editable_packages, legacy_update=None):
         # collaborators
         self._editable_packages = editable_packages
-        self._cache = conan_app.cache
-        self._remote_manager = conan_app.remote_manager
+        self._cache = cache
+        self._remote_manager = remote_manager
         self._resolved = {}  # Cache of the requested recipes to optimize calls
         self._legacy_update = legacy_update
 
@@ -32,9 +34,11 @@ class ConanProxy:
     def _get_recipe(self, reference, remotes, update, check_update):
         output = ConanOutput(scope=str(reference))
 
-        conanfile_path = self._editable_packages.get_path(reference)
-        if conanfile_path is not None:
-            return BasicLayout(reference, conanfile_path), RECIPE_EDITABLE, None
+        editable = self._editable_packages.get(reference)
+        if editable is not None:
+            path = editable["path"]
+            output_folder = editable.get("output_folder")
+            return BasicLayout(reference, path, output_folder), RECIPE_EDITABLE, None
 
         # check if it there's any revision of this recipe in the local cache
         try:
@@ -65,19 +69,22 @@ class ConanProxy:
             return recipe_layout, status, None
 
         # Something found in remotes, check if we already have the latest in local cache
-        # TODO: cache2.0 here if we already have a revision in the cache but we add the
-        #  --update argument and we find that same revision in server, we will not
-        #  download anything but we will UPDATE the date of that revision in the
-        #  local cache and WE ARE ALSO UPDATING THE REMOTE
-        #  Check if this is the flow we want to follow
         assert ref.timestamp
         cache_time = ref.timestamp
         if remote_ref.revision != ref.revision:
             if cache_time < remote_ref.timestamp:
                 # the remote one is newer
                 if should_update_reference(remote_ref, update):
-                    output.info("Retrieving from remote '%s'..." % remote.name)
-                    new_recipe_layout = self._download(remote_ref, remote)
+                    output.info(f"Updating to latest from remote '{remote.name}'...")
+                    try:
+                        new_recipe_layout = self._download(remote_ref, remote)
+                    except ConanReferenceAlreadyExistsInDB:
+                        # When updating to a newer revision in the server, but it already exists
+                        # in the cache with an older timestamp
+                        output.info(f"Latest from '{remote.name}' was found in "
+                                    "the cache, using it and updating its timestamp")
+                        new_recipe_layout = self._cache.recipe_layout(remote_ref)
+                        self._cache.update_recipe_timestamp(remote_ref)  # make it latest
                     status = RECIPE_UPDATED
                     return new_recipe_layout, status, remote
                 else:
@@ -175,4 +182,5 @@ def should_update_reference(reference, update):
     if isinstance(update, bool):
         return update
     # Legacy syntax had --update without pattern, it manifests as a "*" pattern
-    return any(name == "*" or reference.name == name for name in update)
+    return any(fnmatch(reference.name, pattern)
+               for pattern in update)

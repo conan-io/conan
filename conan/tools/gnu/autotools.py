@@ -1,6 +1,7 @@
 import os
 import re
 
+from conan.errors import ConanException
 from conan.tools.build import build_jobs, cmd_args_to_string, load_toolchain_args
 from conan.internal.subsystems import subsystem_path, deduce_subsystem
 from conan.tools.files import chdir
@@ -71,6 +72,8 @@ class Autotools:
         make_program = self._conanfile.conf.get("tools.gnu:make_program",
                                                 default="mingw32-make" if self._use_win_mingw()
                                                 else "make")
+        subsystem = deduce_subsystem(self._conanfile, scope="build")
+        make_program = subsystem_path(subsystem, make_program)
         str_args = self._make_args
         str_extra_args = " ".join(args) if args is not None else ""
         jobs = ""
@@ -97,7 +100,10 @@ class Autotools:
         """
         if target is None:
             target = "install"
-            do_strip = self._conanfile.conf.get("tools.build:install_strip", check_type=bool)
+            try:
+                do_strip = self._conanfile.conf.get("tools.build:install_strip", check_type=bool)
+            except ConanException:
+                do_strip = "autotools" in self._conanfile.conf.get("tools.build:install_strip", check_type=list)
             if do_strip:
                 target += "-strip"
         args = args if args else []

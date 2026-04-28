@@ -22,13 +22,6 @@ class TargetConfigurationTemplate2:
         self._full_cpp_info = full_cpp_info
 
     def content(self):
-        auto_link = self._cmakedeps.get_property("cmake_set_interface_link_directories",
-                                                 self._conanfile, check_type=bool)
-        if auto_link:
-            out = self._cmakedeps._conanfile.output  # noqa
-            out.warning("CMakeConfigDeps: cmake_set_interface_link_directories deprecated and "
-                        "invalid. The package 'package_info()' must correctly define the (CPS) "
-                        "information", warn_tag="deprecated")
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
         return t.render(self._context)
@@ -52,13 +45,17 @@ class TargetConfigurationTemplate2:
 
         if not requires and not components:  # global cpp_info without components definition
             # require the pkgname::pkgname base (user defined) or INTERFACE base target
-            for d in transitive_reqs.values():
+            for req, d in transitive_reqs.items():
                 if d.package_type is PackageType.APP:
                     continue
                 dep_target = self._cmakedeps.get_property("cmake_target_name", d)
                 dep_target = dep_target or f"{d.ref.name}::{d.ref.name}"
-                link = not (pkg_type is PackageType.SHARED and d.package_type is PackageType.SHARED)
-                result[dep_target] = link
+                link_feature = self._cmakedeps.get_property("cmake_link_feature", d)
+                link = req.libs
+                result[dep_target] = {
+                    "link": link,
+                    "link_feature": link_feature
+                }
             return result
 
         for required_pkg, required_comp in requires:
@@ -68,12 +65,15 @@ class TargetConfigurationTemplate2:
                 dep_target = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                           required_comp)
                 dep_target = dep_target or f"{pkg_name}::{required_comp}"
-                link = not (pkg_type is PackageType.SHARED and
-                            dep_comp.type is PackageType.SHARED)
-                result[dep_target] = link
+                link_feature = self._cmakedeps.get_property("cmake_link_feature", self._conanfile,
+                                                            required_comp)
+                result[dep_target] = {
+                    "link": True,  # Components of same package have PUBLIC dependency
+                    "link_feature": link_feature
+                }
             else:  # Different package
                 try:
-                    dep = transitive_reqs[required_pkg]
+                    req, dep = transitive_reqs.of(required_pkg)
                 except KeyError:  # The transitive dep might have been skipped
                     pass
                 else:
@@ -91,19 +91,26 @@ class TargetConfigurationTemplate2:
                             continue  # It doesn't make sense to link a package that is an App
                         comp = None
                         default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
-                        link = pkg_type is not PackageType.SHARED
+                        link = req.libs  # Do what the requirement to that package says
                     else:
                         if dep_comp.type is PackageType.APP or dep_comp.exe:
                             continue  # It doesn't make sense to link a package that is an App
                         comp = required_comp
                         default_target = f"{required_pkg}::{required_comp}"
+                        # if it contains a requirement of a specific component of the other package
+                        # and the other package can be an APP, but containing a LIB component
+                        # the req.libs will not be defined. This is the libtool->automake(app) case
                         link = not (pkg_type is PackageType.SHARED and
                                     dep_comp.type is PackageType.SHARED)
-
+                    link = req.libs or link
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
                     dep_target = dep_target or default_target
+                    link_feature = self._cmakedeps.get_property("cmake_link_feature", dep, comp)
 
-                    result[dep_target] = link
+                    result[dep_target] = {
+                        "link": link,
+                        "link_feature": link_feature
+                    }
         return result
 
     @property
@@ -121,7 +128,7 @@ class TargetConfigurationTemplate2:
 
         libs = {}
         # The BUILD context does not generate libraries targets atm
-        if self._conanfile.context == CONTEXT_HOST:
+        if not self._require.build:
             libs = self._get_libs(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
             self._add_root_lib_target(libs, pkg_name, cpp_info)
         exes = self._get_exes(cpp_info, pkg_name, pkg_folder, pkg_folder_var)
@@ -180,7 +187,7 @@ class TargetConfigurationTemplate2:
 
     def _get_cmake_lib(self, info, components, pkg_folder, pkg_folder_var, comp_name=None):
         if info.exe or not (info.package_framework or info.frameworks or info.includedirs or info.libs
-                            or info.system_libs or info.defines):
+                            or info.system_libs or info.defines or info.requires):
             return
 
         includedirs = ";".join(self._path(i, pkg_folder, pkg_folder_var)
@@ -195,6 +202,7 @@ class TargetConfigurationTemplate2:
                                                   comp_name=comp_name, check_type=list) or []
         sources = [self._path(source, pkg_folder, pkg_folder_var) for source in info.sources]
         target = {"type": "INTERFACE",
+                  "comp_name": comp_name,
                   "includedirs": includedirs,
                   "defines": defines,
                   "requires": requires,
@@ -264,9 +272,19 @@ class TargetConfigurationTemplate2:
                     target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
                                                                defaultc)
                     comp_name = target_name or f"{pkg_name}::{defaultc}"
-                    all_requires[comp_name] = True  # It is an interface, full link
+                    link_feature = self._cmakedeps.get_property("cmake_link_feature", self._conanfile,
+                                                                defaultc)
+                    all_requires[comp_name] = {
+                        "link": True,  # It is an interface, full link
+                        "link_feature": link_feature
+                    }
             else:
-                all_requires = {k: True for k in libs.keys()}
+                all_requires = {k: {
+                    "link": True,
+                    "link_feature": self._cmakedeps.get_property("cmake_link_feature", self._conanfile,
+                                                                 v.get("comp_name"))
+                }
+                    for k, v in libs.items()}
             # This target might have an alias, so we need to check it
             cmake_target_aliases = self._get_aliases()
             libs[root_target_name] = {"type": "INTERFACE",
@@ -384,6 +402,12 @@ class TargetConfigurationTemplate2:
 
         {% if lib_info.get("link_languages") %}
         get_property(_languages GLOBAL PROPERTY ENABLED_LANGUAGES)
+        if("CXX" IN_LIST _languages)
+            list(APPEND _languages "C")
+        endif()
+        if("CUDA" IN_LIST _languages)
+            list(APPEND _languages "C" "CXX")
+        endif()
         {% for lang in lib_info["link_languages"] %}
         if(NOT "{{lang}}" IN_LIST _languages)
             message(SEND_ERROR
@@ -407,16 +431,26 @@ class TargetConfigurationTemplate2:
 
         {% if lib_info.get("requires") %}
         # Information of transitive dependencies
-        {% for require_target, link in lib_info["requires"].items() %}
-        # Requirement {{require_target}} => Full link: {{link}}
+        {% for require_target, link_info in lib_info["requires"].items() %}
 
-        {% if link %}
+        # Requirement {{lib}} -> {{require_target}} (Full link: {{link_info["link"]}})
+        {% if link_info["link"] %}
+        {% if link_info["link_feature"] %}
+        # Link feature: {{link_info["link_feature"]}}
+        if(CMAKE_VERSION VERSION_LESS "3.24")
+            message(FATAL_ERROR "The 'CMakeConfigDeps' generator LINK_FEATURE property only works with CMake >= 3.24")
+        endif()
+        {% endif %}
         # set property allows to append, and lib_info[requires] will iterate
         set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+            {% if link_info["link_feature"] %}
+                     "$<LINK_LIBRARY:{{link_info["link_feature"]}},{{config_wrapper(config, require_target)}}>")
+            {% else %}
                      "{{config_wrapper(config, require_target)}}")
+            {% endif %}
         {% else %}
-        if(${CMAKE_VERSION} VERSION_LESS "3.27")
-            message(FATAL_ERROR "The 'CMakeToolchain' generator only works with CMake >= 3.27")
+        if(CMAKE_VERSION VERSION_LESS "3.27")
+            message(FATAL_ERROR "The 'CMakeConfigDeps' generator COMPILE_ONLY expression only works with CMake >= 3.27")
         endif()
         # If the headers trait is not there, this will do nothing
         target_link_libraries({{lib}} INTERFACE

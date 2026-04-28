@@ -3,7 +3,6 @@ import os
 import platform
 import stat
 import textwrap
-from collections import OrderedDict
 
 import pytest
 from unittest.mock import patch
@@ -12,7 +11,6 @@ from requests import Response
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.internal.api.uploader import gzopen_without_timestamps
-from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME, PACKAGE_TGZ_NAME
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient, TestServer, \
     GenConanfile, TestRequester, TestingResponse
 from conan.internal.util.files import is_dirty, save, set_dirty, sha1sum
@@ -129,7 +127,7 @@ class TestUpload:
 
             export_download_folder = layout.download_export()
 
-            tgz = os.path.join(export_download_folder, EXPORT_SOURCES_TGZ_NAME)
+            tgz = os.path.join(export_download_folder, "conan_sources.tgz")
             assert os.path.exists(tgz)
             assert is_dirty(tgz)
 
@@ -147,7 +145,7 @@ class TestUpload:
         pref = client.created_layout().reference
 
         def gzopen_patched(name, fileobj, compresslevel=None):  # noqa
-            if name == PACKAGE_TGZ_NAME:
+            if name == "conan_package.tgz":
                 raise ConanException("Error gzopen %s" % name)
             return gzopen_without_timestamps(name, fileobj)
         with patch('conan.internal.api.uploader.gzopen_without_timestamps', new=gzopen_patched):
@@ -155,7 +153,7 @@ class TestUpload:
             assert "Error gzopen conan_package.tgz" in client.out
 
             download_folder = client.get_latest_pkg_layout(pref).download_package()
-            tgz = os.path.join(download_folder, PACKAGE_TGZ_NAME)
+            tgz = os.path.join(download_folder, "conan_package.tgz")
             assert os.path.exists(tgz)
             assert is_dirty(tgz)
 
@@ -375,10 +373,7 @@ class TestUpload:
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
         server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
-        servers = OrderedDict()
-        servers["server1"] = server1
-        servers["server2"] = server2
-        client = TestClient(servers=servers)
+        client = TestClient(servers={"server1": server1, "server2": server2}, light=True)
         client.save(files)
         client.run("create . --user=user --channel=testing")
         client.run("remote login server1 lasote -p mypass")
@@ -567,3 +562,14 @@ def test_upload_json_output(dry_run):
         assert "upload-urls" not in c.out
         assert "url:" not in c.out
         assert "checksum:" not in c.out
+
+
+def test_upload_to_disabled():
+    c = TestClient(default_server_user=True, light=True)
+    c.run("remote disable *")
+    c.save({"conanfile.py": GenConanfile("tool", "0.1")})
+    c.run("create")
+    c.run("upload * -c -r=default", assert_error=True)
+    assert "ERROR: Remote 'default' is disabled" in c.out
+    c.run("upload * -c -r=default --allow-disabled")
+    assert "tool/0.1: Uploading recipe" in c.out

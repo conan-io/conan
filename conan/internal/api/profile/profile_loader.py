@@ -229,7 +229,6 @@ class _ProfileValueParser:
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
         doc = TextINIParse(profile_text, allowed_fields=["tool_requires",
-                                                         "system_tools",  # DEPRECATED: platform_tool_requires
                                                          "platform_requires",
                                                          "platform_tool_requires", "settings",
                                                          "options", "conf", "buildenv", "runenv",
@@ -241,12 +240,17 @@ class _ProfileValueParser:
         tool_requires = _ProfileValueParser._parse_tool_requires(doc)
 
         doc_platform_requires = doc.platform_requires or ""
-        doc_platform_tool_requires = doc.platform_tool_requires or doc.system_tools or ""
-        if doc.system_tools:
-            ConanOutput().warning("Profile [system_tools] is deprecated,"
-                                  " please use [platform_tool_requires]")
-        platform_tool_requires = [RecipeReference.loads(r) for r in doc_platform_tool_requires.splitlines()]
-        platform_requires = [RecipeReference.loads(r) for r in doc_platform_requires.splitlines()]
+        doc_platform_tool_requires = doc.platform_tool_requires or ""
+
+        def parse_replaces(replaces):
+            result = [RecipeReference.loads(r) for r in replaces.splitlines()]
+            errors = [r for r in result if str(r.version).startswith("[")]
+            if errors:
+                raise ConanException("Profile [platform_requires]/[platform_tool_requires] must "
+                                     f"be exact versions, not version ranges: {errors}")
+            return result
+        platform_tool_requires = parse_replaces(doc_platform_tool_requires)
+        platform_requires = parse_replaces(doc_platform_requires)
 
         def load_replace(doc_replace_requires):
             result = {}
@@ -333,6 +337,11 @@ class _ProfileValueParser:
                     pattern, req_list = "*", br_line
                 else:
                     pattern, req_list = tokens
+                if "[" in pattern:
+                    ConanOutput().warning(
+                        f"Tool requires pattern {pattern} contains a version range, which has no effect. "
+                        f"Only '&' for consumer and '*' as wildcard are supported in this context.",
+                        warn_tag="risk")
                 refs = [RecipeReference.loads(r.strip()) for r in req_list.split(",")]
                 result.setdefault(pattern, []).extend(refs)
         return result
@@ -345,6 +354,10 @@ class _ProfileValueParser:
             if ":" in item:
                 tmp = item.split(":", 1)
                 packagename, item = tmp
+                if "[" in packagename:
+                    ConanOutput().warning(f"Settings pattern {packagename} contains a version range, which has no effect. "
+                                          f"Only '&' for consumer and '*' as wildcard are supported in this context.",
+                                          warn_tag="risk")
 
             result_name, result_value = item.split("=", 1)
             result_name = result_name.strip()
@@ -397,6 +410,11 @@ def _profile_parse_args(settings, options, conf):
                 tmp = name.split(":", 1)
                 ref_name = tmp[0]
                 name = tmp[1]
+                if "[" in ref_name:
+                    ConanOutput().warning(
+                        f"Pattern {ref_name} contains a version range, which has no effect. "
+                        f"Only '&' for consumer and '*' as wildcard are supported in this context.",
+                        warn_tag="risk")
                 package_items[ref_name].append((name, value))
             else:
                 simple_items.append((name, value))

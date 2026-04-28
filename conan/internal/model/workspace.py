@@ -118,7 +118,7 @@ class Workspace:
         from conan.internal.conan_app import ConanFileHelpers, CmdWrapper
         cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
         helpers = ConanFileHelpers(None, cmd_wrap, self._conan_api._api_helpers.global_conf,
-                                   cache=None, home_folder=self._conan_api.home_folder)
+                                   cache=None, home_folder=self._conan_api.home_folder, conan_api=self._conan_api)
         loader = ConanFileLoader(pyreq_loader=None, conanfile_helpers=helpers)
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
                                       channel=None, remotes=None, graph_lock=None)

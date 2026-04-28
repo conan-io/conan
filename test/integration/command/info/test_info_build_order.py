@@ -15,7 +15,8 @@ def test_info_build_order():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
-    c.run("graph build-order consumer --build=missing --format=json")
+    # Old legacy syntax
+    c.run("graph build-order consumer --build=missing --format=json -cc 'core:policies=[\"deprecated_build_order_args\"]'")
     bo_json = json.loads(c.stdout)
 
     result = [
@@ -76,7 +77,8 @@ def test_info_build_order():
     assert bo_json["order"] == result
 
     # test html format
-    c.run("graph build-order consumer --build=missing --format=html")
+    # old legacy syntax
+    c.run("graph build-order consumer --build=missing --format=html -cc 'core:policies=[\"deprecated_build_order_args\"]'")
     assert "<body>" in c.stdout
     c.run("graph build-order consumer --order-by=recipe --build=missing --format=html")
     assert "<body>" in c.stdout
@@ -162,7 +164,7 @@ def test_info_build_order_build_require():
             "consumer/conanfile.txt": "[requires]\npkg/0.1"})
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
-    c.run("graph build-order  consumer --build=missing --format=json")
+    c.run("graph build-order  consumer --build=missing --format=json --order-by=recipe")
     bo_json = json.loads(c.stdout)
     result = [
         [
@@ -209,7 +211,7 @@ def test_info_build_order_build_require():
         ]
     ]
 
-    assert bo_json == result
+    assert bo_json['order'] == result
 
 
 def test_info_build_order_options():
@@ -226,7 +228,7 @@ def test_info_build_order_options():
     c.run("export dep1 --name=dep1 --version=0.1")
     c.run("export dep2 --name=dep2 --version=0.1")
 
-    c.run("graph build-order  consumer --build=missing --format=json")
+    c.run("graph build-order  consumer --build=missing --format=json --order-by=recipe")
     bo_json = json.loads(c.stdout)
     result = [
         [
@@ -265,7 +267,7 @@ def test_info_build_order_options():
              ]]}
         ]
     ]
-    assert bo_json == result
+    assert bo_json['order'] == result
 
 
 def test_info_build_order_merge_multi_product():
@@ -277,8 +279,10 @@ def test_info_build_order_merge_multi_product():
     c.run("export dep --name=dep --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
     c.run("export pkg --name=pkg --version=0.2")
-    c.run("graph build-order consumer1  --build=missing --format=json", redirect_stdout="bo1.json")
-    c.run("graph build-order consumer2  --build=missing --format=json", redirect_stdout="bo2.json")
+    c.run("graph build-order consumer1  --build=missing --format=json --order-by=recipe",
+          redirect_stdout="bo1.json")
+    c.run("graph build-order consumer2  --build=missing --format=json --order-by=recipe",
+          redirect_stdout="bo2.json")
     c.run("graph build-order-merge --file=bo1.json --file=bo2.json --format=json",
           redirect_stdout="bo3.json")
 
@@ -349,7 +353,7 @@ def test_info_build_order_merge_multi_product():
         ]
     ]
 
-    assert bo_json == result
+    assert bo_json['order'] == result
 
     # test that html format for build-order-merge generates something
     c.run("graph build-order-merge --file=bo1.json --file=bo2.json --format=html")
@@ -455,9 +459,9 @@ def test_info_build_order_merge_conditionals():
     c.run("export dep --name=depwin --version=0.1")
     c.run("export dep --name=depnix --version=0.1")
     c.run("export pkg --name=pkg --version=0.1")
-    c.run("graph build-order consumer --format=json --build=missing -s os=Windows",
+    c.run("graph build-order consumer --format=json --build=missing -s os=Windows --order-by=recipe",
           redirect_stdout="bo_win.json")
-    c.run("graph build-order consumer --format=json --build=missing -s os=Linux",
+    c.run("graph build-order consumer --format=json --build=missing -s os=Linux --order-by=recipe",
           redirect_stdout="bo_nix.json")
     c.run("graph build-order-merge --file=bo_win.json --file=bo_nix.json --format=json",
           redirect_stdout="bo3.json")
@@ -542,7 +546,7 @@ def test_info_build_order_merge_conditionals():
         ]
     ]
 
-    assert bo_json == result
+    assert bo_json['order'] == result
 
 
 def test_info_build_order_lockfile_location():
@@ -555,7 +559,7 @@ def test_info_build_order_lockfile_location():
     c.run("create dep")
     c.run("lock create pkg --lockfile-out=myconan.lock")
     assert os.path.exists(os.path.join(c.current_folder, "myconan.lock"))
-    c.run("graph build-order pkg --lockfile=myconan.lock --lockfile-out=myconan2.lock")
+    c.run("graph build-order pkg --lockfile=myconan.lock --lockfile-out=myconan2.lock --order-by=recipe")
     assert os.path.exists(os.path.join(c.current_folder, "myconan2.lock"))
 
 
@@ -627,7 +631,8 @@ def test_info_build_order_broken_recipe():
         """)
     c.save({"conanfile.py": dep})
     c.run("export .")
-    c.run("graph build-order --requires=dep/0.1 --format=json", assert_error=True)
+    c.run("graph build-order --requires=dep/0.1 --format=json --order-by=recipe",
+          assert_error=True)
     assert "ImportError" in c.out
     assert "It is possible that this recipe is not Conan 2.0 ready" in c.out
 
@@ -713,7 +718,7 @@ class TestBuildOrderReduce:
     def test_error_reduced(self):
         c = TestClient()
         c.save({"conanfile.py": GenConanfile("liba", "0.1")})
-        c.run("graph build-order . --format=json", redirect_stdout="bo1.json")
+        c.run("graph build-order . --order-by=recipe --format=json", redirect_stdout="bo1.json")
         c.run("graph build-order . --order-by=recipe --reduce --format=json",
               redirect_stdout="bo2.json")
         c.run(f"graph build-order-merge --file=bo1.json --file=bo2.json", assert_error=True)
@@ -725,6 +730,8 @@ class TestBuildOrderReduce:
     def test_error_different_orders(self):
         c = TestClient()
         c.save({"conanfile.py": GenConanfile("liba", "0.1")})
+        c.save_home({"global.conf": "core:policies=['deprecated_build_order_args']"})
+        # old syntax
         c.run("graph build-order . --format=json", redirect_stdout="bo1.json")
         c.run("graph build-order . --order-by=recipe --format=json", redirect_stdout="bo2.json")
         c.run("graph build-order . --order-by=configuration --format=json",
@@ -873,7 +880,7 @@ def test_build_order_build_context_compatible():
     for approach in ("--build=missing -s foo/*:compiler.cppstd=17",
                      '--build="compatible:foo/*" --build="missing:bar/*"',
                      '--build="missing:foo/*" --build="compatible:foo/*" --build="missing:bar/*"'):
-        c.run(f'graph build-order --require=foo/1.0 --require=bar/1.0 -pr:a profile {approach}')
+        c.run(f'graph build-order --require=foo/1.0 --require=bar/1.0 -pr:a profile {approach} --order-by=recipe')
         c.assert_listed_binary({"foo/1.0": ["4e2ae338231ae18d0d43b9e119404d2b2c416758", "Build"],
                                 "bar/1.0": ["5e4ffcc1ff33697a4ee96f66f0d2228ec458f25c", "Build"]})
         c.assert_listed_binary({"foo/1.0": ["4e2ae338231ae18d0d43b9e119404d2b2c416758", "Build"]},
@@ -906,11 +913,27 @@ def test_build_order_path_reqs_mixed_args():
     # This used not to crash in previous versions
     # Also make sure we can properly used them separately
     tc = TestClient(light=True)
-    tc.run("graph build-order . --requires=foo/1.0", assert_error=True)
+    tc.run("graph build-order . --requires=foo/1.0 --order-by=recipe", assert_error=True)
     assert "ERROR: --requires and --tool-requires arguments are incompatible with [path] '.' argument" in tc.out
 
-    tc.run("graph build-order --requires=foo/1.0", assert_error=True)
+    tc.run("graph build-order --requires=foo/1.0 --order-by=recipe", assert_error=True)
     assert "Package 'foo/1.0' not resolved: No remote defined" in tc.out
 
-    tc.run("graph build-order .", assert_error=True)
+    tc.run("graph build-order . --order-by=recipe", assert_error=True)
     assert "Conanfile not found" in tc.out
+
+
+def test_build_order_order_by_missing_deprecated():
+    tc = TestClient(light=True)
+    tc.save({"conanfile.py": GenConanfile("dep", "0.1")})
+    tc.run("graph build-order", assert_error=True)
+    assert "The old behaviour can be re-enabled by adding 'deprecated_build_order_args'" in tc.out
+
+
+def test_build_order_deprecated_build_order_version_check():
+    from conan import __version__ as conan_version
+    from conan.tools.scm import Version
+    from conan.internal.model.version_range import VersionRange
+    r = VersionRange(f">=2.32,include_prerelease")
+    assert not r.contains(Version(conan_version), None), \
+        "Remove --order-by deprecated behaviour in this version"

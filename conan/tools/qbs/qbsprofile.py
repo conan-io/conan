@@ -287,6 +287,7 @@ class QbsProfile:
 
         map_list_property("tools.build:cflags", "cpp.cFlags", self.extra_cflags)
         map_list_property("tools.build:cxxflags", "cpp.cxxFlags", self.extra_cxxflags)
+        map_list_property("tools.build:rcflags", "cpp.rcFlags", [])
         map_list_property("tools.build:defines", "cpp.defines", self.extra_defines)
 
         def ldflags():

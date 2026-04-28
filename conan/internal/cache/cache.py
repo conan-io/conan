@@ -184,7 +184,7 @@ class PkgCache:
     def create_pkg_layout(self, pref: PkgReference):
         """ called by:
          - RemoteManager.get_package()
-         - cacje restpre
+         - cache restore
         """
         assert pref.ref.revision, "Recipe revision must be known to create the package layout"
         assert pref.package_id, "Package id must be known to create the package layout"
@@ -201,13 +201,13 @@ class PkgCache:
         assert ref.timestamp
         self._db.update_recipe_timestamp(ref)
 
-    def search_recipes(self, pattern=None, ignorecase=True):
+    def search_recipes(self, pattern=None):
         # Conan references in main storage
         if pattern:
             if isinstance(pattern, RecipeReference):
                 pattern = repr(pattern)
             pattern = translate(pattern)
-            pattern = re.compile(pattern, re.IGNORECASE if ignorecase else 0)
+            pattern = re.compile(pattern)
 
         return self._db.list_references(pattern)
 
@@ -301,16 +301,17 @@ class PkgCache:
             self._db.update_recipe_timestamp(ref)
 
     def get_recipe_lru(self, ref):
-        return self._db.get_recipe_lru(ref)
+        path = self._full_path(self._get_path(ref))
+        return os.path.getmtime(path)  # seconds since EPOCH
 
     def update_recipes_lru(self, refs):
-        self._db.update_recipes_lru(refs)
+        for r in refs:
+            path = self._full_path(self._get_path(r))
+            os.utime(path, None)
 
     def get_package_lru(self, pref):
-        return self._db.get_package_lru(pref)
-
-    def update_packages_lru(self, prefs):
-        self._db.update_packages_lru(prefs)
+        layout = self.pkg_layout(pref)  # It can be a build folder too
+        return os.path.getmtime(layout.base_folder)  # seconds since EPOCH
 
     def path_to_ref(self, path):
         try:

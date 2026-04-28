@@ -6,8 +6,6 @@ import pytest
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
-new_value = "will_break_next"
-
 
 @pytest.fixture
 def client():
@@ -19,7 +17,7 @@ def client():
         class Pkg(ConanFile):
             settings = "build_type", "os", "arch", "compiler"
             requires = "dep/0.1"
-            generators = "CMakeDeps", "CMakeToolchain"
+            generators = "CMakeConfigDeps", "CMakeToolchain"
             def layout(self):  # Necessary to force config files in another location
                 cmake_layout(self)
             def build(self):
@@ -41,8 +39,8 @@ def client():
 def test_cmake_generated(client):
     c = client
     c.run("create dep")
-    c.run(f"build pkg -c tools.cmake.cmakedeps:new={new_value}")
-    assert "Conan toolchain: Including CMakeDeps generated conan_cmakedeps_paths.cmake" in c.out
+    c.run(f"build pkg")
+    assert "Conan toolchain: Including CMakeConfigDeps generated conan_cmakedeps_paths.cmake" in c.out
     assert "Conan: Target declared imported INTERFACE library 'dep::dep'" in c.out
 
 
@@ -70,8 +68,8 @@ def test_cmake_in_package(client, lowercase):
 
     c.save({"dep/conanfile.py": dep})
     c.run("create dep")
-    c.run(f"build pkg -c tools.cmake.cmakedeps:new={new_value}")
-    assert "Conan toolchain: Including CMakeDeps generated conan_cmakedeps_paths.cmake" in c.out
+    c.run(f"build pkg")
+    assert "Conan toolchain: Including CMakeConfigDeps generated conan_cmakedeps_paths.cmake" in c.out
     assert "Hello from dep dep-Config.cmake!!!!!" in c.out
 
 
@@ -79,7 +77,7 @@ class TestRuntimeDirs:
 
     def test_runtime_lib_dirs_multiconf(self):
         client = TestClient()
-        app = GenConanfile().with_requires("dep/1.0").with_generator("CMakeDeps")\
+        app = GenConanfile().with_requires("dep/1.0").with_generator("CMakeConfigDeps")\
             .with_settings("build_type")
         client.save({"lib/conanfile.py": GenConanfile(),
                      "dep/conanfile.py": GenConanfile("dep").with_requires("onelib/1.0",
@@ -89,8 +87,8 @@ class TestRuntimeDirs:
         client.run("create lib --name=twolib --version=1.0")
         client.run("create dep  --version=1.0")
 
-        client.run(f'install app -s build_type=Release -c tools.cmake.cmakedeps:new={new_value}')
-        client.run(f'install app -s build_type=Debug -c tools.cmake.cmakedeps:new={new_value}')
+        client.run(f'install app -s build_type=Release')
+        client.run(f'install app -s build_type=Debug')
 
         contents = client.load("app/conan_cmakedeps_paths.cmake")
         pattern_lib_dirs = r"set\(CONAN_RUNTIME_LIB_DIRS ([^)]*)\)"
@@ -102,7 +100,7 @@ class TestRuntimeDirs:
 
 
 @pytest.mark.tool("cmake")
-class TestCMakeDepsPaths:
+class TestCMakeConfigDepsPaths:
 
     @pytest.mark.parametrize("requires, tool_requires", [(True, False), (False, True), (True, True)])
     def test_find_program_path(self, requires, tool_requires):
@@ -134,7 +132,7 @@ class TestCMakeDepsPaths:
                 {requires}
                 {tool_requires}
                 settings = "os", "arch", "compiler", "build_type"
-                generators = "CMakeToolchain", "CMakeDeps"
+                generators = "CMakeToolchain", "CMakeConfigDeps"
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
@@ -148,7 +146,7 @@ class TestCMakeDepsPaths:
             endif()
         """)
         c.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
-        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"build .")
         assert "Found hello prog" in c.out
         if requires and tool_requires:
             assert "There is already a 'tool/1.0' package contributing to CMAKE_PROGRAM_PATH" in c.out
@@ -180,7 +178,7 @@ class TestCMakeDepsPaths:
             class PkgConan(ConanFile):
                 requires = "hello/1.0"
                 settings = "os", "arch", "compiler", "build_type"
-                generators = "CMakeToolchain", "CMakeDeps"
+                generators = "CMakeToolchain", "CMakeConfigDeps"
                 def build(self):
                     cmake = CMake(self)
                     cmake.configure()
@@ -198,7 +196,7 @@ class TestCMakeDepsPaths:
             endif()
         """)
         c.save({"conanfile.py": conanfile, "CMakeLists.txt": consumer}, clean_first=True)
-        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"build .")
         assert "Found hello header" in c.out
         assert "Found hello lib" in c.out
 
@@ -242,7 +240,7 @@ class TestCMakeDepsPaths:
         """)
         c.save({"conanfile.py": conanfile,
                 "CMakeLists.txt": consumer}, clean_first=True)
-        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"build .")
         assert "MYOWNCMAKE FROM hello!" in c.out
 
     def test_include_modules_both_build_host(self):
@@ -282,7 +280,7 @@ class TestCMakeDepsPaths:
             """)
         c.save({"conanfile.py": conanfile,
                 "CMakeLists.txt": consumer}, clean_first=True)
-        c.run(f"build . -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"build .")
         assert "conanfile.py: There is already a 'hello/0.1' package " \
                "contributing to CMAKE_MODULE_PATH" in c.out
         assert "MYOWNCMAKE FROM hello!" in c.out

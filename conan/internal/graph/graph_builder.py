@@ -19,10 +19,11 @@ from conan.internal.model.options import Options, _PackageOptions
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
 from conan.internal.model.requires import Requirement
-from conan.internal.model.version_range import VersionRange
+from conan.internal.model.version_range import VersionRange, required_conan_version_policy
 
 
 class DepsGraphBuilder:
+    ALLOW_ALIAS = False
 
     def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf):
         self._proxy = proxy
@@ -195,8 +196,17 @@ class DepsGraphBuilder:
 
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
+
         for pattern, tool_requires in profile.tool_requires.items():
-            if ref_matches(ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
+            is_consumer = conanfile._conan_is_consumer  # noqa
+            if pattern[0] in "!~" and pattern[1] == "(":  # This is a negated OR operation
+                assert pattern[-1] == ")", (f"Malformed profile OR expression without"
+                                            f" closing parenthesis: {pattern}")
+                parts = pattern[2:-1].split("|")
+                matched = not any(ref_matches(ref, p, is_consumer=is_consumer) for p in parts)
+            else:
+                matched = ref_matches(ref, pattern, is_consumer=is_consumer)
+            if matched:
                 for tool_require in tool_requires:  # Do the override
                     # Check if it is a self-loop of build-requires in build context and avoid it
                     if ref and tool_require.name == ref.name and tool_require.user == ref.user and \
@@ -215,7 +225,9 @@ class DepsGraphBuilder:
         result = []
         skip_build = node.conanfile.conf.get("tools.graph:skip_build", check_type=bool)
         skip_test = node.conanfile.conf.get("tools.graph:skip_test", check_type=bool)
+        consistent_policy_new = required_conan_version_policy(node.conanfile, "2.27.9")
         for require in node.conanfile.requires.values():
+            require.consistent_policy_new = consistent_policy_new
             if not require.visible and not require.package_id_mode:
                 if skip_build and require.build:
                     node.skipped_build_requires = True
@@ -225,6 +237,8 @@ class DepsGraphBuilder:
             result.append(require)
             alias = require.alias  # alias needs to be processed this early
             if alias is not None:
+                if not DepsGraphBuilder.ALLOW_ALIAS and os.getenv("CONAN_ALLOW_ALIAS") != "will_break_next":
+                    raise ConanException(f"Alias requirements have been removed: '{node}' requiring: '{alias}'")
                 resolved = False
                 if graph_lock is not None:
                     resolved = graph_lock.replace_alias(require, alias)
@@ -233,7 +247,7 @@ class DepsGraphBuilder:
                     self._resolve_alias(node, require, alias, graph)
             self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
             if graph_lock:
-                graph_lock.resolve_overrides(require)
+                graph_lock.resolve_overrides(require, node.context)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
         return result
 
@@ -320,12 +334,13 @@ class DepsGraphBuilder:
                     if version_range:
                         if version_range.contains(d.version, resolve_prereleases):
                             require.ref.version = d.version  # resolved range is replaced by exact
+                            require.ref.revision = d.revision or "platform"
                             layout = BasicLayout(require.ref, None)
                             return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
                     elif require.ref.version == d.version:
                         if d.revision is None or require.ref.revision is None or \
                                 d.revision == require.ref.revision:
-                            require.ref.revision = d.revision
+                            require.ref.revision = d.revision or "platform"
                             layout = BasicLayout(require.ref, None)
                             return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
 
@@ -390,8 +405,7 @@ class DepsGraphBuilder:
                 ref.name = tracking_ref[1][:-1]  # Remove the trailing >
             req = Requirement(ref, headers=True, libs=True, visible=True)
             transitive = node.transitive_deps.get(req)
-            if transitive is None or transitive.require.ref.user != ref.user \
-                    or transitive.require.ref.channel != ref.channel:
+            if transitive is None:
                 raise ConanException(f"{node.ref} require '{ref}': didn't find a matching "
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
@@ -426,6 +440,8 @@ class DepsGraphBuilder:
         new_node = Node(new_ref, dep_conanfile, context=context, test=require.test or node.test)
         new_node.recipe = recipe_status
         new_node.remote = remote
+        if isinstance(layout, BasicLayout):  # Store the editable_output_folder for BinaryInstaller
+            new_node.editable_output_folder = layout.editable_output_folder
 
         down_options = self._compute_down_options(node, require, new_ref)
 

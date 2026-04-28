@@ -111,3 +111,5 @@ Session.vim
 !conan/tools/build
 !test/unittests/client/build
 !test/unittests/tools/build
+
+.claude

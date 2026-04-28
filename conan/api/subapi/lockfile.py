@@ -2,8 +2,10 @@ import os
 
 from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.graph.graph import Overrides
 from conan.errors import ConanException
+from conan.internal.model.conanconfig import loadconanconfig
 from conan.internal.model.lockfile import Lockfile, LOCKFILE
 
 
@@ -59,6 +61,16 @@ class LockfileAPI:
             graph_lock._overrides = Overrides.deserialize(overrides)
         ConanOutput().info("Using lockfile: '{}'".format(lockfile_path))
         return graph_lock
+
+    def check_lockfile_config(self, lockfile):
+        """Verify that installed configurations are aligned with lockfile config_requires.
+        """
+        if lockfile is None:
+            return
+
+        config_version_path = HomePaths(self._conan_api.home_folder).config_version_path
+        refs = loadconanconfig(config_version_path) if os.path.exists(config_version_path) else []
+        lockfile.check_config_requires(refs)
 
     def update_lockfile_export(self, lockfile, conanfile, ref, is_build_require=False):
         # The package_type is not fully processed at export

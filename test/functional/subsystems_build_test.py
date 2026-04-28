@@ -158,7 +158,9 @@ class TestSubsystemsBuild:
         $ pacman -S mingw-w64-clang-x86_64-toolchain
         """
         client = TestClient()
-        self._build(client, static_runtime=static)
+        # Not defined in msys2 clang by default
+        with environment_update({"CC": "clang", "CXX": "clang++"}):
+            self._build(client, static_runtime=static)
 
         check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None,
                       subsystem="mingw64")

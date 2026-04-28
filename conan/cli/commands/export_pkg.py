@@ -43,6 +43,7 @@ def export_pkg(conan_api, parser, *args):
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=path,
                                                cwd=cwd, partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None

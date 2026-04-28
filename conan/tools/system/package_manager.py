@@ -1,4 +1,5 @@
 import platform
+from io import StringIO
 
 from conan.tools.build import cross_building
 from conan.internal.graph.graph import CONTEXT_BUILD
@@ -26,7 +27,7 @@ class _SystemPackageManagerTool:
         :param conanfile: The current recipe object. Always use ``self``.
         """
         self._conanfile = conanfile
-        self._active_tool = self._conanfile.conf.get("tools.system.package_manager:tool", default=self.get_default_tool())
+        self._active_tool = self._conanfile.conf.get("tools.system.package_manager:tool") or self.get_default_tool()
         self._sudo = self._conanfile.conf.get("tools.system.package_manager:sudo", default=False, check_type=bool)
         self._sudo_askpass = self._conanfile.conf.get("tools.system.package_manager:sudo_askpass", default=False, check_type=bool)
         self._mode = self._conanfile.conf.get("tools.system.package_manager:mode", default=self.mode_check)
@@ -42,13 +43,14 @@ class _SystemPackageManagerTool:
             os_name = distro.id() or os_name
         elif os_name == "Windows" and self._conanfile.settings.get_safe("os.subsystem") == "msys2":
             os_name = "msys2"
-        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian", "linuxmint", 'astra', 'elbrus', 'altlinux', 'pop'],
+        manager_mapping = {"apt-get": ["Linux", "ubuntu", "debian", "raspbian", "linuxmint",
+                                       'astra', 'elbrus', 'altlinux', 'pop'],
                            "apk": ["alpine"],
-                           "yum": ["pidora", "scientific", "xenserver", "amazon", "oracle", "amzn",
-                                   "almalinux", "rocky"],
-                           "dnf": ["fedora", "rhel", "centos", "mageia", "nobara"],
+                           "yum": ["pidora", "scientific", "xenserver", "amazon", "amzn"],
+                           "dnf": ["fedora", "rhel", "centos", "mageia", "nobara", "almalinux",
+                                   "rocky", "oracle"],
                            "brew": ["Darwin"],
-                           "pacman": ["arch", "manjaro", "msys2", "endeavouros"],
+                           "pacman": ["arch", "manjaro", "msys2", "endeavouros", "cachyos"],
                            "choco": ["Windows"],
                            "zypper": ["opensuse", "sles"],
                            "pkg": ["freebsd"],
@@ -107,9 +109,17 @@ class _SystemPackageManagerTool:
 
     def _conanfile_run(self, command, accepted_returns, quiet=True):
         # When checking multiple packages, this is too noisy
-        ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet)
+        # Capture output and show it only on failure.
+        stdout_buf = StringIO() if quiet else None
+        stderr_buf = StringIO() if quiet else None
+        ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet, stdout=stdout_buf, stderr=stderr_buf)
         if ret not in accepted_returns:
-            raise ConanException("Command '%s' failed" % command)
+            msg = f"Command '{command}' failed with exit code {ret}"
+            if stderr_buf is not None and stderr_buf.getvalue():
+                msg += f"\nstderr: {stderr_buf.getvalue().strip()}"
+            if stdout_buf is not None and stdout_buf.getvalue():
+                msg += f"\nstdout: {stdout_buf.getvalue().strip()}"
+            raise ConanException(msg)
         return ret
 
     def install_substitutes(self, *args, **kwargs):
@@ -177,6 +187,7 @@ class _SystemPackageManagerTool:
         raise ConanException("None of the installs for the package substitutes succeeded.")
 
     def _install(self, packages, update=False, check=True, host_package=True, **kwargs):
+        orig_packages = packages
         pkgs = self._conanfile.system_requires.setdefault(self._active_tool, {})
         install_pkgs = pkgs.setdefault("install", [])
         install_pkgs.extend(p for p in packages if p not in install_pkgs)
@@ -211,8 +222,7 @@ class _SystemPackageManagerTool:
                                                       **kwargs)
                 return self._conanfile_run(command, self.accepted_install_codes, quiet=False)
         else:
-            self._conanfile.output.info("System requirements: {} already "
-                                        "installed".format(" ".join(packages)))
+            self._conanfile.output.info(f"System requirements: {' '.join(orig_packages)} already installed")
 
     def _update(self):
         # we just update the package manager database in case we are in 'install mode'
@@ -274,7 +284,8 @@ class Apt(_SystemPackageManagerTool):
                             "armv7": "arm",
                             "armv7hf": "armhf",
                             "armv8": "arm64",
-                            "s390x": "s390x"} if arch_names is None else arch_names
+                            "s390x": "s390x",
+                            "riscv64": "riscv64"} if arch_names is None else arch_names
 
         self._arch_separator = ":"
 
@@ -325,7 +336,8 @@ class Yum(_SystemPackageManagerTool):
                             "armv7": "armv7",
                             "armv7hf": "armv7hl",
                             "armv8": "aarch64",
-                            "s390x": "s390x"} if arch_names is None else arch_names
+                            "s390x": "s390x",
+                            "riscv64": "riscv64"} if arch_names is None else arch_names
         self._arch_separator = "."
 
 

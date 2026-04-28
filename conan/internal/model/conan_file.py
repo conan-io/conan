@@ -59,6 +59,7 @@ class ConanFile:
     win_bash_run = None  # For run scope
 
     _conan_is_consumer = False
+    _conan_required_version = None
 
     # #### Requirements
     requires = None
@@ -75,6 +76,7 @@ class ConanFile:
     buildenv_info = None
     runenv_info = None
     conf_info = None
+    conf = None
     generator_info = None
     conan_data = None
 
@@ -103,6 +105,10 @@ class ConanFile:
             self.settings = [self.settings]
         self.requires = Requirements(self.requires, self.build_requires, self.test_requires,
                                      self.tool_requires)
+        if self.build_requires:
+            self.output.warning(
+                "build_requires is deprecated, prefer to use tool_requires with correct traits",
+                warn_tag="deprecated")
 
         self.options = Options(self.options or {}, self.default_options)
 
@@ -256,8 +262,9 @@ class ConanFile:
 
     @property
     def source_path(self) -> Path:
-        self.output.warning(f"Use of 'source_path' is deprecated, please use 'source_folder' instead",
-                            warn_tag="deprecated")
+        self.output.warning(
+            "Use of 'source_path' is deprecated, please use 'source_folder' instead",
+            warn_tag="deprecated")
         assert self.source_folder is not None, "`source_folder` is `None`"
         return Path(self.source_folder)
 
@@ -278,8 +285,9 @@ class ConanFile:
 
     @property
     def export_sources_path(self) -> Path:
-        self.output.warning(f"Use of 'export_sources_path' is deprecated, please use "
-                            f"'export_sources_folder' instead", warn_tag="deprecated")
+        self.output.warning(
+            "Use of 'export_sources_path' is deprecated, please use 'export_sources_folder' instead",
+            warn_tag="deprecated")
         assert self.export_sources_folder is not None, "`export_sources_folder` is `None`"
         return Path(self.export_sources_folder)
 
@@ -289,9 +297,9 @@ class ConanFile:
 
     @property
     def export_path(self) -> Path:
-        self.output.warning(f"Use of 'export_path' is deprecated, please use 'export_folder' instead",
-                            warn_tag="deprecated")
-
+        self.output.warning(
+            "Use of 'export_path' is deprecated, please use 'export_folder' instead",
+            warn_tag="deprecated")
         assert self.export_folder is not None, "`export_folder` is `None`"
         return Path(self.export_folder)
 
@@ -316,8 +324,9 @@ class ConanFile:
 
     @property
     def build_path(self) -> Path:
-        self.output.warning(f"Use of 'build_path' is deprecated, please use 'build_folder' instead",
-                            warn_tag="deprecated")
+        self.output.warning(
+            "Use of 'build_path' is deprecated, please use 'build_folder' instead",
+            warn_tag="deprecated")
         assert self.build_folder is not None, "`build_folder` is `None`"
         return Path(self.build_folder)
 
@@ -341,16 +350,17 @@ class ConanFile:
 
     @property
     def package_path(self) -> Path:
-        self.output.warning(f"Use of 'package_path' is deprecated, please use 'package_folder' instead",
-                            warn_tag="deprecated")
-
+        self.output.warning(
+            "Use of 'package_path' is deprecated, please use 'package_folder' instead",
+            warn_tag="deprecated")
         assert self.package_folder is not None, "`package_folder` is `None`"
         return Path(self.package_folder)
 
     @property
     def generators_path(self) -> Path:
-        self.output.warning(f"Use of 'generators_path' is deprecated, please use "
-                            f"'generators_folder' instead", warn_tag="deprecated")
+        self.output.warning(
+            "Use of 'generators_path' is deprecated, please use 'generators_folder' instead",
+            warn_tag="deprecated")
         assert self.generators_folder is not None, "`generators_folder` is `None`"
         return Path(self.generators_folder)
 
@@ -384,7 +394,8 @@ class ConanFile:
         env = [env] if env and isinstance(env, str) else (env or [])
         assert isinstance(env, list), "env argument to ConanFile.run() should be a list"
         envfiles_folder = self.generators_folder or os.getcwd()
-        wrapped_cmd = command_env_wrapper(self, command, env, envfiles_folder=envfiles_folder)
+        wrapped_cmd = command_env_wrapper(self, command, env, envfiles_folder=envfiles_folder,
+                                          scope=scope)
         from conan.internal.util.runners import conan_run
         if not quiet:
             ConanOutput().info(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)

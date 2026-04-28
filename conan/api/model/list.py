@@ -41,10 +41,6 @@ class MultiPackagesList:
         for k, v in other.lists.items():
             self.lists.setdefault(k, PackagesList()).merge(v)
 
-    def keep_outer(self, other):
-        for namespace, other_pkg_list in other.lists.items():
-            self.lists.get(namespace, PackagesList()).keep_outer(other_pkg_list)
-
     @staticmethod
     def load(file):
         """ Create an instance of the class from a serialized JSON file path pointed by ``file``."""
@@ -96,7 +92,6 @@ class MultiPackagesList:
         if not os.path.isfile(graphfile):
             raise ConanException(f"Graph file not found: {graphfile}")
         try:
-            base_context = context.split("-")[0] if context else None
             graph = json.loads(load(graphfile))
             # Check if input json is a graph file
             if "graph" not in graph:
@@ -107,15 +102,7 @@ class MultiPackagesList:
                 )
 
             mpkglist = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
-                                                       context=base_context)
-            if context == "build-only":
-                host = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
-                                                       context="host")
-                mpkglist.keep_outer(host)
-            elif context == "host-only":
-                build = MultiPackagesList._define_graph(graph, graph_recipes, graph_binaries,
-                                                        context="build")
-                mpkglist.keep_outer(build)
+                                                       context=context)
             return mpkglist
         except JSONDecodeError as e:
             raise ConanException(f"Graph file invalid JSON: {graphfile}\n{e}")
@@ -130,6 +117,7 @@ class MultiPackagesList:
 
     @staticmethod
     def _define_graph(graph, graph_recipes=None, graph_binaries=None, context=None):
+        base_context = context.split("-")[0] if context else None
         pkglist = MultiPackagesList()
         cache_list = PackagesList()
         if graph_recipes is None and graph_binaries is None:
@@ -141,7 +129,7 @@ class MultiPackagesList:
 
         pkglist.lists["Local Cache"] = cache_list
         for node in graph["graph"]["nodes"].values():
-            if context and node['context'] != context:
+            if base_context and node['context'] != base_context:
                 continue
 
             # We need to add the python_requires too
@@ -189,7 +177,32 @@ class MultiPackagesList:
             if any(b == "*" or b == binary for b in binaries):
                 cache_list.add_ref(ref)  # Binary listed forces recipe listed
                 cache_list.add_pref(pref, node["info"])
+        # Now filter possible exclusive contexts once that we know how they are distributed
+        MultiPackagesList._filter_exclusive_context(pkglist, graph, context)
         return pkglist
+
+    @staticmethod
+    def _filter_exclusive_context(mpkglist, graph, context):
+        if context not in ("host-only", "build-only"):
+            return
+
+        pref_contexts = {}
+        for node in graph["graph"]["nodes"].values():
+            if (node["recipe"] not in (RECIPE_CONSUMER, RECIPE_VIRTUAL)
+                and node["ref"] and node["package_id"]):
+                pref = node["ref"] + ":" + node["package_id"]
+                pref_contexts.setdefault(pref, set()).add(node['context'])
+
+        opposite_context = "build" if context == "host-only" else "host"
+        for remote, pkglist in mpkglist.lists.items():
+            for pref, contexts in pref_contexts.items():
+                if opposite_context in contexts:
+                    pref = PkgReference.loads(pref)
+                    if pkglist.has_rref(pref.ref):
+                        rev_dict = pkglist.recipe_dict(pref.ref)
+                        rev_dict.get("packages", {}).pop(pref.package_id, None)
+                        if len(rev_dict.get("packages", {})) == 0:
+                            pkglist._data.pop(str(pref.ref), None)
 
 
 class PackagesList:
@@ -213,15 +226,6 @@ class PackagesList:
             return d
         recursive_dict_update(self._data, other._data)
 
-    def keep_outer(self, other):
-        assert isinstance(other, PackagesList)
-        if not self._data:
-            return
-
-        for ref, info in other._data.items():
-            if self._data.get(ref, {}) == info:
-                self._data.pop(ref)
-
     def split(self):
         """
         Returns a list of PackageList, split one per reference.
@@ -242,13 +246,6 @@ class PackagesList:
             for rrev_dict in ref_dict.get("revisions", {}).values():
                 rrev_dict.pop("packages", None)
 
-    def add_refs(self, refs):
-        ConanOutput().warning("PackagesLists.add_refs() non-public, non-documented method will be "
-                              "removed, use .add_ref() instead", warn_tag="deprecated")
-        # RREVS alreday come in ASCENDING order, so upload does older revisions first
-        for ref in refs:
-            self.add_ref(ref)
-
     def add_ref(self, ref: RecipeReference) -> None:
         """
         Adds a new RecipeReference to a package list
@@ -259,13 +256,6 @@ class PackagesList:
             rev_dict = revs_dict.setdefault(ref.revision, {})
             if ref.timestamp:
                 rev_dict["timestamp"] = ref.timestamp
-
-    def add_prefs(self, rrev, prefs):
-        ConanOutput().warning("PackageLists.add_prefs() non-public, non-documented method will be "
-                              "removed, use .add_pref() instead", warn_tag="deprecated")
-        # Prevs already come in ASCENDING order, so upload does older revisions first
-        for p in prefs:
-            self.add_pref(p)
 
     def add_pref(self, pref: PkgReference, pkg_info: dict = None) -> None:
         """
@@ -283,36 +273,33 @@ class PackagesList:
         if pkg_info is not None:
             package_dict["info"] = pkg_info
 
-    def add_configurations(self, confs):
-        ConanOutput().warning("PackageLists.add_configurations() non-public, non-documented method "
-                              "will be removed, use .add_pref() instead",
-                              warn_tag="deprecated")
-        for pref, conf in confs.items():
-            rev_dict = self.recipe_dict(pref.ref)
-            try:
-                rev_dict["packages"][pref.package_id]["info"] = conf
-            except KeyError:  # If package_id does not exist, do nothing, only add to existing prefs
-                pass
-
-    def refs(self):
-        ConanOutput().warning("PackageLists.refs() non-public, non-documented method will be "
-                              "removed, use .items() instead", warn_tag="deprecated")
-        result = {}
-        for ref, ref_dict in self._data.items():
-            for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
-                t = rrev_dict.get("timestamp")
-                recipe = RecipeReference.loads(f"{ref}#{rrev}")  # TODO: optimize this
-                if t is not None:
-                    recipe.timestamp = t
-                result[recipe] = rrev_dict
-        return result
-
     def items(self) -> Iterable[Tuple[RecipeReference, Dict[PkgReference, Dict]]]:
-        """ Iterate the contents of the package list.
+        """Iterate over the contents of the package list.
 
-        The first dictionary is the information directly belonging to the recipe-revision.
-        The second dictionary contains PkgReference as keys, and a dictionary with the values
-        belonging to that specific package reference (settings, options, etc.).
+        Yields tuples containing a recipe reference and a dictionary of its
+        associated package references content.
+
+        Returns:
+            An iterable of tuples where:
+
+            - The first element is a ``RecipeReference`` (representing the recipe revision).
+            - The second element is a dictionary mapping a ``PkgReference`` to a nested dictionary of
+              its specific attributes (e.g., settings, options).
+
+        Warning:
+            **Missing Revisions Behavior:**
+            This method filters out results that lack revision information.
+
+            - It will ONLY yield items if they contain at least a **recipe revision**.
+            - The nested package dictionary will be empty unless it contains a **package revision**.
+
+            **When to use serialize instead:**
+            If you perform a general search that does not fetch revisions (e.g., running
+            ``conan list *``), this method will yield nothing because no artifact references
+            are created. In these cases, use the ``serialize()`` method to access the results.
+
+            To successfully use ``items()``, your query must explicitly request revisions
+            (e.g., running ``conan list pkg/version#*:*#*``).
         """
         for ref, ref_dict in self._data.items():
             for rrev, rrev_dict in ref_dict.get("revisions", {}).items():
@@ -335,25 +322,16 @@ class PackagesList:
         """
         return self._data[str(ref)]["revisions"][ref.revision]
 
+    def has_rref(self, ref: RecipeReference) -> bool:
+        # Checks if the PackagesList contains the given RecipeReference.
+        return str(ref) in self._data and ref.revision in self._data[str(ref)].get("revisions", {})
+
     def package_dict(self, pref: PkgReference):
         """ Gives read/write access to the dictionary containing a specific PkgReference
         information
         """
         ref_dict = self.recipe_dict(pref.ref)
         return ref_dict["packages"][pref.package_id]["revisions"][pref.revision]
-
-    @staticmethod
-    def prefs(ref, recipe_bundle):
-        ConanOutput().warning("PackageLists.prefs() non-public, non-documented method will be "
-                              "removed, use .items() instead", warn_tag="deprecated")
-        result = {}
-        for package_id, pkg_bundle in recipe_bundle.get("packages", {}).items():
-            prevs = pkg_bundle.get("revisions", {})
-            for prev, prev_bundle in prevs.items():
-                t = prev_bundle.get("timestamp")
-                pref = PkgReference(ref, package_id, prev, t)
-                result[pref] = prev_bundle
-        return result
 
     def serialize(self):
         """ Serialize the instance to a dictionary."""

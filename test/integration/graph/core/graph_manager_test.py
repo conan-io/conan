@@ -1,5 +1,4 @@
 import pytest
-from parameterized import parameterized
 
 from conan.internal.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
 from conan.errors import ConanException
@@ -15,11 +14,11 @@ def _check_transitive(node, transitive_deps):
                                                 f"!=\n{transitive_deps}"
 
     for v1, v2 in zip(values, transitive_deps):
-        assert v1.node is v2[0], f"{v1.node}!={v2[0]}"
-        assert v1.require.headers is v2[1], f"{v1.node}!={v2[0]} headers"
-        assert v1.require.libs is v2[2], f"{v1.node}!={v2[0]} libs"
-        assert v1.require.build is v2[3], f"{v1.node}!={v2[0]} build"
-        assert v1.require.run is v2[4], f"{v1.node}!={v2[0]} run"
+        assert v1.node is v2[0], f"{v1.node}!=expected {v2[0]}"
+        assert v1.require.headers is v2[1], f"{v1.node}!=expected {v2[0]} ({v2[1]}) headers"
+        assert v1.require.libs is v2[2], f"{v1.node}!=expected {v2[0]} ({v2[2]}) libs"
+        assert v1.require.build is v2[3], f"{v1.node}!=expected {v2[0]} ({v2[3]}) build"
+        assert v1.require.run is v2[4], f"{v1.node}!=expected {v2[0]} ({v2[4]}) run"
         assert len(v2) <= 5
 
 
@@ -342,8 +341,8 @@ class TestLinear(GraphManagerTest):
         _check_transitive(app, [(libb, True, True, False, False)])
         _check_transitive(libb, [(liba, False, False, True, True)])
 
-    @parameterized.expand([("application",), ("shared-library",), ("static-library",),
-                           ("header-library",), ("build-scripts",), (None,)])
+    @pytest.mark.parametrize("package_type", ["application", "shared-library", "static-library",
+                             "header-library", "build-scripts", None])
     def test_generic_build_require_adjust_run_with_package_type(self, package_type):
         # app --br-> cmake (app)
         self.recipe_conanfile("cmake/0.1", GenConanfile().with_package_type(package_type))
@@ -588,8 +587,7 @@ class TestLinearFourLevels(GraphManagerTest):
                                 (libb, True, True, False, False),
                                 (liba, False, True, False, False)])
 
-    @parameterized.expand([("static-library", ),
-                           ("shared-library", )])
+    @pytest.mark.parametrize("library_type", ["static-library", "shared-library"])
     def test_libraries_transitive_headers(self, library_type):
         # app -> libc/0.1 -> libb0.1  -> liba0.1
         # All with transitive_headers, the final application shoud get all headers
@@ -763,6 +761,44 @@ class TestLinearFourLevels(GraphManagerTest):
                                 (libb, False, False, False, True),
                                 (liba, False, False, False, False)])
 
+    def test_run_false_multiversion_shared(self):
+        self.recipe_conanfile("liba/1.0", GenConanfile().with_package_type("shared-library"))
+        self.recipe_conanfile("liba/2.0", GenConanfile().with_package_type("shared-library"))
+        self.recipe_conanfile("tool/1.0", GenConanfile().with_package_type("application")
+                              .with_requires("liba/1.0"))
+        self.recipe_conanfile("tool/2.0", GenConanfile().with_package_type("application")
+                              .with_requires("liba/2.0"))
+        self.recipe_conanfile("libc/0.1",
+                              GenConanfile().with_package_type("shared-library")
+                                            .with_tool_requirement("tool/1.0", run=False)
+                                            .with_tool_requirement("tool/2.0", run=False))
+        consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        assert 6 == len(deps_graph.nodes)
+        app = deps_graph.root
+        libc = app.edges[0].dst
+        tool1 = libc.edges[0].dst
+        tool2 = libc.edges[1].dst
+        liba1 = tool1.edges[0].dst
+        liba2 = tool2.edges[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[tool1, tool2], dependents=[app])
+        self._check_node(tool1, "tool/1.0#123", deps=[liba1], dependents=[libc])
+        self._check_node(tool2, "tool/2.0#123", deps=[liba2], dependents=[libc])
+
+        # node, headers, lib, build, run
+        _check_transitive(libc, [
+            (tool1, False, False, True, False),
+            (liba1, False, False, True, False),
+            (tool2, False, False, True, False),
+            (liba2, False, False, True, False)
+        ])
+
+        _check_transitive(app, [(libc, True, True, False, True)])
+
     def test_force_run(self):
         # app -> libc/0.1 -> libb0.1  -> liba0.1
         # even if all are static, there is something in a static lib (files or whatever) that
@@ -798,8 +834,7 @@ class TestLinearFourLevels(GraphManagerTest):
                                 (libb, False, True, False, False),
                                 (liba, False, True, False, True)])
 
-    @parameterized.expand([(True,),
-                           (False,)])
+    @pytest.mark.parametrize("run", [True, False])
     def test_header_only_run(self, run):
         # app -> libc/0.1 -> libb0.1  -> liba0.1
         # many header-onlys
@@ -1353,7 +1388,7 @@ class TestDiamond(GraphManagerTest):
                                 (libc, True, True, False, False),
                                 (liba, True, True, False, False)])
 
-    @parameterized.expand([(True, ), (False, )])
+    @pytest.mark.parametrize("order", [True, False])
     def test_diamond_additive(self, order):
         # app -> libb0.1 ---------> liba0.1
         #    \-> libc0.1 (run=True)->/

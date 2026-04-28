@@ -3,7 +3,6 @@ import os
 import re
 import textwrap
 import time
-from collections import OrderedDict
 from unittest.mock import patch, Mock
 
 import pytest
@@ -46,6 +45,13 @@ class TestParamErrors:
         c.run("list * -p os=Linux", assert_error=True)
         assert "--package-query and --filter-xxx can only be done for binaries" in c.out
 
+    def test_wrong_package_query(self):
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        c.run('list *:* -p "not os=Linux"')
+        assert "ERROR: Invalid package query: not os=Linux. 'not' operator is not allowed" in c.out
+
     def test_graph_file_error(self):
         # This can happen when reusing the same file in input and output
         c = TestClient(light=True)
@@ -78,9 +84,8 @@ class TestParamErrors:
 
 @pytest.fixture(scope="module")
 def client():
-    servers = OrderedDict([("default", TestServer()),
-                           ("other", TestServer())])
-    c = TestClient(servers=servers, inputs=2*["admin", "password"])
+    c = TestClient(servers={"default": TestServer(), "other": TestServer()},
+                   inputs=2*["admin", "password"])
     c.save({
         "zlib.py": GenConanfile("zlib"),
         "zlib_ng.py": GenConanfile("zlib_ng", "1.0.0"),
@@ -990,3 +995,10 @@ def test_list_local_recipe_index():
     assert "ERROR: Recipe 'pkg/0.1@a' not found" in c.out
     c.run("list 'pkg%0.1#a@b/c' -r=local")
     assert "ERROR: Recipe 'pkg%0.1' not found" in c.out
+
+def test_list_error_option():
+    c = TestClient(default_server_user=False)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_option("my_error_option", [1, 2])})
+    c.run("create . -o my_error_option=1")
+    c.run("list pkg/1.0#*:*")
+    assert "my_error_option: 1" in c.out

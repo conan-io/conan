@@ -70,6 +70,8 @@ def upload(conan_api: ConanAPI, parser, *args):
                         help='Upload all matching recipes without confirmation')
     parser.add_argument('--dry-run', default=False, action='store_true',
                         help='Do not execute the real upload (experimental)')
+    parser.add_argument('--allow-disabled', default=False, action='store_true',
+                        help='Allow uploading to disabled remote')
     parser.add_argument("-l", "--list", help="Package list file")
     parser.add_argument("-m", "--metadata", action='append',
                         help='Upload the metadata, even if the package is already in the server and '
@@ -86,6 +88,8 @@ def upload(conan_api: ConanAPI, parser, *args):
         raise ConanException("Cannot define both the pattern and the package list file")
     if args.package_query and args.list:
         raise ConanException("Cannot define package-query and the package list file")
+    if args.allow_disabled:
+        remote.disabled = False
 
     if args.list:
         listfile = make_abs_path(args.list)

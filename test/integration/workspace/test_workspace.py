@@ -5,6 +5,7 @@ import textwrap
 
 import pytest
 
+from conan.api.model import RecipeReference
 from conan.api.subapi.workspace import WorkspaceAPI
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.mocks import ConanFileMock
@@ -580,7 +581,8 @@ class TestWorkspaceBuild:
                     result = []
                     for f in os.listdir(self.folder):
                         if os.path.isdir(os.path.join(self.folder, f)):
-                            result.append({"path": f, "ref": f"{f}/0.1"})
+                            result.append({"path": f, "ref": f"{f}/0.1",
+                                           "output_folder": f"{f}/myout"})
                     return result
            """)
         c = TestClient(light=True)
@@ -589,6 +591,7 @@ class TestWorkspaceBuild:
         c.run("workspace info")
         assert "pkga/0.1" in c.out
         c.run("workspace build")
+        assert "metadata" in os.listdir(os.path.join(c.current_folder, "pkga", "myout"))
         assert "conanfile.py (pkga/0.1): Building pkga AND 0.1!!!" in c.out
 
     def test_build_with_external_editable_python_requires(self):
@@ -900,6 +903,55 @@ class TestMeta:
         c.run("workspace super-install", assert_error=True)
         assert ("Workspace definition error. Package libb/0.1 in the Conan cache "
                 "has dependencies to packages in the workspace: [liba/0.1]") in c.out
+
+    def test_install_create_use_lockfile(self):
+        c = TestClient()
+        c.save({"dep/conanfile.py": GenConanfile(),
+                "ws/conanws.yml": "",
+                "ws/liba/conanfile.py": GenConanfile("liba").with_requires("dep1/[*]", "dep2/[*]"),
+                "ws/libb/conanfile.py": GenConanfile("libb").with_requires("liba/[*]", "dep1/[*]")},
+               )
+        c.run("create dep --name=dep1 --version=0.1")
+        c.run("create dep --name=dep2 --version=0.1")
+        with c.chdir("ws"):
+            c.run("workspace add liba --version=0.1")
+            c.run("workspace add libb --version=0.1")
+            c.run("workspace super-install --lockfile-out=ws.lock")
+            lock = json.loads(c.load("ws.lock"))
+        refs = [RecipeReference.loads(r).repr_notime() for r in lock["requires"]]
+        # Liba and libb are NOT in the lockfile for this
+        assert refs == ['libb/0.1',
+                        'liba/0.1',
+                        'dep2/0.1#4d670581ccb765839f2239cc8dff8fbd',
+                        'dep1/0.1#4d670581ccb765839f2239cc8dff8fbd']
+        c.run("create dep --name=dep1 --version=0.2")
+        c.run("create dep --name=dep2 --version=0.2")
+        with c.chdir("ws"):
+            c.run("workspace super-install --lockfile=ws.lock")
+            assert "dep1/0.1" in c.out
+            assert "dep2/0.1" in c.out
+            assert "dep1/0.2" not in c.out
+            assert "dep2/0.2" not in c.out
+
+            # bump the workspace versions themselves
+            c.run("workspace add liba --version=0.2")
+            assert "Workspace 'ws': WARN: Package liba already exists, updating" in c.out
+            c.run("workspace add libb --version=0.2")
+
+            c.run("workspace super-install --lockfile=ws.lock", assert_error=True)
+            assert "ERROR: Requirement 'liba/0.2' not in lockfile 'requires'" in c.out
+
+            c.run("workspace super-install --lockfile=ws.lock --lockfile-partial "
+                  "--lockfile-clean --lockfile-out=ws2.lock")
+            assert "dep1/0.1" in c.out
+            assert "dep2/0.1" in c.out
+            lock = json.loads(c.load("ws2.lock"))
+            refs = [RecipeReference.loads(r).repr_notime() for r in lock["requires"]]
+            # Liba and libb are NOT in the lockfile for this
+            assert refs == ['libb/0.2',
+                            'liba/0.2',
+                            'dep2/0.1#4d670581ccb765839f2239cc8dff8fbd',
+                            'dep1/0.1#4d670581ccb765839f2239cc8dff8fbd']
 
     def test_deployers_json(self):
         c = TestClient()
@@ -1298,6 +1350,76 @@ class TestInstall:
         assert "conanfile.py (pkga/0.1): CMakeToolchain generated" in c.out
         assert "conanfile.py (pkgb/0.1): CMakeToolchain generated" in c.out
         assert "conanfile.py (pkgc/0.1): CMakeToolchain generated" in c.out
+
+    def test_install_lockfile_out_error(self):
+        # it is not possible to generate a lockfile for an orchestrated
+        # "conan workspace install/build" command
+        c = TestClient()
+        c.save({"conanws.yml": ""})
+        c.run("workspace install --lockfile-out=conan.lock", assert_error=True)
+        assert "error: unrecognized arguments: --lockfile-out=conan.lock" in c.out
+
+        c.run("workspace create --lockfile-out=conan.lock", assert_error=True)
+        assert "error: unrecognized arguments: --lockfile-out=conan.lock" in c.out
+
+    def test_install_with_lockfile(self):
+        # https://github.com/conan-io/conan/issues/19891
+        c = TestClient()
+        c.run("workspace init .")
+        c.save({"app/conanfile.py": GenConanfile("app", "1.0")})
+        c.run("workspace add app")
+        c.run("lock create app")
+        c.run("workspace build --lockfile=app/conan.lock --lockfile-partial")
+        # it doesn't fail
+
+    def test_build_ignore_local_lockfiles(self):
+        c = TestClient()
+        c.save({"hello/conanfile.py": GenConanfile("hello", "0.1"),
+                "app/conanfile.py": GenConanfile("app", "0.1").with_requires("hello/0.1")})
+        c.run("export hello")
+        c.run("lock create app")
+
+        # make some kind of change in hello/conanfile.py
+        c.save({"hello/conanfile.py": GenConanfile("hello", "0.1").with_class_attribute("v=1")})
+        c.run("export hello")  # (new revision)
+
+        # rm -rf hello/ (no longer needed)
+        shutil.rmtree(os.path.join(c.current_folder, "hello"))
+        c.run("workspace init .")
+        c.run("workspace add app")
+        c.run("workspace build --build=missing")
+        assert "Using lockfile" not in c.out
+
+        c.run("lock create --requires=app/0.1 --lockfile-out=conan.lock")
+        c.run("workspace build --build=missing")
+        assert "Using lockfile" in c.out
+
+        c.run("workspace build --build=missing --lockfile=")
+        assert "Using lockfile" not in c.out
+
+    def test_build_use_auto_lockfile(self):
+        c = TestClient()
+        c.save({"hello/conanfile.py": GenConanfile("hello", "0.1"),
+                "app/conanfile.py": GenConanfile("app", "0.1").with_requires("hello/0.1")})
+        c.run("export hello")
+        rev1 = c.exported_recipe_revision()
+        # This is in the root workspace folder, so it is found automatically
+        c.run("lock create app --lockfile-out=conan.lock")
+
+        # make some kind of change in hello/conanfile.py
+        c.save({"hello/conanfile.py": GenConanfile("hello", "0.1").with_class_attribute("v=1")})
+        c.run("export hello")  # (new revision)
+        rev2 = c.exported_recipe_revision()
+        assert rev2 != rev1
+
+        # rm -rf hello/ (no longer needed)
+        shutil.rmtree(os.path.join(c.current_folder, "hello"))
+        c.run("workspace init .")
+        c.run("workspace add app")
+        c.run("workspace build --build=missing --lockfile-partial")
+        assert "Using lockfile" in c.out
+        assert f"hello/0.1#{rev1}" in c.out
+        assert rev2 not in c.out
 
 
 def test_keep_core_conf():
