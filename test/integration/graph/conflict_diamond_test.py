@@ -1,5 +1,6 @@
 import json
 import os
+import textwrap
 
 import pytest
 
@@ -385,3 +386,203 @@ class TestErrorVisibleFalse:
         assert dep_pkg2["visible"] is True
         assert dep_pkg3["ref"] == "pkg3/1.1"
         assert dep_pkg2["visible"] is True
+
+
+class TestConsistentTrait:
+    def test_visible_order_issue(self):
+        #  libc  -> libb/1.0 (static) -> liba/1.1 (header)
+        #   \-------------------------------/
+        # Order doesn't matter here if using consistent=True
+        #  libc2 ---------------------> liba/1.1 (header)
+        #   \----> libb/1.0 (static) ------/
+        # Order doesn't matter
+        #  libc3 ---------------------> liba/1.1 (header)
+        #   \----> libb/1.0 (static) -> liba/1.2 (header)
+        c = TestClient(light=True)
+        c.save_home({"global.conf": "core:required_conan_version=>=2.28"})
+        c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
+                                                                .with_requires("liba/[>=1]"),
+                "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+                                                                .with_requirement("libb/1.0",
+                                                                                  visible=False)
+                                                                .with_requirement("liba/1.1"),
+                "libc2/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+                                                                 .with_requirement("liba/1.1")
+                                                                 .with_requirement("libb/1.0",
+                                                                                   visible=False),
+                "libc3/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+                                                                 .with_requirement("liba/1.1")
+                                                                 .with_requirement("libb/1.0",
+                                                                                   visible=False,
+                                                                                   consistent=False),
+                })
+        c.run("export liba --version=1.0")
+        c.run("export liba --version=1.1")
+        c.run("export liba --version=1.2")
+        c.run("export libb")
+        c.run("graph info libc --format=json")
+        assert "liba/1.2" not in c.out
+        graph = json.loads(c.stdout)
+        assert len(graph["graph"]["nodes"]) == 3
+
+        # Different order, but consistent=True
+        c.run("graph info libc2 --format=json")
+        assert "liba/1.2" not in c.out
+        graph = json.loads(c.stdout)
+        assert len(graph["graph"]["nodes"]) == 3
+
+        c.run("graph info libc3 --format=json")
+        assert "liba/1.2" in c.out
+        graph = json.loads(c.stdout)
+        assert len(graph["graph"]["nodes"]) == 4
+
+    def test_visible_order_full_diamond_issue(self):
+        # This is a conflict, because the depth-first graph resolution approach can't see
+        # beyond the current branch to see there is an incompatible version in other branch not
+        # expanded yet
+        #  libc --(v=F, c=T)-> libb/1.0 (static) -(range)--> liba/1.2(header)
+        #   \----------------> libd/1.0 (static)-----------> liba/1.1 (header) CONFLICT
+
+        # Order matters here, with the other order not a conflict, because fixed dep is
+        # expanded first
+        #  libc2 -----------> libd/1.0 (static) ---------> liba/1.1 (header)
+        #   \--(v=F, c=T)---> libb/1.0 (static) --range-----/ (header)
+
+        # If not consistent, no conflcit
+        #  libc --(v=F, c=T)-> libb/1.0 (static) -(range)--> liba/1.2(header)
+        #   \----------------> libd/1.0 (static)-----------> liba/1.1 (header)
+        c = TestClient(light=True)
+        c.save_home({"global.conf": "core:required_conan_version=>=2.28"})
+        c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
+                                                                .with_requires("liba/[>=1]"),
+                "libd/conanfile.py": GenConanfile("lib_d", "1.0").with_package_type("static-library")
+                                                                 .with_requires("liba/1.1"),
+                "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+                                                                .with_requirement("libb/1.0",
+                                                                                  visible=False)
+                                                                .with_requirement("lib_d/1.0"),
+                "libc2/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+                                                                 .with_requirement("lib_d/1.0")
+                                                                 .with_requirement("libb/1.0",
+                                                                                   visible=False),
+                "libc3/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+                                                                 .with_requirement("lib_d/1.0")
+                                                                 .with_requirement("libb/1.0",
+                                                                                   visible=False,
+                                                                                   consistent=False),
+                })
+        c.run("export liba --version=1.0")
+        c.run("export liba --version=1.1")
+        c.run("export liba --version=1.2")
+        c.run("export libb")
+        c.run("export libd")
+        # This is still a conflict, the consistent=True raises this conflict
+        c.run("graph info libc", assert_error=True)
+        assert "ERROR: Version conflict: Conflict between liba/1.1 and liba/1.2" in c.out
+
+        c.run("graph info libc2 --format=json")
+        assert "liba/1.2" not in c.out
+        graph = json.loads(c.stdout)
+        assert len(graph["graph"]["nodes"]) == 4
+
+        c.run("graph info libc3 --format=json")
+        assert "liba/1.2" in c.out
+        graph = json.loads(c.stdout)
+        assert len(graph["graph"]["nodes"]) == 5
+
+    def test_visible_consistent(self):
+        c = TestClient(light=True)
+        c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
+                                                                .with_requirement("liba/[>=1]",
+                                                                                  consistent=False),
+                })
+        c.run("create liba --version=1.0")
+        c.run("install libb", assert_error=True)
+        assert ("Requirement liba/[>=1] with visible=True and "
+                "consistent=False is not supported") in c.out
+
+    def test_large_graph(self):
+        c = TestClient()
+        libzip = textwrap.dedent("""
+            from conan import ConanFile
+
+            class HostRecipe(ConanFile):
+                name = "libzip"
+                version = "1.11.3"
+                package_type = "static-library"
+
+                def requirements(self):
+                    self.requires("zlib/[>=1.2.11 <2]")
+                    self.requires("bzip2/1.0.8")
+            """)
+        minizip = textwrap.dedent("""
+            from conan import ConanFile
+
+            class HostRecipe(ConanFile):
+                name = "minizip"
+                version = "1.3.1"
+                package_type = "static-library"
+
+                def requirements(self):
+                    self.requires("zlib/[>=1.2.11 <2]")
+                    self.requires("bzip2/1.0.8")
+            """)
+        host = textwrap.dedent("""
+            from conan import ConanFile
+
+            class HostRecipe(ConanFile):
+                name = "host"
+                version = "0.1"
+                package_type = "shared-library"
+
+                def requirements(self):
+                    self.requires("libzip/1.11.3")
+            """)
+        lib = textwrap.dedent("""
+            from conan import ConanFile
+
+            class HostRecipe(ConanFile):
+                name = "lib"
+                version = "0.1"
+                package_type = "shared-library"
+
+                def requirements(self):
+                    self.requires("minizip/1.3.1")
+            """)
+        plugin = textwrap.dedent("""
+            from conan import ConanFile
+
+            required_conan_version = ">=2.28"
+
+            class pluginRecipe(ConanFile):
+                name = "plugin"
+                version = "0.1"
+                package_type = "static-library"
+
+                def requirements(self):
+                    self.requires("host/0.1", visible=False)
+                    self.requires("lib/0.1", visible=False)
+            """)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.3.1").with_package_type("static-library"),
+                "bzip2/conanfile.py": GenConanfile("bzip2", "1.0.8").with_package_type("static-library"),
+                "libzip/conanfile.py": libzip,
+                "minizip/conanfile.py": minizip,
+                "host/conanfile.py": host,
+                "lib/conanfile.py": lib,
+                "plugin/conanfile.py": plugin,
+                })
+        c.run("export zlib")
+        c.run("export bzip2")
+        c.run("export libzip")
+        c.run("export minizip")
+        c.run("export host")
+        c.run("export lib")
+        c.run("export plugin")
+        c.run("graph info plugin --format=json")
+        graph = json.loads(c.stdout)
+        assert len(graph["graph"]["nodes"]) == 7
+        # c.run("graph info plugin --format=html", redirect_stdout="graph.html")
+        # c.open("graph.html")
