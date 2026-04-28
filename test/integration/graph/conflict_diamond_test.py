@@ -399,7 +399,7 @@ class TestConsistentTrait:
         #  libc3 ---------------------> liba/1.1 (header)
         #   \----> libb/1.0 (static) -> liba/1.2 (header)
         c = TestClient(light=True)
-        c.save_home({"global.conf": "core:required_conan_version=>=2.28"})
+        c.save_home({"global.conf": 'core:policies=["required_conan_version>=2.28"]'})
         c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
                 "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
                                                                 .with_requires("liba/[>=1]"),
@@ -453,7 +453,7 @@ class TestConsistentTrait:
         #  libc --(v=F, c=T)-> libb/1.0 (static) -(range)--> liba/1.2(header)
         #   \----------------> libd/1.0 (static)-----------> liba/1.1 (header)
         c = TestClient(light=True)
-        c.save_home({"global.conf": "core:required_conan_version=>=2.28"})
+        c.save_home({"global.conf": 'core:policies=["required_conan_version>=2.28"]'})
         c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
                 "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
                                                                 .with_requires("liba/[>=1]"),
