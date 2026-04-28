@@ -170,14 +170,6 @@ class ConanOutput:
     def level_allowed(cls, level):
         return cls._conan_output_level <= level
 
-    def _emit_scope_line_if_new(self):
-        """Print ``scope:`` once per scope change, when a message is about to be written."""
-        scope = self._scope
-        if not scope or scope == ConanOutput._last_scope_header:
-            return
-        self.writeln(f"{scope}:", fg=Color.BRIGHT_BLUE)
-        ConanOutput._last_scope_header = scope
-
     @property
     def color(self):
         return self._color
@@ -227,18 +219,6 @@ class ConanOutput:
         self._write_message(msg, newline=newline)
         return self
 
-    def _format_scoped_message(self, msg, fg=None, bg=None):
-        """Prefix every physical line with a short space gutter (block under the scope header).
-        Splitlines is used for handling multi-line messages, ensuring a gutter is added to each line
-        """
-        parts = []
-        for line in msg.splitlines():
-            if self._color:
-                parts.append(f"  {fg or ''}{bg or ''}{line}{Style.RESET_ALL}")
-            else:
-                parts.append(f"  {line}")
-        return "\n".join(parts)
-
     def _write_message(self, msg, fg=None, bg=None, newline=True):
         if isinstance(msg, dict):
             # For traces we can receive a dict already, we try to transform then into more natural
@@ -248,8 +228,13 @@ class ConanOutput:
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
         if ConanOutput._scoped_recipe_output and self._scope:
-            self._emit_scope_line_if_new()
-            ret = self._format_scoped_message(msg, fg, bg)
+            if self._scope != ConanOutput._last_scope_header:
+                self.writeln(f"{self._scope}:", fg=Color.BRIGHT_BLUE)
+                ConanOutput._last_scope_header = self._scope
+            if self._color:
+                ret = f"  {fg or ''}{bg or ''}{msg}{Style.RESET_ALL}"
+            else:
+                ret = f"  {msg}"
         elif self._scope:
             if self._color:
                 ret = f"{fg or ''}{bg or ''}{self._scope}: {msg}{Style.RESET_ALL}"
@@ -322,23 +307,15 @@ class ConanOutput:
     def title(self, msg: str):
         """ Draws a title around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
-            ConanOutput._last_scope_header = None
-            prev_scope = self._scope
-            self._scope = ""
             self._write_message("\n======== {} ========".format(msg),
                                 fg=Color.BRIGHT_MAGENTA)
-            self._scope = prev_scope
         return self
 
     def subtitle(self, msg: str):
         """ Draws a subtitle around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
-            ConanOutput._last_scope_header = None
-            prev_scope = self._scope
-            self._scope = ""
             self._write_message("\n-------- {} --------".format(msg),
                                 fg=Color.BRIGHT_MAGENTA)
-            self._scope = prev_scope
         return self
 
     def highlight(self, msg: str):

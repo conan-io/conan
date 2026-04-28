@@ -438,7 +438,7 @@ class TestUpdateFlows:
         assert "liba/[>1.0.0]: liba/1.2.0" in self.client.out
         self.client.assert_listed_require({"liba/1.2.0": "Downloaded (server2)"})
         assert f"liba/1.2.0: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
-               "from remote 'server2' " in self.client.out
+               "from remote 'server2'" in self.client.out
 
 
 @pytest.mark.parametrize("update,result",

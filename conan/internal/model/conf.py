@@ -19,8 +19,18 @@ from conan.internal.util.files import load, save
 
 required_conan_version_msg = """\
 Raise if current version does not match the defined range.
-   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id is applied
-   These behaviors also apply for 'required_conan_version' in recipes, but the global one has precedence."""
+Applies the following behaviors based on the minimum specified version:
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19849 for VirtualBuildEnv bindir path propagation based on requirement run trait
+   These behaviors also apply for 'required_conan_version' in recipes, but the global one has precedence.
+"""
+
+policies_msg = """\
+A list of opt-in behaviors that can be defined in the configuration to control specific aspects of Conan's behavior,
+such as keeping deprecated behaviours:
+   - deprecated_conanfile_path_methods: Allow using deprecated Path accessors in recipes - To be removed in Conan 2.32
+   - deprecated_build_order_args: Allow deprecated skipping of --order-by argument in conan graph build-order - To be removed in Conan 2.32
+   - deprecated_empty_version_range: Allow using deprecated empty version range expressions - To be removed in Conan 2.32"""
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": required_conan_version_msg,
@@ -42,6 +52,7 @@ BUILT_IN_CONFS = {
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
+    "core:policies": policies_msg,
     # Sources backup
     "core.sources:download_cache": "Folder to store the sources backup",
     "core.sources:download_urls": "List of URLs to download backup sources from",
@@ -104,7 +115,7 @@ BUILT_IN_CONFS = {
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
     "tools.cmake:ctest_args": "Add extra arguments to CMake.ctest() runner command line",
-    "tools.cmake:configure_args": "Add extra arguments to CMake.configure() command line ",
+    "tools.cmake:configure_args": "Add extra arguments to CMake.configure() command line",
     "tools.cmake:install_strip": "(Deprecated) Add --strip to cmake.install(). Use tools.build:install_strip instead",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "(int, default: 2) Number of retries in case of failure when downloading",

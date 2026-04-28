@@ -1,17 +1,22 @@
 import re
 import textwrap
+import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-def test_require_different_versions():
+@pytest.mark.parametrize("min_conan_version", [None, ">=2.28"])
+def test_require_different_versions(min_conan_version):
     """ this test demostrates that it is possible to tool_require different versions
     of the same thing, deactivating run=False (as long as their executables are not called the same)
 
     https://github.com/conan-io/conan/issues/13521
     """
     c = TestClient()
+    required_conan_version_line = ""
+    if min_conan_version:
+        required_conan_version_line = f"required_conan_version='{min_conan_version}'"
     gcc = textwrap.dedent(r"""
         import os
         from conan import ConanFile
@@ -24,10 +29,13 @@ def test_require_different_versions():
                 save(self, os.path.join(self.package_folder, "bin", f"mygcc{self.version}.sh"), echo)
                 os.chmod(os.path.join(self.package_folder, "bin", f"mygcc{self.version}.sh"), 0o777)
             """)
-    wine = textwrap.dedent("""
+    wine = textwrap.dedent(f"""
         import os, platform
         from conan import ConanFile
         from conan.tools.files import save, chdir
+        from conan.tools.env import VirtualBuildEnv
+        {required_conan_version_line}
+
         class Pkg(ConanFile):
             name = "wine"
             version = "1.0"
@@ -40,11 +48,19 @@ def test_require_different_versions():
                 assert gcc1.ref.version == "1.0"
                 gcc2 = self.dependencies.build["gcc/2.0"]
                 assert gcc2.ref.version == "2.0"
+                # In the new behaviour enabled in newer versions,
+                # we have a way to bring back both bindirs to the path
+                if {bool(required_conan_version_line)}:
+                    venv = VirtualBuildEnv(self)
+                    env = venv.environment()
+                    env.prepend_path("PATH", gcc1.cpp_info.bindir)
+                    env.prepend_path("PATH", gcc2.cpp_info.bindir)
+                    venv.generate()
 
             def build(self):
                 ext = "bat" if platform.system() == "Windows" else "sh"
-                self.run(f"mygcc1.0.{ext}")
-                self.run(f"mygcc2.0.{ext}")
+                self.run(f"mygcc1.0.{{ext}}")
+                self.run(f"mygcc2.0.{{ext}}")
             """)
     c.save({"gcc/conanfile.py": gcc,
             "wine/conanfile.py": wine})

@@ -22,7 +22,15 @@ def loadconanconfig_yml(filename):
         contents = yaml.safe_load(load(filename))
         config_versions = contents["packages"]
         config_versions = [RecipeReference.loads(r) for r in config_versions]
-        urls = contents.get("urls")
+        urls_raw = contents.get("urls")
+        urls = None
+        if urls_raw is not None:
+            urls = []
+            for u in urls_raw:
+                if isinstance(u, str):
+                    urls.append((u, True))
+                else:
+                    urls.append((u["url"], u.get("verify_ssl", True)))
     except Exception as e:
         raise ConanException(f"Error while loading config file {filename}: {str(e)}")
     return config_versions, urls
