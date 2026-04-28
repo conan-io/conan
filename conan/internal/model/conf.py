@@ -28,7 +28,6 @@ Applies the following behaviors based on the minimum specified version:
 policies_msg = """\
 A list of opt-in behaviors that can be defined in the configuration to control specific aspects of Conan's behavior,
 such as keeping deprecated behaviours:
-   - deprecated_conanfile_path_methods: Allow using deprecated Path accessors in recipes - To be removed in Conan 2.32
    - deprecated_build_order_args: Allow deprecated skipping of --order-by argument in conan graph build-order - To be removed in Conan 2.32
    - deprecated_empty_version_range: Allow using deprecated empty version range expressions - To be removed in Conan 2.32"""
 
