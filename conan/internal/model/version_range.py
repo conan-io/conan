@@ -16,7 +16,7 @@ def required_conan_version_policy(conanfile, limit_version):
         if policies:
             policy = next(iter(p for p in policies if p.startswith("required_conan_version")), None)
             if policy:
-                version = policy.split("=", 1)[1]
+                version = policy[len("required_conan_version"):]
                 version_range = VersionRange(version)
                 if not version_range.contains(Version(limit_version), resolve_prerelease=None):
                     return True
