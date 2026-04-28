@@ -122,7 +122,7 @@ class Meson:
         # Errors are always logged, and status about installed files is controlled by this flag,
         # so it's a bit backwards
         verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
-        return "--quiet" if verbosity else ""
+        return "--quiet" if verbosity == "quiet" else ""
 
     @property
     def _prefix(self):
