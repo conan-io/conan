@@ -1081,9 +1081,9 @@ class TestCompatibleFlags:
                     self.cpp_info.exelinkflags = ["-mywinflag"]
            """)
         plugin = textwrap.dedent("""\
-            def flags_plugin(conanfile, elements, **kwargs):
+            def flags_map(conanfile, flags, **kwargs):
                 result = []
-                for d in elements:
+                for d in flags:
                     if d == "-mywinflag":
                         if conanfile.settings.get_safe("os") == "Linux":
                             result.append("-mylinuxflag")
@@ -1161,9 +1161,9 @@ class TestCompatibleFlags:
                     self.output.info(f"CXXFLAGS: {cpp_info.cxxflags}!!!")
                 """)
         plugin = textwrap.dedent("""\
-            def flags_plugin(conanfile, elements, **kwargs):
+            def flags_map(conanfile, flags, **kwargs):
                 result = []
-                for d in elements:
+                for d in flags:
                     if "mywin" in d:
                         if conanfile.settings.get_safe("compiler") == "msvc":
                             result.append(d)
@@ -1207,12 +1207,12 @@ class TestCompatibleFlags:
                     self.output.info(f"FLAGS: {cpp_info.cxxflags}!!!")
                 """)
         plugin = textwrap.dedent("""\
-            def flags_plugin(elements, item, conanfile, **kwargs):
+            def flags_map(flags, item, conanfile, **kwargs):
                 if item != "cxxflags":
-                    return elements
+                    return flags
                 result = []
                 compiler = conanfile.settings.get_safe("compiler")
-                for d in elements:
+                for d in flags:
                     if d.startswith("/Zc:"):
                         if compiler == "msvc":
                             result.append(d)

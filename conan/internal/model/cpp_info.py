@@ -139,13 +139,13 @@ class _Component:
         }
 
     @staticmethod
-    def _evaluate_cond(item, elements, conanfile):
+    def _evaluate_cond(item, flags, conanfile):
         if conanfile is None:
-            return elements
-        plugin = conanfile._conan_helpers.flags_plugin  # noqa
-        if plugin is None:
-            return elements
-        return plugin(conanfile=conanfile, item=item, elements=elements)
+            return flags
+        flags_map = conanfile._conan_helpers.flags_map  # noqa
+        if flags_map is None:
+            return flags
+        return flags_map(conanfile=conanfile, item=item, flags=flags)
 
     @staticmethod
     def deserialize(contents):

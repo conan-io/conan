@@ -202,7 +202,7 @@ class ConanAPI:
                                        "compiler_flags.py")
             if os.path.isfile(plugin_path):
                 mod, _ = load_python_file(plugin_path)
-                return mod.flags_plugin
+                return mod.flags_map
             return None
 
         def get_loader(self):
@@ -220,7 +220,7 @@ class ConanAPI:
             cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
             conanfile_helpers = ConanFileHelpers(self._requester, cmd_wrap, self.global_conf,
                                                  self.cache, self._conan_api.home_folder,
-                                                 self._conan_api, flags_plugin=self._flags_plugin())
+                                                 self._conan_api, flags_map=self._flags_plugin())
             pyreq_loader = PyRequireLoader(proxy, range_resolver, self.global_conf)
             # This is caching too!
             loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
