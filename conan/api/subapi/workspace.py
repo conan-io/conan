@@ -326,12 +326,11 @@ class WorkspaceAPI:
         ConanOutput().title("Collapsing workspace packages")
 
         root_class = self._ws.root_conanfile()
+        # To inject things like cmd_wrapper to the consumer conanfile, so self.run() works
+        loader = self._conan_api._api_helpers.loader  # noqa
+        helpers = loader._conanfile_helpers  # noqa
         if root_class is not None:
             conanfile = root_class(f"{WORKSPACE_PY} base project Conanfile")
-            # To inject things like cmd_wrapper to the consumer conanfile, so self.run() works
-            loader = self._conan_api._api_helpers.loader  # noqa
-            helpers = loader._conanfile_helpers  # noqa
-            conanfile._conan_helpers = helpers
             conanfile._conan_is_consumer = True
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
                                          is_build_require=False)
@@ -348,8 +347,10 @@ class WorkspaceAPI:
             ConanOutput().info(f"Workspace {WORKSPACE_PY} not found in the workspace folder, "
                                "using default behavior")
             conanfile = ConanFile(display_name="cli")
+            conanfile._conan_is_consumer = True
             consumer_definer(conanfile, profile_host, profile_build)
             root = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
+        conanfile._conan_helpers = helpers
 
         result = DepsGraph()  # TODO: We might need to copy more information from the original graph
         result.add_node(root)

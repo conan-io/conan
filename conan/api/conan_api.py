@@ -29,7 +29,7 @@ from conan.internal.graph.proxy import ConanProxy
 from conan.internal.graph.python_requires import PyRequireLoader
 from conan.internal.graph.range_resolver import RangeResolver
 from conan.internal.hook_manager import HookManager
-from conan.internal.loader import ConanFileLoader
+from conan.internal.loader import ConanFileLoader, load_python_file
 from conan.internal.model.conf import load_global_conf, ConfDefinition, CORE_CONF_PATTERN
 from conan.internal.model.settings import load_settings_yml
 from conan.internal.paths import get_conan_user_home
@@ -197,6 +197,14 @@ class ConanAPI:
             _, _, load, _ = self.get_loader()
             return load
 
+        def _flags_plugin(self):
+            plugin_path = os.path.join(self._conan_api.home_folder, "extensions", "plugins",
+                                       "compiler_flags.py")
+            if os.path.isfile(plugin_path):
+                mod, _ = load_python_file(plugin_path)
+                return mod.flags_map
+            return None
+
         def get_loader(self):
             ws_editables = self._conan_api.workspace.packages()
             editable_packages = self._editable_packages.update_copy(ws_editables)
@@ -212,7 +220,7 @@ class ConanAPI:
             cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
             conanfile_helpers = ConanFileHelpers(self._requester, cmd_wrap, self.global_conf,
                                                  self.cache, self._conan_api.home_folder,
-                                                 self._conan_api)
+                                                 self._conan_api, flags_map=self._flags_plugin())
             pyreq_loader = PyRequireLoader(proxy, range_resolver, self.global_conf)
             # This is caching too!
             loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
