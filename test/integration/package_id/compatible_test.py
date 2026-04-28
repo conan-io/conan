@@ -891,7 +891,7 @@ class TestListOnlyCompatibilityOptimization:
                     .with_import("import os, time")
                     .with_import("from conan.tools.files import save")
                     .with_package("save(self, os.path.join(self.package_folder, 'data.txt'), str(time.time()))")
-        })
+                 })
         tc.run(f"create . {compiler_args} -s=compiler.cppstd=17")
         std17_old_ref = tc.created_layout().reference
         std17_id = std17_old_ref.package_id
@@ -1095,7 +1095,7 @@ class TestCompatibleFlags:
                         result.append(d)
                 return result
                 """)
-        c.save_home({"extensions/plugins/flags.py": plugin})
+        c.save_home({"extensions/plugins/compiler_flags.py": plugin})
         if components:
             conanfile = conanfile.replace(".cpp_info.", ".cpp_info.components['mycomp'].")
 
@@ -1171,7 +1171,7 @@ class TestCompatibleFlags:
                         result.append(d)
                 return result
                 """)
-        c.save_home({"extensions/plugins/flags.py": plugin})
+        c.save_home({"extensions/plugins/compiler_flags.py": plugin})
         c.save({"pkg/conanfile.py": conanfile,
                 "consumer/conanfile.py": consumer})
 
@@ -1220,7 +1220,7 @@ class TestCompatibleFlags:
                         result.append(d)
                 return result
                 """)
-        c.save_home({"extensions/plugins/flags.py": plugin})
+        c.save_home({"extensions/plugins/compiler_flags.py": plugin})
 
         c.save({"pkg/conanfile.py": conanfile,
                 "consumer/conanfile.py": consumer})

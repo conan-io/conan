@@ -199,7 +199,7 @@ class ConanAPI:
 
         def _flags_plugin(self):
             plugin_path = os.path.join(self._conan_api.home_folder, "extensions", "plugins",
-                                       "flags.py")
+                                       "compiler_flags.py")
             if os.path.isfile(plugin_path):
                 mod, _ = load_python_file(plugin_path)
                 return mod.flags_plugin
