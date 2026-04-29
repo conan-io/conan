@@ -43,9 +43,6 @@ class PackagesJsonTable:
         assert pref.revision
         return os.path.join(self._pkgid_dir(pref), pref.revision)
 
-    def _prev_data_path(self, pref: PkgReference) -> str:
-        return os.path.join(self._prev_dir(pref), "data.json")
-
     # ------------------------------------------------------------------
     # Internal scan helpers
     # ------------------------------------------------------------------
@@ -86,38 +83,41 @@ class PackagesJsonTable:
 
         os.makedirs(prev_dir, exist_ok=True)
         # revision and package_id are the folder names — no need to store them in the file.
-        write_json_atomic(self._prev_data_path(pref), {
+        write_json_atomic(os.path.join(prev_dir, "data.json"), {
             "timestamp": pref.timestamp,
             "path": path,
             "build_id": build_id,
         })
 
     def get(self, pref: PkgReference) -> dict:
-        if not os.path.isdir(self._prev_dir(pref)):
+        prev_dir = self._prev_dir(pref)
+        if not os.path.isdir(prev_dir):
             raise ConanReferenceDoesNotExistInDB(f"No entry for package '{repr(pref)}'")
 
-        prev_data = read_json_with_retry(self._prev_data_path(pref))
+        prev_data = read_json_with_retry(os.path.join(prev_dir, "data.json"))
         return self._make_result(pref.ref, pref.package_id, pref.revision, prev_data)
 
     def update_timestamp(self, pref: PkgReference, path: str, build_id: str):
         assert pref.revision
         assert pref.timestamp
 
-        if not os.path.isdir(self._prev_dir(pref)):
+        prev_dir = self._prev_dir(pref)
+        if not os.path.isdir(prev_dir):
             return
 
-        prev_data = read_json_with_retry(self._prev_data_path(pref))
+        prev_data = read_json_with_retry(os.path.join(prev_dir, "data.json"))
         prev_data["timestamp"] = pref.timestamp
         prev_data["path"] = path
         prev_data["build_id"] = build_id
-        write_json_atomic(self._prev_data_path(pref), prev_data)
+        write_json_atomic(os.path.join(prev_dir, "data.json"), prev_data)
 
     def remove_build_id(self, pref: PkgReference):
-        if not os.path.isdir(self._prev_dir(pref)):
+        prev_dir = self._prev_dir(pref)
+        if not os.path.isdir(prev_dir):
             return
-        prev_data = read_json_with_retry(self._prev_data_path(pref))
+        prev_data = read_json_with_retry(os.path.join(prev_dir, "data.json"))
         prev_data["build_id"] = None
-        write_json_atomic(self._prev_data_path(pref), prev_data)
+        write_json_atomic(os.path.join(prev_dir, "data.json"), prev_data)
 
     def remove_recipe(self, ref: RecipeReference):
         """No-op: packages are nested under the recipe revision dir and removed with it."""
@@ -129,12 +129,11 @@ class PackagesJsonTable:
 
         # Remove the pkgid dir if no revision subdirs remain.
         pkgid_dir = self._pkgid_dir(pref)
-        if os.path.isdir(pkgid_dir):
-            try:
-                if not os.listdir(pkgid_dir):
-                    shutil.rmtree(pkgid_dir, ignore_errors=True)
-            except OSError:
-                pass
+        try:
+            if not os.listdir(pkgid_dir):
+                shutil.rmtree(pkgid_dir, ignore_errors=True)
+        except OSError:
+            pass
 
     def get_package_revisions_references(self, pref: PkgReference,
                                          only_latest_prev=False) -> List[dict]:
@@ -178,8 +177,6 @@ class PackagesJsonTable:
 
         result = []
         for pkgid in os.listdir(rrev_dir):
-            if pkgid == "data.json":
-                continue
             pkgid_dir = os.path.join(rrev_dir, pkgid)
             if not os.path.isdir(pkgid_dir):
                 continue
@@ -204,8 +201,6 @@ class PackagesJsonTable:
             return None
 
         for pkgid in os.listdir(rrev_dir):
-            if pkgid == "data.json":
-                continue
             pkgid_dir = os.path.join(rrev_dir, pkgid)
             if not os.path.isdir(pkgid_dir):
                 continue
@@ -230,22 +225,14 @@ class PackagesJsonTable:
             if not os.path.isdir(ref_dir):
                 continue
             ref_data = read_json_with_retry(os.path.join(ref_dir, "data.json"))
-            if ref_data is None:
-                continue
 
             for rrev in os.listdir(ref_dir):
-                if rrev == "data.json":
-                    continue
                 rrev_dir = os.path.join(ref_dir, rrev)
                 if not os.path.isdir(rrev_dir):
                     continue
                 rrev_data = read_json_with_retry(os.path.join(rrev_dir, "data.json"))
-                if rrev_data is None:
-                    continue
 
                 for pkgid in os.listdir(rrev_dir):
-                    if pkgid == "data.json":
-                        continue
                     pkgid_dir = os.path.join(rrev_dir, pkgid)
                     if not os.path.isdir(pkgid_dir):
                         continue
