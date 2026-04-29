@@ -402,6 +402,88 @@ class TestLibsLinkageTraits:
         # it works
 
     @pytest.mark.tool("cmake", "3.27")
+    @pytest.mark.parametrize("shared", [False, True])
+    def test_transitive_libs_and_shared(self, shared):
+        """
+        Issue related: https://github.com/conan-io/conan/issues/19801
+
+        Testing the case when having ``transitive_libs=True`` on the intermediate
+        requirement and being built/consumed as SHARED.
+
+        The consumer executable calls a symbol that only exists in ``matrix`` while CMake only
+        links ``engine::engine``; the link succeeds only when ``matrix::matrix`` is propagated.
+        """
+        shared_flag = "-o '*:shared=True'" if shared else ""
+        c = TestClient()
+        c.run("new cmake_lib -d name=matrix -d version=0.1 -o matrix")
+        matrix_h = textwrap.dedent("""\
+            #pragma once
+            #ifdef _WIN32
+              #define MATRIX_EXPORT __declspec(dllexport)
+            #else
+              #define MATRIX_EXPORT
+            #endif
+            MATRIX_EXPORT void matrix();
+            MATRIX_EXPORT void matrix_embedded();
+        """)
+        c.load("matrix/include/matrix.h").rstrip()
+        matrix_cpp = textwrap.dedent(r"""\
+            #include <iostream>
+            #include <matrix.h>
+            void matrix(){ std::cout << "MATRIX!!!!\n"; }
+            void matrix_embedded(){ std::cout << "MATRIX EMBEDDED!!!!\n";}
+            """)
+        c.save({"matrix/include/matrix.h": matrix_h, "matrix/src/matrix.cpp": matrix_cpp})
+        c.run(f"create matrix {shared_flag} -c tools.cmake.cmakedeps:new={new_value} -tf=")
+
+        c.run("new cmake_lib -d name=engine -d version=0.1 -d requires=matrix/0.1 -o engine")
+
+        conanfile = c.load("engine/conanfile.py")
+        conanfile = conanfile.replace(
+            'self.requires("matrix/0.1")',
+            'self.requires("matrix/0.1", transitive_headers=True, transitive_libs=True)',
+        )
+
+        engine_h = textwrap.dedent("""\
+            #pragma once
+            # include <matrix.h>
+            #ifdef _WIN32
+              #define ENGINE_EXPORT __declspec(dllexport)
+            #else
+              #define ENGINE_EXPORT
+            #endif
+            ENGINE_EXPORT void engine();
+
+            static void engine_embedded(){
+                matrix_embedded();
+            }
+        """)
+        engine_cpp = textwrap.dedent(r"""\
+            #include <iostream>
+            #include <engine.h>
+            void engine(){ std::cout << "ENGINE!!!!\n"; }
+            """)
+        c.save({"engine/conanfile.py": conanfile,
+                "engine/include/engine.h": engine_h,
+                "engine/src/engine.cpp": engine_cpp})
+        c.run(f"create engine {shared_flag} -c tools.cmake.cmakedeps:new={new_value} -tf=")
+
+        c.run("new cmake_exe -d name=consumer -d version=0.1 -d requires=engine/0.1 -o consumer")
+        main_cpp = textwrap.dedent("""
+            #include "consumer.h"
+            #include "engine.h"
+
+            int main() {
+                consumer();
+                engine();
+                engine_embedded();
+            }
+            """)
+        c.save({"consumer/src/main.cpp": main_cpp})
+        c.run(f"build consumer {shared_flag} -c tools.cmake.cmakedeps:new={new_value}")
+        # it works
+
+    @pytest.mark.tool("cmake", "3.27")
     def test_link_features(self):
         tc = TestClient()
         tc.run("new cmake_lib -d name=matrix -d version=0.1")

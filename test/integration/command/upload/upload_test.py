@@ -562,3 +562,14 @@ def test_upload_json_output(dry_run):
         assert "upload-urls" not in c.out
         assert "url:" not in c.out
         assert "checksum:" not in c.out
+
+
+def test_upload_to_disabled():
+    c = TestClient(default_server_user=True, light=True)
+    c.run("remote disable *")
+    c.save({"conanfile.py": GenConanfile("tool", "0.1")})
+    c.run("create")
+    c.run("upload * -c -r=default", assert_error=True)
+    assert "ERROR: Remote 'default' is disabled" in c.out
+    c.run("upload * -c -r=default --allow-disabled")
+    assert "tool/0.1: Uploading recipe" in c.out

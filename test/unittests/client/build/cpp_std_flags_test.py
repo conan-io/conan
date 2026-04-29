@@ -83,6 +83,15 @@ class TestCompilerFlags:
         assert _make_cppstd_flag("gcc", "15", "20") == '-std=c++20'
         assert _make_cppstd_flag("gcc", "15", "23") == '-std=c++23'
         assert _make_cppstd_flag("gcc", "15", "26") == '-std=c++26'
+        assert _make_cppstd_flag("gcc", "15", "26") == '-std=c++26'
+
+        assert _make_cppstd_flag("gcc", "16", "11") == '-std=c++11'
+        assert _make_cppstd_flag("gcc", "16", "14") == '-std=c++14'
+        assert _make_cppstd_flag("gcc", "16", "17") == '-std=c++17'
+        assert _make_cppstd_flag("gcc", "16", "20") == '-std=c++20'
+        assert _make_cppstd_flag("gcc", "16", "23") == '-std=c++23'
+        assert _make_cppstd_flag("gcc", "16", "26") == '-std=c++26'
+        assert _make_cppstd_flag("gcc", "16", "26") == '-std=c++26'
 
     def test_gcc_cppstd_defaults(self):
         assert _make_cppstd_default("gcc", "4") == "gnu98"
@@ -94,6 +103,8 @@ class TestCompilerFlags:
         assert _make_cppstd_default("gcc", "11") == "gnu17"
         assert _make_cppstd_default("gcc", "11.1") == "gnu17"
         assert _make_cppstd_default("gcc", "15.1") == "gnu17"
+        assert _make_cppstd_default("gcc", "16") == "gnu20"
+        assert _make_cppstd_default("gcc", "16.1") == "gnu20"
 
     def test_clang_cppstd_flags(self):
         assert _make_cppstd_flag("clang", "2.0", "98") is None

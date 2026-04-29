@@ -9,7 +9,8 @@ class Requirement:
     """
     def __init__(self, ref, *, headers=None, libs=None, build=False, run=None, visible=None,
                  transitive_headers=None, transitive_libs=None, test=None, package_id_mode=None,
-                 force=None, override=None, direct=None, options=None, no_skip=False):
+                 force=None, override=None, direct=None, options=None, no_skip=False,
+                 consistent=None):
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
@@ -26,6 +27,7 @@ class Requirement:
         self._force = force
         self._override = override
         self._direct = direct
+        self._consistent = consistent
         self.options = options
         # Meta and auxiliary information
         # The "defining_require" is the require that defines the current value. If this require is
@@ -37,6 +39,11 @@ class Requirement:
         self.skip = False
         self.required_nodes = set()  # store which intermediate nodes are required, to compute "Skip"
         self.no_skip = no_skip
+        # computed ones, not default ones
+        self.consistent_policy_new = False
+        if self.visible and not self.consistent:
+            raise ConanException(f"Requirement {ref} with visible=True and consistent=False is not"
+                                 f" supported. Please open a Github ticket to report it")
 
     @property
     def files(self):  # require needs some files in dependency package
@@ -103,6 +110,19 @@ class Requirement:
         self._direct = value
 
     @property
+    def consistent(self):
+        # Host by default has to be consistent too
+        if self.consistent_policy_new:
+            default_consistent = self.visible or self.test or not self.build
+        else:
+            default_consistent = self.visible or self.test
+        return self._default_if_none(self._consistent, default_consistent)
+
+    @consistent.setter
+    def consistent(self, value):
+        self._consistent = value
+
+    @property
     def build(self):
         return self._build
 
@@ -165,7 +185,8 @@ class Requirement:
         return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
                            run=self.run, visible=self.visible,
                            transitive_headers=self.transitive_headers,
-                           transitive_libs=self.transitive_libs)
+                           transitive_libs=self.transitive_libs,
+                           consistent=self.consistent)
 
     @property
     def version_range(self):
@@ -229,7 +250,7 @@ class Requirement:
                  (self.headers and other.headers) or
                  (self.libs and other.libs) or
                  (self.run and other.run) or
-                 ((self.visible or self.test) and (other.visible or other.test)) or
+                 (self.consistent and other.consistent) or
                  (self.ref == other.ref and self.options == other.options)))
 
     def aggregate(self, other):
@@ -250,6 +271,7 @@ class Requirement:
         self.libs |= other.libs
         self.run = self.run or other.run
         self.visible |= other.visible
+        self.consistent |= other.consistent
         self.force |= other.force
         self.direct |= other.direct
         self.transitive_headers = self.transitive_headers or other.transitive_headers
@@ -281,7 +303,9 @@ class Requirement:
             # Build-requires will propagate its main trait for running exes/shared to downstream
             # consumers so run=require.run, irrespective of the 'self.run' trait
             downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                             run=require.run, visible=self.visible, direct=False)
+                                             run=require.run, visible=self.visible, direct=False,
+                                             # require.consistent is True, cause require.visible=True
+                                             consistent=self.consistent)
             return downstream_require
 
         if self.build:  # Build-requires
@@ -289,7 +313,9 @@ class Requirement:
             # visible=self.visible will further propagate it downstream
             if dep_pkg_type is PackageType.SHARED or require.run:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                                 run=self.run, visible=self.visible, direct=False)
+                                                 run=self.run, visible=self.visible, direct=False,
+                                                 # require.visible=True => require.consistent=True
+                                                 consistent=self.consistent)
                 return downstream_require
             return
 
@@ -333,6 +359,8 @@ class Requirement:
             downstream_require.libs = require.libs and require.transitive_libs
         if self.transitive_libs is not None:
             downstream_require.transitive_libs = self.transitive_libs
+
+        downstream_require.consistent = require.consistent and self.consistent
 
         if self.visible is False:
             downstream_require.visible = False

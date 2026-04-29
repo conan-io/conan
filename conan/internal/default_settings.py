@@ -125,7 +125,8 @@ compiler:
                     "12", "12.1", "12.2", "12.3", "12.4", "12.5",
                     "13", "13.1", "13.2", "13.3", "13.4",
                     "14", "14.1", "14.2", "14.3",
-                    "15", "15.1", "15.2"]
+                    "15", "15.1", "15.2",
+                    "16", "16.1"]
         libcxx: [libstdc++, libstdc++11]
         threads: [null, posix, win32, mcf]  # Windows MinGW
         exception: [null, dwarf2, sjlj, seh]  # Windows MinGW

@@ -304,6 +304,8 @@ def default_cppstd(compiler, compiler_version):
         return "gnu98" if version < "6" else "gnu14"
 
     def _gcc_cppstd_default(version):
+        if version >= "16":
+            return "gnu20"
         if version >= "11":
             return "gnu17"
         return "gnu98" if version < "6" else "gnu14"
