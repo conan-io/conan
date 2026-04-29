@@ -332,8 +332,10 @@ class WorkspaceAPI:
         if root_class is not None:
             conanfile = root_class(f"{WORKSPACE_PY} base project Conanfile")
             conanfile._conan_is_consumer = True
+            # We extract the ref, so pattern-based conf works too
+            ref = RecipeReference(conanfile.name, conanfile.version) if conanfile.name else None
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
-                                         is_build_require=False)
+                                         is_build_require=False, ref=ref)
             # consumer_definer(conanfile, profile_host, profile_build)
             self._init_options(conanfile, profile_host.options)
             for field in ("requires", "build_requires", "test_requires", "requirements", "build",

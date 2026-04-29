@@ -832,6 +832,32 @@ class TestMeta:
         c.run("workspace super-install -of=build -o *:myoption=1")
         assert "project Conanfile: Generating with opt dep/0.1:myoption=1!!!!" in c.out
 
+    def test_apply_conf_pattern(self):
+        c = TestClient()
+        conanfilews = textwrap.dedent("""
+            from conan import ConanFile
+            from conan import Workspace
+
+            class MyWs(ConanFile):
+                name = "mywspkg"
+                def generate(self):
+                    self.output.info(f"Generating with conf {self.conf.get("user:myconf")}!!")
+
+            class Ws(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+            """)
+
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "conanws.py": conanfilews})
+        c.run("workspace add dep")
+        c.run("workspace super-install -c user:myconf=myvalue123")
+        assert "conanws.py base project Conanfile: Generating with conf myvalue123!!" in c.out
+        c.run("workspace super-install -c &:user:myconf=myvalue123")
+        assert "conanws.py base project Conanfile: Generating with conf myvalue123!!" in c.out
+        c.run("workspace super-install -c mywspkg*:user:myconf=myvalue123")
+        assert "conanws.py base project Conanfile: Generating with conf myvalue123!!" in c.out
+
     def test_workspace_pkg_definitions(self):
         c = TestClient()
         conanfilews = textwrap.dedent("""
