@@ -841,7 +841,7 @@ class TestMeta:
             class MyWs(ConanFile):
                 name = "mywspkg"
                 def generate(self):
-                    self.output.info(f"Generating with conf {self.conf.get("user:myconf")}!!")
+                    self.output.info(f'Generating with conf {self.conf.get("user:myconf")}!!')
 
             class Ws(Workspace):
                 def root_conanfile(self):
