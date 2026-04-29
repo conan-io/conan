@@ -48,7 +48,7 @@ class Meson:
                 cmd += f' --native-file "{native}"'
         cmd += ' "{}" "{}"'.format(build_folder, source_folder)
         cmd += f" --prefix={self._prefix}"
-        self._conanfile.output.info("Meson configure cmd: {}".format(cmd))
+        self._conanfile.output.info("Running Meson.configure()")
         self._conanfile.run(cmd)
 
     def build(self, target=None):
@@ -69,7 +69,7 @@ class Meson:
         verbosity = self._build_verbosity
         if verbosity:
             cmd += " " + verbosity
-        self._conanfile.output.info("Meson build cmd: {}".format(cmd))
+        self._conanfile.output.info("Running Meson.build()")
         self._conanfile.run(cmd)
 
     def install(self, cli_args=None):

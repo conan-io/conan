@@ -104,6 +104,7 @@ class ConanOutput:
     _last_scope_header = None
     # Flag to enable/disable new ConanOutput contextual behavior
     _scoped_recipe_output = None
+    _scoped_inline = False
     lock = Lock()
 
     def __init__(self, scope: str = ""):
@@ -227,17 +228,21 @@ class ConanOutput:
             msg = "=> {}".format(msg)
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
+        scope_color = Color.BRIGHT_CYAN
         if ConanOutput._scoped_recipe_output and self._scope:
             if self._scope != ConanOutput._last_scope_header:
-                self.writeln(f"{self._scope}:", fg=Color.BRIGHT_BLUE)
+                if ConanOutput._scoped_inline:
+                    self.write(f"{self._scope}:", fg=scope_color)
+                else:
+                    self.writeln(f"{self._scope}:", fg=scope_color)
                 ConanOutput._last_scope_header = self._scope
             if self._color:
-                ret = f"  {fg or ''}{bg or ''}{msg}{Style.RESET_ALL}"
+                ret = f"{' ' if ConanOutput._scoped_inline else ' > '}{fg or ''}{bg or ''}{msg}{Style.RESET_ALL}"
             else:
-                ret = f"  {msg}"
+                ret = f"{' ' if ConanOutput._scoped_inline else ' > '}{msg}"
         elif self._scope:
             if self._color:
-                ret = f"{fg or ''}{bg or ''}{self._scope}: {msg}{Style.RESET_ALL}"
+                ret = f"{scope_color}{self._scope}:{Style.RESET_ALL} {fg or ''}{bg or ''}{msg}{Style.RESET_ALL}"
             else:
                 ret = f"{self._scope}: {msg}"
         else:

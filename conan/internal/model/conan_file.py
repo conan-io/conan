@@ -398,14 +398,14 @@ class ConanFile:
                                           scope=scope)
         from conan.internal.util.runners import conan_run
         if not quiet:
-            ConanOutput().info(f"{self.display_name}: RUN: {command}", fg=Color.BRIGHT_BLUE)
-        ConanOutput().debug(f"{self.display_name}: Full command: {wrapped_cmd}")
+            self.output.info(f"RUN: {command}", fg=Color.BRIGHT_BLUE)
+        self.output.debug(f"Full command: {wrapped_cmd}")
         if quiet or ConanOutput.get_output_level() == LEVEL_QUIET:
             stdout = subprocess.DEVNULL if stdout is None else stdout
             stderr = subprocess.DEVNULL if stderr is None else stderr
         retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, stderr=stderr, shell=shell)
         if not quiet:
-            ConanOutput().writeln("")
+            self.output.writeln("")
 
         if not ignore_errors and retcode != 0:
             raise ConanException("Error %d while executing" % retcode)

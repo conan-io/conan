@@ -71,9 +71,12 @@ def build(conan_api, parser, *args):
                                        deploy=args.deployer, deploy_folder=deployer_folder,
                                        envs_generation=args.envs_generation)
 
-    out.title("Calling build()")
+    if ConanOutput._scoped_recipe_output is None:
+        ConanOutput._scoped_recipe_output = True
+    out.title("Building package")
     conanfile = deps_graph.root.conanfile
     conan_api.local.build(conanfile)
+    ConanOutput._scoped_recipe_output = None
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)

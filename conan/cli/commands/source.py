@@ -1,5 +1,6 @@
 import os
 
+from conan.api.output import ConanOutput
 from conan.cli.command import conan_command
 from conan.cli.args import add_reference_args
 
@@ -19,5 +20,9 @@ def source(conan_api, parser, *args):
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     enabled_remotes = conan_api.remotes.list()  # for python_requires not local
     # TODO: Missing lockfile for python_requires
+
+    if ConanOutput._scoped_recipe_output is None:
+        ConanOutput._scoped_recipe_output = True
     conan_api.local.source(path, name=args.name, version=args.version, user=args.user,
                            channel=args.channel, remotes=enabled_remotes)
+    ConanOutput._scoped_recipe_output = None

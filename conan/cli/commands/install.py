@@ -45,7 +45,10 @@ def install(conan_api, parser, *args):
     validate_common_graph_args(args)
     cwd = os.getcwd()
 
+    if ConanOutput._scoped_recipe_output is None:
+        ConanOutput._scoped_recipe_output = True
     deps_graph, lockfile, install_error = _run_install_command(conan_api, args, cwd)
+    ConanOutput._scoped_recipe_output = None
 
     # Update lockfile if necessary
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,

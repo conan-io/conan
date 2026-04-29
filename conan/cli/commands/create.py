@@ -49,6 +49,8 @@ def create(conan_api, parser, *args):
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
+    if ConanOutput._scoped_recipe_output is None:
+        ConanOutput._scoped_recipe_output = True
     ref, conanfile = conan_api.export.export(path=path,
                                              name=args.name, version=args.version,
                                              user=args.user, channel=args.channel,
@@ -129,6 +131,7 @@ def create(conan_api, parser, *args):
                  tested_python_requires=tested_python_requires, tested_graph=deps_graph)
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
+    ConanOutput._scoped_recipe_output = None
     return {"graph": deps_graph,
             "conan_api": conan_api,
             "conan_error": install_error}

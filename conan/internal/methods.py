@@ -70,8 +70,8 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     save(os.path.join(conanfile.package_folder, CONANINFO), conanfile.info.dumps())
     manifest = FileTreeManifest.create(conanfile.package_folder)
     manifest.save(conanfile.package_folder)
-    package_output = ConanOutput(scope="%s: package()" % scoped_output.scope)
-    manifest.report_summary(package_output, "Packaged")
+    scoped_output.highlight("Generated manifest:")
+    manifest.report_summary(scoped_output, "Packaged")
 
     prev = manifest.summary_hash
     scoped_output.info("Created package revision %s" % prev)
