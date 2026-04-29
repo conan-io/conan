@@ -93,7 +93,7 @@ class ConanFileDependencies(UserRequirementsDict):
 
     @staticmethod
     def from_node(node):
-        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
+        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile, node.conanfile))
                         for require, transitive in node.transitive_deps.items())
         if node.replaced_requires:
             cant_be_removed = set()

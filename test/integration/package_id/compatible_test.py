@@ -891,7 +891,7 @@ class TestListOnlyCompatibilityOptimization:
                     .with_import("import os, time")
                     .with_import("from conan.tools.files import save")
                     .with_package("save(self, os.path.join(self.package_folder, 'data.txt'), str(time.time()))")
-        })
+                 })
         tc.run(f"create . {compiler_args} -s=compiler.cppstd=17")
         std17_old_ref = tc.created_layout().reference
         std17_id = std17_old_ref.package_id
@@ -1053,6 +1053,191 @@ def test_compatibility_remove_cppstd():
     # Now we try again, this time app will find the compatible dep without cppstd
     tc.run("install --requires=dep/1.0 -pr=profile -s=compiler.cppstd=17")
     assert f"dep/1.0: Found compatible package '{dep_package_id}'" in tc.out
+
+
+class TestCompatibleFlags:
+
+    @pytest.mark.parametrize("components", [True, False])
+    def test_compatible_flags(self, components):
+        """ The compiler flags depends on the consumer settings, not on the binary compatible
+        settings used to create that compatible binary. This test shows how the new info
+        can be used to parameterize on the consumer settings
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                settings = "os"
+
+                def compatibility(self):
+                    if self.settings.os == "Windows" or self.settings.os == "Macos":
+                        return [{"settings": [("os", "Linux")]}]
+
+                def package_info(self):
+                    self.cpp_info.cxxflags = ["-mywinflag"]
+                    self.cpp_info.cflags = ["-mywinflag"]
+                    self.cpp_info.sharedlinkflags = ["-mywinflag"]
+                    self.cpp_info.exelinkflags = ["-mywinflag"]
+           """)
+        plugin = textwrap.dedent("""\
+            def flags_map(conanfile, flags, **kwargs):
+                result = []
+                for d in flags:
+                    if d == "-mywinflag":
+                        if conanfile.settings.get_safe("os") == "Linux":
+                            result.append("-mylinuxflag")
+                        elif conanfile.settings.get_safe("os") != "Windows":
+                            result.append("-other-os-flag")
+                        else:
+                            result.append(d)
+                    else:
+                        result.append(d)
+                return result
+                """)
+        c.save_home({"extensions/plugins/compiler_flags.py": plugin})
+        if components:
+            conanfile = conanfile.replace(".cpp_info.", ".cpp_info.components['mycomp'].")
+
+        c.save({"pkg/conanfile.py": conanfile,
+                "consumer/conanfile.txt": "[requires]\npkg/0.1\n[generators]\nCMakeConfigDeps"})
+
+        c.run("create pkg --name=pkg --version=0.1 -s os=Linux --format=json")
+        pkg_json = json.loads(c.stdout)
+        expected_serial = ["-mywinflag"]  # The flag at creation time is the original one
+        if not components:
+            assert pkg_json["graph"]["nodes"]["1"]["cpp_info"]["root"]["cflags"] == expected_serial
+
+        def _check(flag, cmake_file):
+            assert f"$<$<COMPILE_LANGUAGE:CXX>:$<$<CONFIG:RELEASE>:{flag}>>" in cmake_file
+            assert f"$<$<COMPILE_LANGUAGE:C>:$<$<CONFIG:RELEASE>:{flag}>>" in cmake_file
+            assert (f"$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:"
+                    f"$<$<CONFIG:RELEASE>:{flag}>>") in cmake_file
+            assert (f"$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:"
+                    f"$<$<CONFIG:RELEASE>:{flag}>>") in cmake_file
+
+        c.run("install consumer -s os=Linux")
+        cmake = c.load("consumer/pkg-Targets-release.cmake")
+        _check("-mylinuxflag", cmake)
+
+        c.run("install consumer -s os=Windows --format=json")
+        pkg_json = json.loads(c.stdout)
+        if not components:
+            assert pkg_json["graph"]["nodes"]["1"]["cpp_info"]["root"]["cflags"] == expected_serial
+        cmake = c.load("consumer/pkg-Targets-release.cmake")
+        _check("-mywinflag", cmake)
+
+        c.run("install consumer -s os=Macos")
+        cmake = c.load("consumer/pkg-Targets-release.cmake")
+        _check("-other-os-flag", cmake)
+
+        # Check old CMakeDeps generator
+        c.run("install consumer -s os=Linux -s arch=x86_64 -g CMakeDeps")
+        cmake = c.load("consumer/pkg-release-x86_64-data.cmake")
+        assert "-mylinuxflag" in cmake
+
+    def test_editable(self):
+        """ same as above, but more compact condition
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.microsoft import is_msvc
+
+            class Pkg(ConanFile):
+                def layout(self):
+                    self.cpp.source.cxxflags = ["-mywineditflag"]
+
+                def package_info(self):
+                    self.cpp_info.cxxflags = ["-mywinflag"]
+           """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                settings = "compiler"
+                requires = "pkg/0.1"
+                def generate(self):
+                    cpp_info = self.dependencies["pkg"].cpp_info
+                    self.output.info(f"CXXFLAGS: {cpp_info.cxxflags}!!!")
+                """)
+        plugin = textwrap.dedent("""\
+            def flags_map(conanfile, flags, **kwargs):
+                result = []
+                for d in flags:
+                    if "mywin" in d:
+                        if conanfile.settings.get_safe("compiler") == "msvc":
+                            result.append(d)
+                    else:
+                        result.append(d)
+                return result
+                """)
+        c.save_home({"extensions/plugins/compiler_flags.py": plugin})
+        c.save({"pkg/conanfile.py": conanfile,
+                "consumer/conanfile.py": consumer})
+
+        settings = "-s compiler=msvc -s compiler.version=193 -s compiler.runtime=dynamic"
+        c.run(f"editable add pkg --name=pkg --version=0.1")
+
+        c.run(f"install consumer {settings}")
+        assert f"conanfile.py: CXXFLAGS: ['-mywineditflag']!!!" in c.out
+        c.run(f"install consumer {settings} -s &:compiler=clang -s &:compiler.version=19")
+        assert f"conanfile.py: CXXFLAGS: []!!!" in c.out
+
+    def test_compatible_flags_direct(self):
+        """  same as above but without compatibility
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.microsoft import is_msvc
+
+            class Pkg(ConanFile):
+                settings = "compiler"
+                def package_info(self):
+                    if is_msvc(self):
+                        self.cpp_info.cxxflags = ["/Zc:__cplusplus"]
+           """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                settings = "os", "compiler"
+                requires = "pkg/0.1"
+                def generate(self):
+                    cpp_info = self.dependencies["pkg"].cpp_info
+                    self.output.info(f"FLAGS: {cpp_info.cxxflags}!!!")
+                """)
+        plugin = textwrap.dedent("""\
+            def flags_map(flags, item, conanfile, **kwargs):
+                if item != "cxxflags":
+                    return flags
+                result = []
+                compiler = conanfile.settings.get_safe("compiler")
+                for d in flags:
+                    if d.startswith("/Zc:"):
+                        if compiler == "msvc":
+                            result.append(d)
+                    else:
+                        result.append(d)
+                return result
+                """)
+        c.save_home({"extensions/plugins/compiler_flags.py": plugin})
+
+        c.save({"pkg/conanfile.py": conanfile,
+                "consumer/conanfile.py": consumer})
+
+        msvc = ("-s compiler=msvc -s compiler.version=194 -s compiler.runtime=dynamic "
+                "-s compiler.cppstd=14")
+        clang = ("-s compiler=clang -s compiler.version=19 -s compiler.runtime=dynamic "
+                 "-s compiler.cppstd=14 "
+                 "-s pkg*:compiler=msvc -s pkg*:compiler.version=194 -s pkg*:compiler.runtime=dynamic "
+                 "-s pkg*:compiler.cppstd=14 -s pkg*:compiler.runtime_type=Release")
+        c.run(f"create pkg --name=pkg --version=0.1 {msvc}")
+
+        c.run(f"install consumer {msvc}")
+        assert "conanfile.py: FLAGS: ['/Zc:__cplusplus']!!!" in c.out
+
+        c.run(f"install consumer {clang}")
+        assert "conanfile.py: FLAGS: []!!!" in c.out
 
 
 def test_compatible_setting():

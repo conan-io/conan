@@ -25,13 +25,15 @@ class CmdWrapper:
 
 
 class ConanFileHelpers:
-    def __init__(self, requester, cmd_wrapper, global_conf, cache, home_folder, conan_api):
+    def __init__(self, requester, cmd_wrapper, global_conf, cache, home_folder, conan_api,
+                 flags_map=None):
         self.requester = requester
         self.cmd_wrapper = cmd_wrapper
         self.global_conf = global_conf
         self.cache = cache
         self.home_folder = home_folder
         self.conan_api = conan_api  # Might be None for local-recipes-index
+        self.flags_map = flags_map
 
 
 class LocalRecipesIndexApp:

@@ -219,13 +219,25 @@ class TestRequirementPackageId:
 
 
 class TestTransitiveStatic:
-    @pytest.mark.parametrize("apply_fix", [True, False, "conf"])
-    def test_transitive_statics(self, apply_fix):
+    @pytest.mark.parametrize("recipe_approach, conf_approach, apply_fix",
+                             [(None, None, False),
+                              ("2.28", None, True),
+                              ("2.27", None, False),
+                              (None, "2.28", True),
+                              (None, "2.27", False),
+                              ("2.28", "2.27", True),  # OR, both work
+                              ("2.27", "2.28", True),  # OR, both work
+                              ("2.27", "2.27", False)  # Does not apply if both say no
+                              ])
+    def test_transitive_statics(self, recipe_approach, conf_approach, apply_fix):
         # https://github.com/conan-io/conan/issues/19664
         c = TestClient(light=True)
-        required_conan_version = 'required_conan_version = ">=2.28"' if apply_fix is True else ""
-        if apply_fix == "conf":
-            c.save_home({"global.conf": "core:required_conan_version=>=2.28"})
+        required_conan_version = ''
+        if recipe_approach is not None:
+            required_conan_version = f'required_conan_version = ">={recipe_approach}"'
+        if conf_approach is not None:
+            c.save_home({"global.conf":
+                             f'core:policies=["required_conan_version>={conf_approach}"]'})
         libc = textwrap.dedent(f"""\
             from conan import ConanFile
 
