@@ -918,3 +918,27 @@ class TestDownloadCacheBackupSources:
         client.save({"conanfile.py": conanfile})
         client.run("source .", assert_error=True)
         assert "core.sources:download_cache must be an absolute path" in client.out
+
+    def test_download_no_sha_no_backup(self):
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+        save(os.path.join(self.file_server.store, "mycompanystorage", "mycompanyfile.txt"),
+             "Business stuff")
+        self.client.save_home(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
+                            f"core.sources:download_urls=['{self.file_server.fake_url}', 'origin']\n"})
+        conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.files import download
+        class Pkg(ConanFile):
+            def source(self):
+                download(self, "{self.file_server.fake_url}/mycompanystorage/mycompanyfile.txt", "myfile.txt")
+        """)
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("source")
+        print(self.client.out)
+        assert "Cannot cache download() without sha256 checksum" in self.client.out
+        assert f"Sources correctly downloaded from {self.file_server.fake_url}" in self.client.out
+        assert "myfile.txt" in os.listdir(self.client.current_folder)
+        assert len(os.listdir(self.download_cache_folder)) == 0
