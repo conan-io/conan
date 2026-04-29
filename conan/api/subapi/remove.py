@@ -28,9 +28,9 @@ class RemoveAPI:
         """
         assert all(bool(ref.revision) for ref in refs), "Recipe revision cannot be None to remove a recipe"
         if remote:
-            self._api_helpers.remote_manager.remove_recipes(refs, remote)
+            for ref in refs:
+                self._api_helpers.remote_manager.remove_recipe(ref, remote)
         else:
-            # TODO: Move this iteration to ``cache``, to align interface with RemoteManager
             for ref in refs:
                 recipe_layout = self._api_helpers.cache.recipe_layout(ref)
                 self._api_helpers.cache.remove_recipe_layout(recipe_layout)
@@ -54,6 +54,7 @@ class RemoveAPI:
         if remote:
             self._api_helpers.remote_manager.remove_packages(prefs, remote)
         else:
+            # TODO: Move this iteration to ``cache``, to align interface with RemoteManager
             for pref in prefs:
                 package_layout = self._api_helpers.cache.pkg_layout(pref)
                 self._api_helpers.cache.remove_package_layout(package_layout)
