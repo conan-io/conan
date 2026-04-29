@@ -30,6 +30,7 @@ class RemoveAPI:
         if remote:
             self._api_helpers.remote_manager.remove_recipes(refs, remote)
         else:
+            # TODO: Move this iteration to ``cache``, to align interface with RemoteManager
             for ref in refs:
                 recipe_layout = self._api_helpers.cache.recipe_layout(ref)
                 self._api_helpers.cache.remove_recipe_layout(recipe_layout)
