@@ -235,6 +235,13 @@ class RemoteManager:
         remote.invalidate_cache()
         return self._call_remote(remote, "remove_recipe", ref)
 
+    def remove_recipes(self, refs, remote):
+        remote.invalidate_cache()
+        result = {}
+        for ref in refs:
+            result[ref] = self._call_remote(remote, "remove_recipe", ref)
+        return result
+
     def remove_packages(self, prefs, remote):
         remote.invalidate_cache()
         return self._call_remote(remote, "remove_packages", prefs)
