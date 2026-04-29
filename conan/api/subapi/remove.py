@@ -21,7 +21,7 @@ class RemoveAPI:
         otherwise they will be removed from the local cache.
 
         Warning:
-            This method is not atomic
+            This method is not atomic wit respect to each of the given references
 
         :param refs: List of recipe references to delete, must contain recipe revisions
         :param remote: Optional remote to remove references from
@@ -41,8 +41,9 @@ class RemoveAPI:
         otherwise they will be removed from the local cache.
 
         Warning:
-            This method is not atomic when performed in the local cache,
-            and remotes are not guaranteed either.
+            This method is not atomic when performed in the local cache
+            with respect to each of the given references,
+            nor are remotes guaranteed to implement this call atomically either.
 
         :param prefs: List of package references to delete, must contain package revisions
         :param remote: Optional remote to remove references from
