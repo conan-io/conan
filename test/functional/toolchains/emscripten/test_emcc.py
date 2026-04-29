@@ -122,21 +122,21 @@ def test_meson_emscripten():
     assert "C++ compiler for the host machine: em++" in client.out
     assert "C++ linker for the host machine: em++ ld.wasm" in client.out
     assert "Host machine cpu family: wasm64" in client.out
-    assert os.path.exists(os.path.join(client.current_folder, "build", "hello.wasm"))
+    assert os.path.exists(os.path.join(client.current_folder, "build-release", "hello.wasm"))
     # wasm64 only supported since node v23 so only run in MacOS where it is available
     if platform.system() == "Darwin":
-        client.run_command("node ./build/hello")
+        client.run_command("node ./build-release/hello")
         assert "Hello World Release!" in client.out
 
-    rmtree(os.path.join(client.current_folder, "build"))
+    rmtree(os.path.join(client.current_folder, "build-release"))
     client.run("build . -pr:h=asmjs")
     assert "C++ compiler for the host machine: em++" in client.out
     assert "C++ linker for the host machine: em++ ld.wasm" in client.out
     assert "Host machine cpu family: asm.js" in client.out
     assert "WASM=0" in client.out
 
-    assert not os.path.exists(os.path.join(client.current_folder, "build", "hello.wasm"))
-    client.run_command("node ./build/hello")
+    assert not os.path.exists(os.path.join(client.current_folder, "build-release", "hello.wasm"))
+    client.run_command("node ./build-release/hello")
     assert "Hello World Release!" in client.out
 
 
