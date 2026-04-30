@@ -296,10 +296,18 @@ class MSBuildDeps:
 
         content_multi = dom.toprettyxml()
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
+        # Append dedup target; MSBuild Condition prevents multiple executions
+        content_multi = content_multi.replace(
+            "</Project>", MSBuildDeps._dedup_target + "</Project>")
         return content_multi
 
     _dedup_target = textwrap.dedent("""\
-        <Target Name="ConanDeduplicatePaths" BeforeTargets="ClCompile;Link;Midl;ResourceCompile">
+        <Target Name="ConanDeduplicatePaths"
+                BeforeTargets="ClCompile;Link;Midl;ResourceCompile"
+                Condition="'$(ConanDedupTargetDefined)' != 'True'">
+          <PropertyGroup>
+            <ConanDedupTargetDefined>True</ConanDedupTargetDefined>
+          </PropertyGroup>
           <ItemGroup>
             <_ConanIncludePaths Include="%(ClCompile.AdditionalIncludeDirectories)" />
           </ItemGroup>
@@ -345,20 +353,6 @@ class MSBuildDeps:
             pkg_aggregated_content = self._dep_props_file("", conandeps_filename, filename,
                                                           condition=comp_condition,
                                                           content=pkg_aggregated_content)
-
-        # Inject deduplication target after ImportGroup to remove duplicate
-        # include/library paths that accumulate from multi-component packages
-        dom = minidom.parseString(pkg_aggregated_content)
-        dedup_dom = minidom.parseString(
-            '<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">'
-            + self._dedup_target + '</Project>')
-        target_node = dedup_dom.getElementsByTagName("Target")[0]
-        # Import the target node into the main document and append it
-        imported = dom.importNode(target_node, deep=True)
-        dom.documentElement.appendChild(imported)
-        pkg_aggregated_content = dom.toprettyxml()
-        pkg_aggregated_content = "\n".join(line for line in pkg_aggregated_content.splitlines()
-                                           if line.strip())
 
         return {conandeps_filename: pkg_aggregated_content}
 
