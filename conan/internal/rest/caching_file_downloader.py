@@ -38,14 +38,10 @@ class SourcesCachingDownloader:
         if download_cache_folder and not sha256:
             self._output.warning("Cannot cache download() without sha256 checksum")
             download_cache_folder = None  # Cannot cache
-        source_origins = source_origins or ["origin"]
+        source_origins = source_origins or ["origin"] if sha256 else ["origin"]
         if None in source_origins:
             raise ConanException(f"Incorrect 'core.sources:download_urls' contains invalid 'None'"
                                  f"url: {source_origins}")
-        if not sha256:
-            # Don't try to use backup feature if no sha256 is defined
-            download_cache_folder = None
-            source_origins = ["origin"]
 
         # First, see if it is already in the download cache
         if download_cache_folder:
