@@ -47,8 +47,8 @@ class SourcesCachingDownloader:
             download_cache_folder = None
             source_origins = ["origin"]
 
+        # First, see if it is already in the download cache
         if download_cache_folder:
-            # First, see if it is already in the download cache
             download_cache = DownloadCache(download_cache_folder)
             download_path = download_cache.source_path(sha256)
             with download_cache.lock(sha256):
