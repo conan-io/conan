@@ -42,13 +42,12 @@ class SourcesCachingDownloader:
         if None in source_origins:
             raise ConanException(f"Incorrect 'core.sources:download_urls' contains invalid 'None'"
                                  f"url: {source_origins}")
-
         if not sha256:
             # Don't try to use backup feature if no sha256 is defined
-            # This doesn't need to be dirty-protected, as the full "source" folder is protected
-            self._download_from_urls(urls, file_path, retry, retry_wait, verify_ssl,
-                                     auth, headers, md5, sha1, sha256)
-        elif download_cache_folder:
+            download_cache_folder = None
+            source_origins = ["origin"]
+
+        if download_cache_folder:
             # First, see if it is already in the download cache
             download_cache = DownloadCache(download_cache_folder)
             download_path = download_cache.source_path(sha256)
