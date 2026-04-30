@@ -43,8 +43,6 @@ def build(conan_api, parser, *args):
     output_folder = make_abs_path(args.output_folder, cwd) if args.output_folder else None
     deployer_folder = make_abs_path(args.deployer_folder, cwd) if args.deployer_folder else None
 
-    if ConanOutput._scoped_recipe_output is None:
-        ConanOutput._scoped_recipe_output = True
     # Basic collaborators: remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
@@ -66,6 +64,8 @@ def build(conan_api, parser, *args):
     print_graph_packages(deps_graph)
 
     out = ConanOutput()
+    if ConanOutput._scoped_recipe_output is None:
+        ConanOutput._scoped_recipe_output = True
     conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
 
     out.title("Finalizing install (deploy, generators)")

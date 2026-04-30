@@ -50,9 +50,7 @@ class GraphBinariesAnalyzer:
                                      for edge in node.edges)
         if build_mode.forced(conanfile, ref, with_deps_to_build):
             node.should_build = True
-            ConanOutput._scoped_inline = True
             conanfile.output.info('Forced build from source')
-            ConanOutput._scoped_inline = False
             node.binary = BINARY_BUILD if not conanfile.info.cant_build else BINARY_INVALID
             node.prev = None
             return True

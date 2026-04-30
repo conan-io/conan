@@ -307,13 +307,11 @@ class BinaryInstaller:
         if package.binary == BINARY_BUILD:
             assert pref.revision is None
             output = ConanOutput(scope=str(pref.ref))
-            ConanOutput._scoped_inline = True
             output.status(f"Installing package {pref.ref} ({handled_count} of {total_count})", fg=Color.BRIGHT_YELLOW)
-            ConanOutput._scoped_inline = False
             output.highlight("Building from source").info(f"Package {pref}")
             compact_dumps = package.nodes[0].conanfile.info.summarize_compact()
             for line in compact_dumps:
-                output.info(line, fg=Color.BRIGHT_GREEN)
+                ConanOutput(scope=str(pref.ref)).info(line, fg=Color.BRIGHT_GREEN)
             package_layout = self._cache.create_build_pkg_layout(pref)
             self._handle_node_build(package, recipe_layout, package_layout)
             # Just in case it was recomputed
@@ -329,11 +327,7 @@ class BinaryInstaller:
                 pref = node.pref
                 assert node.prev, "PREV for %s is None" % str(pref)
                 msg = f'Already installed! ({handled_count} of {total_count})'
-
-                # If scope is enabled, print scope inline
-                ConanOutput._scoped_inline = True
                 node.conanfile.output.success(msg)
-                ConanOutput._scoped_inline = False
                 os.utime(package_layout.base_folder, None)
 
         # Make sure that all nodes with same pref compute package_info()

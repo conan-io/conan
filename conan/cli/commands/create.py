@@ -56,6 +56,7 @@ def create(conan_api, parser, *args):
                                              user=args.user, channel=args.channel,
                                              lockfile=lockfile,
                                              remotes=remotes)
+    ConanOutput._scoped_recipe_output = None
 
     # FIXME: Dirty: package type still raw, not processed yet
     is_build = args.build_require or conanfile.package_type == "build-scripts"
@@ -102,8 +103,11 @@ def create(conan_api, parser, *args):
                                          update=args.update, lockfile=lockfile)
         print_graph_packages(deps_graph)
 
+        if ConanOutput._scoped_recipe_output is None:
+            ConanOutput._scoped_recipe_output = True
         install_error = conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes,
                                                            return_install_error=True)
+        ConanOutput._scoped_recipe_output = None
 
         # We update the lockfile, so it will be updated for later ``test_package``
         lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
@@ -126,12 +130,14 @@ def create(conan_api, parser, *args):
         from conan.cli.commands.test import run_test
         # The test_package do not make the "conan create" command return a different graph or
         # produce a different lockfile. The result is always the same, irrespective of test_package
+        if ConanOutput._scoped_recipe_output is None:
+            ConanOutput._scoped_recipe_output = True
         run_test(conan_api, test_conanfile_path, ref, profile_host, profile_build, remotes, lockfile,
                  update=None, build_modes=args.build, build_modes_test=args.build_test,
                  tested_python_requires=tested_python_requires, tested_graph=deps_graph)
+        ConanOutput._scoped_recipe_output = None
 
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
-    ConanOutput._scoped_recipe_output = None
     return {"graph": deps_graph,
             "conan_api": conan_api,
             "conan_error": install_error}
