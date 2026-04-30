@@ -937,7 +937,6 @@ class TestDownloadCacheBackupSources:
         """)
         self.client.save({"conanfile.py": conanfile})
         self.client.run("source")
-        print(self.client.out)
         assert "Cannot cache download() without sha256 checksum" in self.client.out
         assert f"Sources correctly downloaded from {self.file_server.fake_url}" in self.client.out
         assert "myfile.txt" in os.listdir(self.client.current_folder)
