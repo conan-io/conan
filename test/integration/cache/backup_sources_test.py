@@ -918,3 +918,29 @@ class TestDownloadCacheBackupSources:
         client.save({"conanfile.py": conanfile})
         client.run("source .", assert_error=True)
         assert "core.sources:download_cache must be an absolute path" in client.out
+
+    @pytest.mark.parametrize("download_cache", [True, False])
+    @pytest.mark.parametrize("download_urls", [True, False])
+    def test_download_no_sha_no_backup(self, download_cache, download_urls):
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+
+        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+        save(os.path.join(self.file_server.store, "mycompanystorage", "mycompanyfile.txt"),
+             "Business stuff")
+        download_cache_line = f"core.sources:download_cache={self.download_cache_folder}\n" if download_cache else ""
+        download_urls_line = f"core.sources:download_urls=['{self.file_server.fake_url}', 'origin']\n" if download_urls else ""
+        self.client.save_home({"global.conf": download_cache_line + download_urls_line})
+        conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.files import download
+        class Pkg(ConanFile):
+            def source(self):
+                download(self, "{self.file_server.fake_url}/mycompanystorage/mycompanyfile.txt", "myfile.txt")
+        """)
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("source")
+        if download_cache or download_urls:
+            assert "Cannot cache download() without sha256 checksum" in self.client.out
+        assert f"Sources correctly downloaded from {self.file_server.fake_url}" in self.client.out
+        assert "myfile.txt" in os.listdir(self.client.current_folder)
+        assert len(os.listdir(self.download_cache_folder)) == 0

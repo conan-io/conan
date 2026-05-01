@@ -35,10 +35,11 @@ class SourcesCachingDownloader:
             download_cache_folder = HomePaths(self._home_folder).default_sources_backup_folder
         if download_cache_folder and not os.path.isabs(download_cache_folder):
             raise ConanException("core.sources:download_cache must be an absolute path")
+        source_origins = source_origins or ["origin"]
         if download_cache_folder and not sha256:
             self._output.warning("Cannot cache download() without sha256 checksum")
             download_cache_folder = None  # Cannot cache
-        source_origins = source_origins or ["origin"]
+            source_origins = ["origin"]
         if None in source_origins:
             raise ConanException(f"Incorrect 'core.sources:download_urls' contains invalid 'None'"
                                  f"url: {source_origins}")
@@ -63,6 +64,7 @@ class SourcesCachingDownloader:
                 shutil.copy2(download_path, file_path)
                 download_cache.update_backup_sources_json(download_path, self._conanfile, urls)
         else:
+            # Not in local cache, check origins from core.sources:download_urls
             # This doesn't need to be dirty-protected, as the full "source" folder is protected
             self._do_download(source_origins, urls, file_path, retry, retry_wait, verify_ssl, auth,
                               headers, md5, sha1, sha256)
