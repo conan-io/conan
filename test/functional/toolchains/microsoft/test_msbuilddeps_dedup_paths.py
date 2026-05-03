@@ -92,7 +92,6 @@ def test_msbuilddeps_dedup_paths_functional():
     client.save(files, clean_first=True)
 
     # Verbose build so we can inspect cl.exe flags
-    client.run("install . -c tools.build:verbosity=verbose")
     client.run("build . -c tools.build:verbosity=verbose")
 
     assert "Build succeeded." in client.out
