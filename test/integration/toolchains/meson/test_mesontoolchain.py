@@ -965,6 +965,7 @@ def test_compiler_executables_emulator_exe_wrapper():
     compiler.version=16
     os=Macos
     [conf]
+    tools.apple:sdk_path=/my/sdk/path
     tools.build:compiler_executables={{"emulator": "{qemu}"}}
     """)
     build = textwrap.dedent("""
