@@ -101,9 +101,6 @@ class ConanOutput:
     _conan_output_level = LEVEL_STATUS
     _silent_warn_tags = []
     _warnings_as_errors = []
-    _last_scope_header = None
-    # Flag to enable/disable new ConanOutput contextual behavior
-    _scoped_recipe_output = None
     lock = Lock()
 
     def __init__(self, scope: str = ""):
@@ -118,8 +115,6 @@ class ConanOutput:
         # FIXME:  This is needed because in testing we are redirecting the sys.stderr to a buffer
         #         stream to capture it, so colorama is not there to strip the color bytes
         self._color = _color_enabled(self.stream)
-        if not scope:
-            ConanOutput._last_scope_header = None
 
     @classmethod
     def define_silence_warnings(cls, warnings):
@@ -181,8 +176,6 @@ class ConanOutput:
     @scope.setter
     def scope(self, out_scope):
         self._scope = out_scope
-        if not out_scope:
-            ConanOutput._last_scope_header = None
 
     @property
     def is_terminal(self):
@@ -227,15 +220,7 @@ class ConanOutput:
             msg = "=> {}".format(msg)
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
-        if ConanOutput._scoped_recipe_output and self._scope:
-            if self._scope != ConanOutput._last_scope_header:
-                self.writeln(f"{self._scope}:", fg=Color.BRIGHT_BLUE)
-                ConanOutput._last_scope_header = self._scope
-            if self._color:
-                ret = f"  {fg or ''}{bg or ''}{msg}{Style.RESET_ALL}"
-            else:
-                ret = f"  {msg}"
-        elif self._scope:
+        if self._scope:
             if self._color:
                 ret = f"{fg or ''}{bg or ''}{self._scope}: {msg}{Style.RESET_ALL}"
             else:
@@ -306,7 +291,6 @@ class ConanOutput:
 
     def title(self, msg: str):
         """ Draws a title around the message, useful for important messages"""
-        ConanOutput._scoped_recipe_output = None
         if self._conan_output_level <= LEVEL_NOTICE:
             self._write_message("\n======== {} ========".format(msg),
                                 fg=Color.BRIGHT_MAGENTA)
@@ -314,7 +298,6 @@ class ConanOutput:
 
     def subtitle(self, msg: str):
         """ Draws a subtitle around the message, useful for important messages"""
-        ConanOutput._scoped_recipe_output = None
         if self._conan_output_level <= LEVEL_NOTICE:
             self._write_message("\n-------- {} --------".format(msg),
                                 fg=Color.BRIGHT_MAGENTA)

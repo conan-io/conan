@@ -43,7 +43,6 @@ class Pkg(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
-        print(client.out)
         assert 'conanfile.py: Buffer got msgs Hello' in client.out
 
     def test_custom_stream_stderr(self):

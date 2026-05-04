@@ -80,7 +80,6 @@ class TestPyRequiresExtend:
                """)
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("source . --name=pkg --version=0.1")
-        print(client.out)
         assert "conanfile.py (pkg/0.1): My cool source!" in client.out
         assert "conanfile.py (pkg/0.1): MY OWN SOURCE" in client.out
 
@@ -1376,10 +1375,10 @@ def test_multi_top_missing_from_remote():
     tc.run("create . --name=pkg --version=1.0 -r default")
 
     # Ensure we found them in the remote
-    assert "dep/1.0@user/testing:\n  Not found in local cache, looking in remotes..." in tc.out
-    assert "dep/1.0@user/testing:\n  Downloaded recipe revision" in tc.out
-    assert "base/1.1@user/testing:\n  Not found in local cache, looking in remotes..." in tc.out
-    assert "base/1.1@user/testing:\n  Downloaded recipe revision" in tc.out
+    assert "dep/1.0@user/testing: Not found in local cache, looking in remotes..." in tc.out
+    assert "dep/1.0@user/testing: Downloaded recipe revision" in tc.out
+    assert "base/1.1@user/testing: Not found in local cache, looking in remotes..." in tc.out
+    assert "base/1.1@user/testing: Downloaded recipe revision" in tc.out
 
 
 def test_transitive_range_not_found_in_cache():
