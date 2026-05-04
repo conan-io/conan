@@ -91,6 +91,9 @@ class MesonToolchain:
     {% if pkgconfig %}
     pkg-config = '{{pkgconfig}}'
     {% endif %}
+    {% if emulator %}
+    exe_wrapper = '{{emulator}}'
+    {% endif %}
 
     [built-in options]
     {% if buildtype %}
@@ -248,6 +251,11 @@ class MesonToolchain:
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         #: Dict-like object with the build, host, and target as the Meson machine context
         self.cross_build = {}
+
+        # Read configuration for compilers
+        compilers_by_conf = self._conanfile_conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
+        self.emulator = compilers_by_conf.get("emulator")
         default_comp = ""
         default_comp_cpp = ""
         if native is False and is_cross_building:
@@ -267,7 +275,7 @@ class MesonToolchain:
                 self.cross_build["host"]["subsystem"] = get_apple_subsystem(sdk_host)
                 self.cross_build["build"]["subsystem"] = get_apple_subsystem(sdk_build)
             # Issue: https://github.com/conan-io/conan/issues/19217
-            self.properties["needs_exe_wrapper"] = not can_run(self._conanfile)
+            self.properties["needs_exe_wrapper"] = self.emulator is not None or not can_run(self._conanfile)
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target
                 os_target = settings_target.get_safe("os")
@@ -291,9 +299,6 @@ class MesonToolchain:
         # Read configuration for sys_root property (honoring existing conf)
         self._sys_root = self._conanfile_conf.get("tools.build:sysroot", check_type=str)
 
-        # Read configuration for compilers
-        compilers_by_conf = self._conanfile_conf.get("tools.build:compiler_executables", default={},
-                                                     check_type=dict)
         # Read the VirtualBuildEnv to update the variables
         build_env = self._conanfile.buildenv_build.vars(self._conanfile) if native else (
             VirtualBuildEnv(self._conanfile, auto_generate=True).vars())
@@ -450,7 +455,7 @@ class MesonToolchain:
         self.c = os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang{compile_ext}")
         self.cpp = os.path.join(ndk_bin, f"{android_target}{android_api_level}-clang++{compile_ext}")
         self.ar = os.path.join(ndk_bin, "llvm-ar")
-    
+
     @property
     def _rpath_link_flag(self):
         add_rpath_link = self._conanfile.conf.get("tools.build:add_rpath_link", check_type=bool)
@@ -462,7 +467,7 @@ class MesonToolchain:
             cppinfo = req.cpp_info.aggregated_components()
             runtime_dirs.extend(cppinfo.libdirs)
         return ["-Wl,-rpath-link=" + ":".join(runtime_dirs)] if runtime_dirs else []
-    
+
     def _get_extra_flags(self):
         # Now, it's time to get all the flags defined by the user
         cxxflags = self._conanfile_conf.get("tools.build:cxxflags", default=[], check_type=list)
@@ -564,6 +569,7 @@ class MesonToolchain:
             "as": self.as_,
             "windres": self.windres,
             "pkgconfig": self.pkgconfig,
+            "emulator": self.emulator,
             # https://mesonbuild.com/Builtin-options.html#core-options
             "buildtype": self.buildtype,
             "default_library": self.default_library,

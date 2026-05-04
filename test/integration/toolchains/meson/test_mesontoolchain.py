@@ -947,3 +947,45 @@ def test_needs_exe_wrapper():
     client.run("install . -pr:h host -pr:b build")
     content = client.load(MesonToolchain.cross_filename)
     assert "needs_exe_wrapper = false" in content
+
+
+def test_compiler_executables_emulator_exe_wrapper():
+    """
+    ``tools.build:compiler_executables['emulator']`` maps to Meson's ``exe_wrapper`` and forces
+    ``needs_exe_wrapper`` even when ``tools.build.cross_building:can_run=True``.
+    """
+    qemu = "/opt/sysroots/usr/bin/qemu-aarch64-static"
+    host = textwrap.dedent(f"""
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=apple-clang
+    compiler.cppstd=gnu17
+    compiler.libcxx=libc++
+    compiler.version=16
+    os=Macos
+    [conf]
+    tools.build:compiler_executables={{"emulator": "{qemu}"}}
+    """)
+    build = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=apple-clang
+    compiler.cppstd=gnu17
+    compiler.libcxx=libc++
+    compiler.version=16
+    os=Macos
+    """)
+    client = TestClient()
+    client.save({
+        "host": host,
+        "build": build,
+        "conanfile.py": GenConanfile("pkg", "1.0")
+                        .with_settings("os", "arch", "compiler", "build_type")
+                        .with_generator("MesonToolchain")
+    })
+    client.run("install . -pr:h host -pr:b build")
+    content = client.load(MesonToolchain.cross_filename)
+    assert "needs_exe_wrapper = true" in content
+    assert f"exe_wrapper = '{qemu}'" in content
