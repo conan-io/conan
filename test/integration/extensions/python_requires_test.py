@@ -80,6 +80,7 @@ class TestPyRequiresExtend:
                """)
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("source . --name=pkg --version=0.1")
+        print(client.out)
         assert "conanfile.py (pkg/0.1): My cool source!" in client.out
         assert "conanfile.py (pkg/0.1): MY OWN SOURCE" in client.out
 
@@ -342,12 +343,12 @@ class TestPyRequiresExtend:
                      "header.h": "pkg new header contents",
                      "other.txt": "text"})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        assert "pkg/0.1@user/testing: Exports sources! *.h" in client.out
-        assert "pkg/0.1@user/testing: Copied 1 '.txt' file: other.txt" in client.out
-        assert "pkg/0.1@user/testing: Copied 1 '.h' file: header.h" in client.out
-        assert "pkg/0.1@user/testing: License! MyLicense" in client.out
-        assert "pkg/0.1@user/testing: Author! author@company.com" in client.out
-        assert "pkg/0.1@user/testing: HEADER CONTENT!: pkg new header contents" in client.out
+        assert " Exports sources! *.h" in client.out
+        assert " Copied 1 '.txt' file: other.txt" in client.out
+        assert " Copied 1 '.h' file: header.h" in client.out
+        assert " License! MyLicense" in client.out
+        assert " Author! author@company.com" in client.out
+        assert " HEADER CONTENT!: pkg new header contents" in client.out
         ref = RecipeReference.loads("pkg/0.1@user/testing")
         assert os.path.exists(os.path.join(client.get_latest_ref_layout(ref).export(), "other.txt"))
 
@@ -691,7 +692,7 @@ class TestPyRequiresExtend:
                      "name.txt": "mypkg",
                      "version.txt": "myversion"})
         client.run("export .")
-        assert "mypkg/myversion: Exported" in client.out
+        assert "Exported: mypkg/myversion" in client.out
         client.run("create .")
         assert "mypkg/myversion: Pkg1 source: mypkg:myversion" in client.out
         assert "mypkg/myversion: Pkg1 build: mypkg:myversion" in client.out
@@ -738,7 +739,7 @@ class TestPyRequiresExtend:
                      "name.txt": "mypkg",
                      "version.txt": "myversion"})
         client.run("export .")
-        assert "mypkg/myversion2: Exported" in client.out
+        assert "Exported: mypkg/myversion2" in client.out
         client.run("create .")
         assert "mypkg/myversion2: Pkg1 source: mypkg:myversion2" in client.out
         assert "mypkg/myversion2: Pkg1 build: mypkg:myversion2" in client.out
@@ -784,7 +785,7 @@ class TestPyRequiresExtend:
                      "name.txt": "MyPkg",
                      "version.txt": "MyVersion"})
         client.run("export . --name=pkg --version=1.0 --user=user --channel=channel")
-        assert "pkg/1.0@user/channel: Exported" in client.out
+        assert "Exported: pkg/1.0@user/channel" in client.out
         client.run("create . --name=pkg --version=1.0 --user=user --channel=channel")
         assert "pkg/1.0@user/channel: Source: tool header: myheader" in client.out
         assert "pkg/1.0@user/channel: Source: tool other: otherheader" in client.out
@@ -1230,19 +1231,19 @@ class TestResolveRemote:
         c.run("upload * -r=default -c")
         c.run("remove * -c")
         c.run("create pkg")
-        assert "tool/0.1: Downloaded recipe" in c.out
+        assert "Downloaded recipe" in c.out
 
         c.run("remove * -c")
         c.run("export pkg")
-        assert "tool/0.1: Downloaded recipe" in c.out
+        assert "Downloaded recipe" in c.out
 
         c.run("remove * -c")
         c.run("export pkg -r=default")
-        assert "tool/0.1: Downloaded recipe" in c.out
+        assert "Downloaded recipe" in c.out
 
         c.run("remove * -c")
         c.run("create pkg -r=default")
-        assert "tool/0.1: Downloaded recipe" in c.out
+        assert "Downloaded recipe" in c.out
 
     def test_missing_python_require_error(self):
         """ make sure the error is clear enough for users UX
@@ -1375,10 +1376,10 @@ def test_multi_top_missing_from_remote():
     tc.run("create . --name=pkg --version=1.0 -r default")
 
     # Ensure we found them in the remote
-    assert "dep/1.0@user/testing: Not found in local cache, looking in remotes..." in tc.out
-    assert "dep/1.0@user/testing: Downloaded recipe revision" in tc.out
-    assert "base/1.1@user/testing: Not found in local cache, looking in remotes..." in tc.out
-    assert "base/1.1@user/testing: Downloaded recipe revision" in tc.out
+    assert "dep/1.0@user/testing:\n  Not found in local cache, looking in remotes..." in tc.out
+    assert "dep/1.0@user/testing:\n  Downloaded recipe revision" in tc.out
+    assert "base/1.1@user/testing:\n  Not found in local cache, looking in remotes..." in tc.out
+    assert "base/1.1@user/testing:\n  Downloaded recipe revision" in tc.out
 
 
 def test_transitive_range_not_found_in_cache():

@@ -78,8 +78,7 @@ def test_output_scoped():
 
     -------- Subtitle --------
     Frog
-    Other package:
-      Hello
+    Other package: Hello
     """) == stderr.getvalue()
 
 

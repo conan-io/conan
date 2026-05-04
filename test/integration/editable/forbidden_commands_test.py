@@ -22,14 +22,14 @@ class TestOtherCommands:
         assert "ERROR: Recipe 'lib/0.1' not found" in t.out
 
         t.run('export . ')
-        assert "lib/0.1: Exported" in t.out
+        assert "Exported: lib/0.1" in t.out
         t.run("list *")
         assert "lib/0.1" in t.out
         t.run('list lib/0.1:*')
         assert "PID:" not in t.out  # One binary is listed
 
         t.run('export-pkg .')
-        assert "lib/0.1: Exporting package" in t.out
+        assert "Exported: lib/0.1" in t.out
 
         t.run('list lib/0.1:*')
         assert "lib/0.1" in t.out  # One binary is listed

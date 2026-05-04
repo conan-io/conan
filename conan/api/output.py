@@ -306,6 +306,7 @@ class ConanOutput:
 
     def title(self, msg: str):
         """ Draws a title around the message, useful for important messages"""
+        ConanOutput._scoped_recipe_output = None
         if self._conan_output_level <= LEVEL_NOTICE:
             self._write_message("\n======== {} ========".format(msg),
                                 fg=Color.BRIGHT_MAGENTA)
@@ -313,6 +314,7 @@ class ConanOutput:
 
     def subtitle(self, msg: str):
         """ Draws a subtitle around the message, useful for important messages"""
+        ConanOutput._scoped_recipe_output = None
         if self._conan_output_level <= LEVEL_NOTICE:
             self._write_message("\n-------- {} --------".format(msg),
                                 fg=Color.BRIGHT_MAGENTA)
