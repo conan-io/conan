@@ -111,7 +111,7 @@ class ConanOutput:
             to the output messages. If not provided, it defaults to an empty string.
         """
         self.stream = sys.stderr
-        self._scope = scope
+        self._scope = str(scope)
         # FIXME:  This is needed because in testing we are redirecting the sys.stderr to a buffer
         #         stream to capture it, so colorama is not there to strip the color bytes
         self._color = _color_enabled(self.stream)
