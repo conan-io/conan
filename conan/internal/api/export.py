@@ -28,8 +28,8 @@ def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
 
     conanfile.conf = global_conf.get_conanfile_conf(ref, is_consumer=True)
     conanfile.display_name = str(ref)
-    ConanOutput().writeln(f"{str(ref)}", fg=Color.CYAN)
-    scoped_output = ConanOutput()
+    ConanOutput().writeln(f"{str(ref)} export", fg=Color.CYAN)
+    scoped_output = ConanOutput(scope="  ")
     # Even though the package_id_non_embed_mode is minor_mode by default,
     # and package_id_unknown_mode is semver_mode by default,
     # recipes with buggy versions that do not define the attribute will have
@@ -53,7 +53,7 @@ def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
 
     hook_manager.execute("pre_export", conanfile=conanfile)
 
-    scoped_output.info(f"  Exporting package recipe: {conanfile_path}")
+    scoped_output.info(f"Exporting package recipe: {conanfile_path}")
 
     export_folder = recipe_layout.export()
     export_src_folder = recipe_layout.export_sources()
@@ -75,7 +75,7 @@ def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
     # Compute the new digest
     manifest = FileTreeManifest.create(export_folder, export_src_folder)
     manifest.save(export_folder)
-    manifest.report_summary(scoped_output, suffix="  Copied")
+    manifest.report_summary(scoped_output)
 
     # Compute the revision for the recipe
     revision = _calc_revision(scoped_output=conanfile.output,

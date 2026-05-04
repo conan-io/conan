@@ -221,10 +221,11 @@ class ConanOutput:
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
         if self._scope:
+            scope = self._scope if self._scope.isspace() else f"{self._scope}:"
             if self._color:
-                ret = f"{fg or ''}{bg or ''}{self._scope}: {msg}{Style.RESET_ALL}"
+                ret = f"{fg or ''}{bg or ''}{scope} {msg}{Style.RESET_ALL}"
             else:
-                ret = f"{self._scope}: {msg}"
+                ret = f"{scope} {msg}"
         else:
             if self._color:
                 ret = f"{fg or ''}{bg or ''}{msg}{Style.RESET_ALL}"
