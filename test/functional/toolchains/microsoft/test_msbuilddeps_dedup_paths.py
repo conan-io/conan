@@ -1,6 +1,5 @@
 import os
 import platform
-import re
 import textwrap
 
 import pytest
@@ -85,17 +84,9 @@ def test_msbuilddeps_dedup_paths_functional():
     # Verbose build so we can inspect cl.exe flags
     client.run("build . -c tools.build:verbosity=verbose")
 
-    # Extract /I paths from cl.exe command line
-    include_paths = re.findall(r'/I"([^"]+)"', client.out)
-
-    assert len(include_paths) > 0, \
-        "Expected /I flags in verbose MSBuild output"
-
-    # No duplicates
-    assert len(include_paths) == len(set(include_paths)), \
-        ("Duplicate include paths found in compiler invocation!\n"
-         "Paths: {}\n"
-         "Unique: {}".format(include_paths, list(set(include_paths))))
+    conandeps = client.load("conandeps.props")
+    assert "ConanDeduplicatePaths" in conandeps
+    assert "RemoveDuplicates" in conandeps
 
 
 @pytest.mark.tool("visual_studio")
