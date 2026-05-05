@@ -93,13 +93,11 @@ class ConfigTemplate2:
         include_dirs = definitions = libraries = None
         if not self._require.build:  # To add global variables for try_compile and legacy
             aggregated_cppinfo = self._full_cpp_info.aggregated_components()
-            include_dirs = None
-            if self._require.headers:
-                # FIXME: Proper escaping of paths for CMake
-                incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
-                incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
-                           for i in incdirs]
-                include_dirs = ";".join(incdirs)
+            # FIXME: Proper escaping of paths for CMake
+            incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
+            incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                       for i in incdirs]
+            include_dirs = ";".join(incdirs)
             definitions = ";".join("-D" + cmake_escape_value(d) for d in aggregated_cppinfo.defines)
 
             libraries = []
