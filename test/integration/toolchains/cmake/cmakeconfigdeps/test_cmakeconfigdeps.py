@@ -1,6 +1,8 @@
 import re
 import textwrap
 
+import pytest
+
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -796,6 +798,40 @@ class TestLegacyVariables:
         # If there's no interface global target
         # mypkg::lib2 is not added to the list of libraries
         assert "set(mypkg_LIBRARIES mypkg::mypkg mypkg::lib2 )" in mypkg_config
+
+    @pytest.mark.parametrize("headers", [True, False])
+    def test_legacy_include_dirs_trait(self, headers):
+        tc = TestClient()
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")
+                    .with_package_file("include/mylib1.h", "header"),
+                 "conanfile.py": GenConanfile("mypkg", "1.0")
+                    .with_requirement("dep/1.0", headers=headers)
+                    .with_settings("build_type", "os", "arch", "compiler")
+                })
+        tc.run("create dep")
+        tc.run("install -g CMakeConfigDeps")
+        mypkg_config = tc.load("dep-config.cmake")
+        if headers:
+            assert "set(dep_INCLUDE_DIRS" in mypkg_config
+        else:
+            assert "set(dep_INCLUDE_DIRS" not in mypkg_config
+
+    @pytest.mark.parametrize("libs", [True, False])
+    def test_legacy_libs_dirs_trait(self, libs):
+        tc = TestClient()
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")
+                .with_package_file("include/mylib1.h", "header"),
+                 "conanfile.py": GenConanfile("mypkg", "1.0")
+                .with_requirement("dep/1.0", libs=libs)
+                .with_settings("build_type", "os", "arch", "compiler")
+                 })
+        tc.run("create dep")
+        tc.run("install -g CMakeConfigDeps")
+        mypkg_config = tc.load("dep-config.cmake")
+        if libs:
+            assert "set(dep_LIBRARIES" in mypkg_config
+        else:
+            assert "set(dep_LIBRARIES" not in mypkg_config
 
 
 class TestPropertiesBuildContext:

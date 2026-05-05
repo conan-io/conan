@@ -93,24 +93,27 @@ class ConfigTemplate2:
         include_dirs = definitions = libraries = None
         if not self._require.build:  # To add global variables for try_compile and legacy
             aggregated_cppinfo = self._full_cpp_info.aggregated_components()
-            # FIXME: Proper escaping of paths for CMake
-            incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
-            incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
-                       for i in incdirs]
-            include_dirs = ";".join(incdirs)
+            include_dirs = None
+            if self._require.headers:
+                # FIXME: Proper escaping of paths for CMake
+                incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
+                incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                           for i in incdirs]
+                include_dirs = ";".join(incdirs)
             definitions = ";".join("-D" + cmake_escape_value(d) for d in aggregated_cppinfo.defines)
 
             libraries = []
-            if self._full_cpp_info.has_components:
-                for component in self._full_cpp_info.components.keys():
-                    root_target_name = self._cmakedeps.get_property("cmake_target_name",
-                                                                    self._conanfile,
-                                                                    comp_name=component)
-                    libraries.append(root_target_name or f"{pkg_name}::{component}")
-            else:
-                root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
-                libraries.append(root_target_name or f"{pkg_name}::{pkg_name}")
-            libraries = " ".join(libraries) if libraries else ""
+            if self._require.libs:
+                if self._full_cpp_info.has_components:
+                    for component in self._full_cpp_info.components.keys():
+                        root_target_name = self._cmakedeps.get_property("cmake_target_name",
+                                                                        self._conanfile,
+                                                                        comp_name=component)
+                        libraries.append(root_target_name or f"{pkg_name}::{component}")
+                else:
+                    root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
+                    libraries.append(root_target_name or f"{pkg_name}::{pkg_name}")
+            libraries = " ".join(libraries) if libraries else None
         return {"additional_variables_prefixes": prefixes,
                 "version": self._conanfile.ref.version,
                 "include_dirs": include_dirs,
