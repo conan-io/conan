@@ -877,7 +877,7 @@ class CppInfo:
             common = self._package.clone()
             common.libs = []
             common.type = str(PackageType.HEADER)  # the type of components is a string!
-            if not result.requires:
+            if not common.requires:
                 common.requires = [f"{c.ref.name}::{c.ref.name}"
                                    for c in conanfile.dependencies.direct_host.values()]
             result.components["_common"] = common
