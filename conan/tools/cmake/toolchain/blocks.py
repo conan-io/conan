@@ -268,6 +268,7 @@ class ArchitectureBlock(Block):
         return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag,
                 "thread_flags_list": thread_flags_list}
 
+
 class RpathLinkFlagsBlock(Block):
     template = textwrap.dedent("""\
         # Pass -rpath-link pointing to all directories with runtime libraries
@@ -291,6 +292,7 @@ class RpathLinkFlagsBlock(Block):
         else:
             rpath_link_flags = None
         return {"rpath_link_flags": rpath_link_flags}
+
 
 class LinkerScriptsBlock(Block):
     template = textwrap.dedent("""\

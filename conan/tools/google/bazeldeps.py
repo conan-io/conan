@@ -523,8 +523,8 @@ class BazelDeps:
         build_req = self._conanfile.dependencies.direct_build  # tool_requires
         test_req = self._conanfile.dependencies.test
 
-        for require, dep in list(host_req.items()) + list(build_req.items()) + list(
-            test_req.items()):
+        for require, dep in (list(host_req.items()) + list(build_req.items())
+                             + list(test_req.items())):
             # Require is not used at the moment, but its information could be used,
             # and will be used in Conan 2.0
             # Filter the build_requires not activated with self.build_context_activated

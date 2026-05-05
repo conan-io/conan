@@ -271,7 +271,7 @@ class XcodeDeps:
         elif not pkg_dep.cpp_info.has_components:
             for _, d in pkg_dep.dependencies.direct_host.items():
                 XcodeDeps._resolve_external(f"{d.ref.name}::{d.ref.name}",
-                                           all_deps, collected, visited)
+                                            all_deps, collected, visited)
 
     @staticmethod
     def _resolve_external(req, all_deps, collected, visited):

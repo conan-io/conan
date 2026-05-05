@@ -254,7 +254,7 @@ class TestRequester:
     def mount(self, *args, **kwargs):
         pass
 
-    def Session(self):
+    def Session(self):  # noqa
         return self
 
     @property
@@ -492,7 +492,6 @@ class TestClient:
             else:
                 remotes.append(Remote(name, server))
         _save(HomePaths(self.cache_folder).remotes_path, remotes)
-
 
     def update_providers(self):
         default_providers = {
@@ -821,7 +820,7 @@ class TestClient:
 
     def created_package_reference(self, ref):
         pref = re.search(r"{}: Full package reference: (\S+)".format(str(ref)),
-                               str(self.out)).group(1)
+                         str(self.out)).group(1)
         return PkgReference.loads(pref)
 
     def exported_recipe_revision(self):

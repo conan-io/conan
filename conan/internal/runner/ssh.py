@@ -9,6 +9,7 @@ import os
 from io import BytesIO
 import sys
 
+
 def ssh_info(msg, error=False):
     fg=Color.BRIGHT_MAGENTA
     if error:
@@ -16,6 +17,7 @@ def ssh_info(msg, error=False):
     ConanOutput().status('\n┌'+'─'*(2+len(msg))+'┐', fg=fg)
     ConanOutput().status(f'| {msg} |', fg=fg)
     ConanOutput().status('└'+'─'*(2+len(msg))+'┘\n', fg=fg)
+
 
 class SSHRunner:
 
