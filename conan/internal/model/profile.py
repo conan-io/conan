@@ -4,6 +4,7 @@ from collections import OrderedDict, defaultdict
 from conan.errors import ConanException
 from conan.tools.env.environment import ProfileEnvironment
 from conan.internal.model.conf import ConfDefinition
+from conan.internal.model.git_remotes import GitRemotes
 from conan.internal.model.options import Options
 from conan.api.model import RecipeReference
 
@@ -26,6 +27,7 @@ class Profile:
         self.buildenv = ProfileEnvironment()
         self.runenv = ProfileEnvironment()
         self.runner = {}
+        self.git_remotes = GitRemotes()
 
         # Cached processed values
         self.processed_settings = None  # Settings with values, and smart completion
@@ -59,6 +61,9 @@ class Profile:
 
         if self.platform_requires:
             result["platform_requires"] = [str(t) for t in self.platform_requires]
+
+        if self.git_remotes:
+            result["git_remotes"] = self.git_remotes.serialize()
 
         return result
 
@@ -123,6 +128,10 @@ class Profile:
             result.append("[runenv]")
             result.append(self.runenv.dumps())
 
+        if self.git_remotes:
+            result.append("[git_remotes]")
+            result.append(self.git_remotes.dumps())
+
         if result and result[-1] != "":
             result.append("")
 
@@ -150,6 +159,7 @@ class Profile:
 
         self.replace_requires.update(other.replace_requires)
         self.replace_tool_requires.update(other.replace_tool_requires)
+        self.git_remotes.update(other.git_remotes)
 
         runner_type = self.runner.get("type")
         other_runner_type = other.runner.get("type")

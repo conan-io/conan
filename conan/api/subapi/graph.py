@@ -183,7 +183,8 @@ class GraphAPI:
         assert profile_host is not None
         assert profile_build is not None
 
-        proxy, range_resolver, loader, _ = self._helpers.get_loader()
+        proxy, range_resolver, loader, _ = self._helpers.get_loader(
+            git_remotes=profile_host.git_remotes)
 
         remotes = remotes or []
         cache = self._helpers.cache

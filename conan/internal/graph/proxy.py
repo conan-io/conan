@@ -10,13 +10,18 @@ from conan.errors import ConanException
 
 
 class ConanProxy:
-    def __init__(self, cache, remote_manager, editable_packages, legacy_update=None):
+    def __init__(self, cache, remote_manager, editable_packages, legacy_update=None,
+                 git_remotes=None, loader=None, hook_manager=None, global_conf=None):
         # collaborators
         self._editable_packages = editable_packages
         self._cache = cache
         self._remote_manager = remote_manager
         self._resolved = {}  # Cache of the requested recipes to optimize calls
         self._legacy_update = legacy_update
+        self._git_remotes = git_remotes
+        self.loader = loader  # set by get_loader() after loader is created (ordering constraint)
+        self._hook_manager = hook_manager
+        self._global_conf = global_conf
 
     def get_recipe(self, ref, remotes, update, check_update):
         """
@@ -49,6 +54,13 @@ class ConanProxy:
                 recipe_layout = self._cache.recipe_layout(reference)
             ref = recipe_layout.reference  # latest revision if it was not defined
         except ConanException:
+            # NOT in local cache → try git_remotes before real remotes
+            if self._git_remotes:
+                git_spec = self._git_remotes.get(reference)
+                if git_spec is not None:
+                    output.info(f"Not found in local cache, resolving from git remote "
+                                f"'{git_spec.url}'")
+                    return self._clone_export_recipe(reference, git_spec, force=False, output=output)
             # NOT in disk, must be retrieved from remotes
             # we will only check all servers for latest revision if we did a --update
             layout, remote = self._download_recipe(reference, remotes, output, update, check_update)
@@ -58,8 +70,18 @@ class ConanProxy:
         # TODO: cache2.0: check with new --update flows
         # TODO: If the revision is given, then we don't need to check for updates?
         if not (check_update or should_update_reference(reference, update)):
+            if self._git_remotes and self._git_remotes.get(reference) is not None:
+                output.info(f"Found in cache (configured via git remote "
+                            f"'{self._git_remotes.get(reference).url}')")
             status = RECIPE_INCACHE
             return recipe_layout, status, None
+
+        # Update needed → git_remotes takes precedence over real remotes
+        if self._git_remotes and should_update_reference(reference, update):
+            git_spec = self._git_remotes.get(reference)
+            if git_spec is not None:
+                output.info(f"Updating from git remote '{git_spec.url}'...")
+                return self._clone_export_recipe(reference, git_spec, force=True, output=output)
 
         # Need to check updates
         remote, remote_ref = self._find_newest_recipe_in_remotes(reference, remotes,
@@ -173,6 +195,16 @@ class ConanProxy:
         output = ConanOutput(scope=str(ref))
         output.info("Downloaded recipe revision %s" % ref.revision)
         return recipe_layout
+
+    def _clone_export_recipe(self, reference, git_spec, force, output):
+        from conan.internal.graph.git_remotes_resolver import GitRemotesResolver
+        resolver = GitRemotesResolver(self._cache, self._global_conf)
+        if git_spec.ref:
+            output.info(f"  git ref: {git_spec.ref}")
+        new_ref, _ = resolver.clone_and_export(
+            reference, git_spec, self.loader, self._hook_manager, force_clone=force)
+        recipe_layout = self._cache.recipe_layout(new_ref)
+        return recipe_layout, RECIPE_UPDATED if force else RECIPE_DOWNLOADED, None
 
 
 def should_update_reference(reference, update):
