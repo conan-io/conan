@@ -34,7 +34,8 @@ class GitRemotesResolver:
         h = hashlib.md5(key.encode()).hexdigest()[:12]
         return os.path.join(self._clones_base, h)
 
-    def _do_clone(self, git_spec, clone_folder):
+    @staticmethod
+    def _do_clone(git_spec, clone_folder):
         output = ConanOutput()
         os.makedirs(clone_folder, exist_ok=True)
         output.info(f"Cloning git repository '{git_spec.url}'...")

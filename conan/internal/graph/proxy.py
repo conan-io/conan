@@ -70,9 +70,6 @@ class ConanProxy:
         # TODO: cache2.0: check with new --update flows
         # TODO: If the revision is given, then we don't need to check for updates?
         if not (check_update or should_update_reference(reference, update)):
-            if self._git_remotes and self._git_remotes.get(reference) is not None:
-                output.info(f"Found in cache (configured via git remote "
-                            f"'{self._git_remotes.get(reference).url}')")
             status = RECIPE_INCACHE
             return recipe_layout, status, None
 
