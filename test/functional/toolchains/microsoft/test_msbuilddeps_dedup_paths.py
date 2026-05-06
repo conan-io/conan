@@ -84,9 +84,14 @@ def test_msbuilddeps_dedup_paths_functional():
     # Verbose build so we can inspect cl.exe flags
     client.run("build . -c tools.build:verbosity=verbose")
 
+    conan_dedup = client.load("conan_dedup.props")
+    assert "ConanDeduplicatePaths" in conan_dedup
+    assert "RemoveDuplicates" in conan_dedup
+    assert "ConanDedupPropsImported" in conan_dedup
+
     conandeps = client.load("conandeps.props")
-    assert "ConanDeduplicatePaths" in conandeps
-    assert "RemoveDuplicates" in conandeps
+    assert "conan_dedup.props" in conandeps
+    assert "ConanDedupPropsImported" in conandeps
 
 
 @pytest.mark.tool("visual_studio")
@@ -127,14 +132,21 @@ def test_msbuilddeps_dedup_conandeps_structure():
     client.run("create pkg")
     client.run("install app")
 
-    conandeps = client.load("app/conandeps.props")
-    assert "ConanDeduplicatePaths" in conandeps
-    assert "RemoveDuplicates" in conandeps
-    assert "ConanDedupTargetDefined" in conandeps
+    conan_dedup = client.load("app/conan_dedup.props")
+    assert "ConanDeduplicatePaths" in conan_dedup
+    assert "RemoveDuplicates" in conan_dedup
+    assert "ConanDedupTargetDefined" in conan_dedup
+    assert "ConanDedupPropsImported" in conan_dedup
 
-    # Also present in component-level .props
+    conandeps = client.load("app/conandeps.props")
+    assert "conan_dedup.props" in conandeps
+    assert "ConanDedupPropsImported" in conandeps
+
+    # Also imported in component-level .props
     pkg_props = client.load("app/conan_mypkg.props")
-    assert "ConanDeduplicatePaths" in pkg_props
+    assert "conan_dedup.props" in pkg_props
+    assert "ConanDedupPropsImported" in pkg_props
 
     comp_props = client.load("app/conan_mypkg_core.props")
-    assert "ConanDeduplicatePaths" in comp_props
+    assert "conan_dedup.props" in comp_props
+    assert "ConanDedupPropsImported" in comp_props

@@ -283,7 +283,8 @@ class MSBuildDeps:
         import_vars = dom.getElementsByTagName('ImportGroup')[0]
 
         # Current vars
-        children = import_vars.getElementsByTagName("Import")
+        children = [n for n in import_vars.childNodes
+                    if n.nodeType == n.ELEMENT_NODE and n.tagName == "Import"]
         for node in children:
             if aggregated_filename == node.getAttribute("Project") \
                     and condition == node.getAttribute("Condition"):
@@ -294,43 +295,61 @@ class MSBuildDeps:
             import_node.setAttribute('Project', aggregated_filename)
             import_vars.appendChild(import_node)
 
+        # Import conan_dedup.props
+        dedup_found = False
+        for node in children:
+            if (node.getAttribute("Project") == "conan_dedup.props"
+                    and node.getAttribute("Condition") ==
+                    "'$(ConanDedupPropsImported)' != 'True'"):
+                dedup_found = True
+                break
+        
+        if not dedup_found:
+            dedup_import = dom.createElement('Import')
+            dedup_import.setAttribute('Condition', "'$(ConanDedupPropsImported)' != 'True'")
+            dedup_import.setAttribute('Project', 'conan_dedup.props')
+            import_vars.appendChild(dedup_import)
+
         content_multi = dom.toprettyxml()
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
-        # Append dedup target; MSBuild Condition prevents multiple executions
-        content_multi = content_multi.replace(
-            "</Project>", MSBuildDeps._dedup_target + "</Project>")
         return content_multi
 
-    _dedup_target = textwrap.dedent("""\
-        <Target Name="ConanDeduplicatePaths"
-                BeforeTargets="ClCompile;Link;Midl;ResourceCompile"
-                Condition="'$(ConanDedupTargetDefined)' != 'True'">
+    _conan_dedup_props = textwrap.dedent("""\
+        <?xml version="1.0" encoding="utf-8"?>
+        <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
           <PropertyGroup>
-            <ConanDedupTargetDefined>True</ConanDedupTargetDefined>
+            <ConanDedupPropsImported>True</ConanDedupPropsImported>
           </PropertyGroup>
-          <ItemGroup>
-            <_ConanIncludePaths Include="%(ClCompile.AdditionalIncludeDirectories)" />
-          </ItemGroup>
-          <RemoveDuplicates Inputs="@(_ConanIncludePaths)">
-            <Output TaskParameter="Filtered" ItemName="_ConanUniqueIncludePaths" />
-          </RemoveDuplicates>
-          <ItemGroup>
-            <ClCompile Condition="'@(_ConanUniqueIncludePaths)' != ''">
-              <AdditionalIncludeDirectories>@(_ConanUniqueIncludePaths)</AdditionalIncludeDirectories>
-            </ClCompile>
-          </ItemGroup>
-          <ItemGroup>
-            <_ConanLibPaths Include="%(Link.AdditionalLibraryDirectories)" />
-          </ItemGroup>
-          <RemoveDuplicates Inputs="@(_ConanLibPaths)">
-            <Output TaskParameter="Filtered" ItemName="_ConanUniqueLibPaths" />
-          </RemoveDuplicates>
-          <ItemGroup>
-            <Link Condition="'@(_ConanUniqueLibPaths)' != ''">
-              <AdditionalLibraryDirectories>@(_ConanUniqueLibPaths)</AdditionalLibraryDirectories>
-            </Link>
-          </ItemGroup>
-        </Target>
+          <Target Name="ConanDeduplicatePaths"
+                  BeforeTargets="ClCompile;Link;Midl;ResourceCompile"
+                  Condition="'$(ConanDedupTargetDefined)' != 'True'">
+            <PropertyGroup>
+              <ConanDedupTargetDefined>True</ConanDedupTargetDefined>
+            </PropertyGroup>
+            <ItemGroup>
+              <_ConanIncludePaths Include="%(ClCompile.AdditionalIncludeDirectories)" />
+            </ItemGroup>
+            <RemoveDuplicates Inputs="@(_ConanIncludePaths)">
+              <Output TaskParameter="Filtered" ItemName="_ConanUniqueIncludePaths" />
+            </RemoveDuplicates>
+            <ItemGroup>
+              <ClCompile Condition="'@(_ConanUniqueIncludePaths)' != ''">
+                <AdditionalIncludeDirectories>@(_ConanUniqueIncludePaths)</AdditionalIncludeDirectories>
+              </ClCompile>
+            </ItemGroup>
+            <ItemGroup>
+              <_ConanLibPaths Include="%(Link.AdditionalLibraryDirectories)" />
+            </ItemGroup>
+            <RemoveDuplicates Inputs="@(_ConanLibPaths)">
+              <Output TaskParameter="Filtered" ItemName="_ConanUniqueLibPaths" />
+            </RemoveDuplicates>
+            <ItemGroup>
+              <Link Condition="'@(_ConanUniqueLibPaths)' != ''">
+                <AdditionalLibraryDirectories>@(_ConanUniqueLibPaths)</AdditionalLibraryDirectories>
+              </Link>
+            </ItemGroup>
+          </Target>
+        </Project>
         """)
 
     def _conandeps(self):
@@ -431,5 +450,7 @@ class MSBuildDeps:
 
         # Include all direct build_requires for host context. This might change
         result.update(self._conandeps())
+
+        result["conan_dedup.props"] = self._conan_dedup_props
 
         return result
