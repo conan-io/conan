@@ -1,6 +1,8 @@
 import re
 import textwrap
 
+import pytest
+
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -997,3 +999,35 @@ def test_requires_only_component_target_generation():
     assert "# Requirement pkg::compB -> pkg::compA (Full link: True)" in target
     # And even if it's INTERFACE, the globally generated target requires it as usual
     assert "# Requirement pkg::pkg -> pkg::compB (Full link: True)" in target
+
+
+@pytest.mark.parametrize("requires", [
+    None,
+    ["base::base"]
+])
+def test_libs_no_components_multilib_component(requires):
+    tc = TestClient()
+
+    base_conanfile = (GenConanfile("base", "1.0")
+                      .with_package_type("static-library")
+                      .with_package_info({"defines": ["FOO"]}))
+
+    cpp_info = {"libs": ["module", "vector"]}
+    if requires:
+        cpp_info["requires"] = requires
+
+    conanfile = (GenConanfile("matrix", "1.0")
+                 .with_package_type("static-library")
+                 .with_settings("os", "arch", "compiler", "build_type")
+                 .with_requirement("base/1.0", transitive_headers=True)
+                 .with_package_file("lib/libmodule.a", "foo")
+                 .with_package_file("lib/libvector.a", "bar")
+                 .with_package_info(cpp_info))
+
+    tc.save({"base/conanfile.py": base_conanfile,
+             "conanfile.py": conanfile})
+    tc.run("create base")
+    tc.run("create")
+    tc.run("install --requires=matrix/1.0 -g CMakeConfigDeps")
+    matrix_targets = tc.load("matrix-Targets-release.cmake")
+    assert "# Requirement matrix::_common -> base::base (Full link: True)" in matrix_targets

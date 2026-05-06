@@ -642,7 +642,7 @@ class _Component:
                            f" '{libname}' that declared .type='{self._type}'")
         self._type = deduced_type
         if self._type != pkg_type:
-            out.warning(f"Lib {libname} deduced as '{self._type}, but 'package_type={pkg_type}'")
+            out.warning(f"Lib {libname} deduced as '{self._type}', but 'package_type={pkg_type}'")
 
     def deduce_locations(self, conanfile, component_name=""):
         name = f'{conanfile} cpp_info.components["{component_name}"]' if component_name \
@@ -877,6 +877,9 @@ class CppInfo:
             common = self._package.clone()
             common.libs = []
             common.type = str(PackageType.HEADER)  # the type of components is a string!
+            if not common.requires:
+                common.requires = [f"{c.ref.name}::{c.ref.name}"
+                                   for c in conanfile.dependencies.direct_host.values()]
             result.components["_common"] = common
 
             for lib in self.libs:
