@@ -183,13 +183,13 @@ class GraphAPI:
         assert profile_host is not None
         assert profile_build is not None
 
-        proxy, range_resolver, loader, _ = self._helpers.get_loader(
-            git_remotes=profile_host.git_remotes)
+        proxy, range_resolver, loader, _ = self._helpers.get_loader()
 
         remotes = remotes or []
         cache = self._helpers.cache
         builder = DepsGraphBuilder(proxy, loader, range_resolver, cache, remotes,
-                                   update, check_update, self._helpers.global_conf)
+                                   update, check_update, self._helpers.global_conf,
+                                   git_remotes=profile_host.git_remotes)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
         return deps_graph
 

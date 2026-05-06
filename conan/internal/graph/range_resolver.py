@@ -7,7 +7,7 @@ from conan.internal.model.version_range import VersionRange
 
 class RangeResolver:
 
-    def __init__(self, cache, remote_manager, global_conf, editable_packages, git_remotes=None):
+    def __init__(self, cache, remote_manager, global_conf, editable_packages):
         self._cache = cache
         self._editable_packages = editable_packages
         self._remote_manager = remote_manager
@@ -15,7 +15,6 @@ class RangeResolver:
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
         self.resolved_ranges = {}
         self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
-        self._git_remotes = git_remotes
 
     def resolve(self, require, base_conanref, remotes, update):
         try:
@@ -45,12 +44,6 @@ class RangeResolver:
         search_ref = RecipeReference(ref.name, "*", ref.user, ref.channel)
 
         resolved_ref = self._resolve_local(search_ref, version_range)
-
-        git_resolved_ref = self._resolve_git_remotes(search_ref, version_range)
-        if git_resolved_ref is not None:
-            if resolved_ref is None or git_resolved_ref.version > resolved_ref.version:
-                resolved_ref = git_resolved_ref
-
         if resolved_ref is None or should_update_reference(search_ref, update):
             remote_resolved_ref = self._resolve_remote(search_ref, version_range, remotes, update)
             if resolved_ref is None or (remote_resolved_ref is not None and
@@ -112,20 +105,6 @@ class RangeResolver:
             resolved_version = self._resolve_version(version_range, update_candidates,
                                                      self._resolve_prereleases)
             return resolved_version
-
-    def _resolve_git_remotes(self, search_ref, version_range):
-        if not self._git_remotes:
-            return None
-        candidates = []
-        for key_str in self._git_remotes.entries:
-            candidate_ref = RecipeReference.loads(key_str)
-            if (candidate_ref.name == search_ref.name and
-                    candidate_ref.user == search_ref.user and
-                    candidate_ref.channel == search_ref.channel):
-                candidates.append(candidate_ref)
-        if candidates:
-            return self._resolve_version(version_range, candidates, self._resolve_prereleases)
-        return None
 
     @staticmethod
     def _resolve_version(version_range, refs_found, resolve_prereleases):

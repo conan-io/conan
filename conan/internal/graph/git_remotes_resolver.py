@@ -4,18 +4,18 @@ import os
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.api.export import cmd_export
+from conan.internal.model.conf import ConfDefinition
 from conan.internal.util.files import rmdir
 from conan.internal.util.runners import detect_runner
 
 
 class GitRemotesResolver:
 
-    def __init__(self, cache, global_conf):
+    def __init__(self, cache):
         self._cache = cache
-        self._global_conf = global_conf
         self._clones_base = os.path.join(cache.store, "git_clones")
 
-    def clone_and_export(self, ref, git_spec, loader, hook_manager, force_clone=False):
+    def clone_and_export(self, ref, git_spec, loader, force_clone=False):
         clone_folder = self._clone_folder(git_spec)
         if force_clone and os.path.exists(clone_folder):
             rmdir(clone_folder)
@@ -25,7 +25,13 @@ class GitRemotesResolver:
         if not os.path.exists(conanfile_path):
             raise ConanException(
                 f"conanfile.py not found at root of git repo '{git_spec.url}'")
-        return cmd_export(loader, self._cache, hook_manager, self._global_conf,
+
+        class MyHookManager:
+            def execute(self, method_name, conanfile):
+                pass
+        hook_manager = MyHookManager()
+        global_conf = ConfDefinition()
+        return cmd_export(loader, self._cache, hook_manager, global_conf,
                           conanfile_path, ref.name, str(ref.version),
                           ref.user, ref.channel, graph_lock=None, remotes=None)
 

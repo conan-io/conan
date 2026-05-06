@@ -205,20 +205,17 @@ class ConanAPI:
                 return mod.flags_map
             return None
 
-        def get_loader(self, git_remotes=None):
+        def get_loader(self):
             ws_editables = self._conan_api.workspace.packages()
             editable_packages = self._editable_packages.update_copy(ws_editables)
 
             legacy_update = self.global_conf.get("core:update_policy", choices=["legacy"])
             # This proxy is caching information
             proxy = ConanProxy(self.cache, self.remote_manager, editable_packages,
-                               legacy_update=legacy_update,
-                               git_remotes=git_remotes,
-                               hook_manager=self.hook_manager,
-                               global_conf=self.global_conf)
+                               legacy_update=legacy_update)
             # This is caching too
             range_resolver = RangeResolver(self.cache, self.remote_manager, self.global_conf,
-                                           editable_packages, git_remotes=git_remotes)
+                                           editable_packages)
 
             cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
             conanfile_helpers = ConanFileHelpers(self._requester, cmd_wrap, self.global_conf,
@@ -227,7 +224,4 @@ class ConanAPI:
             pyreq_loader = PyRequireLoader(proxy, range_resolver, self.global_conf)
             # This is caching too!
             loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
-            # loader is created after proxy due to PyRequireLoader depending on proxy;
-            # set it here inside the factory before returning
-            proxy.loader = loader
             return proxy, range_resolver, loader, None
