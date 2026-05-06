@@ -2,7 +2,7 @@ import json
 
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write, ConanOutput
+from conan.api.output import cli_out_write
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import print_list_text, print_list_json, print_serial
@@ -211,6 +211,7 @@ def cache_check_integrity(conan_api: ConanAPI, parser, subparser, *args):
     corrupted_artifacts = conan_api.cache.check_integrity(package_list, return_pkg_list=True)
     return {"results": {"Local Cache": corrupted_artifacts.serialize()},
             "conan_error": "There are corrupted artifacts, check the error logs" if corrupted_artifacts else ""}
+
 
 @conan_subcommand(formatters={"text": print_package_sign_text,
                               "json": print_list_json})

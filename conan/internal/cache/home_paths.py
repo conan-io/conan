@@ -1,7 +1,5 @@
 import os
 
-from conan.api.output import ConanOutput
-
 _EXTENSIONS_FOLDER = "extensions"
 _PLUGINS = "plugins"
 

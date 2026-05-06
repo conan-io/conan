@@ -159,7 +159,6 @@ class ConanFileLoader:
 
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         conanfile.display_name = str(ref)
-        conanfile.output.scope = conanfile.display_name
         return conanfile
 
     def load_consumer(self, conanfile_path, name=None, version=None, user=None,
@@ -176,7 +175,6 @@ class ConanFileLoader:
             conanfile.display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))
         else:
             conanfile.display_name = os.path.basename(conanfile_path)
-        conanfile.output.scope = conanfile.display_name
         conanfile._conan_is_consumer = True
         return conanfile
 
