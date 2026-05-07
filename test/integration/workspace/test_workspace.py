@@ -573,20 +573,44 @@ class TestWorkspaceBuild:
         c.save({
             "hello/conanfile.py": GenConanfile("hello", "1.0").with_build_msg("Building HELLO!"),
             "app/conanfile.py": GenConanfile("app", "1.0").with_build_msg("Building APP!")
-                                                           .with_requires("hello/1.0"),
+                                                          .with_requires("hello/1.0"),
         })
         c.run("export hello")
         c.run("workspace add app")
 
         # Without --build=missing the workspace build must fail
         c.run("workspace build", assert_error=True)
-        assert "Missing" in c.out
+        assert "Missing binary: hello" in c.out
 
         # With --build=missing, hello/1.0 must be built first, then app
         c.run("workspace build --build=missing")
         assert "Workspace building external hello/1.0" in c.out
         assert "hello/1.0: WARN: Building HELLO!" in c.out  # binary was actually compiled
         assert "conanfile.py (app/1.0): WARN: Building APP!" in c.out
+
+    def test_workspace_build_missing_with_options(self):
+        # Reproduces https://github.com/conan-io/conan/issues/19948
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+
+        c.save({
+            "hello/conanfile.py": GenConanfile("hello", "1.0").with_shared_option(False),
+            "app/conanfile.py": GenConanfile("app", "1.0").with_requires("hello/1.0")
+                                                          .with_default_option("hello*:shared",
+                                                                               True),
+        })
+        c.run("export hello")
+        c.run("workspace add app")
+
+        # Without --build=missing the workspace build must fail
+        c.run("workspace build", assert_error=True)
+        assert "Missing binary: hello" in c.out
+
+        # With --build=missing, hello/1.0 must be built first, then app
+        c.run("workspace build --build=missing")
+        assert ('Command: install --requires=hello/1.0 --build=hello/1.0 '
+                '-o="hello*:shared=True"') in c.out
+        assert "Workspace building external hello/1.0" in c.out
 
     def test_build_dynamic_name_version(self):
         conanfile = textwrap.dedent("""\
