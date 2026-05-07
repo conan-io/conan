@@ -83,14 +83,12 @@ class TestCompilerFlags:
         assert _make_cppstd_flag("gcc", "15", "20") == '-std=c++20'
         assert _make_cppstd_flag("gcc", "15", "23") == '-std=c++23'
         assert _make_cppstd_flag("gcc", "15", "26") == '-std=c++26'
-        assert _make_cppstd_flag("gcc", "15", "26") == '-std=c++26'
 
         assert _make_cppstd_flag("gcc", "16", "11") == '-std=c++11'
         assert _make_cppstd_flag("gcc", "16", "14") == '-std=c++14'
         assert _make_cppstd_flag("gcc", "16", "17") == '-std=c++17'
         assert _make_cppstd_flag("gcc", "16", "20") == '-std=c++20'
         assert _make_cppstd_flag("gcc", "16", "23") == '-std=c++23'
-        assert _make_cppstd_flag("gcc", "16", "26") == '-std=c++26'
         assert _make_cppstd_flag("gcc", "16", "26") == '-std=c++26'
 
     def test_gcc_cppstd_defaults(self):
