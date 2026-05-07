@@ -4,6 +4,7 @@ import textwrap
 
 import pytest
 
+from conan.api.model import PkgReference
 from conan.test.assets.visual_project_files import get_vs_project_files
 from conan.test.utils.tools import TestClient
 
@@ -81,17 +82,30 @@ def test_msbuilddeps_dedup_paths_functional():
 
     client.save(files, clean_first=True)
 
-    # Verbose build so we can inspect cl.exe flags
-    client.run("build . -c tools.build:verbosity=verbose")
-
-    conan_dedup = client.load("conan_dedup.props")
-    assert "ConanDeduplicatePaths" in conan_dedup
-    assert "RemoveDuplicates" in conan_dedup
-    assert "ConanDedupPropsImported" in conan_dedup
+    client.run("build .")
+    pref = PkgReference.loads("mypkg/1.0#f7eaa1b37facb8e95254e77269bcaa5c:"
+                              "da39a3ee5e6b4b0d3255bfef95601890afd80709")
+    pkg_path = client.get_latest_pkg_layout(pref).package()
+    assert str(client.out).count(f"/I{pkg_path}") == 1
 
     conandeps = client.load("conandeps.props")
     assert "conan_dedup.props" in conandeps
-    assert "ConanDedupPropsImported" in conandeps
+    conanmypkg = client.load("conan_mypkg.props")
+    assert "conan_dedup.props" in conanmypkg
+
+    conanmypkg = client.load("conan_mypkg_server.props")
+    # FIXME: Why?? Why component files need to dedup paths? they are not expected to be duplicated
+    assert "conan_dedup.props" in conanmypkg
+
+    # repeat install with other config
+    client.run("build . -s build_type=Debug")
+    assert str(client.out).count(f"/I{pkg_path}") == 1
+
+    # It didn't duplicate entries
+    conandeps = client.load("conandeps.props")
+    assert conandeps.count("conan_dedup.props") == 1
+    conanmypkg = client.load("conan_mypkg.props")
+    assert conanmypkg.count("conan_dedup.props") == 1
 
 
 @pytest.mark.tool("visual_studio")

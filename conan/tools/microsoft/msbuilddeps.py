@@ -283,8 +283,7 @@ class MSBuildDeps:
         import_vars = dom.getElementsByTagName('ImportGroup')[0]
 
         # Current vars
-        children = [n for n in import_vars.childNodes
-                    if n.nodeType == n.ELEMENT_NODE and n.tagName == "Import"]
+        children = import_vars.getElementsByTagName("Import")
         for node in children:
             if aggregated_filename == node.getAttribute("Project") \
                     and condition == node.getAttribute("Condition"):
@@ -296,15 +295,7 @@ class MSBuildDeps:
             import_vars.appendChild(import_node)
 
         # Import conan_dedup.props
-        dedup_found = False
-        for node in children:
-            if (node.getAttribute("Project") == "conan_dedup.props"
-                    and node.getAttribute("Condition") ==
-                    "'$(ConanDedupPropsImported)' != 'True'"):
-                dedup_found = True
-                break
-        
-        if not dedup_found:
+        if "conan_dedup.props" not in content_multi:
             dedup_import = dom.createElement('Import')
             dedup_import.setAttribute('Condition', "'$(ConanDedupPropsImported)' != 'True'")
             dedup_import.setAttribute('Project', 'conan_dedup.props')
@@ -372,7 +363,6 @@ class MSBuildDeps:
             pkg_aggregated_content = self._dep_props_file("", conandeps_filename, filename,
                                                           condition=comp_condition,
                                                           content=pkg_aggregated_content)
-
         return {conandeps_filename: pkg_aggregated_content}
 
     def _package_props_files(self, require, dep, build=False):
