@@ -7,6 +7,7 @@ from jinja2 import Template
 from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
+from conan.tools.cmake.layout import is_consumer
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import (ExtraVariablesBlock, ToolchainBlocks,
@@ -223,13 +224,9 @@ class CMakeToolchain:
             cmake_executable = cmake_executable or self._find_cmake_exe()
 
         user_presets = self.user_presets_path
-        try:  # TODO: Refactor this repeated pattern to deduce "is-consumer"
-            # The user conf user_presets ONLY applies to dev space, not in the cache
-            if self._conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE):
-                user_presets = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_presets",
-                                                        default=self.user_presets_path)
-        except AttributeError:
-            pass
+        if is_consumer(self._conanfile):
+            user_presets = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_presets",
+                                                    default=self.user_presets_path)
 
         write_cmake_presets(self._conanfile, toolchain_file, self.generator, cache_variables,
                             user_presets, self.presets_prefix, buildenv, runenv,

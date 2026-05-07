@@ -54,7 +54,7 @@ class TestCompilerFlags:
     @pytest.mark.parametrize("compiler,arch,the_os,flag",
                              [("clang", "x86", "Windows", ""),
                               ("clang", "x86_64", "Windows", "")
-                             ])
+                              ])
     def test_arch_flag_clangcl(self,  compiler, arch, the_os, flag):
         settings = MockSettings({"compiler": compiler,
                                  "arch": arch,

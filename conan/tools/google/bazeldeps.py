@@ -187,7 +187,8 @@ class _BazelDepBuildGenerator:
         pkg_name = dep.cpp_info.get_property("bazel_repository_name") or dep.ref.name
         return f"build-{pkg_name}" if self._is_build_require else pkg_name
 
-    def _get_target_name(self, dep):
+    @staticmethod
+    def _get_target_name(dep):
         pkg_name = dep.cpp_info.get_property("bazel_target_name") or dep.ref.name
         return pkg_name
 
@@ -214,7 +215,8 @@ class _BazelDepBuildGenerator:
         return ['"{}"'.format(_relativize_path(path, self._package_folder))
                 for path in cpp_info.includedirs]
 
-    def _get_defines(self, cpp_info):
+    @staticmethod
+    def _get_defines(cpp_info):
         return ['"{}"'.format(define.replace('"', '\\' * 3 + '"'))
                 for define in cpp_info.defines]
 
@@ -231,7 +233,8 @@ class _BazelDepBuildGenerator:
             frameworkdirs_flags.extend(["-F", frw_dir.replace("\\", "/")])
         return [f'"{flag}"' for flag in (system_libs + shared_flags + framework_flags + frameworkdirs_flags)]
 
-    def _get_copts(self, cpp_info):
+    @staticmethod
+    def _get_copts(cpp_info):
         # FIXME: long discussions between copts (-Iflag) vs includes in Bazel. Not sure yet
         # includedirsflags = ['"-I{}"'.format(_relativize_path(d, package_folder_path))
         #                     for d in cpp_info.includedirs]

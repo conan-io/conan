@@ -364,7 +364,7 @@ class MesonToolchain:
         self.objcpp_link_args = []
 
         self._resolve_apple_flags_and_variables(build_env, compilers_by_conf)
-        if native is False:
+        if not native:
             self._resolve_android_cross_compilation()
 
     def _get_default_dirs(self):
@@ -483,8 +483,8 @@ class MesonToolchain:
         cflags += self.apple_extra_flags
         ld += self.apple_extra_flags
         return {
-            "cxxflags": [self.arch_flag] + cxxflags + sys_root + self.extra_cxxflags
-                         + self.threads_flags,
+            "cxxflags": ([self.arch_flag] + cxxflags + sys_root + self.extra_cxxflags
+                         + self.threads_flags),
             "cflags": [self.arch_flag] + cflags + sys_root + self.extra_cflags + self.threads_flags,
             "ldflags": [self.arch_flag] + [self.arch_link_flag] + ld + self._rpath_link_flag,
             "defines": [f"-D{d}" for d in (defines + self.extra_defines)]

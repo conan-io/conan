@@ -95,8 +95,8 @@ def build_windows_subsystem(profile, make_program, subsystem):
                  "profile": profile}, clean_first=True)
 
     client.run("install . --profile=profile")
-    cmd = environment_wrap_command(ConanFileMock(), ["conanbuildenv",
-                                    "conanautotoolstoolchain",
+    cmd = environment_wrap_command(ConanFileMock(),
+                                   ["conanbuildenv", "conanautotoolstoolchain",
                                     "conanautotoolsdeps"], client.current_folder, make_program)
     client.run_command(cmd)
     client.run_command("app")
