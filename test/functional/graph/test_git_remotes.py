@@ -1,10 +1,12 @@
 import json
+import os
 import re
 
 import pytest
 
+from conan.internal.util.files import save
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.utils.scm import create_local_git_repo
+from conan.test.utils.scm import create_local_git_repo, git_add_changes_commit
 from conan.test.utils.tools import TestClient
 
 
@@ -206,12 +208,25 @@ class TestGitRemotesLockfile:
         # Tamper the lockfile: replace the real revision with a fake one
         raw = c.load("conan.lock")
         tampered = re.sub(r"(zlib/1\.2\.11#)[0-9a-f]+", r"\1deadbeef00000000000000000000000", raw)
-        c.save({"conan.lock": tampered})
+        c.save({"conan2.lock": tampered})
 
         # Second install with tampered lockfile: cached revision X, lockfile expects Y → clear error
-        c.run("install . --lockfile=conan.lock --build=missing", assert_error=True)
-        print(c.out)
+        c.run("install . --lockfile=conan2.lock", assert_error=True)
         assert "zlib/1.2.11" in c.out
-        assert "does not match the revision" in c.out
-        assert "deadbeef" in c.out
-        assert "The lockfile is out of date with the git source" in c.out
+        assert ("Requirement 'zlib/1.2.11#20823ba3fead87d6e797bd33010ca88a' "
+                "not in lockfile 'requires'") in c.out
+
+        # Now removing the cache one
+        c.run("remove * -c")
+        c.run("install . --lockfile=conan.lock --build=missing")
+        assert "Cloning" not in c.out  # it reuses the previous clone
+        assert "zlib/1.2.11" in c.out
+
+        # It it updates a new commit, and the lockfile pins previous recipe-revision, it will fail
+        save(os.path.join(repo_url, "conanfile.py"),
+             str(GenConanfile("zlib", "1.2.11").with_class_attribute("somevar=3")))
+        git_add_changes_commit(repo_url)
+        c.run("install . --lockfile=conan.lock --build=missing --update", assert_error=True)
+        assert "Cloning" in c.out
+        assert ("Requirement 'zlib/1.2.11#6a02546722ab83f3926c350c001c9c4d' "
+                "not in lockfile 'requires'") in c.out
