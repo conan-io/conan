@@ -809,4 +809,23 @@ def load_global_conf(home_folder):
             # tools.android:ndk_path = my/path/to/android/ndk
             """)
         save(global_conf_path, default_global_conf)
+
+    # TODO: This is a bit repeated, to be refactored later, to keep PR clear
+    global_conf_path_user = home_paths.global_conf_path_user
+    if os.path.exists(global_conf_path_user):
+        text = load(global_conf_path_user)
+        distro = None
+        if platform.system() in ["Linux", "FreeBSD"]:
+            import distro
+        template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
+        from conan import conan_version
+        home_folder_fwd = home_folder.replace("\\", "/")
+        content = template.render({"platform": platform, "os": os, "distro": distro,
+                                   "conan_version": conan_version,
+                                   "conan_home_folder": home_folder_fwd,
+                                   "detect_api": detect_api,
+                                   "hashlib": hashlib})
+        user_conf = ConfDefinition()
+        user_conf.loads(content)
+        new_config.update_conf_definition(user_conf)
     return new_config

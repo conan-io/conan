@@ -19,6 +19,10 @@ class HomePaths:
         return os.path.join(self._home, "global.conf")
 
     @property
+    def global_conf_path_user(self):
+        return os.path.join(self._home, "global_user.conf")
+
+    @property
     def deployers_path(self):
         return os.path.join(self._home, _EXTENSIONS_FOLDER, "deployers")
 
