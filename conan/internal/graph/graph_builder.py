@@ -23,8 +23,7 @@ from conan.internal.model.version_range import VersionRange, required_conan_vers
 class DepsGraphBuilder:
     ALLOW_ALIAS = False
 
-    def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf,
-                 git_remotes=None):
+    def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf):
         self._proxy = proxy
         self._loader = loader
         self._resolver = resolver
@@ -33,7 +32,6 @@ class DepsGraphBuilder:
         self._update = update
         self._check_update = check_update
         self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
-        self._git_remotes = git_remotes
 
     def load_graph(self, root_node, profile_host, profile_build, graph_lock=None):
         assert profile_host is not None
@@ -298,56 +296,46 @@ class DepsGraphBuilder:
         return layout, dep_conanfile, recipe_status, remote
 
     def _prefetch_git_remote(self, require):
-        """Ensure git_remotes entries matching this require are in the local cache before
-        range resolution and proxy lookup run. Mirrors the _resolve_replace_requires pattern:
-        acting early in _initialize_requires so the rest of graph resolution is transparent."""
-        if not self._git_remotes:
+        """If the requirement declares a git= source, clone and export it into the local cache
+        before range resolution and proxy lookup run. This mirrors the _resolve_replace_requires
+        pattern — acting early in _initialize_requires so the rest of graph resolution is
+        transparent (proxy just finds the recipe in cache as usual)."""
+        if require.git is None:
             return
-        version_range = require.version_range
-        if version_range is not None:
-            # For version ranges, export every git_remotes candidate matching the package name
-            # so _resolve_local() can pick the best version from cache afterward.
-            for key_str, git_spec in self._git_remotes.entries.items():
-                from conan.api.model import RecipeReference
-                candidate_ref = RecipeReference.loads(key_str)
-                if (candidate_ref.name == require.ref.name and
-                        candidate_ref.user == require.ref.user and
-                        candidate_ref.channel == require.ref.channel):
-                    self._export_from_git_remote(candidate_ref, git_spec)
-        else:
-            git_spec = self._git_remotes.get(require.ref)
-            if git_spec is not None:
-                self._export_from_git_remote(require.ref, git_spec)
 
-    def _export_from_git_remote(self, ref, git_spec):
-        """Clone the git repo (if needed) and export its conanfile.py into the local cache."""
         from conan.api.output import ConanOutput
         from conan.internal.graph.git_remotes_resolver import GitRemotesResolver
         from conan.internal.graph.proxy import should_update_reference
 
-        output = ConanOutput(scope=str(ref))
-        force_clone = bool(should_update_reference(ref, self._update))
+        ref = require.ref
+        if ref.revision:
+            raise ConanException(f"Ref {ref.revision} cannot be specified with git")
+        git = require.git  # raw string: "url" or "url@ref"
+        idx = git.rsplit("@", 1)
+        url, git_ref = idx if len(idx) == 2 else (idx[0], None)
 
-        if not force_clone:
+        output = ConanOutput(scope=str(ref))
+        force_clone = should_update_reference(ref, self._update)
+
+        if force_clone:
+            output.info(f"Updating from git remote '{url}'...")
+        else:
             try:
                 if ref.revision:
                     self._cache.recipe_layout(ref)
                 else:
                     self._cache.recipe_layout_latest(ref)
-                output.info(f"Found in cache (configured via git remote '{git_spec.url}')")
+                output.info(f"Found in cache (configured via git remote '{url}')")
                 return  # Already in cache, nothing to do
-            except Exception:
+            except ConanException:
                 pass  # Not in cache — proceed with clone+export
+            output.info(f"Not found in local cache, resolving from git remote '{url}'")
 
-        if force_clone:
-            output.info(f"Updating from git remote '{git_spec.url}'...")
-        else:
-            output.info(f"Not found in local cache, resolving from git remote '{git_spec.url}'")
-        if git_spec.ref:
-            output.info(f"  git ref: {git_spec.ref}")
+        if git_ref:
+            output.info(f"  git ref: {git_ref}")
 
-        resolver = GitRemotesResolver(self._cache)
-        resolver.clone_and_export(ref, git_spec, self._loader, force_clone=force_clone)
+        GitRemotesResolver(self._cache).clone_and_export(ref, url, git_ref, self._loader,
+                                                         force_clone=force_clone)
 
     @staticmethod
     def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):

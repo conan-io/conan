@@ -188,8 +188,7 @@ class GraphAPI:
         remotes = remotes or []
         cache = self._helpers.cache
         builder = DepsGraphBuilder(proxy, loader, range_resolver, cache, remotes,
-                                   update, check_update, self._helpers.global_conf,
-                                   git_remotes=profile_host.git_remotes)
+                                   update, check_update, self._helpers.global_conf)
         deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
         return deps_graph
 

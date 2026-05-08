@@ -233,7 +233,7 @@ class _ProfileValueParser:
                                                          "platform_tool_requires", "settings",
                                                          "options", "conf", "buildenv", "runenv",
                                                          "replace_requires", "replace_tool_requires",
-                                                         "runner", "git_remotes"])
+                                                         "runner"])
         # Parse doc sections into Conan model, Settings, Options, etc
         settings, package_settings = _ProfileValueParser._parse_settings(doc)
         options = Options.loads(doc.options) if doc.options else None
@@ -315,11 +315,6 @@ class _ProfileValueParser:
 
         runner = _ProfileValueParser._parse_key_value(doc.runner) if doc.runner else {}
         base_profile.runner.update(runner)
-
-        if doc.git_remotes:
-            from conan.internal.model.git_remotes import GitRemotes
-            base_profile.git_remotes.update(GitRemotes.loads(doc.git_remotes))
-
         return base_profile
 
     @staticmethod
