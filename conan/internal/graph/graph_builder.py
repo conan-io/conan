@@ -322,10 +322,12 @@ class DepsGraphBuilder:
         else:
             try:
                 if ref.revision:
-                    self._cache.recipe_layout(ref)
+                    layout = self._cache.recipe_layout(ref)
                 else:
-                    self._cache.recipe_layout_latest(ref)
+                    layout = self._cache.recipe_layout_latest(ref)
                 output.info(f"Found in cache (configured via git remote '{url}')")
+                # Stash cached revision so _create_new_node can detect a lockfile mismatch
+                require._git_exported_revision = layout.reference.revision
                 return  # Already in cache, nothing to do
             except ConanException:
                 pass  # Not in cache — proceed with clone+export
@@ -334,8 +336,10 @@ class DepsGraphBuilder:
         if git_ref:
             output.info(f"  git ref: {git_ref}")
 
-        GitRemotesResolver(self._cache).clone_and_export(ref, url, git_ref, self._loader,
-                                                         force_clone=force_clone)
+        exported_ref, _ = GitRemotesResolver(self._cache).clone_and_export(
+            ref, url, git_ref, self._loader, force_clone=force_clone)
+        # Stash the exported revision so _create_new_node can detect a lockfile mismatch
+        require._git_exported_revision = exported_ref.revision
 
     @staticmethod
     def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
@@ -439,6 +443,13 @@ class DepsGraphBuilder:
         if graph_lock is not None:
             # Here is when the ranges and revisions are resolved
             graph_lock.resolve_locked(node, require, self._resolve_prereleases)
+            git_rev = getattr(require, "_git_exported_revision", None)
+            if git_rev is not None and require.ref.revision is not None \
+                    and require.ref.revision != git_rev:
+                raise ConanException(
+                    f"Lockfile revision '{require.ref.revision}' for '{require.ref.name}/"
+                    f"{require.ref.version}' does not match the revision '{git_rev}' "
+                    f"exported from git. The lockfile is out of date with the git source.")
 
         if resolved is None:
             try:

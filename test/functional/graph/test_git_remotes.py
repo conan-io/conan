@@ -1,3 +1,6 @@
+import json
+import re
+
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
@@ -151,3 +154,64 @@ class TestGitRemotesTransitive:
         assert c.out.count("resolving from git remote") == 3
         # pkgc is found in cache the second time (via pkgb's requires, after pkga already exported it)
         assert c.out.count("Found in cache (configured via git remote") == 1
+
+
+@pytest.mark.tool("git")
+class TestGitRemotesLockfile:
+
+    def test_lockfile_happy_path(self):
+        """First install with --lockfile-out captures the git-exported revision.
+        Second install with --lockfile reuses cache via the locked revision."""
+        repo_url, _ = create_local_git_repo({"conanfile.py": GenConanfile("zlib", "1.2.11")})
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.2.11", git=repo_url)})
+
+        # First install: clone from git, export to cache, write lockfile
+        c.run("install . --build=missing --lockfile-out=conan.lock")
+        assert "resolving from git remote" in c.out
+        assert "zlib/1.2.11" in c.out
+
+        # Lockfile must contain zlib/1.2.11 with a recipe revision
+        lock = json.loads(c.load("conan.lock"))
+        requires = lock["requires"]
+        assert len(requires) == 1
+        locked_ref = requires[0]
+        assert locked_ref.startswith("zlib/1.2.11#")
+        revision = locked_ref.split("#")[1]
+        assert revision  # non-empty revision hash
+
+        # Second install with lockfile: recipe already in cache → no clone
+        c.run("install . --lockfile=conan.lock")
+        assert "Found in cache (configured via git remote" in c.out
+        assert "Cloning" not in c.out
+        assert "zlib/1.2.11" in c.out
+
+        # Now removing the cache one
+        c.run("remove * -c")
+        c.run("install . --lockfile=conan.lock --build=missing")
+        assert "Cloning" not in c.out  # it reuses the previous clone
+        assert "zlib/1.2.11" in c.out
+
+    def test_lockfile_revision_mismatch_fails(self):
+        """If the lockfile contains a recipe revision that differs from what git exports,
+        Conan must raise an error because the locked revision is not present in cache."""
+        repo_url, _ = create_local_git_repo({"conanfile.py": GenConanfile("zlib", "1.2.11")})
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.2.11", git=repo_url)})
+
+        # First install: populate cache and generate a valid lockfile
+        c.run("install . --build=missing --lockfile-out=conan.lock")
+        assert "resolving from git remote" in c.out
+
+        # Tamper the lockfile: replace the real revision with a fake one
+        raw = c.load("conan.lock")
+        tampered = re.sub(r"(zlib/1\.2\.11#)[0-9a-f]+", r"\1deadbeef00000000000000000000000", raw)
+        c.save({"conan.lock": tampered})
+
+        # Second install with tampered lockfile: cached revision X, lockfile expects Y → clear error
+        c.run("install . --lockfile=conan.lock --build=missing", assert_error=True)
+        print(c.out)
+        assert "zlib/1.2.11" in c.out
+        assert "does not match the revision" in c.out
+        assert "deadbeef" in c.out
+        assert "The lockfile is out of date with the git source" in c.out
