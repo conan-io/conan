@@ -1,3 +1,4 @@
+import os
 import platform
 import re
 import textwrap
@@ -116,3 +117,36 @@ def test_cpp_info_aggregation():
 
     t.save({"conanfile.py": consumer})
     t.run("create . --name consumer --version 1.0 --profile:host=macos")
+
+
+@pytest.mark.parametrize("transitive_headers", [True, False])
+@pytest.mark.parametrize("transitive_libs", [True, False])
+# Not really, but ensures we don't run this test on Windows
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
+def test_transitive_non_includes(transitive_headers, transitive_libs):
+    tc = TestClient(light=True)
+    tc.save({"brotli/conanfile.py": GenConanfile("brotli", "1.0")
+                .with_package_info({"libs": ["brotlienc2"]}),
+             "lib/conanfile.py": GenConanfile("lib", "1.0")
+                .with_requirement("brotli/1.0",
+                                  transitive_headers=transitive_headers,
+                                  transitive_libs=transitive_libs),
+             "conanfile.py": GenConanfile("app", "1.0")
+            .with_require("lib/1.0")
+            .with_generator("AutotoolsDeps")})
+
+    tc.run("create brotli")
+    brotli_layout = tc.created_layout()
+    tc.run("create lib")
+    tc.run("install .")
+    autotoolsdeps = tc.load("conanautotoolsdeps.sh")
+
+    if transitive_headers:
+        assert os.path.join(brotli_layout.package(), "include") in autotoolsdeps
+    else:
+        assert os.path.join(brotli_layout.package(), "include") not in autotoolsdeps
+
+    if transitive_libs:
+        assert "brotlienc2" in autotoolsdeps
+    else:
+        assert "brotlienc2" not in autotoolsdeps
