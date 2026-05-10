@@ -694,6 +694,93 @@ class TestDownloadCacheBackupSources:
                 f"backup {self.file_server.fake_url}/backup2/") in self.client.out
         assert "sha256 hash failed for" in self.client.out
 
+    def test_url_mismatch_redownloads_on_sha256_collision(self):
+        # Repro for conan-io/conan#19956: a recipe that declares a sha256 already
+        # present in the source cache (under an unrelated URL) must NOT silently
+        # reuse the cached payload. The cache lookup must verify the URL was seen
+        # before with that sha256; otherwise re-download so check_checksum runs.
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+
+        # sha256 of "Hello, world!"
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_internet, "good.txt"), "Hello, world!")
+        # Different content under a different URL — the second recipe declares the
+        # same sha256 by mistake (e.g. copy/paste from a sibling recipe).
+        save(os.path.join(http_server_base_folder_internet, "evil.txt"), "Bye, world!")
+
+        good_recipe = textwrap.dedent(f"""
+           from conan import ConanFile
+           from conan.tools.files import download
+           class PkgA(ConanFile):
+               name = "pkga"
+               version = "1.0"
+               def source(self):
+                   download(self, "{self.file_server.fake_url}/internet/good.txt", "good.txt",
+                            sha256="{sha256}")
+           """)
+        bad_recipe = textwrap.dedent(f"""
+           from conan import ConanFile
+           from conan.tools.files import download
+           class PkgB(ConanFile):
+               name = "pkgb"
+               version = "1.0"
+               def source(self):
+                   download(self, "{self.file_server.fake_url}/internet/evil.txt", "evil.txt",
+                            sha256="{sha256}")
+           """)
+
+        self.client.save_home(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
+                            f"core.sources:download_urls=['origin']\n"})
+
+        # First recipe: legitimately downloads and registers good.txt against the sha256
+        self.client.save({"conanfile.py": good_recipe})
+        self.client.run("create .")
+        sidecar_path = os.path.join(self.download_cache_folder, "s", sha256 + ".json")
+        sidecar = json.loads(load(sidecar_path))
+        known_urls = sum(sidecar["references"].values(), [])
+        assert f"{self.file_server.fake_url}/internet/good.txt" in known_urls
+        assert f"{self.file_server.fake_url}/internet/evil.txt" not in known_urls
+
+        # Second recipe declares the same sha256 but a different URL — the cache
+        # entry is reused only after re-download, which then fails check_checksum.
+        self.client.save({"conanfile.py": bad_recipe})
+        self.client.run("create .", assert_error=True)
+        assert "not previously associated with the cached" in self.client.out
+        assert "sha256 hash failed for" in self.client.out
+
+    def test_url_match_reuses_cache_without_redownload(self):
+        # Companion to test_url_mismatch_redownloads_on_sha256_collision: a recipe
+        # that uses a URL already registered for the cached sha256 must hit the
+        # cache as before, with no warning and no re-download.
+        http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
+
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(http_server_base_folder_internet, "good.txt"), "Hello, world!")
+
+        def _recipe(name):
+            return textwrap.dedent(f"""
+                from conan import ConanFile
+                from conan.tools.files import download
+                class Pkg(ConanFile):
+                    name = "{name}"
+                    version = "1.0"
+                    def source(self):
+                        download(self, "{self.file_server.fake_url}/internet/good.txt",
+                                 "good.txt", sha256="{sha256}")
+                """)
+
+        self.client.save_home(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
+                            f"core.sources:download_urls=['origin']\n"})
+
+        self.client.save({"conanfile.py": _recipe("pkga")})
+        self.client.run("create .")
+        self.client.save({"conanfile.py": _recipe("pkgb")})
+        self.client.run("create .")
+        assert "not previously associated with the cached" not in self.client.out
+        assert "retrieved from local download cache" in self.client.out
+
     def test_export_then_upload_workflow(self):
         mkdir(os.path.join(self.download_cache_folder, "s"))
 

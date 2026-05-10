@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 
@@ -10,7 +11,27 @@ from conan.internal.rest.file_downloader import FileDownloader
 from conan.internal.rest.download_cache import DownloadCache
 from conan.internal.errors import AuthenticationException, ForbiddenException, NotFoundException
 from conan.errors import ConanException
-from conan.internal.util.files import mkdir, set_dirty_context_manager, remove_if_dirty, human_size
+from conan.internal.util.files import load, mkdir, set_dirty_context_manager, remove_if_dirty, \
+    human_size
+
+
+def _cached_known_urls(cache_path):
+    """Return the set of URLs previously associated with a backup-source cache
+    entry, by reading its sidecar `<cache_path>.json`. Empty set if the file
+    is missing or malformed (legacy caches predate the metadata file)."""
+    metadata_path = cache_path + ".json"
+    if not os.path.exists(metadata_path):
+        return set()
+    try:
+        metadata = json.loads(load(metadata_path))
+    except Exception:
+        return set()
+    refs = metadata.get("references", {}) if isinstance(metadata, dict) else {}
+    known = set()
+    for ref_urls in refs.values():
+        if isinstance(ref_urls, list):
+            known.update(ref_urls)
+    return known
 
 
 class SourcesCachingDownloader:
@@ -51,10 +72,30 @@ class SourcesCachingDownloader:
             with download_cache.lock(sha256):
                 remove_if_dirty(download_path)
 
-                if os.path.exists(download_path):
+                requested_urls = urls if isinstance(urls, (list, tuple)) else [urls]
+                cache_hit = os.path.exists(download_path)
+                # A cache entry is reusable as-is only when at least one of the
+                # requested URLs has been seen with this sha256 before.
+                # Otherwise the recipe may have declared a sha256 that
+                # accidentally collides with an unrelated package's hash
+                # (see conan-io/conan#19956). Re-download in that case so
+                # FileDownloader.check_checksum can flag the mismatch.
+                cache_url_match = False
+                if cache_hit:
+                    known_urls = _cached_known_urls(download_path)
+                    cache_url_match = (not known_urls
+                                       or any(u in known_urls for u in requested_urls))
+
+                if cache_hit and cache_url_match:
                     self._output.info(f"Source {urls} retrieved from local download cache")
                 else:
-                    # not in cache, we need to actually download from internet or backup servers
+                    if cache_hit:
+                        self._output.warning(
+                            f"Source {urls} not previously associated with the cached "
+                            f"sha256 {sha256[:16]}…; re-downloading to verify the URL "
+                            f"matches that hash"
+                        )
+                    # not in cache (or URL mismatch), download from internet / backup servers
                     with set_dirty_context_manager(download_path):
                         self._do_download(source_origins, urls, download_path, retry, retry_wait,
                                           verify_ssl, auth, headers, md5, sha1, sha256)
