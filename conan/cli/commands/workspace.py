@@ -312,7 +312,7 @@ def workspace_clean(conan_api: ConanAPI, parser, subparser, *args):  # noqa
 @conan_subcommand()
 def workspace_init(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Clean the temporary build folders when possible
+    Initialize a workspace in the given folder
     """
     subparser.add_argument("path", nargs="?", default=os.getcwd(),
                            help="Path to a folder where the workspace will be initialized. "
