@@ -612,6 +612,31 @@ class TestWorkspaceBuild:
                 '-o="hello*:shared=True"') in c.out
         assert "Workspace building external hello/1.0" in c.out
 
+    def test_workspace_build_missing_with_options_test_requires(self):
+        # Reproduces https://github.com/conan-io/conan/issues/19948
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+
+        c.save({
+            "hello/conanfile.py": GenConanfile("hello", "1.0").with_shared_option(False),
+            "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_test_requires("hello/1.0"),
+            "app/conanfile.py": GenConanfile("app", "1.0").with_requires("pkg/1.0")
+                                                          .with_default_option("hello*:shared",
+                                                                               True),
+        })
+        c.run("export hello")
+        c.run("export pkg")
+        c.run("workspace add app")
+
+        # Without --build=missing the workspace build must fail
+        c.run("workspace build", assert_error=True)
+        assert "Missing binary: pkg" in c.out
+
+        # With --build=missing, hello/1.0 must be built first, then app
+        c.run("workspace build --build=missing")
+        assert '-o="hello*:shared=True"' not in c.out
+        assert "Workspace building external hello/1.0" in c.out
+
     def test_build_dynamic_name_version(self):
         conanfile = textwrap.dedent("""\
             from conan import ConanFile
