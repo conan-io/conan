@@ -279,8 +279,34 @@ def cppstd_flag(conanfile) -> str:
     if func:
         flag = func(Version(compiler_version), str(cppstd))
     if flag and llvm_clang_front(conanfile) == "clang-cl":
-        flag = flag.replace("=", ":")
+        flag = _to_clang_cl_cppstd_flag(flag, Version(compiler_version))
     return flag
+
+
+def _to_clang_cl_cppstd_flag(flag, clang_version):
+    """
+    Translate a GCC-style ``-std=...`` flag produced by ``_cppstd_clang`` into
+    a form that the ``clang-cl`` driver accepts.
+
+    ``clang-cl`` mimics ``cl.exe``'s ``/std:`` flag and only accepts a fixed
+    set of values (``c++14``, ``c++17``, ``c++20``, ``c++latest``;
+    Clang >= 22 also accepts ``c++23preview`` as an alias for
+    ``-std=c++23``). Anything else — pre-standard markers (``c++1y``,
+    ``c++2a``, ``c++2b``), ``gnu++`` extensions, ``c++26`` — is unknown to
+    the MSVC-compatible front and is therefore routed through the
+    ``-clang:`` passthrough so the inner clang frontend receives the
+    original GCC-style flag.
+
+    See https://blog.conan.io/2022/10/13/Different-flavors-Clang-compiler-Windows.html
+    """
+    if not flag.startswith("-std="):
+        return flag
+    value = flag[len("-std="):]
+    if value in ("c++14", "c++17", "c++20"):
+        return f"/std:{value}"
+    if value == "c++23" and clang_version >= "22":
+        return "/std:c++23preview"
+    return f"-clang:{flag}"
 
 
 def cppstd_msvc_flag(visual_version, cppstd):
