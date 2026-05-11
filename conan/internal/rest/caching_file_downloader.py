@@ -55,12 +55,10 @@ class SourcesCachingDownloader:
                 in_cache = os.path.exists(download_path)
                 need_download = not in_cache
                 if in_cache:
-                    recorded_urls = download_cache.read_backup_sources_metadata_urls(download_path)
-                    url_mismatch = False
-                    if recorded_urls:
-                        urls_set = set(urls if isinstance(urls, (list, tuple)) else [urls])
-                        url_mismatch = not (recorded_urls & urls_set)
-                    if url_mismatch:
+                    recorded_urls = download_cache.get_urls_from_backup_sources(download_path)
+                    urls_set = set(urls if isinstance(urls, (list, tuple)) else [urls])
+                    # URLs mismatch
+                    if not recorded_urls.intersection(urls_set):
                         self._output.warning(
                             "The requested URL(s) are not listed in backup-sources metadata for this "
                             "SHA256 cache entry. This may be a conandata mistake, or the same checksum "
