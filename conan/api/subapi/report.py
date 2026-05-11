@@ -69,9 +69,9 @@ class ReportAPI:
         diff = stdout.getvalue()
 
         if old_path:
-            self._conan_api.remove.recipe(old_export_ref)
+            self._conan_api.remove.recipes([old_export_ref])
         if new_path:
-            self._conan_api.remove.recipe(new_export_ref)
+            self._conan_api.remove.recipes([new_export_ref])
 
         return {
             "diff": diff,
