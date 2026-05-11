@@ -117,17 +117,8 @@ class DownloadCache:
         summary_path = cached_path + ".json"
         if not os.path.exists(summary_path):
             return set()
-        data = json.loads(load(summary_path))
-        refs = data.get("references") or {}
-        result = set()
-        for mirror in refs.values():
-            if not mirror:
-                continue
-            if isinstance(mirror, (list, tuple)):
-                result.update(mirror)
-            else:
-                result.add(mirror)
-        return result
+        refs = json.loads(load(summary_path)).get("references") or {}
+        return {url for urls in refs.values() for url in urls}
 
     @staticmethod
     def update_backup_sources_json(cached_path, conanfile, urls):
