@@ -989,9 +989,12 @@ class TestDownloadCacheBackupSources:
         self.client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_import(dl_import).with_source(
             f'download(self, "{url_a}", "src.tgz", sha256="{sha}")')})
         self.client.run("source")
+        summary_json = os.path.join(self.download_cache_folder, "s", sha + ".json")
+        meta_after_first = json.loads(load(summary_json))
 
         self.client.save({"conanfile.py": GenConanfile("pkg", "1.1").with_import(dl_import).with_source(
             f'download(self, "{url_bad}", "src.tgz", sha256="{sha}")')})
         self.client.run("source", assert_error=True)
         assert warn in self.client.out
         assert "sha256 hash failed" in self.client.out
+        assert json.loads(load(summary_json)) == meta_after_first
