@@ -48,13 +48,29 @@ class SourcesCachingDownloader:
         if download_cache_folder:
             download_cache = DownloadCache(download_cache_folder)
             download_path = download_cache.source_path(sha256)
+
             with download_cache.lock(sha256):
                 remove_if_dirty(download_path)
 
-                if os.path.exists(download_path):
-                    self._output.info(f"Source {urls} retrieved from local download cache")
-                else:
-                    # not in cache, we need to actually download from internet or backup servers
+                in_cache = os.path.exists(download_path)
+                need_download = not in_cache
+                if in_cache:
+                    recorded_urls = download_cache.read_backup_sources_metadata_urls(download_path)
+                    url_mismatch = False
+                    if recorded_urls:
+                        urls_set = set(urls if isinstance(urls, (list, tuple)) else [urls])
+                        url_mismatch = not (recorded_urls & urls_set)
+                    if url_mismatch:
+                        self._output.warning(
+                            "The requested URL(s) are not listed in backup-sources metadata for this "
+                            "SHA256 cache entry. This may be a conandata mistake, or the same checksum "
+                            "reused for a different upstream version. Re-downloading to verify."
+                        )
+                        need_download = True
+                    else:
+                        self._output.info(f"Source {urls} retrieved from local download cache")
+
+                if need_download:
                     with set_dirty_context_manager(download_path):
                         self._do_download(source_origins, urls, download_path, retry, retry_wait,
                                           verify_ssl, auth, headers, md5, sha1, sha256)
