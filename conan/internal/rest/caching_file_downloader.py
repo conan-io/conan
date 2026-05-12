@@ -57,8 +57,10 @@ class SourcesCachingDownloader:
                 if in_cache:
                     recorded_urls = download_cache.get_urls_from_backup_sources(download_path)
                     urls_set = set(urls if isinstance(urls, (list, tuple)) else [urls])
-                    # URLs mismatch
-                    if not recorded_urls.intersection(urls_set):
+                    # URLs mismatch: only re-download if there are recorded URLs and they don't match the requested ones.
+                    # Some users could not have available the metadata files (json) while using
+                    # backup-sources. We do not want to force re-downloading
+                    if recorded_urls and not recorded_urls.intersection(urls_set):
                         self._output.warning(
                             "The requested URL(s) are not listed in backup-sources metadata for this "
                             "SHA256 cache entry. This may be a conandata mistake, or the same checksum "
