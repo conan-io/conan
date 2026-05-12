@@ -30,7 +30,7 @@ class AutotoolsDeps:
         flags = []
         for dep in self.ordered_deps:
             flags.extend(["-Wl,-rpath -Wl,{}".format(libdir) for libdir in dep.cpp_info.libdirs
-                          if dep.options.get_safe("shared", False)])
+                          if dep.package_type == "shared-library"])
         return flags
 
     @property
