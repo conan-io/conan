@@ -29,7 +29,7 @@ class AutotoolsDeps:
     def _rpaths_flags(self):
         flags = []
         for dep in self.ordered_deps:
-            flags.extend(["-Wl,-rpath -Wl,{}".format(libdir) for libdir in dep.cpp_info.libdirs
+            flags.extend(["-Wl,-rpath -Wl,{}".format(libdir) for libdir in self._get_cpp_info().libdirs
                           if dep.package_type == "shared-library"])
         return flags
 

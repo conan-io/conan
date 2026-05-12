@@ -155,9 +155,46 @@ def test_autotoolsdeps_macos_rpath_by_package_type(package_type, use_shared_opti
             "conanfile.py": consumer,
             "macos": profile})
     t.run("create dep_pkg --profile:host=macos")
-    t.run("install . --profile:host=macos")
+    t.run("install --profile:host=macos")
     deps = t.load("conanautotoolsdeps.sh")
     if expect_rpath:
         assert "-Wl,-rpath" in deps
     else:
         assert "-Wl,-rpath" not in deps
+
+
+@pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Autotools")
+def test_autotoolsdeps_macos_rpath_shared_dep_with_components():
+    profile = textwrap.dedent("""
+         [settings]
+         build_type=Release
+         arch=x86
+         os=Macos
+         compiler=gcc
+         compiler.libcxx=libstdc++11
+         compiler.version=7.1
+         compiler.cppstd=17
+    """)
+    dep = (GenConanfile("pkg", "1.0")
+           .with_settings("os", "arch", "compiler", "build_type")
+           .with_package_type("shared-library")
+           .with_package_info({
+               "libdirs": [],
+               "components": {
+                   "cmp": {"libdirs": ["nested/lib"], "libs": ["pkg"]},
+               },
+           }))
+    consumer = (GenConanfile("app", "1.0")
+                .with_settings("os", "arch", "compiler", "build_type")
+                .with_require("pkg/1.0")
+                .with_generator("AutotoolsDeps"))
+
+    t = TestClient()
+    t.save({"dep_pkg/conanfile.py": dep,
+            "conanfile.py": consumer,
+            "macos": profile})
+    t.run("create dep_pkg --profile:host=macos")
+    t.run("install --profile:host=macos")
+    deps = t.load("conanautotoolsdeps.sh")
+    assert "nested" in deps
+    assert "-Wl,-rpath" in deps
