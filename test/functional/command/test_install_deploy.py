@@ -567,6 +567,39 @@ class TestRuntimeDeployer:
         else:
             assert not os.path.islink(lib)
 
+    def test_runtime_deploy_symlink_overwrite(self):
+        """Two deps may ship the same symlink name pointing at different targets; overwrite must
+        not raise FileExistsError (https://github.com/conan-io/conan/issues/19968).
+        """
+        if platform.system() == "Windows":
+            pytest.skip("Requires POSIX symlinks")
+        c = TestClient()
+
+        def _shared_lib_pkg(name, versioned_so, body):
+            return (GenConanfile(name, "1.0")
+                    .with_package_type("shared-library")
+                    .with_import("import os")
+                    .with_import("from conan.tools.files import save, chdir")
+                    .with_package(
+                        f'save(self, os.path.join(self.package_folder, "lib", "{versioned_so}"), "{body}")',
+                        'with chdir(self, os.path.join(self.package_folder, "lib")):',
+                        f'    os.symlink(src="{versioned_so}", dst="libfoo.so")',
+                    ))
+
+        pkga = _shared_lib_pkg("pkga", "libfoo.so.1", "v1")
+        pkgb = _shared_lib_pkg("pkgb", "libfoo.so.2", "v2")
+        c.save({"pkga/conanfile.py": pkga,
+                "pkgb/conanfile.py": pkgb,
+                "conanfile.txt": "[requires]\npkga/1.0\npkgb/1.0\n"})
+        c.run("export-pkg pkga --name=pkga --version=1.0")
+        c.run("export-pkg pkgb --name=pkgb --version=1.0")
+        c.run("install . --deployer=runtime_deploy --deployer-folder=myruntime -vvv")
+        assert "libfoo.so exists and will be overwritten" in c.out
+        link = os.path.join(c.current_folder, "myruntime", "libfoo.so")
+        assert os.path.islink(link)
+        # Last dependency in host order wins the symlink target; both outcomes are valid.
+        assert os.readlink(link) in ("libfoo.so.1", "libfoo.so.2")
+
     def test_runtime_deploy_subfolder(self):
         """ The deployer runtime_deploy should preserve subfolder structure when deploying
         shared libraries
