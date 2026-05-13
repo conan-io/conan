@@ -30,9 +30,9 @@ class AutotoolsDeps:
     def _rpaths_flags(self):
         flags = []
         for dep in self.ordered_deps:
-            flags.extend(["-Wl,-rpath -Wl,{}".format(libdir)
-                          for libdir in dep.cpp_info.aggregated_components().libdirs
-                          if dep.package_type is PackageType.SHARED])
+            if dep.package_type is PackageType.SHARED:
+                flags.extend(["-Wl,-rpath -Wl,{}".format(libdir) for libdir in
+                              dep.cpp_info.aggregated_components().libdirs])
         return flags
 
     @property
