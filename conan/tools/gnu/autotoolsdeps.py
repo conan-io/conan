@@ -29,7 +29,8 @@ class AutotoolsDeps:
     def _rpaths_flags(self):
         flags = []
         for dep in self.ordered_deps:
-            flags.extend(["-Wl,-rpath -Wl,{}".format(libdir) for libdir in self._get_cpp_info().libdirs
+            flags.extend(["-Wl,-rpath -Wl,{}".format(libdir)
+                          for libdir in dep.cpp_info.aggregated_components().libdirs
                           if dep.package_type == "shared-library"])
         return flags
 
@@ -79,6 +80,6 @@ class AutotoolsDeps:
     def vars(self, scope="build"):
         return self.environment.vars(self._conanfile, scope=scope)
 
-    def generate(self,  scope="build"):
+    def generate(self, scope="build"):
         check_duplicated_generator(self, self._conanfile)
         self.vars(scope).save_script("conanautotoolsdeps")
