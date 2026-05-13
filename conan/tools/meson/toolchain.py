@@ -91,8 +91,8 @@ class MesonToolchain:
     {% if pkgconfig %}
     pkg-config = '{{pkgconfig}}'
     {% endif %}
-    {% if emulator %}
-    exe_wrapper = '{{emulator}}'
+    {% if exe_wrapper %}
+    exe_wrapper = '{{exe_wrapper}}'
     {% endif %}
 
     [built-in options]
@@ -200,6 +200,9 @@ class MesonToolchain:
         compiler_version = self._conanfile.settings.get_safe("compiler.version")
         if compiler_version is None:
             raise ConanException("MesonToolchain needs 'settings.compiler.version', but it is not defined")
+        # Read configuration for compilers
+        compilers_by_conf = self._conanfile_conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
 
         cppstd = self._conanfile.settings.get_safe("compiler.cppstd")
         cstd = self._conanfile.settings.get_safe("compiler.cstd")
@@ -251,11 +254,6 @@ class MesonToolchain:
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         #: Dict-like object with the build, host, and target as the Meson machine context
         self.cross_build = {}
-
-        # Read configuration for compilers
-        compilers_by_conf = self._conanfile_conf.get("tools.build:compiler_executables", default={},
-                                                     check_type=dict)
-        self.emulator = compilers_by_conf.get("emulator")
         default_comp = ""
         default_comp_cpp = ""
         if native is False and is_cross_building:
@@ -274,8 +272,10 @@ class MesonToolchain:
                 sdk_host = conanfile.settings.get_safe("os.sdk")
                 self.cross_build["host"]["subsystem"] = get_apple_subsystem(sdk_host)
                 self.cross_build["build"]["subsystem"] = get_apple_subsystem(sdk_build)
+            # Let's check if any emulator was defined
+            self._exe_wrapper = compilers_by_conf.get("emulator")
             # Issue: https://github.com/conan-io/conan/issues/19217
-            self.properties["needs_exe_wrapper"] = self.emulator is not None or not can_run(self._conanfile)
+            self.properties["needs_exe_wrapper"] = self._exe_wrapper is not None or not can_run(self._conanfile)
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target
                 os_target = settings_target.get_safe("os")
@@ -569,7 +569,7 @@ class MesonToolchain:
             "as": self.as_,
             "windres": self.windres,
             "pkgconfig": self.pkgconfig,
-            "emulator": self.emulator,
+            "exe_wrapper": self._exe_wrapper,
             # https://mesonbuild.com/Builtin-options.html#core-options
             "buildtype": self.buildtype,
             "default_library": self.default_library,
