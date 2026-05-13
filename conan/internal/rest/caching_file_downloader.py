@@ -63,7 +63,7 @@ class SourcesCachingDownloader:
                     if recorded_urls and not recorded_urls.intersection(urls_set):
                         self._output.warning(
                             "The requested URL(s) are not listed in backup-sources metadata for this "
-                            "SHA256 cache entry. This may be a conandata mistake, or the same checksum "
+                            "SHA256 cache entry. This may be a mistake, or the same checksum "
                             "reused for a different upstream version. Re-downloading to verify."
                         )
                         need_download = True
