@@ -155,10 +155,11 @@ def test_autotoolsdeps_macos_rpath_by_package_type(package_type, use_shared_opti
             "conanfile.py": consumer,
             "macos": profile})
     t.run("create dep_pkg --profile:host=macos")
+    dp_pkg_package_path = t.created_layout().package()
     t.run("install --profile:host=macos")
     deps = t.load("conanautotoolsdeps.sh")
     if expect_rpath:
-        assert "-Wl,-rpath" in deps
+        assert f"-Wl,-rpath -Wl,{dp_pkg_package_path}" in deps
     else:
         assert "-Wl,-rpath" not in deps
 
@@ -194,7 +195,8 @@ def test_autotoolsdeps_macos_rpath_shared_dep_with_components():
             "conanfile.py": consumer,
             "macos": profile})
     t.run("create dep_pkg --profile:host=macos")
+    dp_pkg_package_path = t.created_layout().package()
     t.run("install --profile:host=macos")
     deps = t.load("conanautotoolsdeps.sh")
     assert "nested" in deps
-    assert "-Wl,-rpath" in deps
+    assert f"-Wl,-rpath -Wl,{dp_pkg_package_path}" in deps
