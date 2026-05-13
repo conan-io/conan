@@ -974,7 +974,7 @@ class TestDownloadCacheBackupSources:
         assert url_a in meta["references"]["pkg/1.0"]
         assert url_b in meta["references"]["pkg/1.1"]
 
-    def test_download_urls_origin_only_missing_summary_json_uses_cached_blob(self):
+    def test_backup_sources_empty_missing_summary_json_uses_cached_blob(self):
         """Not having a backup-sources ``.json`` must not prevent reusing the cached blob on a second ``source``"""
         d = os.path.join(self.file_server.store, "internet")
         sha = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
@@ -988,8 +988,15 @@ class TestDownloadCacheBackupSources:
         self.client.run("source")
 
         summary_json = os.path.join(self.client.cache_folder, "sources", "s", sha + ".json")
-        os.remove(summary_json)
 
+        # Empty the references in the summary JSON to simulate a missing or corrupted summary, but keep the cached blob
+        with open(summary_json, "w") as f:
+            json.dump({"references": {}}, f)
+        self.client.run("source")
+        assert "retrieved from local download cache" in self.client.out
+
+        # Remove the summary JSON entirely, it should still reuse the cached blob because the URL and SHA256 are the same
+        os.remove(summary_json)
         self.client.run("source")
         assert "retrieved from local download cache" in self.client.out
 
