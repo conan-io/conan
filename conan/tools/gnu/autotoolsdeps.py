@@ -1,4 +1,5 @@
 from conan.internal import check_duplicated_generator
+from conan.internal.model.pkg_type import PackageType
 from conan.tools import CppInfo
 from conan.tools.env import Environment
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
@@ -31,7 +32,7 @@ class AutotoolsDeps:
         for dep in self.ordered_deps:
             flags.extend(["-Wl,-rpath -Wl,{}".format(libdir)
                           for libdir in dep.cpp_info.aggregated_components().libdirs
-                          if dep.package_type == "shared-library"])
+                          if dep.package_type is PackageType.SHARED])
         return flags
 
     @property
