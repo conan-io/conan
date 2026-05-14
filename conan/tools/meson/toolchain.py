@@ -254,6 +254,7 @@ class MesonToolchain:
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         #: Dict-like object with the build, host, and target as the Meson machine context
         self.cross_build = {}
+        self._exe_wrapper = None
         default_comp = ""
         default_comp_cpp = ""
         if native is False and is_cross_building:

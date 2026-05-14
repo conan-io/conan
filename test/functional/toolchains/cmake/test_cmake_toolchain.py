@@ -1568,4 +1568,3 @@ def test_cmake_toolchain_crosscompiling_emulator():
     assert f'set(CMAKE_CROSSCOMPILING_EMULATOR "{wrapper_path}")' in client.load("conan_toolchain.cmake")
     assert "TRY_RUN RUN_RESULT: 42" in client.out
     assert "EMULATOR_INVOKED" in client.load("emulator.log")
-    print(client.load("emulator.log"))
