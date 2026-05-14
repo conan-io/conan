@@ -387,6 +387,7 @@ class ConanFile:
         """
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         command = self._conan_helpers.cmd_wrapper.wrap(command, conanfile=self)
+        command = self._emulator_prefix_for_test_package(command)
         if env == "":  # This default allows not breaking for users with ``env=None`` indicating
             # they don't want any env-file applied
             env = "conanbuild" if scope == "build" else "conanrun"
@@ -411,6 +412,18 @@ class ConanFile:
             raise ConanException("Error %d while executing" % retcode)
 
         return retcode
+
+    def _emulator_prefix_for_test_package(self, command):
+        """Prepend ``tools.build:compiler_executables['emulator']`` when ``run()`` is invoked from
+        ``test_package`` ``test()`` only.
+        """
+        if not getattr(self, "_conan_in_test_package_test", False):
+            return command
+        compilers = self.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+        emulator = compilers.get("emulator")
+        if not emulator:
+            return command
+        return f"{emulator} {command}"
 
     def __repr__(self):
         return self.display_name
