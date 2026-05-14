@@ -171,4 +171,3 @@ def test_premake_build_with_custom_configuration():
     )
     assert 'conanfile.premake5.lua" gmake --arch=arm64!!' in tc.out
     assert "Running make config=releasedll all -j4!!" in tc.out
-
