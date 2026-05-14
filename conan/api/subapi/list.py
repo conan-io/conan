@@ -259,14 +259,15 @@ class ListAPI:
                 if lru:  # Filter LRUs
                     prefs = [r for r in prefs if cache.get_package_lru(r) < limit_time]
 
-                # Only omit the recipe revision when an explicit filter reduced packages to zero.
-                # A naturally-empty recipe (no binaries ever built) must still appear so that
-                # commands like `upload` can process the conanfile.
-                # The only "unfiltered" case is package_id="*" with no profile/query/lru.
-                explicit_filter = (package_query is not None or profile is not None
-                                   or lru is not None
-                                   or pattern.package_id != "*")
-                if prefs or not explicit_filter:
+                # Include this recipe revision in the result if either:
+                # - it has at least one matching package, OR
+                # - no filter was applied (bare "*" package_id, no profile/query/lru),
+                #   so naturally-empty recipes still appear (e.g. for `conan upload`)
+                unfiltered_wildcard = (pattern.package_id == "*"
+                                       and package_query is None
+                                       and profile is None
+                                       and not lru)
+                if prefs or unfiltered_wildcard:
                     select_bundle.add_ref(rrev)
                     select_bundle.recipe_dict(rrev)["packages"] = {}
                     for p in prefs:
