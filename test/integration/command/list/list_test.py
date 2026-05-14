@@ -1002,3 +1002,43 @@ def test_list_error_option():
     c.run("create . -o my_error_option=1")
     c.run("list pkg/1.0#*:*")
     assert "my_error_option: 1" in c.out
+
+
+def test_list_wildcard_recipe_specific_package_id_omits_nonmatching_revisions():
+    """*/*:<specific_id> must only include recipe revisions that actually have that package ID.
+    Revisions (and recipes) with no matching binary must be absent from the output entirely."""
+    c = TestClient()
+    c.save({"pkg1.py": GenConanfile("pkg1", "1.0").with_settings("os"),
+            "pkg2.py": GenConanfile("pkg2", "1.0")})
+    c.run("create pkg1.py -s os=Windows")
+    c.run("create pkg1.py -s os=Linux")
+    c.run("create pkg2.py")
+
+    windows_id = "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
+    windows_id_pattern = "ebec3*"
+
+    for pkg_id in (windows_id, windows_id_pattern):
+        c.run(f"list */*:{pkg_id} --format=json", redirect_stdout="result.json")
+        result = json.loads(c.load("result.json"))
+        local = result["Local Cache"]
+
+        # pkg1/1.0 has the Windows binary
+        assert "pkg1/1.0" in local
+        rrev_data = list(local["pkg1/1.0"]["revisions"].values())[0]
+        assert windows_id in rrev_data["packages"]
+
+        # pkg2/1.0 has no binary with that ID
+        assert "pkg2/1.0" not in local
+
+
+def test_list_wildcard_recipe_nonexistent_package_id_empty_output():
+    """pkg/*:nonexistent_id should produce completely empty output. No recipes or revisions
+    should appear when no binary matches the given package ID."""
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_settings("os")})
+    c.run("create . -s os=Windows")
+    c.run("create . -s os=Linux")
+
+    c.run(f"list pkg/*:nonexistent_id --format=json", redirect_stdout="result.json")
+    result = json.loads(c.load("result.json"))
+    assert result["Local Cache"] == {}

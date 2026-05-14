@@ -217,7 +217,8 @@ class ListAPI:
                 rrevs = [r for r in rrevs if cache.get_recipe_lru(r) < limit_time]
 
             for rr in rrevs:
-                select_bundle.add_ref(rr)
+                if pattern.package_id is None:
+                    select_bundle.add_ref(rr)
 
             if pattern.package_id is None:  # Stop if not displaying binaries
                 continue
@@ -258,12 +259,20 @@ class ListAPI:
                 if lru:  # Filter LRUs
                     prefs = [r for r in prefs if cache.get_package_lru(r) < limit_time]
 
-                # Packages dict has been listed, even if empty
-                select_bundle.recipe_dict(rrev)["packages"] = {}
-                for p in prefs:
-                    # the "packages" dict is not using the package-revision
-                    pkg_info = packages.get(PkgReference(p.ref, p.package_id))
-                    select_bundle.add_pref(p, pkg_info)
+                # Only omit the recipe revision when an explicit filter reduced packages to zero.
+                # A naturally-empty recipe (no binaries ever built) must still appear so that
+                # commands like `upload` can process the conanfile.
+                # The only "unfiltered" case is package_id="*" with no profile/query/lru.
+                explicit_filter = (package_query is not None or profile is not None
+                                   or lru is not None
+                                   or pattern.package_id != "*")
+                if prefs or not explicit_filter:
+                    select_bundle.add_ref(rrev)
+                    select_bundle.recipe_dict(rrev)["packages"] = {}
+                    for p in prefs:
+                        # the "packages" dict is not using the package-revision
+                        pkg_info = packages.get(PkgReference(p.ref, p.package_id))
+                        select_bundle.add_pref(p, pkg_info)
         return select_bundle
 
     def explain_missing_binaries(self, ref, conaninfo, remotes):
