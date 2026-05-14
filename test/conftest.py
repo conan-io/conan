@@ -6,7 +6,7 @@ from shutil import which
 
 import pytest
 
-from conan.internal.api.detect.detect_vs import vswhere
+from conan.internal.api.detect.detect_vs import vswhere, vs_installation_path
 
 """
 To override these locations with your own in your dev machine:
@@ -58,7 +58,8 @@ tools_locations = {
     'visual_studio': {"default": "15",
                       "15": {},
                       "16": {"disabled": True},
-                      "17": {}},
+                      "17": {},
+                      "18": {}},
     'pkg_config': {
         "exe": "pkg-config",
         "default": "0.28",
@@ -266,7 +267,7 @@ def _get_individual_tool(name, version):
         if tool_version.get("disabled"):
             return False
         if name == "visual_studio":
-            if vswhere():  # TODO: Missing version detection
+            if vs_installation_path(version):
                 return None, None
 
         tool_path = tool_version.get("path", {}).get(tool_platform)
