@@ -1,5 +1,6 @@
 import os
 import re
+import shlex
 import textwrap
 
 from jinja2 import Template
@@ -994,6 +995,9 @@ class GenericSystemBlock(Block):
         set(CMAKE_SYSTEM_PROCESSOR {{ cmake_system_processor }})
         endif()
         {% endif %}
+        {% if cmake_crosscompiling_emulator %}
+        set(CMAKE_CROSSCOMPILING_EMULATOR "{{ cmake_crosscompiling_emulator }}")
+        {% endif %}
 
         {% if generator_platform and not winsdk_version %}
         set(CMAKE_GENERATOR_PLATFORM "{{ generator_platform }}" CACHE STRING "" FORCE)
@@ -1213,11 +1217,17 @@ class GenericSystemBlock(Block):
         result = self._get_winsdk_version(system_version, generator_platform)
         system_version, winsdk_version, gen_platform_sdk_version = result
 
+        compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                     check_type=dict)
+        emulator = compilers_by_conf.get("emulator")
+        cmake_crosscompiling_emulator = ";".join(shlex.split(emulator)) if emulator else None
+
         return {"toolset": toolset,
                 "generator_platform": generator_platform,
                 "cmake_system_name": system_name,
                 "cmake_system_version": system_version,
                 "cmake_system_processor": system_processor,
+                "cmake_crosscompiling_emulator": cmake_crosscompiling_emulator,
                 "cmake_sysroot": cmake_sysroot,
                 "winsdk_version": winsdk_version,
                 "gen_platform_sdk_version": gen_platform_sdk_version}

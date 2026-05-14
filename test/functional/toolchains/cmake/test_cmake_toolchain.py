@@ -1516,3 +1516,56 @@ def test_cmake_toolchain_verbosity_propagation():
     toolchain = t.load("conan_toolchain.cmake")
     # assert 'set(CMAKE_VERBOSE_MAKEFILE "OFF"' in toolchain
     assert 'set(CMAKE_MESSAGE_LOG_LEVEL "WARNING"' in toolchain
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Bash wrapper not available on Windows")
+def test_cmake_toolchain_crosscompiling_emulator():
+    client = TestClient(path_with_spaces=False)
+    wrapper_script = textwrap.dedent("""\
+        #!/bin/bash
+        SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+        echo "EMULATOR_INVOKED: $@" >> "$SCRIPT_DIR/emulator.log"
+        exec "$@"
+        """)
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "CMakeLists.txt"
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.generate()
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+        """)
+    cmakelists = textwrap.dedent("""\
+        cmake_minimum_required(VERSION 3.15)
+        project(test_emulator CXX)
+        file(WRITE ${CMAKE_BINARY_DIR}/test_try_run.cpp [[
+            #include <iostream>
+            int main() { std::cout << "TRY_RUN_OUTPUT" << std::endl; return 42; }
+        ]])
+        try_run(RUN_RESULT COMPILE_RESULT
+                ${CMAKE_BINARY_DIR} ${CMAKE_BINARY_DIR}/test_try_run.cpp
+                RUN_OUTPUT_VARIABLE RUN_OUTPUT)
+        message(STATUS "TRY_RUN RUN_RESULT: ${RUN_RESULT}")
+        """)
+    profile = textwrap.dedent("""\
+        include(default)
+        [conf]
+        tools.build:compiler_executables={'emulator': '{{profile_dir}}/emulator_wrapper.sh'}
+        tools.cmake.cmaketoolchain:system_name=Linux
+        """)
+    client.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists,
+                 "emulator_wrapper.sh": wrapper_script, "profile": profile})
+    os.chmod(os.path.join(client.current_folder, "emulator_wrapper.sh"), 0o755)
+
+    client.run("build . -pr=profile")
+
+    wrapper_path = os.path.join(client.current_folder, "emulator_wrapper.sh")
+    assert f'set(CMAKE_CROSSCOMPILING_EMULATOR "{wrapper_path}")' in client.load("conan_toolchain.cmake")
+    assert "TRY_RUN RUN_RESULT: 42" in client.out
+    assert "EMULATOR_INVOKED" in client.load("emulator.log")
+    print(client.load("emulator.log"))

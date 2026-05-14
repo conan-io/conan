@@ -552,3 +552,14 @@ class TestCrossBuild:
         toolchain = CMakeToolchain(conanfile_cross)
         content = toolchain.content
         assert 'set(CMAKE_SYSTEM_NAME Generic)' in content
+
+    @pytest.mark.parametrize("emulator,expected", [
+        ("qemu-arm", "qemu-arm"),
+        ("qemu-arm -L /usr/arm-linux-gnueabi", "qemu-arm;-L;/usr/arm-linux-gnueabi"),
+        ('"/path/with spaces/emulator" --arg', "/path/with spaces/emulator;--arg"),
+    ])
+    def test_crosscompiling_emulator(self, conanfile_cross, emulator, expected):
+        conanfile_cross.conf.define("tools.build:compiler_executables", {"emulator": emulator})
+        toolchain = CMakeToolchain(conanfile_cross)
+        content = toolchain.content
+        assert f'set(CMAKE_CROSSCOMPILING_EMULATOR "{expected}")' in content
