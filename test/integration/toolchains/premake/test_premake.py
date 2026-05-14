@@ -1,3 +1,4 @@
+import platform
 import textwrap
 
 import pytest
@@ -108,6 +109,7 @@ def test_premake_build_with_targets():
     assert "Running make config=release app test -j42!!" in tc.out
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 @pytest.mark.tool("visual_studio", "17")
 def test_premake_msbuild_platform():
     tc = TestClient()
