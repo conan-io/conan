@@ -63,11 +63,15 @@ class TestLRU:
         # What if no revision, but package id is passed
         c.run("list pkg/0.1:* --lru=1d", assert_error=True)
         assert "'--lru' must be used with package revision pattern" in c.out
-        # Doesn't fail, but packages is empty
+        # No packages match, so the revision itself should be absent
         c.run("list pkg/0.1:*#* --lru=1d --format=json")
         pkgs = json.loads(c.stdout)
-        rev = pkgs["Local Cache"]["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]
-        assert rev["packages"] == {}
+        assert pkgs["Local Cache"] == {}
+        # Wait a bit and try again, now the package should be listed
+        time.sleep(2)
+        c.run("list pkg/0.1:*#* --lru=1s --format=json")
+        pkgs = json.loads(c.stdout)
+        assert pkgs["Local Cache"]["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]["packages"] != {}
 
     def test_update_lru_when_used_as_dependency(self):
         """Show that using a recipe as a dependency will update its LRU"""

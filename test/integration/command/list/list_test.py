@@ -719,9 +719,8 @@ def test_list_empty_settings():
     c.run("create .")
 
     c.run("list pkg/1.0:* -p os=Windows -f=json")
-    revisions = json.loads(c.stdout)["Local Cache"]["pkg/1.0"]["revisions"]
-    pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
-    assert pkgs == {}
+    result = json.loads(c.stdout)["Local Cache"]
+    assert result == {}
     c.run("list pkg/1.0:* -p os=None -f=json")
     revisions = json.loads(c.stdout)["Local Cache"]["pkg/1.0"]["revisions"]
     pkgs = revisions["a69a86bbd19ae2ef7eedc64ae645c531"]["packages"]
@@ -915,8 +914,7 @@ class TestListBinaryFilter:
         result = json.loads(c.stdout)
         header = result[pkg_key]["header/1.0"]["revisions"]["747cc49983b14bdd00df50a0671bd8b3"]
         assert header["packages"] == {"da39a3ee5e6b4b0d3255bfef95601890afd80709": {"info": {}}}
-        pkg = result[pkg_key]["pkg/1.0"]["revisions"]["03591c8b22497dd74214e08b3bf2a56f"]
-        assert pkg["packages"] == {}
+        assert "pkg/1.0" not in result[pkg_key]
 
         c.run(f"list *:* -fp=profile_armv8 --format=json {r}")
         result = json.loads(c.stdout)
