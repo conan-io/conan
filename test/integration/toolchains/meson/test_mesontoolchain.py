@@ -326,6 +326,7 @@ def test_deactivate_nowrap():
     assert "nofallback" not in content
 
 
+@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 @pytest.mark.parametrize("build_type,runtime,vscrt", [
     ("Debug", "dynamic", "mdd"),

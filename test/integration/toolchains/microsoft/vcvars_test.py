@@ -76,6 +76,7 @@ def test_vcvars_generator_string():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.tool("visual_studio", "17")
 def test_vcvars_platform_x86():
     # https://github.com/conan-io/conan/issues/11144
     client = TestClient(path_with_spaces=False)
@@ -87,6 +88,7 @@ def test_vcvars_platform_x86():
     assert 'vcvarsall.bat"  x86_amd64' in vcvars
 
 
+@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_vcvars_winsdk_version():
     client = TestClient(path_with_spaces=False)
@@ -99,6 +101,7 @@ def test_vcvars_winsdk_version():
     assert 'vcvarsall.bat"  amd64 10.0 -vcvars_ver=14.3' in vcvars
 
 
+@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_vcvars_compiler_update():
     client = TestClient(path_with_spaces=False)
@@ -111,6 +114,7 @@ def test_vcvars_compiler_update():
     assert 'vcvarsall.bat"  amd64 -vcvars_ver=14.33' in vcvars
 
 
+@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_vcvars_conf_msvc_update():
     client = TestClient(path_with_spaces=False)
@@ -123,6 +127,7 @@ def test_vcvars_conf_msvc_update():
     assert 'vcvarsall.bat"  amd64 -vcvars_ver=14.38.29910' in vcvars
 
 
+@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_vcvars_armv8_windows_store():
     client = TestClient(path_with_spaces=False)
