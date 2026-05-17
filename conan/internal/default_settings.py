@@ -95,11 +95,11 @@ os:
     Emscripten:
     Neutrino:
         version: ["6.4", "6.5", "6.6", "7.0", "7.1", "8.0"]
-        variant: [None, "safe"]
+        variant: [null, "safe"]
     baremetal:
     VxWorks:
         version: ["7"]
-        variant: [None, "certified"]
+        variant: [null, "certified"]
 arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64,
        armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, arm64ec,
        sparc, sparcv9,
