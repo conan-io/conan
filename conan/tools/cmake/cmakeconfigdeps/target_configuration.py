@@ -103,6 +103,12 @@ class TargetConfigurationTemplate2:
                         link = not (pkg_type is PackageType.SHARED and
                                     dep_comp.type is PackageType.SHARED)
                     link = req.libs or link
+                    # If the dependency has cmake_build_modules, it needs full link
+                    # because the build_module may bring hidden dependencies (like Python libs)
+                    build_modules = self._cmakedeps.get_property("cmake_build_modules", dep, comp,
+                                                                  check_type=list) or []
+                    if build_modules:
+                        link = True
                     dep_target = self._cmakedeps.get_property("cmake_target_name", dep, comp)
                     dep_target = dep_target or default_target
                     link_feature = self._cmakedeps.get_property("cmake_link_feature", dep, comp)
