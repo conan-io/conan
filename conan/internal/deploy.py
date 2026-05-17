@@ -175,7 +175,13 @@ def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None
             if not os.path.exists(os.path.dirname(dest_filepath)):
                 os.makedirs(os.path.dirname(dest_filepath))
 
-            if os.path.exists(dest_filepath):
+            if os.path.islink(dest_filepath):
+                if os.path.islink(src_filepath) and os.readlink(src_filepath) == os.readlink(dest_filepath):
+                    output.verbose(f"{dest_filepath} symlink already points to the same target, skipping")
+                    continue
+                output.warning(f"{dest_filepath} exists and will be overwritten")
+                os.unlink(dest_filepath)
+            elif os.path.exists(dest_filepath):
                 if filecmp.cmp(src_filepath, dest_filepath):  # Be efficient, do not copy
                     output.verbose(f"{dest_filepath} exists with same contents, skipping copy")
                     continue
