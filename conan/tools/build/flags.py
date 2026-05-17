@@ -279,7 +279,12 @@ def cppstd_flag(conanfile) -> str:
     if func:
         flag = func(Version(compiler_version), str(cppstd))
     if flag and llvm_clang_front(conanfile) == "clang-cl":
-        flag = flag.replace("=", ":")
+        # clang-cl maps -std:c++NN to wrong MSVC /std:c++latest flag for C++23+
+        # Use -clang:-std=c++NN prefix to pass the clang-style flag through
+        if flag.startswith("-std="):
+            flag = "-clang:" + flag
+        else:
+            flag = flag.replace("=", ":")
     return flag
 
 
