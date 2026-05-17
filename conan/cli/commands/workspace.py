@@ -200,6 +200,8 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
     if args.lockfile_partial:
         lockfile_args.append("--lockfile-partial")
     lockfile_args = " ".join(lockfile_args)
+    # Build the --build arguments to forward to sub-commands
+    build_args = " ".join(f"--build={b}" for b in (buildmode or []))
     for level in order["order"]:
         for elem in level:
             ref = RecipeReference.loads(elem["ref"])
@@ -210,6 +212,8 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                     if ws_pkg is None:
                         if is_editable or package["binary"] == "Build":  # Build extern to Workspace
                             cmd = f'install {package["build_args"]} {profile_args} {lockfile_args}'
+                            if build_args:
+                                cmd += f" {build_args}"
                             ConanOutput().box(f"Workspace building external {ref}")
                             ConanOutput().info(f"Command: {cmd}\n")
                             conan_api.command.run(cmd)
@@ -225,6 +229,8 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                         command = "build" if build else "install"
                         cmd = (f'{command} "{path}" {profile_args} {build_arg} {ref_args} {of_arg} '
                                f'{lockfile_args}')
+                        if build_args:
+                            cmd += f" {build_args}"
                         ConanOutput().box(f"Workspace {command}: {ref}")
                         ConanOutput().info(f"Command: {cmd}\n")
                         conan_api.command.run(cmd)
@@ -312,7 +318,7 @@ def workspace_clean(conan_api: ConanAPI, parser, subparser, *args):  # noqa
 @conan_subcommand()
 def workspace_init(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Clean the temporary build folders when possible
+    Initialize a workspace, creating the conanws.py file
     """
     subparser.add_argument("path", nargs="?", default=os.getcwd(),
                            help="Path to a folder where the workspace will be initialized. "
