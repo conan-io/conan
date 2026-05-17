@@ -267,7 +267,12 @@ class MesonToolchain:
                 self.cross_build["host"]["subsystem"] = get_apple_subsystem(sdk_host)
                 self.cross_build["build"]["subsystem"] = get_apple_subsystem(sdk_build)
             # Issue: https://github.com/conan-io/conan/issues/19217
-            self.properties["needs_exe_wrapper"] = not can_run(self._conanfile)
+            # Issue: https://github.com/conan-io/conan/issues/19912
+            # needs_exe_wrapper is independent from can_run, it should be True whenever
+            # cross-building is happening, regardless of whether the build machine can run
+            # host executables. Meson uses needs_exe_wrapper to know if it needs an exe
+            # wrapper for cross-compiled test executables.
+            self.properties["needs_exe_wrapper"] = cross_building(self._conanfile)
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target
                 os_target = settings_target.get_safe("os")
