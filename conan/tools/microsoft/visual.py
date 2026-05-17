@@ -158,6 +158,7 @@ class VCVars:
             set __VSCMD_ARG_NO_LOGO=1
             set VSCMD_SKIP_SENDTELEMETRY=1
             echo conanvcvars.bat: Activating environment Visual Studio {vs_version} - {vcvarsarch} - winsdk_version={winsdk_version} - vcvars_ver={vcvars_ver}
+            if not defined CONAN_ORIGINAL_PATH set "CONAN_ORIGINAL_PATH=%PATH%"
             {vcvars}
             """)
         from conan.tools.env.environment import create_env_script
@@ -188,12 +189,28 @@ def _create_deactivate_vcvars_file(conanfile, filename):
     if conanfile.conf.get("tools.env:deactivation_mode") == "function":
         return
     deactivate_filename = f"deactivate_{filename}"
-    message = f"[{deactivate_filename}]: *** vcvars env cannot be deactivated ***\n"
     is_ps1 = filename.endswith(".ps1")
     if is_ps1:
-        content = f"Write-Host {message}"
+        content = textwrap.dedent(f"""\
+            if (Test-Path env:CONAN_ORIGINAL_PATH) {{
+                $env:Path = $env:CONAN_ORIGINAL_PATH
+                Remove-Item env:CONAN_ORIGINAL_PATH
+                Write-Host "[{deactivate_filename}]: Restored PATH from backup"
+            }} else {{
+                Write-Host "[{deactivate_filename}]: *** vcvars env cannot be deactivated ***"
+            }}
+            """)
     else:
-        content = f"echo {message}"
+        content = textwrap.dedent(f"""\
+            @echo off
+            if defined CONAN_ORIGINAL_PATH (
+                set "PATH=%CONAN_ORIGINAL_PATH%"
+                set "CONAN_ORIGINAL_PATH="
+                echo [{deactivate_filename}]: Restored PATH from backup
+            ) else (
+                echo [{deactivate_filename}]: *** vcvars env cannot be deactivated ***
+            )
+            """)
     path = os.path.join(conanfile.generators_folder, deactivate_filename)
     save(path, content)
 
