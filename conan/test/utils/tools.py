@@ -131,7 +131,7 @@ class TestingResponse:
     def text(self):
         return self.test_response.text
 
-    def iter_content(self, chunk_size=1):  # @UnusedVariable
+    def iter_content(self, chunk_size=1):  # noqa
         return [self.content]
 
     @property
@@ -139,10 +139,7 @@ class TestingResponse:
         return self.test_response.status_code
 
     def json(self):
-        try:
-            return json.loads(self.test_response.content)
-        except:
-            raise ValueError("The response is not a JSON")
+        return json.loads(self.test_response.content)
 
 
 class TestRequester:

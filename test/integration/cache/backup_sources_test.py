@@ -11,6 +11,7 @@ from webtest import TestApp
 
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
@@ -944,3 +945,82 @@ class TestDownloadCacheBackupSources:
         assert f"Sources correctly downloaded from {self.file_server.fake_url}" in self.client.out
         assert "myfile.txt" in os.listdir(self.client.current_folder)
         assert len(os.listdir(self.download_cache_folder)) == 0
+
+    def test_backup_sources_unlisted_url_same_sha_warns(self):
+        """New URL(s) with no overlap vs summary JSON for the same cached SHA256 emit a warning once."""
+        warn = "not listed in backup-sources metadata"
+        d = os.path.join(self.file_server.store, "internet")
+        sha = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(d, "upstream_a.txt"), "Hello, world!")
+        save(os.path.join(d, "upstream_b.txt"), "Hello, world!")
+        url_a = f"{self.file_server.fake_url}/internet/upstream_a.txt"
+        url_b = f"{self.file_server.fake_url}/internet/upstream_b.txt"
+
+        self.client.save_home({"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"})
+        dl_import = "from conan.tools.files import download"
+        self.client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_import(dl_import).with_source(
+            f'download(self, "{url_a}", "src.tgz", sha256="{sha}")')})
+        self.client.run("source")
+        assert warn not in self.client.out
+
+        self.client.save({"conanfile.py": GenConanfile("pkg", "1.1").with_import(dl_import).with_source(
+            f'download(self, "{url_b}", "src.tgz", sha256="{sha}")')})
+        self.client.run("source")
+        assert warn in self.client.out
+        self.client.run("source")
+        assert warn not in self.client.out
+
+        meta = json.loads(load(os.path.join(self.download_cache_folder, "s", sha + ".json")))
+        assert url_a in meta["references"]["pkg/1.0"]
+        assert url_b in meta["references"]["pkg/1.1"]
+
+    def test_backup_sources_empty_missing_summary_json_uses_cached_blob(self):
+        """Not having a backup-sources ``.json`` must not prevent reusing the cached blob on a second ``source``"""
+        d = os.path.join(self.file_server.store, "internet")
+        sha = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(d, "myfile.txt"), "Hello, world!")
+        url = f"{self.file_server.fake_url}/internet/myfile.txt"
+
+        self.client.save_home({"global.conf": "core.sources:download_urls=['origin']\n"})
+        dl_import = "from conan.tools.files import download"
+        self.client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_import(dl_import).with_source(
+            f'download(self, "{url}", "src.tgz", sha256="{sha}")')})
+        self.client.run("source")
+
+        summary_json = os.path.join(self.client.cache_folder, "sources", "s", sha + ".json")
+
+        # Empty the references in the summary JSON to simulate a missing or corrupted summary, but keep the cached blob
+        with open(summary_json, "w") as f:
+            json.dump({"references": {}}, f)
+        self.client.run("source")
+        assert "retrieved from local download cache" in self.client.out
+
+        # Remove the summary JSON entirely, it should still reuse the cached blob because the URL and SHA256 are the same
+        os.remove(summary_json)
+        self.client.run("source")
+        assert "retrieved from local download cache" in self.client.out
+
+    def test_backup_sources_unlisted_url_wrong_content_checksum_error(self):
+        """New URL vs summary triggers re-download; wrong bytes vs declared SHA256 fail checksum."""
+        warn = "not listed in backup-sources metadata"
+        d = os.path.join(self.file_server.store, "internet")
+        sha = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        save(os.path.join(d, "upstream_a.txt"), "Hello, world!")
+        save(os.path.join(d, "upstream_bad.txt"), "Wrong tarball contents")
+        url_a = f"{self.file_server.fake_url}/internet/upstream_a.txt"
+        url_bad = f"{self.file_server.fake_url}/internet/upstream_bad.txt"
+
+        self.client.save_home({"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"})
+        dl_import = "from conan.tools.files import download"
+        self.client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_import(dl_import).with_source(
+            f'download(self, "{url_a}", "src.tgz", sha256="{sha}")')})
+        self.client.run("source")
+        summary_json = os.path.join(self.download_cache_folder, "s", sha + ".json")
+        meta_after_first = json.loads(load(summary_json))
+
+        self.client.save({"conanfile.py": GenConanfile("pkg", "1.1").with_import(dl_import).with_source(
+            f'download(self, "{url_bad}", "src.tgz", sha256="{sha}")')})
+        self.client.run("source", assert_error=True)
+        assert warn in self.client.out
+        assert "sha256 hash failed" in self.client.out
+        assert json.loads(load(summary_json)) == meta_after_first

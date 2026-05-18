@@ -139,7 +139,7 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
     """
     subparser.add_argument("pattern", nargs="?", help="Selection pattern for references to clean")
     subparser.add_argument("-l", "--list", action=OnceArgument,
-                            help="Package list of packages to clean")
+                           help="Package list of packages to clean")
     subparser.add_argument("-s", "--source", action='store_true', default=False,
                            help="Clean source folders")
     subparser.add_argument("-b", "--build", action='store_true', default=False,

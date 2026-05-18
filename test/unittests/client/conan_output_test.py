@@ -90,7 +90,6 @@ def test_output_no_trim():
         ConanOutput().write("world ", newline=True)
     assert "Hello world " in stderr.getvalue()
 
-
     with redirect_output(stderr):
         output = ConanOutput()
         output.write("Hello ")
