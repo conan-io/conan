@@ -146,22 +146,21 @@ class TestUploadExportOnly:
     uploadable, because upload uses package_id="*" internally which triggers the
     packages-listing path in list.select()."""
 
-    @pytest.fixture(scope="class")
-    def client(self):
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile("pkg", "1.0")})
-        client.run(f"export .")
-        return client
-
-    def test_upload_export_only_recipe(self, client):
+    def test_upload_export_only_recipe(self):
         """A recipe that was exported but has no packages should still be uploaded."""
-        client.run("upload pkg/1.0 -r=default -c")
-        assert "Uploading recipe 'pkg/1.0" in client.out
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+        c.run("export .")
+        c.run("upload pkg/1.0 -r=default -c")
+        assert "Uploading recipe 'pkg/1.0" in c.out
 
-    def test_upload_export_only_recipe_wildcard(self, client):
+    def test_upload_export_only_recipe_wildcard(self):
         """Wildcard pattern upload should include exported-only recipes alongside built ones."""
-        client.run("upload * -r=default -c")
-        assert "Uploading recipe 'pkg/1.0" in client.out
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+        c.run("export .")
+        c.run("upload * -r=default -c")
+        assert "Uploading recipe 'pkg/1.0" in c.out
 
 
 class TestUploadPatternErrors:
