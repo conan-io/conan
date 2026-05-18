@@ -216,14 +216,18 @@ class ListAPI:
             if lru and pattern.package_id is None:  # Filter LRUs
                 rrevs = [r for r in rrevs if cache.get_recipe_lru(r) < limit_time]
 
-            for rr in rrevs:
-                if pattern.package_id is None:
-                    select_bundle.add_ref(rr)
-
             if pattern.package_id is None:  # Stop if not displaying binaries
+                for rr in rrevs:
+                    select_bundle.add_ref(rr)
                 continue
 
             trrevs = TimedOutput(5, msg_format=msg_format)
+            # Include the recipe revision in the result if no filter was applied
+            # ("*" package_id, no profile/query/lru), so empty recipes still appear (conan upload)
+            unfiltered_wildcard = (pattern.package_id == "*"
+                                   and package_query is None
+                                   and profile is None
+                                   and not lru)
             for rrev in rrevs:
                 trrevs.info(f"Listing binaries of {rrev.repr_notime()} in {remote_name}", rrev, rrevs)
                 prefs = []
@@ -259,14 +263,7 @@ class ListAPI:
                 if lru:  # Filter LRUs
                     prefs = [r for r in prefs if cache.get_package_lru(r) < limit_time]
 
-                # Include this recipe revision in the result if either:
-                # - it has at least one matching package, OR
-                # - no filter was applied (bare "*" package_id, no profile/query/lru),
-                #   so naturally-empty recipes still appear (e.g. for `conan upload`)
-                unfiltered_wildcard = (pattern.package_id == "*"
-                                       and package_query is None
-                                       and profile is None
-                                       and not lru)
+                # Include this recipe revision if it has a matching package or if no filter was applied
                 if prefs or unfiltered_wildcard:
                     select_bundle.add_ref(rrev)
                     select_bundle.recipe_dict(rrev)["packages"] = {}
