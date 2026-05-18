@@ -14,6 +14,16 @@ class RemoveAPI:
         self._conan_api = conan_api
         self._api_helpers = api_helpers
 
+    def recipe(self, ref: RecipeReference, remote: Optional[Remote] = None):
+        """ Removes the specified recipe reference.
+
+        If ``remote`` is specified, the recipe will be removed from the remote,
+        otherwise they will be removed from the local cache.
+
+        :param ref: Recipe reference to remove
+        :param remote: Optional remote to remove references from"""
+        self.recipes([ref], remote)
+
     def recipes(self, refs: List[RecipeReference], remote: Optional[Remote] = None):
         """Removes the specified recipe reference alongside all its associated packages.
 
@@ -34,6 +44,16 @@ class RemoveAPI:
             for ref in refs:
                 recipe_layout = self._api_helpers.cache.recipe_layout(ref)
                 self._api_helpers.cache.remove_recipe_layout(recipe_layout)
+
+    def package(self, pref: PkgReference, remote: Optional[Remote] = None):
+        """Removes the specified package reference.
+
+        If ``remote`` is specified, the packages will be removed from the remote,
+        otherwise they will be removed from the local cache.
+
+        :param pref: Package reference to remove
+        :param remote: Optional remote to remove references from"""
+        self.packages([pref], remote)
 
     def packages(self, prefs: List[PkgReference], remote: Optional[Remote] = None):
         """Removes all the specified package references.
