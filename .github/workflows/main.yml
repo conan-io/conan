@@ -11,6 +11,9 @@ on:
       - 'release/*'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -112,9 +115,11 @@ jobs:
       - name: Merge coverage reports
         run: |
           pip install coverage
+          pip install git+https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/conan-io/covtest.git
           coverage combine
           coverage report
           coverage xml
+          covtest process
 
       - name: Code coverage
         uses: codecov/codecov-action@v5
@@ -125,6 +130,7 @@ jobs:
         with:
           name: |
             .coverage.*
+            .covtest
 
   deploy_to_pypi_test:
     runs-on: ubuntu-latest
