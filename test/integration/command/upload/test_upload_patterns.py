@@ -141,6 +141,29 @@ class TestUploadPatterns:
         self.assert_uploaded("pkga", result, client, query="os=Windows")
 
 
+class TestUploadExportOnly:
+    """Recipes that have been exported but never built (no binaries) must still be
+    uploadable, because upload uses package_id="*" internally which triggers the
+    packages-listing path in list.select()."""
+
+    @pytest.fixture(scope="class")
+    def client(self):
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+        client.run(f"export .")
+        return client
+
+    def test_upload_export_only_recipe(self, client):
+        """A recipe that was exported but has no packages should still be uploaded."""
+        client.run("upload pkg/1.0 -r=default -c")
+        assert "Uploading recipe 'pkg/1.0" in client.out
+
+    def test_upload_export_only_recipe_wildcard(self, client):
+        """Wildcard pattern upload should include exported-only recipes alongside built ones."""
+        client.run("upload * -r=default -c")
+        assert "Uploading recipe 'pkg/1.0" in client.out
+
+
 class TestUploadPatternErrors:
 
     @pytest.fixture(scope="class")
