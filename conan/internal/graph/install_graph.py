@@ -8,8 +8,6 @@ from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_S
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conan.internal.model.options import Options
-from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.util.files import load
 
 
@@ -53,18 +51,7 @@ class _InstallPackageReference:
         result.binary = node.binary
         result.context = node.context
         # self_options are the minimum to reproduce state
-        base_options = Options()
-        # FIXME: Very dirty
-        for pattern, options in node.conanfile.self_options._deps_package_options.items():
-            if ref_matches(node.ref, pattern, is_consumer=False):
-                base_options._deps_package_options.update({pattern: options})
-        for t in node.transitive_deps.values():
-            if not t.require.direct:
-                continue
-            if hasattr(t.node.conanfile, "self_options"):  # platform requires
-                base_options.update(t.node.conanfile.self_options)
-
-        result.options = base_options.dumps().splitlines()
+        result.options = node.conanfile.self_options.dumps().splitlines()
         result.nodes.append(node)
         result.overrides = node.overrides()
         result.info = node.conanfile.info.serialize()  # ConanInfo doesn't have deserialize
