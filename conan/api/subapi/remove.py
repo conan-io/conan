@@ -15,7 +15,7 @@ class RemoveAPI:
         self._api_helpers = api_helpers
 
     def recipe(self, ref: RecipeReference, remote: Optional[Remote] = None):
-        """ Removes the specified recipe reference.
+        """ Removes the specified recipe reference alongside all its associated packages.
 
         If ``remote`` is specified, the recipe will be removed from the remote,
         otherwise they will be removed from the local cache.
