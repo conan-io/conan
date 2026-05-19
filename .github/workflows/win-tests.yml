@@ -27,14 +27,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install Visual Studio Build Tools
-        run: |
-          Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "vs_buildtools15.exe"
-          Start-Process -FilePath ".\vs_buildtools15.exe" -ArgumentList `
-            "--quiet",  "--wait", "--norestart", "--nocache", `
-            "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
-            "--add", "Microsoft.Component.MSBuild" -WindowStyle Hidden -Wait
-
       - name: Determine pip cache directory
         id: pip-cache-dir
         shell: pwsh
