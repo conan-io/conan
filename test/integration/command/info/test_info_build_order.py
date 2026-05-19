@@ -956,6 +956,11 @@ def test_build_order_options():
     assert '"build_args": "--requires=hello/1.0 --build=hello/1.0"' in c.out
     assert '"build_args": "--requires=pkg/1.0 --build=pkg/1.0"' in c.out
 
+    # It works in both orders
+    c.run("graph build-order app --order-by=configuration --build=missing --format=json")
+    assert '"build_args": "--requires=hello/1.0 --build=hello/1.0"' in c.out
+    assert '"build_args": "--requires=pkg/1.0 --build=pkg/1.0"' in c.out
+
     # check that the built package is the static one, as the option is not propagated
     c.run("install app --build=missing")
     c.assert_listed_binary({"hello/1.0": ("55c609fe8808aa5308134cb5989d23d3caffccf2", "Build")},
