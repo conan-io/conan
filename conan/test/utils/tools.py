@@ -27,6 +27,7 @@ from conan.api.output import ConanOutput
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS
+from conan.internal.api.detect.detect_api import detect_msvc_compiler
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal import REVISIONS
@@ -51,13 +52,15 @@ NO_SETTINGS_PACKAGE_ID = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
 arch = platform.machine()
 arch_setting = "armv8" if arch in ["arm64", "aarch64"] else arch
+compiler, msvc_version, exe = detect_msvc_compiler()
+msvc_version = msvc_version or "191"
 default_profiles = {
-    "Windows": textwrap.dedent("""\
+    "Windows": textwrap.dedent(f"""\
         [settings]
         os=Windows
         arch=x86_64
         compiler=msvc
-        compiler.version=191
+        compiler.version={msvc_version}
         compiler.runtime=dynamic
         build_type=Release
         """),
