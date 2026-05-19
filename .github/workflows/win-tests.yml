@@ -16,9 +16,9 @@ jobs:
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}
-        runner: [windows-2022, windows-2025-vs2026]
+        runner: [windows-2025]
     runs-on: ${{ matrix.runner }}
-    name: Unit & Integration Tests (${{ matrix.python-version }})
+    name: Unit & Integration Tests (${{ matrix.python-version }} ${{ matrix.runner }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -70,7 +70,7 @@ jobs:
         python-version: ${{ fromJson(inputs.python-versions) }}
         runner: [windows-2022, windows-2025-vs2026]
     runs-on: ${{ matrix.runner }}
-    name: Functional Tests (${{ matrix.python-version }})
+    name: Functional Tests (${{ matrix.python-version }} ${{ matrix.runner }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

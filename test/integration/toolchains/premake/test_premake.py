@@ -1,7 +1,4 @@
-import platform
 import textwrap
-
-import pytest
 
 from conan.test.utils.tools import TestClient
 
@@ -109,8 +106,6 @@ def test_premake_build_with_targets():
     assert "Running make config=release app test -j42!!" in tc.out
 
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
-@pytest.mark.tool("visual_studio", "17")
 def test_premake_msbuild_platform():
     tc = TestClient()
     windows_profile = textwrap.dedent("""
@@ -122,6 +117,9 @@ def test_premake_msbuild_platform():
         compiler.runtime=dynamic
         compiler.version=194
         os=Windows
+
+        [conf]
+        tools.microsoft.msbuild:installation_path=
     """)
 
     conanfile = textwrap.dedent(

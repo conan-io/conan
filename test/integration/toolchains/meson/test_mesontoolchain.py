@@ -326,7 +326,6 @@ def test_deactivate_nowrap():
     assert "nofallback" not in content
 
 
-@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 @pytest.mark.parametrize("build_type,runtime,vscrt", [
     ("Debug", "dynamic", "mdd"),
@@ -347,6 +346,7 @@ def test_clang_cl_vscrt(build_type, runtime, vscrt):
 
         [conf]
         tools.cmake.cmaketoolchain:generator=Visual Studio 17
+        tools.microsoft.msbuild:installation_path=
 
         [buildenv]
         CC=clang-cl
