@@ -437,6 +437,19 @@ def test_deploy_incorrect_folder():
         assert "ERROR: Deployer folder cannot be created" in c.out
 
 
+def _runtime_deploy_shared_lib_conanfile(name, versioned_so, body):
+    """Recipe with one versioned .so under lib/ and lib/libfoo.so -> that file (POSIX symlink)."""
+    return (GenConanfile(name, "1.0")
+            .with_package_type("shared-library")
+            .with_import("import os")
+            .with_import("from conan.tools.files import save, chdir")
+            .with_package(
+                f'save(self, os.path.join(self.package_folder, "lib", "{versioned_so}"), "{body}")',
+                'with chdir(self, os.path.join(self.package_folder, "lib")):',
+                f'    os.symlink(src="{versioned_so}", dst="libfoo.so")',
+            ))
+
+
 class TestRuntimeDeployer:
     def test_runtime_deploy(self):
         c = TestClient()
@@ -566,6 +579,80 @@ class TestRuntimeDeployer:
             assert not os.path.islink(lib)
         else:
             assert not os.path.islink(lib)
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires POSIX symlinks")
+    def test_runtime_deploy_symlink_overwrite(self):
+        """Two deps may ship the same symlink name pointing at different targets; overwrite must
+        not raise FileExistsError (https://github.com/conan-io/conan/issues/19968).
+        """
+        c = TestClient()
+        pkga = _runtime_deploy_shared_lib_conanfile("pkga", "libfoo.so.1", "v1")
+        pkgb = _runtime_deploy_shared_lib_conanfile("pkgb", "libfoo.so.2", "v2")
+        c.save({"pkga/conanfile.py": pkga,
+                "pkgb/conanfile.py": pkgb,
+                "conanfile.txt": "[requires]\npkga/1.0\npkgb/1.0\n"})
+        c.run("export-pkg pkga --name=pkga --version=1.0")
+        c.run("export-pkg pkgb --name=pkgb --version=1.0")
+        c.run("install . --deployer=runtime_deploy --deployer-folder=myruntime -vvv")
+        assert "libfoo.so exists and will be overwritten" in c.out
+        link = os.path.join(c.current_folder, "myruntime", "libfoo.so")
+        assert os.path.islink(link)
+        # Last dependency in host order wins the symlink target; both outcomes are valid.
+        assert os.readlink(link) in ("libfoo.so.1", "libfoo.so.2")
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires POSIX symlinks")
+    def test_runtime_deploy_recovers_broken_symlink_on_redeploy(self):
+        """Broken symlink in the deploy dir (filecmp can raise); redeploy must replace it."""
+        c = TestClient()
+        c.save({"pkga/conanfile.py": _runtime_deploy_shared_lib_conanfile("pkga", "libfoo.so.1", "v1"),
+                "conanfile.txt": "[requires]\npkga/1.0\n"})
+        c.run("export-pkg pkga --name=pkga --version=1.0")
+        out = os.path.join(c.current_folder, "out")
+        c.run("install . --deployer=runtime_deploy --deployer-folder=out -vvv")
+        deployed_soname = os.path.join(out, "libfoo.so.1")
+        os.remove(deployed_soname)
+        link = os.path.join(out, "libfoo.so")
+        assert os.path.islink(link)
+        assert not os.path.exists(deployed_soname)
+        c.run("install . --deployer=runtime_deploy --deployer-folder=out -vvv")
+        assert os.path.isfile(deployed_soname)
+        assert os.readlink(link) == "libfoo.so.1"
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires POSIX symlinks")
+    def test_runtime_deploy_same_ref_reinstall_different_options(self):
+        """Same pkga/1.0 reinstalled with a different option: symlink name unchanged, target differs
+        (https://github.com/conan-io/conan/issues/19968).
+        """
+        pkga = (GenConanfile("pkga", "1.0")
+                .with_package_type("shared-library")
+                .with_settings("os", "compiler", "build_type", "arch")
+                .with_option("which", ["1", "2"])
+                .with_default_option("which", "1")
+                .with_import("import os")
+                .with_import("from conan.tools.files import save, chdir")
+                .with_package(*textwrap.dedent("""
+                    lib_dir = os.path.join(self.package_folder, "lib")
+                    os.makedirs(lib_dir, exist_ok=True)
+                    if self.options.which == "1":
+                        save(self, os.path.join(lib_dir, "libfoo.so.1"), "v1")
+                        with chdir(self, lib_dir):
+                            os.symlink("libfoo.so.1", "libfoo.so")
+                    else:
+                        save(self, os.path.join(lib_dir, "libfoo.so.2"), "v2")
+                        with chdir(self, lib_dir):
+                            os.symlink("libfoo.so.2", "libfoo.so")
+                    """).strip().splitlines()))
+        c = TestClient()
+        c.save({"pkga/conanfile.py": pkga,
+                "conanfile.txt": "[requires]\npkga/1.0\n"})
+        c.run("create pkga -o pkga/*:which=1 --build=missing")
+        c.run("create pkga -o pkga/*:which=2 --build=missing")
+        out = os.path.join(c.current_folder, "deploy_out")
+        c.run("install . -o pkga/*:which=1 --deployer=runtime_deploy --deployer-folder=deploy_out")
+        c.run("install . -o pkga/*:which=2 --deployer=runtime_deploy --deployer-folder=deploy_out")
+        link = os.path.join(out, "libfoo.so")
+        assert os.path.islink(link)
+        assert os.readlink(link) == "libfoo.so.2"
 
     def test_runtime_deploy_subfolder(self):
         """ The deployer runtime_deploy should preserve subfolder structure when deploying

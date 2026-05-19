@@ -137,6 +137,45 @@ class TestAddRemove:
         assert "dep1/0.2" in c.out
         assert "dep1/0.1" not in c.out
 
+    def test_add_output_folder_updated(self):
+        # https://github.com/conan-io/conan/issues/19987
+        # When re-adding a package with --output-folder, the output_folder
+        # should be updated, not silently ignored.
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "dep1/conanfile.py": GenConanfile("dep1", "0.1")})
+        c.run('workspace add dep1 --output-folder myout')
+        assert "Reference 'dep1/0.1' added to workspace" in c.out
+        ws = c.load("conanws.yml")
+        assert "output_folder: myout" in ws
+        # Change version and re-add with a different output-folder
+        c.save({"dep1/conanfile.py": GenConanfile("dep1", "0.2")})
+        c.run('workspace add dep1 --output-folder newout')
+        assert "Package dep1 already exists, updating its reference" in c.out
+        assert "Reference 'dep1/0.2' added to workspace" in c.out
+        ws = c.load("conanws.yml")
+        assert "output_folder: newout" in ws
+        # output_folder for myout should no longer be there
+        assert "output_folder: myout" not in ws
+
+    def test_add_output_folder_removed_when_omitted(self):
+        # When re-adding without --output-folder, the existing output_folder
+        # should be removed from the workspace entry.
+        c = TestClient(light=True)
+        c.save({"conanws.yml": "",
+                "dep1/conanfile.py": GenConanfile("dep1", "0.1")})
+        c.run("workspace add dep1 --output-folder myout")
+        assert "Reference 'dep1/0.1' added to workspace" in c.out
+        ws = c.load("conanws.yml")
+        assert "output_folder: myout" in ws
+        # Re-add without output-folder — should remove it
+        c.save({"dep1/conanfile.py": GenConanfile("dep1", "0.2")})
+        c.run("workspace add dep1")
+        assert "Package dep1 already exists, updating its reference" in c.out
+        assert "Reference 'dep1/0.2' added to workspace" in c.out
+        ws = c.load("conanws.yml")
+        assert "output_folder" not in ws
+
     @pytest.mark.parametrize("api", [False, True])
     def test_dynamic_editables(self, api):
         c = TestClient(light=True)
