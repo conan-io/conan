@@ -537,6 +537,9 @@ class TestListRemove:
         assert len(zli_uc_revs["ffd4bc45820ddb320ab224685b9ba3fb"]["packages"]) == 1
 
         client.run(f"list *:* {remote}")
+        assert "There are no matching recipe references" in client.out
+
+        client.run(f"list * {remote}")
         assert "zli/1.0.0" in client.out
         assert "zlib/1.0.0@user/channel" in client.out
 

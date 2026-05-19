@@ -1029,6 +1029,19 @@ def test_list_wildcard_recipe_specific_package_id_omits_nonmatching_revisions():
         assert "pkg2/1.0" not in local
 
 
+def test_list_star_package_id_no_binaries_empty_output():
+    """pkg/version:* must produce empty output when no binaries exist.
+    The colon syntax means 'show recipes that have at least one matching binary';
+    an exported-but-never-built recipe must not appear."""
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("hello", "0.1")})
+    c.run("export conanfile.py")
+
+    c.run("list hello/0.1:* --format=json", redirect_stdout="result.json")
+    result = json.loads(c.load("result.json"))
+    assert result["Local Cache"] == {}
+
+
 def test_list_wildcard_recipe_nonexistent_package_id_empty_output():
     """pkg/*:nonexistent_id should produce completely empty output. No recipes or revisions
     should appear when no binary matches the given package ID."""

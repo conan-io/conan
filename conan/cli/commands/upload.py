@@ -99,7 +99,8 @@ def upload(conan_api: ConanAPI, parser, *args):
             package_list.only_recipes()
     else:
         ref_pattern = ListPattern(args.pattern, package_id="*", only_recipe=args.only_recipe)
-        package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+        package_list = conan_api.list.select(ref_pattern, package_query=args.package_query,
+                                             include_empty_revisions=True)
 
     if package_list:
         # If only if search with "*" we ask for confirmation

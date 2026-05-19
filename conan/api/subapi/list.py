@@ -153,7 +153,7 @@ class ListAPI:
         return result
 
     def select(self, pattern: ListPattern, package_query=None, remote: Remote = None, lru=None,
-               profile=None) -> PackagesList:
+               profile=None, include_empty_revisions=False) -> PackagesList:
         """For a given pattern, return a list of recipes and packages matching the provided filters.
 
         :parameter ListPattern pattern: Search criteria
@@ -166,6 +166,10 @@ class ListAPI:
             packages/binaries that have been used in the last 'lru' time.
             It can be a string like ``"2d"`` (2 days) or ``"3h"`` (3 hours).
         :parameter Profile profile: Profile to filter the packages by settings and options.
+        :parameter bool include_empty_revisions: When ``True`` and ``package_id`` is the bare
+            ``"*"`` wildcard with no other filters applied, recipe revisions that have no
+            matching binaries are included in the result. Only ``conan upload`` should set
+            this to ``True`` so that exported-but-not-built recipes are still uploaded.
         """
         # TODO: Implement better error forwarding for "list" command that captures Exceptions
         if package_query and pattern.package_id and "*" not in pattern.package_id:
@@ -222,9 +226,13 @@ class ListAPI:
                 continue
 
             trrevs = TimedOutput(5, msg_format=msg_format)
-            # Include the recipe revision in the result if no filter was applied
-            # ("*" package_id, no profile/query/lru), so empty recipes still appear (conan upload)
-            unfiltered_wildcard = (pattern.package_id == "*"
+            # Only include recipe revisions with no matching binaries when the caller explicitly
+            # opts in via include_empty_revisions=True (used by "conan upload") AND the
+            # package_id is the bare "*" wildcard with no other filters applied.
+            # Any more specific pattern — including patterns containing "*" like "abc123*" —
+            # must only emit revisions that have at least one matching binary.
+            unfiltered_wildcard = (include_empty_revisions
+                                   and pattern.package_id == "*"
                                    and package_query is None
                                    and profile is None
                                    and not lru)
@@ -263,7 +271,6 @@ class ListAPI:
                 if lru:  # Filter LRUs
                     prefs = [r for r in prefs if cache.get_package_lru(r) < limit_time]
 
-                # Include this recipe revision if it has a matching package or if no filter was applied
                 if prefs or unfiltered_wildcard:
                     select_bundle.add_ref(rrev)
                     select_bundle.recipe_dict(rrev)["packages"] = {}
