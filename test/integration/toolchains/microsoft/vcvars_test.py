@@ -8,7 +8,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-@pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.parametrize("scope", ["build", "run", None])
 def test_vcvars_generator(scope):
     client = TestClient(path_with_spaces=False)
@@ -26,7 +26,10 @@ def test_vcvars_generator(scope):
 
     client.save({"conanfile.py": conanfile})
     client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=191 '
-               '-s compiler.cppstd=14 -s compiler.runtime=static')
+               '-s compiler.cppstd=14 -s compiler.runtime=static '
+               # Using a known existing path to avoid auto-detection via vswhere
+               '-c tools.microsoft.msbuild:installation_path=C:/'
+               )
 
     assert os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
     assert r"VC\Auxiliary\Build\vcvarsall.bat" in client.load("conanvcvars.bat")
@@ -52,7 +55,7 @@ def test_vcvars_generator_skip():
     assert not os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
 
 
-@pytest.mark.skipif(platform.system() not in ["Linux"], reason="Requires Linux")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Requires Linux")
 def test_vcvars_generator_skip_on_linux():
     """
     Skip creation of conanvcvars.bat on Linux build systems
@@ -65,12 +68,11 @@ def test_vcvars_generator_skip_on_linux():
     assert not os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
 
 
-@pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_vcvars_generator_string():
     client = TestClient(path_with_spaces=False)
     client.save({"conanfile.txt": "[generators]\nVCVars"})
-    client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=191 '
-               '-s compiler.cppstd=14 -s compiler.runtime=static')
+    client.run('install .')
 
     assert os.path.exists(os.path.join(client.current_folder, "conanvcvars.bat"))
 
@@ -80,8 +82,7 @@ def test_vcvars_platform_x86():
     # https://github.com/conan-io/conan/issues/11144
     client = TestClient(path_with_spaces=False)
     client.save({"conanfile.txt": "[generators]\nVCVars"})
-    client.run('install . -s os=Windows -s compiler="msvc" -s compiler.version=193 '
-               '-s compiler.cppstd=14 -s compiler.runtime=static -s:b arch=x86')
+    client.run('install . -s:b arch=x86')
 
     vcvars = client.load("conanvcvars.bat")
     assert 'vcvarsall.bat"  x86_amd64' in vcvars
@@ -93,7 +94,10 @@ def test_vcvars_winsdk_version():
     client.save({"conanfile.txt": "[generators]\nVCVars"})
     client.run('install . -s os=Windows -s compiler=msvc -s compiler.version=193 '
                '-s compiler.cppstd=14 -s compiler.runtime=static '
-               '-c tools.microsoft:winsdk_version=10.0')
+               '-c tools.microsoft:winsdk_version=10.0 '
+               # Using a known existing path to avoid auto-detection via vswhere
+               '-c tools.microsoft.msbuild:installation_path=C:/'
+               )
 
     vcvars = client.load("conanvcvars.bat")
     assert 'vcvarsall.bat"  amd64 10.0 -vcvars_ver=14.3' in vcvars
@@ -127,12 +131,11 @@ def test_vcvars_conf_msvc_update():
 def test_vcvars_armv8_windows_store():
     client = TestClient(path_with_spaces=False)
     client.save({"conanfile.txt": "[generators]\nVCVars"})
-    client.run('install . -s:b os=Windows -s compiler="msvc" -s compiler.version=194 '
-               '-s compiler.cppstd=14 -s compiler.runtime=static -s:h arch=armv8 '
+    client.run('install . -s:h arch=armv8 '
                '-s:h os=WindowsStore -s:h os.version=10.0')
 
     vcvars = client.load("conanvcvars.bat")
-    assert 'vcvarsall.bat"  amd64_arm64' in vcvars
+    assert 'vcvarsall.bat"  amd64_arm64 10.0' in vcvars
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
