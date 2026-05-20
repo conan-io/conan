@@ -116,7 +116,9 @@ jobs:
       - name: Merge coverage reports
         run: |
           pip install coverage
-          pip install git+https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/conan-io/covtest.git
+          git clone https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/conan-io/covtest.git ./covtest_repo
+          pip install ./covtest_repo
+          rm -rf ./covtest_repo
           coverage combine
           coverage report
           coverage xml
