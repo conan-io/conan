@@ -1040,6 +1040,26 @@ def test_list_star_package_id_no_binaries_empty_output():
     assert "No packages found for this revision" in c.out
 
 
+def test_list_revisions_output():
+    """test non-existent package ID and package revision output"""
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("hello", "0.1")})
+    c.run("create conanfile.py")
+
+    c.run("list hello/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709#*")
+    assert """\
+          packages
+            da39a3ee5e6b4b0d3255bfef95601890afd80709
+              revisions
+                0ba8627bd47edc3a501e8f0eb9a79e5e""" in c.out
+    c.run("list hello/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709#non-existent")
+    assert "ERROR: Package revision 'hello/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709#non-existent' not found" in c.out
+    c.run("list hello/0.1:non-existent#non-existent")
+    assert "ERROR: Package revision 'hello/0.1:non-existent#non-existent' not found" in c.out
+    c.run("list hello/0.1:non-existent#*")
+    assert "No packages found for this revision" in c.out
+
+
 def test_list_wildcard_recipe_nonexistent_package_id_empty_output():
     """pkg/*:nonexistent_id shows the revision with "No packages found for this revision"
     when the package ID does not match any existing binary."""
