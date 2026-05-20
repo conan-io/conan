@@ -118,7 +118,7 @@ def _filecopy(src, filename, dst):
             rmdir(dst)
         else:
             remove(dst)
-    shutil.copyfile(src, dst)
+    shutil.copy(src, dst)
 
 
 def _process_file(directory, filename, config, cache_folder, folder):
