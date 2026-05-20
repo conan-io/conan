@@ -11,10 +11,6 @@ on:
       - 'release/*'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  packages: write
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -101,6 +97,8 @@ jobs:
 
   code_coverage:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     name: Code coverage
     # if: github.ref == 'refs/heads/develop2'         # Only measure code coverage on main branch
     needs: [linux_suite, osx_suite, windows_suite]
