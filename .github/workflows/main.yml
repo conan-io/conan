@@ -121,6 +121,7 @@ jobs:
           coverage report
           coverage xml
           covtest process
+          covtest upload --url ${{ secrets.COVTEST_SERVER_URL }} --token ${{ secrets.COVTEST_SERVER_TOKEN }}
 
       - name: Code coverage
         uses: codecov/codecov-action@v5
