@@ -200,6 +200,7 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
     if args.lockfile_partial:
         lockfile_args.append("--lockfile-partial")
     lockfile_args = " ".join(lockfile_args)
+    verbose_args = f"-v{args.v}" if args.v else ""
     for level in order["order"]:
         for elem in level:
             ref = RecipeReference.loads(elem["ref"])
@@ -209,7 +210,8 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                     is_editable = package["binary"] in ("Editable", "EditableBuild")
                     if ws_pkg is None:
                         if is_editable or package["binary"] == "Build":  # Build extern to Workspace
-                            cmd = f'install {package["build_args"]} {profile_args} {lockfile_args}'
+                            cmd = (f'install {package["build_args"]} {profile_args} '
+                                   f'{lockfile_args} {verbose_args}')
                             ConanOutput().box(f"Workspace building external {ref}")
                             ConanOutput().info(f"Command: {cmd}\n")
                             conan_api.command.run(cmd)
@@ -224,7 +226,7 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                         # TODO: Missing --lockfile-overrides arg here
                         command = "build" if build else "install"
                         cmd = (f'{command} "{path}" {profile_args} {build_arg} {ref_args} {of_arg} '
-                               f'{lockfile_args}')
+                               f'{lockfile_args} {verbose_args}')
                         ConanOutput().box(f"Workspace {command}: {ref}")
                         ConanOutput().info(f"Command: {cmd}\n")
                         conan_api.command.run(cmd)

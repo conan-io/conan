@@ -661,6 +661,44 @@ class TestWorkspaceBuild:
                                 "ext/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                             "EditableBuild")})
 
+    def test_verbosity_propagated(self):
+        # https://github.com/conan-io/conan/issues/20005
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+
+        pkga = textwrap.dedent("""\
+            from conan import ConanFile
+            class MyConan(ConanFile):
+                name = "pkga"
+                version = "0.1"
+                def build(self):
+                    self.output.info("INFO MSG!!")
+                    self.output.warning("WARN MSG!!")
+                    self.output.error("ERROR MSG!!")
+                    self.output.verbose("VERBOSE MSG!!")
+                """)
+        c.save({"pkga/conanfile.py": pkga,
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1")})
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb")
+        c.run("workspace build")
+        assert "conanfile.py (pkga/0.1): VERBOSE MSG!!" not in c.out
+        assert "conanfile.py (pkga/0.1): INFO MSG!!" in c.out
+        assert "conanfile.py (pkga/0.1): WARN: WARN MSG!!" in c.out
+        assert "conanfile.py (pkga/0.1): ERROR: ERROR MSG!!" in c.out
+
+        c.run("workspace build -vvv")
+        assert "conanfile.py (pkga/0.1): VERBOSE MSG!!" in c.out
+        assert "conanfile.py (pkga/0.1): INFO MSG!!" in c.out
+        assert "conanfile.py (pkga/0.1): WARN: WARN MSG!!" in c.out
+        assert "conanfile.py (pkga/0.1): ERROR: ERROR MSG!!" in c.out
+
+        c.run("workspace build -vwarning")
+        assert "conanfile.py (pkga/0.1): VERBOSE MSG!!" not in c.out
+        assert "conanfile.py (pkga/0.1): INFO MSG!!" not in c.out
+        assert "conanfile.py (pkga/0.1): WARN: WARN MSG!!" in c.out
+        assert "conanfile.py (pkga/0.1): ERROR: ERROR MSG!!" in c.out
+
 
 class TestNew:
     def test_new(self):
