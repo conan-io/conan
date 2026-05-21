@@ -191,7 +191,8 @@ class MesonToolchain:
         self.threads_flags = threads_flags(self._conanfile)
         #: Dict-like object that defines Meson ``properties`` with ``key=value`` format
         self.properties = {}
-        #: Dict-like object that defines Meson ``binaries`` with ``key=value`` format
+        #: Dict-like object that defines Meson ``binaries`` with ``key=value`` format. If any dict key
+        #: matches a public attribute binary name, e.g., "c", "cpp", etc., it will override that one.
         self.binaries = {}
         #: Dict-like object that defines Meson ``project options`` with ``key=value`` format
         self.project_options = {
