@@ -555,3 +555,36 @@ def test_tools_apt_check_install_to_build_machine_arch_with_version(tool_class, 
         tool.check(["package=0.1"], host_package=False)
 
     assert tool._conanfile.command == result
+
+
+def test_arch_name_param(capsys):
+    settings = MockSettings({"arch": "x86_64"})
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+
+        conanfile = ConanFileMock(settings=settings)
+        conanfile.conf.define("tools.system.package_manager:tool", "apt-get")
+        conanfile.conf.define("tools.system.package_manager:mode", "install")
+        apt = Apt(conanfile)
+        assert apt.get_package_name("libc6", arch_name="i386") == "libc6:i386"
+        apt.check(["libc6"], arch_name="i386")
+        assert conanfile.command == (
+            r"dpkg-query -W -f='${Architecture}\n' libc6 | grep -qEx '(i386|all)'")
+        conanfile.command = None
+        with patch.object(_SystemPackageManagerTool, "_conanfile_run", MagicMock(return_value=0)):
+            apt.install(["libc6"], arch_name="i386")
+        assert conanfile.command is None
+        assert "libc6 already installed" in capsys.readouterr().err
+
+        for tool_class, expected in (
+            (Apk, "apk info -e package"),
+            (Brew, 'test -n "$(brew ls --versions package)"'),
+            (Pkg, "pkg info package"),
+            (PkgUtil, 'test -n "`pkgutil --list package`"'),
+            (Chocolatey, 'choco list --exact package | findstr /c:"1 packages installed."'),
+        ):
+            conanfile = ConanFileMock(settings=settings)
+            conanfile.conf.define("tools.system.package_manager:tool", tool_class.tool_name)
+            tool = tool_class(conanfile)
+            tool.check(["package"], arch_name="i386")
+            assert conanfile.command == expected

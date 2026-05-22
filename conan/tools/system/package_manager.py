@@ -72,28 +72,32 @@ class _SystemPackageManagerTool:
         self._conanfile.output.info("A default system package manager couldn't be found for {}, "
                                     "system packages will not be installed.".format(os_name))
 
-    def _split_package_name(self, package, host_package):
+    def _split_package_name(self, package, host_package, arch_name=None):
 
         name, version = (package.split("=")[0], package.split("=")[1]) if "=" in package else (package, "")
-        arch_separator, arch_name = "", ""
+        arch_separator, _arch_name = "", ""
         version_separator = self.version_separator if version else ""
 
-        if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
+        if arch_name and self._arch_separator:
             arch_separator = self._arch_separator
-            arch_name = self._arch_names.get(self._arch)
-        return name, version, arch_separator, arch_name, version_separator
+            _arch_name = arch_name
+        elif self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
+            arch_separator = self._arch_separator
+            _arch_name = self._arch_names.get(self._arch)
+        return name, version, arch_separator, _arch_name, version_separator
 
-    def get_package_name(self, package, host_package=True):
+    def get_package_name(self, package, host_package=True, arch_name=None):
         # Only if the package is for building, for example a library,
         # we should add the host arch when cross building.
         # If the package is a tool that should be installed on the current build
         # machine we should not add the arch.
 
-        name, version, arch_separator, arch_name, version_separator = self._split_package_name(package, host_package)
+        name, version, arch_separator, _arch_name, version_separator = self._split_package_name(
+            package, host_package, arch_name=arch_name)
 
         return self.full_package_name.format(name=name,
                                              arch_separator=arch_separator,
-                                             arch_name=arch_name,
+                                             arch_name=_arch_name,
                                              version_separator=version_separator,
                                              version=version)
 
@@ -151,6 +155,8 @@ class _SystemPackageManagerTool:
         :param packages: try to install the list of packages passed as a parameter.
         :param update: try to update the package manager database before checking and installing.
         :param check: check if the packages are already installed before installing them.
+        :param arch_name: optional package-manager architecture for all *packages*. Ignored by tools
+               that do not support multi-architecture package names.
         :return: the return code of the executed package manager command.
         """
         return self.run(self._install, *args, **kwargs)
@@ -170,6 +176,8 @@ class _SystemPackageManagerTool:
         Check if the list of packages passed as parameter are already installed.
 
         :param packages: list of packages to check.
+        :param arch_name: optional package-manager architecture for all *packages*. Ignored by tools
+               that do not support multi-architecture package names.
         :return: list of packages from the packages argument that are not installed in the system.
         """
         return self.run(self._check, *args, **kwargs)
@@ -186,7 +194,7 @@ class _SystemPackageManagerTool:
             self._conanfile.output.warning(str(error))
         raise ConanException("None of the installs for the package substitutes succeeded.")
 
-    def _install(self, packages, update=False, check=True, host_package=True, **kwargs):
+    def _install(self, packages, update=False, check=True, host_package=True, arch_name=None, **kwargs):
         orig_packages = packages
         pkgs = self._conanfile.system_requires.setdefault(self._active_tool, {})
         install_pkgs = pkgs.setdefault("install", [])
@@ -195,7 +203,7 @@ class _SystemPackageManagerTool:
             return
 
         if check or self._mode in (self.mode_check, self.mode_report_installed):
-            packages = self.check(packages, host_package=host_package)
+            packages = self.check(packages, host_package=host_package, arch_name=arch_name)
             missing_pkgs = pkgs.setdefault("missing", [])
             missing_pkgs.extend(p for p in packages if p not in missing_pkgs)
         if self._mode == self.mode_report_installed:
@@ -214,7 +222,8 @@ class _SystemPackageManagerTool:
         elif packages:
             if update:
                 self.update()
-            packages_arch = [self.get_package_name(package, host_package=host_package) for package in packages]
+            packages_arch = [self.get_package_name(package, host_package=host_package, arch_name=arch_name)
+                             for package in packages]
             if packages_arch:
                 command = self.install_command.format(sudo=self.sudo_str,
                                                       tool=self.tool_name,
@@ -231,18 +240,20 @@ class _SystemPackageManagerTool:
             command = self.update_command.format(sudo=self.sudo_str, tool=self.tool_name)
             return self._conanfile_run(command, self.accepted_update_codes, quiet=False)
 
-    def _check(self, packages, host_package=True):
-        missing = [pkg for pkg in packages if self.check_package(pkg, host_package) != 0]
+    def _check(self, packages, host_package=True, arch_name=None):
+        missing = [pkg for pkg in packages
+                   if self.check_package(pkg, host_package, arch_name=arch_name) != 0]
         return missing
 
-    def check_package(self, package, host_package=True):
-        name, version, arch_separator, arch_name, _ = self._split_package_name(package, host_package)
+    def check_package(self, package, host_package=True, arch_name=None):
+        name, version, arch_separator, _arch_name, _ = self._split_package_name(
+            package, host_package, arch_name=arch_name)
 
         check_arch = self._arch if host_package else self._conanfile.settings_build.get_safe('arch')
-        arch_package = arch_name or self._arch_names.get(check_arch)
+        arch_package = _arch_name or self._arch_names.get(check_arch)
         package = self.full_package_name.format(name=name,
                                                 arch_separator=arch_separator,
-                                                arch_name=arch_name,
+                                                arch_name=_arch_name,
                                                 version="",
                                                 version_separator="")
         command = self.check_command.format(tool=self.tool_name, package=package, arch_package=arch_package, base_name=name)
@@ -289,7 +300,8 @@ class Apt(_SystemPackageManagerTool):
 
         self._arch_separator = ":"
 
-    def install(self, packages, update=False, check=True, recommends=False, host_package=True):
+    def install(self, packages, update=False, check=True, recommends=False, host_package=True,
+                arch_name=None):
         """
         Will try to install the list of packages passed as a parameter. Its
         behaviour is affected by the value of ``tools.system.package_manager:mode``
@@ -300,13 +312,17 @@ class Apt(_SystemPackageManagerTool):
         :param check: check if the packages are already installed before installing them.
         :param host_package: install the packages for the host machine architecture (the machine
                that will run the software), it has an effect when cross building.
+        :param arch_name: optional package-manager architecture for all *packages* (e.g. ``i386``,
+               ``amd64``). Overrides automatic architecture detection from Conan settings. Use the
+               native *apt* architecture name, not the Conan ``settings.arch`` value.
         :param recommends: if the parameter ``recommends`` is ``False`` it will add the
                ``'--no-install-recommends'`` argument to the *apt-get* command call.
         :return: the return code of the executed apt command.
         """
         recommends_str = '' if recommends else '--no-install-recommends '
         return super(Apt, self).install(packages, update=update, check=check,
-                                        host_package=host_package, recommends=recommends_str)
+                                        host_package=host_package, arch_name=arch_name,
+                                        recommends=recommends_str)
 
 
 class Yum(_SystemPackageManagerTool):
