@@ -27,6 +27,7 @@ from conan.api.output import ConanOutput
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS
+from conan.internal.api.detect.detect_api import detect_os
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal import REVISIONS
@@ -428,8 +429,8 @@ class TestClient:
 
         # create default profile
         if light:
-            text = "[settings]\nos=Linux"  # Needed at least build-os
-            save(self.paths.settings_path, "os: [Linux, Windows]")
+            text = f"[settings]\nos={detect_os()}"  # Needed at least build-os
+            save(self.paths.settings_path, "os: [Linux, Windows, Macos]")
         else:
             text = default_profiles[platform.system()]
         save(os.path.join(self.cache_folder, "profiles", "default"), text)
