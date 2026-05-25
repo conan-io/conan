@@ -184,13 +184,14 @@ class MesonToolchain:
 
         # https://mesonbuild.com/Builtin-options.html#base-options
         fpic = self._conanfile.options.get_safe("fPIC")
-        shared = self._conanfile.package_type is PackageType.SHARED or self._conanfile.options.get_safe("shared")
+        shared = self._conanfile.package_type is PackageType.SHARED
+        static = self._conanfile.package_type is PackageType.STATIC
         #: Build static libraries as position independent. By default, ``self.options.get_safe("fPIC")``
-        self.b_staticpic = fpic if (shared is False and fpic is not None) else None
+        self.b_staticpic = fpic if (static and fpic is not None) else None
         # https://mesonbuild.com/Builtin-options.html#core-options
         # Do not adjust "debug" if already adjusted "buildtype"
         #: Default library type, e.g., "shared.
-        self.default_library = ("shared" if shared else "static") if shared is not None else None
+        self.default_library = ("shared" if shared else "static") if shared or static else None
 
         compiler = self._conanfile.settings.get_safe("compiler")
         if compiler is None:
