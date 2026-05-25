@@ -103,7 +103,7 @@ jobs:
       contents: read
     name: Code coverage
     # if: github.ref == 'refs/heads/develop2'         # Only measure code coverage on main branch
-    needs: [linux_suite, osx_suite, windows_suite]
+    needs: [linux_suite]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
