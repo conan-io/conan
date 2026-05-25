@@ -6,6 +6,7 @@ from jinja2 import Template, StrictUndefined
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
+from conan.internal.model.pkg_type import PackageType
 from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
     resolve_apple_flags, apple_extra_flags
 from conan.tools.build.cross_building import cross_building, can_run
@@ -183,7 +184,7 @@ class MesonToolchain:
 
         # https://mesonbuild.com/Builtin-options.html#base-options
         fpic = self._conanfile.options.get_safe("fPIC")
-        shared = self._conanfile.options.get_safe("shared")
+        shared = self._conanfile.package_type == PackageType.SHARED
         #: Build static libraries as position independent. By default, ``self.options.get_safe("fPIC")``
         self.b_staticpic = fpic if (shared is False and fpic is not None) else None
         # https://mesonbuild.com/Builtin-options.html#core-options

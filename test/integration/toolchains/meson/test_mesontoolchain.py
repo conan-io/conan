@@ -906,6 +906,39 @@ def test_new_public_attributes():
     assert expected in content
 
 
+@pytest.mark.parametrize(
+    "package_type, shared_option, default_library, has_fpic",
+    [
+        ("shared-library", None, "shared", False),
+        ("static-library", None, "static", True),
+        ("library", True, "shared", False),
+        ("library", False, "static", True),
+    ],
+)
+def test_package_type(package_type, shared_option, default_library, has_fpic):
+    client = TestClient()
+
+    conanfile = (GenConanfile("pkg", "1.0")
+                 .with_settings("os", "arch", "compiler", "build_type")
+                 .with_package_type(package_type)
+                 .with_generator("MesonToolchain"))
+
+    if shared_option is not None:
+        conanfile = conanfile.with_option("shared", [True, False], shared_option)
+    if has_fpic:
+        conanfile = conanfile.with_option("fPIC", [True, False], True)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install")
+    content = client.load(MesonToolchain.native_filename)
+    assert "buildtype = 'release'" in content
+    assert f"default_library = '{default_library}'" in content
+    if has_fpic:
+        assert "b_staticpic = True" in content
+    else:
+        assert "b_staticpic" not in content
+
+
 def test_needs_exe_wrapper():
     """
     Tests needs_exe_wrapper depends on `can_run()` function instead of
