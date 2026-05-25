@@ -931,7 +931,6 @@ def test_package_type(package_type, shared_option, default_library, has_fpic):
     client.save({"conanfile.py": conanfile})
     client.run("install")
     content = client.load(MesonToolchain.native_filename)
-    print(content)
     assert "buildtype = 'release'" in content
     assert f"default_library = '{default_library}'" in content
     if has_fpic:
