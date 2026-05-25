@@ -50,47 +50,9 @@ class MesonToolchain:
     {% endfor %}
 
     [binaries]
-    {% if c %}
-    c = {{c}}
-    {% endif %}
-    {% if cpp %}
-    cpp = {{cpp}}
-    {% endif %}
-    {% if ld %}
-    ld = {{ld}}
-    {% endif %}
-    {% if is_apple_system %}
-    {% if objc %}
-    objc = '{{objc}}'
-    {% endif %}
-    {% if objcpp %}
-    objcpp = '{{objcpp}}'
-    {% endif %}
-    {% endif %}
-    {% if c_ld %}
-    c_ld = '{{c_ld}}'
-    {% endif %}
-    {% if cpp_ld %}
-    cpp_ld = '{{cpp_ld}}'
-    {% endif %}
-    {% if ar %}
-    ar = '{{ar}}'
-    {% endif %}
-    {% if strip %}
-    strip = '{{strip}}'
-    {% endif %}
-    {% if as %}
-    as = '{{as}}'
-    {% endif %}
-    {% if windres %}
-    windres = '{{windres}}'
-    {% endif %}
-    {% if pkgconfig %}
-    pkgconfig = '{{pkgconfig}}'
-    {% endif %}
-    {% if pkgconfig %}
-    pkg-config = '{{pkgconfig}}'
-    {% endif %}
+    {% for it, value in binaries.items() -%}
+    {{it}} = {{value}}
+    {% endfor %}
 
     [built-in options]
     {% if buildtype %}
@@ -229,6 +191,9 @@ class MesonToolchain:
         self.threads_flags = threads_flags(self._conanfile)
         #: Dict-like object that defines Meson ``properties`` with ``key=value`` format
         self.properties = {}
+        #: Dict-like object that defines Meson ``binaries`` with ``key=value`` format. If any dict key
+        #: matches a public attribute binary name, e.g., "c", "cpp", etc., it will override that one.
+        self.binaries = {}
         #: Dict-like object that defines Meson ``project options`` with ``key=value`` format
         self.project_options = {
             "wrap_mode": "nofallback"  # https://github.com/conan-io/conan/issues/10671
@@ -508,6 +473,32 @@ class MesonToolchain:
         ret = [x.strip() for x in value.split() if x]
         return ret[0] if len(ret) == 1 else ret
 
+    def _get_binaries(self):
+        """
+        Gets all the binaries elements to fill the [binaries] section
+        """
+        ret = {
+            "c": self.c,
+            "cpp": self.cpp,
+            "ld": self.ld,
+            "c_ld": self.c_ld,
+            "cpp_ld": self.cpp_ld,
+            "ar": self.ar,
+            "strip": self.strip,
+            "as": self.as_,
+            "windres": self.windres,
+            "pkgconfig": self.pkgconfig,
+            "pkg-config": self.pkgconfig
+        }
+        if self._is_apple_system:
+            ret.update({
+                "objc": self.objc,
+                "objcpp": self.objcpp,
+            })
+        # Let's give more prio to any value entered by the new binaries attribute
+        ret.update(self.binaries)
+        return ret
+
     @property
     def _context(self):
         apple_flags = self.apple_isysroot_flag + self.apple_arch_flag + self.apple_min_version_flag
@@ -552,18 +543,7 @@ class MesonToolchain:
             # https://mesonbuild.com/Builtin-options.html#directories
             # https://mesonbuild.com/Machine-files.html#binaries
             # https://mesonbuild.com/Reference-tables.html#compiler-and-linker-selection-variables
-            "c": to_meson_value(self.c),
-            "cpp": to_meson_value(self.cpp),
-            "ld": to_meson_value(self.ld),
-            "objc": self.objc,
-            "objcpp": self.objcpp,
-            "c_ld": self.c_ld,
-            "cpp_ld": self.cpp_ld,
-            "ar": self.ar,
-            "strip": self.strip,
-            "as": self.as_,
-            "windres": self.windres,
-            "pkgconfig": self.pkgconfig,
+            "binaries": {k: to_meson_value(v) for k, v in self._get_binaries().items() if v is not None},
             # https://mesonbuild.com/Builtin-options.html#core-options
             "buildtype": self.buildtype,
             "default_library": self.default_library,

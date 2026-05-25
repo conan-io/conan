@@ -947,3 +947,28 @@ def test_needs_exe_wrapper():
     client.run("install . -pr:h host -pr:b build")
     content = client.load(MesonToolchain.cross_filename)
     assert "needs_exe_wrapper = false" in content
+
+
+def test_binaries_attribute():
+    """
+    Tests binaries attribute.
+
+    Issue: https://github.com/conan-io/conan/issues/20007
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.binaries["wayland-scanner"] = "/path/to/wayland-scanner"
+            tc.binaries["c"] = "/path/to/c"  # overrides the default one defined by tc.c attribute
+            tc.generate()
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    content = client.load(MesonToolchain.native_filename)
+    assert "wayland-scanner = '/path/to/wayland-scanner'" in content
+    assert "c = '/path/to/c'" in content
