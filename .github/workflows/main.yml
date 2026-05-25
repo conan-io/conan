@@ -81,7 +81,6 @@ jobs:
 
   osx_suite:
     needs: [ensure_latest_tag_merged, set_python_versions]
-    if: github.ref == 'refs/heads/develop2'
     uses: ./.github/workflows/osx-tests.yml
     name: OSX test suite
     with:
@@ -90,7 +89,6 @@ jobs:
 
   windows_suite:
     needs: [ensure_latest_tag_merged, set_python_versions]
-    if: github.ref == 'refs/heads/develop2'
     uses: ./.github/workflows/win-tests.yml
     name: Windows test suite
     with:
@@ -99,11 +97,9 @@ jobs:
 
   code_coverage:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     name: Code coverage
-    # if: github.ref == 'refs/heads/develop2'         # Only measure code coverage on main branch
-    needs: [linux_suite]
+    if: github.ref == 'refs/heads/develop2'         # Only measure code coverage on main branch
+    needs: [linux_suite, osx_suite, windows_suite]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -116,14 +112,14 @@ jobs:
       - name: Merge coverage reports
         run: |
           pip install coverage
-          git clone https://x-access-token:${{ secrets.COVTEST_READ_TOKEN }}@github.com/conan-io/covtest.git ./covtest_repo
-          pip install ./covtest_repo
-          rm -rf ./covtest_repo
+          git clone https://x-access-token:${{ secrets.COVTEST_READ_TOKEN }}@github.com/conan-io/covtest.git ./covtest_repo || true
+          pip install ./covtest_repo || true
+          rm -rf ./covtest_repo || true
           coverage combine
           coverage report
           coverage xml
-          covtest process
-          covtest upload --url=${{ secrets.COVTEST_SERVER_URL }} --user=${{ secrets.COVTEST_SERVER_USER }} --token=${{ secrets.COVTEST_SERVER_TOKEN }}
+          covtest process || true
+          covtest upload --url=${{ secrets.COVTEST_SERVER_URL }} --user=${{ secrets.COVTEST_SERVER_USER }} --token=${{ secrets.COVTEST_SERVER_TOKEN }} || true
 
       - name: Code coverage
         uses: codecov/codecov-action@v5

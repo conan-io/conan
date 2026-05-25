@@ -58,12 +58,14 @@ jobs:
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}
-        test-type: [unittests, integration]
+        test-type: [unittests, integration, functional]
         include:
         - test-type: unittests
           test-name: Unit
         - test-type: integration
           test-name: Integration
+        - test-type: functional
+          test-name: Functional
     name: ${{ matrix.test-name }} Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
