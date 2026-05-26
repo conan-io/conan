@@ -193,8 +193,9 @@ class TestCompilerFlags:
         assert _make_clang_cl_cppstd_flag("17", "23") == "-clang:-std=c++23"
         assert _make_clang_cl_cppstd_flag("21", "23") == "-clang:-std=c++23"
 
-        # clang-cl 22 introduced the `c++23preview` alias.
-        assert _make_clang_cl_cppstd_flag("22", "23") == "/std:c++23preview"
+        # clang-cl 22 introduced the `c++23preview` alias, but we are not using it
+        # it has a bug with modules, so the `-clang` route seems better
+        assert _make_clang_cl_cppstd_flag("22", "23") == "-clang:-std=c++23"
 
         # C++26 has no `/std:` value yet, even on the latest clang-cl.
         assert _make_clang_cl_cppstd_flag("17", "26") == "-clang:-std=c++26"
