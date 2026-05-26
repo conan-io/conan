@@ -8,7 +8,7 @@ from conan.test.utils.tools import TestClient, GenConanfile
 class TestOptions:
 
     def test_general_scope_options_test_package(self):
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -34,7 +34,7 @@ class TestOptions:
         assert "pkg/0.1@user/testing: BUILD SHARED: 1" in client.out
 
     def test_general_scope_options_test_package_notdefined(self):
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile = GenConanfile()
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=True")
@@ -49,7 +49,7 @@ class TestOptions:
         assert "Testing the package: Building" in client.out
 
     def test_general_scope_priorities(self):
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -80,7 +80,7 @@ class TestOptions:
         assert "pkg/0.1: BUILD SHARED: 1 OTHER: 6" in client.out
 
     def test_parsing(self):
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile = '''
 from conan import ConanFile
 class EqualerrorConan(ConanFile):
@@ -106,7 +106,7 @@ equal/1.0.0@user/testing:opt=a=b
 
     def test_general_scope_options(self):
         # https://github.com/conan-io/conan/issues/2538
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile_liba = textwrap.dedent("""
             from conan import ConanFile
             class LibA(ConanFile):
@@ -151,7 +151,7 @@ equal/1.0.0@user/testing:opt=a=b
             assert "liba/0.1@danimtb/testing: shared=True" in client.out
 
     def test_define_nested_option_not_freeze(self):
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -187,7 +187,7 @@ equal/1.0.0@user/testing:opt=a=b
         this test was failing because Options was protecting against removal of options with
         already assigned values. This has been relaxed, to make possible this case
         """
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -211,7 +211,7 @@ equal/1.0.0@user/testing:opt=a=b
         assert "pkg/0.1" in c.out  # Real test is the above doesn't crash
 
     def test_any(self):
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class EqualerrorConan(ConanFile):
@@ -258,7 +258,7 @@ class TestOptionsPriorities:
                 def configure(self):
                     self.options["lib1/*"].foobar = self.options.logic_for_foobar
             """)
-        c = TestClient()
+        c = TestClient(light=True)
 
         c.save({"lib1/conanfile.py": lib1,
                 "lib2/conanfile.py": lib2})
@@ -350,7 +350,7 @@ class TestOptionsPriorities:
 
 def test_configurable_default_options():
     # https://github.com/conan-io/conan/issues/11487
-    c = TestClient()
+    c = TestClient(light=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):
@@ -415,11 +415,11 @@ class TestMultipleOptionsPatterns:
         """
         https://github.com/conan-io/conan/issues/13240
         """
-        c = TestClient()
+        c = TestClient(light=True)
         consumer = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
-              settings = "os", "arch", "compiler", "build_type"
+              settings = "os"
 
               def requirements(self):
                   self.requires("dep1/1.0")
@@ -447,11 +447,11 @@ class TestMultipleOptionsPatterns:
         assert "dep4/1.0: SHARED: True!!" in c.out
 
     def test_multiple_options_patterns(self):
-        c = TestClient()
+        c = TestClient(light=True)
         configure_consumer = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
+                settings = "os"
 
                 def requirements(self):
                     self.requires("dep1/1.0")
@@ -477,11 +477,11 @@ class TestMultipleOptionsPatterns:
         assert "dep4/1.0: SHARED: True!!" in c.out
 
     def test_multiple_options_patterns_order(self):
-        c = TestClient()
+        c = TestClient(light=True)
         configure_consumer = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
+                settings = "os"
 
                 def requirements(self):
                     self.requires("dep1/1.0")
@@ -541,7 +541,7 @@ class TestTransitiveOptionsShared:
     """
     @pytest.fixture()
     def client(self):
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"toollib/conanfile.py": GenConanfile("toollib", "0.1").with_shared_option(False),
                 "tool/conanfile.py": GenConanfile("tool", "0.1").with_shared_option(False)
                                                                 .with_requires("toollib/0.1"),
@@ -599,7 +599,7 @@ class TestTransitiveOptionsShared:
 
 
 def test_options_no_user_channel_patterns():
-    c = TestClient()
+    c = TestClient(light=True)
     conanfile = textwrap.dedent("""\
         from conan import ConanFile
         class Pkg(ConanFile):
@@ -639,7 +639,7 @@ def test_options_no_user_channel_patterns():
 
 
 def test_package_options_negate_patterns():
-    c = TestClient()
+    c = TestClient(light=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class Dep(ConanFile):
@@ -685,7 +685,7 @@ class TestTransitiveOptionsSharedInvisible:
     """
     @pytest.fixture()
     def client(self):
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"dep2/conanfile.py": GenConanfile("dep2", "0.1").with_shared_option(False),
                 "dep1/conanfile.py": GenConanfile("dep1", "0.1").with_shared_option(False)
                                                                 .with_requirement("dep2/0.1",
@@ -739,7 +739,7 @@ class TestTransitiveOptionsSharedInvisible:
 class TestImportantOptions:
     @pytest.mark.parametrize("pkg", ["liba", "libb", "app"])
     def test_important_options(self, pkg):
-        c = TestClient()
+        c = TestClient(light=True)
 
         liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3])
         libb = GenConanfile("libb", "0.1").with_requires("liba/0.1")
@@ -770,12 +770,12 @@ class TestImportantOptions:
         assert "liba/0.1: MYOPTION: 3" in c.out
 
     def test_profile_shows_important(self):
-        c = TestClient()
+        c = TestClient(light=True)
         c.run("profile show  -o *:myoption!=3")
         assert "*:myoption!=3" in c.out
 
     def test_important_options_recipe_priority(self):
-        c = TestClient()
+        c = TestClient(light=True)
 
         liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3, 4])\
                                           .with_default_option("myoption!", 1)
@@ -802,7 +802,7 @@ class TestImportantOptions:
         assert "liba/0.1: MYOPTION: 4" in c.out
 
     def test_important_options_recipe_priority_conditional(self):
-        c = TestClient()
+        c = TestClient(light=True)
 
         liba = textwrap.dedent("""
             from conan import ConanFile
@@ -850,7 +850,7 @@ class TestConflictOptionsWarnings:
 
     @pytest.mark.parametrize("important", [True, False])
     def test_options_warnings(self, important):
-        c = TestClient()
+        c = TestClient(light=True)
         liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3], default=1)
         libb = GenConanfile("libb", "0.1").with_requires("liba/0.1")
         if important:
