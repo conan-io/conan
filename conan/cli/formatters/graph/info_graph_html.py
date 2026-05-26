@@ -83,7 +83,7 @@ graph_info_html = r"""
                 </div>
                 <div>
                     <input type="checkbox" onchange="showSubgraph()" id="show_subgraph"/>
-                    <label for="show_package_type">Show subgraph</label>
+                    <label for="show_subgraph">Show subgraph</label>
                 </div>
                 <div>
                     <input type="search" placeholder="Search packages..." oninput="searchPackages(this)" onkeydown="onSearchKeyDown(event)">

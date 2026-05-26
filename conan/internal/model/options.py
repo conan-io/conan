@@ -404,12 +404,12 @@ class Options:
         # self_options are the minimal necessary for a build-order
         # TODO: check this, isn't this just a copy?
         self_options = Options()
-        self_options._deps_package_options = down_options._deps_package_options.copy()
-
         # compute now the necessary to propagate all down - self + self deps
         upstream_options = Options()
         for pattern, options in down_options._deps_package_options.items():
             if ref_matches(own_ref, pattern, is_consumer=is_consumer):
+                # keep it for reproduction of state
+                self_options._deps_package_options.update({pattern: options})
                 # Remove the exact match-name to this package, don't further propagate up
                 pattern_name = pattern.split("/", 1)[0]
                 if "*" not in pattern_name:

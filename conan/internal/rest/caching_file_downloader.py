@@ -48,13 +48,29 @@ class SourcesCachingDownloader:
         if download_cache_folder:
             download_cache = DownloadCache(download_cache_folder)
             download_path = download_cache.source_path(sha256)
+
             with download_cache.lock(sha256):
                 remove_if_dirty(download_path)
 
-                if os.path.exists(download_path):
-                    self._output.info(f"Source {urls} retrieved from local download cache")
-                else:
-                    # not in cache, we need to actually download from internet or backup servers
+                in_cache = os.path.exists(download_path)
+                need_download = not in_cache
+                if in_cache:
+                    recorded_urls = download_cache.get_urls_from_backup_sources(download_path)
+                    urls_set = set(urls if isinstance(urls, (list, tuple)) else [urls])
+                    # URLs mismatch: only re-download if there are recorded URLs and they don't match the requested ones.
+                    # Some users could not have available the metadata files (json) while using
+                    # backup-sources. We do not want to force re-downloading
+                    if recorded_urls and not recorded_urls.intersection(urls_set):
+                        self._output.warning(
+                            "The requested URL(s) are not listed in backup-sources metadata for this "
+                            "SHA256 cache entry. This may be a mistake, or the same checksum "
+                            "reused for a different upstream version. Re-downloading to verify."
+                        )
+                        need_download = True
+                    else:
+                        self._output.info(f"Source {urls} retrieved from local download cache")
+
+                if need_download:
                     with set_dirty_context_manager(download_path):
                         self._do_download(source_origins, urls, download_path, retry, retry_wait,
                                           verify_ssl, auth, headers, md5, sha1, sha256)
