@@ -300,7 +300,7 @@ def _to_clang_cl_cppstd_flag(flag):
         return flag
     value = flag[len("-std="):]
     if value in ("c++14", "c++17", "c++20"):
-        return f"/std:{value}"
+        return f"-std:{value}"  # keep -std it is more portable
     return f"-clang:{flag}"
 
 

@@ -184,9 +184,9 @@ class TestCompilerFlags:
         # original `-std=...` flag. See conan-io/conan#19887.
 
         # Standards that `clang-cl` accepts directly.
-        assert _make_clang_cl_cppstd_flag("17", "14") == "/std:c++14"
-        assert _make_clang_cl_cppstd_flag("17", "17") == "/std:c++17"
-        assert _make_clang_cl_cppstd_flag("17", "20") == "/std:c++20"
+        assert _make_clang_cl_cppstd_flag("17", "14") == "-std:c++14"
+        assert _make_clang_cl_cppstd_flag("17", "17") == "-std:c++17"
+        assert _make_clang_cl_cppstd_flag("17", "20") == "-std:c++20"
 
         # C++23 is not a valid `/std:` value before clang-cl 22, route via
         # the `-clang:` passthrough.
