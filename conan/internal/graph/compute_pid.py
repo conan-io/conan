@@ -6,6 +6,7 @@ from conan.internal.methods import auto_header_only_package_id
 from conan.internal.model.info import (ConanInfo, RequirementsInfo, RequirementInfo,
                                        PythonRequiresInfo)
 from conan.internal.model.pkg_type import PackageType
+from conan.internal.model.version_range import required_conan_version_policy
 
 
 def compute_package_id(node, modes, config_version, hook_manager):
@@ -20,10 +21,14 @@ def compute_package_id(node, modes, config_version, hook_manager):
 
     data = OrderedDict()
     build_data = OrderedDict()
+
+    fix_transitive_static = required_conan_version_policy(conanfile, "2.27.9")
+
     for require, transitive in node.transitive_deps.items():
         dep_node = transitive.node
-        require.deduce_package_id_mode(conanfile.package_type, dep_node,
-                                       non_embed_mode, embed_mode, build_mode, unknown_mode)
+        require.deduce_package_id_mode(conanfile, dep_node,
+                                       non_embed_mode, embed_mode, build_mode, unknown_mode,
+                                       fix_transitive_static)
         if require.package_id_mode is not None:
             req_info = RequirementInfo(dep_node.pref.ref, dep_node.pref.package_id,
                                        require.package_id_mode)

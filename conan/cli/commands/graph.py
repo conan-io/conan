@@ -73,8 +73,19 @@ def graph_build_order(conan_api, parser, subparser, *args):
                                 'only if the result will not be merged later with other build-order')
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
+    deprecated_policies = conan_api.config.get("core:policies", check_type=list, default=list())
     if args.order_by is None:
-        ConanOutput().warning("Please specify --order-by argument", warn_tag="deprecated")
+        if "deprecated_build_order_args" in deprecated_policies:
+            ConanOutput().warning("Please specify --order-by argument. "
+                                  "This behaviour is kept enabled because 'deprecated_build_order_args' "
+                                  "is present in the 'core:policies' conf list. "
+                                  "The fallback will be removed in Conan 2.32.",
+                                  warn_tag="deprecated")
+        else:
+            raise ConanException("Please specify --order-by argument. "
+                                 "The old behaviour can be re-enabled by adding 'deprecated_build_order_args' "
+                                 "to the 'core:policies' conf list until Conan 2.32, "
+                                 "where it will be removed.")
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
@@ -87,6 +98,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -185,6 +197,7 @@ def graph_info(conan_api, parser, subparser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
@@ -266,6 +279,7 @@ def graph_explain(conan_api, parser,  subparser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -316,9 +330,9 @@ def outdated_text_formatter(result):
 def outdated_json_formatter(result):
     output = {key: {"current_versions": list({str(v) for v in value["cache_refs"]}),
                     "version_ranges": [str(r) for r in value["version_ranges"]],
-                    "latest_remote": [] if value["latest_remote"] is None
-                                        else {"ref": str(value["latest_remote"]["ref"]),
-                                              "remote": str(value["latest_remote"]["remote"])}}
+                    "latest_remote": [] if value["latest_remote"] is None else {
+                        "ref": str(value["latest_remote"]["ref"]),
+                        "remote": str(value["latest_remote"]["remote"])}}
               for key, value in result.items()}
     cli_out_write(json.dumps(output))
 
@@ -347,6 +361,7 @@ def graph_outdated(conan_api, parser, subparser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:

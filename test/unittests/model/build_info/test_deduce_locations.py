@@ -266,7 +266,6 @@ def test_multiple_matches_exact_match(prefix, conanfile):
     assert result.type == "static-library"
 
 
-
 @pytest.mark.parametrize("lib_name, libs", [
     ("harfbuzz", ["harfbuzz-icu.lib", "harfbuzz.lib"]),
 ])

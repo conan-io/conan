@@ -95,10 +95,9 @@ class TestInfo:
         create_export(test_deps, "hello0")
 
         # arbitrary case - file will be named according to argument
-        self.client.run("graph info . --format=html")
-        html = self.client.stdout
+        self.client.run("graph info . --format=html", redirect_stdout="graph.html")
         # Just make sure it doesn't crash
-        assert "<body>" in html
+        assert "<body>" in self.client.load("graph.html")
 
 
 def test_user_templates():
@@ -173,7 +172,8 @@ def test_graph_conflict_loop():
     c.run("export lib_c")
     c.run("graph info lib_x --format=html", assert_error=True, redirect_stdout="graph.html")
     # checked manually
-    #c.open("graph.html")
+    # c.open("graph.html")
+
 
 def test_graph_missing_error():
     c = TestClient()

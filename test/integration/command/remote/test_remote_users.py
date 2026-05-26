@@ -6,6 +6,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from conan.internal.api.remotes.localdb import LocalDB
+from conan.internal.rest.rest_client_v2 import RestV2Methods
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
 from conan.test.utils.env import environment_update
@@ -456,6 +457,31 @@ class TestRemoteAuth:
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out
 
+    def test_remote_auth_strict(self):
+        servers = {
+            "good": TestServer(users={"myuser": "mypassword"}),
+            "bad": TestServer(users={"myuser": "mypassword"}),
+        }
+        # All succeed -> exit 0
+        c = TestClient(light=True, servers=servers,
+                       inputs=["myuser", "mypassword", "myuser", "mypassword"])
+        c.run("remote auth * --strict")
+        assert "user: myuser" in c.out
+
+        # Partial failure without --strict -> exit 0
+        c2 = TestClient(light=True, servers=servers,
+                        inputs=["myuser", "mypassword",
+                                "wrong", "wrong", "wrong", "wrong", "wrong", "wrong"])
+        c2.run("remote auth *")
+        assert "error" in c2.out
+
+        # Partial failure with --strict -> exit != 0
+        c3 = TestClient(light=True, servers=servers,
+                        inputs=["myuser", "mypassword",
+                                "wrong", "wrong", "wrong", "wrong", "wrong", "wrong"])
+        c3.run("remote auth * --strict", assert_error=True)
+        assert "Authentication error in remotes: bad" in c3.out
+
     def test_auth_after_logout(self):
         server = TestServer(users={"myuser": "password"})
         c = TestClient(light=True, servers={"default": server}, inputs=["myuser", "password"]*2)
@@ -467,3 +493,31 @@ class TestRemoteAuth:
         c.run("remote auth *")
         assert "Remote 'default' needs authentication, obtaining credentials" in c.out
         assert "user: myuser" in c.out
+
+    def test_remote_auth_env_vars_anonymous_warning(self):
+        """https://github.com/conan-io/conan/issues/19807
+        Warn when env vars are set but server accepts anonymous access"""
+        server = TestServer(users={"admin": "password"})
+        c = TestClient(light=True, servers={"default": server})
+
+        # env vars set + anonymous server → warning with var names
+        with patch.object(RestV2Methods, "check_credentials", return_value=None):
+            with environment_update({"CONAN_LOGIN_USERNAME": "admin", "CONAN_PASSWORD": "password"}):
+                c.run("remote auth default")
+
+        assert "CONAN_LOGIN_USERNAME" in c.out
+        assert "environment variables were not used. Use '--force'" in c.out
+
+        # env vars set + --force → authenticated, no warning
+        with environment_update({"CONAN_LOGIN_USERNAME": "admin", "CONAN_PASSWORD": "password"}):
+            c.run("remote auth default --force")
+
+        assert "user: admin" in c.out
+        assert "environment variables were not used" not in c.out
+
+        # no env vars + anonymous server → no warning
+        c.run("remote logout default")
+        with patch.object(RestV2Methods, "check_credentials", return_value=None):
+            c.run("remote auth default")
+
+        assert "environment variables were not used" not in c.out

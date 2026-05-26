@@ -84,12 +84,16 @@ class UserRequirementsDict:
             # so it's definitely in the dict
             return True
 
+    def of(self, ref, build=None, **kwargs):
+        # TODO: come up with a better name
+        return self._get(ref, build, **kwargs)
+
 
 class ConanFileDependencies(UserRequirementsDict):
 
     @staticmethod
     def from_node(node):
-        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
+        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile, node.conanfile))
                         for require, transitive in node.transitive_deps.items())
         if node.replaced_requires:
             cant_be_removed = set()

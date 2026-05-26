@@ -78,11 +78,11 @@ def text_vuln_formatter(result):
             desc = node.get("description", "")
             desc = (desc[:240] + "...") if len(desc) > 240 else desc
             desc_wrapped = wrap_and_indent(desc)
-            isWithdrawn = node.get("withdrawn", False)
-            publishedAt = node.get("publishedAt")
+            is_withdrawn = node.get("withdrawn", False)
+            published_at = node.get("publishedAt")
 
             cli_out_write(f"- {name}", fg=Color.BRIGHT_WHITE, endline="")
-            if isWithdrawn:
+            if is_withdrawn:
                 cli_out_write(" [WITHDRAWN]", fg=Color.BRIGHT_CYAN, endline="")
             cli_out_write(f" (Severity: {sev}{score_txt})", fg=sev_color)
             advisories = node.get("advisories", {})
@@ -111,23 +111,23 @@ def text_vuln_formatter(result):
 
             cli_out_write("\n" + desc_wrapped)
 
-            if publishedAt:
+            if published_at:
                 cli_out_write(f"  Published at: ", endline="", fg=Color.BRIGHT_BLUE)
-                cli_out_write(publishedAt)
+                cli_out_write(published_at)
 
             references = node.get("references")
             if references:
                 cli_out_write(f"  url: ", endline="", fg=Color.BRIGHT_BLUE)
                 cli_out_write(references[0])
 
-            vulnerablePackages = node.get("vulnerablePackages")
-            if vulnerablePackages:
-                fixVersions = [fix['version']
-                               for fix_edge in vulnerablePackages.get("edges", [])
-                               for fix in fix_edge['node'].get("fixVersions", [])]
-                if fixVersions:
+            vulnerable_packages = node.get("vulnerablePackages")
+            if vulnerable_packages:
+                fix_versions = [fix['version']
+                                for fix_edge in vulnerable_packages.get("edges", [])
+                                for fix in fix_edge['node'].get("fixVersions", [])]
+                if fix_versions:
                     cli_out_write(f"  fixed in version(s): ", endline="", fg=Color.BRIGHT_BLUE)
-                    cli_out_write(', '.join(fixVersions))
+                    cli_out_write(', '.join(fix_versions))
 
             if "v3" in cvss and cvss["v3"].get("baseScore", 0) > 0:
                 score_v3 = cvss["v3"].get("baseScore", 0)
@@ -376,11 +376,11 @@ def html_vuln_formatter(result):
                 desc = node.get("description", "")
                 withdrawn = node.get("withdrawn", False)
                 advisories = node.get("advisories", [])
-                jfrogAdvisories = [adv for adv in advisories
-                                   if adv.get("name", "").startswith("JFSA-")]
-                fixVersions = [fix['version']
-                               for fix_edge in node.get("vulnerablePackages", {}).get("edges", [])
-                               for fix in fix_edge['node'].get("fixVersions", [])]
+                jfrog_advisories = [adv for adv in advisories
+                                    if adv.get("name", "").startswith("JFSA-")]
+                fix_versions = [fix['version']
+                                for fix_edge in node.get("vulnerablePackages", {}).get("edges", [])
+                                for fix in fix_edge['node'].get("fixVersions", [])]
                 vulns.append({
                     "package": ref,
                     "vuln_id": name,
@@ -392,9 +392,9 @@ def html_vuln_formatter(result):
                     "description": desc,
                     "references": references,
                     "withdrawn": withdrawn,
-                    "advisories": jfrogAdvisories,
+                    "advisories": jfrog_advisories,
                     "provider_url": result.get("provider_url"),
-                    "fixVersions": fixVersions,
+                    "fixVersions": fix_versions,
                     "publishedAt": node.get("publishedAt")
                 })
 

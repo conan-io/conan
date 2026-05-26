@@ -5,7 +5,7 @@ from conan.tools import CppInfo
 from conan.tools.env import Environment
 
 
-def format_defines(defines):
+def format_defines(defines, toolchain=False):
     def is_hex_or_numeric(s):
         try:
             # Check for Hexadecimal (base 16)
@@ -22,7 +22,7 @@ def format_defines(defines):
             macro, value = define.split("=", 1)
             if value and not is_hex_or_numeric(value):
                 # value quotes are escaped
-                value = f'\\"{value}\\"'
+                value = f'\\"{value}\\"' if toolchain else f'\"{value}\"'
             define = f"{macro}#{value}"
         formated_defines.append(f'/D"{define}"')
     return formated_defines

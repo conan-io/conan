@@ -4,12 +4,11 @@ import platform
 import textwrap
 
 from conan.api.output import ConanOutput, Color
-from conan.tools.cmake.layout import get_build_folder_custom_vars
+from conan.tools.cmake.layout import get_build_folder_custom_vars, is_consumer
 from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.build import build_jobs
 from conan.tools.microsoft import is_msvc
-from conan.internal.graph.graph import RECIPE_CONSUMER
 from conan.errors import ConanException
 from conan.internal.util.files import save, load
 
@@ -181,12 +180,8 @@ class _CMakePresets:
         def _format_val(val):
             return f'"{val}"' if type(val) is str and " " in val else f"{val}"
 
-        try:
-            is_consumer = conanfile._conan_node.recipe == RECIPE_CONSUMER and \
-                          conanfile.tested_reference_str is None
-        except:
-            is_consumer = False
-        if is_consumer:
+        # only for consumer that is not a "test_package"
+        if is_consumer(conanfile) and conanfile.tested_reference_str is None:
             # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
             vars_tip = " ".join([f"-D{k}={_format_val(v)}" for k, v in cache_variables.items()])
             tc_tip = f"-DCMAKE_TOOLCHAIN_FILE=<output_folder>/{toolchain_file} " \

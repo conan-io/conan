@@ -118,7 +118,7 @@ def test_msbuilddeps_format_names():
             content = c.load(f)
             minidom.parseString(content)
             counter += 1
-    assert counter == 8
+    assert counter == 9
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")

@@ -36,10 +36,9 @@ def _parse_error_threshold(result: dict, error_level: float) -> None:
             for edge in result["data"][ref]["vulnerabilities"]["edges"]:
                 preferred_base_score = float(edge["node"]["cvss"].get("preferredBaseScore", 0.0))
                 if preferred_base_score >= error_level:
-                    result.update(
-                        {"conan_error":
-                             f"The package {ref} has a CVSS score {preferred_base_score} and "
-                             f"exceeded the threshold severity level {error_level}."})
+                    error_msg = (f"The package {ref} has a CVSS score {preferred_base_score} and "
+                                 f"exceeded the threshold severity level {error_level}.")
+                    result["conan_error"] = error_msg
                     break
 
 
@@ -78,6 +77,7 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args) -> dict:
     overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=path, cwd=cwd,
                                                partial=args.lockfile_partial, overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 

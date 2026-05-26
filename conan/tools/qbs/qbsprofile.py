@@ -184,7 +184,8 @@ class QbsProfile:
         # todo: other compilers?
         return compiler
 
-    def _default_compiler_names(self, toolchain):
+    @staticmethod
+    def _default_compiler_names(toolchain):
         if toolchain == 'msvc':
             return 'cl', 'cl'
         if toolchain == 'clang-cl':

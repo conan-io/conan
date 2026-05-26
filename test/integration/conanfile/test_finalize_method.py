@@ -318,7 +318,6 @@ class TestToolRequiresFlows:
         tc.run(f"cache check-integrity {app_layout.reference}")
         assert "There are corrupted artifacts" not in tc.out
 
-
     def test_multiple_instances_of_finalized_package(self):
         tc = TestClient(light=True)
         tc.save({"tool/conanfile.py": GenConanfile("tool", "1.0")
@@ -339,6 +338,7 @@ class TestToolRequiresFlows:
         assert tc.out.count("RUNNING MY FINALIZE") == 1
         # Finalize folder conan output should be printed only once
         assert tc.out.count("Finalized folder ") == 1
+
 
 class TestRemoteFlows:
 

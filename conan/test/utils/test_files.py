@@ -57,11 +57,10 @@ def uncompress_packaged_files(paths, pref):
     pref.revision = prev
 
     package_path = paths.package(pref)
-    PACKAGE_TGZ_NAME = "conan_package.tgz"
-    if not (os.path.exists(os.path.join(package_path, PACKAGE_TGZ_NAME))):
-        raise ConanException("%s not found in %s" % (PACKAGE_TGZ_NAME, package_path))
+    if not (os.path.exists(os.path.join(package_path, "conan_package.tgz"))):
+        raise ConanException("%s not found in %s" % ("conan_package.tgz", package_path))
     tmp = temp_folder()
-    untargz(os.path.join(package_path, PACKAGE_TGZ_NAME), tmp)
+    untargz(os.path.join(package_path, "conan_package.tgz"), tmp)
     return tmp
 
 

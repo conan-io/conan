@@ -438,12 +438,11 @@ class TestUpdateFlows:
         assert "liba/[>1.0.0]: liba/1.2.0" in self.client.out
         self.client.assert_listed_require({"liba/1.2.0": "Downloaded (server2)"})
         assert f"liba/1.2.0: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
-               "from remote 'server2' " in self.client.out
+               "from remote 'server2'" in self.client.out
 
 
 @pytest.mark.parametrize("update,result",
                          [
-                             # Not a real pattern, works to support legacy syntax
                              ["*", {"liba/1.1": "Downloaded (default)",
                                     "libb/1.1": "Downloaded (default)"}],
                              ["libc", {"liba/1.0": "Cache",
@@ -458,9 +457,9 @@ class TestUpdateFlows:
                                                                             "libb/1.0": "Cache"}],
                              ["", {"liba/1.0": "Cache",
                                    "libb/1.0": "Cache"}],
-                             # Patterns not supported, only full name match
-                             ["lib*", {"liba/1.0": "Cache",
-                                       "libb/1.0": "Cache"}],
+                             # Patterns supported, but only on name
+                             ["lib*", {"liba/1.1": "Downloaded (default)",
+                                       "libb/1.1": "Downloaded (default)"}],
                              ["liba/*", {"liba/1.0": "Cache",
                                          "libb/1.0": "Cache"}],
                              # None only passes legacy --update without args,

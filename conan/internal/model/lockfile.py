@@ -1,7 +1,6 @@
 import fnmatch
 import json
 import os
-from collections import OrderedDict
 
 from conan.api.output import ConanOutput
 from conan.internal.graph.graph import RECIPE_VIRTUAL, RECIPE_CONSUMER, CONTEXT_BUILD, Overrides
@@ -21,7 +20,7 @@ class _LockRequires:
     otherwise it could be a bare list
     """
     def __init__(self):
-        self._requires = OrderedDict()  # {require: package_ids}
+        self._requires = {}  # {require: package_ids}
 
     def refs(self):
         return self._requires.keys()
@@ -53,9 +52,9 @@ class _LockRequires:
             old_package_ids = self._requires.pop(ref, None)  # Get existing one
             if old_package_ids is not None:
                 if package_ids is not None:
-                    package_ids = old_package_ids.update(package_ids)
-                else:
-                    package_ids = old_package_ids
+                    assert isinstance(old_package_ids, dict)
+                    old_package_ids.update(package_ids)
+                package_ids = old_package_ids
             self._requires[ref] = package_ids
         else:  # Manual addition of something without revision
             existing = {r: r for r in self._requires}.get(ref)
@@ -77,7 +76,7 @@ class _LockRequires:
                         remove.append(k)
         else:
             remove = [k for k in self._requires if k.matches(pattern, False)]
-        self._requires = OrderedDict((k, v) for k, v in self._requires.items() if k not in remove)
+        self._requires = {k: v for k, v in self._requires.items() if k not in remove}
         return remove
 
     def update(self, refs, name):
@@ -96,7 +95,7 @@ class _LockRequires:
         self.sort()
 
     def sort(self):
-        self._requires = OrderedDict(reversed(sorted(self._requires.items())))
+        self._requires = dict(reversed(sorted(self._requires.items())))
 
     def merge(self, other):
         """
@@ -317,6 +316,34 @@ class Lockfile:
             prevs = self._requires.get(node.ref)
         if prevs:
             return prevs.get(node.package_id)
+
+    def check_config_requires(self, installed_refs):
+        # Validates that the given installed configuration packages satisfy the current lockfile
+        # For that to happen, the installed conf packages must match the lockfile ones
+        # Lockfile ones can be partial, like not containing recipe-revision
+        # And also all 'config_requires' in the lockfile must have a configuration package for them
+        # In case of a lockfile containing several constraints, one per package name must exist
+        lockfile_refs = set(self._conf_requires.refs())
+        if not lockfile_refs:
+            return  # If lockfile is not locking config_requires, do nothing, would break
+
+        # Existing installed config packages must exist in the lockfile
+        not_locked = [r for r in installed_refs if r not in lockfile_refs]
+        if not_locked:
+            raise ConanException(f"Installed config packages {not_locked} not in the lockfile")
+
+        # Config-requires in the lockfile must be installed, at least 1 per package name
+        # so first, group by package name
+        lockfile_refs_by_name = {}
+        for r in self._conf_requires.refs():
+            lockfile_refs_by_name.setdefault(r.name, []).append(r)
+        not_installed = []
+        for refs in lockfile_refs_by_name.values():
+            if not any(r in installed_refs for r in refs):
+                not_installed.extend(refs)
+        if not_installed:
+            raise ConanException("There are config packages in lockfile "
+                                 f"'config_requires' not installed: {not_installed}")
 
     def _resolve(self, require, locked_refs, resolve_prereleases, kind):
         version_range = require.version_range

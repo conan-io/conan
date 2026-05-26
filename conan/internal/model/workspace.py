@@ -71,6 +71,10 @@ class Workspace:
             if p["path"] == path:
                 self.output.warning(f"Package {path} already exists, updating its reference")
                 p["ref"] = editable["ref"]
+                if output_folder:
+                    p["output_folder"] = self._conan_rel_path(output_folder)
+                else:
+                    p.pop("output_folder", None)
                 break
         else:
             packages.append(editable)

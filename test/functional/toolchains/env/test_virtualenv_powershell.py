@@ -209,23 +209,6 @@ def test_concatenate_build_and_run_env(powershell):
     assert "MYTOOL 1!!" in client.out
 
 
-def test_powershell_deprecated_message():
-    client = TestClient(light=True)
-    conanfile = textwrap.dedent("""\
-        from conan import ConanFile
-        class Pkg(ConanFile):
-            settings = "os"
-            name = "pkg"
-            version = "0.1"
-            def build(self):
-                self.run("echo HELLO")
-        """)
-
-    client.save({"conanfile.py": conanfile})
-    client.run(f'build . -c tools.env.virtualenv:powershell=True', assert_error=True)
-    assert "Boolean values for 'tools.env.virtualenv:powershell' are deprecated" in client.out
-
-
 @pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
 @pytest.mark.parametrize("powershell", ["pwsh", "powershell.exe"])
 def test_powershell_quoting(powershell):
@@ -254,3 +237,15 @@ def test_verbosity_flag():
 
     assert "/verbosity:Detailed" in tc.out
     assert "-verbosity:Detailed" not in tc.out
+
+
+def test_powershell_deactivation():
+    # https://github.com/conan-io/conan/issues/19819
+    c = TestClient(light=True)
+    c.save({"conanfile.txt": ""})
+    c.run('install . -c tools.env.virtualenv:powershell=!')
+    files = os.listdir(c.current_folder)
+    assert "conanrun.ps1" not in files
+    assert "conanbuild.ps1" not in files
+    assert "conanrunenv.ps1" not in files
+    assert "conanbuildenv.ps1" not in files

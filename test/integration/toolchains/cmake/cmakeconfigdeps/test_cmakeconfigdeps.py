@@ -1,10 +1,10 @@
 import re
 import textwrap
 
+import pytest
+
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-
-new_value = "will_break_next"
 
 
 def test_cmakedeps_direct_deps_paths():
@@ -29,10 +29,10 @@ def test_cmakedeps_direct_deps_paths():
         class PkgConan(ConanFile):
             requires = "lib/1.0"
             settings = "os", "arch", "compiler", "build_type"
-            generators = "CMakeDeps"
+            generators = "CMakeConfigDeps"
     """)
     c.save({"conanfile.py": conanfile}, clean_first=True)
-    c.run(f"install . -c tools.cmake.cmakedeps:new={new_value}")
+    c.run(f"install .")
     cmake_paths = c.load("conan_cmakedeps_paths.cmake")
     assert "set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)" in cmake_paths
     assert re.search(r"list\(PREPEND CMAKE_PROGRAM_PATH \".*/bin\"", cmake_paths)  # default
@@ -77,10 +77,10 @@ def test_cmakedeps_transitive_paths():
         class PkgConan(ConanFile):
             requires = "libb/1.0"
             settings = "os", "arch", "compiler", "build_type"
-            generators = "CMakeDeps"
+            generators = "CMakeConfigDeps"
     """)
     c.save({"conanfile.py": conanfile}, clean_first=True)
-    c.run(f"install . -c tools.cmake.cmakedeps:new={new_value}")
+    c.run(f"install .")
     cmake_paths = c.load("conan_cmakedeps_paths.cmake")
     assert re.search(r"list\(PREPEND CMAKE_PROGRAM_PATH \".*/libb.*/p/binb\"\)", cmake_paths)
     assert not re.search(r"list\(PREPEND CMAKE_PROGRAM_PATH /bina\"", cmake_paths)
@@ -132,12 +132,12 @@ def test_cmakedeps_deployer_relative_paths():
         class PkgConan(ConanFile):
             requires = "liba/1.0", "libb/1.0"
             settings = "os", "arch", "compiler", "build_type"
-            generators = "CMakeDeps"
+            generators = "CMakeConfigDeps"
     """)
     c.save({"conanfile.py": conanfile}, clean_first=True)
 
     # Now with a deployment
-    c.run(f"install . -c tools.cmake.cmakedeps:new={new_value} --deployer=full_deploy")
+    c.run(f"install . --deployer=full_deploy")
     cmake_paths = c.load("conan_cmakedeps_paths.cmake")
     assert 'set(libb_DIR "${CMAKE_CURRENT_LIST_DIR}/full_deploy/host/libb/1.0")' in cmake_paths
     assert ('set(CONAN_RUNTIME_LIB_DIRS "$<$<CONFIG:Release>:${CMAKE_CURRENT_LIST_DIR}'
@@ -214,32 +214,11 @@ def test_system_wrappers():
     c.save({"conanfile.py": conanfile})
     c.run("create .")
 
-    c.run(f"install --requires=lib/system -g CMakeConfigDeps "
-          f"-c tools.cmake.cmakedeps:new={new_value}")
+    c.run(f"install --requires=lib/system -g CMakeConfigDeps")
     cmake = c.load("lib-Targets-release.cmake")
     assert "add_library(lib::lib INTERFACE IMPORTED)" in cmake
     assert "set_property(TARGET lib::lib APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
            '             $<$<CONFIG:RELEASE>:my_system_cool_lib>)' in cmake
-
-
-def test_autolink_pragma():
-    """https://github.com/conan-io/conan/issues/10837"""
-    c = TestClient()
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-        class Pkg(ConanFile):
-            def package_info(self):
-                self.cpp_info.set_property("cmake_set_interface_link_directories", True)
-        """)
-    c.save({"conanfile.py": conanfile,
-            "test_package/conanfile.py": GenConanfile().with_test("pass")
-                                                       .with_settings("build_type")
-                                                       .with_generator("CMakeDeps")})
-    c.run("create . --name=pkg --version=0.1")
-    assert "CMakeDeps: cmake_set_interface_link_directories is legacy, not necessary" in c.out
-    c.run(f"create . --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new={new_value}")
-    assert "CMakeConfigDeps: cmake_set_interface_link_directories deprecated and invalid. " \
-           "The package 'package_info()' must correctly define the (CPS) information" in c.out
 
 
 def test_consuming_cpp_info_with_components_dependency_from_same_package():
@@ -255,8 +234,8 @@ def test_consuming_cpp_info_with_components_dependency_from_same_package():
     c.save({"conanfile.py": conanfile,
             "test_package/conanfile.py": GenConanfile().with_settings("build_type")
                                                        .with_test("pass")
-                                                       .with_generator("CMakeDeps")})
-    c.run(f"create . --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new={new_value}")
+                                                       .with_generator("CMakeConfigDeps")})
+    c.run(f"create . --name=pkg --version=0.1")
     # it doesn't break
     assert "find_package(pkg)" in c.out
 
@@ -283,9 +262,9 @@ def test_consuming_cpp_info_with_components_dependency_from_other_package():
             "pkg/conanfile.py": conanfile,
             "pkg/test_package/conanfile.py": GenConanfile().with_settings("build_type")
                                                            .with_test("pass")
-                                                           .with_generator("CMakeDeps")})
+                                                           .with_generator("CMakeConfigDeps")})
     c.run("create dep")
-    c.run(f"create pkg --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new={new_value}")
+    c.run(f"create pkg --name=pkg --version=0.1")
     # it doesn't break
     assert "find_package(pkg)" in c.out
 
@@ -303,12 +282,11 @@ def test_error_incorrect_component():
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
             "pkg/conanfile.py": conanfile,
             "pkg/test_package/conanfile.py": GenConanfile().with_settings("build_type")
-                                                           .with_generator("CMakeDeps")
+                                                           .with_generator("CMakeConfigDeps")
                                                            .with_test("pass")})
     c.run("create dep")
-    c.run(f"create pkg --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new={new_value}",
-          assert_error=True)
-    assert ("ERROR: Error in generator 'CMakeDeps': pkg/0.1 recipe cpp_info did .requires to "
+    c.run(f"create pkg --name=pkg --version=0.1", assert_error=True)
+    assert ("ERROR: Error in generator 'CMakeConfigDeps': pkg/0.1 recipe cpp_info did .requires to "
             "'dep::lib' but component 'lib' not found in dep") in c.out
 
 
@@ -335,7 +313,7 @@ def test_consuming_cpp_info_transitively_by_requiring_root_component():
         from conan import ConanFile
         class TestPkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
-            generators = "VirtualRunEnv", "CMakeDeps"
+            generators = "VirtualRunEnv", "CMakeConfigDeps"
 
             def requirements(self):
                 self.requires(self.tested_reference_str)
@@ -346,9 +324,8 @@ def test_consuming_cpp_info_transitively_by_requiring_root_component():
     c.save({"dependent/conanfile.py": dependent_conanfile,
             "main/conanfile.py": conanfile,
             "main/test_package/conanfile.py": test_package})
-    c.run("create ./dependent/ --name=dependent --version=0.1 "
-          f"-c tools.cmake.cmakedeps:new={new_value}")
-    c.run(f"create ./main/ --name=pkg --version=0.1 -c tools.cmake.cmakedeps:new={new_value}")
+    c.run("create ./dependent/ --name=dependent --version=0.1")
+    c.run(f"create ./main/ --name=pkg --version=0.1")
 
 
 def test_cmake_find_mode_deprecated():
@@ -365,8 +342,7 @@ def test_cmake_find_mode_deprecated():
         """)
     tc.save({"conanfile.py": dep})
     tc.run("create .")
-    args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
-    tc.run(f"install --requires=dep/0.1 {args}")
+    tc.run(f"install --requires=dep/0.1 -g CMakeConfigDeps")
     assert "CMakeConfigDeps does not support module find mode"
 
 
@@ -406,8 +382,7 @@ def test_cmake_extra_dependencies():
         """)
     tc.save({"conanfile.py": dep})
     tc.run("create .")
-    args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
-    tc.run(f"install --requires=dep/0.1 {args}")
+    tc.run(f"install --requires=dep/0.1 -g CMakeConfigDeps")
     dep = tc.load("dep-Targets-release.cmake")
     assert "find_dependency(MyOpenMPI REQUIRED )" in dep
     assert "set_property(TARGET dep::dep APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
@@ -442,8 +417,7 @@ def test_cmake_extra_dependencies_components():
         """)
     tc.save({"conanfile.py": dep})
     tc.run("create .")
-    args = f"-g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}"
-    tc.run(f"install --requires=dep/0.1 {args}")
+    tc.run(f"install --requires=dep/0.1 -g CMakeConfigDeps")
     dep = tc.load("dep-Targets-release.cmake")
     assert "find_dependency(MyOpenMPI REQUIRED )" in dep
     assert "set_property(TARGET dep::mycomp APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
@@ -462,7 +436,7 @@ class TestRequiresToApp:
 
             class TestPkg(ConanFile):
                 settings = "os", "compiler", "arch", "build_type"
-                generators = "CMakeDeps", "CMakeToolchain"
+                generators = "CMakeConfigDeps", "CMakeToolchain"
 
                 def requirements(self):
                     self.requires(self.tested_reference_str)
@@ -475,7 +449,7 @@ class TestRequiresToApp:
                 "libtool/conanfile.py": conanfile,
                 "libtool/test_package/conanfile.py": test_package})
         c.run("create automake")
-        c.run(f"create libtool -c tools.cmake.cmakedeps:new={new_value}")
+        c.run(f"create libtool")
         targets = c.load("libtool/test_package/libtool-Targets-release.cmake")
         # The libtool shouldn't depend on the automake::automake target
         assert "automake::automake" not in targets
@@ -513,8 +487,7 @@ class TestRequiresToApp:
         c.run("create automake")
 
         c.run("create libtool")
-        c.run("install --requires=libtool/0.1 -g CMakeDeps "
-              f"-c tools.cmake.cmakedeps:new={new_value}")
+        c.run("install --requires=libtool/0.1 -g CMakeConfigDeps")
         targets = c.load("libtool-Targets-release.cmake")
         # The libtool shouldn't depend on the automake::automake target
         assert "automake::automake" not in targets
@@ -541,8 +514,7 @@ class TestRequiresToApp:
                 "libtool/conanfile.py": conanfile})
         c.run("create automake")
         c.run("create libtool")
-        c.run("install --requires=libtool/0.1 -g CMakeDeps "
-              f"-c tools.cmake.cmakedeps:new={new_value}")
+        c.run("install --requires=libtool/0.1 -g CMakeConfigDeps")
         targets = c.load("libtool-Targets-release.cmake")
         # The libtool shouldn't depend on the automake::automake target
         assert "automake::automake" not in targets
@@ -577,8 +549,7 @@ class TestRequiresToApp:
                 "libtool/conanfile.py": conanfile})
         c.run("create automake")
         c.run("create libtool")
-        c.run("install --requires=libtool/0.1 -g CMakeDeps "
-              f"-c tools.cmake.cmakedeps:new={new_value}")
+        c.run("install --requires=libtool/0.1 -g CMakeConfigDeps")
         targets = c.load("libtool-Targets-release.cmake")
         # The libtool shouldn't depend on the automake::automake target
         assert "automake::myapp" not in targets
@@ -600,7 +571,7 @@ def test_alias_cmakedeps_set_property():
         """),
              "conanfile.py": textwrap.dedent("""
              from conan import ConanFile
-             from conan.tools.cmake import CMakeDeps, CMake
+             from conan.tools.cmake import CMakeConfigDeps, CMake
              class Pkg(ConanFile):
                 name = "pkg"
                 version = "1.0"
@@ -609,14 +580,14 @@ def test_alias_cmakedeps_set_property():
                 requires = "dep/1.0"
 
                 def generate(self):
-                    deps = CMakeDeps(self)
+                    deps = CMakeConfigDeps(self)
                     deps.set_property("dep", "cmake_target_aliases", ["alias", "dep::other_name"])
                     deps.set_property("dep::mycomp", "cmake_target_aliases",
                                       ["component_alias", "dep::my_aliased_component"])
                     deps.generate()
              """)})
     tc.run("create dep")
-    tc.run(f"install . -c tools.cmake.cmakedeps:new={new_value}")
+    tc.run(f"install .")
     targets_data = tc.load('dep-Targets-release.cmake')
     assert "add_library(dep::dep" in targets_data
     assert "add_library(alias" in targets_data
@@ -649,7 +620,7 @@ def test_package_info_extra_variables():
     client.save({"conanfile.py": conanfile})
     client.run("create .")
 
-    client.run(f"install --requires=pkg/0.1 -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value} "
+    client.run(f"install --requires=pkg/0.1 -g CMakeConfigDeps "
                """-c tools.cmake.cmaketoolchain:extra_variables="{'BAR': 9}" """)
     target = client.load("pkg-config.cmake")
     assert 'set(BAR' not in target
@@ -676,7 +647,7 @@ def test_target_defines_only():
     client.save({"conanfile.py": conanfile})
     client.run("create .")
 
-    client.run(f"install --requires=pkg/0.1 -g CMakeDeps -c tools.cmake.cmakedeps:new={new_value}")
+    client.run(f"install --requires=pkg/0.1 -g CMakeConfigDeps")
     target = client.load("pkg-Targets-release.cmake")
     assert 'add_library(pkg::base INTERFACE IMPORTED)' in target
     assert "# Requirement pkg::comp -> pkg::base (Full link: True)" in target
@@ -820,7 +791,7 @@ class TestLegacyVariables:
                  .with_package_file("lib/mylib2.a", "library")
                  .with_package_info({"components": {"mypkg": {"libs": ["mylib1"]},
                                                     "lib2": {"libs": ["mylib2"]}}})
-        })
+                 })
         tc.run("create")
         tc.run("install --requires=mypkg/1.0 -g CMakeConfigDeps")
         mypkg_config = tc.load("mypkg-config.cmake")
@@ -1028,3 +999,35 @@ def test_requires_only_component_target_generation():
     assert "# Requirement pkg::compB -> pkg::compA (Full link: True)" in target
     # And even if it's INTERFACE, the globally generated target requires it as usual
     assert "# Requirement pkg::pkg -> pkg::compB (Full link: True)" in target
+
+
+@pytest.mark.parametrize("requires", [
+    None,
+    ["base::base"]
+])
+def test_libs_no_components_multilib_component(requires):
+    tc = TestClient()
+
+    base_conanfile = (GenConanfile("base", "1.0")
+                      .with_package_type("static-library")
+                      .with_package_info({"defines": ["FOO"]}))
+
+    cpp_info = {"libs": ["module", "vector"]}
+    if requires:
+        cpp_info["requires"] = requires
+
+    conanfile = (GenConanfile("matrix", "1.0")
+                 .with_package_type("static-library")
+                 .with_settings("os", "arch", "compiler", "build_type")
+                 .with_requirement("base/1.0", transitive_headers=True)
+                 .with_package_file("lib/libmodule.a", "foo")
+                 .with_package_file("lib/libvector.a", "bar")
+                 .with_package_info(cpp_info))
+
+    tc.save({"base/conanfile.py": base_conanfile,
+             "conanfile.py": conanfile})
+    tc.run("create base")
+    tc.run("create")
+    tc.run("install --requires=matrix/1.0 -g CMakeConfigDeps")
+    matrix_targets = tc.load("matrix-Targets-release.cmake")
+    assert "# Requirement matrix::_common -> base::base (Full link: True)" in matrix_targets

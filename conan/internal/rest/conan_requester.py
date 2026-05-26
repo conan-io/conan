@@ -45,7 +45,8 @@ class _SourceURLCredentials:
             return
 
         def _get_auth(credentials):
-            if "token" in credentials or ("user" in credentials and "password" in credentials):
+            if ("headers" in credentials or "token" in credentials or
+               ("user" in credentials and "password" in credentials)):
                 return credentials
             raise ConanException(f"Unknown credentials method for '{credentials['url']}'")
 

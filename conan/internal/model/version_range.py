@@ -5,6 +5,30 @@ from conan.internal.model.version import Version
 from conan.errors import ConanException
 
 
+def required_conan_version_policy(conanfile, limit_version):
+    try:
+        global_conf = conanfile._conan_helpers.global_conf  # noqa
+    except AttributeError:
+        pass  # This can happen for PLATFORM deps without _conan_helpers
+    else:
+        policies = global_conf.get("core:policies")
+        # The global policy_conan_version one has priority
+        if policies:
+            policy = next(iter(p for p in policies if p.startswith("required_conan_version")), None)
+            if policy:
+                version = policy[len("required_conan_version"):]
+                version_range = VersionRange(version)
+                if not version_range.contains(Version(limit_version), resolve_prerelease=None):
+                    return True
+
+    conanfile_version = conanfile._conan_required_version # noqa
+    if conanfile_version:
+        version_range = VersionRange(conanfile_version)
+        if not version_range.contains(Version(limit_version), resolve_prerelease=None):
+            return True
+    return False
+
+
 @total_ordering
 class _Condition:
     def __init__(self, operator, version):

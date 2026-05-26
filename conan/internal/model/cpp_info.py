@@ -89,6 +89,8 @@ class _Component:
         self._sysroot = None
         self._requires = None
 
+        self._consumer_conanfile = None
+
         # LEGACY 1.X fields, can be removed in 2.X
         self.names = MockInfoProperty("cpp_info.names")
         self.filenames = MockInfoProperty("cpp_info.filenames")
@@ -103,6 +105,9 @@ class _Component:
         self._type = None
         self._location = None
         self._link_location = None
+
+    def set_consumer(self, conanfile):
+        self._consumer_conanfile = conanfile
 
     def serialize(self):
         return {
@@ -132,6 +137,15 @@ class _Component:
             "link_location": self._link_location,
             "languages": self._languages
         }
+
+    @staticmethod
+    def _evaluate_cond(item, flags, conanfile):
+        if conanfile is None:
+            return flags
+        flags_map = conanfile._conan_helpers.flags_map  # noqa
+        if flags_map is None:
+            return flags
+        return flags_map(conanfile=conanfile, item=item, flags=flags)
 
     @staticmethod
     def deserialize(contents):
@@ -342,7 +356,7 @@ class _Component:
     def cflags(self):
         if self._cflags is None:
             self._cflags = []
-        return self._cflags
+        return self._evaluate_cond("cflags", self._cflags, self._consumer_conanfile)
 
     @cflags.setter
     def cflags(self, value):
@@ -352,7 +366,7 @@ class _Component:
     def cxxflags(self):
         if self._cxxflags is None:
             self._cxxflags = []
-        return self._cxxflags
+        return self._evaluate_cond("cxxflags", self._cxxflags, self._consumer_conanfile)
 
     @cxxflags.setter
     def cxxflags(self, value):
@@ -362,7 +376,8 @@ class _Component:
     def sharedlinkflags(self):
         if self._sharedlinkflags is None:
             self._sharedlinkflags = []
-        return self._sharedlinkflags
+        return self._evaluate_cond("sharedlinkflags", self._sharedlinkflags,
+                                   self._consumer_conanfile)
 
     @sharedlinkflags.setter
     def sharedlinkflags(self, value):
@@ -372,7 +387,7 @@ class _Component:
     def exelinkflags(self):
         if self._exelinkflags is None:
             self._exelinkflags = []
-        return self._exelinkflags
+        return self._evaluate_cond("exelinkflags", self._exelinkflags, self._consumer_conanfile)
 
     @exelinkflags.setter
     def exelinkflags(self, value):
@@ -452,8 +467,8 @@ class _Component:
 
     def merge(self, other, overwrite=False):
         """
-        @param overwrite:
-        @type other: _Component
+        :param overwrite:
+        :type other: _Component
         """
         def merge_list(o, d):
             d.extend(e for e in o if e not in d)
@@ -627,7 +642,7 @@ class _Component:
                            f" '{libname}' that declared .type='{self._type}'")
         self._type = deduced_type
         if self._type != pkg_type:
-            out.warning(f"Lib {libname} deduced as '{self._type}, but 'package_type={pkg_type}'")
+            out.warning(f"Lib {libname} deduced as '{self._type}', but 'package_type={pkg_type}'")
 
     def deduce_locations(self, conanfile, component_name=""):
         name = f'{conanfile} cpp_info.components["{component_name}"]' if component_name \
@@ -677,6 +692,11 @@ class CppInfo:
         self.components = defaultdict(lambda: _Component(set_defaults))
         self.default_components = None
         self._package = _Component(set_defaults)
+
+    def set_consumer(self, conanfile):
+        self._package.set_consumer(conanfile)
+        for comp in self.components.values():
+            comp.set_consumer(conanfile)
 
     def __getattr__(self, attr):
         # all cpp_info.xxx of not defined things will go to the global package
@@ -857,6 +877,9 @@ class CppInfo:
             common = self._package.clone()
             common.libs = []
             common.type = str(PackageType.HEADER)  # the type of components is a string!
+            if not common.requires:
+                common.requires = [f"{c.ref.name}::{c.ref.name}"
+                                   for c in conanfile.dependencies.direct_host.values()]
             result.components["_common"] = common
 
             for lib in self.libs:

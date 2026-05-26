@@ -7,8 +7,6 @@ import os
 import fnmatch
 import textwrap
 
-from collections import OrderedDict
-
 from jinja2 import Environment, FileSystemLoader
 
 from conan.errors import ConanException
@@ -18,6 +16,17 @@ from conan.internal.model.options import _PackageOption
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.model.settings import SettingsItem
 from conan.internal.util.files import load, save
+
+
+policies_msg = """\
+A list of opt-in behaviors that can be defined in the configuration to control specific aspects of Conan's behavior,
+such as keeping deprecated behaviours:
+   - deprecated_build_order_args: Allow deprecated skipping of --order-by argument in conan graph build-order - To be removed in Conan 2.32
+   - deprecated_empty_version_range: Allow using deprecated empty version range expressions - To be removed in Conan 2.32
+If the policy 'required_conan_version>=version' is defined, different behaviors can be enabled:
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19849 for VirtualBuildEnv bindir path propagation based on requirement run trait
+   - If required_conan_version>=2.28, https://github.com/conan-io/conan/pull/19286 defaults the new 'consistent' trait to True for the host context, even when 'visible=False'"""
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -30,15 +39,16 @@ BUILT_IN_CONFS = {
     "core:default_build_profile": "Defines the default build profile ('default' by default)",
     "core:allow_uppercase_pkg_names": "Temporarily (will be removed in 2.X) allow uppercase names",
     "core.version_ranges:resolve_prereleases": "Whether version ranges can resolve to pre-releases or not",
-    "core.upload:retry": "Number of retries in case of failure when uploading to Conan server",
-    "core.upload:retry_wait": "Seconds to wait between upload attempts to Conan server",
+    "core.upload:retry": "(int, default: 1) Number of retries in case of failure when uploading to Conan server",
+    "core.upload:retry_wait": "(int, default: 5s) Seconds to wait between upload attempts to Conan server",
     "core.upload:parallel": "Number of concurrent threads to upload packages",
     "core.download:parallel": "Number of concurrent threads to download packages",
-    "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
-    "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
+    "core.download:retry": " (int, default: 2) Number of retries in case of failure when downloading from Conan server",
+    "core.download:retry_wait": "(int, default: 1s) Seconds to wait between download attempts from Conan server",
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
+    "core:policies": policies_msg,
     # Sources backup
     "core.sources:download_cache": "Folder to store the sources backup",
     "core.sources:download_urls": "List of URLs to download backup sources from",
@@ -101,11 +111,11 @@ BUILT_IN_CONFS = {
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
     "tools.cmake:ctest_args": "Add extra arguments to CMake.ctest() runner command line",
-    "tools.cmake:configure_args": "Add extra arguments to CMake.configure() command line ",
+    "tools.cmake:configure_args": "Add extra arguments to CMake.configure() command line",
     "tools.cmake:install_strip": "(Deprecated) Add --strip to cmake.install(). Use tools.build:install_strip instead",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
-    "tools.files.download:retry": "Number of retries in case of failure when downloading",
-    "tools.files.download:retry_wait": "Seconds to wait between download attempts",
+    "tools.files.download:retry": "(int, default: 2) Number of retries in case of failure when downloading",
+    "tools.files.download:retry_wait": "(int, default: 5s) Seconds to wait between download attempts",
     "tools.files.download:verify": "If set, overrides recipes on whether to perform SSL verification for their downloaded files. Only recommended to be set while testing",
     "tools.files.unzip:filter": "Define tar extraction filter: 'fully_trusted', 'tar', 'data'",
     "tools.graph:vendor": "(Experimental) If 'build', enables the computation of dependencies of vendoring packages to build them",
@@ -145,7 +155,7 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_bitcode": "(boolean) Enable/Disable Bitcode Apple Clang flags",
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
-    "tools.env.virtualenv:powershell": "If specified, it generates PowerShell launchers (.ps1). Use this configuration setting the PowerShell executable you want to use (e.g., 'powershell.exe' or 'pwsh'). Setting it to True or False is deprecated as of Conan 2.11.0.",
+    "tools.env.virtualenv:powershell": "If specified, it generates PowerShell launchers (.ps1). Use this configuration setting the PowerShell executable you want to use (e.g., 'powershell.exe' or 'pwsh')",
     "tools.env:dotenv": "(Experimental) Generate dotenv environment files",
     "tools.env:deactivation_mode": "(Experimental) If 'function', generate a deactivate function instead of a script to unset the environment variables",
     # Compilers/Flags configurations
@@ -158,7 +168,8 @@ BUILT_IN_CONFS = {
     "tools.build:rcflags": "List of extra RC (resource compiler) flags used by different toolchains like CMakeToolchain, MSBuildToolchain and MesonToolchain",
     "tools.build:linker_scripts": "List of linker script files to pass to the linker used by different toolchains like CMakeToolchain, AutotoolsToolchain, and MesonToolchain",
     # Toolchain installation
-    "tools.build:install_strip": "(boolean) Strip the binaries when installing them with CMake, Meson and Autotools",
+    "tools.build:install_strip": "(boolean or list) True/False to strip on install for every CMake, Meson and Autotools "
+                                 "integration, or a list of 'cmake', 'meson', 'autotools' to strip only for those.",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
 }
@@ -345,19 +356,10 @@ class Conf:
 
     def __init__(self):
         # It being ordered allows for Windows case-insensitive composition
-        self._values = OrderedDict()  # {var_name: [] of values, including separators}
+        self._values = {}  # {var_name: [] of values, including separators}
 
     def __bool__(self):
         return bool(self._values)
-
-    def __repr__(self):
-        return "Conf: " + repr(self._values)
-
-    def __eq__(self, other):
-        """
-        :type other: Conf
-        """
-        return other._values == self._values
 
     def clear(self):
         self._values.clear()
@@ -387,7 +389,9 @@ class Conf:
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
-            if choices is not None and v not in choices and v is not None:
+            if v is None:  # value was unset
+                return default
+            if choices is not None and v not in choices:
                 raise ConanException(f"Unknown value '{v}' for '{conf_name}'")
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
@@ -398,9 +402,9 @@ class Conf:
                 raise ConanException(f"[conf] {conf_name} must be a boolean-like object "
                                      f"(true/false, 1/0, on/off) and value '{v}' does not match it.")
             elif check_type is str and not isinstance(v, str):
+                # TODO: this would be converting things like lists to strings without
+                #   proper error, is it worth trying to change it?
                 return str(v)
-            elif v is None:  # value was unset
-                return default
             elif (check_type is not None and not isinstance(v, check_type) or
                   check_type is int and isinstance(v, bool)):
                 raise ConanException(f"[conf] {conf_name} must be a "
@@ -429,13 +433,12 @@ class Conf:
 
     def copy(self):
         c = Conf()
-        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
+        c._values = {k: v.copy() for k, v in self._values.items()}
         return c
 
     def filter_core(self):
         c = Conf()
-        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items()
-                                if not CORE_CONF_PATTERN.match(k))
+        c._values = {k: v.copy() for k, v in self._values.items() if not CORE_CONF_PATTERN.match(k)}
         return c
 
     def dumps(self):
@@ -600,10 +603,7 @@ class ConfDefinition:
                ("=!", "unset"), ("*=", "update"), ("=", "define"))
 
     def __init__(self):
-        self._pattern_confs = OrderedDict()
-
-    def __repr__(self):
-        return "ConfDefinition: " + repr(self._pattern_confs)
+        self._pattern_confs = {}
 
     def __bool__(self):
         return bool(self._pattern_confs)
@@ -809,4 +809,23 @@ def load_global_conf(home_folder):
             # tools.android:ndk_path = my/path/to/android/ndk
             """)
         save(global_conf_path, default_global_conf)
+
+    # TODO: This is a bit repeated, to be refactored later, to keep PR clear
+    global_conf_path_user = home_paths.global_conf_path_user
+    if os.path.exists(global_conf_path_user):
+        text = load(global_conf_path_user)
+        distro = None
+        if platform.system() in ["Linux", "FreeBSD"]:
+            import distro
+        template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
+        from conan import conan_version
+        home_folder_fwd = home_folder.replace("\\", "/")
+        content = template.render({"platform": platform, "os": os, "distro": distro,
+                                   "conan_version": conan_version,
+                                   "conan_home_folder": home_folder_fwd,
+                                   "detect_api": detect_api,
+                                   "hashlib": hashlib})
+        user_conf = ConfDefinition()
+        user_conf.loads(content)
+        new_config.update_conf_definition(user_conf)
     return new_config
