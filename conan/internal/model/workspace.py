@@ -25,6 +25,8 @@ class Workspace:
         self.conan_data = self._conan_load_data()
         self._conan_api = conan_api
         self.output = ConanOutput(scope=f"Workspace '{self.name()}'")
+        # This will be injected from the outside before load_conanfile() is called
+        self._editable_packages = None
 
     def __getattribute__(self, item):
         # Return a protected wrapper around workspace overridable callables in order to
@@ -117,13 +119,7 @@ class Workspace:
 
     def load_conanfile(self, conanfile_path):
         conanfile_path = os.path.join(self.folder, conanfile_path, "conanfile.py")
-        from conan.internal.loader import ConanFileLoader
-        from conan.internal.cache.home_paths import HomePaths
-        from conan.internal.conan_app import ConanFileHelpers, CmdWrapper
-        cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
-        helpers = ConanFileHelpers(None, cmd_wrap, self._conan_api._api_helpers.global_conf,
-                                   cache=None, home_folder=self._conan_api.home_folder, conan_api=self._conan_api)
-        loader = ConanFileLoader(pyreq_loader=None, conanfile_helpers=helpers)
+        _, _, loader, _ = self._conan_api._api_helpers._get_loader(self._editable_packages)  # noqa
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
                                       channel=None, remotes=None, graph_lock=None)
         return conanfile
