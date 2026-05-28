@@ -5,7 +5,7 @@ import pytest
 
 from conan.test.assets.sources import gen_function_cpp
 from test.functional.utils import check_exe_run
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, default_vs_ide_version
 
 
 @pytest.mark.slow
@@ -95,7 +95,7 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
 
 @pytest.mark.slow
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.tool("cmake", "4.2")
 # This test uses clang inside Visual Studio, not managed by mark.tool
 @pytest.mark.tool("visual_studio")
 def test_toolchain_nmake_clang():
@@ -116,7 +116,7 @@ def test_toolchain_nmake_clang():
     conf = {
         "tools.build:defines": "[{}]".format(",".join([f"'{v}'" for v in defines])),
         "tools.build:compiler_executables": r'{\"c\": \"clang-cl\", \"cpp\": \"clang-cl\"}',
-        "tools.cmake.cmaketoolchain:generator": "Visual Studio 17",
+        "tools.cmake.cmaketoolchain:generator": f"Visual Studio {default_vs_ide_version}",
     }
 
     # Build the profile according to the settings provided

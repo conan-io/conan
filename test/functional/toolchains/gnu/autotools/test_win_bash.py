@@ -9,7 +9,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from test.conftest import tools_locations
 from test.functional.utils import check_exe_run, check_vs_runtime
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, default_vs_ide_version
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
@@ -142,7 +142,8 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     assert "conanvcvars.bat" in bat_contents
 
     static_runtime = runtime == "static"
-    check_vs_runtime("main.exe", client, "17", build_type=build_type, static_runtime=static_runtime)
+    check_vs_runtime("main.exe", client, default_vs_ide_version, build_type=build_type,
+                     static_runtime=static_runtime)
 
 
 @pytest.mark.parametrize("scope", ["build", "run"])
