@@ -233,8 +233,6 @@ class MesonToolchain:
                 sdk_host = conanfile.settings.get_safe("os.sdk")
                 self.cross_build["host"]["subsystem"] = get_apple_subsystem(sdk_host)
                 self.cross_build["build"]["subsystem"] = get_apple_subsystem(sdk_build)
-            # Issue: https://github.com/conan-io/conan/issues/19217
-            self.properties["needs_exe_wrapper"] = not can_run(self._conanfile)
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target
                 os_target = settings_target.get_safe("os")
@@ -333,6 +331,8 @@ class MesonToolchain:
         self._resolve_apple_flags_and_variables(build_env, compilers_by_conf)
         if not native:
             self._resolve_android_cross_compilation()
+        #: Defines the Meson ``exe_wrapper`` variable
+        self.exe_wrapper = None
 
     def _get_default_dirs(self):
         """
@@ -490,7 +490,8 @@ class MesonToolchain:
             "as": self.as_,
             "windres": self.windres,
             "pkgconfig": self.pkgconfig,
-            "pkg-config": self.pkgconfig
+            "pkg-config": self.pkgconfig,
+            "exe_wrapper": self.exe_wrapper,
         }
         if self._is_apple_system:
             ret.update({
@@ -535,6 +536,24 @@ class MesonToolchain:
                     raise ConanException("MesonToolchain.subproject_options must be a list of dicts")
                 subproject_options[subproject] = [{k: to_meson_value(v) for k, v in keypair.items()}
                                                   for keypair in listkeypair]
+
+        # Apply extra_variables from conf at generation time so conf has priority over toolchain attributes
+        # Issue: https://github.com/conan-io/conan/issues/18718
+        extra_variables = self._conanfile_conf.get("tools.meson.mesontoolchain:extra_variables",
+                                                   default={}, check_type=dict)
+        self.properties.update(extra_variables.get("properties", {}))
+        self.binaries.update(extra_variables.get("binaries", {}))
+        self.project_options.update(extra_variables.get("project_options", {}))
+
+        # Issue: https://github.com/conan-io/conan/issues/19217
+        # Issue: https://github.com/conan-io/conan/issues/18718
+        # Evaluate needs_exe_wrapper at generation time to consider user-defined exe_wrapper
+        # exe_wrapper can be set via tc.exe_wrapper attribute or via tc.binaries["exe_wrapper"]
+        # or via tools.meson.mesontoolchain:extra_variables conf
+        if self.cross_build:
+            has_exe_wrapper = self.exe_wrapper is not None or self.binaries.get("exe_wrapper") is not None
+            self.properties["needs_exe_wrapper"] = has_exe_wrapper or not can_run(self._conanfile)
+
         return {
             # https://mesonbuild.com/Machine-files.html#properties
             "properties": {k: to_meson_value(v) for k, v in self.properties.items()},
