@@ -78,7 +78,7 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                   cxx11_abi=None, subsystem=None, extra_msg=""):
     output = str(output)
     names = names if isinstance(names, list) else [names]
-    vs_version = str(version)
+    version = str(version)
 
     for name in names:
         if extra_msg:  # For ``conan new`` templates
@@ -111,9 +111,12 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
             elif compiler == "clang":
                 assert "{} __clang_".format(name) in output
                 if version:
-                    major, minor = version.split(".")[0:2]
-                    assert "{} __clang_major__{}".format(name, major) in output
-                    assert "{} __clang_minor__{}".format(name, minor) in output
+                    digits = version.split(".")
+                    print("DIGITS", digits)
+                    print("{} __clang_major__{}".format(name, digits[0]))
+                    assert "{} __clang_major__{}".format(name, digits[0]) in output
+                    if len(digits) > 1:
+                        assert "{} __clang_minor__{}".format(name, digits[1]) in output
             elif compiler == "apple-clang":
                 assert "{} __apple_build_version__".format(name) in output
                 if version:
