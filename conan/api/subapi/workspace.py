@@ -112,6 +112,10 @@ class WorkspaceAPI:
         if not self._folder or not self._enabled:
             return
         packages = {}
+        # Create a cpy of the global editables and pass it to the WS object
+        editable_packages = self._conan_api._api_helpers.editable_packages.update_copy({})  # noqa
+        self._ws._editable_packages = editable_packages
+
         for editable_info in self._ws.packages():
             rel_path = editable_info["path"]
             path = os.path.normpath(os.path.join(self._folder, rel_path, "conanfile.py"))
@@ -119,8 +123,8 @@ class WorkspaceAPI:
                 raise ConanException(f"Workspace package not found: {path}")
             ref = editable_info.get("ref")
             try:
+                conanfile = self._ws.load_conanfile(rel_path)
                 if ref is None:
-                    conanfile = self._ws.load_conanfile(rel_path)
                     reference = RecipeReference(name=conanfile.name, version=conanfile.version,
                                                 user=conanfile.user, channel=conanfile.channel)
                 else:
@@ -130,9 +134,11 @@ class WorkspaceAPI:
                 raise ConanException(f"Workspace package reference could not be deduced by"
                                      f" {rel_path}/conanfile.py or it is not"
                                      f" correctly defined in the conanws.yml file: {e}")
+            # Update the local editables, so internal load_conanfile can work finding pyreqs
+            editable_packages._edited_refs[reference] = {"path": path}  # noqa
             if reference in packages:
                 raise ConanException(f"Workspace package '{str(reference)}' already exists.")
-            packages[reference] = {"path": path}
+            packages[reference] = {"path": path, "conanfile": conanfile}
             if editable_info.get("output_folder"):
                 packages[reference]["output_folder"] = (
                     os.path.normpath(os.path.join(self._folder, editable_info["output_folder"]))
@@ -411,6 +417,10 @@ class WorkspaceAPI:
     def select_packages(self, packages):
         self._check_ws()
         editable = self.packages()
+        # Filter those that are python-requires that shouldn't participate in build-orders or other
+        # orchestration commands
+        editable = {ref: value for ref, value in editable.items()
+                    if value["conanfile"].package_type != "python-require"}
         packages = packages or []
         selected_editables = {}
         for ref, info in editable.items():

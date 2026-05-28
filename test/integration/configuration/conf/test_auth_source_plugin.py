@@ -101,9 +101,24 @@ class TestAuthSourcePlugin:
             assert headers["myheader"] == "myvalue"
             assert f"Conan/{__version__}" in headers["User-Agent"]
 
-    def test_source_credentials_headers(self):
+    def test_source_credentials_headers_with_token(self):
         cache_folder = temp_folder()
         source_credentials = json.dumps({"credentials": [{"url": "aaa", "token": "mytok",
+                                                          "headers": {"myheader2": "myvalue2"}}]})
+        save(os.path.join(cache_folder, "source_credentials.json"), source_credentials)
+
+        mock_http_requester = MagicMock()
+        with mock.patch("conan.internal.rest.conan_requester.requests", mock_http_requester):
+            requester = ConanRequester(ConfDefinition(), cache_folder)
+            requester.get(url="aaa", source_credentials=True)
+            headers = requester._http_requester.get.call_args[1]["headers"]
+            assert headers["myheader2"] == "myvalue2"
+            assert headers["Authorization"] == "Bearer mytok"
+            assert f"Conan/{__version__}" in headers["User-Agent"]
+
+    def test_source_credentials_headers_without_token(self):
+        cache_folder = temp_folder()
+        source_credentials = json.dumps({"credentials": [{"url": "aaa",
                                                           "headers": {"myheader2": "myvalue2"}}]})
         save(os.path.join(cache_folder, "source_credentials.json"), source_credentials)
 

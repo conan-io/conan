@@ -104,7 +104,7 @@ RUN curl https://pyenv.run | bash && \
     pyenv install $PY312 && \
     pyenv install $PY314 && \
     pyenv global $PY39 && \
-    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    curl -fsSL https://bootstrap.pypa.io/pip/3.9/get-pip.py -o get-pip.py && \
     python get-pip.py && \
     rm get-pip.py
 

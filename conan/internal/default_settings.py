@@ -95,11 +95,11 @@ os:
     Emscripten:
     Neutrino:
         version: ["6.4", "6.5", "6.6", "7.0", "7.1", "8.0"]
-        variant: [None, "safe"]
+        variant: [null, "safe"]
     baremetal:
     VxWorks:
         version: ["7"]
-        variant: [None, "certified"]
+        variant: [null, "certified"]
 arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64,
        armv4, armv4i, armv5el, armv5hf, armv6, armv7, armv7hf, armv7s, armv7k, armv8, armv8_32, armv8.3, arm64ec,
        sparc, sparcv9,
@@ -169,7 +169,7 @@ compiler:
         runtime: [null, static, dynamic]
         runtime_type: [null, Debug, Release]
     qcc:
-        version: ["4.4", "5.4", "8.3"]
+        version: ["4.4", "5.4", "8.3", "12.2"]
         libcxx: [cxx, gpp, cpp, cpp-ne, accp, acpp-ne, ecpp, ecpp-ne]
         cppstd: [null, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17]
     mcst-lcc:

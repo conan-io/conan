@@ -12,6 +12,24 @@ def _make_cppstd_flag(compiler, compiler_version, cppstd=None):
     return cppstd_flag(conanfile)
 
 
+def _make_clang_cl_cppstd_flag(clang_version, cppstd):
+    """Build a conanfile that triggers the ``llvm_clang_front == "clang-cl"``
+    branch in :func:`cppstd_flag`: ``compiler=clang``, ``os=Windows``,
+    a non-empty ``compiler.runtime`` and a ``clang-cl`` path in
+    ``tools.build:compiler_executables``.
+    """
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Windows",
+                                       "compiler": "clang",
+                                       "compiler.version": clang_version,
+                                       "compiler.cppstd": cppstd,
+                                       "compiler.runtime": "dynamic",
+                                       "compiler.runtime_type": "Release"})
+    conanfile.conf.define("tools.build:compiler_executables",
+                          {"c": "clang-cl", "cpp": "clang-cl"})
+    return cppstd_flag(conanfile)
+
+
 def _make_cppstd_default(compiler, compiler_version):
     return default_cppstd(compiler, Version(compiler_version))
 
@@ -158,6 +176,38 @@ class TestCompilerFlags:
         assert _make_cppstd_flag("clang", "17", "20") == '-std=c++20'
         assert _make_cppstd_flag("clang", "17", "23") == '-std=c++23'
         assert _make_cppstd_flag("clang", "17", "26") == '-std=c++26'
+
+    def test_clang_cl_cppstd_flags(self):
+        # `clang-cl` mirrors `cl.exe`'s `/std:` flag and only accepts a
+        # fixed set of values. Anything else is routed through the
+        # `-clang:` passthrough so the inner clang frontend gets the
+        # original `-std=...` flag. See conan-io/conan#19887.
+
+        # Standards that `clang-cl` accepts directly.
+        assert _make_clang_cl_cppstd_flag("17", "14") == "-std:c++14"
+        assert _make_clang_cl_cppstd_flag("17", "17") == "-std:c++17"
+        assert _make_clang_cl_cppstd_flag("17", "20") == "-std:c++20"
+
+        # C++23 is not a valid `/std:` value before clang-cl 22, route via
+        # the `-clang:` passthrough.
+        assert _make_clang_cl_cppstd_flag("17", "23") == "-clang:-std=c++23"
+        assert _make_clang_cl_cppstd_flag("21", "23") == "-clang:-std=c++23"
+
+        # clang-cl 22 introduced the `c++23preview` alias, but we are not using it
+        # it has a bug with modules, so the `-clang` route seems better
+        assert _make_clang_cl_cppstd_flag("22", "23") == "-clang:-std=c++23"
+
+        # C++26 has no `/std:` value yet, even on the latest clang-cl.
+        assert _make_clang_cl_cppstd_flag("17", "26") == "-clang:-std=c++26"
+        assert _make_clang_cl_cppstd_flag("22", "26") == "-clang:-std=c++26"
+
+        # `gnu++` extensions never have a `/std:` form.
+        assert _make_clang_cl_cppstd_flag("17", "gnu17") == "-clang:-std=gnu++17"
+        assert _make_clang_cl_cppstd_flag("17", "gnu23") == "-clang:-std=gnu++23"
+
+        # Pre-standard markers emitted for older clang versions also need
+        # passthrough — `/std:c++2a` is not understood by clang-cl.
+        assert _make_clang_cl_cppstd_flag("11", "20") == "-clang:-std=c++2a"
 
     def test_clang_cppstd_defaults(self):
         assert _make_cppstd_default("clang", "2") == "gnu98"

@@ -907,6 +907,39 @@ def test_new_public_attributes():
     assert expected in content
 
 
+@pytest.mark.parametrize(
+    "package_type, shared_option, default_library, has_fpic",
+    [
+        ("shared-library", None, "shared", False),
+        ("static-library", None, "static", True),
+        ("library", True, "shared", False),
+        ("library", False, "static", True),
+    ],
+)
+def test_package_type(package_type, shared_option, default_library, has_fpic):
+    client = TestClient()
+
+    conanfile = (GenConanfile("pkg", "1.0")
+                 .with_settings("os", "arch", "compiler", "build_type")
+                 .with_package_type(package_type)
+                 .with_generator("MesonToolchain"))
+
+    if shared_option is not None:
+        conanfile = conanfile.with_option("shared", [True, False], shared_option)
+    if has_fpic:
+        conanfile = conanfile.with_option("fPIC", [True, False], True)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install")
+    content = client.load(MesonToolchain.native_filename)
+    assert "buildtype = 'release'" in content
+    assert f"default_library = '{default_library}'" in content
+    if has_fpic:
+        assert "b_staticpic = True" in content
+    else:
+        assert "b_staticpic" not in content
+
+
 def test_needs_exe_wrapper():
     """
     Tests needs_exe_wrapper depends on `can_run()` function instead of
@@ -948,3 +981,28 @@ def test_needs_exe_wrapper():
     client.run("install . -pr:h host -pr:b build")
     content = client.load(MesonToolchain.cross_filename)
     assert "needs_exe_wrapper = false" in content
+
+
+def test_binaries_attribute():
+    """
+    Tests binaries attribute.
+
+    Issue: https://github.com/conan-io/conan/issues/20007
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.binaries["wayland-scanner"] = "/path/to/wayland-scanner"
+            tc.binaries["c"] = "/path/to/c"  # overrides the default one defined by tc.c attribute
+            tc.generate()
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    content = client.load(MesonToolchain.native_filename)
+    assert "wayland-scanner = '/path/to/wayland-scanner'" in content
+    assert "c = '/path/to/c'" in content
