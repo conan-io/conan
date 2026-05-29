@@ -150,6 +150,10 @@ class Profile:
 
         self.replace_requires.update(other.replace_requires)
         self.replace_tool_requires.update(other.replace_tool_requires)
+        # Filter the removed ones
+        self.replace_requires = {k: v for k, v in self.replace_requires.items() if v is not "!"}
+        self.replace_tool_requires = {k: v for k, v in self.replace_tool_requires.items()
+                                      if v is not "!"}
 
         runner_type = self.runner.get("type")
         other_runner_type = other.runner.get("type")

@@ -259,8 +259,9 @@ class _ProfileValueParser:
                 if not r or r.startswith("#"):
                     continue
                 try:
-                    src, target = r.split(":")
-                    target = RecipeReference.loads(target.strip())
+                    src, target = r.split(":", 1)
+                    target = target.strip()
+                    target = RecipeReference.loads(target) if target != "!" else "!"
                     src = RecipeReference.loads(src.strip())
                 except Exception as e:
                     raise ConanException(f"Error in [replace_xxx] '{r}'.\nIt should be in the form"
