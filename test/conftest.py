@@ -160,7 +160,7 @@ tools_locations = {
         "default": "7.x",
         "6.x": {"path": {'Linux': '/usr/share/bazel-6.5.0/bin',
                          'Windows': 'C:/tools/bazel/6.5.0',
-                         'Darwin': '/Users/runner/Applications/bazel/6.5.0'}},
+                         'Darwin': 'skip-tests'}},  # Bazel 6.x incompatible with macOS 26 (missing LC_UUID in wrapped_clang)
         "7.x": {"path": {'Linux': '/usr/share/bazel-7.6.2/bin',
                          'Windows': 'C:/tools/bazel/7.6.2',
                          'Darwin': '/Users/runner/Applications/bazel/7.6.2'}},
