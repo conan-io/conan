@@ -13,7 +13,7 @@ on:
 
 jobs:
   osx_setup:
-    runs-on: macos-15
+    runs-on: macos-26
     name: Setup and Cache Dependencies
     steps:
       - name: Checkout code
@@ -112,7 +112,7 @@ jobs:
 
   osx_tests:
     needs: osx_setup
-    runs-on: macos-15
+    runs-on: macos-26
     strategy:
       fail-fast: true
       matrix:
@@ -144,9 +144,9 @@ jobs:
             ~/Applications/bazel/8.4.2
           key: ${{ runner.os }}-conan-tools-cache
 
-      - name: Select Xcode 16.4
+      - name: Select Xcode 26.4.1
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.4.app
+          sudo xcode-select -s /Applications/Xcode_26.4.1.app
           xcodebuild -version
           xcrun --sdk macosx --show-sdk-version
           clang --version
