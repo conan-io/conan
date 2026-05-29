@@ -40,7 +40,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Library/Caches/Homebrew
-          key: ${{ runner.os }}-brew
+          key: ${{ runner.os }}-macos26-brew
 
       - name: Install homebrew dependencies
         run: |
@@ -59,7 +59,7 @@ jobs:
             ~/Applications/bazel/6.5.0
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
-          key: ${{ runner.os }}-conan-tools-cache
+          key: ${{ runner.os }}-macos26-conan-tools-cache
 
       - name: Build CMake old versions not available for ARM
         if: steps.cache-tools.outputs.cache-hit != 'true'
@@ -142,7 +142,7 @@ jobs:
             ~/Applications/bazel/6.5.0
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
-          key: ${{ runner.os }}-conan-tools-cache
+          key: ${{ runner.os }}-macos26-conan-tools-cache
 
       - name: Select Xcode 26.4.1
         run: |
