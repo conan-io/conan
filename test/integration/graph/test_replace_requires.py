@@ -866,79 +866,33 @@ class TestReplaceRequiresCompose:
         assert "dep/1.0: dep/3.0" in c.out
         c.assert_listed_require({"dep/3.0": "Cache"})
 
-    def test_invalidate_replace_requires(self):
-        """'pattern: !' in a later profile removes a replace_requires rule defined earlier."""
+    @pytest.mark.parametrize("tool_require", [False, True])
+    @pytest.mark.parametrize("strategy", ["cli", "include"])
+    def test_invalidate(self, strategy, tool_require):
+        """'pattern: !' removes a replace_requires/replace_tool_requires rule defined in an
+        earlier profile, whether composed via -pr=p1 -pr=p2 (cli) or include(p1) (include)."""
+        section = "replace_tool_requires" if tool_require else "replace_requires"
+        app = GenConanfile().with_tool_requires("dep/1.0") if tool_require \
+            else GenConanfile().with_requires("dep/1.0")
+        profile1 = f"[{section}]\ndep/1.0: dep/2.0"
+        if strategy == "cli":
+            profile2 = f"[{section}]\ndep/1.0: !"
+            both_cmd = "install app -pr=profile1 -pr=profile2"
+        else:
+            profile2 = f"include(profile1)\n[{section}]\ndep/1.0: !"
+            both_cmd = "install app -pr=profile2"
         c = TestClient(light=True)
-        c.save({"dep/conanfile.py": GenConanfile("dep"),
-                "app/conanfile.py": GenConanfile().with_requires("dep/1.0"),
-                "profile1": "[replace_requires]\ndep/1.0: dep/2.0",
-                "profile2": "[replace_requires]\ndep/1.0: !"})
+        c.save({"dep/conanfile.py": GenConanfile("dep"), "app/conanfile.py": app,
+                "profile1": profile1, "profile2": profile2})
         c.run("create dep --version=1.0")
         c.run("create dep --version=2.0")
 
         # profile1 alone: replacement is active
         c.run("install app -pr=profile1")
         assert "dep/1.0: dep/2.0" in c.out
-        c.assert_listed_require({"dep/2.0": "Cache"})
+        c.assert_listed_require({"dep/2.0": "Cache"}, build=tool_require)
 
         # profile2 cancels the rule from profile1: original dep/1.0 is used
-        c.run("install app -pr=profile1 -pr=profile2")
+        c.run(both_cmd)
         assert "dep/1.0: dep/2.0" not in c.out
-        c.assert_listed_require({"dep/1.0": "Cache"})
-
-    def test_invalidate_replace_tool_requires(self):
-        """'pattern: !' also works for [replace_tool_requires]."""
-        c = TestClient(light=True)
-        c.save({"dep/conanfile.py": GenConanfile("dep"),
-                "app/conanfile.py": GenConanfile().with_tool_requires("dep/1.0"),
-                "profile1": "[replace_tool_requires]\ndep/1.0: dep/2.0",
-                "profile2": "[replace_tool_requires]\ndep/1.0: !"})
-        c.run("create dep --version=1.0")
-        c.run("create dep --version=2.0")
-
-        c.run("install app -pr=profile1")
-        assert "dep/1.0: dep/2.0" in c.out
-        c.assert_listed_require({"dep/2.0": "Cache"}, build=True)
-
-        c.run("install app -pr=profile1 -pr=profile2")
-        assert "dep/1.0: dep/2.0" not in c.out
-        c.assert_listed_require({"dep/1.0": "Cache"}, build=True)
-
-    def test_invalidate_replace_requires_via_include(self):
-        """'pattern: !' in a profile that includes another profile removes a replace_requires
-        rule defined in the included profile. The including profile has priority."""
-        c = TestClient(light=True)
-        c.save({"dep/conanfile.py": GenConanfile("dep"),
-                "app/conanfile.py": GenConanfile().with_requires("dep/1.0"),
-                "profile1": "[replace_requires]\ndep/1.0: dep/2.0",
-                "profile2": "include(profile1)\n[replace_requires]\ndep/1.0: !"})
-        c.run("create dep --version=1.0")
-        c.run("create dep --version=2.0")
-
-        # profile1 alone: replacement is active
-        c.run("install app -pr=profile1")
-        assert "dep/1.0: dep/2.0" in c.out
-        c.assert_listed_require({"dep/2.0": "Cache"})
-
-        # profile2 includes profile1 but cancels its rule: original dep/1.0 is used
-        c.run("install app -pr=profile2")
-        assert "dep/1.0: dep/2.0" not in c.out
-        c.assert_listed_require({"dep/1.0": "Cache"})
-
-    def test_invalidate_replace_tool_requires_via_include(self):
-        """'pattern: !' also works for [replace_tool_requires] via include()."""
-        c = TestClient(light=True)
-        c.save({"dep/conanfile.py": GenConanfile("dep"),
-                "app/conanfile.py": GenConanfile().with_tool_requires("dep/1.0"),
-                "profile1": "[replace_tool_requires]\ndep/1.0: dep/2.0",
-                "profile2": "include(profile1)\n[replace_tool_requires]\ndep/1.0: !"})
-        c.run("create dep --version=1.0")
-        c.run("create dep --version=2.0")
-
-        c.run("install app -pr=profile1")
-        assert "dep/1.0: dep/2.0" in c.out
-        c.assert_listed_require({"dep/2.0": "Cache"}, build=True)
-
-        c.run("install app -pr=profile2")
-        assert "dep/1.0: dep/2.0" not in c.out
-        c.assert_listed_require({"dep/1.0": "Cache"}, build=True)
+        c.assert_listed_require({"dep/1.0": "Cache"}, build=tool_require)
