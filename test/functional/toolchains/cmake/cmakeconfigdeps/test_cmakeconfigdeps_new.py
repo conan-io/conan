@@ -1108,7 +1108,8 @@ class TestToolRequires:
         # Ninja for same layout in all platforms
         c.run(f"install bye --build-require -c:a tools.cmake.cmakedeps:new={new_value} "
               f"-c:a tools.cmake.cmaketoolchain:generator=Ninja")
-        cmake = c.load("bye/build/Release/generators/hello-TargetsBuild-release.cmake")
+        # Despite installing "bye" in the build context, "hello" should be in the host one
+        cmake = c.load("bye/build/Release/generators/hello-Targets-release.cmake")
         assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
 
 
