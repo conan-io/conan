@@ -896,3 +896,30 @@ class TestReplaceRequiresCompose:
         c.run(both_cmd)
         assert "dep/1.0: dep/2.0" not in c.out
         c.assert_listed_require({"dep/1.0": "Cache"}, build=tool_require)
+
+    def test_invalidate_all(self):
+        """'*: !' invalidates all replace_requires rules defined in earlier profiles at once."""
+        c = TestClient(light=True)
+        c.save({"dep/conanfile.py": GenConanfile("dep"),
+                "app/conanfile.py": GenConanfile().with_requires("dep/1.0", "dep2/1.0"),
+                "dep2/conanfile.py": GenConanfile("dep2"),
+                "profile1": "[replace_requires]\ndep/1.0: dep/2.0\ndep2/1.0: dep2/2.0",
+                "profile2": "[replace_requires]\n*: !"})
+        c.run("create dep --version=1.0")
+        c.run("create dep --version=2.0")
+        c.run("create dep2 --version=1.0")
+        c.run("create dep2 --version=2.0")
+
+        # profile1 alone: both replacements active
+        c.run("install app -pr=profile1")
+        assert "dep/1.0: dep/2.0" in c.out
+        assert "dep2/1.0: dep2/2.0" in c.out
+        c.assert_listed_require({"dep/2.0": "Cache"})
+        c.assert_listed_require({"dep2/2.0": "Cache"})
+
+        # profile2 wipes all rules: both original requirements are used
+        c.run("install app -pr=profile1 -pr=profile2")
+        assert "dep/1.0: dep/2.0" not in c.out
+        assert "dep2/1.0: dep2/2.0" not in c.out
+        c.assert_listed_require({"dep/1.0": "Cache"})
+        c.assert_listed_require({"dep2/1.0": "Cache"})
