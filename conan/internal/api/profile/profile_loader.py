@@ -259,7 +259,7 @@ class _ProfileValueParser:
                 if not r or r.startswith("#"):
                     continue
                 try:
-                    src, target = r.split(":", 1)
+                    src, target = r.split(":")
                     target = target.strip()
                     src = src.strip()
                     if src == "*" and target != "!":
