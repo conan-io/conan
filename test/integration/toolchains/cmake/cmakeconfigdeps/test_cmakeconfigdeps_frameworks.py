@@ -65,3 +65,30 @@ def test_framework_only_component_generates_target():
     tc.run(f"install --requires=frame/1.0 -g CMakeConfigDeps")
     targets = tc.load("frame-Targets-release.cmake")
     assert "add_library(frame::frame INTERFACE IMPORTED)" in targets
+
+
+def test_framework_add_imported_configurations():
+    """
+    Issue: https://github.com/conan-io/conan/issues/20034
+    """
+    conanfile = textwrap.dedent(f"""
+    import os
+    from conan import ConanFile
+
+    class MyFramework(ConanFile):
+        name = "frame"
+        version = "1.0"
+        settings = "os", "arch", "compiler", "build_type"
+
+        def package_info(self):
+            self.cpp_info.set_property("cmake_target_name", "frame::frame")
+            self.cpp_info.type = "static-library"
+            self.cpp_info.package_framework = True
+            self.cpp_info.location = os.path.join(self.package_folder, "Frame.framework")
+    """)
+    tc = TestClient()
+    tc.save({"conanfile.py": conanfile})
+    tc.run("create -s build_type=Debug")
+    tc.run(f"install --requires=frame/1.0 -g CMakeConfigDeps -s build_type=Debug")
+    targets = tc.load("frame-Targets-debug.cmake")
+    assert "set_property(TARGET frame::frame APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)" in targets

@@ -469,6 +469,7 @@ class TargetConfigurationTemplate2:
                      "{{config_wrapper(config, lib_info["frameworks"])}}")
         {% endif %}
         {% if lib_info.get("package_framework") %}
+        set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         set_target_properties({{lib}} PROPERTIES
             IMPORTED_LOCATION_{{config}} "{{lib_info["package_framework"]["location"]}}"
             FRAMEWORK TRUE)
