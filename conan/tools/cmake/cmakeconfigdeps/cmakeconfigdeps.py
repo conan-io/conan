@@ -119,17 +119,16 @@ class CMakeConfigDeps:
             if require.direct:
                 direct_deps.append((require, dep))
             full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
-            config = ConfigTemplate2(self, require, dep, full_cpp_info)
-            ret[config.filename] = config.content()
             base_filename = self.get_cmake_filename(dep)
-            properties = {"cmake_config_version_compat": self.get_property("cmake_config_version_compat", dep),
-                          "system_package_version": self.get_property("system_package_version", dep)}
-            config_version = ConfigVersionTemplate2(base_filename, dep.ref.version, properties)
+            cmake_config_properties = self._get_cmake_config_properties(dep)
+            config_version = ConfigVersionTemplate2(base_filename, dep.ref.version, cmake_config_properties)
             ret[config_version.filename] = config_version.content()
-
+            config = ConfigTemplate2(base_filename, self, dep, full_cpp_info, cmake_config_properties, is_build_context=require.build)
+            ret[config.filename] = config.content()
             targets = TargetsTemplate2(base_filename)
             ret[targets.filename] = targets.content()
-            target_configuration = TargetConfigurationTemplate2(self, dep, require, full_cpp_info)
+            target_configuration = TargetConfigurationTemplate2(base_filename, self, dep, require, full_cpp_info,
+                                                                cmake_config_properties, is_build_context=require.build)
             ret[target_configuration.filename] = target_configuration.content()
 
         self._print_help(direct_deps)
@@ -197,6 +196,26 @@ class CMakeConfigDeps:
         # - The name of transitive dependencies for calls to find_dependency
         ret = self.get_property("cmake_file_name", dep)
         return ret or dep.ref.name
+
+    def _get_cmake_config_properties(self, dep):
+        conf_extra_variables = dep.conf.get("tools.cmake.cmaketoolchain:extra_variables", default={},
+                                            check_type=dict)
+        dep_extra_variables = self.get_property("cmake_extra_variables", dep, check_type=dict) or {}
+        # The configuration variables have precedence over the dependency ones (those already appear on the toolchain files)
+        cmake_extra_variables = {dep: value for dep, value in dep_extra_variables.items() if
+                                 dep not in conf_extra_variables}
+        return {
+            "cmake_config_version_compat": self.get_property("cmake_config_version_compat", dep),
+            "system_package_version": self.get_property("system_package_version", dep),
+            "cmake_build_modules": self.get_property("cmake_build_modules", dep,
+                                                     check_type=list) or [],
+            "cmake_extra_variables": cmake_extra_variables,
+            "cmake_additional_variables_prefixes": self.get_property(
+                "cmake_additional_variables_prefixes", dep, check_type=list) or [],
+            "cmake_components": self.get_property("cmake_components", dep, check_type=list),
+            "cmake_extra_dependencies": self.get_property("cmake_extra_dependencies", dep,
+                                                          check_type=list) or []
+        }
 
     def _get_find_mode(self, dep):
         tmp = self.get_property("cmake_find_mode", dep)
