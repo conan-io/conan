@@ -797,3 +797,84 @@ def test_host_version_replace():
     tc.run("install -pr=profile")
     tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"})
     tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"}, build=True)
+
+
+class TestReplaceRequiresCLIPriority:
+    """CLI-specified requires (--requires, --tool-requires, conan create ref) have higher priority
+    than [replace_requires] / [replace_tool_requires] profile sections and must not be replaced."""
+
+    def test_install_requires_cli_not_replaced(self):
+        """conan install --requires=pkg/1.0 should install pkg/1.0, not the replacement."""
+        c = TestClient(light=True)
+        c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0"),
+                "other/conanfile.py": GenConanfile("other", "2.0"),
+                "profile": "[replace_requires]\npkg/*: other/2.0"})
+        c.run("create pkg")
+        c.run("create other")
+        c.run("install --requires=pkg/1.0 -pr=profile")
+        # The CLI-specified pkg/1.0 must not be replaced by other/2.0
+        assert "Replaced requires" not in c.out
+        c.assert_listed_require({"pkg/1.0": "Cache"})
+
+    def test_install_tool_requires_cli_not_replaced(self):
+        """conan install --tool-requires=cmake/3.20 should use cmake/3.20, not the replacement."""
+        c = TestClient(light=True)
+        c.save({"cmake/conanfile.py": GenConanfile("cmake", "3.20"),
+                "cmake_old/conanfile.py": GenConanfile("cmake", "3.19"),
+                "profile": "[replace_tool_requires]\ncmake/*: cmake/3.19"})
+        c.run("create cmake")
+        c.run("create cmake_old --name=cmake --version=3.19")
+        c.run("install --tool-requires=cmake/3.20 -pr=profile")
+        # The CLI-specified cmake/3.20 must not be replaced by cmake/3.19
+        assert "Replaced requires" not in c.out
+        c.assert_listed_require({"cmake/3.20": "Cache"}, build=True)
+
+    def test_create_cli_not_replaced(self):
+        """conan create --name=pkg --version=1.0 should create pkg/1.0, not the replacement."""
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile(),
+                "other/conanfile.py": GenConanfile("other", "2.0"),
+                "profile": "[replace_requires]\npkg/*: other/2.0"})
+        c.run("create other")
+        # Creating pkg/1.0 should not be affected by the replace_requires targeting pkg/*
+        c.run("create . --name=pkg --version=1.0 -pr=profile")
+        assert "Replaced requires" not in c.out
+        assert "pkg/1.0" in c.out
+
+    def test_create_build_require_cli_not_replaced(self):
+        """conan create --build-require --name=cmake --version=3.20 should create cmake/3.20."""
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile(),
+                "old/conanfile.py": GenConanfile("cmake", "3.19"),
+                "profile": "[replace_tool_requires]\ncmake/*: cmake/3.19"})
+        c.run("create old --name=cmake --version=3.19")
+        c.run("create . --name=cmake --version=3.20 --build-require -pr=profile")
+        assert "Replaced requires" not in c.out
+        assert "cmake/3.20" in c.out
+
+    def test_install_requires_cli_transitive_still_replaced(self):
+        """Transitive dependencies of CLI-specified requires SHOULD still be replaced."""
+        c = TestClient(light=True)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "2.0"),
+                "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
+                "profile": "[replace_requires]\ndep/*: dep/2.0"})
+        c.run("create dep")
+        c.run("create pkg --build=missing -pr=profile")
+        # Install pkg/1.0 from CLI - pkg itself is not replaced, but its dep/1.0 IS replaced
+        c.run("install --requires=pkg/1.0 -pr=profile")
+        assert "Replaced requires" in c.out
+        c.assert_listed_require({"pkg/1.0": "Cache"})
+        c.assert_listed_require({"dep/2.0": "Cache"})
+
+    def test_install_requires_cli_name_change_not_replaced(self):
+        """conan install --requires=pkg/1.0 should not be replaced even if name changes."""
+        c = TestClient(light=True)
+        c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0"),
+                "pkgng/conanfile.py": GenConanfile("pkgng", "1.0"),
+                "profile": "[replace_requires]\npkg/*: pkgng/*"})
+        c.run("create pkg")
+        c.run("create pkgng")
+        c.run("install --requires=pkg/1.0 -pr=profile")
+        # CLI-specified pkg/1.0 must not be replaced by pkgng/1.0
+        assert "Replaced requires" not in c.out
+        c.assert_listed_require({"pkg/1.0": "Cache"})
