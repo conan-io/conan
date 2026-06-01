@@ -17,7 +17,6 @@ jobs:
   artifactory_tests:
     name: Artifactory ${{ matrix.artifactory-version }}
     runs-on: ubuntu-latest
-    if: ${{ secrets.ARTIFACTORY_LICENSE != '' }}
     strategy:
       fail-fast: false
       matrix:
