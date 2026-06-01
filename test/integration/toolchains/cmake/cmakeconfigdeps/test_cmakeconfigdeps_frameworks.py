@@ -83,7 +83,7 @@ def test_framework_add_imported_configurations():
         def package_info(self):
             self.cpp_info.set_property("cmake_target_name", "frame::frame")
             self.cpp_info.type = "static-library"
-            self.cpp_info.package_framework = True
+            self.cpp_info.package_framework = "Frame"
             self.cpp_info.location = os.path.join(self.package_folder, "Frame.framework")
     """)
     tc = TestClient()
