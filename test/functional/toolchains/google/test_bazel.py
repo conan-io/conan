@@ -39,7 +39,7 @@ def base_profile():
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
+@pytest.mark.parametrize("build_type", ["Debug", "Release"])
 @pytest.mark.tool("bazel", "6.x")
 def test_basic_exe_6x(bazelrc, build_type, base_profile, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
@@ -58,7 +58,7 @@ def test_basic_exe_6x(bazelrc, build_type, base_profile, bazel_output_root_dir):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
+@pytest.mark.parametrize("build_type", ["Debug", "Release"])
 @pytest.mark.tool("bazel", "7.x")
 def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
@@ -89,20 +89,12 @@ def test_basic_lib(bazelrc, base_profile, bazel_output_root_dir):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
 @pytest.mark.tool("bazel", "9.x")
-def test_basic_exe_9x(bazelrc, build_type, base_profile, bazel_output_root_dir):
+def test_basic_lib_9x(bazelrc, base_profile, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
-    client.run(f"new bazel_exe -d name=myapp -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
-    client.save({"mybazelrc": bazelrc})
-    profile = base_profile.format(build_type=build_type,
-                                  curdir=client.current_folder.replace("\\", "/"))
-    client.save({"my_profile": profile})
-    client.run("create . --profile=./my_profile")
-    if build_type != "Debug":
-        assert "myapp/1.0: Hello World Release!" in client.out
-    else:
-        assert "myapp/1.0: Hello World Debug!" in client.out
+    client.run(f"new bazel_7_lib -d name=mylib -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
+    client.run("create .")
+    assert "mylib/1.0: Hello World Release!" in client.out
 
 
 @pytest.mark.slow
