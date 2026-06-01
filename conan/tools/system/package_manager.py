@@ -72,13 +72,25 @@ class _SystemPackageManagerTool:
         self._conanfile.output.info("A default system package manager couldn't be found for {}, "
                                     "system packages will not be installed.".format(os_name))
 
+    def _parse_explicit_arch_suffix(self, name):
+        # Explicit architecture suffix for multiarch on the build machine (e.g. libc6:i386).
+        # Needed when foreign-arch packages are installed on a native build machine with
+        # host_package=False, where cross_building does not add the suffix automatically.
+        # Without this, Apt.check() uses the wrong base name/arch and always triggers install.
+        return name, ""
+
     def _split_package_name(self, package, host_package):
 
         name, version = (package.split("=")[0], package.split("=")[1]) if "=" in package else (package, "")
         arch_separator, arch_name = "", ""
         version_separator = self.version_separator if version else ""
 
-        if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
+        name, explicit_arch = self._parse_explicit_arch_suffix(name)
+        if explicit_arch:
+            arch_separator = self._arch_separator
+            arch_name = explicit_arch
+
+        if not arch_name and self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
             arch_separator = self._arch_separator
             arch_name = self._arch_names.get(self._arch)
         return name, version, arch_separator, arch_name, version_separator
@@ -289,6 +301,13 @@ class Apt(_SystemPackageManagerTool):
 
         self._arch_separator = ":"
 
+    def _parse_explicit_arch_suffix(self, name):
+        if self._arch_separator in name:
+            base_name, _, explicit_arch = name.rpartition(self._arch_separator)
+            if base_name and explicit_arch:
+                return base_name, explicit_arch
+        return name, ""
+
     def install(self, packages, update=False, check=True, recommends=False, host_package=True):
         """
         Will try to install the list of packages passed as a parameter. Its
@@ -339,6 +358,14 @@ class Yum(_SystemPackageManagerTool):
                             "s390x": "s390x",
                             "riscv64": "riscv64"} if arch_names is None else arch_names
         self._arch_separator = "."
+
+    def _parse_explicit_arch_suffix(self, name):
+        if self._arch_separator not in name:
+            return name, ""
+        base_name, _, explicit_arch = name.rpartition(self._arch_separator)
+        if base_name and explicit_arch in self._arch_names.values():
+            return base_name, explicit_arch
+        return name, ""
 
 
 class Dnf(Yum):
