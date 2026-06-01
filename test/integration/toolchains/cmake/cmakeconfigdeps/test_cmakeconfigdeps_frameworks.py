@@ -92,3 +92,31 @@ def test_framework_add_imported_configurations():
     tc.run(f"install --requires=frame/1.0 -g CMakeConfigDeps -s build_type=Debug")
     targets = tc.load("frame-Targets-debug.cmake")
     assert "set_property(TARGET frame::frame APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)" in targets
+
+
+def test_framework_raises_error_if_libs():
+    """
+    Tests it's raised an exception when libs and package_framework
+    are used together
+    """
+    conanfile = textwrap.dedent(f"""
+    import os
+    from conan import ConanFile
+
+    class MyFramework(ConanFile):
+        name = "frame"
+        version = "1.0"
+        settings = "os", "arch", "compiler", "build_type"
+
+        def package_info(self):
+            self.cpp_info.libs = ["myframe"]
+            self.cpp_info.set_property("cmake_target_name", "frame::frame")
+            self.cpp_info.type = "static-library"
+            self.cpp_info.package_framework = "Frame"
+            self.cpp_info.location = os.path.join(self.package_folder, "Frame.framework")
+    """)
+    tc = TestClient()
+    tc.save({"conanfile.py": conanfile})
+    tc.run("create")
+    tc.run(f"install --requires=frame/1.0 -g CMakeConfigDeps", assert_error=True)
+    assert "Can't define .libs and .package_framework for the same component" in tc.out
