@@ -52,7 +52,7 @@ jobs:
 
       - name: Apply Artifactory license
         run: |
-          curl -sf --output /dev/null -u admin:password -XPOST http://localhost:8081/artifactory/api/system/licenses \
+          curl -sf --output /dev/null -u admin:password -XPOST http://localhost:8081/artifactory/api/system/license \
             -H "Content-type: application/json" \
             -d "{\"licenseKey\": \"${{ secrets.ARTIFACTORY_LICENSE }}\"}"
 
