@@ -41,6 +41,9 @@ class _BazelDepBuildGenerator:
     # https://bazel.build/concepts/build-files
     dep_build_filename = "BUILD.bazel"
     dep_build_template = textwrap.dedent("""\
+    load("@rules_cc//cc:cc_import.bzl", "cc_import")
+    load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
     {% macro cc_import_macro(libs) %}
     {% for lib_info in libs %}
     cc_import(
@@ -553,6 +556,8 @@ class BazelDeps:
         Module.bazel file, e.g. like this:
 
         .. code-block:: python
+
+            bazel_dep(name = "rules_cc", version = "0.2.14")
 
             load_conan_dependencies = use_extension(
                 "//build:conan_deps_module_extension.bzl",
