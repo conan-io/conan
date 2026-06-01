@@ -5,6 +5,7 @@ on:
     branches:
       - develop2
       - 'release/2.*'
+      - 'czoido/launch-arti-tests' # remove after testing
   schedule:
     - cron: '0 3 * * *'  # Nightly at 3 AM UTC (runs on default branch: develop2)
   workflow_dispatch:
