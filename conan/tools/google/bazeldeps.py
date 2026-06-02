@@ -41,9 +41,11 @@ class _BazelDepBuildGenerator:
     # https://bazel.build/concepts/build-files
     dep_build_filename = "BUILD.bazel"
     dep_build_template = textwrap.dedent("""\
+    {% if cc_rules_load %}
     load("@rules_cc//cc:cc_import.bzl", "cc_import")
     load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
+    {% endif %}
     {% macro cc_import_macro(libs) %}
     {% for lib_info in libs %}
     cc_import(
@@ -359,6 +361,9 @@ class _BazelDepBuildGenerator:
                 for req in self._transitive_reqs.values()
             ]
         cpp_info = self._dep.cpp_info
+
+        # For Bazel 9+, C++ rules must be loaded from ``rules_cc`` explicitly
+        cc_rules_load = self._dep.conf.get("tools.google.bazel:rules_cc", default=False, check_type=bool)
         build_content["root"] = {
             "name": pkg_name,
             "libs": self._get_lib_info(cpp_info, deduced_cpp_info),
@@ -369,7 +374,8 @@ class _BazelDepBuildGenerator:
             "linkopts": self._get_linkopts(cpp_info),
             "copts": self._get_copts(cpp_info),
             "dependencies": requires,
-            "component_names": component_names
+            "component_names": component_names,
+            "cc_rules_load": cc_rules_load
         }
         return build_content
 
@@ -556,8 +562,6 @@ class BazelDeps:
         Module.bazel file, e.g. like this:
 
         .. code-block:: python
-
-            bazel_dep(name = "rules_cc", version = "0.2.14")
 
             load_conan_dependencies = use_extension(
                 "//build:conan_deps_module_extension.bzl",

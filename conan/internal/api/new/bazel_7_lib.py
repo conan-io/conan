@@ -125,13 +125,13 @@ cc_shared_library(
 """
 
 _bazel_module = """\
-bazel_dep(name = "rules_cc", version = "0.2.14")
+bazel_dep(name = "rules_cc", version = "0.2.17")
 """
 _bazel_rc = """\
 {% if output_root_dir is defined %}startup --output_user_root={{output_root_dir}}{% endif %}
 """
 _test_bazel_module_bazel = """\
-bazel_dep(name = "rules_cc", version = "0.2.14")
+bazel_dep(name = "rules_cc", version = "0.2.17")
 
 load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "conan_extension")
 use_repo(load_conan_dependencies, "{{name}}")
