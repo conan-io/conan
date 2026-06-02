@@ -51,14 +51,18 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Apply Artifactory license
+        env:
+          ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
+          ARTIFACTORY_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
+          ARTIFACTORY_LICENSE: ${{ secrets.ARTIFACTORY_LICENSE }}
         run: |
-          curl -sf --output /dev/null -u admin:password -XPOST http://localhost:8081/artifactory/api/system/license \
+          curl -sf --output /dev/null -u "${ARTIFACTORY_USER}:${ARTIFACTORY_PASSWORD}" -XPOST http://localhost:8081/artifactory/api/system/license \
             -H "Content-type: application/json" \
-            -d "{\"licenseKey\": \"${{ secrets.ARTIFACTORY_LICENSE }}\"}"
+            -d "{\"licenseKey\": \"${ARTIFACTORY_LICENSE}\"}"
 
       - name: Wait for Artifactory router (port 8082)
         run: |
-          until curl -sf -u admin:password http://localhost:8082/artifactory/api/system/ping; do
+          until curl -sf http://localhost:8082/artifactory/api/system/ping; do
             echo "Waiting for Artifactory router..."
             sleep 5
           done
