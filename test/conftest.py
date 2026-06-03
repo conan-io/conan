@@ -144,7 +144,6 @@ tools_locations = {
         "system": {"path": {'Windows': f"{msys2_path}/clang64/bin"}},
     },
     'msys2_mingw64_clang64': {
-        "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "clang",

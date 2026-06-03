@@ -232,6 +232,7 @@ class TestMsysClang:
         check_vs_runtime(cmd, client, "17", build_type="Release",
                          static_runtime=False, subsystem="clang64")
 
+    @pytest.mark.slow
     @pytest.mark.tool("msys2_mingw64_clang64")
     def test_msys2_clang_mingw(self, client):
         """ compiling with the clang INSIDE mingw, which uses the
