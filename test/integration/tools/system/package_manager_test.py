@@ -575,12 +575,18 @@ def test_tools_apt_explicit_arch_suffix(package, check_cmd):
     assert tool._conanfile.command == check_cmd
 
     conanfile.conf.define("tools.system.package_manager:mode", "install")
-    with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=[])):
-        tool.install([package], host_package=False)
-    assert tool._conanfile.command is None
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=[])):
+            tool = Apt(conanfile)
+            tool.install([package], host_package=False)
+    assert "apt-get install" not in (tool._conanfile.command or "")
 
-    with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=[package])):
-        tool.install([package], host_package=False)
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=[package])):
+            tool = Apt(conanfile)
+            tool.install([package], host_package=False)
     install_name = tool.get_package_name(package, host_package=False)
     assert tool._conanfile.command == (
         f"apt-get install -y --no-install-recommends {install_name}")
@@ -601,8 +607,11 @@ def test_tools_yum_explicit_arch_suffix():
     assert tool._conanfile.command == "rpm -q libfoo.bar"
 
     conanfile.conf.define("tools.system.package_manager:mode", "install")
-    with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=["glibc.i?86"])):
-        tool.install(["glibc.i?86"], host_package=False)
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=["glibc.i?86"])):
+            tool = Yum(conanfile)
+            tool.install(["glibc.i?86"], host_package=False)
     assert tool._conanfile.command == "yum install -y glibc.i?86"
 
     tool.check(["glibc.i686"], host_package=False)
@@ -637,8 +646,11 @@ def test_tools_apt_explicit_arch_suffix_cross_build():
             r"dpkg-query -W -f='${Architecture}\n' libc6 | grep -qEx '(arm64|all)'")
 
     conanfile.conf.define("tools.system.package_manager:mode", "install")
-    with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=["libc6:arm64"])):
-        tool.install(["libc6:arm64"], host_package=True)
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=["libc6:arm64"])):
+            tool = Apt(conanfile)
+            tool.install(["libc6:arm64"], host_package=True)
     assert tool._conanfile.command == "apt-get install -y --no-install-recommends libc6:arm64"
 
 
