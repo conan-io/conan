@@ -218,6 +218,9 @@ class TargetConfigurationTemplate2:
         # FIXME: We're ignoring this value at this moment. It relies on cmake_target_name or lib name
         #        Revisit when cpp.exe value is used too.
         if info.package_framework:
+            assert isinstance(info.package_framework, str), f"package_framework should be a str"
+            if info.libs:
+                raise ConanException("Can't define .libs and .package_framework for the same component")
             target["package_framework"] = {}
             lib_type = "SHARED" if info.type is PackageType.SHARED else \
                 "STATIC" if info.type is PackageType.STATIC else "STATIC"
@@ -469,6 +472,7 @@ class TargetConfigurationTemplate2:
                      "{{config_wrapper(config, lib_info["frameworks"])}}")
         {% endif %}
         {% if lib_info.get("package_framework") %}
+        set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         set_target_properties({{lib}} PROPERTIES
             IMPORTED_LOCATION_{{config}} "{{lib_info["package_framework"]["location"]}}"
             FRAMEWORK TRUE)
