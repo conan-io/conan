@@ -286,14 +286,10 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
                                       'generators = "BazelToolchain", "BazelDeps"\n'
                                       '    requires = "myfirstlib/1.2.11"')
         workspace = textwrap.dedent("""
-        bazel_dep(name = "rules_cc", version = "0.2.17")
-
         load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "conan_extension")
         use_repo(load_conan_dependencies, "myfirstlib")
         """)
         bazel_build_linux = textwrap.dedent("""\
-        load("@rules_cc//cc:cc_library.bzl", "cc_library")
-
         cc_library(
             name = "mysecondlib",
             srcs = ["mysecondlib.cpp"],
@@ -302,9 +298,6 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
         )
         """)
         bazel_build = textwrap.dedent("""\
-        load("@rules_cc//cc:cc_library.bzl", "cc_library")
-        load("@rules_cc//cc:cc_shared_library.bzl", "cc_shared_library")
-
         cc_library(
             name = "mysecondlib",
             srcs = ["mysecondlib.cpp"],
