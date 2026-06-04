@@ -197,12 +197,11 @@ tools_locations = {
     },
     "emcc": {},
     "node": {},
-    # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
-    # "intel_oneapi": {
-    #     "default": "2021.3",
-    #     "exe": "dpcpp",
-    #     "2021.3": {"path": {"Linux": "/opt/intel/oneapi/compiler/2021.3.0/linux/bin"}}
-    # }
+    "intel_oneapi": {
+        "default": "2026.0",
+        "exe": "icpx",
+        "2026.0": {"path": {"Linux": "/opt/intel/oneapi/compiler/2026.0/bin"}}
+    }
 }
 
 
