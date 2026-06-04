@@ -158,9 +158,9 @@ tools_locations = {
     },
     'bazel': {
         "default": "7.x",
-        "6.x": {"path": {'Linux': '/usr/share/bazel-6.5.0/bin',
-                         'Windows': 'C:/tools/bazel/6.5.0',
-                         'Darwin': '/Users/runner/Applications/bazel/6.5.0'}},
+        "6.x": {"path": {'Linux': '/usr/share/bazel-6.6.0/bin',
+                         'Windows': 'C:/tools/bazel/6.6.0',
+                         'Darwin': '/Users/runner/Applications/bazel/6.6.0'}},
         "7.x": {"path": {'Linux': '/usr/share/bazel-7.6.2/bin',
                          'Windows': 'C:/tools/bazel/7.6.2',
                          'Darwin': '/Users/runner/Applications/bazel/7.6.2'}},
