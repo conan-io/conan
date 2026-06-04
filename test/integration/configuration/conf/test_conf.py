@@ -462,3 +462,10 @@ def test_conf_test_package():
     c.run("create . -c &:user.myteam:myconf=myvalue")
     assert "dep/0.1: user.myteam:myconf: myvalue" in c.out
     assert "dep/0.1 (test package): user.myteam:myconf: myvalue" in c.out
+
+
+def test_global_conf_jinja_broken_msg():
+    c = TestClient(light=True)
+    c.save_home({"global.conf": "{{some + error}}"})
+    c.run("config list", assert_error=True)
+    assert "ERROR: Error loading 'global.conf' in home folder: 'some' is undefined" in c.out
