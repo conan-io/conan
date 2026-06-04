@@ -1,5 +1,5 @@
 import pytest
-import platform
+from pathlib import Path
 import textwrap
 import os
 
@@ -11,9 +11,11 @@ from conan.test.utils.tools import TestClient
 @pytest.mark.tool("intel_oneapi")
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux")
 class TestIntelCC:
+
     """Tests for Intel oneAPI C++/DPC++ compilers"""
 
-    oneapi = tools_locations["intel_oneapi"]["2026.0"]["path"]["Linux"]
+    # We need the path to the oneapi dir, not the binaries dir
+    oneapi = Path(tools_locations["intel_oneapi"]["2026.0"]["path"]["Linux"]).parent.parent.parent
 
     def test_intel_oneapi_and_icpx(self):
         """

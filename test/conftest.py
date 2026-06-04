@@ -200,7 +200,7 @@ tools_locations = {
     "intel_oneapi": {
         "default": "2026.0",
         "exe": "icpx",
-        "2026.0": {"path": {"Linux": "/opt/intel/oneapi"}}
+        "2026.0": {"path": {"Linux": "/opt/intel/oneapi/compiler/2026.0/bin/"}}
     }
 }
 
