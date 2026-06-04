@@ -13,11 +13,12 @@ on:
 
 jobs:
   unit_integration_tests:
-    runs-on: windows-2022
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}
-    name: Unit & Integration Tests (${{ matrix.python-version }})
+        runner: [windows-2025]
+    runs-on: ${{ matrix.runner }}
+    name: Unit & Integration Tests (${{ matrix.python-version }} ${{ matrix.runner }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -64,11 +65,12 @@ jobs:
           tests: test/unittests test/integration
 
   functional_tests:
-    runs-on: windows-2022
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}
-    name: Functional Tests (${{ matrix.python-version }})
+        runner: [windows-2022, windows-2025-vs2026]
+    runs-on: ${{ matrix.runner }}
+    name: Functional Tests (${{ matrix.python-version }} ${{ matrix.runner }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -79,6 +81,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install MSVC v14.38 Toolset
+        if: matrix.runner == 'windows-2022'
         run: |
           Start-Process -Wait "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" -ArgumentList {`
             modify `
@@ -89,6 +92,7 @@ jobs:
           }
 
       - name: Verify MSVC v14.38 toolset installation
+        if: matrix.runner == 'windows-2022'
         run: dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
 
       - name: Install Visual Studio Build Tools
