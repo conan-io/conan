@@ -76,6 +76,10 @@ class IntelCC:
         intel_cc_path = self._conanfile.conf.get("tools.intel:installation_path")
         if intel_cc_path == "":
             return
+        if intel_cc_path == '""' or intel_cc_path == "''":
+            raise ConanException("Invalid 'tools.intel:installation_path'. To undefine it use "
+                                 "an empty string, like 'tools.intel:installation_path=' without "
+                                 "any quotes if used in profiles")
 
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             content = textwrap.dedent("""\

@@ -226,6 +226,7 @@ class TestSubsystemsBuild:
         assert "__MINGW64__" in client.out
         assert "__CYGWIN__" not in client.out
 
+    @pytest.mark.slow
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("msys2_mingw64_clang64")
     def test_msys2_mingw64_clang64(self):
@@ -458,6 +459,7 @@ class TestSubsystemsCMakeBuild:
                       subsystem="mingw64")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="clang64")
 
+    @pytest.mark.slow
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("msys2_mingw64_clang64")
     def test_msys2_mingw64_clang64(self):
