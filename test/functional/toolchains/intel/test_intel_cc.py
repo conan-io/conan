@@ -15,7 +15,7 @@ class TestIntelCC:
     """Tests for Intel oneAPI C++/DPC++ compilers"""
 
     # We need the path to the oneapi dir, not the binaries dir
-    oneapi = Path(tools_locations["intel_oneapi"]["2026.0"]["path"]["Linux"])
+    oneapi = Path(tools_locations["intel_oneapi"]["2026.0"]["path"]["Linux"]).parent.parent
 
     @pytest.mark.tool("cmake")
     def test_intel_oneapi_and_icpx(self):
