@@ -346,6 +346,7 @@ def test_clang_cl_vscrt(build_type, runtime, vscrt):
 
         [conf]
         tools.cmake.cmaketoolchain:generator=Visual Studio 17
+        tools.microsoft.msbuild:installation_path=
 
         [buildenv]
         CC=clang-cl

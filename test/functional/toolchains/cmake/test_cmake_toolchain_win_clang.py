@@ -9,7 +9,7 @@ from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp, gen_function_c
 from test.conftest import tools_locations
 from test.functional.utils import check_vs_runtime, check_exe_run
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, default_vs_ide_version
 
 
 @pytest.fixture
@@ -200,7 +200,7 @@ class TestVSClangCL:
         check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=False)
 
 
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "4.2")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 class TestMsysClang:
     @pytest.mark.tool("msys2_clang64")
@@ -229,7 +229,7 @@ class TestMsysClang:
 
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
-        check_vs_runtime(cmd, client, "17", build_type="Release",
+        check_vs_runtime(cmd, client, default_vs_ide_version, build_type="Release",
                          static_runtime=False, subsystem="clang64")
 
     @pytest.mark.slow
@@ -259,7 +259,7 @@ class TestMsysClang:
 
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
-        check_vs_runtime(cmd, client, "17", build_type="Release",
+        check_vs_runtime(cmd, client, default_vs_ide_version, build_type="Release",
                          static_runtime=False, subsystem="mingw64")
 
     @pytest.mark.tool("msys2_clang64")
@@ -289,8 +289,8 @@ class TestMsysClang:
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
         # static_runtime equivalent to C, for checking, no dep on libc++
-        check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=True,
-                         subsystem="clang64")
+        check_vs_runtime(cmd, client, default_vs_ide_version, build_type="Release",
+                         static_runtime=True, subsystem="clang64")
 
 
 @pytest.mark.tool("cmake")

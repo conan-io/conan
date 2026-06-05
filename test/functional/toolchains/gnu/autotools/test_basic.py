@@ -12,7 +12,7 @@ from conan.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_m
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from test.functional.utils import check_exe_run, check_vs_runtime
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, default_msvc_version
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
@@ -383,11 +383,11 @@ def test_autotools_arguments_override():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only MSVC")
 def test_msvc_extra_flag():
-    profile = textwrap.dedent("""
+    profile = textwrap.dedent(f"""
         [settings]
         os=Windows
         compiler=msvc
-        compiler.version=193
+        compiler.version={default_msvc_version}
         compiler.runtime=dynamic
         arch=x86_64
         build_type=Release

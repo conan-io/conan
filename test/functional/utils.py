@@ -3,6 +3,7 @@ from conan.tools.microsoft.visual import vcvars_command
 
 def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd64",
                      static_runtime=False, subsystem=None):
+    vs_version = str(vs_version)
     vcvars = vcvars_command(version=vs_version, architecture=architecture)
     normalized_path = artifact.replace("/", "\\")
     static = artifact.endswith(".a") or artifact.endswith(".lib")
@@ -77,6 +78,7 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                   cxx11_abi=None, subsystem=None, extra_msg=""):
     output = str(output)
     names = names if isinstance(names, list) else [names]
+    version = str(version) if version else version
 
     for name in names:
         if extra_msg:  # For ``conan new`` templates
@@ -109,9 +111,10 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
             elif compiler == "clang":
                 assert "{} __clang_".format(name) in output
                 if version:
-                    major, minor = version.split(".")[0:2]
-                    assert "{} __clang_major__{}".format(name, major) in output
-                    assert "{} __clang_minor__{}".format(name, minor) in output
+                    digits = version.split(".")
+                    assert "{} __clang_major__{}".format(name, digits[0]) in output
+                    if len(digits) > 1:
+                        assert "{} __clang_minor__{}".format(name, digits[1]) in output
             elif compiler == "apple-clang":
                 assert "{} __apple_build_version__".format(name) in output
                 if version:
