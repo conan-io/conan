@@ -200,7 +200,7 @@ tools_locations = {
     "node": {},
     "intel_oneapi": {
         "default": "2026.0",
-        "exe": "icpx",
+        "exe": "/opt/intel/oneapi/2026.0/bin/icpx",
         "2026.0": {"path": {"Linux": "/opt/intel/oneapi"}}
     }
 }
