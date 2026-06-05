@@ -133,7 +133,7 @@ _bazel_rc = """\
 _test_bazel_module_bazel = """\
 bazel_dep(name = "rules_cc", version = "0.2.17")
 
-load_conan_dependencies = use_extension("//conan:conan_deps_module_extension_9.bzl", "conan_extension")
+load_conan_dependencies = use_extension("//conan:conan_deps_module_extension_bazel9_plus.bzl", "conan_extension")
 use_repo(load_conan_dependencies, "{{name}}")
 """
 

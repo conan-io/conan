@@ -425,7 +425,7 @@ class _BazelPathsGenerator:
     """
     repository_filename = "dependencies.bzl"
     modules_filename = "conan_deps_module_extension.bzl"
-    modules_filename_9 = "conan_deps_module_extension_9.bzl"
+    modules_filename_9 = "conan_deps_module_extension_bazel9_plus.bzl"
     repository_rules_filename = "conan_deps_repo_rules.bzl"
     repository_template = textwrap.dedent("""\
         # This Bazel module should be loaded by your WORKSPACE file.
@@ -483,7 +483,7 @@ class _BazelPathsGenerator:
         # Bazel 9+ module extension. Use with BUILD.bazel_9 dependency files and rules_cc.
         # Add to your MODULE.bazel file:
         # bazel_dep(name = "rules_cc", version = "0.2.17")
-        # load_conan_dependencies = use_extension("//conan:conan_deps_module_extension_9.bzl", "conan_extension")
+        # load_conan_dependencies = use_extension("//conan:conan_deps_module_extension_bazel9_plus.bzl", "conan_extension")
         load(":conan_deps_repo_rules.bzl", "conan_dependency_repo")
 
         def _load_dependencies_impl(mctx):
@@ -616,7 +616,7 @@ class BazelDeps:
             )
             use_repo(load_conan_dependencies, "dep-1", "dep-2", ...)
 
-        For Bazel 9+, use ``conan_deps_module_extension_9.bzl`` instead and add ``rules_cc`` to your
+        For Bazel 9+, use ``conan_deps_module_extension_bazel9_plus.bzl`` instead and add ``rules_cc`` to your
         MODULE.bazel:
 
         .. code-block:: python
@@ -624,7 +624,7 @@ class BazelDeps:
             bazel_dep(name = "rules_cc", version = "0.2.17")
 
             load_conan_dependencies = use_extension(
-                "//build:conan_deps_module_extension_9.bzl",
+                "//build:conan_deps_module_extension_bazel9_plus.bzl",
                 "conan_extension"
             )
             use_repo(load_conan_dependencies, "dep-1", "dep-2", ...)
