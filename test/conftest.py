@@ -249,7 +249,7 @@ def _get_individual_tool(name, version):
 
     tool_platform = platform.system()
     if tool.get("platform", tool_platform) != tool_platform:
-        return None, None
+        return None
 
     version = version or tool.get("default")
     tool_version = tool.get(version)
