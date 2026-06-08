@@ -226,14 +226,6 @@ except ImportError as e:
     user_tool_locations = None
 
 
-tools_environments = {
-    'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
-    'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}},
-    'ucrt64': {'Windows': {'MSYSTEM': 'UCRT64'}},
-    'msys2_clang64': {"Windows": {"MSYSTEM": "CLANG64"}}
-}
-
-
 _cached_tools = {}
 
 
@@ -267,7 +259,7 @@ def _get_individual_tool(name, version):
             return False
         if name == "visual_studio":
             if vs_installation_path(version):
-                return None, None
+                return None
 
         tool_path = tool_version.get("path", {}).get(tool_platform)
         tool_path = tool_path.replace("/", "\\") if tool_platform == "Windows" and tool_path is not None else tool_path
@@ -286,12 +278,7 @@ def _get_individual_tool(name, version):
             return True
         tool_path = None
 
-    try:
-        tool_env = tools_environments[name][tool_platform]
-    except KeyError:
-        tool_env = None
-
-    cached = tool_path, tool_env
+    cached = tool_path
 
     # Check this particular tool is installed
     old_environ = None
@@ -310,7 +297,7 @@ def _get_individual_tool(name, version):
         # finds the exe in a path that is not the one set in the conf -> fail
         cached = True
     elif tool_path is None:
-        cached = exe_path, tool_env
+        cached = exe_path
 
     if old_environ is not None:
         os.environ.clear()
@@ -362,11 +349,9 @@ def pytest_runtest_setup(item):
             pytest.skip("Required '{}' tool version '{}' is not available".format(tool_name,
                                                                                   version_msg))
 
-        tool_path, tool_env = result
+        tool_path = result
         if tool_path:
             tools_paths.append(tool_path)
-        if tool_env:
-            tools_env_vars.update(tool_env)
         # Fix random failures CI because of this: https://issues.jenkins.io/browse/JENKINS-9104
         if tool_name == "visual_studio":
             tools_env_vars['_MSPDBSRV_ENDPOINT_'] = str(uuid.uuid4())
