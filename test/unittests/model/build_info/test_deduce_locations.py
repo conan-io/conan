@@ -97,7 +97,9 @@ def test_complex_deduce_locations_shared(lib_name, libs, conanfile):
     ("libcurl_imp.lib", "libcurl.dll", ["libcurl_imp"], "libcurl"),
     ("libcrypto.lib", "libcrypto-3-x64.dll", ["libcrypto"], "crypto"),
     ("libssl.lib", "libssl-3-x64.dll", ["libssl"], "ssl"),
-    ("zdll.lib", "zlib1.dll", ["zdll"], "zlib")
+    ("zdll.lib", "zlib1.dll", ["zdll"], "zlib"),
+    ("mimalloc.dll.lib", "mimalloc.dll", ["mimalloc"], "mimalloc"),
+    ("mimalloc.dll.lib", "mimalloc.dll", ["mimalloc.dll"], "mimalloc"),
 ])
 def test_windows_shared_link_locations(lib_name, dll_name, libs, pkg_name, conanfile):
     """

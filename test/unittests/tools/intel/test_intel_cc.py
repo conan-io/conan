@@ -122,10 +122,22 @@ def test_installation_path_in_conf():
     })
     fake_path = "mysuper/path/to/intel/oneapi"
     conanfile.conf = ConfDefinition()
-    conanfile.conf.loads(textwrap.dedent("""\
-        tools.intel:installation_path=%s
-    """ % fake_path))
+    conanfile.conf.loads(textwrap.dedent(f'tools.intel:installation_path={fake_path}'))
     assert IntelCC(conanfile).installation_path == fake_path
+
+
+def test_invalid_installation_path_in_conf():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({
+        "compiler.version": "2026.0",
+        "os": "Windows"
+    })
+
+    conanfile.conf = ConfDefinition()
+    conanfile.conf.loads(textwrap.dedent('tools.intel:installation_path=""'))
+    with pytest.raises(ConanException) as e:
+        IntelCC(conanfile).generate()
+    assert "Invalid 'tools.intel:installation_path'" in str(e.value)
 
 
 @pytest.mark.parametrize("os_,call_command,setvars_file", [
