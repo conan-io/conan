@@ -570,12 +570,13 @@ class TestRuntimeDeployer:
         link_so = os.path.join(c.current_folder, "output", "libfoo.so")
         lib = os.path.join(c.current_folder, "output", "libfoo.so.0.1.0")
         # INFO: This test requires in Windows to have symlinks enabled, otherwise it will fail
-        assert os.path.islink(link_so_0)
-        assert os.path.islink(link_so)
-        assert not os.path.isabs(os.readlink(link_so_0))
-        assert not os.path.isabs(os.readlink(os.path.join(link_so)))
-        assert os.path.realpath(link_so) == os.path.realpath(link_so_0)
-        assert os.path.realpath(link_so_0) == os.path.realpath(lib)
+        if symlink:
+            assert os.path.islink(link_so_0)
+            assert os.path.islink(link_so)
+            assert not os.path.isabs(os.readlink(link_so_0))
+            assert not os.path.isabs(os.readlink(os.path.join(link_so)))
+            assert os.path.realpath(link_so) == os.path.realpath(link_so_0)
+            assert os.path.realpath(link_so_0) == os.path.realpath(lib)
         assert not os.path.islink(lib)
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Requires POSIX symlinks")
