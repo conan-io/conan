@@ -37,7 +37,6 @@ class TestIntelCC:
 
             [conf]
             tools.intel:installation_path={self.oneapi}
-            tools.build:compiler_executables={{"c": "icx", "cpp": "icpx"}}
         """)
 
         client.save({"intel_profile": intel_profile})
@@ -60,17 +59,13 @@ class TestIntelCC:
             os=Linux
             arch=x86_64
             compiler=intel-cc
-            compiler.mode=icx
+            compiler.mode=dpcpp
             compiler.version=2026.0
             compiler.libcxx=libstdc++
             build_type=Release
 
             [conf]
             tools.intel:installation_path={self.oneapi}
-            tools.build:compiler_executables={{"c": "icx", "cpp": "icpx"}}
-            tools.build:cxxflags=["-fsycl"]
-            tools.build:sharedlinkflags=["-fsycl"]
-            tools.build:exelinkflags=["-fsycl"]
         """)
 
         client.save({"intel_profile": intel_profile})
@@ -97,7 +92,6 @@ class TestIntelCC:
 
            [conf]
            tools.intel:installation_path={self.oneapi}
-           tools.build:compiler_executables={{"c": "icx", "cpp": "icpx"}}
            """)
 
         client.save({"intel_profile": intel_profile})

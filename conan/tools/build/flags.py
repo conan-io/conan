@@ -100,6 +100,12 @@ def architecture_link_flag(conanfile):
         # Deactivate WASM output forcing asm.js output instead
         if arch == "asm.js":
             return "-sWASM=0"
+    elif compiler == "intel-cc":
+        mode = conanfile.settings.get_safe("compiler.mode")
+        version = conanfile.settings.get_safe("compiler.version")
+        # dpcpp deprecated since 2024.0, use icpx -fsycl instead
+        if mode == "dpcpp" and int(version.split(".")[0]) >= 2024:
+            return "-fsycl"
     return ""
 
 

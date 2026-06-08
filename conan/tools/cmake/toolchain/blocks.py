@@ -9,6 +9,7 @@ from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
 from conan.tools.android.utils import android_abi
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
+from conan.tools.build.compiler import compiler_executables
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
@@ -954,6 +955,8 @@ class CompilersBlock(Block):
         # Reading configuration from "tools.build:compiler_executables" -> {"C": "/usr/bin/gcc"}
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
                                                      check_type=dict)
+        if not compilers_by_conf:
+            compilers_by_conf = compiler_executables(self._conanfile) or {}
         # Map the possible languages
         compilers = {}
         # Allowed <LANG> variables (and <LANG>_LAUNCHER)

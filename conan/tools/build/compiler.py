@@ -42,3 +42,21 @@ def check_min_compiler_version(conanfile, compiler_restrictions):
                     f"{ref} requires {compiler} >= {min_version}, but {compiler} {compiler_version} was found\n"
                     f"Reason: {reason}")
             break
+
+def compiler_executables(conanfile):
+    """
+    Returns the C and C++ compiler executables based on compiler settings.
+
+    :return: dict with "c" and "cpp" keys, or None if not applicable
+    """
+    compiler = conanfile.settings.get_safe("compiler")
+    if compiler == "intel-cc":
+        mode = conanfile.settings.get_safe("compiler.mode")
+        version = conanfile.settings.get_safe("compiler.version")
+        if mode == "classic":
+            return {"c": "icc", "cpp": "icpc"}
+        elif mode == "dpcpp" and int(version.split(".")[0]) < 2024:
+            return {"c": "icx", "cpp": "dpcpp"}  # dpcpp deprecated since 2024.0
+        else:  # icx or dpcpp >= 2024
+            return {"c": "icx", "cpp": "icpx"}
+    return None
