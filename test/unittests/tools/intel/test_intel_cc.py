@@ -4,7 +4,7 @@ import textwrap
 import pytest
 from unittest.mock import patch
 
-from conan.tools.build.flags import architecture_flag, architecture_link_flag, cppstd_flag
+from conan.tools.build.flags import architecture_flag, sycl_flag, cppstd_flag
 from conan.tools.build.compiler import compiler_executables
 from conan.tools.intel import IntelCC
 from conan.errors import ConanException
@@ -139,15 +139,15 @@ def test_compiler_executables(mode, version, expected_cc, expected_cxx):
     ("dpcpp", "2026.0", "-fsycl"),  # dpcpp >= 2024, needs -fsycl
     ("icx", "2026.0", ""),         # icx mode, no sycl flags
 ])
-def test_intel_cc_link_flag(mode, version, expected):
-    """Test that architecture_link_flag returns -fsycl for dpcpp >= 2024"""
+def test_sycl_flag(mode, version, expected):
+    """Test that sycl_flag returns -fsycl for dpcpp >= 2024"""
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({
         "compiler": "intel-cc",
         "compiler.version": version,
         "compiler.mode": mode,
     })
-    assert architecture_link_flag(conanfile) == expected
+    assert sycl_flag(conanfile) == expected
 
 
 def test_installation_path_in_conf():

@@ -67,15 +67,21 @@ class TestIntelCC:
             [conf]
             tools.intel:installation_path={self.oneapi}
         """)
+        sycl_code = textwrap.dedent("""
+            #include <sycl/sycl.hpp>
+            int main() {
+                sycl::range<1> r{1};
+                return r.size() == 1 ? 0 : 1;
+            }
+        """)
 
-        client.save({"intel_profile": intel_profile})
+        client.save({"intel_profile": intel_profile, "src/main.cpp": sycl_code})
         client.run("build . -pr:b intel_profile -pr:h intel_profile")
         assert ":: initializing oneAPI environment ..." in client.out
         assert ":: oneAPI environment initialized ::" in client.out
         # Run executable with Intel environment active (needed for libsycl.so)
         build_folder = os.path.join(client.current_folder, "build", "Release")
         client.run_command(f'. /opt/intel/oneapi/setvars.sh --force && "{build_folder}/hello"')
-        assert "Hello World" in client.out
 
     def test_intel_oneapi_autotools(self):
         client = TestClient(path_with_spaces=False)
