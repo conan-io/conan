@@ -14,8 +14,7 @@ class TestIntelCC:
 
     """Tests for Intel oneAPI C++/DPC++ compilers"""
 
-    # We need the path to the oneapi dir, not the binaries dir
-    oneapi = Path(tools_locations["intel_oneapi"]["2026.0"]["path"]["Linux"]).parent.parent.parent
+    oneapi_path = Path(tools_locations["intel_oneapi"]["2026.0"]["root"]["Linux"])
 
     @pytest.mark.tool("cmake")
     def test_intel_oneapi_and_icpx(self):
@@ -36,7 +35,7 @@ class TestIntelCC:
             build_type=Release
 
             [conf]
-            tools.intel:installation_path={self.oneapi}
+            tools.intel:installation_path={self.oneapi_path}
         """)
 
         client.save({"intel_profile": intel_profile})
@@ -65,7 +64,7 @@ class TestIntelCC:
             build_type=Release
 
             [conf]
-            tools.intel:installation_path={self.oneapi}
+            tools.intel:installation_path={self.oneapi_path}
         """)
         sycl_code = textwrap.dedent("""
             #include <sycl/sycl.hpp>
@@ -81,7 +80,7 @@ class TestIntelCC:
         assert ":: oneAPI environment initialized ::" in client.out
         # Run executable with Intel environment active (needed for libsycl.so)
         build_folder = os.path.join(client.current_folder, "build", "Release")
-        client.run_command(f'. /opt/intel/oneapi/setvars.sh --force && "{build_folder}/hello"')
+        client.run_command(f'. {self.oneapi_path}/setvars.sh --force && "{build_folder}/hello"')
 
     def test_intel_oneapi_autotools(self):
         client = TestClient(path_with_spaces=False)
@@ -97,7 +96,7 @@ class TestIntelCC:
            build_type=Release
 
            [conf]
-           tools.intel:installation_path={self.oneapi}
+           tools.intel:installation_path={self.oneapi_path}
            """)
 
         client.save({"intel_profile": intel_profile})
