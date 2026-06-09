@@ -87,26 +87,6 @@ def architecture_flag(conanfile):
     return ""
 
 
-def sycl_flag(conanfile):
-    """
-    Returns the SYCL flag for intel-cc compiler with dpcpp mode.
-    For oneAPI >= 2024.0, dpcpp executable is deprecated and icpx -fsycl should be used.
-    This flag should be added to both cxxflags and linkflags.
-
-    :return: "-fsycl" if applicable, empty string otherwise
-    """
-    compiler = conanfile.settings.get_safe("compiler")
-    if compiler != "intel-cc":
-        return ""
-    mode = conanfile.settings.get_safe("compiler.mode")
-    if mode != "dpcpp":
-        return ""
-    version = conanfile.settings.get_safe("compiler.version")
-    if int(version.split(".")[0]) >= 2024:
-        return "-fsycl"
-    return ""
-
-
 def architecture_link_flag(conanfile):
     """
     returns exclusively linker flags specific to the target architecture and compiler

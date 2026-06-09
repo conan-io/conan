@@ -58,12 +58,15 @@ class TestIntelCC:
             os=Linux
             arch=x86_64
             compiler=intel-cc
-            compiler.mode=dpcpp
+            compiler.mode=icx
             compiler.version=2026.0
             compiler.libcxx=libstdc++
             build_type=Release
 
             [conf]
+            tools.build:cxxflags=["-fsycl"]
+            tools.build:exelinkflags=["-fsycl"]
+            tools.build:sharedlinkflags=["-fsycl"]
             tools.intel:installation_path={self.oneapi_path}
         """)
         sycl_code = textwrap.dedent("""
@@ -96,6 +99,7 @@ class TestIntelCC:
            build_type=Release
 
            [conf]
+           tools.build:compiler_executables={{'c': 'icx', 'cpp': 'icpx'}}
            tools.intel:installation_path={self.oneapi_path}
            """)
 

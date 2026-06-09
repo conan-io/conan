@@ -4,8 +4,7 @@ import textwrap
 import pytest
 from unittest.mock import patch
 
-from conan.tools.build.flags import architecture_flag, sycl_flag, cppstd_flag
-from conan.tools.build.compiler import compiler_executables
+from conan.tools.build.flags import architecture_flag, cppstd_flag
 from conan.tools.intel import IntelCC
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
@@ -112,42 +111,6 @@ def test_check_ms_toolsets(mode, expected):
         "os": "Windows"
     })
     assert IntelCC(conanfile).ms_toolset == expected
-
-
-@pytest.mark.parametrize("mode,version,expected_cc,expected_cxx", [
-    ("icx", "2021.3", "icx", "icpx"),
-    ("icx", "2026.0", "icx", "icpx"),
-    ("dpcpp", "2021.3", "icx", "dpcpp"),  # dpcpp available before 2024.0
-    ("dpcpp", "2026.0", "icx", "icpx"),   # dpcpp deprecated >= 2024.0, use icpx
-    ("classic", "2021.3", "icc", "icpc"),
-])
-def test_compiler_executables(mode, version, expected_cc, expected_cxx):
-    """Test that compiler_executables returns the correct executables based on mode and version"""
-    conanfile = ConanFileMock()
-    conanfile.settings = MockSettings({
-        "compiler": "intel-cc",
-        "compiler.version": version,
-        "compiler.mode": mode,
-    })
-    result = compiler_executables(conanfile)
-    assert result["c"] == expected_cc
-    assert result["cpp"] == expected_cxx
-
-
-@pytest.mark.parametrize("mode,version,expected", [
-    ("dpcpp", "2021.3", ""),       # dpcpp < 2024, no extra flags needed
-    ("dpcpp", "2026.0", "-fsycl"),  # dpcpp >= 2024, needs -fsycl
-    ("icx", "2026.0", ""),         # icx mode, no sycl flags
-])
-def test_sycl_flag(mode, version, expected):
-    """Test that sycl_flag returns -fsycl for dpcpp >= 2024"""
-    conanfile = ConanFileMock()
-    conanfile.settings = MockSettings({
-        "compiler": "intel-cc",
-        "compiler.version": version,
-        "compiler.mode": mode,
-    })
-    assert sycl_flag(conanfile) == expected
 
 
 def test_installation_path_in_conf():

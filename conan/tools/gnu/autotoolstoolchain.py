@@ -5,10 +5,9 @@ from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import is_universal_arch
 from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
-from conan.tools.build.compiler import compiler_executables
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, build_type_flags, cppstd_flag, \
-    build_type_link_flags, libcxx_flags, cstd_flag, llvm_clang_front, threads_flags, sycl_flag
+    build_type_link_flags, libcxx_flags, cstd_flag, llvm_clang_front, threads_flags
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.intel import IntelCC
@@ -54,7 +53,6 @@ class AutotoolsToolchain:
         self.cstd = cstd_flag(self._conanfile)
         self.arch_flag = architecture_flag(self._conanfile)
         self.arch_ld_flag = architecture_link_flag(self._conanfile)
-        self.sycl_flag = sycl_flag(self._conanfile)
         self.threads_flags = threads_flags(self._conanfile)
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(self._conanfile)
         self.fpic = self._conanfile.options.get_safe("fPIC")
@@ -219,7 +217,7 @@ class AutotoolsToolchain:
     @property
     def cxxflags(self):
         fpic = "-fPIC" if self.fpic else None
-        ret = [self.libcxx, self.cppstd, self.arch_flag, self.sycl_flag, fpic, self.msvc_runtime_flag,
+        ret = [self.libcxx, self.cppstd, self.arch_flag, fpic, self.msvc_runtime_flag,
                self.sysroot_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         apple_flags += self.apple_extra_flags
@@ -241,7 +239,7 @@ class AutotoolsToolchain:
 
     @property
     def ldflags(self):
-        ret = [self.arch_flag, self.sysroot_flag, self.arch_ld_flag, self.sycl_flag] + self.threads_flags
+        ret = [self.arch_flag, self.sysroot_flag, self.arch_ld_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
         apple_flags += self.apple_extra_flags
         conf_flags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
@@ -289,9 +287,6 @@ class AutotoolsToolchain:
             compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables",
                                                          default={},
                                                          check_type=dict)
-            # If not defined by user, try to get from compiler settings (e.g. intel-cc)
-            if not compilers_by_conf:
-                compilers_by_conf = compiler_executables(self._conanfile) or {}
             if compilers_by_conf:
                 compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
                                      "rc": "RC"}

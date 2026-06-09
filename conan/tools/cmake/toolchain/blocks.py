@@ -9,8 +9,7 @@ from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
 from conan.tools.android.utils import android_abi
 from conan.tools.apple.apple import is_apple_os, to_apple_arch
 from conan.tools.build import build_jobs
-from conan.tools.build.compiler import compiler_executables
-from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, sycl_flag, threads_flags
+from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
@@ -838,11 +837,10 @@ class ExtraFlagsBlock(Block):
 
     def context(self):
         # Now, it's time to get all the flags defined by the user
-        syclflags = sycl_flag(self._conanfile)
-        cxxflags = self._toolchain.extra_cxxflags + self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list) + [syclflags]
-        cflags = self._toolchain.extra_cflags + self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list) + [syclflags]
-        sharedlinkflags = self._toolchain.extra_sharedlinkflags + self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list) + [syclflags]
-        exelinkflags = self._toolchain.extra_exelinkflags + self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list) + [syclflags]
+        cxxflags = self._toolchain.extra_cxxflags + self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
+        cflags = self._toolchain.extra_cflags + self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        sharedlinkflags = self._toolchain.extra_sharedlinkflags + self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        exelinkflags = self._toolchain.extra_exelinkflags + self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         rcflags = self._conanfile.conf.get("tools.build:rcflags", default=[], check_type=list)
         defines = self._conanfile.conf.get("tools.build:defines", default=[], check_type=list)
 
@@ -956,8 +954,6 @@ class CompilersBlock(Block):
         # Reading configuration from "tools.build:compiler_executables" -> {"C": "/usr/bin/gcc"}
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables", default={},
                                                      check_type=dict)
-        if not compilers_by_conf:
-            compilers_by_conf = compiler_executables(self._conanfile) or {}
         # Map the possible languages
         compilers = {}
         # Allowed <LANG> variables (and <LANG>_LAUNCHER)
@@ -974,6 +970,17 @@ class CompilersBlock(Block):
             if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
                 compilers["C"] = "cl"
                 compilers["CXX"] = "cl"
+        elif compiler == "intel-cc" and "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+            mode = self._conanfile.settings.get_safe("compiler.mode")
+            if mode == "classic":
+                compilers["C"] = "icc"
+                compilers["CXX"] = "icpc"
+            elif mode == "dpcpp":
+                compilers["C"] = "icx"
+                compilers["CXX"] = "dpcpp"
+            else:  # icx
+                compilers["C"] = "icx"
+                compilers["CXX"] = "icpx"
         return {"compilers": compilers}
 
 
