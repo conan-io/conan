@@ -978,7 +978,7 @@ class CompilersBlock(Block):
             elif mode == "dpcpp":
                 compilers["C"] = "icx"
                 compilers["CXX"] = "dpcpp"
-            else:  # icx
+            elif mode == "icx":  # icx
                 compilers["C"] = "icx"
                 compilers["CXX"] = "icpx"
         return {"compilers": compilers}
