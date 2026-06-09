@@ -1031,3 +1031,26 @@ def test_libs_no_components_multilib_component(requires):
     tc.run("install --requires=matrix/1.0 -g CMakeConfigDeps")
     matrix_targets = tc.load("matrix-Targets-release.cmake")
     assert "# Requirement matrix::_common -> base::base (Full link: True)" in matrix_targets
+
+
+def test_implib_location_explicit_extension():
+    """
+    https://github.com/conan-io/conan/issues/20054
+    If the extension was explicitly added, we would not find the importlib if it was named
+    .dll.lib
+    """
+    tc = TestClient()
+    conanfile = (GenConanfile("allocator", "1.0")
+                 .with_package_file("lib/allocator.dll.lib", "importlib")
+                 .with_package_file("bin/allocator.dll", "dll")
+                 .with_package_type("shared-library")
+                 .with_package_info({"libs": ["allocator.dll"]}))
+
+    tc.save({"conanfile.py": conanfile})
+    tc.run("create")
+    tc.run("install --requires=allocator/1.0 -g=CMakeConfigDeps")
+    targets = tc.load("allocator-Targets-release.cmake")
+    # We find the importlib
+    assert "PROPERTIES IMPORTED_IMPLIB_RELEASE" in targets
+    # And we find the dll
+    assert "PROPERTIES IMPORTED_LOCATION_RELEASE" in targets
