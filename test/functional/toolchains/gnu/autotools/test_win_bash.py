@@ -72,6 +72,7 @@ def test_autotools_bash_complete_ucrt64():
         pytest.skip("msys2 path not defined")
     try:
         ucrt64_path = tools_locations["ucrt64"]["system"]["path"]["Windows"]
+        ucrt64_path = ucrt64_path.replace("\\", "/")
     except KeyError:
         pytest.skip("ucrt64 path not defined")
 
