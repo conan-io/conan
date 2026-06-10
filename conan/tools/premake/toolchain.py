@@ -1,9 +1,11 @@
+from conan.tools.build.compiler import get_compiler_executables
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 import os
 import textwrap
 from pathlib import Path
 
 from conan.tools.env.virtualbuildenv import VirtualBuildEnv
+from conan.tools.intel import IntelCC
 from jinja2 import Template
 
 from conan.tools.build.cross_building import cross_building
@@ -256,9 +258,7 @@ class PremakeToolchain:
             elif cppstd[0].isnumeric():
                 cppstd = f"c++{cppstd}"
 
-        compilers_build_mapping = self._conanfile.conf.get(
-            "tools.build:compiler_executables", default={}, check_type=dict
-        )
+        compilers_build_mapping = get_compiler_executables(self._conanfile)
         if compilers_build_mapping:
             build_env = VirtualBuildEnv(self._conanfile, auto_generate=False)
             env = build_env.environment()
@@ -296,6 +296,8 @@ class PremakeToolchain:
         # Generate VCVars if using MSVC
         if "msvc" in self._conanfile.settings.compiler:
             VCVars(self._conanfile).generate()
+        if self._conanfile.settings.get_safe("compiler") == "intel-cc":
+            IntelCC(self._conanfile).generate()
 
     def _target_build_os(self):
         conan_os = str(self._conanfile.settings.os)

@@ -5,6 +5,7 @@ from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import is_universal_arch
 from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
+from conan.tools.build.compiler import get_compiler_executables
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags, libcxx_flags, cstd_flag, llvm_clang_front, threads_flags
@@ -283,10 +284,8 @@ class AutotoolsToolchain:
                 unix_env_value = unix_path(self._conanfile, env_value)
                 env.define(env_var, unix_env_value)
         else:
-            # Setting user custom compiler executables flags
-            compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables",
-                                                         default={},
-                                                         check_type=dict)
+            # Setting compiler executables from conf, buildenv or known defaults
+            compilers_by_conf = get_compiler_executables(self._conanfile)
             if compilers_by_conf:
                 compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
                                      "rc": "RC"}

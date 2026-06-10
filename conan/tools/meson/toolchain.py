@@ -9,10 +9,12 @@ from conan.internal.internal_tools import raise_on_universal_arch
 from conan.internal.model.pkg_type import PackageType
 from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
     resolve_apple_flags, apple_extra_flags
+from conan.tools.build.compiler import get_compiler_executables
 from conan.tools.build.cross_building import cross_building, can_run
 from conan.tools.build.flags import (architecture_link_flag, libcxx_flags, architecture_flag,
                                      threads_flags)
 from conan.tools.env import VirtualBuildEnv
+from conan.tools.intel import IntelCC
 from conan.tools.meson.helpers import get_apple_subsystem, to_cppstd_flag, to_cstd_flag, \
     to_meson_machine, to_meson_value
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
@@ -258,20 +260,19 @@ class MesonToolchain:
         # Read configuration for sys_root property (honoring existing conf)
         self._sys_root = self._conanfile_conf.get("tools.build:sysroot", check_type=str)
 
-        # Read configuration for compilers
-        compilers_by_conf = self._conanfile_conf.get("tools.build:compiler_executables", default={},
-                                                     check_type=dict)
+        # Read compilers from conf, buildenv or known defaults (intel-cc, emcc)
+        compilers_by_conf = get_compiler_executables(self._conanfile)
         # Read the VirtualBuildEnv to update the variables
         build_env = self._conanfile.buildenv_build.vars(self._conanfile) if native else (
             VirtualBuildEnv(self._conanfile, auto_generate=True).vars())
         #: Sets the Meson ``c`` variable, defaulting to the ``CC`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.
-        self.c = compilers_by_conf.get("c") or self._sanitize_env_format(build_env.get("CC")) or default_comp
+        self.c = self._sanitize_env_format(compilers_by_conf.get("c")) or default_comp
         #: Sets the Meson ``cpp`` variable, defaulting to the ``CXX`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.
-        self.cpp = compilers_by_conf.get("cpp") or self._sanitize_env_format(build_env.get("CXX")) or default_comp_cpp
+        self.cpp = self._sanitize_env_format(compilers_by_conf.get("cpp")) or default_comp_cpp
         #: Sets the Meson ``ld`` variable, defaulting to the ``LD`` build environment value.
         #: If provided as a blank-separated string, it will be transformed into a list.
         #: Otherwise, it remains a single string.
@@ -606,3 +607,5 @@ class MesonToolchain:
         save(self._filename, self._content)
         # FIXME: Should we check the OS and compiler to call VCVars?
         VCVars(self._conanfile).generate()
+        if self._conanfile.settings.get_safe("compiler") == "intel-cc":
+            IntelCC(self._conanfile).generate()
