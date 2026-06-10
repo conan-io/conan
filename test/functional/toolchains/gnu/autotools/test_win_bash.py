@@ -90,9 +90,6 @@ def test_autotools_bash_complete_ucrt64():
         [conf]
         tools.microsoft.bash:subsystem=msys2-ucrt64
         tools.microsoft.bash:path={msys2_path}/bash.exe
-
-        [runenv]
-        PATH+=(path){ucrt64_path}
         """)
 
     main = gen_function_cpp(name="main")
@@ -111,6 +108,9 @@ def test_autotools_bash_complete_ucrt64():
             def build(self):
                 autotools = Autotools(self)
                 autotools.make()
+                import os
+                path = os.path.abspath(".").replace("\\", "/")
+                self.run(f"{path}/app.exe")
         """)
 
     client.save({"conanfile.py": conanfile,
@@ -118,8 +118,6 @@ def test_autotools_bash_complete_ucrt64():
                  "app.cpp": main,
                  "profile_win": profile_win})
     client.run("build . -pr=profile_win")
-
-    client.run_command("conanrun.bat && app.exe")
     check_exe_run(client.out, "main", "gcc", "16", "Release", "x86_64", cppstd="17",
                   cxx11_abi=0, subsystem="ucrt64")
     check_vs_runtime("app.exe", client, "15", "Debug", subsystem="ucrt64")
