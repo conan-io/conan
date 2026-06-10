@@ -285,7 +285,7 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
         conanfile = conanfile.replace('generators = "BazelToolchain"',
                                       'generators = "BazelToolchain", "BazelDeps"\n'
                                       '    requires = "myfirstlib/1.2.11"')
-        workspace = textwrap.dedent("""
+        module = textwrap.dedent("""
         load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "conan_extension")
         use_repo(load_conan_dependencies, "myfirstlib")
         """)
@@ -348,7 +348,7 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
         """)
         # Overwriting files
         client.save({"conanfile.py": conanfile,
-                     "MODULE.bazel": workspace,
+                     "MODULE.bazel": module,
                      "main/BUILD": bazel_build_linux if os_ == "Linux" else bazel_build,
                      "main/mysecondlib.cpp": mysecondlib_cpp if os_ != "Windows" else mysecondlib_cpp_win,
                      })
@@ -380,8 +380,9 @@ def test_empty_bazel_query_9x():
     """
     Test BazelDeps with Bazel 9.x (rules_cc loads required in generated BUILD files).
 
-    Dependencies are exposed as external repositories via the module extension, so targets
-    must be queried under ``@zlib//...`` rather than ``//conan/zlib/...``.
+    FIXME: `bazel query //...` does not work correctly here as it loads all the BUILD.bazel
+           by default instead of the BUILD.rules_cc.bazel file. Remove that logic
+           whenever BUILD.bazel with those rules become the default template.
     """
     client = _setup_empty_bazel_query_client()
     with client.chdir("consumer"):
