@@ -199,6 +199,106 @@ class TestLinear(GraphManagerTest):
                                 (liba, True, True, False, True)])
         _check_transitive(libb, [(liba, True, True, False, True)])
 
+    @pytest.mark.parametrize("shared", [True])
+    def test_simple_transitive_headers_chain(self, shared):
+        # consumer -> libd -> libc - transitive_headers=True -> libb - > liba -> lib0
+        self.recipe_cache("lib0/0.1", option_shared=shared)
+        liba = GenConanfile().with_requirement("lib0/0.1").with_shared_option(shared)
+        self.recipe_conanfile("liba/0.1", liba)
+
+        libb = GenConanfile().with_requirement("liba/0.1").with_shared_option(shared)
+        self.recipe_conanfile("libb/0.1", libb)
+
+        libc = GenConanfile()
+        libc.with_requirement("libb/0.1", transitive_headers=True).with_shared_option(shared)
+        self.recipe_conanfile("libc/0.1", libc)
+
+        libd = GenConanfile().with_requirement("libc/0.1").with_shared_option(shared)
+        self.recipe_conanfile("libd/0.1", libd)
+
+        consumer = self.recipe_consumer("consumer/0.1", ["libd/0.1"])
+        deps_graph = self.build_consumer(consumer)
+
+        consumer = deps_graph.root
+        libd = consumer.edges[0].dst
+        libc = libd.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
+        lib0 = liba.edges[0].dst
+
+        # node, headers, lib, build, run
+        _check_transitive(consumer, [
+            (libd, True, True, False, shared),
+            (libc, False, not shared, False, shared),
+            (libb, False, not shared, False, shared),
+            (liba, False, not shared, False, shared),
+            (lib0, False, not shared, False, shared),
+        ])
+
+        _check_transitive(libd, [
+            (libc, True, True, False, shared),
+            (libb, True, not shared, False, shared),
+            (liba, False, not shared, False, shared),
+            (lib0, False, not shared, False, shared),
+        ])
+
+        _check_transitive(libc, [
+            (libb, True, True, False, shared),
+            (liba, False, not shared, False, shared),
+            (lib0, False, not shared, False, shared),
+        ])
+
+    @pytest.mark.parametrize("shared", [True, False])
+    @pytest.mark.parametrize("liba_first", [True, False])
+    @pytest.mark.parametrize("transitive", [True, False])
+    def test_transitive_headers_duplicate_different_diamond(self, shared, liba_first, transitive):
+        # libd -> libc - (faulty) - > liba
+        #            \ - transitive_headers=True -> libb -> liba
+        self.recipe_cache("liba/0.1", option_shared=shared)
+        libb = GenConanfile().with_requirement("liba/0.1")
+        libb.with_shared_option(shared)
+        self.recipe_conanfile("libb/0.1", libb)
+
+        libc = GenConanfile()
+        if liba_first:
+            libc.with_requirement("liba/0.1").with_requirement("libb/0.1", transitive_headers=transitive)
+        else:
+            libc.with_requirement("libb/0.1", transitive_headers=transitive).with_requirement("liba/0.1")
+
+        libc.with_shared_option(shared)
+        self.recipe_conanfile("libc/0.1", libc)
+
+        consumer = self.recipe_consumer("libd/0.1", ["libc/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        assert 4 == len(deps_graph.nodes)
+        libd = deps_graph.root
+        libc = libd.edges[0].dst
+        if liba_first:
+            liba = libc.edges[0].dst
+            libb = libc.edges[1].dst
+        else:
+            liba = libc.edges[1].dst
+            libb = libc.edges[0].dst
+
+        self._check_node(libd, "libd/0.1", deps=[libc])
+        self._check_node(libc, "libc/0.1#123", deps=[libb, liba], dependents=[libd])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
+
+        # # node, headers, lib, build, run
+        _check_transitive(libd, [
+            (libc, True, True, False, shared),
+            (libb, transitive, not shared, False, shared),
+            # Fails, currently depends on transitive as libb does
+            (liba, False, not shared, False, shared),
+        ])
+        _check_transitive(libc, [
+            (libb, True, True, False, shared),
+            (liba, True, True, False, shared),
+        ])
+
     def test_middle_shared_up_static(self):
         # app -> libb0.1 (shared) -> liba0.1 (static)
         self.recipe_cache("liba/0.1", option_shared=False)
