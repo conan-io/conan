@@ -131,6 +131,7 @@ _bazel_rc = """\
 {% if output_root_dir is defined %}startup --output_user_root={{output_root_dir}}{% endif %}
 """
 _test_bazel_module_bazel = """\
+# This requires Bazel >= 7.2
 include("//conan:conan_deps.MODULE.bazel")
 """
 

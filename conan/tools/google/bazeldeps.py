@@ -40,9 +40,9 @@ class _BazelDepBuildGenerator:
     # If both files exist, BUILD.bazel takes precedence over BUILD
     # https://bazel.build/concepts/build-files
     dep_build_filename = "BUILD.bazel"
-    dep_build_filename_9 = "BUILD.bazel_9"
+    dep_build_filename_rules_cc = "BUILD.rules_cc.bazel"
     dep_build_template = textwrap.dedent("""\
-    {% if bazel9 %}
+    {% if rules_cc %}
     load("@rules_cc//cc:cc_import.bzl", "cc_import")
     load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
@@ -177,12 +177,12 @@ class _BazelDepBuildGenerator:
         return folder.replace("\\", "/")
 
     @property
-    def _absolute_build_file_path_9(self):
+    def _absolute_build_file_path_rules_cc(self):
         """
-        Returns the absolute path to the BUILD file created by Conan (Bazel 9+)
+        Returns the absolute path to the BUILD file created by Conan (rules_cc / Bazel 9+)
         """
         folder = os.path.join(self._conanfile.generators_folder,
-                              self._build_file_path(self.dep_build_filename_9))
+                              self._build_file_path(self.dep_build_filename_rules_cc))
         return folder.replace("\\", "/")
 
     @property
@@ -391,18 +391,18 @@ class _BazelDepBuildGenerator:
             'repository_name': self._get_repository_name(self._dep),
             'package_folder': self._package_folder,
             'package_build_file_path': self._absolute_build_file_path,
-            'package_build_file_path_9': self._absolute_build_file_path_9,
+            'package_build_file_path_rules_cc': self._absolute_build_file_path_rules_cc,
         }
 
     def items(self):
         template = Template(self.dep_build_template, trim_blocks=True, lstrip_blocks=True,
                             undefined=StrictUndefined)
         context = self._get_build_file_context()
-        content_7 = template.render({**context, "bazel9": False})
-        content_9 = template.render({**context, "bazel9": True})
+        content = template.render({**context, "rules_cc": False})
+        content_rules_cc = template.render({**context, "rules_cc": True})
         return {
-            self._build_file_path(self.dep_build_filename): content_7,
-            self._build_file_path(self.dep_build_filename_9): content_9,
+            self._build_file_path(self.dep_build_filename): content,
+            self._build_file_path(self.dep_build_filename_rules_cc): content_rules_cc,
         }.items()
 
 
@@ -483,7 +483,7 @@ class _BazelPathsGenerator:
         )
         """)
     module_template_rules_cc = textwrap.dedent("""\
-        # Bazel 9+ module extension. Use with BUILD.bazel_9 dependency files and rules_cc.
+        # Bazel 9+/rules_cc module extension. Use with BUILD.rules_cc.bazel dependency files.
         # Include the generated module snippet from your MODULE.bazel file:
         # include("//conan:conan_deps.MODULE.bazel")
         load(":conan_deps_repo_rules.bzl", "conan_dependency_repo")
@@ -493,7 +493,7 @@ class _BazelPathsGenerator:
             conan_dependency_repo(
                 name = "{{dep_info['repository_name']}}",
                 package_path = "{{dep_info['package_folder']}}",
-                build_file_path = "{{dep_info['package_build_file_path_9']}}",
+                build_file_path = "{{dep_info['package_build_file_path_rules_cc']}}",
             )
         {% endfor %}
 
@@ -624,7 +624,7 @@ class BazelDeps:
             load("@//[BUILD_FOLDER]:dependencies.bzl", "load_conan_dependencies")
             load_conan_dependencies()
 
-        In case of bazel >= 7.1, include the generated module snippet in your MODULE.bazel
+        In case of Bazel >= 7.2, include the generated module snippet in your MODULE.bazel
         file:
 
         .. code-block:: python

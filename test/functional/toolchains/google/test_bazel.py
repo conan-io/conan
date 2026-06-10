@@ -367,7 +367,11 @@ def test_empty_bazel_query():
 
     Issue related: https://github.com/conan-io/conan/issues/18743
     """
-    _run_empty_bazel_query_test()
+    client = _setup_empty_bazel_query_client()
+    with client.chdir("consumer"):
+        client.run_command("bazel query //...")
+    assert "//conan/zlib:zlib" in client.out
+    assert "//conan/zlib:zlib_binaries" in client.out
 
 
 @pytest.mark.slow
@@ -375,11 +379,18 @@ def test_empty_bazel_query():
 def test_empty_bazel_query_9x():
     """
     Test BazelDeps with Bazel 9.x (rules_cc loads required in generated BUILD files).
+
+    Dependencies are exposed as external repositories via the module extension, so targets
+    must be queried under ``@zlib//...`` rather than ``//conan/zlib/...``.
     """
-    _run_empty_bazel_query_test()
+    client = _setup_empty_bazel_query_client()
+    with client.chdir("consumer"):
+        client.run_command("bazel query @zlib//...")
+    assert "@zlib//:zlib" in client.out
+    assert "@zlib//:zlib_binaries" in client.out
 
 
-def _run_empty_bazel_query_test():
+def _setup_empty_bazel_query_client():
     zlib = GenConanfile("zlib", "0.1")
     consumer = textwrap.dedent("""
     from conan import ConanFile
@@ -397,10 +408,7 @@ def _run_empty_bazel_query_test():
             bz.generate()
     """)
     module = textwrap.dedent("""\
-    bazel_dep(name = "rules_cc", version = "0.2.17")
-
-    load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "conan_extension")
-    use_repo(load_conan_dependencies, "zlib")
+    include("//conan:conan_deps.MODULE.bazel")
     """)
     client = TestClient()
     client.save({
@@ -410,7 +418,4 @@ def _run_empty_bazel_query_test():
     })
     client.run("create zlib")
     client.run("install consumer")
-    with client.chdir("consumer"):
-        client.run_command("bazel query //...")
-    assert "//conan/zlib:zlib" in client.out
-    assert "//conan/zlib:zlib_binaries" in client.out
+    return client
