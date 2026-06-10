@@ -260,8 +260,12 @@ class _ProfileValueParser:
                     continue
                 try:
                     src, target = r.split(":")
-                    target = RecipeReference.loads(target.strip())
-                    src = RecipeReference.loads(src.strip())
+                    target = target.strip()
+                    src = src.strip()
+                    if src == "*" and target != "!":
+                        raise ConanException("'*' pattern can only be used only with '!'")
+                    target = RecipeReference.loads(target) if target != "!" else "!"
+                    src = RecipeReference.loads(src) if src != "*" else "*"
                 except Exception as e:
                     raise ConanException(f"Error in [replace_xxx] '{r}'.\nIt should be in the form"
                                          f" 'pattern: replacement', without package-ids.\n"
