@@ -64,6 +64,66 @@ def test_autotools_bash_complete():
     assert "conanvcvars.bat" in bat_contents
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_autotools_bash_complete_ucrt64():
+    try:
+        msys2_path = tools_locations["msys2"]["system"]["path"]["Windows"]
+    except KeyError:
+        pytest.skip("msys2 path not defined")
+    try:
+        ucrt64_path = tools_locations["ucrt64"]["system"]["path"]["Windows"]
+    except KeyError:
+        pytest.skip("ucrt64 path not defined")
+
+    client = TestClient(path_with_spaces=False)
+    profile_win = textwrap.dedent(f"""
+        [settings]
+        os=Windows
+        compiler=gcc
+        compiler.version=16
+        compiler.libcxx=libstdc++
+        compiler.cppstd=17
+        arch=x86_64
+        build_type=Release
+
+        [conf]
+        tools.microsoft.bash:subsystem=msys2-ucrt64
+        tools.microsoft.bash:path={msys2_path}/bash.exe
+
+        [runenv]
+        PATH+=(path){ucrt64_path}
+        """)
+
+    main = gen_function_cpp(name="main")
+    makefile = gen_makefile(apps=["app"])
+
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.gnu import Autotools
+
+        class TestConan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "AutotoolsToolchain"
+
+            win_bash = True
+
+            def build(self):
+                autotools = Autotools(self)
+                autotools.make()
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "Makefile": makefile,
+                 "app.cpp": main,
+                 "profile_win": profile_win})
+    client.run("build . -pr=profile_win")
+
+    client.run_command("conanrun.bat && app.exe")
+    check_exe_run(client.out, "main", "gcc", "16", "Release", "x86_64", cppstd="17",
+                  cxx11_abi=0, subsystem="ucrt64")
+    check_vs_runtime("app.exe", client, "15", "Debug", subsystem="ucrt64")
+
+
 @pytest.mark.slow
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool("msys2")

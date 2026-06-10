@@ -105,9 +105,10 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                 assert "{} __GNUC__".format(name) in output
                 assert "clang" not in output
                 if version:  # FIXME: At the moment, the GCC version is not controlled, will change
-                    major, minor = version.split(".")[0:2]
-                    assert "{} __GNUC__{}".format(name, major) in output
-                    assert "{} __GNUC_MINOR__{}".format(name, minor) in output
+                    digits = version.split(".")
+                    assert "{} __GNUC__{}".format(name, digits[0]) in output
+                    if len(digits) > 1:
+                        assert "{} __GNUC_MINOR__{}".format(name, digits[1]) in output
             elif compiler == "clang":
                 assert "{} __clang_".format(name) in output
                 if version:
