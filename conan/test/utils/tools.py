@@ -26,6 +26,8 @@ from webtest.app import TestApp
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS
+from conan.internal.api.detect.detect_api import detect_os, detect_msvc_compiler, \
+    default_msvc_ide_version
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal import REVISIONS
@@ -50,6 +52,10 @@ NO_SETTINGS_PACKAGE_ID = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
 arch = platform.machine()
 arch_setting = "armv8" if arch in ["arm64", "aarch64"] else arch
+compiler, msvc_version, exe = detect_msvc_compiler()
+default_msvc_version = msvc_version
+default_vs_ide_version = default_msvc_ide_version(msvc_version)
+
 default_profiles = {
     "Windows": textwrap.dedent("""\
         [settings]
@@ -130,7 +136,7 @@ class TestingResponse:
     def text(self):
         return self.test_response.text
 
-    def iter_content(self, chunk_size=1):  # @UnusedVariable
+    def iter_content(self, chunk_size=1):  # noqa
         return [self.content]
 
     @property
@@ -138,10 +144,7 @@ class TestingResponse:
         return self.test_response.status_code
 
     def json(self):
-        try:
-            return json.loads(self.test_response.content)
-        except:
-            raise ValueError("The response is not a JSON")
+        return json.loads(self.test_response.content)
 
 
 class TestRequester:
@@ -253,7 +256,7 @@ class TestRequester:
     def mount(self, *args, **kwargs):
         pass
 
-    def Session(self):
+    def Session(self):  # noqa
         return self
 
     @property
@@ -430,8 +433,8 @@ class TestClient:
 
         # create default profile
         if light:
-            text = "[settings]\nos=Linux"  # Needed at least build-os
-            save(self.paths.settings_path, "os: [Linux, Windows]")
+            text = f"[settings]\nos={detect_os()}"  # Needed at least build-os
+            save(self.paths.settings_path, "os: [Linux, Windows, Macos]")
         else:
             text = default_profiles[platform.system()]
         save(os.path.join(self.cache_folder, "profiles", "default"), text)
@@ -491,7 +494,6 @@ class TestClient:
             else:
                 remotes.append(Remote(name, server))
         _save(HomePaths(self.cache_folder).remotes_path, remotes)
-
 
     def update_providers(self):
         default_providers = {
@@ -819,7 +821,7 @@ class TestClient:
 
     def created_package_reference(self, ref):
         pref = re.search(r"{}: Full package reference: (\S+)".format(str(ref)),
-                               str(self.out)).group(1)
+                         str(self.out)).group(1)
         return PkgReference.loads(pref)
 
     def exported_recipe_revision(self):

@@ -5,7 +5,7 @@ import pytest
 
 from conan.test.assets.sources import gen_function_cpp
 from test.functional.utils import check_exe_run
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, default_vs_ide_version
 
 
 @pytest.mark.slow
@@ -95,7 +95,7 @@ def test_toolchain_nmake(compiler, version, runtime, cppstd, build_type,
 
 @pytest.mark.slow
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.tool("cmake", "4.2")
 # This test uses clang inside Visual Studio, not managed by mark.tool
 @pytest.mark.tool("visual_studio")
 def test_toolchain_nmake_clang():
@@ -105,18 +105,25 @@ def test_toolchain_nmake_clang():
                "TEST_DEFINITION4=TestPpdValue4", "TEST_DEFINITION5=__declspec(dllexport)",
                "TEST_DEFINITION6=foo bar"]
     client = TestClient(path_with_spaces=False)
+
+    # Maps to the version of the Clang inside VS
+    clang_version = {"17": "19",
+                     "18": "20"}[str(default_vs_ide_version)]
+    toolset_version = {"17": "v144",
+                       "18": "v145"}[str(default_vs_ide_version)]
+
     settings = {"compiler": "clang",
-                "compiler.version": "20",
+                "compiler.version": clang_version,
                 "compiler.cppstd": "14",
                 "compiler.runtime": "dynamic",
                 "build_type": build_type,
-                "compiler.runtime_version": "v144",
+                "compiler.runtime_version": toolset_version,
                 "arch": "x86_64"}
 
     conf = {
         "tools.build:defines": "[{}]".format(",".join([f"'{v}'" for v in defines])),
         "tools.build:compiler_executables": r'{\"c\": \"clang-cl\", \"cpp\": \"clang-cl\"}',
-        "tools.cmake.cmaketoolchain:generator": "Visual Studio 17",
+        "tools.cmake.cmaketoolchain:generator": f"Visual Studio {default_vs_ide_version}",
     }
 
     # Build the profile according to the settings provided
@@ -159,7 +166,9 @@ def test_toolchain_nmake_clang():
                                                 preprocessor=conf_preprocessors.keys())},
                 clean_first=True)
     client.run(f"build . {settings} {conf}")
+    print(client.out)
     client.run_command("simple.exe")
+    print(client.out)
     assert "dep/1.0" in client.out
-    check_exe_run(client.out, "main", "clang", "19.1", build_type, "x86_64", cppstd,
+    check_exe_run(client.out, "main", "clang", clang_version, build_type, "x86_64", cppstd,
                   conf_preprocessors)

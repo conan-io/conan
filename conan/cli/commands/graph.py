@@ -330,9 +330,9 @@ def outdated_text_formatter(result):
 def outdated_json_formatter(result):
     output = {key: {"current_versions": list({str(v) for v in value["cache_refs"]}),
                     "version_ranges": [str(r) for r in value["version_ranges"]],
-                    "latest_remote": [] if value["latest_remote"] is None
-                                        else {"ref": str(value["latest_remote"]["ref"]),
-                                              "remote": str(value["latest_remote"]["remote"])}}
+                    "latest_remote": [] if value["latest_remote"] is None else {
+                        "ref": str(value["latest_remote"]["ref"]),
+                        "remote": str(value["latest_remote"]["remote"])}}
               for key, value in result.items()}
     cli_out_write(json.dumps(output))
 

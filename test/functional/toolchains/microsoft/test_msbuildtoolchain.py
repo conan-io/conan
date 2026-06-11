@@ -36,6 +36,7 @@ def test_msbuildtoolchain_props_with_extra_flags():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.tool("visual_studio", "17")
 def test_msbuildtoolchain_winsdk_version():
     """
     Configure sdk_version
@@ -51,6 +52,7 @@ def test_msbuildtoolchain_winsdk_version():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+@pytest.mark.tool("visual_studio", "17")
 def test_msbuildtoolchain_compiler_update():
     # It only works for update=8, because 19.38 is the compiler in Github actions!
     client = TestClient(path_with_spaces=False)

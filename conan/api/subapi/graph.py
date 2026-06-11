@@ -77,7 +77,6 @@ class GraphAPI:
                                          update=update)
         initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST, False)
         conanfile.display_name = "%s (test package)" % str(tested_reference)
-        conanfile.output.scope = conanfile.display_name
         conanfile.tested_reference_str = repr(tested_reference)
 
         ref = RecipeReference(conanfile.name, conanfile.version, tested_reference.user,

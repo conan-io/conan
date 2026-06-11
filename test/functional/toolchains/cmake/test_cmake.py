@@ -11,6 +11,7 @@ from test.functional.utils import check_vs_runtime, check_exe_run
 from conan.test.utils.tools import TestClient
 
 
+@pytest.mark.slow
 @pytest.mark.tool("cmake", "3.15")
 @pytest.mark.tool("mingw64")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
@@ -30,6 +31,7 @@ def test_simple_cmake_mingw():
         compiler.cppstd=17
         """})
     client.run("create . --profile=mingw")
+    print(client.out)
     build_folder = client.created_test_build_folder("hello/1.0")
     # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
     #  and no one notices. It would be good to have some details in confuser.py to be consistent
@@ -37,6 +39,37 @@ def test_simple_cmake_mingw():
                   subsystem="mingw64", extra_msg="Hello World", cxx11_abi="1")
     check_vs_runtime(f"test_package/{build_folder}/example.exe", client, "15",
                      build_type="Release", static_runtime=False, subsystem="mingw64")
+
+
+@pytest.mark.slow
+@pytest.mark.tool("cmake", "3.15")
+@pytest.mark.tool("ucrt64")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+def test_simple_cmake_ucrt64():
+    # It is enough to have the @pytest.mark.tool("ucrt64") that defines the compiler in the path
+    # to get the right one
+    client = TestClient()
+    client.run("new cmake_lib -d name=hello -d version=1.0")
+    client.save({"mingw": """
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type=Release
+        compiler=gcc
+        compiler.exception=seh
+        compiler.libcxx=libstdc++11
+        compiler.threads=win32
+        compiler.version=11.2
+        compiler.cppstd=17
+        """})
+    client.run("create . --profile=mingw")
+    build_folder = client.created_test_build_folder("hello/1.0")
+    # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
+    #  and no one notices. It would be good to have some details in confuser.py to be consistent
+    check_exe_run(client.out, "hello/1.0:", "gcc", None, "Release", "x86_64", "17",
+                  subsystem="ucrt64", extra_msg="Hello World", cxx11_abi="1")
+    check_vs_runtime(f"test_package/{build_folder}/example.exe", client, "15",
+                     build_type="Release", static_runtime=False, subsystem="ucrt64")
 
 # TODO: How to link with mingw statically?
 

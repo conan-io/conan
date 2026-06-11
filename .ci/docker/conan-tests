@@ -24,10 +24,11 @@ ENV PY37=3.7.9 \
     GXX_11=/usr/bin/g++-11 \
     CLANG_14=/usr/bin/clang-14 \
     CLANGXX_14=/usr/bin/clang++-14 \
-    BAZEL_6=6.5.0 \
+    BAZEL_6=6.6.0 \
     BAZEL_7=7.6.2 \
     BAZEL_8=8.4.2 \
-    EMSDK=4.0.22
+    EMSDK=4.0.22 \
+    INTEL_ONEAPI_VERSION=2026.0
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -104,7 +105,7 @@ RUN curl https://pyenv.run | bash && \
     pyenv install $PY312 && \
     pyenv install $PY314 && \
     pyenv global $PY39 && \
-    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    curl -fsSL https://bootstrap.pypa.io/pip/3.9/get-pip.py -o get-pip.py && \
     python get-pip.py && \
     rm get-pip.py
 
@@ -146,6 +147,15 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 10 && \
     update-alternatives --set g++ /usr/bin/g++-9 && \
     update-alternatives --set clang /usr/bin/clang-14 && \
     update-alternatives --set clang++ /usr/bin/clang++-14
+
+# Intel oneAPI DPC++/C++ Compiler
+RUN wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
+        | gpg --dearmor | tee /usr/share/keyrings/intel-oneapi-archive-keyring.gpg > /dev/null && \
+    echo "deb [signed-by=/usr/share/keyrings/intel-oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
+        | tee /etc/apt/sources.list.d/oneAPI.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends intel-oneapi-compiler-dpcpp-cpp-${INTEL_ONEAPI_VERSION} && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /usr/share/bazel-$BAZEL_6/bin && \
     wget https://github.com/bazelbuild/bazel/releases/download/${BAZEL_6}/bazel-${BAZEL_6}-linux-x86_64 && \

@@ -937,3 +937,35 @@ def test_build_order_deprecated_build_order_version_check():
     r = VersionRange(f">=2.32,include_prerelease")
     assert not r.contains(Version(conan_version), None), \
         "Remove --order-by deprecated behaviour in this version"
+
+
+def test_build_order_options():
+    # Reproduces https://github.com/conan-io/conan/issues/19948
+    c = TestClient(light=True)
+    c.save({
+        "hello/conanfile.py": GenConanfile("hello", "1.0").with_shared_option(False),
+        "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_test_requires("hello/1.0"),
+        "app/conanfile.py": GenConanfile("app", "1.0").with_requires("pkg/1.0")
+                                                      .with_default_option("hello*:shared",
+                                                                           True),
+    })
+    c.run("export hello")
+    c.run("export pkg")
+
+    c.run("graph build-order app --order-by=recipe --build=missing --format=json")
+    assert '"build_args": "--requires=hello/1.0 --build=hello/1.0"' in c.out
+    assert '"build_args": "--requires=pkg/1.0 --build=pkg/1.0"' in c.out
+
+    # It works in both orders
+    c.run("graph build-order app --order-by=configuration --build=missing --format=json")
+    assert '"build_args": "--requires=hello/1.0 --build=hello/1.0"' in c.out
+    assert '"build_args": "--requires=pkg/1.0 --build=pkg/1.0"' in c.out
+
+    # check that the built package is the static one, as the option is not propagated
+    c.run("install app --build=missing")
+    c.assert_listed_binary({"hello/1.0": ("55c609fe8808aa5308134cb5989d23d3caffccf2", "Build")},
+                           test=True)
+    c.run("list hello:*")
+    assert "55c609fe8808aa5308134cb5989d23d3caffccf2" in c.out
+    # the built package is the static one, the option is not really propagated
+    assert "shared: False" in c.out

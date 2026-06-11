@@ -232,8 +232,11 @@ class PkgCache:
         return self._db.get_matching_build_id(ref, build_id)
 
     def remove_recipe_layout(self, layout: RecipeLayout):
+        pkg_ids = self.get_package_references(layout.reference, only_latest_prev=False)
+        for pref in pkg_ids:
+            package_layout = self.pkg_layout(pref)
+            self.remove_package_layout(package_layout)
         layout.remove()
-        # FIXME: This is clearing package binaries from DB, but not from disk/layout
         self._db.remove_recipe(layout.reference)
 
     def remove_package_layout(self, layout: PackageLayout):

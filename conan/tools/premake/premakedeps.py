@@ -229,8 +229,8 @@ class PremakeDeps:
             # Generate config dependent package variable and setup premake file
             var_filename = PREMAKE_VAR_FILE.format(pkgname=dep_name, config=conf_name)
             self._output_lua_file(var_filename, [
-                PREMAKE_TEMPLATE_VAR.format(pkgname=dep_name,
-                    config=conf_name, deps=_PremakeTemplate(require, dep_aggregate))
+                PREMAKE_TEMPLATE_VAR.format(pkgname=dep_name, config=conf_name,
+                                            deps=_PremakeTemplate(require, dep_aggregate))
             ])
 
             # Create list of all available profiles by searching on disk

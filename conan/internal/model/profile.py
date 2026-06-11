@@ -148,8 +148,17 @@ class Profile:
                 existing[r.name] = req
             self.tool_requires[pattern] = list(existing.values())
 
-        self.replace_requires.update(other.replace_requires)
-        self.replace_tool_requires.update(other.replace_tool_requires)
+        def _update_replace(current, other_):
+            for k, v in other_.items():
+                if isinstance(k, str) and k == "*":
+                    assert v == "!"
+                    current.clear()
+                elif isinstance(v, str) and v == "!":
+                    current.pop(k, None)
+                else:
+                    current[k] = v
+        _update_replace(self.replace_requires, other.replace_requires)
+        _update_replace(self.replace_tool_requires, other.replace_tool_requires)
 
         runner_type = self.runner.get("type")
         other_runner_type = other.runner.get("type")

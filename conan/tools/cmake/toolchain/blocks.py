@@ -268,6 +268,7 @@ class ArchitectureBlock(Block):
         return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag,
                 "thread_flags_list": thread_flags_list}
 
+
 class RpathLinkFlagsBlock(Block):
     template = textwrap.dedent("""\
         # Pass -rpath-link pointing to all directories with runtime libraries
@@ -291,6 +292,7 @@ class RpathLinkFlagsBlock(Block):
         else:
             rpath_link_flags = None
         return {"rpath_link_flags": rpath_link_flags}
+
 
 class LinkerScriptsBlock(Block):
     template = textwrap.dedent("""\
@@ -968,6 +970,17 @@ class CompilersBlock(Block):
             if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
                 compilers["C"] = "cl"
                 compilers["CXX"] = "cl"
+        elif compiler == "intel-cc" and "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+            mode = self._conanfile.settings.get_safe("compiler.mode")
+            if mode == "classic":
+                compilers["C"] = "icc"
+                compilers["CXX"] = "icpc"
+            elif mode == "dpcpp":
+                compilers["C"] = "icx"
+                compilers["CXX"] = "dpcpp"
+            elif mode == "icx":  # icx
+                compilers["C"] = "icx"
+                compilers["CXX"] = "icpx"
         return {"compilers": compilers}
 
 
