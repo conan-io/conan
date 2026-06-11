@@ -4,7 +4,8 @@ import textwrap
 from pathlib import Path
 
 from conan.tools.env.virtualbuildenv import VirtualBuildEnv
-from conan.tools.intel import IntelCC, intel_cc_compilers
+from conan.tools.intel import IntelCC
+from conan.tools.intel.intel_cc import intel_cc_compilers
 from jinja2 import Template
 
 from conan.tools.build.cross_building import cross_building

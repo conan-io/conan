@@ -9,7 +9,8 @@ from conan.internal.internal_tools import raise_on_universal_arch
 from conan.internal.model.pkg_type import PackageType
 from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
     resolve_apple_flags, apple_extra_flags
-from conan.tools.intel import IntelCC, intel_cc_compilers
+from conan.tools.intel import IntelCC
+from conan.tools.intel.intel_cc import intel_cc_compilers
 from conan.tools.build.cross_building import cross_building, can_run
 from conan.tools.build.flags import (architecture_link_flag, libcxx_flags, architecture_flag,
                                      threads_flags)

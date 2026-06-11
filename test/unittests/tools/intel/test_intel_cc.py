@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from conan.tools.build.flags import architecture_flag, cppstd_flag
 from conan.tools.intel import IntelCC
+from conan.tools.intel.intel_cc import intel_cc_compilers
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
 from conan.test.utils.mocks import ConanFileMock, MockSettings
@@ -170,7 +171,6 @@ def test_setvars_command_with_custom_arguments(platform_system, os_, call_comman
     ("dpcpp", "icx", "dpcpp"),
 ])
 def test_intel_cc_compilers(mode, expected_c, expected_cpp):
-    from conan.tools.intel import intel_cc_compilers
     settings = MockSettings({"compiler": "intel-cc", "compiler.mode": mode})
     conanfile = ConanFileMock(settings)
     result = intel_cc_compilers(conanfile)
@@ -179,7 +179,6 @@ def test_intel_cc_compilers(mode, expected_c, expected_cpp):
 
 
 def test_intel_cc_compilers_not_intel():
-    from conan.tools.intel import intel_cc_compilers
     settings = MockSettings({"compiler": "gcc"})
     conanfile = ConanFileMock(settings)
     assert intel_cc_compilers(conanfile) is None
