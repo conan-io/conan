@@ -24,6 +24,9 @@ base_emscripten_profile = textwrap.dedent(
     tools.build:exelinkflags=['-sALLOW_MEMORY_GROWTH=1']
     tools.build:sharedlinkflags=['-sALLOW_MEMORY_GROWTH=1']
 
+    # Define the emcc executable paths
+    tools.build:compiler_executables={'c':'emcc', 'cpp':'em++'}
+
     # Set Ninja as default generator as it is faster and will sove issues on Windows
     tools.cmake.cmaketoolchain:generator=Ninja
     # Verbosity to see emcc invocations

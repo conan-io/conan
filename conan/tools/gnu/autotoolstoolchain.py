@@ -5,13 +5,12 @@ from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import is_universal_arch
 from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
-from conan.tools.build.compiler import get_compiler_executables
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, build_type_flags, cppstd_flag, \
     build_type_link_flags, libcxx_flags, cstd_flag, llvm_clang_front, threads_flags
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
-from conan.tools.intel import IntelCC
+from conan.tools.intel import IntelCC, intel_cc_compilers
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.internal.model.pkg_type import PackageType
 
@@ -284,8 +283,10 @@ class AutotoolsToolchain:
                 unix_env_value = unix_path(self._conanfile, env_value)
                 env.define(env_var, unix_env_value)
         else:
-            # Setting compiler executables from conf, buildenv or known defaults
-            compilers_by_conf = get_compiler_executables(self._conanfile)
+            # Setting user custom compiler executables flags
+            compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables",
+                                                         default={},
+                                                         check_type=dict)
             if compilers_by_conf:
                 compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
                                      "rc": "RC"}
@@ -296,11 +297,16 @@ class AutotoolsToolchain:
                         compiler = unix_path(self._conanfile, compiler)
                         env.define(env_var, compiler)
             compiler_setting = self._conanfile.settings.get_safe("compiler")
-            if compiler_setting == "msvc":
-                # None of them defined, if one is defined by user, user should define the other too
-                if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+            # None of them defined, if one is defined by user, user should define the other too
+            if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+                if compiler_setting == "msvc":
                     env.define("CC", "cl")
                     env.define("CXX", "cl")
+                # Default compilers for intel-cc when not configured
+                intel_defaults = intel_cc_compilers(self._conanfile)
+                if intel_defaults:
+                    env.define("CC", intel_defaults["c"])
+                    env.define("CXX", intel_defaults["cpp"])
 
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)

@@ -154,3 +154,23 @@ class IntelCC:
             raise ConanException("don't know how to call %s for %s" % (svars, self.arch))
 
         return command
+
+
+def intel_cc_compilers(conanfile):
+    """
+    Returns default compiler executables for intel-cc based on compiler.mode setting.
+
+    :param conanfile: The current recipe object.
+    :return: dict with "c" and "cpp" keys, or None if compiler is not intel-cc.
+    """
+    if conanfile.settings.get_safe("compiler") != "intel-cc":
+        return None
+    mode = conanfile.settings.get_safe("compiler.mode")
+    if mode == "classic":
+        return {"c": "icc", "cpp": "icpc"}
+    elif mode == "dpcpp":
+        return {"c": "icx", "cpp": "dpcpp"}
+    elif mode == "icx":
+        return {"c": "icx", "cpp": "icpx"}
+    else:
+        return None

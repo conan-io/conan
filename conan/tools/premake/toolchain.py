@@ -1,11 +1,10 @@
-from conan.tools.build.compiler import get_compiler_executables
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 import os
 import textwrap
 from pathlib import Path
 
 from conan.tools.env.virtualbuildenv import VirtualBuildEnv
-from conan.tools.intel import IntelCC
+from conan.tools.intel import IntelCC, intel_cc_compilers
 from jinja2 import Template
 
 from conan.tools.build.cross_building import cross_building
@@ -258,7 +257,12 @@ class PremakeToolchain:
             elif cppstd[0].isnumeric():
                 cppstd = f"c++{cppstd}"
 
-        compilers_build_mapping = get_compiler_executables(self._conanfile)
+        compilers_build_mapping = self._conanfile.conf.get(
+            "tools.build:compiler_executables", default={}, check_type=dict
+        )
+        # Default compilers for intel-cc when not configured
+        if "c" not in compilers_build_mapping and "cpp" not in compilers_build_mapping:
+            compilers_build_mapping = intel_cc_compilers(self._conanfile) or {}
         if compilers_build_mapping:
             build_env = VirtualBuildEnv(self._conanfile, auto_generate=False)
             env = build_env.environment()

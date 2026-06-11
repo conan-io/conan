@@ -5,7 +5,6 @@ import textwrap
 
 from jinja2 import Template
 from conan.internal import check_duplicated_generator
-from conan.tools.build.compiler import get_compiler_executables
 from conan.errors import ConanException
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import msvs_toolset
@@ -222,11 +221,14 @@ class QbsProfile:
         else:
             # TODO: use CC also for msvc?
             c_compiler_default, cxx_compiler_default = self._default_compiler_names(toolchain)
-            compiler_exes = get_compiler_executables(self._conanfile)
-            c_compiler = compiler_exes.get("c") or c_compiler_default
+            compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables",
+                                                         default={}, check_type=dict)
+            c_compiler = (
+                compilers_by_conf.get("c") or self._build_env.get("CC") or c_compiler_default)
             c_compiler = self._find_exe(c_compiler)
 
-            cxx_compiler = compiler_exes.get("cpp") or cxx_compiler_default
+            cxx_compiler = (
+                compilers_by_conf.get("cpp") or self._build_env.get("CXX") or cxx_compiler_default)
             cxx_compiler = self._find_exe(cxx_compiler)
             compiler = cxx_compiler or c_compiler
         if compiler is None:
