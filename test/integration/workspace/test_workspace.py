@@ -1950,9 +1950,9 @@ class TestPyRequires:
         c.assert_listed_require({"liba/0.1": "Editable"})
         c.assert_listed_require({"dep/0.1": "Editable"}, python=True)
         c.run("workspace create")
-        assert "dep/0.1: Exported" in c.out
-        assert "liba/0.1: Exported" in c.out
-        assert "libb/0.1: Exported" in c.out
+        assert "Exported: dep/0.1" in c.out
+        assert "Exported: liba/0.1" in c.out
+        assert "Exported: libb/0.1" in c.out
         assert "Workspace create liba/0.1" in c.out
         assert "Workspace create libb/0.1" in c.out
         assert "Workspace create dep/0.1" not in c.out
