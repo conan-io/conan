@@ -246,16 +246,16 @@ class TestLinear(GraphManagerTest):
         ])
 
         _check_transitive(libc, [
-            (libb, True, True, False, shared),
-            (liba, False, not shared, False, shared),
-            (lib0, False, not shared, False, shared),
+            (libb, True, True, False, shared, True, None),
+            (liba, False, not shared, False, shared, None, None),
+            (lib0, False, not shared, False, shared, None, None),
         ])
 
     @pytest.mark.parametrize("shared", [True, False])
     @pytest.mark.parametrize("liba_first", [True, False])
-    @pytest.mark.parametrize("transitive", [True, False])
+    @pytest.mark.parametrize("transitive", [True, False, None])
     def test_transitive_headers_duplicate_different_diamond(self, shared, liba_first, transitive):
-        # libd -> libc - (faulty) - > liba
+        # libd -> libc - > liba
         #            \ - transitive_headers=True -> libb -> liba
         self.recipe_cache("liba/0.1", option_shared=shared)
         libb = GenConanfile().with_requirement("liba/0.1")
@@ -290,16 +290,46 @@ class TestLinear(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[libc])
         self._check_node(liba, "liba/0.1#123", dependents=[libb, libc])
 
-        # # node, headers, lib, build, run
+        # # node, headers, lib, build, run, (transitive_headers, transitive_libs)
         _check_transitive(libd, [
             (libc, True, True, False, shared, None, None),
             (libb, bool(transitive), not shared, False, shared, None, None),
-            # Fails, currently depends on transitive as libb does
+            # Header does not depend on the transitive flag of libb
             (liba, False, not shared, False, shared, None, None),
         ])
         _check_transitive(libc, [
             (libb, True, True, False, shared, transitive, None),
             (liba, True, True, False, shared, None, None),
+        ])
+
+    def test_static_shared_transitive_chain(self):
+        # consumer -> shared1 - transitive_libs = True -> static2 -> static3
+        # Consumer needs static2 and static3 in all cases
+        self.recipe_cache("static3/0.1", option_shared=False)
+        self.recipe_cache("static2/0.1", option_shared=False, requires=["static3/0.1"])
+        shared1 = GenConanfile().with_requirement("static2/0.1", transitive_headers=True)
+        shared1.with_shared_option(True)
+        self.recipe_conanfile("shared1/0.1", shared1)
+
+        consumer = self.recipe_consumer("consumer/0.1", ["shared1/0.1"])
+        deps_graph = self.build_consumer(consumer)
+
+        assert 4 == len(deps_graph.nodes)
+        consumer = deps_graph.root
+        shared1 = consumer.edges[0].dst
+        static2 = shared1.edges[0].dst
+        static3 = static2.edges[0].dst
+
+        self._check_node(consumer, "consumer/0.1", deps=[shared1])
+        self._check_node(shared1, "shared1/0.1#123", deps=[static2], dependents=[consumer])
+        self._check_node(static2, "static2/0.1#123", deps=[static3], dependents=[shared1])
+        self._check_node(static3, "static3/0.1#123", dependents=[static2])
+
+        # # node, headers, lib, build, run, (transitive_headers, transitive_libs)
+        _check_transitive(consumer, [
+            (shared1, True, True, False, True, None, None),
+            (static2, True, False, False, False, None, None),
+            (static3, False, False, False, False, None, None),
         ])
 
     def test_middle_shared_up_static(self):
