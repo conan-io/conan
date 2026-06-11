@@ -1809,6 +1809,61 @@ class TestPyRequires:
         c.run("workspace install")
         assert "conanfile.py (pkg/0.1): HELLO!!!" in c.out
 
+    def test_ws_python_requires_extend_packages_method(self):
+        c = TestClient(light=True)
+
+        pyreq = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class BaseConan:
+                options = {"base": [True, False]}
+                default_options = {"base": True}
+                def generate(self):
+                    self.output.info("HELLO!!!")
+
+            class TestPackage(ConanFile):
+                name = "pyreq"
+                version = "0.1"
+                package_type = "python-require"
+            """)
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class TestPackage(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                python_requires = "pyreq/0.1"
+                python_requires_extend = "pyreq.BaseConan"
+
+                options = {"derived": [True, False]}
+                default_options = {"derived": False}
+
+                def init(self):
+                    base = self.python_requires["pyreq"].module.BaseConan
+                    # Note we pass the base options and default_options
+                    self.options.update(base.options, base.default_options)
+            """)
+        ws = textwrap.dedent("""\
+            import os
+            from conan import Workspace
+
+            class MyWorkspace(Workspace):
+                def packages(self):
+                    for f in ("pyreq", "pkg"):
+                        conanfile = self.load_conanfile(f)
+                        yield {"path": f, "ref": f"{conanfile.name}/{conanfile.version}"}
+              """)
+        c.save({"pyreq/conanfile.py": pyreq,
+                "pkg/conanfile.py": pkg,
+                "conanws.py": ws})
+
+        c.run("workspace info --format=json")
+        ws = json.loads(c.stdout)
+        assert ws["packages"] == [{'path': 'pyreq', 'ref': 'pyreq/0.1'},
+                                  {'path': 'pkg', 'ref': 'pkg/0.1'}]
+
+        c.run("workspace install")
+        assert "conanfile.py (pkg/0.1): HELLO!!!" in c.out
+
     def test_ws_python_requires_extend_transitive(self):
         c = TestClient(light=True)
         c.save({"conanws.yml": ""})
