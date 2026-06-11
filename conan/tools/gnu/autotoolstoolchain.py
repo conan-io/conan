@@ -303,10 +303,11 @@ class AutotoolsToolchain:
                     env.define("CC", "cl")
                     env.define("CXX", "cl")
                 # Default compilers for intel-cc when not configured
-                intel_defaults = intel_cc_compilers(self._conanfile)
-                if intel_defaults:
-                    env.define("CC", intel_defaults["c"])
-                    env.define("CXX", intel_defaults["cpp"])
+                else:
+                    intel_defaults = intel_cc_compilers(self._conanfile)
+                    if intel_defaults:
+                        env.define("CC", intel_defaults["c"])
+                        env.define("CXX", intel_defaults["cpp"])
 
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)

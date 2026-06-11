@@ -93,6 +93,23 @@ class TestIntelCC:
         build_folder = os.path.join(client.current_folder, "build-release", "src")
         client.run_command(f'. {self.oneapi_path}/setvars.sh --force && "{build_folder}/hello"')
 
+    @pytest.mark.tool("autotools")
+    def test_intel_oneapi_and_sycl_gnutoolchain(self):
+        """Test Intel oneAPI with SYCL using GnuToolchain."""
+        client = TestClient(path_with_spaces=False)
+        client.run("new autotools_exe -d name=hello -d version=0.1")
+        # Replace AutotoolsToolchain with GnuToolchain
+        conanfile = client.load("conanfile.py")
+        conanfile = conanfile.replace("AutotoolsToolchain", "GnuToolchain")
+        client.save({"conanfile.py": conanfile,
+                     "intel_profile": self.intel_sycl_profile,
+                     "src/main.cpp": self.sycl_code})
+        client.run("build . -pr:a intel_profile")
+        assert ":: initializing oneAPI environment ..." in client.out
+        assert ":: oneAPI environment initialized ::" in client.out
+        build_folder = os.path.join(client.current_folder, "build-release", "src")
+        client.run_command(f'. {self.oneapi_path}/setvars.sh --force && "{build_folder}/hello"')
+
     @pytest.mark.tool("meson")
     def test_intel_oneapi_and_sycl_meson(self):
         """Test Intel oneAPI with SYCL using Meson."""

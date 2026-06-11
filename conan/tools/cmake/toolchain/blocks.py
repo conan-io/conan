@@ -971,10 +971,11 @@ class CompilersBlock(Block):
                 compilers["C"] = "cl"
                 compilers["CXX"] = "cl"
             # Default compilers for intel-cc when not configured
-            intel_defaults = intel_cc_compilers(self._conanfile)
-            if intel_defaults:
-                compilers["C"] = intel_defaults["c"]
-                compilers["CXX"] = intel_defaults["cpp"]
+            else:
+                intel_defaults = intel_cc_compilers(self._conanfile)
+                if intel_defaults:
+                    compilers["C"] = intel_defaults["c"]
+                    compilers["CXX"] = intel_defaults["cpp"]
         return {"compilers": compilers}
 
 
