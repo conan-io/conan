@@ -19,7 +19,10 @@ def _check_transitive(node, transitive_deps):
         assert v1.require.libs is v2[2], f"{v1.node}!=expected {v2[0]} ({v2[2]}) libs"
         assert v1.require.build is v2[3], f"{v1.node}!=expected {v2[0]} ({v2[3]}) build"
         assert v1.require.run is v2[4], f"{v1.node}!=expected {v2[0]} ({v2[4]}) run"
-        assert len(v2) <= 5
+        if len(v2) > 5:
+            assert v1.require.transitive_headers is v2[5], f"{v1.node}!=expected {v2[0]} ({v2[1]}) transitive_headers"
+        if len(v2) > 6:
+            assert v1.require.transitive_libs is v2[6], f"{v1.node}!=expected {v2[0]} ({v2[2]}) transitive_libs"
 
 
 class TestLinear(GraphManagerTest):
@@ -199,7 +202,7 @@ class TestLinear(GraphManagerTest):
                                 (liba, True, True, False, True)])
         _check_transitive(libb, [(liba, True, True, False, True)])
 
-    @pytest.mark.parametrize("shared", [True])
+    @pytest.mark.parametrize("shared", [True, False])
     def test_simple_transitive_headers_chain(self, shared):
         # consumer -> libd -> libc - transitive_headers=True -> libb - > liba -> lib0
         self.recipe_cache("lib0/0.1", option_shared=shared)
@@ -226,7 +229,7 @@ class TestLinear(GraphManagerTest):
         liba = libb.edges[0].dst
         lib0 = liba.edges[0].dst
 
-        # node, headers, lib, build, run
+        # node, headers, lib, build, run (transitive_headers, transitive_libs)
         _check_transitive(consumer, [
             (libd, True, True, False, shared),
             (libc, False, not shared, False, shared),
@@ -289,14 +292,14 @@ class TestLinear(GraphManagerTest):
 
         # # node, headers, lib, build, run
         _check_transitive(libd, [
-            (libc, True, True, False, shared),
-            (libb, transitive, not shared, False, shared),
+            (libc, True, True, False, shared, None, None),
+            (libb, bool(transitive), not shared, False, shared, None, None),
             # Fails, currently depends on transitive as libb does
-            (liba, False, not shared, False, shared),
+            (liba, False, not shared, False, shared, None, None),
         ])
         _check_transitive(libc, [
-            (libb, True, True, False, shared),
-            (liba, True, True, False, shared),
+            (libb, True, True, False, shared, transitive, None),
+            (liba, True, True, False, shared, None, None),
         ])
 
     def test_middle_shared_up_static(self):
