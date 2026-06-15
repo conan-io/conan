@@ -1,6 +1,6 @@
 requests>=2.25, <3.0.0
 urllib3>=1.26.6, <3.0
-colorama>=0.4.3, <0.5.0
+rich>=14.3.4, <15
 PyYAML>=6.0, <7.0
 patch-ng>=1.18.0, <1.20
 fasteners>=0.15

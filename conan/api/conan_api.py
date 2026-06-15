@@ -1,7 +1,6 @@
 import os
 import sys
 
-from conan.api.output import init_colorama
 from conan.api.subapi.audit import AuditAPI
 from conan.api.subapi.cache import CacheAPI
 from conan.api.subapi.command import CommandAPI
@@ -59,7 +58,6 @@ class ConanAPI:
         if cache_folder is not None and not os.path.isabs(cache_folder):
             raise ConanException("cache_folder has to be an absolute path")
 
-        init_colorama(sys.stderr)
         # Deprecated, but still used internally, prefer home_folder
         self.cache_folder = cache_folder or get_conan_user_home()
         self._home_folder = self.cache_folder

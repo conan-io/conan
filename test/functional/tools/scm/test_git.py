@@ -1295,7 +1295,7 @@ class TestGitTreelessRemote:
         client.save({"conanfile.py": self.conanfile.format(url=url)})
         client.run("export .")
         # We expect [tree:0] for regular git remote command. Requires Git +2.43
-        assert f"git remote: origin\t{url} (fetch) [tree:0]" in client.out
+        assert f"git remote: origin     {url} (fetch) [tree:0]" in client.out
         # Then get_remote_url filters it to only the URL
         assert f"get_remote_url(): {url} ===" in client.out
 

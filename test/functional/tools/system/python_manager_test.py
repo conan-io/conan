@@ -46,7 +46,7 @@ def test_empty_pyenv():
     c.run("build")
     # Test that some Conan common deps are not in this pip list
     assert "requests" not in c.out
-    assert "colorama" not in c.out
+    assert "rich" not in c.out
     assert "Jinja2" not in c.out
     assert "PyJWT" not in c.out
     ext = ".bat" if platform.system() == "Windows" else ".sh"
