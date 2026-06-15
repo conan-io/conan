@@ -9,7 +9,7 @@ from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp, gen_function_c
 from test.conftest import tools_locations
 from test.functional.utils import check_vs_runtime, check_exe_run
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, default_vs_ide_version
 
 
 @pytest.fixture
@@ -200,7 +200,7 @@ class TestVSClangCL:
         check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=False)
 
 
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "4.2")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 class TestMsysClang:
     @pytest.mark.tool("msys2_clang64")
@@ -229,9 +229,10 @@ class TestMsysClang:
 
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
-        check_vs_runtime(cmd, client, "17", build_type="Release",
+        check_vs_runtime(cmd, client, default_vs_ide_version, build_type="Release",
                          static_runtime=False, subsystem="clang64")
 
+    @pytest.mark.slow
     @pytest.mark.tool("msys2_mingw64_clang64")
     def test_msys2_clang_mingw(self, client):
         """ compiling with the clang INSIDE mingw, which uses the
@@ -245,7 +246,7 @@ class TestMsysClang:
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
         # TODO: Version is still not controlled
-        assert "main __clang_major__21" in client.out
+        assert "main __clang_major__22" in client.out
         assert "main _GLIBCXX_USE_CXX11_ABI 0" in client.out
         assert "main __cplusplus2014" in client.out
         assert "main __GNUC__" in client.out
@@ -258,7 +259,7 @@ class TestMsysClang:
 
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
-        check_vs_runtime(cmd, client, "17", build_type="Release",
+        check_vs_runtime(cmd, client, default_vs_ide_version, build_type="Release",
                          static_runtime=False, subsystem="mingw64")
 
     @pytest.mark.tool("msys2_clang64")
@@ -288,8 +289,8 @@ class TestMsysClang:
         cmd = re.search(r"MYCMD=(.*)!", str(client.out)).group(1)
         cmd = cmd + ".exe"
         # static_runtime equivalent to C, for checking, no dep on libc++
-        check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=True,
-                         subsystem="clang64")
+        check_vs_runtime(cmd, client, default_vs_ide_version, build_type="Release",
+                         static_runtime=True, subsystem="clang64")
 
 
 @pytest.mark.tool("cmake")

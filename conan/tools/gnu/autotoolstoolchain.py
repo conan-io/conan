@@ -10,6 +10,7 @@ from conan.tools.build.flags import architecture_flag, architecture_link_flag, b
     build_type_link_flags, libcxx_flags, cstd_flag, llvm_clang_front, threads_flags
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
+from conan.tools.intel import IntelCC
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.internal.model.pkg_type import PackageType
 
@@ -333,6 +334,8 @@ class AutotoolsToolchain:
         env.save_script("conanautotoolstoolchain")
         self.generate_args()
         VCVars(self._conanfile).generate(scope=scope)
+        if self._conanfile.settings.get_safe("compiler") == "intel-cc":
+            IntelCC(self._conanfile).generate()
 
     def _default_configure_shared_flags(self):
         args = []

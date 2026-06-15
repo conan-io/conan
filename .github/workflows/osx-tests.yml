@@ -13,7 +13,7 @@ on:
 
 jobs:
   osx_setup:
-    runs-on: macos-15
+    runs-on: macos-26
     name: Setup and Cache Dependencies
     steps:
       - name: Checkout code
@@ -40,7 +40,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Library/Caches/Homebrew
-          key: ${{ runner.os }}-brew
+          key: ${{ runner.os }}-macos26-brew
 
       - name: Install homebrew dependencies
         run: |
@@ -56,10 +56,10 @@ jobs:
             ~/Applications/CMake/3.23.5
             ~/Applications/CMake/3.27.9
             ~/Applications/CMake/4.2.1
-            ~/Applications/bazel/6.5.0
+            ~/Applications/bazel/6.6.0
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
-          key: ${{ runner.os }}-conan-tools-cache
+          key: ${{ runner.os }}-macos26-conan-tools-cache
 
       - name: Build CMake old versions not available for ARM
         if: steps.cache-tools.outputs.cache-hit != 'true'
@@ -104,7 +104,7 @@ jobs:
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
-          for version in 6.5.0 7.6.2 8.4.2; do
+          for version in 6.6.0 7.6.2 8.4.2; do
             mkdir -p ${HOME}/Applications/bazel/${version}
             wget -q -O ${HOME}/Applications/bazel/${version}/bazel https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-darwin-arm64
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
@@ -112,7 +112,7 @@ jobs:
 
   osx_tests:
     needs: osx_setup
-    runs-on: macos-15
+    runs-on: macos-26
     strategy:
       fail-fast: true
       matrix:
@@ -139,14 +139,14 @@ jobs:
             ~/Applications/CMake/3.23.5
             ~/Applications/CMake/3.27.9
             ~/Applications/CMake/4.2.1
-            ~/Applications/bazel/6.5.0
+            ~/Applications/bazel/6.6.0
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
-          key: ${{ runner.os }}-conan-tools-cache
+          key: ${{ runner.os }}-macos26-conan-tools-cache
 
-      - name: Select Xcode 16.4
+      - name: Select Xcode 26.4.1
         run: |
-          sudo xcode-select -s /Applications/Xcode_16.4.app
+          sudo xcode-select -s /Applications/Xcode_26.4.1.app
           xcodebuild -version
           xcrun --sdk macosx --show-sdk-version
           clang --version

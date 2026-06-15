@@ -577,36 +577,25 @@ class _Component:
         libdirs = self.libdirs
         bindirs = self.bindirs
         libname = self.libs[0]
-        static_location = None
-        shared_location = None
         dll_location = None
         deduced_type = None
-        # libname is exactly the pattern, e.g., ["mylib.a"] instead of ["mylib"]
-        _, ext = os.path.splitext(libname)
-        if ext in (".lib", ".a", ".dll", ".so", ".dylib"):
-            if ext in (".lib", ".a"):
-                static_location = _find_matching(libdirs, libname)
-            elif ext in (".so", ".dylib"):
-                shared_location = _find_matching(libdirs, libname)
-            elif ext == ".dll":
-                dll_location = _find_matching(bindirs, libname)
-        else:
-            lib_sanitized = re.escape(libname)
-            component_sanitized = re.escape(library_name)
-            # At first, exact match
-            regex_static = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:a|lib)")
-            regex_shared = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:so|dylib)")
-            regex_dll = re.compile(rf".*(?:{lib_sanitized}|{component_sanitized}).*\.dll")
-            static_location = _find_matching(libdirs, regex_static)
-            shared_location = _find_matching(libdirs, regex_shared)
-            if not any([static_location, shared_location]):
-                # Let's extend a little bit the pattern search
-                regex_wider_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib)")
-                regex_wider_shared = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:so|dylib)")
-                static_location = _find_matching(libdirs, regex_wider_static)
-                shared_location = _find_matching(libdirs, regex_wider_shared)
-            if static_location or not shared_location:
-                dll_location = _find_matching(bindirs, regex_dll)
+        libname, ext = os.path.splitext(libname)
+        lib_sanitized = re.escape(libname)
+        component_sanitized = re.escape(library_name)
+        # At first, exact match
+        regex_static = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:a|lib)")
+        regex_shared = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:so|dylib)")
+        regex_dll = re.compile(rf".*(?:{lib_sanitized}|{component_sanitized}).*\.dll")
+        static_location = _find_matching(libdirs, regex_static)
+        shared_location = _find_matching(libdirs, regex_shared)
+        if not any([static_location, shared_location]):
+            # Let's extend a little bit the pattern search
+            regex_wider_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib)")
+            regex_wider_shared = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:so|dylib)")
+            static_location = _find_matching(libdirs, regex_wider_static)
+            shared_location = _find_matching(libdirs, regex_wider_shared)
+        if static_location or not shared_location:
+            dll_location = _find_matching(bindirs, regex_dll)
 
         if static_location:
             if shared_location:
