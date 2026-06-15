@@ -313,9 +313,13 @@ class TestLinear(GraphManagerTest):
             (liba, True, True, False, shared, None if version else (True if transitive else None), None),
         ])
 
-    def test_static_shared_transitive_chain(self):
+    @pytest.mark.parametrize("version", [None, ">=2.30-dev"])
+    def test_static_shared_transitive_chain(self, version):
         # consumer -> shared1 - transitive_libs = True -> static2 -> static3
         # Consumer needs static2 and static3 in all cases
+        if version:
+            with open(os.path.join(self.cache_folder, "global.conf"), "w") as f:
+                f.write(f'core:policies=["required_conan_version{version}"]')
         self.recipe_cache("static3/0.1", option_shared=False)
         self.recipe_cache("static2/0.1", option_shared=False, requires=["static3/0.1"])
         shared1 = GenConanfile().with_requirement("static2/0.1", transitive_headers=True)
