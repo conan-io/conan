@@ -354,7 +354,9 @@ class Requirement:
             downstream_require.headers = require.headers and require.transitive_headers
         if self.transitive_headers is not None:
             transitive_propagation = required_conan_version_policy(consumer_conanfile, "2.29.9")
-            downstream_require.transitive_headers = self.transitive_headers if not transitive_propagation else self.transitive_headers and require.transitive_headers
+            downstream_require.transitive_headers = (self.transitive_headers
+                                                     if not transitive_propagation else
+                                                     self.transitive_headers and require.transitive_headers)
 
         if require.transitive_libs is not None:
             downstream_require.libs = require.libs and require.transitive_libs
