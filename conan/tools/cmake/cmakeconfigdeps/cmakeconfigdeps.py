@@ -127,8 +127,7 @@ class CMakeConfigDeps:
             ret[config.filename] = config.content()
             targets = TargetsTemplate2(base_filename)
             ret[targets.filename] = targets.content()
-            target_configuration = TargetConfigurationTemplate2(base_filename, self, dep, require, full_cpp_info,
-                                                                cmake_config_properties, is_build_context=require.build)
+            target_configuration = TargetConfigurationTemplate2(self, dep, require, full_cpp_info)
             ret[target_configuration.filename] = target_configuration.content()
 
         self._print_help(direct_deps)
