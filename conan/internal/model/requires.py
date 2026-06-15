@@ -1,7 +1,7 @@
 from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
-from conan.internal.model.version_range import VersionRange
+from conan.internal.model.version_range import VersionRange, required_conan_version_policy
 
 
 class Requirement:
@@ -286,7 +286,7 @@ class Requirement:
             self.package_id_mode = other.package_id_mode
         self.required_nodes.update(other.required_nodes)
 
-    def transform_downstream(self, pkg_type, require, dep_pkg_type):
+    def transform_downstream(self, pkg_type, require, dep_pkg_type, consumer_conanfile):
         """
         consumer ---self--->  foo<pkg_type> ---require---> bar<dep_pkg_type>
             \\ -------------------????-------------------- /
@@ -353,7 +353,8 @@ class Requirement:
         if require.transitive_headers is not None:
             downstream_require.headers = require.headers and require.transitive_headers
         if self.transitive_headers is not None:
-            downstream_require.transitive_headers = self.transitive_headers and require.transitive_headers
+            transitive_propagation = required_conan_version_policy(consumer_conanfile, "2.29.9")
+            downstream_require.transitive_headers = self.transitive_headers if not transitive_propagation else self.transitive_headers and require.transitive_headers
 
         if require.transitive_libs is not None:
             downstream_require.libs = require.libs and require.transitive_libs

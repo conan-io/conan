@@ -1,4 +1,5 @@
 import pytest
+import os
 
 from conan.internal.graph.graph_error import GraphMissingError, GraphLoopError, GraphConflictError
 from conan.errors import ConanException
@@ -20,9 +21,9 @@ def _check_transitive(node, transitive_deps):
         assert v1.require.build is v2[3], f"{v1.node}!=expected {v2[0]} ({v2[3]}) build"
         assert v1.require.run is v2[4], f"{v1.node}!=expected {v2[0]} ({v2[4]}) run"
         if len(v2) > 5:
-            assert v1.require.transitive_headers is v2[5], f"{v1.node}!=expected {v2[0]} ({v2[1]}) transitive_headers"
+            assert v1.require.transitive_headers is v2[5], f"{v1.node}!=expected {v2[0]} ({v2[5]}) transitive_headers"
         if len(v2) > 6:
-            assert v1.require.transitive_libs is v2[6], f"{v1.node}!=expected {v2[0]} ({v2[2]}) transitive_libs"
+            assert v1.require.transitive_libs is v2[6], f"{v1.node}!=expected {v2[0]} ({v2[6]}) transitive_libs"
 
 
 class TestLinear(GraphManagerTest):
@@ -202,9 +203,13 @@ class TestLinear(GraphManagerTest):
                                 (liba, True, True, False, True)])
         _check_transitive(libb, [(liba, True, True, False, True)])
 
+    @pytest.mark.parametrize("version", [None])
     @pytest.mark.parametrize("shared", [True, False])
-    def test_simple_transitive_headers_chain(self, shared):
+    def test_simple_transitive_headers_chain(self, shared, version):
         # consumer -> libd -> libc - transitive_headers=True -> libb - > liba -> lib0
+        if version:
+            with open(os.path.join(self.cache_folder, "global.conf"), "w") as f:
+                f.write(f'core:policies=["required_conan_version{version}"]')
         self.recipe_cache("lib0/0.1", option_shared=shared)
         liba = GenConanfile().with_requirement("lib0/0.1").with_shared_option(shared)
         self.recipe_conanfile("liba/0.1", liba)
@@ -231,30 +236,33 @@ class TestLinear(GraphManagerTest):
 
         # node, headers, lib, build, run (transitive_headers, transitive_libs)
         _check_transitive(consumer, [
-            (libd, True, True, False, shared),
-            (libc, False, not shared, False, shared),
-            (libb, False, not shared, False, shared),
-            (liba, False, not shared, False, shared),
-            (lib0, False, not shared, False, shared),
-        ])
-
-        _check_transitive(libd, [
-            (libc, True, True, False, shared),
-            (libb, True, not shared, False, shared),
-            (liba, False, not shared, False, shared),
-            (lib0, False, not shared, False, shared),
-        ])
-
-        _check_transitive(libc, [
-            (libb, True, True, False, shared, True, None),
+            (libd, True, True, False, shared, None, None),
+            (libc, False, not shared, False, shared, None, None),
+            (libb, False, not shared, False, shared, None, None),
             (liba, False, not shared, False, shared, None, None),
             (lib0, False, not shared, False, shared, None, None),
         ])
 
+        _check_transitive(libd, [
+            (libc, True, True, False, shared, None, None),
+            (libb, True, not shared, False, shared, None, None),
+            (liba, False, not shared, False, shared, None, None),
+            (lib0, False, not shared, False, shared, None, None),
+        ])
+
+        _check_transitive(libc, [
+            (libb, True, True, False, shared, True, None),
+            # Having the transitive_headers trait propagated without the fix
+            # does not create a new package id in this case, it only cases about the headers trait
+            (liba, False, not shared, False, shared, None if version else True, None),
+            (lib0, False, not shared, False, shared, None if version else True, None),
+        ])
+
+    @pytest.mark.parametrize("version", [None, ">=2.30-dev"])
     @pytest.mark.parametrize("shared", [True, False])
     @pytest.mark.parametrize("liba_first", [True, False])
     @pytest.mark.parametrize("transitive", [True, False, None])
-    def test_transitive_headers_duplicate_different_diamond(self, shared, liba_first, transitive):
+    def test_transitive_headers_duplicate_different_diamond(self, version, shared, liba_first, transitive):
         # libd -> libc - > liba
         #            \ - transitive_headers=True -> libb -> liba
         self.recipe_cache("liba/0.1", option_shared=shared)
@@ -269,10 +277,12 @@ class TestLinear(GraphManagerTest):
             libc.with_requirement("libb/0.1", transitive_headers=transitive).with_requirement("liba/0.1")
 
         libc.with_shared_option(shared)
+        if version:
+            libc = str(libc) + f"\nrequired_conan_version = '{version}'"
+
         self.recipe_conanfile("libc/0.1", libc)
 
         consumer = self.recipe_consumer("libd/0.1", ["libc/0.1"])
-
         deps_graph = self.build_consumer(consumer)
 
         assert 4 == len(deps_graph.nodes)
@@ -295,11 +305,12 @@ class TestLinear(GraphManagerTest):
             (libc, True, True, False, shared, None, None),
             (libb, bool(transitive), not shared, False, shared, None, None),
             # Header does not depend on the transitive flag of libb
-            (liba, False, not shared, False, shared, None, None),
+            # when the fix is applied
+            (liba, False if version else bool(transitive), not shared, False, shared, None, None),
         ])
         _check_transitive(libc, [
             (libb, True, True, False, shared, transitive, None),
-            (liba, True, True, False, shared, None, None),
+            (liba, True, True, False, shared, None if version else (True if transitive else None), None),
         ])
 
     def test_static_shared_transitive_chain(self):
