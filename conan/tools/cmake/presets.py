@@ -81,7 +81,7 @@ class _CMakePresets:
 
         preset_content = json.dumps(data, indent=4)
         save(preset_path, preset_content)
-        ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {preset_path}")
+        ConanOutput("  ").info(f"CMakeToolchain generated: {preset_path}")
         return preset_path, data
 
     @staticmethod
@@ -190,8 +190,11 @@ class _CMakePresets:
             msg = textwrap.dedent(f"""\
                 CMakeToolchain: Preset '{name}' added to CMakePresets.json.
                     (cmake>=3.23) cmake --preset {name}
-                    (cmake<3.23) cmake <path> -G {_format_val(generator)} {tc_tip} {vars_tip}""")
-            conanfile.output.info(msg, fg=Color.CYAN)
+                    (cmake<3.23) cmake <path> -G {_format_val(generator)}
+                                 {tc_tip}
+                                 {vars_tip}""")
+            msg = textwrap.indent(msg, "   ")
+            ConanOutput().info(msg, fg=Color.CYAN)
         return ret
 
     @staticmethod
@@ -311,7 +314,7 @@ class _IncludingPresets:
             data = _IncludingPresets._update_stubs(data, inherited_user, output_dir, absolute_paths)
 
         data = json.dumps(data, indent=4)
-        ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {user_presets_path}")
+        ConanOutput("  ").info(f"CMakeToolchain generated: {user_presets_path}")
         save(user_presets_path, data)
 
     @staticmethod

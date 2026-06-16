@@ -3,6 +3,7 @@ import inspect
 import os
 import traceback
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.errors import conanfile_exception_formatter
@@ -79,12 +80,12 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
     _receive_conf(conanfile)
     _receive_generators(conanfile)
 
+    conanfile.output.highlight(f"Generate step")
+    ConanOutput().info(f"   Generators folder: {new_gen_folder}")
     # TODO: Optimize this, so the global generators are not loaded every call to write_generators
     global_generators = load_cache_generators(HomePaths(home_folder).custom_generators_path)
     hook_manager.execute("pre_generate", conanfile=conanfile)
 
-    if conanfile.generators:
-        conanfile.output.highlight(f"Writing generators to {new_gen_folder}")
     # generators check that they are not present in the generators field,
     # to avoid duplicates between the generators attribute and the generate() method
     # They would raise an exception here if we don't invalidate the field while we call them
@@ -105,7 +106,7 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
         try:
             generator = generator_class(conanfile)
             mkdir(new_gen_folder)
-            conanfile.output.info(f"Generator '{generator_name}' calling 'generate()'")
+            ConanOutput("  ").info(f"Generator '{generator_name}' calling 'generate()'")
             with chdir(new_gen_folder):
                 generator.generate()
         except Exception as e:
@@ -119,8 +120,7 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
     conanfile.generators = old_generators
 
     if hasattr(conanfile, "generate"):
-        conanfile.output.highlight("Calling generate()")
-        conanfile.output.info(f"Generators folder: {new_gen_folder}")
+        ConanOutput("  ").highlight("Calling generate() method in recipe")
         mkdir(new_gen_folder)
         with chdir(new_gen_folder):
             with conanfile_exception_formatter(conanfile, "generate"):

@@ -3,7 +3,7 @@ import textwrap
 import jinja2
 from jinja2 import Template
 
-from conan.api.output import Color
+from conan.api.output import Color, ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.tools.cmake.cmakedeps import FIND_MODE_CONFIG, FIND_MODE_NONE, FIND_MODE_BOTH, \
     FIND_MODE_MODULE
@@ -106,9 +106,9 @@ class CMakeDeps:
             targets = ' '.join(c.root_target_name for c in direct_configs)
             msg.append(f"    target_link_libraries(... {targets})")
             if self._conanfile._conan_is_consumer:  # noqa
-                self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
+                ConanOutput("  ").info("\n".join(msg), fg=Color.CYAN)
             else:
-                self._conanfile.output.verbose("\n".join(msg))
+                ConanOutput("  ").verbose("\n".join(msg))
 
         return ret
 

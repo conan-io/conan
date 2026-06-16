@@ -28,6 +28,7 @@ def test_custom_global_generator():
             "conanfile.txt": conanfile})
     c.run("create pkg")
     c.run("install .")
+    print(c.out)
     assert "conanfile.txt: Generator 'MyCustomGenerator' calling 'generate()'" in c.out
     assert "conanfile.txt: DEP: pkg/0.1!!" in c.out
 
