@@ -31,8 +31,10 @@ class _SystemPackageManagerTool:
         self._sudo = self._conanfile.conf.get("tools.system.package_manager:sudo", default=False, check_type=bool)
         self._sudo_askpass = self._conanfile.conf.get("tools.system.package_manager:sudo_askpass", default=False, check_type=bool)
         self._mode = self._conanfile.conf.get("tools.system.package_manager:mode", default=self.mode_check)
-        self._arch = self._conanfile.settings_build.get_safe('arch') \
-            if self._conanfile.context == CONTEXT_BUILD else self._conanfile.settings.get_safe('arch')
+        self._build_only = getattr(self._conanfile, '_conan_build_system_requirements', False)
+        _build_ctx = self._conanfile.context == CONTEXT_BUILD or self._build_only
+        settings = self._conanfile.settings_build if _build_ctx else self._conanfile.settings
+        self._arch = settings.get_safe('arch')
         self._arch_names = {}
         self._arch_separator = ""
 
@@ -78,7 +80,8 @@ class _SystemPackageManagerTool:
         arch_separator, arch_name = "", ""
         version_separator = self.version_separator if version else ""
 
-        if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
+        if self._arch in self._arch_names and cross_building(self._conanfile) and host_package  \
+                and not self._build_only:
             arch_separator = self._arch_separator
             arch_name = self._arch_names.get(self._arch)
         return name, version, arch_separator, arch_name, version_separator

@@ -588,7 +588,7 @@ def test_create_docker_runner_profile_composition():
     client.run("create . -pr:h profile -pr:h profile_extension")
 
     assert "[100%] Built target example" in client.out
-    assert "Restore: pkg/2.0 in pkgc6abef0178849" in client.out
+    assert "Restore: pkg/2.0 in pkg" in client.out
     assert "Restore: pkg/2.0:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/2.0:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
 

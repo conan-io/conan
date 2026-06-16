@@ -538,6 +538,7 @@ class TestRuntimeDeployer:
         assert (sorted(os.listdir(os.path.join(c.current_folder, "myruntime", "bin")))
                 == sorted(['pkga.dll']))
 
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires POSIX symlinks")
     @pytest.mark.parametrize("symlink, expected",
                              [(True, ["libfoo.so.0.1.0", "libfoo.so.0", "libfoo.so"]),
                               (False, ["libfoo.so.0.1.0"])])
@@ -569,16 +570,14 @@ class TestRuntimeDeployer:
         link_so = os.path.join(c.current_folder, "output", "libfoo.so")
         lib = os.path.join(c.current_folder, "output", "libfoo.so.0.1.0")
         # INFO: This test requires in Windows to have symlinks enabled, otherwise it will fail
-        if symlink and platform.system() != "Windows":
+        if symlink:
             assert os.path.islink(link_so_0)
             assert os.path.islink(link_so)
             assert not os.path.isabs(os.readlink(link_so_0))
             assert not os.path.isabs(os.readlink(os.path.join(link_so)))
             assert os.path.realpath(link_so) == os.path.realpath(link_so_0)
             assert os.path.realpath(link_so_0) == os.path.realpath(lib)
-            assert not os.path.islink(lib)
-        else:
-            assert not os.path.islink(lib)
+        assert not os.path.islink(lib)
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Requires POSIX symlinks")
     def test_runtime_deploy_symlink_overwrite(self):
@@ -683,6 +682,7 @@ class TestRuntimeDeployer:
         assert sorted(os.listdir(os.path.join(c.current_folder, "output", "subfolder",
                                               "subsubfolder"))) == ["libqux.so"]
 
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires POSIX symlinks")
     def test_runtime_deploy_subfolder_symlink(self):
         """ The deployer runtime_deploy should preserve subfolder structure when deploying shared
             libraries with symlinks

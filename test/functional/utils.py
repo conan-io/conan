@@ -161,6 +161,11 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                 assert "__MINGW32__" not in output
                 assert "__MINGW64__" not in output
                 assert "__MSYS__" not in output
+            elif subsystem == "ucrt64":
+                assert "__CYGWIN__" not in output
+                assert "__MINGW32__" in output
+                assert "__MINGW64__" in output
+                assert "__MSYS__" not in output
             else:
                 raise Exception("unknown subsystem {}".format(subsystem))
         else:

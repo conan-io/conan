@@ -600,7 +600,7 @@ class Conf:
 class ConfDefinition:
     # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
-               ("=!", "unset"), ("*=", "update"), ("=", "define"))
+               ("=!", "unset"), ("=~", "unset"), ("*=", "update"), ("=", "define"))
 
     def __init__(self):
         self._pattern_confs = {}
