@@ -8,8 +8,9 @@ class TargetsTemplate2:
     """
     FooTargets.cmake
     """
-    def __init__(self, filename):
+    def __init__(self, filename, reference):
         self._filename = filename
+        self._reference = reference
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
@@ -22,14 +23,15 @@ class TargetsTemplate2:
 
     @property
     def _context(self):
-        ret = {"filename": self._filename}
+        ret = {"filename": self._filename,
+               "ref": str(self._reference)}
         return ret
 
     @property
     def _template(self):
         return textwrap.dedent("""\
             include_guard()
-            message(STATUS "Conan: Configuring Targets for {{ filename }}")
+            message(STATUS "Conan: Configuring Targets for {{ ref }}")
 
             # Load information for each installed configuration.
             file(GLOB _target_files "${CMAKE_CURRENT_LIST_DIR}/{{filename}}-Targets-*.cmake")
