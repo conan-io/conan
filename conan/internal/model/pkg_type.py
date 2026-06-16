@@ -60,14 +60,15 @@ class PackageType(Enum):
                                          " but no 'shared' option declared")
             elif any(option in conanfile.options for option in ["shared", "header_only"]):
                 shared_value = conanfile.options.get_safe("shared")
-                if conanfile_type is PackageType.SHARED and shared_value == False:  # noqa
-                    raise ConanException(
-                        f"{conanfile}: 'shared-library' should not have 'shared' option set to False. "
-                        "Consider removing the 'shared' option.")
-                if conanfile_type is PackageType.STATIC and shared_value:
-                    raise ConanException(
-                        f"{conanfile}: 'static-library' should not have 'shared' option set to True. "
-                        "Consider removing the 'shared' option")
+                if shared_value is not None:
+                    if conanfile_type == PackageType.SHARED and not shared_value:
+                        raise ConanException(
+                            f"{conanfile}: 'shared-library' should not have 'shared' option set to False. "
+                            "Consider removing the 'shared' option.")
+                    if conanfile_type is PackageType.STATIC and shared_value:
+                        raise ConanException(
+                            f"{conanfile}: 'static-library' should not have 'shared' option set to True. "
+                            "Consider removing the 'shared' option")
                 conanfile.output.warning(f"{conanfile}: package_type '{conanfile_type}' is defined, "
                                          "but 'shared' and/or 'header_only' options are present. "
                                          "The package_type will have precedence over the options "
