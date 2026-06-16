@@ -11,11 +11,10 @@ class ConfigTemplate2:
     FooConfig.cmake
     foo-config.cmake
     """
-    def __init__(self, filename, pkg_name, version, consumer_conanfile, full_cpp_info,
+    def __init__(self, filename, reference, consumer_conanfile, full_cpp_info,
                  cmake_config_properties, is_build_context=False):
         self._filename = filename
-        self._pkg_name = pkg_name
-        self._version = version
+        self._reference = reference
         self._consumer_conanfile = consumer_conanfile
         self._full_cpp_info = full_cpp_info
         self._cmake_config_properties = cmake_config_properties
@@ -47,7 +46,7 @@ class ConfigTemplate2:
 
         result = {"filename": f,
                   "components": components,
-                  "pkg_name": self._pkg_name,
+                  "pkg_name": self._reference.name,
                   "targets_include_file": targets_include,
                   "build_modules_paths": build_modules_paths}
 
@@ -77,7 +76,7 @@ class ConfigTemplate2:
             definitions = ";".join("-D" + cmake_escape_value(d) for d in aggregated_cppinfo.defines)
             libraries = self._cmake_config_properties.get("cmake_legacy_libraries", "")
         return {"additional_variables_prefixes": prefixes,
-                "version": self._version,
+                "version": self._reference.version,
                 "include_dirs": include_dirs,
                 "definitions": definitions,
                 "libraries": libraries}

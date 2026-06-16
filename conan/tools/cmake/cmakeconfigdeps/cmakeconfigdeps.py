@@ -122,9 +122,9 @@ class CMakeConfigDeps:
             base_filename = self.get_cmake_filename(dep)
             cmake_config_properties = self._get_cmake_config_properties(dep, full_cpp_info,
                                                                         is_build_context=require.build)
-            config_version = ConfigVersionTemplate2(base_filename, dep.ref.version, cmake_config_properties)
+            config_version = ConfigVersionTemplate2(base_filename, dep.ref, cmake_config_properties)
             ret[config_version.filename] = config_version.content()
-            config = ConfigTemplate2(base_filename, dep.ref.name, dep.ref.version, self._conanfile,
+            config = ConfigTemplate2(base_filename, dep.ref, self._conanfile,
                                      full_cpp_info, cmake_config_properties,
                                      is_build_context=require.build)
             ret[config.filename] = config.content()
