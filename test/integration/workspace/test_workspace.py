@@ -1522,9 +1522,10 @@ class TestInstall:
         c.run("workspace add pkgb")
         c.run("workspace add pkgc")
         c.run("workspace install")
-        assert "conanfile.py (pkga/0.1): CMakeToolchain generated" in c.out
-        assert "conanfile.py (pkgb/0.1): CMakeToolchain generated" in c.out
-        assert "conanfile.py (pkgc/0.1): CMakeToolchain generated" in c.out
+        assert "conanfile.py (pkga/0.1): Generate step" in c.out
+        assert "conanfile.py (pkgb/0.1): Generate step" in c.out
+        assert "conanfile.py (pkgc/0.1): Generate step" in c.out
+        assert str(c.out).count("CMakeToolchain generated: conan_toolchain.cmake") == 3
 
     def test_install_lockfile_out_error(self):
         # it is not possible to generate a lockfile for an orchestrated

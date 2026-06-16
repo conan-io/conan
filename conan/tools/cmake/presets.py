@@ -3,7 +3,7 @@ import os
 import platform
 import textwrap
 
-from conan.api.output import ConanOutput, Color
+from conan.api.output import Color
 from conan.tools.cmake.layout import get_build_folder_custom_vars, is_consumer
 from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
 from conan.tools.cmake.utils import is_multi_configuration
@@ -81,7 +81,7 @@ class _CMakePresets:
 
         preset_content = json.dumps(data, indent=4)
         save(preset_path, preset_content)
-        ConanOutput("  ").info(f"CMakeToolchain generated: {preset_path}")
+        conanfile.output.info(f"CMakeToolchain generated: {preset_path}")
         return preset_path, data
 
     @staticmethod
@@ -193,8 +193,7 @@ class _CMakePresets:
                     (cmake<3.23) cmake <path> -G {_format_val(generator)}
                                  {tc_tip}
                                  {vars_tip}""")
-            msg = textwrap.indent(msg, "   ")
-            ConanOutput().info(msg, fg=Color.CYAN)
+            conanfile.output.info(msg, fg=Color.CYAN)
         return ret
 
     @staticmethod
@@ -314,7 +313,7 @@ class _IncludingPresets:
             data = _IncludingPresets._update_stubs(data, inherited_user, output_dir, absolute_paths)
 
         data = json.dumps(data, indent=4)
-        ConanOutput("  ").info(f"CMakeToolchain generated: {user_presets_path}")
+        conanfile.output.info(f"CMakeToolchain generated: {user_presets_path}")
         save(user_presets_path, data)
 
     @staticmethod

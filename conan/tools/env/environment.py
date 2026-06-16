@@ -946,8 +946,8 @@ def generate_aggregated_env(conanfile):
                 save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                      ps1_content(deactivates(ps1s)))
     if generated:
-        ConanOutput("  ").highlight("Generating aggregated env files")
-        ConanOutput("  ").info(f"Generated aggregated env files: {generated}")
+        conanfile.output.highlight("Generating aggregated env files")
+        conanfile.output.info(f"Generated aggregated env files: {generated}")
 
 
 def _relativize_paths(conanfile, placeholder):

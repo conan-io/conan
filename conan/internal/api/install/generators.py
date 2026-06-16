@@ -81,7 +81,9 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
     _receive_generators(conanfile)
 
     conanfile.output.highlight(f"Generate step")
-    ConanOutput().info(f"   Generators folder: {new_gen_folder}")
+    old_display = conanfile.display_name
+    conanfile.display_name = "  "
+    conanfile.output.info(f"Generators folder: {new_gen_folder}")
     # TODO: Optimize this, so the global generators are not loaded every call to write_generators
     global_generators = load_cache_generators(HomePaths(home_folder).custom_generators_path)
     hook_manager.execute("pre_generate", conanfile=conanfile)
@@ -106,7 +108,7 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
         try:
             generator = generator_class(conanfile)
             mkdir(new_gen_folder)
-            ConanOutput("  ").info(f"Generator '{generator_name}' calling 'generate()'")
+            conanfile.output.info(f"Generator '{generator_name}' calling 'generate()'")
             with chdir(new_gen_folder):
                 generator.generate()
         except Exception as e:
@@ -120,7 +122,7 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
     conanfile.generators = old_generators
 
     if hasattr(conanfile, "generate"):
-        ConanOutput("  ").highlight("Calling generate() method in recipe")
+        conanfile.output.highlight("Calling generate() method in recipe")
         mkdir(new_gen_folder)
         with chdir(new_gen_folder):
             with conanfile_exception_formatter(conanfile, "generate"):
@@ -144,6 +146,7 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
     from conan.tools.env.environment import generate_aggregated_env
     generate_aggregated_env(conanfile)
     hook_manager.execute("post_generate", conanfile=conanfile)
+    conanfile.display_name = old_display
 
 
 def _receive_conf(conanfile):
