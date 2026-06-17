@@ -2,7 +2,6 @@ import pytest
 from pathlib import Path
 import platform
 import textwrap
-import os
 
 from test.conftest import tools_locations
 from conan.test.utils.tools import TestClient
@@ -63,9 +62,22 @@ class TestIntelCC:
     """)
     sycl_code = textwrap.dedent("""
         #include <sycl/sycl.hpp>
-        int main() {
-            sycl::range<1> r{1};
-            return r.size() == 1 ? 0 : 1;
+        #include <iostream>
+        #include <vector>
+        #include <string>
+
+        void hello() {
+            sycl::queue q;
+            std::cout << "Hello World from SYCL device: "
+                      << q.get_device().get_info<sycl::info::device::name>() << std::endl;
+        }
+
+        void hello_print_vector(const std::vector<std::string> &strings) {
+            sycl::queue q;
+            std::cout << "SYCL device: " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
+            for (const auto &s : strings) {
+                std::cout << s << std::endl;
+            }
         }
     """)
 
@@ -73,52 +85,47 @@ class TestIntelCC:
     def test_intel_oneapi_and_sycl_cmake(self):
         """Test Intel oneAPI with SYCL using CMake."""
         client = TestClient()
-        client.run("new cmake_exe -d name=hello -d version=0.1")
-        client.save({"intel_profile": self.intel_sycl_profile, "src/main.cpp": self.sycl_code})
-        client.run("build . -pr:a intel_profile")
+        client.run("new cmake_lib -d name=hello -d version=0.1")
+        client.save({"intel_profile": self.intel_sycl_profile, "src/hello.cpp": self.sycl_code})
+        client.run("create . -pr:a intel_profile")
         assert ":: initializing oneAPI environment ..." in client.out
         assert ":: oneAPI environment initialized ::" in client.out
-        build_folder = os.path.join(client.current_folder, "build", "Release")
-        client.run_command(f'. {self.oneapi_path}/setvars.sh --force && "{build_folder}/hello"')
+        assert "Hello World from SYCL device" in client.out
 
     @pytest.mark.tool("autotools")
     def test_intel_oneapi_and_sycl_autotools(self):
         """Test Intel oneAPI with SYCL using Autotools."""
         client = TestClient(path_with_spaces=False)
-        client.run("new autotools_exe -d name=hello -d version=0.1")
-        client.save({"intel_profile": self.intel_sycl_profile, "src/main.cpp": self.sycl_code})
-        client.run("build . -pr:a intel_profile")
+        client.run("new autotools_lib -d name=hello -d version=0.1")
+        client.save({"intel_profile": self.intel_sycl_profile, "src/hello.cpp": self.sycl_code})
+        client.run("create . -pr:a intel_profile")
         assert ":: initializing oneAPI environment ..." in client.out
         assert ":: oneAPI environment initialized ::" in client.out
-        build_folder = os.path.join(client.current_folder, "build-release", "src")
-        client.run_command(f'. {self.oneapi_path}/setvars.sh --force && "{build_folder}/hello"')
+        assert "Hello World from SYCL device" in client.out
 
     @pytest.mark.tool("autotools")
     def test_intel_oneapi_and_sycl_gnutoolchain(self):
         """Test Intel oneAPI with SYCL using GnuToolchain."""
         client = TestClient(path_with_spaces=False)
-        client.run("new autotools_exe -d name=hello -d version=0.1")
-        # Replace AutotoolsToolchain with GnuToolchain
+        client.run("new autotools_lib -d name=hello -d version=0.1")
         conanfile = client.load("conanfile.py")
         conanfile = conanfile.replace("AutotoolsToolchain", "GnuToolchain")
         client.save({"conanfile.py": conanfile,
                      "intel_profile": self.intel_sycl_profile,
-                     "src/main.cpp": self.sycl_code})
-        client.run("build . -pr:a intel_profile")
+                     "src/hello.cpp": self.sycl_code})
+        client.run("create . -pr:a intel_profile")
         assert ":: initializing oneAPI environment ..." in client.out
         assert ":: oneAPI environment initialized ::" in client.out
-        build_folder = os.path.join(client.current_folder, "build-release", "src")
-        client.run_command(f'. {self.oneapi_path}/setvars.sh --force && "{build_folder}/hello"')
+        assert "Hello World from SYCL device" in client.out
 
     @pytest.mark.tool("meson")
     def test_intel_oneapi_and_sycl_meson(self):
         """Test Intel oneAPI with SYCL using Meson."""
         client = TestClient()
-        client.run("new meson_exe -d name=hello -d version=0.1")
-        client.save({"intel_profile": self.intel_sycl_profile, "src/main.cpp": self.sycl_code})
-        client.run("build . -pr:a intel_profile")
+        client.run("new meson_lib -d name=hello -d version=0.1")
+        client.save({"intel_profile": self.intel_sycl_profile, "src/hello.cpp": self.sycl_code})
+        client.run("create . -pr:a intel_profile")
         assert ":: initializing oneAPI environment ..." in client.out
         assert ":: oneAPI environment initialized ::" in client.out
-        build_folder = os.path.join(client.current_folder, "build-release")
-        client.run_command(f'. {self.oneapi_path}/setvars.sh --force && "{build_folder}/hello"')
+        assert "Hello World from SYCL device" in client.out
 
