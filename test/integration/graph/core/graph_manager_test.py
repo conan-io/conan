@@ -203,7 +203,7 @@ class TestLinear(GraphManagerTest):
                                 (liba, True, True, False, True)])
         _check_transitive(libb, [(liba, True, True, False, True)])
 
-    @pytest.mark.parametrize("version", [None])
+    @pytest.mark.parametrize("version", [None, ">=2.30-dev"])
     @pytest.mark.parametrize("shared", [True, False])
     def test_simple_transitive_headers_chain(self, shared, version):
         # consumer -> libd -> libc - transitive_headers=True -> libb - > liba -> lib0
