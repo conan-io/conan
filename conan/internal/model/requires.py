@@ -286,7 +286,7 @@ class Requirement:
             self.package_id_mode = other.package_id_mode
         self.required_nodes.update(other.required_nodes)
 
-    def transform_downstream(self, pkg_type, require, dep_pkg_type, consumer_conanfile):
+    def transform_downstream(self, pkg_type, require, dep_pkg_type, source):
         """
         consumer ---self--->  foo<pkg_type> ---require---> bar<dep_pkg_type>
             \\ -------------------????-------------------- /
@@ -353,7 +353,7 @@ class Requirement:
         if require.transitive_headers is not None:
             downstream_require.headers = require.headers and require.transitive_headers
         if self.transitive_headers is not None:
-            transitive_propagation = required_conan_version_policy(consumer_conanfile, "2.29.9")
+            transitive_propagation = required_conan_version_policy(source, "2.29.9")
             downstream_require.transitive_headers = (self.transitive_headers
                                                      if not transitive_propagation else
                                                      self.transitive_headers and require.transitive_headers)

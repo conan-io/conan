@@ -153,7 +153,7 @@ class Node:
 
         down_require = d.require.transform_downstream(self.conanfile.package_type, require,
                                                       node.conanfile.package_type,
-                                                      consumer_conanfile=d.src.conanfile)
+                                                      d.src.conanfile)
         if down_require is None:
             return
 
@@ -206,7 +206,7 @@ class Node:
         # print("    Lets check_downstream one more")
         down_require = dependant.require.transform_downstream(self.conanfile.package_type,
                                                               require, None,
-                                                              consumer_conanfile=dependant.src.conanfile)
+                                                              dependant.src.conanfile)
 
         if down_require is None:
             # print("    No need to check downstream more")
