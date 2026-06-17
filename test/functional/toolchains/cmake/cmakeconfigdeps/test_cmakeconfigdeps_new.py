@@ -34,7 +34,7 @@ class TestExes:
                     cmake_layout(self)
                     self.cpp.build.exe = "mytool"
                     name = "mytool.exe" if platform.system() == "Windows" else "mytool"
-                    app_loc = os.path.join("build", str(self.settings.build_type), name)
+                    app_loc = os.path.join(str(self.settings.build_type), name)
                     self.cpp.build.location = app_loc
 
                 def build(self):
