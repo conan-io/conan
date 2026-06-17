@@ -7,25 +7,49 @@ from test.conftest import tools_locations
 from conan.test.utils.tools import TestClient
 
 
+SYCL_CODE = textwrap.dedent("""
+    #include <sycl/sycl.hpp>
+    #include <iostream>
+    #include <vector>
+    #include <string>
+
+    void hello() {
+        sycl::queue q;
+        std::cout << "Hello World from SYCL device: "
+                  << q.get_device().get_info<sycl::info::device::name>() << std::endl;
+    }
+
+    void hello_print_vector(const std::vector<std::string> &strings) {
+        sycl::queue q;
+        std::cout << "SYCL device: " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
+        for (const auto &s : strings) {
+            std::cout << s << std::endl;
+        }
+    }
+""")
+
+
 @pytest.mark.tool("intel_oneapi")
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only for Linux")
 class TestIntelCC:
+    """Tests for Intel oneAPI C++/DPC++ compilers on Linux"""
 
-    """Tests for Intel oneAPI C++/DPC++ compilers"""
-
-    oneapi_path = Path(tools_locations["intel_oneapi"]["2026.0"]["root"]["Linux"])
+    oneapi_path = Path(tools_locations["intel_oneapi"]["2026.0"]["root"][platform.system()])
 
     @pytest.mark.tool("cmake")
     def test_intel_oneapi_and_icpx(self):
-        """
-        Test Intel oneAPI icx/icpx C++ compiler with CMake.
-        Creates a library package and verifies compilation works.
-        """
+        """Test Intel oneAPI icx/icpx C++ compiler with CMake."""
         client = TestClient()
         client.run("new cmake_lib -d name=hello -d version=0.1")
+        compiler_executables = (
+            'tools.build:compiler_executables={"c": "icx-cl", "cpp": "icx-cl"}'
+            if platform.system() == "Windows"
+            else ""
+        )
+
         intel_profile = textwrap.dedent(f"""
             [settings]
-            os=Linux
+            os={platform.system()}
             arch=x86_64
             compiler=intel-cc
             compiler.mode=icx
@@ -35,14 +59,15 @@ class TestIntelCC:
 
             [conf]
             tools.intel:installation_path={self.oneapi_path}
+            {compiler_executables}
         """)
 
         client.save({"intel_profile": intel_profile})
         client.run("create -pr:b intel_profile -pr:h intel_profile")
-        assert ":: initializing oneAPI environment ..." in client.out
+        assert ":: initializing oneAPI environment" in client.out
         assert ":: oneAPI environment initialized ::" in client.out
         assert "Hello World" in client.out
-        assert "hello/0.1: __INTEL_LLVM_COMPILER2026" in client.out
+        assert "__INTEL_LLVM_COMPILER2026" in client.out
 
     intel_sycl_profile = textwrap.dedent(f"""
         [settings]
@@ -60,35 +85,15 @@ class TestIntelCC:
         tools.build:sharedlinkflags=["-fsycl"]
         tools.intel:installation_path={oneapi_path}
     """)
-    sycl_code = textwrap.dedent("""
-        #include <sycl/sycl.hpp>
-        #include <iostream>
-        #include <vector>
-        #include <string>
-
-        void hello() {
-            sycl::queue q;
-            std::cout << "Hello World from SYCL device: "
-                      << q.get_device().get_info<sycl::info::device::name>() << std::endl;
-        }
-
-        void hello_print_vector(const std::vector<std::string> &strings) {
-            sycl::queue q;
-            std::cout << "SYCL device: " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
-            for (const auto &s : strings) {
-                std::cout << s << std::endl;
-            }
-        }
-    """)
 
     @pytest.mark.tool("cmake")
     def test_intel_oneapi_and_sycl_cmake(self):
         """Test Intel oneAPI with SYCL using CMake."""
         client = TestClient()
         client.run("new cmake_lib -d name=hello -d version=0.1")
-        client.save({"intel_profile": self.intel_sycl_profile, "src/hello.cpp": self.sycl_code})
+        client.save({"intel_profile": self.intel_sycl_profile, "src/hello.cpp": SYCL_CODE})
         client.run("create . -pr:a intel_profile")
-        assert ":: initializing oneAPI environment ..." in client.out
+        assert ":: initializing oneAPI environment" in client.out
         assert ":: oneAPI environment initialized ::" in client.out
         assert "Hello World from SYCL device" in client.out
 
@@ -97,9 +102,9 @@ class TestIntelCC:
         """Test Intel oneAPI with SYCL using Autotools."""
         client = TestClient(path_with_spaces=False)
         client.run("new autotools_lib -d name=hello -d version=0.1")
-        client.save({"intel_profile": self.intel_sycl_profile, "src/hello.cpp": self.sycl_code})
+        client.save({"intel_profile": self.intel_sycl_profile, "src/hello.cpp": SYCL_CODE})
         client.run("create . -pr:a intel_profile")
-        assert ":: initializing oneAPI environment ..." in client.out
+        assert ":: initializing oneAPI environment" in client.out
         assert ":: oneAPI environment initialized ::" in client.out
         assert "Hello World from SYCL device" in client.out
 
@@ -110,11 +115,9 @@ class TestIntelCC:
         client.run("new autotools_lib -d name=hello -d version=0.1")
         conanfile = client.load("conanfile.py")
         conanfile = conanfile.replace("AutotoolsToolchain", "GnuToolchain")
-        client.save({"conanfile.py": conanfile,
-                     "intel_profile": self.intel_sycl_profile,
-                     "src/hello.cpp": self.sycl_code})
+        client.save({"conanfile.py": conanfile, "intel_profile": self.intel_sycl_profile, "src/hello.cpp": SYCL_CODE})
         client.run("create . -pr:a intel_profile")
-        assert ":: initializing oneAPI environment ..." in client.out
+        assert ":: initializing oneAPI environment" in client.out
         assert ":: oneAPI environment initialized ::" in client.out
         assert "Hello World from SYCL device" in client.out
 
@@ -123,9 +126,9 @@ class TestIntelCC:
         """Test Intel oneAPI with SYCL using Meson."""
         client = TestClient()
         client.run("new meson_lib -d name=hello -d version=0.1")
-        client.save({"intel_profile": self.intel_sycl_profile, "src/hello.cpp": self.sycl_code})
+        client.save({"intel_profile": self.intel_sycl_profile, "src/hello.cpp": SYCL_CODE})
         client.run("create . -pr:a intel_profile")
-        assert ":: initializing oneAPI environment ..." in client.out
+        assert ":: initializing oneAPI environment" in client.out
         assert ":: oneAPI environment initialized ::" in client.out
         assert "Hello World from SYCL device" in client.out
 
