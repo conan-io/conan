@@ -506,6 +506,12 @@ class _Component:
             origin = getattr(self, varname)
             if origin is not None:
                 origin[:] = [os.path.join(folder, el) for el in origin]
+
+        for prop in ["_location", "_link_location"]:
+            origin = getattr(self, prop)
+            if origin is not None:
+                setattr(self, prop, os.path.join(folder, origin))
+
         properties = self._properties
         if properties is not None:
             modules = properties.get("cmake_build_modules")  # Only this prop at this moment
@@ -525,6 +531,12 @@ class _Component:
             origin = getattr(self, varname)
             if origin is not None:
                 origin[:] = [relocate(f) for f in origin]
+
+        for prop in ["_location", "_link_location"]:
+            origin = getattr(self, prop)
+            if origin is not None:
+                setattr(self, prop, relocate(origin))
+
         properties = self._properties
         if properties is not None:
             modules = properties.get("cmake_build_modules")  # Only this prop at this moment

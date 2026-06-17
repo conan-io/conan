@@ -1054,3 +1054,86 @@ def test_implib_location_explicit_extension():
     assert "PROPERTIES IMPORTED_IMPLIB_RELEASE" in targets
     # And we find the dll
     assert "PROPERTIES IMPORTED_LOCATION_RELEASE" in targets
+
+
+def test_editable_exe_location_relative_to_build_folder():
+    # https://github.com/conan-io/conan/issues/20081
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+
+        class AppConan(ConanFile):
+            name = "app"
+            version = "0.1"
+            package_type = "application"
+
+            def layout(self):
+                self.folders.build = "mybuild"
+                self.cpp.build.exe = "myexe"
+                self.cpp.build.location = "myexe.exe"
+
+            def package_info(self):
+                self.cpp_info.exe = "myexe"
+                self.cpp_info.location = os.path.join("bin", "myexe.exe")
+        """)
+
+    c = TestClient()
+    c.save({"app/conanfile.py": conanfile})
+
+    c.run("create app")
+    c.run("install --requires=app/0.1 -g CMakeConfigDeps")
+    content = c.load("app-Targets-release.cmake")
+    assert "${app_PACKAGE_FOLDER_RELEASE}/bin/myexe.exe" in content
+
+    # Deployers are not really affected, CMakeConfigDeps already use relative paths
+    c.run("install --requires=app/0.1 -g CMakeConfigDeps --deployer=full_deploy")
+    content = c.load("app-Targets-release.cmake")
+    assert "${app_PACKAGE_FOLDER_RELEASE}/bin/myexe.exe" in content
+
+    c.run("editable add app")
+    c.run("install --requires=app/0.1 -g CMakeConfigDeps")
+    content = c.load("app-Targets-release.cmake")
+    assert "${app_PACKAGE_FOLDER_RELEASE}/mybuild/myexe.exe" in content
+
+
+def test_editable_component_exe_location_relative_to_build_folder():
+    # https://github.com/conan-io/conan/issues/20081 (component variant)
+    # Same issue for cpp.build.components[...].location
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import cmake_layout
+
+        class AppConan(ConanFile):
+            name = "app"
+            version = "0.1"
+            package_type = "application"
+
+            def layout(self):
+                self.folders.build = "mybuild"
+                self.cpp.build.components["mycomp"].exe = "myexe"
+                self.cpp.build.components["mycomp"].location = "myexe.exe"
+
+            def package_info(self):
+                self.cpp_info.components["mycomp"].exe = "myexe"
+                self.cpp_info.components["mycomp"].location = os.path.join("bin", "myexe.exe")
+        """)
+
+    c = TestClient()
+    c.save({"app/conanfile.py": conanfile})
+
+    c.run("create app")
+    c.run("install --requires=app/0.1 -g CMakeConfigDeps")
+    content = c.load("app-Targets-release.cmake")
+    assert "${app_PACKAGE_FOLDER_RELEASE}/bin/myexe.exe" in content
+
+    # Deployers are not really affected, CMakeConfigDeps already use relative paths
+    c.run("install --requires=app/0.1 -g CMakeConfigDeps --deployer=full_deploy")
+    content = c.load("app-Targets-release.cmake")
+    assert "${app_PACKAGE_FOLDER_RELEASE}/bin/myexe.exe" in content
+
+    c.run("editable add app")
+    c.run("install --requires=app/0.1 -g CMakeConfigDeps")
+
+    content = c.load("app-Targets-release.cmake")
+    assert "${app_PACKAGE_FOLDER_RELEASE}/mybuild/myexe.exe" in content
