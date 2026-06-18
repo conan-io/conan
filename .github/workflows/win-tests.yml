@@ -178,6 +178,7 @@ jobs:
             C:\tools\bazel\6.6.0
             C:\tools\bazel\7.6.2
             C:\tools\bazel\8.4.2
+            C:\tools\bazel\9.1.0
           key: ${{ runner.os }}-conan-tools-cache
 
       - name: Install CMake versions
@@ -206,7 +207,7 @@ jobs:
       - name: Install Bazel versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
-          $BAZEL_BUILD_VERSIONS = "6.6.0", "7.6.2", "8.4.2"
+          $BAZEL_BUILD_VERSIONS = "6.6.0", "7.6.2", "8.4.2", "9.1.0"
           foreach ($version in $BAZEL_BUILD_VERSIONS) {
               Write-Host "Downloading Bazel version $version for Windows..."
               $destination = "C:\tools\bazel\$version"

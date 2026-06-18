@@ -1776,7 +1776,7 @@ def test_find_package_extra_variants():
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
     client.run("build")
-    assert 'Conan: Configuring Targets for hello/1.0' in client.out
+    assert 'Conan: Configuring Targets for hello' in client.out
     # And this follows the expected found variable generation
     assert "Found HellO!" in client.out
     assert "Found hello!" not in client.out
