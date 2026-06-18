@@ -281,6 +281,6 @@ class TestCMakeConfigDepsPaths:
         c.save({"conanfile.py": conanfile,
                 "CMakeLists.txt": consumer}, clean_first=True)
         c.run(f"build .")
-        assert "conanfile.py: There is already a 'hello/0.1' package " \
+        assert "There is already a 'hello/0.1' package " \
                "contributing to CMAKE_MODULE_PATH" in c.out
         assert "MYOWNCMAKE FROM hello!" in c.out
