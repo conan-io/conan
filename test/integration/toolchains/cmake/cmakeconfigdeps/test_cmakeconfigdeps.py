@@ -151,6 +151,12 @@ def test_cmakedeps_deployer_relative_paths():
     assert ('set(liba_PACKAGE_FOLDER_RELEASE "${CMAKE_CURRENT_LIST_DIR}/full_deploy/'
             'host/liba/1.0")') in liba_targets
 
+    # Extra check with full path
+    c.run(f'install "{c.current_folder}/." --deployer=full_deploy')
+    cmake = c.load("liba-config.cmake")
+    assert 'set(liba_INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/full_deploy/host/liba/1.0' in cmake
+    assert 'set(liba_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/full_deploy/host/liba/1.0' in cmake
+
 
 def test_cmakeconfigdeps_recipe():
     c = TestClient()
