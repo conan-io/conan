@@ -34,7 +34,7 @@ SYCL_CODE = textwrap.dedent("""
 class TestIntelCC:
     """Tests for Intel oneAPI C++/DPC++ compilers on Linux"""
 
-    oneapi_path = Path(tools_locations["intel_oneapi"]["2026.0"]["root"][platform.system()])
+    oneapi_path = Path(tools_locations["intel_oneapi"]["2026.0"]["root"]["Linux"])
 
     @pytest.mark.tool("cmake")
     def test_intel_oneapi_and_icpx(self):
