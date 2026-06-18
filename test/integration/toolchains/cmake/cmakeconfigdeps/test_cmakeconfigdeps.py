@@ -1135,5 +1135,4 @@ class TestEditableExeLocation:
         c.run("install --requires=app/0.1 -g CMakeConfigDeps")
 
         content = c.load("app-Targets-release.cmake")
-        print(content)
         assert "${app_PACKAGE_FOLDER_RELEASE}/mybuild/myexe.exe" in content

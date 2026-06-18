@@ -501,18 +501,19 @@ class _Component:
                 else:
                     current_values[k] = copy.copy(v)
 
-    def set_relative_base_relative_folder(self, folder):
+    def set_relative_base_relative_folder(self, relative_folder):
+        # This is using the relative folder location for the package root or build tree
+        # only
         for prop in ["_location", "_link_location"]:
             origin = getattr(self, prop)
             if origin is not None:
-                setattr(self, prop, os.path.join(folder, origin))
+                setattr(self, prop, os.path.join(relative_folder, origin))
 
     def set_relative_base_folder(self, folder):
         for varname in _DIRS_VAR_NAMES:
             origin = getattr(self, varname)
             if origin is not None:
                 origin[:] = [os.path.join(folder, el) for el in origin]
-
         properties = self._properties
         if properties is not None:
             modules = properties.get("cmake_build_modules")  # Only this prop at this moment
@@ -532,7 +533,6 @@ class _Component:
             origin = getattr(self, varname)
             if origin is not None:
                 origin[:] = [relocate(f) for f in origin]
-
         properties = self._properties
         if properties is not None:
             modules = properties.get("cmake_build_modules")  # Only this prop at this moment
