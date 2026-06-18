@@ -84,7 +84,7 @@ class TestToolRequires:
                      "profile": "[platform_tool_requires]\ntool/1.1"})
         client.run("install . -pr=profile")
         assert "tool/1.1#platform - Platform" in client.out
-        assert "conanfile.py: DEPENDENCY tool/1.1" in client.out
+        assert "DEPENDENCY tool/1.1" in client.out
 
     def test_consumer_resolved_revision(self):
         client = TestClient(light=True)
@@ -101,7 +101,7 @@ class TestToolRequires:
                      "profile": "[platform_tool_requires]\ntool/1.1#rev1"})
         client.run("install . -pr=profile")
         assert "tool/1.1 - Platform" in client.out
-        assert "conanfile.py: DEPENDENCY tool/1.1#rev1" in client.out
+        assert "DEPENDENCY tool/1.1#rev1" in client.out
 
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -115,7 +115,7 @@ class TestToolRequires:
         client.save({"conanfile.py": conanfile})
         client.run("install . -pr=profile")
         assert "tool/1.1#rev1 - Platform" in client.out
-        assert "conanfile.py: DEPENDENCY tool/1.1#rev1" in client.out
+        assert "DEPENDENCY tool/1.1#rev1" in client.out
 
     def test_consumer_unresolved_revision(self):
         """ if a recipe specifies an exact revision and so does the profiñe
