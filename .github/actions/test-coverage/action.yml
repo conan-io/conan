@@ -30,7 +30,7 @@ runs:
         if: ${{ inputs.tests }}
         shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
         run: |
-          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov-context=test --cov=conan --cov=conans --cov=test --cov-report=' || '' }} ${{ github.event_name == 'pull_request' && '--junitxml=test-results.xml' || '' }}
+          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov-context=test --cov=conan --cov=conans --cov=test --cov-report=' || '' }} ${{ github.head_ref != '' && '--junitxml=test-results.xml' || '' }}
 
       - name: Rename coverage file
         if: github.ref == 'refs/heads/develop2'
@@ -46,7 +46,7 @@ runs:
           include-hidden-files: true
 
       - name: Upload test results
-        if: ${{ always() && github.event_name == 'pull_request' }}
+        if: ${{ always() && github.head_ref != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}

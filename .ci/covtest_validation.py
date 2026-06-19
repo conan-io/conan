@@ -23,15 +23,15 @@ def nodeid_to_junit_key(nodeid):
 
 def main():
     if not os.path.exists(PREDICTION_FILE):
-        print("Prediction file not found — skipping covtest validation.")
-        return 0
-
-    with open(PREDICTION_FILE) as f:
-        raw_predictions = [line.strip() for line in f if line.strip()]
-
-    if not raw_predictions:
-        print("Empty prediction (server unreachable, no snapshot, or config file changed). Skipping.")
-        return 0
+        prediction_note = "Prediction file not found -- skipping comparison."
+        raw_predictions = []
+    else:
+        with open(PREDICTION_FILE) as f:
+            raw_predictions = [line.strip() for line in f if line.strip()]
+        if not raw_predictions:
+            prediction_note = "Empty prediction (server unreachable, no snapshot, or config changed) -- skipping comparison."
+        else:
+            prediction_note = None
 
     predicted_keys = {nodeid_to_junit_key(n) for n in raw_predictions}
 
@@ -57,8 +57,6 @@ def main():
                 failing_keys.add(key)
 
     total_failing = len(failing_keys)
-    unpredicted = failing_keys - predicted_keys
-    predicted_hit = total_failing - len(unpredicted)
     total_passed = total_run - total_failing - total_skipped
 
     print("=== CovTest Prediction Summary ===")
@@ -67,12 +65,19 @@ def main():
     print("  Failed/Errored: {:>6,}".format(total_failing))
     print("  Skipped:        {:>6,}".format(total_skipped))
     print()
+
+    if prediction_note:
+        print(prediction_note)
+        return 0
+
     print("Covtest predicted:{:>6,} tests".format(len(raw_predictions)))
 
     if total_failing == 0:
-        print("  No test failures — nothing to validate.")
+        print("  No test failures -- nothing to validate.")
         return 0
 
+    unpredicted = failing_keys - predicted_keys
+    predicted_hit = total_failing - len(unpredicted)
     pct = predicted_hit / total_failing * 100
     print("  Predicted failures:   {:>3} / {}  ({:.1f}%)".format(predicted_hit, total_failing, pct))
     print("  Unpredicted failures: {:>3} / {}  ({:.1f}%)".format(len(unpredicted), total_failing, 100 - pct))
