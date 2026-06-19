@@ -181,6 +181,10 @@ def intel_cc_compilers(conanfile):
     elif mode == "dpcpp":
         return {"c": "icx", "cpp": "dpcpp"}
     elif mode == "icx":
+        if conanfile.settings.get_safe("os") == "Windows":
+            # On Windows, the Intel oneAPI DPC++/C++ Compiler (icx) is invoked through the icx-cl  to ensure
+            # compatibility with the Microsoft Visual Studio environment.
+            return {"c": "icx-cl", "cpp": "icx-cl"}
         return {"c": "icx", "cpp": "icpx"}
     else:
         return None
