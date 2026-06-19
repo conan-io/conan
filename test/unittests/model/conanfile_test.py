@@ -6,7 +6,7 @@ from conan.test.utils.tools import TestClient
 
 class TestConanFile:
     def test_conanfile_naming(self):
-        # simple non breaking change
+        simple breaking change
         for member in vars(ConanFile):
             if member.startswith('_') and not member.startswith("__"):
                 assert member.startswith('_conan')
