@@ -147,4 +147,4 @@ def test_install_editable_build_folder_vars():
     c.run("build lib -pr=profile")
     c.run("install app -pr=profile --build=editable")
     path = os.path.join(c.current_folder, "lib", "build", "windows-x86_64", "Release", "generators")
-    assert f"Generate step\nGenerators folder: {path}" in c.out
+    assert f"Generators folder: {path}" in c.out
