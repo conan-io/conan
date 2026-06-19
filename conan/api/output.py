@@ -307,7 +307,7 @@ class ConanOutput:
     def step(self, msg: str):
         """ Draws a subtitle around the message, useful for important messages"""
         if self._conan_output_level <= LEVEL_NOTICE:
-            self._write_message(msg, fg=Color.BRIGHT_CYAN)
+            self._write_message(f">>> {msg}", fg=Color.BRIGHT_CYAN)
         return self
 
     def highlight(self, msg: str):

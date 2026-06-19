@@ -83,6 +83,7 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
     ConanOutput().step(f"Generate step")
     old_display = conanfile.display_name
     conanfile.display_name = ""
+    conanfile.output.info(f"Generating files for {old_display}")
     conanfile.output.info(f"Generators folder: {new_gen_folder}")
     # TODO: Optimize this, so the global generators are not loaded every call to write_generators
     global_generators = load_cache_generators(HomePaths(home_folder).custom_generators_path)
