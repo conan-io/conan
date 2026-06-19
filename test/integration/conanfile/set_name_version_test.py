@@ -23,7 +23,7 @@ class TestSetVersionName:
         client.save({"conanfile.py": conanfile})
         user_channel_arg = "--user=user --channel=channel" if user_channel else ""
         client.run("export . %s" % user_channel_arg)
-        assert "pkg/2.1%s: Exported" % user_channel in client.out
+        assert "Exported: pkg/2.1%s" % user_channel in client.out
         # installing it doesn't break
         client.run("install --requires=pkg/2.1%s --build=missing" % (user_channel or "@"))
         client.assert_listed_require({f"pkg/2.1{user_channel}": "Cache"})
@@ -52,7 +52,7 @@ class TestSetVersionName:
                      "name.txt": "pkg",
                      "version.txt": "2.1"})
         client.run("export . --user=user --channel=testing")
-        assert "pkg/2.1@user/testing: Exported" in client.out
+        assert "Exported: pkg/2.1@user/testing" in client.out
         client.run("install --requires=pkg/2.1@user/testing --build=missing")
         client.assert_listed_binary({f"pkg/2.1@user/testing": (NO_SETTINGS_PACKAGE_ID, "Build")})
         client.run("install --requires=pkg/2.1@user/testing")
@@ -96,7 +96,7 @@ class TestSetVersionName:
                """)
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=pkg --version=1.0")
-        assert "pkg.extra/1.0.extra: Exported" in client.out
+        assert "Exported: pkg.extra/1.0.extra" in client.out
 
     def test_set_version_name_only_not_cli(self):
         client = TestClient()
@@ -110,11 +110,11 @@ class TestSetVersionName:
             """)
         client.save({"conanfile.py": conanfile})
         client.run("export . --name=other --version=1.1 --user=user --channel=testing")
-        assert "other/1.1@user/testing: Exported" in client.out
+        assert "Exported: other/1.1@user/testing" in client.out
         client.run("export .  --version=1.1 --user=user --channel=testing")
-        assert "pkg/1.1@user/testing: Exported" in client.out
+        assert "Exported: pkg/1.1@user/testing" in client.out
         client.run("export . --user=user --channel=testing")
-        assert "pkg/2.0@user/testing: Exported" in client.out
+        assert "Exported: pkg/2.0@user/testing" in client.out
 
         # Local flow should also work
         client.run("install . --name=other --version=1.2")
@@ -161,7 +161,7 @@ class TestSetVersionName:
         with client.chdir("build"):
             client.save({"version.txt": "2.1"}, clean_first=True)
             client.run("export .. ")
-            assert "pkg/2.1: Exported" in client.out
+            assert "Exported: pkg/2.1" in client.out
 
 
 def test_set_version_forbidden_chars():
@@ -223,4 +223,4 @@ def test_set_version_channel():
         """)
     c.save({"conanfile.py": conanfile})
     c.run("export .")
-    assert "pkg/0.1@myuser/mychannel: Exported" in c.out
+    assert " Exported: pkg/0.1@myuser/mychannel" in c.out

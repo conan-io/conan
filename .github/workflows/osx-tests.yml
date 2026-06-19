@@ -59,6 +59,7 @@ jobs:
             ~/Applications/bazel/6.6.0
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
+            ~/Applications/bazel/9.1.0
           key: ${{ runner.os }}-macos26-conan-tools-cache
 
       - name: Build CMake old versions not available for ARM
@@ -104,7 +105,7 @@ jobs:
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
-          for version in 6.6.0 7.6.2 8.4.2; do
+          for version in 6.6.0 7.6.2 8.4.2 9.1.0; do
             mkdir -p ${HOME}/Applications/bazel/${version}
             wget -q -O ${HOME}/Applications/bazel/${version}/bazel https://github.com/bazelbuild/bazel/releases/download/${version}/bazel-${version}-darwin-arm64
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
@@ -142,6 +143,7 @@ jobs:
             ~/Applications/bazel/6.6.0
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
+            ~/Applications/bazel/9.1.0
           key: ${{ runner.os }}-macos26-conan-tools-cache
 
       - name: Select Xcode 26.4.1

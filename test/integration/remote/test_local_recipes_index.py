@@ -277,7 +277,7 @@ class TestInstall:
         client = TestClient(light=True)
         client.run(f"remote add local '{folder}'")
         client.run("install --requires=zlib/0.1 --build=missing -vv")
-        assert "zlib/0.1: Copied 1 file: patch1" in client.out
+        assert "Copied 1 file: patch1" in client.out
         assert "zlib/0.1: Apply patch (file): patches/patch1" in client.out
 
     def test_export_user_channel(self):

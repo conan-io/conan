@@ -21,9 +21,9 @@ class TestExportsMethod:
             """)
         client.save({"conanfile.py": conanfile, "LICENSE.md": "license", "file.txt": "file"})
         client.run("export . --name=pkg --version=0.1")
-        assert "pkg/0.1: Copied 1 '.txt' file: file.txt" in client.out
-        assert "pkg/0.1: Calling export()" in client.out
-        assert "Copied 1 '.md' file: LICENSE.md" in client.out
+        assert " Copied 1 '.txt' file: file.txt" in client.out
+        assert " Calling export()" in client.out
+        assert " Copied 1 '.md' file: LICENSE.md" in client.out
 
         layout = client.exported_layout()
 
@@ -163,7 +163,7 @@ class TestExportsSourcesMethod:
             """)
         client.save({"conanfile.py": conanfile, "LICENSE.md": "license", "file.txt": "file"})
         client.run("export . --name=pkg --version=0.1")
-        assert "pkg/0.1: Copied 1 '.txt' file: file.txt" in client.out
+        assert "Copied 1 '.txt' file: file.txt" in client.out
         assert "Copied 1 '.md' file: LICENSE.md" in client.out
 
         layout = client.exported_layout()

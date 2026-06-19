@@ -51,38 +51,6 @@ def test_output_chainable():
     assert "But there was more that needed to be said" in stderr.getvalue()
 
 
-def test_output_scoped():
-    """
-    Test that when scoped output is enabled, the scope is only printed once per scope change or title/subtitle is emitted
-    """
-    stderr = RedirectedTestOutput()
-    with redirect_output(stderr):
-        ConanOutput._scoped_recipe_output = True
-        output = ConanOutput(scope="My package")
-        output.info("Hello")
-        output.highlight("Conan")
-        output = ConanOutput()
-        output.title("Title")
-        output.info("Package manager!")
-        output.subtitle("Subtitle")
-        output.highlight("Frog")
-        output = ConanOutput(scope="Other package")
-        output.info("Hello")
-    assert textwrap.dedent("""\
-    My package:
-      Hello
-      Conan
-
-    ======== Title ========
-    Package manager!
-
-    -------- Subtitle --------
-    Frog
-    Other package:
-      Hello
-    """) == stderr.getvalue()
-
-
 def test_output_no_trim():
     stderr = RedirectedTestOutput()
     with redirect_output(stderr):

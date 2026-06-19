@@ -35,7 +35,7 @@ class TestCompatibleIDsTest:
                      "myprofile": profile})
         # Create package with gcc 4.8
         client.run("export . --name=pkg --version=0.1 --user=user --channel=stable")
-        assert ("pkg/0.1@user/stable: Exported: "
+        assert ("Exported: "
                 "pkg/0.1@user/stable#d165eb4bcdd1c894a97d2a212956f5fe") in client.out
         client.run("export . --name=lib --version=0.1 --user=user --channel=stable")
 
