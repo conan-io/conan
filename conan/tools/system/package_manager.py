@@ -78,7 +78,7 @@ class _SystemPackageManagerTool:
         return True
 
     def _parse_explicit_arch_suffix(self, name):
-        if self._arch_separator not in name:
+        if not self._arch_separator or self._arch_separator not in name:
             return name, ""
         base_name, _, explicit_arch = name.rpartition(self._arch_separator)
         if base_name and explicit_arch and self._is_valid_explicit_arch(explicit_arch):
