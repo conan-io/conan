@@ -21,6 +21,22 @@ def nodeid_to_junit_key(nodeid):
         return module + "." + ".".join(parts[1:-1]) + "::" + parts[-1]
 
 
+def is_predicted(junit_key, predicted_keys, predicted_file_paths):
+    """Check exact key match first; fall back to file-level match for empty-classname entries.
+
+    Empty classname means a collection error (e.g. import failure) reported for the whole
+    file. In that case we treat any predicted test in that file as a match.
+    """
+    if junit_key in predicted_keys:
+        return True
+    classname, sep, name = junit_key.partition("::")
+    if sep and not classname:
+        # name is a dotted module path -- convert back to a file path
+        file_path = name.replace(".", "/") + ".py"
+        return file_path in predicted_file_paths
+    return False
+
+
 def main():
     if not os.path.exists(PREDICTION_FILE):
         prediction_note = "Prediction file not found -- skipping comparison."
@@ -34,8 +50,9 @@ def main():
             prediction_note = None
 
     predicted_keys = {nodeid_to_junit_key(n) for n in raw_predictions}
+    predicted_file_paths = {n.split("::")[0] for n in raw_predictions}
 
-    total_run = total_failures_attr = total_errored = total_skipped = 0
+    total_run = total_skipped = 0
     suite_count = 0
     failing_keys = set()
 
@@ -48,8 +65,6 @@ def main():
         for suite in root.iter("testsuite"):
             suite_count += 1
             total_run += int(suite.get("tests", 0))
-            total_failures_attr += int(suite.get("failures", 0))
-            total_errored += int(suite.get("errors", 0))
             total_skipped += int(suite.get("skipped", 0))
         for tc in root.iter("testcase"):
             if tc.find("failure") is not None or tc.find("error") is not None:
@@ -76,7 +91,8 @@ def main():
         print("  No test failures -- nothing to validate.")
         return 0
 
-    unpredicted = failing_keys - predicted_keys
+    unpredicted = {k for k in failing_keys
+                   if not is_predicted(k, predicted_keys, predicted_file_paths)}
     predicted_hit = total_failing - len(unpredicted)
     pct = predicted_hit / total_failing * 100
     print("  Predicted failures:   {:>3} / {}  ({:.1f}%)".format(predicted_hit, total_failing, pct))
