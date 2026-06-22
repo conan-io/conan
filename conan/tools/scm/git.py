@@ -270,26 +270,32 @@ class Git:
         files = files.splitlines()
         return files
 
-    def coordinates_to_conandata(self, repository=False):
+    def coordinates_to_conandata(self, repository=False, use_tree=False):
         """
-        Capture the "url" and "commit" from the Git repo, calling ``get_url_and_commit()``, and then
-        store those in the ``conandata.yml`` under the "scm" key. This information can be
-        used later to clone and checkout the exact source point that was used to create this
-        package, and can be useful even if the recipe uses ``exports_sources`` as mechanism to
-        embed the sources.
+        Capture SCM coordinates from Git and store them in conandata.yml under "scm".
+        When use_tree=True, stores root tree SHA (content fingerprint, stable across squash
+        merges) instead of commit SHA for reproducible recipe revisions in pre-merge CI builds.
 
-        :param repository: By default gets the commit of the defined folder, use repository=True to get
-                     the commit of the repository instead.
+        The use_tree only works at the moment for repository=False
         """
-        scm_url, scm_commit = self.get_url_and_commit(repository=repository)
-        update_conandata(self._conanfile, {"scm": {"commit": scm_commit, "url": scm_url}})
+        if use_tree:
+            if self.is_dirty(repository=repository):
+                raise ConanException("Repo is dirty, cannot capture tree: {}".format(self.folder))
+            assert repository is False, "repository=True not allowed in coordinates_to_conandata"
+            tree = self.run("log -1 --format=%T")
+            url = self.get_remote_url()
+            update_conandata(self._conanfile, {"scm": {"tree": tree, "url": url}})
+        else:
+            scm_url, scm_commit = self.get_url_and_commit(repository=repository)
+            update_conandata(self._conanfile, {"scm": {"commit": scm_commit, "url": scm_url}})
 
     def checkout_from_conandata_coordinates(self):
-        """
-        Reads the "scm" field from the ``conandata.yml``, that must contain at least "url" and
-        "commit" and then do a ``clone(url, target=".")``, ``fetch <commit>``, followed by a ``checkout(commit)``.
-        """
+        """Reads "scm" from conandata.yml and clones/checks out the sources."""
         sources = self._conanfile.conan_data["scm"]
         self.clone(url=sources["url"], target=".", args=["--origin=origin"])
-        self.run(f"fetch origin {sources['commit']}")
-        self.checkout(commit=sources["commit"])
+        if "tree" in sources:
+            # Tree objects are in the local store after clone; apply directly without commit scan.
+            self.run(f"read-tree --reset -u {sources['tree']}")
+        else:
+            self.run(f"fetch origin {sources['commit']}")
+            self.checkout(commit=sources["commit"])
