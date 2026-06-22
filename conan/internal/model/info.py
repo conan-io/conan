@@ -48,11 +48,7 @@ class _VersionRepr:
         return ".".join([v0, v1, v2])
 
     def micro(self):
-        # This check is to avoid breaking non-integer major versions
-        # for legacy reasons. Users are warned against using them
-        if not isinstance(self._version.major.value, int):
-            return str(self._version.major)
-
+        # Not checking for cci.version, doesn't need to be legacy compatible
         v0 = str(self._version.major)
         v1 = str(self._version.minor) if self._version.minor is not None else "0"
         v2 = str(self._version.patch) if self._version.patch is not None else "0"
