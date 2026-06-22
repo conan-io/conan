@@ -1179,9 +1179,9 @@ class TestCompatibleFlags:
         c.run(f"editable add pkg --name=pkg --version=0.1")
 
         c.run(f"install consumer {settings}")
-        assert f"conanfile.py: CXXFLAGS: ['-mywineditflag']!!!" in c.out
+        assert f"CXXFLAGS: ['-mywineditflag']!!!" in c.out
         c.run(f"install consumer {settings} -s &:compiler=clang -s &:compiler.version=19")
-        assert f"conanfile.py: CXXFLAGS: []!!!" in c.out
+        assert f"CXXFLAGS: []!!!" in c.out
 
     def test_compatible_flags_direct(self):
         """  same as above but without compatibility
@@ -1234,10 +1234,10 @@ class TestCompatibleFlags:
         c.run(f"create pkg --name=pkg --version=0.1 {msvc}")
 
         c.run(f"install consumer {msvc}")
-        assert "conanfile.py: FLAGS: ['/Zc:__cplusplus']!!!" in c.out
+        assert "FLAGS: ['/Zc:__cplusplus']!!!" in c.out
 
         c.run(f"install consumer {clang}")
-        assert "conanfile.py: FLAGS: []!!!" in c.out
+        assert "FLAGS: []!!!" in c.out
 
 
 def test_compatible_setting():

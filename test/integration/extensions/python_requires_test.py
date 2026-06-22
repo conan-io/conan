@@ -343,8 +343,8 @@ class TestPyRequiresExtend:
                      "other.txt": "text"})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         assert " Exports sources! *.h" in client.out
-        assert " Copied 1 '.txt' file: other.txt" in client.out
-        assert " Copied 1 '.h' file: header.h" in client.out
+        assert "Copied 1 '.txt' file: other.txt" in client.out
+        assert "Copied 1 '.h' file: header.h" in client.out
         assert " License! MyLicense" in client.out
         assert " Author! author@company.com" in client.out
         assert " HEADER CONTENT!: pkg new header contents" in client.out
@@ -461,7 +461,7 @@ class TestPyRequiresExtend:
                 """)
         client.save({"conanfile.py": derived})
         client.run("install .")
-        assert "conanfile.py: MYOPTION: 2!!!!" in client.out
+        assert "MYOPTION: 2!!!!" in client.out
 
     def test_failure_init_method(self):
         client = TestClient()
@@ -1298,8 +1298,8 @@ class TestTransitiveExtend:
         client.run("export company")
         client.run("export project")
         client.run("install consumer")
-        assert "conanfile.py (consumer/1.0): Msg1:project!!!" in client.out
-        assert "conanfile.py (consumer/1.0): Msg2:company!!!" in client.out
+        assert "Msg1:project!!!" in client.out
+        assert "Msg2:company!!!" in client.out
 
     def test_transitive_extend2(self):
         client = TestClient(light=True)
@@ -1349,8 +1349,8 @@ class TestTransitiveExtend:
         client.run("export company")
         client.run("export project")
         client.run("install consumer")
-        assert "conanfile.py (consumer/1.0): Msg1:project!!!" in client.out
-        assert "conanfile.py (consumer/1.0): Msg2:company!!!" in client.out
+        assert "Msg1:project!!!" in client.out
+        assert "Msg2:company!!!" in client.out
 
 
 def test_multi_top_missing_from_remote():

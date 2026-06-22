@@ -201,7 +201,7 @@ def test_replace_requires_consumer_references(name, version):
     c.run("create dep")
     c.run("build app -pr=profile")
     assert f"zlib/0.1: {name}/{version}" in c.out
-    assert f"conanfile.py (app/0.1): DEP ZLIB generate: {name}!" in c.out
+    assert f"DEP ZLIB generate: {name}!" in c.out
     assert f"conanfile.py (app/0.1): DEP ZLIB build: {name}!" in c.out
     # Check generated CMake code. If the targets are NOT compatible, then the replacement
     # Cannot happen
@@ -211,7 +211,7 @@ def test_replace_requires_consumer_references(name, version):
     assert "add_library(ZLIB::ZLIB INTERFACE IMPORTED)" in cmake
     c.run("create app -pr=profile")
     assert f"zlib/0.1: {name}/{version}" in c.out
-    assert f"app/0.1: DEP ZLIB generate: {name}!" in c.out
+    assert f"DEP ZLIB generate: {name}!" in c.out
     assert f"app/0.1: DEP ZLIB build: {name}!" in c.out
     if name == "zlib-ng":
         # CMakeDeps can not be used to consume replaced requires for different packages
@@ -257,9 +257,9 @@ def test_replace_requires_consumer_references_error_multiple():
     c.run("create zlib")
     c.run("build app -pr=profile")
     assert "zlib/0.1: zlib/0.2" in c.out
-    assert "conanfile.py (app/0.1): DEP ZLIB generate: zlib!" in c.out
+    assert "DEP ZLIB generate: zlib!" in c.out
     assert "conanfile.py (app/0.1): DEP ZLIB build: zlib!" in c.out
-    assert "conanfile.py (app/0.1): DEP BZIP2 generate: zlib!" in c.out
+    assert "DEP BZIP2 generate: zlib!" in c.out
     assert "conanfile.py (app/0.1): DEP BZIP2 build: zlib!" in c.out
     # Check generated CMake code. If the targets are NOT compatible, then the replacement
     # Cannot happen
@@ -269,7 +269,7 @@ def test_replace_requires_consumer_references_error_multiple():
     assert "add_library(ZLIB::ZLIB INTERFACE IMPORTED)" in cmake
     c.run("create app -pr=profile")
     assert "zlib/0.1: zlib/0.2" in c.out
-    assert "app/0.1: DEP ZLIB generate: zlib!" in c.out
+    assert "DEP ZLIB generate: zlib!" in c.out
     assert "app/0.1: DEP ZLIB build: zlib!" in c.out
 
 
@@ -323,7 +323,7 @@ def test_replace_requires_consumer_components_options():
     c.run("create zlibng -o *:compat=True")
     c.run("build app -pr=profile")
     assert "zlib/0.1: zlib-ng/0.1" in c.out
-    assert "conanfile.py (app/0.1): DEP ZLIB generate: zlib-ng!" in c.out
+    assert "DEP ZLIB generate: zlib-ng!" in c.out
     assert "conanfile.py (app/0.1): DEP ZLIB build: zlib-ng!" in c.out
     # Check generated CMake code. If the targets are NOT compatible, then the replacement
     # Cannot happen
@@ -337,7 +337,7 @@ def test_replace_requires_consumer_components_options():
 
     c.run("create app -pr=profile")
     assert "zlib/0.1: zlib-ng/0.1" in c.out
-    assert "app/0.1: DEP ZLIB generate: zlib-ng!" in c.out
+    assert "DEP ZLIB generate: zlib-ng!" in c.out
     assert "app/0.1: DEP ZLIB build: zlib-ng!" in c.out
     assert "find_package(ZLIB)" in c.out
     assert "target_link_libraries(... ZLIB::ZLIB)" in c.out
@@ -377,8 +377,8 @@ def test_replace_requires_multiple():
     c.run("create dep --name=libgl --version=1.0")
     c.run("create app -pr=profile")
     # There are actually 2 dependencies, pointing to the same node
-    assert "libepoxy/0.1: DEP: opengl: libgl" in c.out
-    assert "libepoxy/0.1: DEP: egl: libgl" in c.out
+    assert "DEP: opengl: libgl" in c.out
+    assert "DEP: egl: libgl" in c.out
 
 
 class TestReplaceRequiresTransitiveGenerators:

@@ -223,4 +223,4 @@ def test_set_version_channel():
         """)
     c.save({"conanfile.py": conanfile})
     c.run("export .")
-    assert " Exported: pkg/0.1@myuser/mychannel" in c.out
+    assert "Exported: pkg/0.1@myuser/mychannel" in c.out

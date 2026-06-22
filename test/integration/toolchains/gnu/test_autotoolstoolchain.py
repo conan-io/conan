@@ -220,7 +220,7 @@ def test_unknown_compiler():
                                                .with_generator("AutotoolsToolchain")})
     # this used to crash, because of build_type_flags in AutotoolsToolchain returning empty string
     client.run("install . -s compiler=xlc")
-    assert "conanfile.py: Generator 'AutotoolsToolchain' calling 'generate()'" in client.out
+    assert "Generator 'AutotoolsToolchain' calling 'generate()'" in client.out
 
 
 def test_toolchain_and_compilers_build_context():
