@@ -543,9 +543,13 @@ class TestLinear(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
 
         # node, headers, lib, build, run
-        _check_transitive(app, [(libb, True, True, False, False),
-                                (liba, False, False, False, False)])
-        _check_transitive(libb, [(liba, True, False, False, False)])
+        _check_transitive(app, [
+            (libb, True, True, False, False, None, None),
+            (liba, False, False, False, False, None, None)
+        ])
+        _check_transitive(libb, [
+            (liba, True, False, False, False, None, None)
+        ])
 
     def test_header_only_with_transitives(self):
         # app -> liba0.1(header) -> libb0.1 (static)
@@ -569,12 +573,16 @@ class TestLinear(GraphManagerTest):
         self._check_node(libb, "libb/0.1#123", dependents=[liba])
         self._check_node(libc, "libc/0.1#123", dependents=[liba])
 
-        # node, headers, lib, build, run
-        _check_transitive(app, [(liba, True, False, False, False),
-                                (libb, True, True, False, False),
-                                (libc, True, True, False, True)])
-        _check_transitive(liba, [(libb, True, True, False, False),
-                                 (libc, True, True, False, True)])
+        # node, headers, lib, build, run, transitive_headers, transitive_libs
+        _check_transitive(app, [
+            (liba, True, False, False, False, None, None),
+            (libb, True, True, False, False, None, None),
+            (libc, True, True, False, True, None, None)
+        ])
+        _check_transitive(liba, [
+            (libb, True, True, False, False, True, True),
+            (libc, True, True, False, True, True, True)
+        ])
 
     def test_multiple_header_only_with_transitives(self):
         # app -> libd0.1(header) -> liba0.1(header) -> libb0.1 (static)
