@@ -83,7 +83,7 @@ class LockfileAPI:
     def update_lockfile_export(self, lockfile, conanfile, ref, is_build_require=False) -> Lockfile:
         """ Update the lockfile or create a new one with the information resulting from a
         conan export operation, so the recently exported version and revision can be locked and
-        priritized.
+        prioritized.
 
         :param lockfile: The lockfile to update. Can be None and a new lockfile will be created
         :param conanfile: The exported conanfile
