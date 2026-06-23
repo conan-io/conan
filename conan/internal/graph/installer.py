@@ -119,6 +119,7 @@ class _PackageBuilder:
         conanfile = node.conanfile
         pref = node.pref
 
+        ConanOutput().step("Source step")
         base_source = recipe_layout.source()
         base_package = package_layout.package()
 

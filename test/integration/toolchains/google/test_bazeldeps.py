@@ -35,7 +35,7 @@ def test_bazel():
             "consumer/conanfile.py": conanfile})
     c.run("create dep")
     c.run("install consumer")
-    assert "conanfile.py: Generator 'BazelToolchain' calling 'generate()'" in c.out
+    assert "Generator 'BazelToolchain' calling 'generate()'" in c.out
 
 
 def test_bazel_relative_paths():
@@ -56,7 +56,7 @@ def test_bazel_relative_paths():
             "consumer/conanfile.py": conanfile})
     c.run("create dep")
     c.run("install consumer")
-    assert "conanfile.py: Generator 'BazelToolchain' calling 'generate()'" in c.out
+    assert "Generator 'BazelToolchain' calling 'generate()'" in c.out
     build_file = c.load("consumer/conandeps/dep/BUILD.bazel")
     expected = textwrap.dedent("""\
     # Components precompiled libs

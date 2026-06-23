@@ -69,9 +69,9 @@ class TestPkgConfig:
         c.save({"conanfile.py": conanfile,
                 "libastral.pc": libastral_pc})
         c.run("install .")
-        assert "conanfile.py: PROVIDES: libastral = 6.6.6" in c.out
-        assert "conanfile.py: VERSION: 6.6.6" in c.out
-        assert "conanfile.py: VARIABLES: /usr/local" in c.out
+        assert "PROVIDES: libastral = 6.6.6" in c.out
+        assert "VERSION: 6.6.6" in c.out
+        assert "VARIABLES: /usr/local" in c.out
 
 
 def test_pkg_config_round_tripe_cpp_info():

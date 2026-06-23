@@ -70,8 +70,12 @@ class IntelCC:
         else:  # DPC++ compiler
             return "Intel(R) oneAPI DPC++ Compiler"
 
-    def generate(self, scope="build"):
-        """Generate the Conan Intel file to be loaded in build environment by default"""
+    def generate(self, scope=None):
+        """Generate the Conan Intel file to be loaded in build and run environments.
+
+        :param scope: The scope(s) for which to generate. Can be a string or list of strings.
+                      Defaults to ["build", "run"] to enable both compilation and runtime.
+        """
         check_duplicated_generator(self, self._conanfile)
         intel_cc_path = self._conanfile.conf.get("tools.intel:installation_path")
         if intel_cc_path == "":
@@ -80,6 +84,11 @@ class IntelCC:
             raise ConanException("Invalid 'tools.intel:installation_path'. To undefine it use "
                                  "an empty string, like 'tools.intel:installation_path=' without "
                                  "any quotes if used in profiles")
+
+        if scope is None:
+            scope = ["build", "run"]
+        elif isinstance(scope, str):
+            scope = [scope]
 
         if platform.system() == "Windows" and not self._conanfile.win_bash:
             content = textwrap.dedent("""\
@@ -91,7 +100,8 @@ class IntelCC:
             filename = self.filename + '.sh'
             content = self.command
         from conan.tools.env.environment import create_env_script
-        create_env_script(self._conanfile, content, filename, scope)
+        for s in scope:
+            create_env_script(self._conanfile, content, filename, s)
 
     @property
     def installation_path(self):
@@ -154,3 +164,27 @@ class IntelCC:
             raise ConanException("don't know how to call %s for %s" % (svars, self.arch))
 
         return command
+
+
+def intel_cc_compilers(conanfile):
+    """
+    Returns default compiler executables for intel-cc based on compiler.mode setting.
+
+    :param conanfile: The current recipe object.
+    :return: dict with "c" and "cpp" keys, or None if compiler is not intel-cc.
+    """
+    if conanfile.settings.get_safe("compiler") != "intel-cc":
+        return None
+    mode = conanfile.settings.get_safe("compiler.mode")
+    if mode == "classic":
+        return {"c": "icc", "cpp": "icpc"}
+    elif mode == "dpcpp":
+        return {"c": "icx", "cpp": "dpcpp"}
+    elif mode == "icx":
+        if conanfile.settings.get_safe("os") == "Windows":
+            # On Windows, the Intel oneAPI DPC++/C++ Compiler (icx) is invoked through the icx-cl  to ensure
+            # compatibility with the Microsoft Visual Studio environment.
+            return {"c": "icx-cl", "cpp": "icx-cl"}
+        return {"c": "icx", "cpp": "icpx"}
+    else:
+        return None

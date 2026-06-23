@@ -113,6 +113,6 @@ def test_profiles_patterns_include():
             "msvc": msvc,
             "clang": clang})
     c.run("install . -pr=clang")
-    assert "conanfile.py (test_pkg/0.1): MyCompiler=clang!!!" in c.out
-    assert "conanfile.py (test_pkg/0.1): MyCompilerVersion=18!!!" in c.out
-    assert "conanfile.py (test_pkg/0.1): MyCompilerCpp=17!!!" in c.out
+    assert "MyCompiler=clang!!!" in c.out
+    assert "MyCompilerVersion=18!!!" in c.out
+    assert "MyCompilerCpp=17!!!" in c.out

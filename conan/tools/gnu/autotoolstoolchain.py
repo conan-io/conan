@@ -11,6 +11,7 @@ from conan.tools.build.flags import architecture_flag, architecture_link_flag, b
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
 from conan.tools.intel import IntelCC
+from conan.tools.intel.intel_cc import intel_cc_compilers
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.internal.model.pkg_type import PackageType
 
@@ -297,11 +298,17 @@ class AutotoolsToolchain:
                         compiler = unix_path(self._conanfile, compiler)
                         env.define(env_var, compiler)
             compiler_setting = self._conanfile.settings.get_safe("compiler")
-            if compiler_setting == "msvc":
-                # None of them defined, if one is defined by user, user should define the other too
-                if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+            # None of them defined, if one is defined by user, user should define the other too
+            if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+                if compiler_setting == "msvc":
                     env.define("CC", "cl")
                     env.define("CXX", "cl")
+                # Default compilers for intel-cc when not configured
+                else:
+                    intel_defaults = intel_cc_compilers(self._conanfile)
+                    if intel_defaults:
+                        env.define("CC", intel_defaults["c"])
+                        env.define("CXX", intel_defaults["cpp"])
 
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)

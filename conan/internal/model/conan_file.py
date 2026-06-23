@@ -192,7 +192,7 @@ class ConanFile:
     def output(self):
         # an output stream (writeln, info, warn error)
         scope = self.display_name
-        if not scope:
+        if scope is None:
             scope = self.ref if self._conan_node else ""
         return ConanOutput(scope=scope)
 

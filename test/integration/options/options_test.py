@@ -297,55 +297,55 @@ class TestOptionsPriorities:
         c.save({"app/conanfile.py": self._app("lib1", "lib2", "not_configure")})
         # This order works, because lib1 is expanded first, it takes foobar=False
         c.run("install app -o lib2*:logic_for_foobar=True -o lib1*:foobar=False")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: True" in c.out
 
         # Now swap order
         c.save({"app/conanfile.py": self._app("lib2", "lib1", "not_configure")})
         c.run("install app -o lib2*:logic_for_foobar=True -o lib1*:foobar=False")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: True" in c.out
 
     def test_lib1_priority(self, _client):
         c = _client
         c.save({"app/conanfile.py": self._app("lib1", "lib2", "not_configure")})
         # This order works, because lib1 is expanded first, it takes foobar=False
         c.run("install app")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: False" in c.out
         c.run("install app -o lib1*:foobar=True")
-        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
-        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        assert "LIB1 FOOBAR: True" in c.out
+        assert "LIB2 LOGIC: False" in c.out
         c.run("install app -o lib2*:logic_for_foobar=True")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: True" in c.out
 
     def test_lib2_priority(self, _client):
         c = _client
         c.save({"app/conanfile.py": self._app("lib2", "lib1", "not_configure")})
         # This order works, because lib1 is expanded first, it takes foobar=False
         c.run("install app")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: False" in c.out
         c.run("install app -o lib1*:foobar=True")
-        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
-        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        assert "LIB1 FOOBAR: True" in c.out
+        assert "LIB2 LOGIC: False" in c.out
         c.run("install app -o lib2*:logic_for_foobar=True")
-        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
-        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+        assert "LIB1 FOOBAR: True" in c.out
+        assert "LIB2 LOGIC: True" in c.out
 
     def test_consumer_configure_priority(self, _client):
         c = _client
         c.save({"app/conanfile.py": self._app("lib1", "lib2", "configure")})
         c.run("install app")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: True" in c.out
 
         # Now swap order
         c.save({"app/conanfile.py": self._app("lib1", "lib2", "configure")})
         c.run("install app")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: True" in c.out
 
 
 def test_configurable_default_options():

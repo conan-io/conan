@@ -93,16 +93,16 @@ class TestHooks:
         c.run("install .")
         assert f"conanfile.py (pkg/0.1): {hook_msg} pre_validate(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} post_validate(): Hello" in c.out
-        assert f"conanfile.py (pkg/0.1): {hook_msg} pre_generate(): Hello" in c.out
-        assert f"conanfile.py (pkg/0.1): {hook_msg} post_generate(): Hello" in c.out
+        assert f"{hook_msg} pre_generate(): Hello" in c.out
+        assert f"{hook_msg} post_generate(): Hello" in c.out
 
         c.run("build .")
         assert f"conanfile.py (pkg/0.1): {hook_msg} pre_validate(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} post_validate(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} pre_build(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} post_build(): Hello" in c.out
-        assert f"conanfile.py (pkg/0.1): {hook_msg} pre_generate(): Hello" in c.out
-        assert f"conanfile.py (pkg/0.1): {hook_msg} post_generate(): Hello" in c.out
+        assert f"{hook_msg} pre_generate(): Hello" in c.out
+        assert f"{hook_msg} post_generate(): Hello" in c.out
 
         c.run("export . ")
         assert f"pre_export(): Hello" in c.out

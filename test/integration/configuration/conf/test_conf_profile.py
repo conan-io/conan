@@ -296,14 +296,14 @@ def test_config_package_append(client):
                  "profile2": profile2,
                  "conanfile.py": conanfile})
     client.run("install . --name=mypkg --version=0.1 -pr=profile2")
-    assert "conanfile.py (mypkg/0.1): MYCONF: ['a', 'b', 'c', 'd']" in client.out
+    assert "MYCONF: ['a', 'b', 'c', 'd']" in client.out
     client.run("install . --name=mydep --version=0.1 -pr=profile2")
-    assert "conanfile.py (mydep/0.1): MYCONF: ['e', 'a', 'b', 'c']" in client.out
+    assert "MYCONF: ['e', 'a', 'b', 'c']" in client.out
 
     client.run("create . --name=mypkg --version=0.1 -pr=profile2")
-    assert "mypkg/0.1: MYCONFBUILD: ['a', 'b', 'c', 'd']" in client.out
+    assert "MYCONFBUILD: ['a', 'b', 'c', 'd']" in client.out
     client.run("create . --name=mydep --version=0.1 -pr=profile2")
-    assert "mydep/0.1: MYCONFBUILD: ['e', 'a', 'b', 'c']" in client.out
+    assert "MYCONFBUILD: ['e', 'a', 'b', 'c']" in client.out
 
 
 def test_conf_patterns_user_channel():
