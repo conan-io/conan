@@ -1063,9 +1063,11 @@ def test_implib_location_explicit_extension():
 
 
 class TestEditableExeLocation:
-    def test_editable_exe(self):
+    @pytest.mark.parametrize("absolute", [False, True])
+    def test_editable_exe(self, absolute):
         # https://github.com/conan-io/conan/issues/20081
-        conanfile = textwrap.dedent("""
+        loc = 'self.package_folder,' if absolute else ''
+        conanfile = textwrap.dedent(f"""
             import os
             from conan import ConanFile
 
@@ -1081,7 +1083,7 @@ class TestEditableExeLocation:
 
                 def package_info(self):
                     self.cpp_info.exe = "myexe"
-                    self.cpp_info.location = os.path.join("bin", "myexe.exe")
+                    self.cpp_info.location = os.path.join({loc} "bin", "myexe.exe")
             """)
 
         c = TestClient()
@@ -1102,10 +1104,12 @@ class TestEditableExeLocation:
         content = c.load("app-Targets-release.cmake")
         assert "${app_PACKAGE_FOLDER_RELEASE}/mybuild/myexe.exe" in content
 
-    def test_editable_component(self):
+    @pytest.mark.parametrize("absolute", [False, True])
+    def test_editable_component(self, absolute):
         # https://github.com/conan-io/conan/issues/20081 (component variant)
         # Same issue for cpp.build.components[...].location
-        conanfile = textwrap.dedent("""
+        loc = 'self.package_folder,' if absolute else ''
+        conanfile = textwrap.dedent(f"""
             import os
             from conan import ConanFile
 
@@ -1121,7 +1125,8 @@ class TestEditableExeLocation:
 
                 def package_info(self):
                     self.cpp_info.components["mycomp"].exe = "myexe"
-                    self.cpp_info.components["mycomp"].location = os.path.join("bin", "myexe.exe")
+                    self.cpp_info.components["mycomp"].location = os.path.join({loc} "bin",
+                                                                               "myexe.exe")
             """)
 
         c = TestClient()
