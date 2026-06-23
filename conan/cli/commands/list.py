@@ -89,6 +89,19 @@ def print_list_text(results):
             return result
         return item
     info = {remote: format_timestamps(values) for remote, values in info.items()}
+
+    def format_empty_packages(item):
+        if isinstance(item, dict):
+            result = {}
+            for k, v in item.items():
+                if k == "packages" and isinstance(v, dict) and not v:
+                    result[k] = ["No packages found for this revision"]
+                else:
+                    result[k] = format_empty_packages(v)
+            return result
+        return item
+    info = {remote: format_empty_packages(values) for remote, values in info.items()}
+
     print_serial(info)
 
 

@@ -10,7 +10,6 @@ from io import BytesIO
 
 from conan.internal.api.uploader import gzopen_without_timestamps
 from conan.tools.files.files import untargz
-from conan.internal.subsystems import get_cased_path
 from conan.errors import ConanException
 
 
@@ -34,8 +33,6 @@ if CONAN_TEST_FOLDER and not os.path.exists(CONAN_TEST_FOLDER):
 
 def temp_folder(path_with_spaces=True, create_dir=True):
     t = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
-    # Make sure that the temp folder is correctly cased, as tempfile return lowercase for Win
-    t = get_cased_path(t)
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     t = os.path.realpath(t)
     # FreeBSD and Solaris do not use GNU Make as a the default 'make' program which has trouble
@@ -57,11 +54,10 @@ def uncompress_packaged_files(paths, pref):
     pref.revision = prev
 
     package_path = paths.package(pref)
-    PACKAGE_TGZ_NAME = "conan_package.tgz"
-    if not (os.path.exists(os.path.join(package_path, PACKAGE_TGZ_NAME))):
-        raise ConanException("%s not found in %s" % (PACKAGE_TGZ_NAME, package_path))
+    if not (os.path.exists(os.path.join(package_path, "conan_package.tgz"))):
+        raise ConanException("%s not found in %s" % ("conan_package.tgz", package_path))
     tmp = temp_folder()
-    untargz(os.path.join(package_path, PACKAGE_TGZ_NAME), tmp)
+    untargz(os.path.join(package_path, "conan_package.tgz"), tmp)
     return tmp
 
 

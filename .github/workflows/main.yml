@@ -116,6 +116,14 @@ jobs:
           coverage report
           coverage xml
 
+      - name: Compute covtest
+        run: |
+          git clone https://x-access-token:${{ secrets.COVTEST_READ_TOKEN }}@github.com/conan-io/covtest.git ./covtest_repo || true
+          pip install ./covtest_repo || true
+          rm -rf ./covtest_repo || true
+          covtest process || true
+          covtest upload --url=${{ secrets.COVTEST_SERVER_URL }} --user=${{ secrets.COVTEST_SERVER_USER }} --token=${{ secrets.COVTEST_SERVER_TOKEN }} || true
+
       - name: Code coverage
         uses: codecov/codecov-action@v5
         with:
@@ -125,6 +133,7 @@ jobs:
         with:
           name: |
             .coverage.*
+            .covtest
 
   deploy_to_pypi_test:
     runs-on: ubuntu-latest

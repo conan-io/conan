@@ -142,7 +142,7 @@ def test_complete(client):
 
 
 def test_dependents_new_buildenv():
-    client = TestClient()
+    client = TestClient(light=True)
     boost = textwrap.dedent("""
         from conan import ConanFile
         class Boost(ConanFile):
@@ -516,10 +516,11 @@ class TestBuildTrackHost:
     ])
     def test_host_version_different_ref(self, host_version, assert_error, assert_msg):
         tc = TestClient(light=True)
+        app = (GenConanfile("app", "1.0").with_requires("libgettext/[>0.1]")
+               .with_tool_requirement(f"gettext/<host_version:{host_version}"))
         tc.save({"gettext/conanfile.py": GenConanfile("gettext"),
                  "libgettext/conanfile.py": GenConanfile("libgettext"),
-                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("libgettext/[>0.1]")
-                                                   .with_tool_requirement(f"gettext/<host_version:{host_version}")})
+                 "app/conanfile.py": app})
         tc.run("create libgettext --version=0.2")
         tc.run("create gettext --version=0.1 --build-require")
         tc.run("create gettext --version=0.2 --build-require")
@@ -780,7 +781,7 @@ def test_build_run_false(min_conan_version, should_propagate):
     required_conan_version_line = ""
     if min_conan_version:
         required_conan_version_line = f"required_conan_version='{min_conan_version}'"
-    tc = TestClient()
+    tc = TestClient(light=True)
     cmake = textwrap.dedent("""
     from conan import ConanFile
     from conan.tools.files import save

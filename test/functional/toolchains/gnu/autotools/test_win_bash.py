@@ -9,7 +9,7 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from test.conftest import tools_locations
 from test.functional.utils import check_exe_run, check_vs_runtime
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, default_vs_ide_version
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
@@ -78,6 +78,10 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     # compilers
     c, cpp = ("clang", "clang++") if frontend == "clang" else ("clang-cl", "clang-cl")
     comps = f'{{"cpp":"{cpp}", "c":"{c}", "rc":"{c}"}}'
+
+    toolset_version = {"17": "v144",
+                       "18": "v145"}[str(default_vs_ide_version)]
+
     profile_win = textwrap.dedent(f"""
         [settings]
         os=Windows
@@ -86,7 +90,7 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
         compiler=clang
         compiler.version=20
         compiler.cppstd=14
-        compiler.runtime_version=v144
+        compiler.runtime_version={toolset_version}
         compiler.runtime={runtime}
 
         [conf]
@@ -136,13 +140,14 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     client.run_command("main.exe")
     assert "__GNUC__" not in client.out
     assert "main __clang_major__20" in client.out
-    check_exe_run(client.out, "main", "clang", None, build_type, "x86_64", None)
+    check_exe_run(client.out, "main", "clang", "20", build_type, "x86_64", None)
 
     bat_contents = client.load("conanbuild.bat")
     assert "conanvcvars.bat" in bat_contents
 
     static_runtime = runtime == "static"
-    check_vs_runtime("main.exe", client, "17", build_type=build_type, static_runtime=static_runtime)
+    check_vs_runtime("main.exe", client, default_vs_ide_version, build_type=build_type,
+                     static_runtime=static_runtime)
 
 
 @pytest.mark.parametrize("scope", ["build", "run"])

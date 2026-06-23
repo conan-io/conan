@@ -325,6 +325,9 @@ class DepsGraphBuilder:
                             return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
 
     def _resolve_replace_requires(self, node, require, profile_build, profile_host, graph):
+        if node.recipe == RECIPE_VIRTUAL:
+            return  # CLI-specified requires have higher priority, do not replace them
+
         profile = profile_build if node.context == CONTEXT_BUILD else profile_host
         replacements = profile.replace_tool_requires if require.build else profile.replace_requires
         if not replacements:
@@ -466,6 +469,9 @@ class DepsGraphBuilder:
                 down_options = node.conanfile.private_up_options
             else:
                 down_options = Options(options_values=node.conanfile.default_build_options)
+
+        # down_options is the real propagated one, so update consumer self_options for state
+        node.conanfile.self_options.update(down_options)
         return down_options
 
     @staticmethod
