@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import threading
 import time
 
 from conan.errors import ConanException
@@ -36,7 +37,7 @@ def read_json_with_retry(filepath: str) -> dict:
 
 def write_json_atomic(filepath: str, data: dict) -> None:
     """Write JSON atomically via a .tmp file and replace."""
-    tmp = filepath + ".tmp"
+    tmp = f"{filepath}.{os.getpid()}.{threading.get_ident()}.tmp"
     msg = None
     for attempt in range(_READ_JSON_MAX_RETRIES):
         try:

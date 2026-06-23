@@ -14,6 +14,7 @@ from typing import List
 
 from conan.api.model import RecipeReference
 from conan.internal.cache.db.json_db import ref_hash, write_json_atomic, read_json_with_retry
+from conan.errors import ConanException
 from conan.internal.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
 
 
@@ -56,17 +57,15 @@ class RecipesJsonTable:
         assert ref.timestamp is not None
 
         rev_dir = self._revision_dir(ref)
-
-        if os.path.isdir(rev_dir):
-            # This is not concurrent yet, keeps the same contract as Sqlite
-            raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(ref)}' already exists")
-
         ref_dir = self._ref_dir(ref)
-        if not os.path.isdir(ref_dir):
-            os.makedirs(ref_dir, exist_ok=True)
-            write_json_atomic(os.path.join(ref_dir, "data.json"), {"ref": str(ref)})
-
-        os.makedirs(rev_dir, exist_ok=True)
+        os.makedirs(ref_dir, exist_ok=True)
+        # Always write ref data.json — content is deterministic so concurrent writes are safe.
+        write_json_atomic(os.path.join(ref_dir, "data.json"), {"ref": str(ref)})
+        # os.mkdir is an atomic syscall: exactly one concurrent caller succeeds.
+        try:
+            os.mkdir(rev_dir)
+        except FileExistsError:
+            raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(ref)}' already exists")
         # The revision is the folder name — no need to store it in the file too.
         write_json_atomic(os.path.join(rev_dir, "data.json"), {
             "timestamp": ref.timestamp,
@@ -89,8 +88,7 @@ class RecipesJsonTable:
 
     def remove(self, ref: RecipeReference):
         rev_dir = self._revision_dir(ref)
-        assert os.path.isdir(rev_dir)
-        shutil.rmtree(rev_dir)
+        shutil.rmtree(rev_dir, ignore_errors=True)
 
         ref_dir = self._ref_dir(ref)
         if os.path.isdir(ref_dir):
@@ -104,7 +102,10 @@ class RecipesJsonTable:
             ref_dir = os.path.join(self._db_folder, entry)
             if not os.path.isdir(ref_dir):
                 continue
-            data = read_json_with_retry(os.path.join(ref_dir, "data.json"))
+            try:
+                data = read_json_with_retry(os.path.join(ref_dir, "data.json"))
+            except ConanException:
+                continue  # dir visible but data.json not yet written; skip transient entry
             refs.append(RecipeReference.loads(data["ref"]))
         return refs
 

@@ -78,10 +78,12 @@ class PackagesJsonTable:
         assert pref.timestamp
 
         prev_dir = self._prev_dir(pref)
-        if os.path.isdir(prev_dir):
+        os.makedirs(os.path.dirname(prev_dir), exist_ok=True)
+        # os.mkdir is an atomic syscall: exactly one concurrent caller succeeds.
+        try:
+            os.mkdir(prev_dir)
+        except FileExistsError:
             raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(pref)}' already exists")
-
-        os.makedirs(prev_dir, exist_ok=True)
         # revision and package_id are the folder names — no need to store them in the file.
         write_json_atomic(os.path.join(prev_dir, "data.json"), {
             "timestamp": pref.timestamp,
