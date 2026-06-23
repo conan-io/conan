@@ -10,7 +10,7 @@ from conan.internal.model.lockfile import Lockfile, LOCKFILE
 
 
 class LockfileAPI:
-    """ Loads and saves Lockfiles from disk, and modify and manipulate them.
+    """ Loads and saves Lockfiles from disk, modifies and manipulates them.
 
     At the moment Lockfile objects are "opaque" objects, they are not intended to be used
     independently, only to be retrieved from this API and passed as arguments to methods
