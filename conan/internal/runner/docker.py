@@ -16,7 +16,7 @@ from pathlib import Path
 from conan.internal.model.profile import Profile
 from conan.internal.model.version import Version
 from conan.internal.runner.output import RunnerOutput
-from conan.internal.conan_app import ConanApp
+
 
 class _ContainerConfig(NamedTuple):
     class Build(NamedTuple):
@@ -74,6 +74,7 @@ class _ContainerConfig(NamedTuple):
             )
         )
 
+
 class DockerRunner:
     def __init__(self, conan_api: ConanAPI, command: str, host_profile: Profile, build_profile: Profile, args: Namespace, raw_args: list[str]):
         self.logger = ConanOutput()
@@ -118,7 +119,7 @@ class DockerRunner:
             raise ConanException(f'"{e.command}" inside docker fail')
         finally:
             if self.container:
-                error = sys.exc_info()[0] is not None # Check if error has been raised
+                error = sys.exc_info()[0] is not None  # Check if error has been raised
                 log = self.logger.error if error else self.logger.status
                 log('Stopping container')
                 self.container.stop()
@@ -242,10 +243,10 @@ class DockerRunner:
             raise RunnerException(command=command, stdout_log=stdout_log, stderr_log=stderr_log)
         return stdout_log, stderr_log
 
-    def _get_volumes_and_docker_path(self) -> tuple[dict,str]:
-        app = ConanApp(self.conan_api)
+    def _get_volumes_and_docker_path(self) -> tuple[dict, str]:
+        loader = self.conan_api._api_helpers.loader  # noqa
         remotes = self.conan_api.remotes.list(self.args.remote) if not self.args.no_remote else []
-        conanfile = app.loader.load_consumer(self.abs_host_path / "conanfile.py", remotes=remotes)
+        conanfile = loader.load_consumer(self.abs_host_path / "conanfile.py", remotes=remotes)
         abs_docker_base_path = Path('/') / self.docker_user_name / 'conanrunner'
         # Check if recipe has defined a root folder
         # In this case, mount the root folder as the base path and update the abs_docker_path to the

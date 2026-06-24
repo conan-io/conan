@@ -1,14 +1,14 @@
-import copy
-
+import os
 from collections import deque
 
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conan.internal.methods import run_configure_method
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
-    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE
+    CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE, RECIPE_CONSUMER
 from conan.internal.graph.graph import RECIPE_PLATFORM
-from conan.internal.graph.graph_error import GraphLoopError, GraphConflictError, GraphMissingError, GraphError
+from conan.internal.graph.graph_error import (GraphLoopError, GraphConflictError, GraphMissingError,
+                                              GraphError)
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.graph.provides import check_graph_provides
 from conan.errors import ConanException
@@ -17,9 +17,11 @@ from conan.internal.model.options import Options, _PackageOptions
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
 from conan.internal.model.requires import Requirement
+from conan.internal.model.version_range import VersionRange, required_conan_version_policy
 
 
 class DepsGraphBuilder:
+    ALLOW_ALIAS = False
 
     def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf):
         self._proxy = proxy
@@ -67,6 +69,10 @@ class DepsGraphBuilder:
         except GraphError as e:
             dep_graph.error = e
         dep_graph.resolved_ranges = self._resolver.resolved_ranges
+        refs = set(n.ref for n in dep_graph.nodes
+                   if n.recipe not in (RECIPE_VIRTUAL, RECIPE_EDITABLE, RECIPE_CONSUMER,
+                                       RECIPE_PLATFORM))
+        self._cache.update_recipes_lru(refs)
         return dep_graph
 
     def _expand_require(self, require, node, graph, profile_host, profile_build, graph_lock):
@@ -75,6 +81,7 @@ class DepsGraphBuilder:
         #    node -(require)-> previous (creates a diamond with a previously existing node)
         # TODO: allow bootstrapping, use references instead of names
         # print("  Expanding require ", node, "->", require)
+        self._deduce_host_version(require, node)
         previous = node.check_downstream_exists(require)
         prev_node = None
         if previous is not None:
@@ -134,6 +141,7 @@ class DepsGraphBuilder:
     @staticmethod
     def _conflicting_version(require, node,
                              prev_require, prev_node, prev_ref, base_previous, resolve_prereleases):
+        # As we are closing a diamond, there can be conflicts. This will raise if so
         version_range = require.version_range
         prev_version_range = prev_require.version_range if prev_node is None else None
         if version_range:
@@ -153,35 +161,24 @@ class DepsGraphBuilder:
                     raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
         elif prev_version_range is not None:
             if require.ref.user != prev_require.ref.user or \
-                    require.ref.channel != prev_require.ref.channel:
-                raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
-            if not prev_version_range.contains(require.ref.version, resolve_prereleases):
+                    require.ref.channel != prev_require.ref.channel or \
+                    not prev_version_range.contains(require.ref.version, resolve_prereleases):
                 raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
         else:
-            def _conflicting_refs(ref1, ref2):
-                ref1_norev = copy.copy(ref1)
-                ref1_norev.revision = None
-                ref2_norev = copy.copy(ref2)
-                ref2_norev.revision = None
-                if ref2_norev != ref1_norev:
-                    return True
-                # Computed node, if is Editable, has revision=None
-                # If new_ref.revision is None we cannot assume any conflict, user hasn't specified
-                # a revision, so it's ok any previous_ref
-                if ref1.revision and ref2.revision and ref1.revision != ref2.revision:
-                    return True
-
-            # As we are closing a diamond, there can be conflicts. This will raise if so
-            conflict = _conflicting_refs(prev_ref, require.ref)
-            if conflict:  # It is possible to get conflict from alias, try to resolve it
+            if prev_ref != require.ref:
                 raise GraphConflictError(node, require, prev_node, prev_require, base_previous)
+            # If there is no conflict, then the incomplete require without revision can be updated
+            # with the previous revision to avoid the later conflict
+            if prev_ref.revision is not None and require.ref.revision is None:
+                require.ref.revision = prev_ref.revision
 
     @staticmethod
     def _prepare_node(node, profile_host, profile_build, down_options, define_consumers=False):
         # basic node configuration: calling configure() and requirements()
         conanfile, ref = node.conanfile, node.ref
 
-        profile_options = profile_host.options if node.context == CONTEXT_HOST else profile_build.options
+        profile_options = profile_host.options if node.context == CONTEXT_HOST \
+            else profile_build.options
         assert isinstance(profile_options, Options), type(profile_options)
         run_configure_method(conanfile, down_options, profile_options, ref)
 
@@ -194,8 +191,17 @@ class DepsGraphBuilder:
 
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
+
         for pattern, tool_requires in profile.tool_requires.items():
-            if ref_matches(ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
+            is_consumer = conanfile._conan_is_consumer  # noqa
+            if pattern[0] in "!~" and pattern[1] == "(":  # This is a negated OR operation
+                assert pattern[-1] == ")", (f"Malformed profile OR expression without"
+                                            f" closing parenthesis: {pattern}")
+                parts = pattern[2:-1].split("|")
+                matched = not any(ref_matches(ref, p, is_consumer=is_consumer) for p in parts)
+            else:
+                matched = ref_matches(ref, pattern, is_consumer=is_consumer)
+            if matched:
                 for tool_require in tool_requires:  # Do the override
                     # Check if it is a self-loop of build-requires in build context and avoid it
                     if ref and tool_require.name == ref.name and tool_require.user == ref.user and \
@@ -214,7 +220,9 @@ class DepsGraphBuilder:
         result = []
         skip_build = node.conanfile.conf.get("tools.graph:skip_build", check_type=bool)
         skip_test = node.conanfile.conf.get("tools.graph:skip_test", check_type=bool)
+        consistent_policy_new = required_conan_version_policy(node.conanfile, "2.27.9")
         for require in node.conanfile.requires.values():
+            require.consistent_policy_new = consistent_policy_new
             if not require.visible and not require.package_id_mode:
                 if skip_build and require.build:
                     node.skipped_build_requires = True
@@ -224,6 +232,8 @@ class DepsGraphBuilder:
             result.append(require)
             alias = require.alias  # alias needs to be processed this early
             if alias is not None:
+                if not DepsGraphBuilder.ALLOW_ALIAS and os.getenv("CONAN_ALLOW_ALIAS") != "will_break_next":
+                    raise ConanException(f"Alias requirements have been removed: '{node}' requiring: '{alias}'")
                 resolved = False
                 if graph_lock is not None:
                     resolved = graph_lock.replace_alias(require, alias)
@@ -232,7 +242,7 @@ class DepsGraphBuilder:
                     self._resolve_alias(node, require, alias, graph)
             self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
             if graph_lock:
-                graph_lock.resolve_overrides(require)
+                graph_lock.resolve_overrides(require, node.context)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
         return result
 
@@ -270,7 +280,10 @@ class DepsGraphBuilder:
             graph.aliased[alias] = pointed_ref  # Caching the alias
             new_req = Requirement(pointed_ref)  # FIXME: Ugly temp creation just for alias check
             alias = new_req.alias
-            node.conanfile.output.warning("Requirement 'alias' is provided in Conan 2 mainly for compatibility and upgrade from Conan 1, but it is an undocumented and legacy feature. Please update to use standard versioning mechanisms", warn_tag="legacy")
+            node.conanfile.output.warning("Requirement 'alias' is provided in Conan 2 mainly for "
+                                          "compatibility and upgrade from Conan 1, but it is an "
+                                          "undocumented and legacy feature. Please update to use "
+                                          "standard versioning mechanisms", warn_tag="legacy")
 
     def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
@@ -301,16 +314,20 @@ class DepsGraphBuilder:
                     if version_range:
                         if version_range.contains(d.version, resolve_prereleases):
                             require.ref.version = d.version  # resolved range is replaced by exact
+                            require.ref.revision = d.revision or "platform"
                             layout = BasicLayout(require.ref, None)
                             return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
                     elif require.ref.version == d.version:
                         if d.revision is None or require.ref.revision is None or \
                                 d.revision == require.ref.revision:
-                            require.ref.revision = d.revision
+                            require.ref.revision = d.revision or "platform"
                             layout = BasicLayout(require.ref, None)
                             return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
 
     def _resolve_replace_requires(self, node, require, profile_build, profile_host, graph):
+        if node.recipe == RECIPE_VIRTUAL:
+            return  # CLI-specified requires have higher priority, do not replace them
+
         profile = profile_build if node.context == CONTEXT_BUILD else profile_host
         replacements = profile.replace_tool_requires if require.build else profile.replace_requires
         if not replacements:
@@ -321,8 +338,19 @@ class DepsGraphBuilder:
                 continue  # no match in name
             if pattern.version != "*":  # we need to check versions
                 rrange = require.version_range
-                valid = rrange.contains(pattern.version, self._resolve_prereleases) if rrange else \
-                    require.ref.version == pattern.version
+                # Is the version pattern a range itself?
+                pversion = repr(pattern.version)
+                if pversion[0] == "[" and pversion[-1] == "]":
+                    prange = VersionRange(pversion[1:-1])
+                    if rrange:
+                        valid = prange.intersection(rrange) is not None
+                    else:
+                        valid = prange.contains(require.ref.version, self._resolve_prereleases)
+                else:
+                    if rrange:
+                        valid = rrange.contains(pattern.version, self._resolve_prereleases)
+                    else:
+                        valid = require.ref.version == pattern.version
                 if not valid:
                     continue
             if pattern.user != "*" and pattern.user != require.ref.user:
@@ -346,7 +374,8 @@ class DepsGraphBuilder:
             node.replaced_requires[original_require] = require
             break  # First match executes the alternative and finishes checking others
 
-    def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
+    @staticmethod
+    def _deduce_host_version(require, node):
         require_version = str(require.ref.version)
         if require_version.startswith("<host_version") and require_version.endswith(">"):
             if not require.build or require.visible:
@@ -359,12 +388,12 @@ class DepsGraphBuilder:
                 ref.name = tracking_ref[1][:-1]  # Remove the trailing >
             req = Requirement(ref, headers=True, libs=True, visible=True)
             transitive = node.transitive_deps.get(req)
-            if transitive is None or transitive.require.ref.user != ref.user \
-                    or transitive.require.ref.channel != ref.channel:
+            if transitive is None:
                 raise ConanException(f"{node.ref} require '{ref}': didn't find a matching "
                                      "host dependency")
             require.ref.version = transitive.require.ref.version
 
+    def _create_new_node(self, node, require, graph, profile_host, profile_build, graph_lock):
         resolved = self._resolved_system(node, require, profile_build, profile_host,
                                          self._resolve_prereleases)
         if graph_lock is not None:
@@ -394,6 +423,8 @@ class DepsGraphBuilder:
         new_node = Node(new_ref, dep_conanfile, context=context, test=require.test or node.test)
         new_node.recipe = recipe_status
         new_node.remote = remote
+        if isinstance(layout, BasicLayout):  # Store the editable_output_folder for BinaryInstaller
+            new_node.editable_output_folder = layout.editable_output_folder
 
         down_options = self._compute_down_options(node, require, new_ref)
 
@@ -438,6 +469,9 @@ class DepsGraphBuilder:
                 down_options = node.conanfile.private_up_options
             else:
                 down_options = Options(options_values=node.conanfile.default_build_options)
+
+        # down_options is the real propagated one, so update consumer self_options for state
+        node.conanfile.self_options.update(down_options)
         return down_options
 
     @staticmethod

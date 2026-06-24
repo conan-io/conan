@@ -3,6 +3,7 @@ from conan.tools.microsoft.visual import vcvars_command
 
 def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd64",
                      static_runtime=False, subsystem=None):
+    vs_version = str(vs_version)
     vcvars = vcvars_command(version=vs_version, architecture=architecture)
     normalized_path = artifact.replace("/", "\\")
     static = artifact.endswith(".a") or artifact.endswith(".lib")
@@ -40,7 +41,8 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
                     assert "libstdc++-6.dll" not in client.out
                 else:
                     assert "libstdc++-6.dll" in client.out
-            elif subsystem == "clang64":
+            else:
+                assert subsystem == "clang64"
                 assert "api-ms-win-crt-" in client.out
                 if static_runtime:
                     assert "libunwind.dll" not in client.out
@@ -49,8 +51,6 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
                     # Latest clangs from subsystems no longer depend on libunwind
                     assert "libunwind.dll" not in client.out
                     assert "libc++.dll" in client.out
-            else:
-                raise Exception("unknown {}".format(subsystem))
         elif static_runtime:
             assert "KERNEL32.dll" in client.out
             assert "MSVC" not in client.out
@@ -61,12 +61,11 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
                 assert "ucrtbased" in client.out
             else:
                 assert "api-ms-win-crt-" in client.out
-            if vs_version in ["15", "16", "17"]:  # UCRT
-                debug = "D" if build_type == "Debug" else ""
-                assert "MSVCP140{}.dll".format(debug) in client.out
-                assert "VCRUNTIME140{}.dll".format(debug) in client.out
-            else:
-                raise NotImplementedError()
+            assert vs_version in ["15", "16", "17", "18"]  # UCRT
+            debug = "D" if build_type == "Debug" else ""
+            assert "MSVCP140{}.dll".format(debug) in client.out
+            assert "VCRUNTIME140{}.dll".format(debug) in client.out
+
     else:  # A static library cannot be checked the same
         client.run_command('{} && DUMPBIN /NOLOGO /DIRECTIVES "{}"'.format(vcvars, artifact))
         if build_type == "Debug":
@@ -79,6 +78,7 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                   cxx11_abi=None, subsystem=None, extra_msg=""):
     output = str(output)
     names = names if isinstance(names, list) else [names]
+    version = str(version) if version else version
 
     for name in names:
         if extra_msg:  # For ``conan new`` templates
@@ -105,15 +105,17 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                 assert "{} __GNUC__".format(name) in output
                 assert "clang" not in output
                 if version:  # FIXME: At the moment, the GCC version is not controlled, will change
-                    major, minor = version.split(".")[0:2]
-                    assert "{} __GNUC__{}".format(name, major) in output
-                    assert "{} __GNUC_MINOR__{}".format(name, minor) in output
+                    digits = version.split(".")
+                    assert "{} __GNUC__{}".format(name, digits[0]) in output
+                    if len(digits) > 1:
+                        assert "{} __GNUC_MINOR__{}".format(name, digits[1]) in output
             elif compiler == "clang":
                 assert "{} __clang_".format(name) in output
                 if version:
-                    major, minor = version.split(".")[0:2]
-                    assert "{} __clang_major__{}".format(name, major) in output
-                    assert "{} __clang_minor__{}".format(name, minor) in output
+                    digits = version.split(".")
+                    assert "{} __clang_major__{}".format(name, digits[0]) in output
+                    if len(digits) > 1:
+                        assert "{} __clang_minor__{}".format(name, digits[1]) in output
             elif compiler == "apple-clang":
                 assert "{} __apple_build_version__".format(name) in output
                 if version:
@@ -159,6 +161,11 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                 assert "__CYGWIN__" in output
                 assert "__MINGW32__" not in output
                 assert "__MINGW64__" not in output
+                assert "__MSYS__" not in output
+            elif subsystem == "ucrt64":
+                assert "__CYGWIN__" not in output
+                assert "__MINGW32__" in output
+                assert "__MINGW64__" in output
                 assert "__MSYS__" not in output
             else:
                 raise Exception("unknown subsystem {}".format(subsystem))

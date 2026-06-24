@@ -42,9 +42,9 @@ def test_editable_folders_root():
     c.run("editable add libs/pkg")
     c.run("install . --build=editable")
     libdir = os.path.join(c.current_folder, "libs", "mybuild", "mylibdir")
-    assert f"conanfile.py: PKG LIBDIR {libdir}" in c.out
+    assert f"PKG LIBDIR {libdir}" in c.out
     assert f"pkg/0.1: PKG package_folder {c.current_folder}" in c.out
-    assert f"pkg/0.1: PKG source_folder {c.current_folder}" in c.out
+    assert f"PKG source_folder {c.current_folder}" in c.out
 
 
 def test_editable_folders_sibiling_root():
@@ -84,8 +84,8 @@ def test_editable_folders_sibiling_root():
     c.run("editable add pkg")
     c.run("install app --build=editable")
     libdir = os.path.join(c.current_folder, "mybuild", "mylibdir")
-    assert f"conanfile.py: PKG LIBDIR {libdir}" in c.out
-    assert f"pkg/0.1: PKG source_folder {c.current_folder}" in c.out
+    assert f"PKG LIBDIR {libdir}" in c.out
+    assert f"PKG source_folder {c.current_folder}" in c.out
     assert f"pkg/0.1: PKG package_folder {c.current_folder}" in c.out
 
 
@@ -147,4 +147,4 @@ def test_install_editable_build_folder_vars():
     c.run("build lib -pr=profile")
     c.run("install app -pr=profile --build=editable")
     path = os.path.join(c.current_folder, "lib", "build", "windows-x86_64", "Release", "generators")
-    assert f"lib/0.1: Writing generators to {path}" in c.out
+    assert f"Generators folder: {path}" in c.out

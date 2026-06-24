@@ -1,17 +1,21 @@
 from pathlib import Path
+
 from conan.internal.graph.graph import CONTEXT_BUILD
 
 
 class ConanFileInterface:
-    """ this is just a protective wrapper to give consumers
+    """
+    This is just a protective wrapper to give consumers
     a limited view of conanfile dependencies, "read" only,
     and only to some attributes, not methods
     """
+
     def __str__(self):
         return str(self._conanfile)
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, consumer):
         self._conanfile = conanfile
+        self._consumer = consumer
 
     def __eq__(self, other):
         """
@@ -70,6 +74,8 @@ class ConanFileInterface:
 
     @property
     def cpp_info(self):
+        # At the moment, not doing a full copy, not necessary as access is not concurrent
+        self._conanfile.cpp_info.set_consumer(self._consumer)
         return self._conanfile.cpp_info
 
     @property
@@ -132,6 +138,10 @@ class ConanFileInterface:
         return self._conanfile.description
 
     @property
+    def author(self):
+        return self._conanfile.author
+
+    @property
     def homepage(self):
         return self._conanfile.homepage
 
@@ -142,3 +152,12 @@ class ConanFileInterface:
     @property
     def extension_properties(self):
         return getattr(self._conanfile, "extension_properties", {})
+
+    @property
+    def recipe(self) -> str:
+        # IMPORTANT: this should be used only for "informational" purposes, see GH#18996.
+        return self._conanfile._conan_node.recipe  # noqa
+
+    @property
+    def conf(self):
+        return self._conanfile.conf

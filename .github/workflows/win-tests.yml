@@ -6,14 +6,19 @@ on:
       python-versions:
         required: true
         type: string
+      run-slow-tests:
+        required: false
+        default: 'false'
+        type: string
 
 jobs:
   unit_integration_tests:
-    runs-on: windows-2022
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}
-    name: Unit & Integration Tests (${{ matrix.python-version }})
+        runner: [windows-2025]
+    runs-on: ${{ matrix.runner }}
+    name: Unit & Integration Tests (${{ matrix.python-version }} ${{ matrix.runner }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,11 +65,12 @@ jobs:
           tests: test/unittests test/integration
 
   functional_tests:
-    runs-on: windows-2022
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}
-    name: Functional Tests (${{ matrix.python-version }})
+        runner: [windows-2022, windows-2025-vs2026]
+    runs-on: ${{ matrix.runner }}
+    name: Functional Tests (${{ matrix.python-version }} ${{ matrix.runner }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -75,6 +81,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install MSVC v14.38 Toolset
+        if: matrix.runner == 'windows-2022'
         run: |
           Start-Process -Wait "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe" -ArgumentList {`
             modify `
@@ -85,6 +92,7 @@ jobs:
           }
 
       - name: Verify MSVC v14.38 toolset installation
+        if: matrix.runner == 'windows-2022'
         run: dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
 
       - name: Install Visual Studio Build Tools
@@ -133,7 +141,8 @@ jobs:
           choco install pkgconfiglite --version 0.28
           choco install ninja --version 1.10.2
           choco install mingw
-          choco install cygwin
+          # mirrors.kernel.org/sourceware/cygwin returns 404; use alternative mirror from this list: https://cygwin.com/mirrors.html
+          choco install cygwin --execution-timeout=300 --package-parameters="'/Site:https://mirror.clarkson.edu/cygwin/'"
           choco install cyg-get
           cyg-get automake gcc-g++ make binutils --verbose
 
@@ -147,6 +156,9 @@ jobs:
             install: >-
                 mingw-w64-x86_64-toolchain
                 mingw-w64-i686-toolchain
+                mingw-w64-ucrt-x86_64-toolchain
+                mingw-w64-clang-x86_64-toolchain
+                mingw-w64-x86_64-clang
                 base-devel
                 gcc
                 autoconf-wrapper
@@ -162,16 +174,17 @@ jobs:
             C:\tools\cmake\3.19.7
             C:\tools\cmake\3.23.5
             C:\tools\cmake\3.27.9
-            C:\tools\cmake\4.0.0-rc3
-            C:\tools\bazel\6.5.0
-            C:\tools\bazel\7.4.1
-            C:\tools\bazel\8.0.0
+            C:\tools\cmake\4.2.1
+            C:\tools\bazel\6.6.0
+            C:\tools\bazel\7.6.2
+            C:\tools\bazel\8.4.2
+            C:\tools\bazel\9.1.0
           key: ${{ runner.os }}-conan-tools-cache
 
       - name: Install CMake versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
-          $CMAKE_BUILD_VERSIONS = "3.15.7", "3.19.7", "3.23.5", "3.27.9", "4.0.0-rc3"
+          $CMAKE_BUILD_VERSIONS = "3.15.7", "3.19.7", "3.23.5", "3.27.9", "4.2.1"
           foreach ($version in $CMAKE_BUILD_VERSIONS) {
             Write-Host "Downloading CMake version $version for Windows..."
             $destination = "C:\tools\cmake\$version"
@@ -194,7 +207,7 @@ jobs:
       - name: Install Bazel versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
-          $BAZEL_BUILD_VERSIONS = "6.5.0", "7.4.1", "8.0.0"
+          $BAZEL_BUILD_VERSIONS = "6.6.0", "7.6.2", "8.4.2", "9.1.0"
           foreach ($version in $BAZEL_BUILD_VERSIONS) {
               Write-Host "Downloading Bazel version $version for Windows..."
               $destination = "C:\tools\bazel\$version"
@@ -252,4 +265,4 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           test-type: functional
-          tests: test/functional
+          tests: ${{ inputs.run-slow-tests == 'true' && 'test/functional' || 'test/functional -m "not slow"' }}

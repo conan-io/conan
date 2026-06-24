@@ -4,7 +4,8 @@ universal_arch_separator = '|'
 
 
 def is_universal_arch(settings_value, valid_definitions):
-    if settings_value is None or valid_definitions is None or universal_arch_separator not in settings_value:
+    if (settings_value is None or valid_definitions is None
+            or universal_arch_separator not in settings_value):
         return False
 
     parts = settings_value.split(universal_arch_separator)

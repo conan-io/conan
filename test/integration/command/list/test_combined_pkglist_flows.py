@@ -1,9 +1,9 @@
 import json
-from collections import OrderedDict
 
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.env import environment_update
 from conan.test.utils.tools import TestClient, TestServer
 
 
@@ -178,7 +178,7 @@ class TestPkgListFindRemote:
     """ we can recover a list of remotes for an already installed graph, for metadata download
     """
     def test_graph_2_pkg_list_remotes(self):
-        servers = OrderedDict([("default", TestServer()), ("remote2", TestServer())])
+        servers = {"default": TestServer(), "remote2": TestServer()}
         c = TestClient(servers=servers, inputs=2 * ["admin", "password"], light=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
@@ -214,12 +214,121 @@ class TestPkgListFindRemote:
         assert "app/1.0: Retrieving recipe metadata from remote 'remote2'" in c.out
         assert "app/1.0: Retrieving package metadata" in c.out
 
+    def test_input_only_name_version(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("create zlib")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list * --format=json", redirect_stdout="mylist.json")
+        pkglist = json.loads(c.load("mylist.json"))
+        expected = {"zlib/1.0": {}}
+        assert pkglist["Local Cache"] == expected
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default")
+        pkglist = json.loads(c.stdout)
+        assert pkglist["default"] == expected
+
+    def test_input_recipe_revisions(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("create zlib")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list *#* --format=json", redirect_stdout="mylist.json")
+
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            revs = pkglist[origin]["zlib/1.0"]["revisions"]
+            assert list(revs) == ["c570d63921c5f2070567da4bf64ff261"]
+            assert "packages" not in revs["c570d63921c5f2070567da4bf64ff261"]
+
+        _check("Local Cache")
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default",
+              redirect_stdout="mylist.json")
+        _check("default")
+
+    def test_input_only_package_ids(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("os")})
+        c.run("create zlib -s os=Linux")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list *:* --format=json", redirect_stdout="mylist.json")
+
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            revs = pkglist[origin]["zlib/1.0"]["revisions"]
+            assert list(revs) == ["1cb7410d0365f87510a6767c7bef804e"]
+            info = {"info": {'settings': {'os': 'Linux'}}}
+            expected = {"9a4eb3c8701508aa9458b1a73d0633783ecc2270": info}
+            assert revs["1cb7410d0365f87510a6767c7bef804e"]["packages"] == expected
+
+        c.run("pkglist find-remote mylist.json --format=json --remote default",
+              redirect_stdout="mylist.json")
+        _check("default")
+
+    def test_graph_pkg_list_of_recipes_and_binaries(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("os")})
+        c.run("create zlib -s os=Linux")
+        c.run("upload zlib* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list *#*:*#* --format=json", redirect_stdout="mylist.json")
+
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            revs = pkglist[origin]["zlib/1.0"]["revisions"]
+            assert list(revs) == ["1cb7410d0365f87510a6767c7bef804e"]
+            expected = {'settings': {'os': 'Linux'}}
+            pkgs = revs["1cb7410d0365f87510a6767c7bef804e"]["packages"]
+            assert list(pkgs) == ["9a4eb3c8701508aa9458b1a73d0633783ecc2270"]
+            pkg = pkgs["9a4eb3c8701508aa9458b1a73d0633783ecc2270"]
+            assert pkg["info"] == expected
+            assert list(pkg["revisions"]) == ["1d3c57385f4133c1fbd6d13bd538496e"]
+
+        _check("Local Cache")
+        c.run("pkglist find-remote mylist.json --format=json --remote default",
+              redirect_stdout="mylist.json")
+        _check("default")
+
+    def test_graph_pkg_list_counter_example(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"conanfile.py": GenConanfile("zlib", "1.0").with_package_file("file.txt",
+                                                                              env_var="MY_VAR")})
+
+        with environment_update({"MY_VAR": "1"}):
+            c.run("create .")
+        with environment_update({"MY_VAR": "2"}):
+            c.run("create .")
+        c.run("upload zlib*:*#* -c -r=default")
+
+        # Create input pkglist for find-remote
+        c.run(f"list zlib/1.0#latest:*#latest --format=json", redirect_stdout="mylist.json")
+
+        def _check(origin):
+            pkglist = json.loads(c.load("mylist.json"))
+            prevs = pkglist[origin]["zlib/1.0"]["revisions"]
+            input_pkgs = prevs["212b9babae6a4b8a8362703cec4257ad"]["packages"]
+            prevs = input_pkgs["da39a3ee5e6b4b0d3255bfef95601890afd80709"]["revisions"]
+            assert len(prevs) == 1
+
+        _check("Local Cache")
+        c.run("pkglist find-remote mylist.json --format=json --remote default",
+              redirect_stdout="mylist.json")
+        _check("default")
+
 
 class TestPkgListMerge:
     """ deep merge lists
     """
     def test_graph_2_pkg_list_remotes(self):
-        servers = OrderedDict([("default", TestServer()), ("remote2", TestServer())])
+        servers = {"default": TestServer(), "remote2": TestServer()}
         c = TestClient(servers=servers, inputs=2 * ["admin", "password"])
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("build_type"),
                 "bzip2/conanfile.py": GenConanfile("bzip2", "1.0").with_settings("build_type"),
@@ -273,10 +382,11 @@ class TestPkgListMerge:
         c.run("create . --version=1.0 --format=json", redirect_stdout="out/graph.json")
         c.run("pkglist merge -l out/graph.json", assert_error=True)
         assert (
-            'ERROR: Expected a package list file but found a graph file. You can create a "package list" JSON file by running:'
-            in c.out
+            'ERROR: Expected a package list file but found a graph file. '
+            'You can create a "package list" JSON file by running:' in c.out
         )
         assert "conan list --graph graph.json --format=json > pkglist.json" in c.out
+
 
 class TestDownloadUpload:
     @pytest.fixture()
@@ -311,6 +421,21 @@ class TestDownloadUpload:
         assert f"Uploading recipe 'zli/" not in client.out
         assert "Uploading package 'zlib/1.0.0" in client.out
         assert "Uploading package 'zli/" not in client.out
+
+    def test_download_upload_all_no_removed(self):
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"zlib.py": GenConanfile("zlib", "0.1")})
+        c.run("create zlib.py ")
+        c.run("upload * -r=default -c --format=json", redirect_stdout="pkglist.json")
+        c.run("remove * -c")
+        c.run(f"download --list=pkglist.json -r=default --format=json",
+              redirect_stdout="pkglist.json")
+        # The original "files" and "upload-urls" fields of first upload are removed
+        pkglist_json = c.load("pkglist.json")
+        assert "files" not in pkglist_json
+        assert "upload-urls" not in pkglist_json
+        c.run("upload --list=pkglist.json -r=default --format=json")
+        # It doesn't crash anymore
 
     @pytest.mark.parametrize("prev_list", [False, True])
     def test_download_upload_only_recipes(self, client, prev_list):
@@ -351,43 +476,66 @@ class TestListRemove:
     def test_remove_nothing_only_refs(self, client):
         # It is necessary to do *#* for actually removing something
         client.run(f"list * --format=json", redirect_stdout="pkglist.json")
-        client.run(f"remove --list=pkglist.json -c")
+        client.run(f"remove --list=pkglist.json -c --format=json")
         assert "Nothing to remove, package list do not contain recipe revisions" in client.out
+        result = json.loads(client.stdout)
+        assert result["Local Cache"] == {}  # Nothing was removed
 
     @pytest.mark.parametrize("remote", [False, True])
     def test_remove_all(self, client, remote):
         # It is necessary to do *#* for actually removing something
         remote = "-r=default" if remote else ""
         client.run(f"list *#* {remote} --format=json", redirect_stdout="pkglist.json")
-        client.run(f"remove --list=pkglist.json {remote} -c")
+        client.run(f"remove --list=pkglist.json {remote} -c --dry-run")
         assert "zli/1.0.0#f034dc90894493961d92dd32a9ee3b78:" \
                " Removed recipe and all binaries" in client.out
         assert "zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb:" \
                " Removed recipe and all binaries" in client.out
+
+        client.run(f"remove --list=pkglist.json {remote} -c --format=json")
+        result = json.loads(client.stdout)
+        origin = "Local Cache" if not remote else "default"
+        assert len(result[origin]["zli/1.0.0"]["revisions"]) == 1
+        assert len(result[origin]["zlib/1.0.0@user/channel"]["revisions"]) == 1
+        assert "packages" not in client.stdout  # Packages are not listed at all
+
         client.run(f"list * {remote}")
         assert "There are no matching recipe references" in client.out
 
     @pytest.mark.parametrize("remote", [False, True])
     def test_remove_packages_no_revisions(self, client, remote):
-        # It is necessary to do *#* for actually removing something
+        # It is necessary to do *#*:*#* for actually removing binaries
         remote = "-r=default" if remote else ""
         client.run(f"list *#*:* {remote} --format=json", redirect_stdout="pkglist.json")
-        client.run(f"remove --list=pkglist.json {remote} -c")
+        client.run(f"remove --list=pkglist.json {remote} -c --format=json")
         assert "No binaries to remove for 'zli/1.0.0#f034dc90894493961d92dd32a9ee3b78'" in client.out
         assert "No binaries to remove for 'zlib/1.0.0@user/channel" \
                "#ffd4bc45820ddb320ab224685b9ba3fb" in client.out
+        result = json.loads(client.stdout)
+        origin = "Local Cache" if not remote else "default"
+        assert result[origin] == {}  # Nothing was removed
 
     @pytest.mark.parametrize("remote", [False, True])
     def test_remove_packages(self, client, remote):
-        # It is necessary to do *#* for actually removing something
+        # It is necessary to do *#*:*#* for actually removing binaries
         remote = "-r=default" if remote else ""
         client.run(f"list *#*:*#* {remote} --format=json", redirect_stdout="pkglist.json")
-        client.run(f"remove --list=pkglist.json {remote} -c")
-
+        client.run(f"remove --list=pkglist.json {remote} -c --dry-run")
         assert "Removed recipe and all binaries" not in client.out
         assert "zli/1.0.0#f034dc90894493961d92dd32a9ee3b78: Removed binaries" in client.out
         assert "zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb: " \
                "Removed binaries" in client.out
+
+        client.run(f"remove --list=pkglist.json {remote} -c --format=json")
+        result = json.loads(client.stdout)
+        origin = "Local Cache" if not remote else "default"
+        zli_revs = result[origin]["zli/1.0.0"]["revisions"]
+        zli_uc_revs = result[origin]["zlib/1.0.0@user/channel"]["revisions"]
+        assert len(zli_revs) == 1
+        assert len(zli_uc_revs) == 1
+        assert len(zli_revs["f034dc90894493961d92dd32a9ee3b78"]["packages"]) == 1
+        assert len(zli_uc_revs["ffd4bc45820ddb320ab224685b9ba3fb"]["packages"]) == 1
+
         client.run(f"list *:* {remote}")
         assert "zli/1.0.0" in client.out
         assert "zlib/1.0.0@user/channel" in client.out
@@ -442,8 +590,74 @@ class TestListGraphContext:
         tc = TestClient(light=True)
         tc.save({"conanfile.py": GenConanfile("lib", "1.0")})
 
-        tc.run("graph info . -f json --build=never --no-remote --filter=context", redirect_stdout="graph_context.json")
+        tc.run("graph info . -f json --build=never --no-remote --filter=context",
+               redirect_stdout="graph_context.json")
 
         tc.run("list --graph=graph_context.json --graph-context=build-only --format=json",
                assert_error=True)
         assert "Note that the graph file should not be filtered" in tc.out
+
+    @pytest.mark.parametrize("context", ["build-only", "host-only"])
+    def test_context_only_binary_mismatch(self, context):
+        tc = TestClient(light=True)
+        tc.save({
+                "protobuf/conanfile.py": GenConanfile("protobuf", "1.0"),
+                "onnx/conanfile.py": GenConanfile("onnx", "1.0").with_requires("protobuf/1.0")
+                                                                .with_tool_requires("protobuf/1.0")})
+
+        tc.run("create protobuf")
+        tc.run("create onnx")
+        # Note that here, the protobuf from tool_requires is skipped!
+        tc.run("graph info --requires=onnx/1.0 -f=json", redirect_stdout="graph.json")
+        tc.run(f"list --graph=graph.json --graph-context={context} --format=json")
+        # We removed both protobuf binaries, not even the recipe is still there
+        assert "protobuf/1.0" not in tc.out
+
+    @pytest.mark.parametrize("context", ["build-only", "host-only"])
+    # We're building onnx to ensure the build context protobuf binary is not skipped
+    @pytest.mark.parametrize("build_onnx", [True, False])
+    def test_context_only_binary_different_pkg_id(self, context, build_onnx):
+        tc = TestClient(light=True)
+        tc.save({
+            "protobuf/conanfile.py": GenConanfile("protobuf", "1.0")
+            .with_shared_option(),
+            "onnx/conanfile.py": GenConanfile("onnx", "1.0")
+            .with_requirement("protobuf/1.0", options={"shared": True})
+            .with_tool_requires("protobuf/1.0")})
+
+        tc.run("create protobuf -o &:shared=True")
+        protobuf_host_shared_pkgid = tc.created_layout().reference.package_id
+        tc.run("create protobuf -o &:shared=False")
+        protobuf_build_static_pkgid = tc.created_layout().reference.package_id
+
+        tc.run("create onnx")
+        build_arg = "-b=&" if build_onnx else ""
+        tc.run(f"graph info --requires=onnx/1.0 {build_arg} -f=json", redirect_stdout="graph.json")
+        tc.run(f"list --graph=graph.json --graph-context={context} --format=json")
+        if context == "build-only":
+            if not build_onnx:
+                # If we have skipped the protobuf build binary, the recipe is gone too
+                # because we have no protobuf packages being used
+                assert "protobuf/1.0" not in tc.out
+            else:
+                assert "protobuf/1.0" in tc.out
+                assert protobuf_build_static_pkgid in tc.out
+                assert protobuf_host_shared_pkgid not in tc.out
+        else:
+            assert "protobuf/1.0" in tc.out
+            assert protobuf_build_static_pkgid not in tc.out
+            assert protobuf_host_shared_pkgid in tc.out
+
+    @pytest.mark.parametrize("context", ["build-only", "host-only"])
+    def test_context_only_consumer_recipe_no_named(self, context):
+        tc = TestClient()
+        tc.save({
+            "protobuf/conanfile.py": GenConanfile("protobuf", "1.0"),
+            "consumer/conanfile.py": GenConanfile()
+                .with_tool_requires("protobuf/1.0")
+                .with_requires("protobuf/1.0")})
+
+        tc.run("create protobuf")
+        tc.run(f"graph info consumer -f=json", redirect_stdout="graph.json")
+        tc.run(f"list --graph=graph.json --graph-context={context}")
+        assert "protobuf/1.0" not in tc.out

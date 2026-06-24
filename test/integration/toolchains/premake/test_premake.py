@@ -117,6 +117,9 @@ def test_premake_msbuild_platform():
         compiler.runtime=dynamic
         compiler.version=194
         os=Windows
+
+        [conf]
+        tools.microsoft.msbuild:installation_path=
     """)
 
     conanfile = textwrap.dedent(
@@ -138,4 +141,33 @@ def test_premake_msbuild_platform():
     tc.save({"conanfile.py": conanfile, "win": windows_profile})
     tc.run("build . -pr win")
     assert 'conanfile.premake5.lua" vs2022 --arch=x86_64!!' in tc.out
-    assert 'Running msbuild.exe "App.sln" -p:Configuration="Release" -p:Platform=Win64!!' in tc.out
+    assert 'Running msbuild.exe "App.sln" -p:Configuration="Release" -p:Platform="Win64"!!' in tc.out
+
+
+def test_premake_build_with_custom_configuration():
+    tc = TestClient()
+    conanfile = textwrap.dedent(
+        """
+        from conan import ConanFile
+        from conan.tools.premake import Premake, PremakeDeps, PremakeToolchain
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "PremakeToolchain"
+            def run(self, cmd, *args, **kwargs):
+                self.output.info(f"Running {cmd}!!")
+            def generate(self):
+                deps = PremakeDeps(self)
+                deps.configuration = "ReleaseDLL"
+            def build(self):
+                premake = Premake(self)
+                premake.configure()
+                premake.build(workspace="App", configuration="ReleaseDLL")
+                """
+    )
+    tc.save({"conanfile.py": conanfile})
+    tc.run(
+        "build . -s compiler=gcc -s compiler.version=13 -s compiler.libcxx=libstdc++ -s arch=armv8 -c tools.build:jobs=4",
+    )
+    assert 'conanfile.premake5.lua" gmake --arch=arm64!!' in tc.out
+    assert "Running make config=releasedll all -j4!!" in tc.out

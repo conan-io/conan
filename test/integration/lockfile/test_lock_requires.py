@@ -395,7 +395,7 @@ class TestLockTestPackage:
         # https://github.com/conan-io/conan/issues/11763
         c = client
         with c.chdir("app"):
-            c.run("lock create .")
+            c.run("lock create")
             lock = c.load("conan.lock")
             assert "cmake/1.0" not in lock
             assert "dep/1.0" in lock
@@ -665,7 +665,7 @@ class TestLockfileUpdate:
 def test_error_test_explicit():
     # https://github.com/conan-io/conan/issues/14833
     client = TestClient(light=True)
-    test = GenConanfile().with_test("pass").with_class_attribute("test_type = 'explicit'")
+    test = GenConanfile().with_test("pass")
     client.save({"conanfile.py": GenConanfile("pkg", "0.1"),
                  "test_package/conanfile.py": test})
     client.run("lock create conanfile.py --lockfile-out=my.lock")
@@ -718,7 +718,6 @@ def test_lock_error():
 
         class TestPackageConan(ConanFile):
             settings = "build_type"
-            test_type = "explicit"
 
             def requirements(self):
                 self.requires(self.tested_reference_str)

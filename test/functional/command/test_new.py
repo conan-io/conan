@@ -1,3 +1,7 @@
+import os
+import platform
+import textwrap
+
 import pytest
 
 from conan.test.utils.tools import TestClient
@@ -12,3 +16,30 @@ def test_conan_new_compiles():
 
     tc.run("create hello -tf=")
     tc.run("create bye")
+
+
+@pytest.mark.tool("cmake")
+def test_conan_new_empty():
+    c = TestClient()
+    c.run("new")
+    cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
+    cmake_minimum_required(VERSION 3.15)
+    project(PackageTest CXX)
+    add_executable(example main.cpp)
+    """)
+    main = textwrap.dedent(r"""
+    #include <iostream>
+
+    int main() {
+        std::cout << "Hello World!\n";
+    }
+    """)
+    c.save({
+        "CMakeLists.txt": cmakelists,
+        "main.cpp": main,
+    })
+    c.run("build")
+    suffix = ".exe" if platform.system() == "Windows" else ""
+    assert os.path.exists(os.path.join(c.current_folder, "build", "Release", f"example{suffix}"))

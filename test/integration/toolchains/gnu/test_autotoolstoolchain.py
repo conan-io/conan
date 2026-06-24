@@ -41,10 +41,10 @@ def test_extra_flags_via_conf():
         assert 'set "CFLAGS=%CFLAGS% -O3 --flag3 --flag4"' in toolchain
         assert 'set "LDFLAGS=%LDFLAGS% --flag5 --flag6"' in toolchain
     else:
-        assert 'export CPPFLAGS="$CPPFLAGS -DNDEBUG -DDEF1 -DDEF2"' in toolchain
-        assert 'export CXXFLAGS="$CXXFLAGS -O3 --flag1 --flag2"' in toolchain
-        assert 'export CFLAGS="$CFLAGS -O3 --flag3 --flag4"' in toolchain
-        assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6"' in toolchain
+        assert 'export CPPFLAGS="${CPPFLAGS:-}${CPPFLAGS:+ }-DNDEBUG -DDEF1 -DDEF2"' in toolchain
+        assert 'export CXXFLAGS="${CXXFLAGS:-}${CXXFLAGS:+ }-O3 --flag1 --flag2"' in toolchain
+        assert 'export CFLAGS="${CFLAGS:-}${CFLAGS:+ }-O3 --flag3 --flag4"' in toolchain
+        assert 'export LDFLAGS="${LDFLAGS:-}${LDFLAGS:+ }--flag5 --flag6"' in toolchain
 
 
 def test_extra_flags_order():
@@ -82,6 +82,33 @@ def test_extra_flags_order():
     assert 'extra_cxxflags cxxflags' in toolchain
     assert 'extra_cflags cflags' in toolchain
     assert 'extra_ldflags sharedlinkflags exelinkflags' in toolchain
+
+
+def test_autotoolstoolchain_rcflags():
+    """Test that tools.build:rcflags is applied to RCFLAGS in the generated script."""
+    os_ = platform.system()
+    os_ = "Macos" if os_ == "Darwin" else os_
+    profile = textwrap.dedent("""
+        [settings]
+        os=%s
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:rcflags=["--rcflag1", "--rcflag2"]
+        """ % os_)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type").with_generator("AutotoolsToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    ext = ".bat" if os_ == "Windows" else ".sh"
+    toolchain = client.load("conanautotoolstoolchain{}".format(ext))
+    assert "RCFLAGS" in toolchain
+    assert "--rcflag1" in toolchain
+    assert "--rcflag2" in toolchain
 
 
 def test_autotools_custom_environment():
@@ -133,7 +160,7 @@ def test_linker_scripts_via_conf():
     if os_ == "Windows":
         assert 'set "LDFLAGS=%LDFLAGS% --flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
     else:
-        assert 'export LDFLAGS="$LDFLAGS --flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
+        assert 'export LDFLAGS="${LDFLAGS:-}${LDFLAGS:+ }--flag5 --flag6 -T\'/linker/scripts/flash.ld\' -T\'/linker/scripts/extra_data.ld\'"' in toolchain
 
 
 def test_not_none_values():
@@ -193,7 +220,7 @@ def test_unknown_compiler():
                                                .with_generator("AutotoolsToolchain")})
     # this used to crash, because of build_type_flags in AutotoolsToolchain returning empty string
     client.run("install . -s compiler=xlc")
-    assert "conanfile.py: Generator 'AutotoolsToolchain' calling 'generate()'" in client.out
+    assert "Generator 'AutotoolsToolchain' calling 'generate()'" in client.out
 
 
 def test_toolchain_and_compilers_build_context():
@@ -369,12 +396,13 @@ def test_conf_build_does_not_exist():
     assert 'export CC_FOR_BUILD="x86_64-linux-gnu-gcc"' in tc
     assert 'export CXX_FOR_BUILD="x86_64-linux-gnu-g++"' in tc
 
+
 @pytest.mark.parametrize(
     "threads, flags",
     [("posix", "-pthread"), ("wasm_workers", "-sWASM_WORKERS=1")],
 )
 def test_thread_flags(threads, flags):
-    os = platform.system()
+    is_win = platform.system() == "Windows"
     client = TestClient()
     profile = textwrap.dedent(f"""
         [settings]
@@ -396,12 +424,12 @@ def test_thread_flags(threads, flags):
         }
     )
     client.run("install . -pr=./profile")
-    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if os == "Windows" else '.sh'))
-    if os == "Windows":
+    toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if is_win else '.sh'))
+    if is_win:
         assert f'set "CXXFLAGS=%CXXFLAGS% -stdlib=libc++ {flags}"' in toolchain
         assert f'set "CFLAGS=%CFLAGS% {flags}"' in toolchain
         assert f'set "LDFLAGS=%LDFLAGS% {flags}' in toolchain
     else:
-        assert f'export CXXFLAGS="$CXXFLAGS -stdlib=libc++ {flags}"' in toolchain
-        assert f'export CFLAGS="$CFLAGS {flags}"' in toolchain
-        assert f'export LDFLAGS="$LDFLAGS {flags}"' in toolchain
+        assert f'export CXXFLAGS="${{CXXFLAGS:-}}${{CXXFLAGS:+ }}-stdlib=libc++ {flags}"' in toolchain
+        assert f'export CFLAGS="${{CFLAGS:-}}${{CFLAGS:+ }}{flags}"' in toolchain
+        assert f'export LDFLAGS="${{LDFLAGS:-}}${{LDFLAGS:+ }}{flags}"' in toolchain

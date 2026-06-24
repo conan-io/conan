@@ -683,7 +683,6 @@ VALID_SPDX_LICENSES = {
 }
 
 
-
 NORMALIZED_VALID_SPDX_LICENSES = {
     "0bsd",
     "3d-slicer-1.0",

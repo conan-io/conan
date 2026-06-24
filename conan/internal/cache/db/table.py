@@ -1,8 +1,12 @@
 import sqlite3
 import threading
+import traceback
 from collections import defaultdict, namedtuple
 from contextlib import contextmanager
-from typing import Tuple, List, Optional
+from typing import Tuple, List
+
+from conan.api.output import ConanOutput
+from conan.errors import ConanException
 
 
 class BaseDbTable:
@@ -23,7 +27,13 @@ class BaseDbTable:
 
     @contextmanager
     def db_connection(self):
-        assert self._lock.acquire(timeout=20), "Conan failed to acquire database lock"
+        if not self._lock.acquire(timeout=20):
+            m = "".join(traceback.format_stack()) + "\n"
+            ConanOutput().error("Error while acquiring lock for DB: " + m)
+            raise ConanException("Conan failed to acquire database lock in 20s. Maybe the system is "
+                                 "under very heavy load. Please report it to Github tickets")
+        # isolation_level=None, puts it in regular SQLITE autocommit mode, every
+        # connection.execute() will autocommit
         connection = sqlite3.connect(self.filename, isolation_level=None, timeout=20)
         try:
             yield connection
@@ -32,24 +42,18 @@ class BaseDbTable:
             self._lock.release()
 
     def create_table(self):
-        def field(name, typename, nullable=False, check_constraints: Optional[List] = None,
-                  unique=False):
+        def field(name, typename, nullable=False, unique=False):
             field_str = name
-            if typename in [str, ]:
+            if typename is str:
                 field_str += ' text'
-            elif typename in [int, ]:
+            elif typename is int:
                 field_str += ' integer'
-            elif typename in [float, ]:
-                field_str += ' real'
             else:
-                assert False, f"sqlite3 type not mapped for type '{typename}'"
+                assert typename is float, f"sqlite3 type not mapped for type '{typename}'"
+                field_str += ' real'
 
             if not nullable:
                 field_str += ' NOT NULL'
-
-            if check_constraints:
-                constraints = ', '.join([str(it) for it in check_constraints])
-                field_str += f' CHECK ({name} IN ({constraints}))'
 
             if unique:
                 field_str += ' UNIQUE'
@@ -61,11 +65,3 @@ class BaseDbTable:
         table_checks = f", UNIQUE({', '.join(self.unique_together)})" if self.unique_together else ''
         with self.db_connection() as conn:
             conn.execute(f"CREATE TABLE {guard} {self.table_name} ({fields} {table_checks});")
-
-    def dump(self):
-        print(f"********* BEGINTABLE {self.table_name}*************")
-        with self.db_connection() as conn:
-            r = conn.execute(f'SELECT rowid, * FROM {self.table_name}')
-            for it in r.fetchall():
-                print(str(it))
-            print(f"********* ENDTABLE {self.table_name}*************")

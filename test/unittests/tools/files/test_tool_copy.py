@@ -1,4 +1,4 @@
-import mock
+from unittest import mock
 import os
 import platform
 import pytest
@@ -54,8 +54,8 @@ class TestToolCopy:
         save(test2, "")
         gen_folder = os.path.join(build_folder, "gen")
         mkdir(gen_folder)
-        bin = os.path.join(gen_folder, "test.bin")
-        save(bin, "")
+        binfile = os.path.join(gen_folder, "test.bin")
+        save(binfile, "")
         sym_folder = os.path.join(build_folder, "sym")
         os.symlink(gen_folder, sym_folder)
 
@@ -142,7 +142,7 @@ class TestToolCopy:
         copied = copy(None, "dir*", src, dst)
 
         assert copied == [dst_dir_file, dst_dir_link]
-        assert os.listdir(dst) == os.listdir(src)
+        assert sorted(os.listdir(dst)) == sorted(os.listdir(src))
         assert os.path.islink(dst_dir_link)
 
     def test_excludes(self):

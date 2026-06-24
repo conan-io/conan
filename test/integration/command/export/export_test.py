@@ -5,7 +5,6 @@ import stat
 import textwrap
 
 import pytest
-from parameterized import parameterized
 
 from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import RecipeReference
@@ -28,11 +27,26 @@ class TestExportSettings:
 
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=lib --version=1.0 --user=lasote --channel=channel")
-        assert "lib/1.0@lasote/channel: Exported" in client.out
+        assert "Exported: lib/1.0@lasote/channel" in client.out
 
         client.save({"conanfile.py": GenConanfile("lib", "1.0")})
         client.run("export . --user=lasote")
-        assert "lib/1.0@lasote: Exporting package recipe" in client.out
+        assert "Exported: lib/1.0@lasote" in client.out
+        client.run("export . --channel=channel", assert_error=True)
+        assert "Can't specify channel 'channel' without user" in client.out
+
+        client.save({"conanfile.py": GenConanfile("lib", "1.0").with_class_attribute('channel = "channel"')})
+        client.run("export .", assert_error=True)
+        assert "Can't specify channel 'channel' without user" in client.out
+
+        client.run("export . --user=user")
+        assert "Exported: lib/1.0@user/channel" in client.out
+
+        client.save({"conanfile.py": GenConanfile("lib", "1.0").with_class_attribute('user = "user"')})
+        client.run("export .")
+        assert "Exported: lib/1.0@user" in client.out
+        client.run("export . --channel=channel")
+        assert "Exported: lib/1.0@user/channel" in client.out
 
     def test_export_read_only(self):
         client = TestClient(light=True)
@@ -175,12 +189,12 @@ class TestConan(ConanFile):
         export_path = layout.export_sources()
         assert sorted(['file.txt', 'file.cpp', 'file.h']) == sorted(os.listdir(export_path))
 
-    @parameterized.expand([("myconanfile.py", ), ("Conanfile.py", )])
+    @pytest.mark.parametrize("filename", ["myconanfile.py", "Conanfile.py"])
     def test_filename(self, filename):
         client = TestClient(light=True)
         client.save({filename: GenConanfile("hello", "1.2")})
         client.run("export %s --user=user --channel=stable" % filename)
-        assert "hello/1.2@user/stable: Exported" in client.out
+        assert "Exported: hello/1.2@user/stable" in client.out
         layout = client.exported_layout()
         export_path = layout.export()
         conanfile = load(os.path.join(export_path, "conanfile.py"))
@@ -244,8 +258,8 @@ class TestExport:
         reg_path = self.client.exported_layout().export()
         manif = FileTreeManifest.load(reg_path)
 
-        assert '%s: Exported' % str(self.ref) in self.client.out
-        assert '%s: Exported to cache folder: %s' % (str(self.ref), reg_path) in self.client.out
+        assert 'Exported: %s' % str(self.ref) in self.client.out
+        assert 'Exported to cache folder: %s' % reg_path in self.client.out
         assert os.path.exists(reg_path)
 
         for name in list(self.files.keys()):
@@ -261,7 +275,7 @@ class TestExport:
         self.ref = RecipeReference("hello0", "0.1", "lasote", "stable")
         self.client.save({"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*")})
         self.client.run("export . --user=lasote --channel=stable")
-        assert "hello0/0.1@lasote/stable: Exported" in self.client.out
+        assert "Exported: hello0/0.1@lasote/stable" in self.client.out
 
     def test_export_filter(self):
         self.client.save({CONANFILE: GenConanfile("openssl", "2.0.1")})
@@ -319,14 +333,14 @@ class TestExportMetadata:
         client = TestClient(light=True)
         client.save({"conanfile.py": GenConanfile("lib", "1.0")})
         client.run('export .')
-        assert "lib/1.0: Exported" in client.out
+        assert "Exported: lib/1.0" in client.out
 
     def test_export_with_name_and_version(self):
         client = TestClient(light=True)
         client.save({"conanfile.py": GenConanfile()})
 
         client.run('export . --name=lib --version=1.0')
-        assert "lib/1.0: Exported" in client.out
+        assert "Exported: lib/1.0" in client.out
 
     def test_export_with_only_user_channel(self):
         """This should be the recommended way and only from Conan 2.0"""
@@ -334,20 +348,20 @@ class TestExportMetadata:
         client.save({"conanfile.py": GenConanfile("lib", "1.0")})
 
         client.run('export .  --version= --user=user --channel=channel')
-        assert "lib/1.0@user/channel: Exported" in client.out
+        assert "Exported: lib/1.0@user/channel" in client.out
 
     def test_export_conflict_no_user_channel(self):
         client = TestClient(light=True)
         client.save({"conanfile.py": GenConanfile()})
 
         client.run('export . --name=pkg --version=0.1 --user=user --channel=channel')
-        assert "pkg/0.1@user/channel: Exported" in client.out
+        assert "Exported: pkg/0.1@user/channel" in client.out
         client.run('export . --name=pkg --version=0.1 --user=other --channel=stable')
-        assert "pkg/0.1@other/stable: Exported" in client.out
+        assert "Exported: pkg/0.1@other/stable" in client.out
         client.run('export . --name=pkg --version=0.1')
-        assert "pkg/0.1: Exported" in client.out
+        assert "Exported: pkg/0.1" in client.out
         client.run('export . --name=pkg --version=0.1')
-        assert "pkg/0.1: Exported" in client.out
+        assert "Exported: pkg/0.1" in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Needs case-sensitive filesystem")

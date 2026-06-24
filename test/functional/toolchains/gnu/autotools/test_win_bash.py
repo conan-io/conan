@@ -4,12 +4,12 @@ import os
 
 import pytest
 
-from conan.test.assets.autotools import gen_makefile_am, gen_configure_ac
+from conan.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from test.conftest import tools_locations
 from test.functional.utils import check_exe_run, check_vs_runtime
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, default_vs_ide_version
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
@@ -65,27 +65,91 @@ def test_autotools_bash_complete():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.tool("clang", "18")
+def test_autotools_bash_complete_ucrt64():
+    try:
+        msys2_path = tools_locations["msys2"]["system"]["path"]["Windows"]
+    except KeyError:
+        pytest.skip("msys2 path not defined")
+    try:
+        ucrt64_path = tools_locations["ucrt64"]["system"]["path"]["Windows"]
+        ucrt64_path = ucrt64_path.replace("\\", "/")
+    except KeyError:
+        pytest.skip("ucrt64 path not defined")
+
+    client = TestClient(path_with_spaces=False)
+    profile_win = textwrap.dedent(f"""
+        [settings]
+        os=Windows
+        compiler=gcc
+        compiler.version=16
+        compiler.libcxx=libstdc++
+        compiler.cppstd=17
+        arch=x86_64
+        build_type=Release
+
+        [conf]
+        tools.microsoft.bash:subsystem=msys2-ucrt64
+        tools.microsoft.bash:path={msys2_path}/bash.exe
+        """)
+
+    main = gen_function_cpp(name="main")
+    makefile = gen_makefile(apps=["app"])
+
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.gnu import Autotools
+
+        class TestConan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "AutotoolsToolchain"
+
+            win_bash = True
+
+            def build(self):
+                autotools = Autotools(self)
+                autotools.make()
+                import os
+                path = os.path.abspath(".").replace("\\", "/")
+                self.run(f"{path}/app.exe")
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "Makefile": makefile,
+                 "app.cpp": main,
+                 "profile_win": profile_win})
+    client.run("build . -pr=profile_win")
+    check_exe_run(client.out, "main", "gcc", "16", "Release", "x86_64", cppstd="17",
+                  cxx11_abi=0, subsystem="ucrt64")
+    check_vs_runtime("app.exe", client, "15", "Debug", subsystem="ucrt64")
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool("msys2")
+@pytest.mark.tool("clang", "20")
 @pytest.mark.parametrize("frontend", ("clang", "clang-cl"))
 @pytest.mark.parametrize("runtime", ("static", "dynamic"))
 @pytest.mark.parametrize("build_type", ("Debug", "Release"))
 def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     client = TestClient(path_with_spaces=False)
     # Problem is that msys2 also has clang in the path, so we need to make it explicit
-    clangpath = tools_locations["clang"]["18"]["path"]["Windows"]
+    clangpath = tools_locations["clang"]["20"]["path"]["Windows"]
     # compilers
     c, cpp = ("clang", "clang++") if frontend == "clang" else ("clang-cl", "clang-cl")
-    comps = f'{{"cpp":"{clangpath}/{cpp}", "c":"{clangpath}/{c}", "rc":"{clangpath}/{c}"}}'
+    comps = f'{{"cpp":"{cpp}", "c":"{c}", "rc":"{c}"}}'
+
+    toolset_version = {"17": "v144",
+                       "18": "v145"}[str(default_vs_ide_version)]
+
     profile_win = textwrap.dedent(f"""
         [settings]
         os=Windows
         arch=x86_64
         build_type={build_type}
         compiler=clang
-        compiler.version=18
+        compiler.version=20
         compiler.cppstd=14
-        compiler.runtime_version=v144
+        compiler.runtime_version={toolset_version}
         compiler.runtime={runtime}
 
         [conf]
@@ -93,6 +157,9 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
         tools.microsoft.bash:subsystem=msys2
         tools.microsoft.bash:path=bash
         tools.compilation:verbosity=verbose
+
+        [buildenv]
+        PATH=+(path){clangpath}
         """)
 
     main = gen_function_cpp(name="main")
@@ -131,18 +198,20 @@ def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     client.run("build . -pr=profile_win")
     client.run_command("main.exe")
     assert "__GNUC__" not in client.out
-    assert "main __clang_major__18" in client.out
-    check_exe_run(client.out, "main", "clang", None, build_type, "x86_64", None)
+    assert "main __clang_major__20" in client.out
+    check_exe_run(client.out, "main", "clang", "20", build_type, "x86_64", None)
 
     bat_contents = client.load("conanbuild.bat")
     assert "conanvcvars.bat" in bat_contents
 
     static_runtime = runtime == "static"
-    check_vs_runtime("main.exe", client, "17", build_type=build_type, static_runtime=static_runtime)
+    check_vs_runtime("main.exe", client, default_vs_ide_version, build_type=build_type,
+                     static_runtime=static_runtime)
 
 
+@pytest.mark.parametrize("scope", ["build", "run"])
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-def test_add_msys2_path_automatically():
+def test_add_msys2_path_automatically(scope):
     """ Check that commands like ar, autoconf, etc, that are in the /usr/bin folder together
     with the bash.exe, can be automaticallly used when running in windows bash, without user
     extra addition to [buildenv] of that msys64/usr/bin path
@@ -161,21 +230,25 @@ def test_add_msys2_path_automatically():
             tools.microsoft.bash:path={}
             """.format(bash_path))})
 
-    conanfile = textwrap.dedent("""
+    conanfile = textwrap.dedent(f"""
         from conan import ConanFile
 
         class HelloConan(ConanFile):
             name = "hello"
             version = "0.1"
 
-            win_bash = True
+            def configure(self):
+                if "{scope}" == "build":
+                    self.win_bash = True
+                else:
+                    self.win_bash_run = True
 
             def build(self):
-                self.run("ar -h")
+                self.run("ar -h", scope="{scope}")
                 """)
 
     client.save({"conanfile.py": conanfile})
-    client.run("create .")
+    client.run("build .")
     assert "ar.exe" in client.out
 
 
@@ -335,3 +408,60 @@ def test_msys2_and_msbuild():
 
     bat_contents = client.load("conanbuild.bat")
     assert "conanvcvars.bat" in bat_contents
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_autotools_support_custom_make():
+    """ Check that the conf setting `tools.gnu:make_program` works when set with
+    windows native paths. For example, when set programatically by a package
+    """
+    client = TestClient(path_with_spaces=False)
+    bash_path = None
+    make_path = None
+    try:
+        bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
+        make_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/make.exe"
+    except KeyError:
+        pytest.skip("msys2 path not defined")
+    if not os.path.exists(make_path):
+        pytest.skip("msys2 make not installed")
+
+    make_path = make_path.replace("/", "\\")
+    assert os.path.exists(make_path)
+
+    profile = textwrap.dedent(f"""
+        include(default)
+
+        [conf]
+        tools.microsoft.bash:subsystem=msys2
+        tools.microsoft.bash:path={bash_path}
+        tools.gnu:make_program={make_path}
+        tools.build:compiler_executables={{"c": "cl", "cpp": "cl"}}
+        """)
+
+    # The autotools support for "cl" compiler (VS) is very limited, linking with deps doesn't
+    # work but building a simple app do
+    makefile = gen_makefile()
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import Autotools
+
+        class TestConan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "AutotoolsToolchain"
+            win_bash = True
+
+            def build(self):
+                # These commands will run in bash activating first the vcvars and
+                # then inside the bash activating the
+                autotools = Autotools(self)
+                autotools.make()
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "Makefile": makefile,
+                 "profile": profile})
+    client.run("build . -pr=profile")
+    # This used to crash, because ``make_program`` was not unix_path
+    assert "conanfile.py: Calling build()" in client.out

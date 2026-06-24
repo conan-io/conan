@@ -3,21 +3,16 @@ import os
 import re
 import textwrap
 import time
-from collections import OrderedDict
 from unittest.mock import patch, Mock
 
 import pytest
 
-from conan.internal.errors import ConanConnectionError
 from conan.errors import ConanException
-from conan.test.assets.cmake import gen_cmakelists
+from conan.internal.errors import ConanConnectionError
+from conan.internal.util.files import save
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.assets.sources import gen_function_h, gen_function_cpp
-from conan.test.utils.file_server import TestFileServer
-from conan.test.utils.test_files import temp_folder
-from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, zipdir
 from conan.test.utils.env import environment_update
-from conan.internal.util.files import save, save_files, sha256sum
+from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
 class TestParamErrors:
@@ -50,6 +45,13 @@ class TestParamErrors:
         c.run("list * -p os=Linux", assert_error=True)
         assert "--package-query and --filter-xxx can only be done for binaries" in c.out
 
+    def test_wrong_package_query(self):
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        c.run('list *:* -p "not os=Linux"')
+        assert "ERROR: Invalid package query: not os=Linux. 'not' operator is not allowed" in c.out
+
     def test_graph_file_error(self):
         # This can happen when reusing the same file in input and output
         c = TestClient(light=True)
@@ -70,7 +72,8 @@ class TestParamErrors:
         c.run("list --graph graph.json --format=json", redirect_stdout="pkglist.json")
         c.run("list --graph pkglist.json", assert_error=True)
         assert (
-            'Expected a graph file but found an unexpected JSON file format. You can create a "graph" JSON file by running'
+            'Expected a graph file but found an unexpected JSON file format. '
+            'You can create a "graph" JSON file by running'
             in c.out
         )
         assert (
@@ -78,11 +81,11 @@ class TestParamErrors:
             in c.out
         )
 
+
 @pytest.fixture(scope="module")
 def client():
-    servers = OrderedDict([("default", TestServer()),
-                           ("other", TestServer())])
-    c = TestClient(servers=servers, inputs=2*["admin", "password"])
+    c = TestClient(servers={"default": TestServer(), "other": TestServer()},
+                   inputs=2*["admin", "password"])
     c.save({
         "zlib.py": GenConanfile("zlib"),
         "zlib_ng.py": GenConanfile("zlib_ng", "1.0.0"),
@@ -229,6 +232,17 @@ class TestListRefs:
                          'zlib/1.0.0@user/channel': {},
                          'zlix/1.0.0': {}}
         self.check_json(client, pattern, remote, expected_json)
+
+    def test_version_range_prerelease(self):
+        tc = TestClient(light=True)
+        tc.save({"conanfile.py": GenConanfile("foo", "1.0-pre.1")})
+        tc.run("export .")
+        tc.run("list * ",)
+        assert "foo/1.0-pre.1" in tc.out
+        tc.run("list foo/[>=1.0]")
+        assert "foo/1.0-pre.1" not in tc.out
+        tc.run("list foo/[>=1.0] -cc core.version_ranges:resolve_prereleases=True")
+        assert "foo/1.0-pre.1" in tc.out
 
     @pytest.mark.parametrize("remote", [True, False])
     def test_list_recipe_versions_exact(self, client, remote):
@@ -764,7 +778,7 @@ class TestListRemotes:
         (ConanException("Boom!"), "ERROR: Boom!")
     ])
     def test_search_remote_errors_but_no_raising_exceptions(self, client, exc, output):
-        with patch("conan.api.subapi.search.SearchAPI.recipes", new=Mock(side_effect=exc)):
+        with patch("conan.api.subapi.list._search_recipes", new=Mock(side_effect=exc)):
             client.run(f'list whatever/1.0 -r="*"')
         expected_output = textwrap.dedent(f"""\
             default
@@ -857,7 +871,8 @@ class TestListCompact:
         "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:*",
         "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:*#*",
         "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#*",
-        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#0ba8627bd47edc3a501e8f0eb9a79e5e"
+        "pkg/1.0#a69a86bbd19ae2ef7eedc64ae645c531:da39a3ee5e6b4b0d3255bfef95601890afd80709#"
+        "0ba8627bd47edc3a501e8f0eb9a79e5e"
     ])
     def test_list_compact_patterns(self, pattern):
         c = TestClient(light=True)
@@ -952,6 +967,7 @@ def test_overlapping_versions():
     results = json.loads(tc.load("list.json"))
     assert len(results["Local Cache"]) == 2
 
+
 def test_list_local_recipe_index():
     c = TestClient(light=True)
     c.run(f"new local_recipes_index -d name=pkg -d version=0.1 -d url='https://conan-fake-url.com' ")
@@ -979,3 +995,79 @@ def test_list_local_recipe_index():
     assert "ERROR: Recipe 'pkg/0.1@a' not found" in c.out
     c.run("list 'pkg%0.1#a@b/c' -r=local")
     assert "ERROR: Recipe 'pkg%0.1' not found" in c.out
+
+def test_list_error_option():
+    c = TestClient(default_server_user=False)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_option("my_error_option", [1, 2])})
+    c.run("create . -o my_error_option=1")
+    c.run("list pkg/1.0#*:*")
+    assert "my_error_option: 1" in c.out
+
+def test_list_wildcard_recipe_specific_package_id_omits_nonmatching_revisions():
+    """*/*:<specific_id> only shows the recipe revision that has that package ID.
+    Revisions with no matching binary show "No packages found for this revision"."""
+    c = TestClient()
+    c.save({"pkg1.py": GenConanfile("pkg1", "1.0").with_settings("os"),
+            "pkg2.py": GenConanfile("pkg2", "1.0")})
+    c.run("create pkg1.py -s os=Windows")
+    c.run("create pkg1.py -s os=Linux")
+    c.run("create pkg2.py")
+
+    windows_id = "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
+    windows_id_pattern = "ebec3*"
+
+    for pkg_id in (windows_id, windows_id_pattern):
+        c.run(f"list */*:{pkg_id}")
+
+        # pkg1/1.0 has the Windows binary
+        assert "pkg1/1.0" in c.out
+        assert windows_id in c.out
+
+        # pkg2/1.0 has no binary with that ID: revision is shown but packages are empty
+        assert "pkg2/1.0" in c.out
+        assert "No packages found for this revision" in c.out
+
+
+def test_list_star_package_id_no_binaries_empty_output():
+    """pkg/version:* on an exported-but-never-built recipe shows the revision with
+    "No packages found for this revision" because no binaries exist."""
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("hello", "0.1")})
+    c.run("export conanfile.py")
+
+    c.run("list hello/0.1:*")
+    assert "hello/0.1" in c.out
+    assert "No packages found for this revision" in c.out
+
+
+def test_list_revisions_output():
+    """test non-existent package ID and package revision output"""
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("hello", "0.1")})
+    c.run("create conanfile.py")
+
+    c.run("list hello/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709#*")
+    assert """\
+          packages
+            da39a3ee5e6b4b0d3255bfef95601890afd80709
+              revisions
+                0ba8627bd47edc3a501e8f0eb9a79e5e""" in c.out
+    c.run("list hello/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709#non-existent")
+    assert "ERROR: Package revision 'hello/0.1:da39a3ee5e6b4b0d3255bfef95601890afd80709#non-existent' not found" in c.out
+    c.run("list hello/0.1:non-existent#non-existent")
+    assert "ERROR: Package revision 'hello/0.1:non-existent#non-existent' not found" in c.out
+    c.run("list hello/0.1:non-existent#*")
+    assert "No packages found for this revision" in c.out
+
+
+def test_list_wildcard_recipe_nonexistent_package_id_empty_output():
+    """pkg/*:nonexistent_id shows the revision with "No packages found for this revision"
+    when the package ID does not match any existing binary."""
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_settings("os")})
+    c.run("create . -s os=Windows")
+    c.run("create . -s os=Linux")
+
+    c.run("list pkg/*:nonexistent_id")
+    assert "pkg/1.0" in c.out
+    assert "No packages found for this revision" in c.out

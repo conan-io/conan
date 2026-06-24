@@ -147,7 +147,7 @@ def test_profile_template_profile_dir():
                  "anysubfolder/profile1": tpl1,
                  "anysubfolder/toolchain.cmake": "MyToolchainCMake!!!"})
     client.run("install . -pr=anysubfolder/profile1")
-    assert "conanfile.py: CONTENT: MyToolchainCMake!!!" in client.out
+    assert "CONTENT: MyToolchainCMake!!!" in client.out
 
 
 def test_profile_conf_backslash():
@@ -230,6 +230,24 @@ def test_profile_template_profile_name():
     # included profiles should respect the inherited profile name
     client.run("install . -pr=include_folder/include_default")
     assert "conanfile.py: PROFILE NAME: include_default" in client.out
+
+
+def test_profile_root_name():
+    c = TestClient()
+    root = textwrap.dedent("""
+        [conf]
+        user.profile:name = {{ profile_name }}
+        user.profile:root_name = {{ root_profile_name }}
+        """)
+    tpl = textwrap.dedent("""
+        include(myprofile)
+        """)
+
+    c.save({"myprofile": root,
+            "other": tpl})
+    c.run("profile show -pr=other")
+    assert "user.profile:name=myprofile" in c.out
+    assert "user.profile:root_name=other" in c.out
 
 
 class TestProfileDetectAPI:
@@ -337,9 +355,9 @@ def test_profile_macro_per_package():
     client.save({"conanfile.py": conanfile,
                  "profile1": tpl1})
     client.run("install . -pr=profile1")
-    assert "conanfile.py (mypkg/0.1): user.conf:key=2!!!!" in client.out
-    assert "conanfile.py (mypkg/0.1): os=Windows!!" in client.out
-    assert "conanfile.py (mypkg/0.1): arch=x86!!" in client.out
+    assert "user.conf:key=2!!!!" in client.out
+    assert "os=Windows!!" in client.out
+    assert "arch=x86!!" in client.out
 
 
 def test_profile_jinja_context():

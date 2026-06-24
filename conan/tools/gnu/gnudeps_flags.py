@@ -8,7 +8,7 @@ from conan.tools.microsoft import is_msvc
 from conan.internal.subsystems import subsystem_path, deduce_subsystem
 
 
-class GnuDepsFlags(object):
+class GnuDepsFlags:
 
     def __init__(self, conanfile, cpp_info):
         self._conanfile = conanfile
@@ -45,7 +45,6 @@ class GnuDepsFlags(object):
         returns an appropriate compiler flags to link with Apple Frameworks
         or an empty array, if Apple Frameworks aren't supported by the given compiler
         """
-        os_ = self._conanfile.settings.get_safe("os")
         if not frameworks or not is_apple_os(self._conanfile):
             return []
         compiler = self._conanfile.settings.get_safe("compiler")

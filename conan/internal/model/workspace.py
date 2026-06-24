@@ -5,6 +5,7 @@ import yaml
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
+from conan.internal.errors import scoped_traceback
 from conan.internal.util.files import load, save
 
 # Related folder
@@ -23,7 +24,26 @@ class Workspace:
         self.folder = folder
         self.conan_data = self._conan_load_data()
         self._conan_api = conan_api
-        self.output = ConanOutput(scope=self.name())
+        self.output = ConanOutput(scope=f"Workspace '{self.name()}'")
+        # This will be injected from the outside before load_conanfile() is called
+        self._editable_packages = None
+
+    def __getattribute__(self, item):
+        # Return a protected wrapper around workspace overridable callables in order to
+        # be able to have clean errors if user errors in conanws.py code
+        myattr = object.__getattribute__(self, item)
+        if item not in ("name", "packages", "add", "remove", "clean", "build_order"):
+            return myattr
+
+        def wrapper(*args, **kwargs):
+            try:
+                return myattr(*args, **kwargs)
+            except ConanException:
+                raise
+            except Exception as e:
+                m = scoped_traceback(f"Error in {item}() method", e, scope="conanws.py")
+                raise ConanException(f"Workspace conanws.py file: {m}")
+        return wrapper
 
     def name(self):
         return self.conan_data.get("name") or os.path.basename(self.folder)
@@ -39,7 +59,8 @@ class Workspace:
         return data or {}
 
     def add(self, ref, path, output_folder):
-        assert os.path.isfile(path)
+        if not path or not os.path.isfile(path):
+            raise ConanException(f"Cannot add to workspace. File not found: {path}")
         path = self._conan_rel_path(os.path.dirname(path))
         editable = {
             "path": path,
@@ -48,16 +69,23 @@ class Workspace:
         if output_folder:
             editable["output_folder"] = self._conan_rel_path(output_folder)
         packages = self.conan_data.setdefault("packages", [])
-        if any(p["path"] == path for p in packages):
-            self.output.warning(f"Package {path} already exists, skipping")
-            return
-        packages.append(editable)
+        for p in packages:
+            if p["path"] == path:
+                self.output.warning(f"Package {path} already exists, updating its reference")
+                p["ref"] = editable["ref"]
+                if output_folder:
+                    p["output_folder"] = self._conan_rel_path(output_folder)
+                else:
+                    p.pop("output_folder", None)
+                break
+        else:
+            packages.append(editable)
         save(os.path.join(self.folder, WORKSPACE_YML), yaml.dump(self.conan_data))
 
     def remove(self, path):
         path = self._conan_rel_path(path)
-        package_found = next(package_info for package_info in self.conan_data.get("packages", [])
-                             if package_info["path"].replace("\\", "/") == path)
+        package_found = next((package_info for package_info in self.conan_data.get("packages", [])
+                              if package_info["path"].replace("\\", "/") == path), None)
         if not package_found:
             raise ConanException(f"No editable package to remove from this path: {path}")
         self.conan_data["packages"].remove(package_found)
@@ -91,16 +119,17 @@ class Workspace:
 
     def load_conanfile(self, conanfile_path):
         conanfile_path = os.path.join(self.folder, conanfile_path, "conanfile.py")
-        from conan.internal.loader import ConanFileLoader
-        from conan.internal.cache.home_paths import HomePaths
-        from conan.internal.conan_app import ConanFileHelpers, CmdWrapper
-        cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
-        helpers = ConanFileHelpers(None, cmd_wrap, self._conan_api.config.global_conf,
-                                   cache=None, home_folder=self._conan_api.home_folder)
-        loader = ConanFileLoader(pyreq_loader=None, conanfile_helpers=helpers)
+        _, _, loader, _ = self._conan_api._api_helpers._get_loader(self._editable_packages)  # noqa
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
                                       channel=None, remotes=None, graph_lock=None)
         return conanfile
 
     def root_conanfile(self):  # noqa
         return None
+
+    def build_order(self, order):  # noqa
+        msg = ["Packages build order:"]
+        for level in order:
+            for item in level:
+                msg.append(f"    {item['ref']}: {item['folder']}")
+        self.output.info("\n".join(msg))

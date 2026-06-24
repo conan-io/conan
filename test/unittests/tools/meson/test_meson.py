@@ -50,7 +50,7 @@ def test_meson_subsystem_helper(apple_sdk, subsystem):
     (None, None)
 ])
 def test_meson_to_cstd_flag(cstd, expected):
-    assert to_cstd_flag(cstd) == expected
+    assert to_cstd_flag(ConanFileMock(), cstd) == expected
 
 
 @pytest.mark.parametrize("compiler, compiler_version, cppstd, expected", [
@@ -64,15 +64,39 @@ def test_meson_to_cstd_flag(cstd, expected):
     (None, None, None, None)
 ])
 def test_meson_to_cppstd_flag(compiler, compiler_version, cppstd, expected):
-    assert to_cppstd_flag(compiler, compiler_version, cppstd) == expected
+    assert to_cppstd_flag(ConanFileMock(), compiler, compiler_version, cppstd) == expected
 
 
-def test_meson_install_strip():
-    """When the configuration `tools.build:install_strip` is set to True,
-        the Meson install command should include the `--strip` option.
+@pytest.mark.parametrize("conf_line, expect_strip", [
+    (True, True),
+    (False, False),
+    (['meson'], True),
+    (['meson', 'cmake'], True),
+    (['autotools', 'cmake'], False),
+])
+def test_meson_install_strip(conf_line, expect_strip):
+    """``tools.build:install_strip`` as True or a list containing ``meson`` adds ``--strip``."""
+    settings = MockSettings({"build_type": "Release",
+                             "compiler": "gcc",
+                             "compiler.version": "7",
+                             "os": "Linux",
+                             "arch": "x86_64"})
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    conanfile.conf.define("tools.build:install_strip", conf_line)
+    conanfile.folders.generators = "."
+    conanfile.folders.set_base_generators(temp_folder())
+    conanfile.folders.set_base_package(temp_folder())
+
+    meson = Meson(conanfile)
+    meson.install()
+
+    assert ('--strip' in str(conanfile.command)) == expect_strip
+
+def test_meson_install_cli_args():
+    """When the `cli_args` are provided, the Meson install command should include them.
     """
     c = ConfDefinition()
-    c.loads("tools.build:install_strip=True")
 
     settings = MockSettings({"build_type": "Release",
                              "compiler": "gcc",
@@ -87,6 +111,6 @@ def test_meson_install_strip():
     conanfile.folders.set_base_package(temp_folder())
 
     meson = Meson(conanfile)
-    meson.install()
+    meson.install(cli_args=["--no-rebuild"])
 
-    assert '--strip' in str(conanfile.command)
+    assert '--no-rebuild' in str(conanfile.command)

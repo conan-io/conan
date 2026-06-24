@@ -1,13 +1,13 @@
 import textwrap
 
 from conan.internal import check_duplicated_generator
-from conan.tools.apple.apple import to_apple_arch
+from conan.tools.apple.apple import to_apple_arch, xcodebuild_deployment_target_key
 from conan.tools.apple.xcodedeps import GLOBAL_XCCONFIG_FILENAME, GLOBAL_XCCONFIG_TEMPLATE, \
     _add_includes_to_file_or_create, _xcconfig_settings_filename, _xcconfig_conditional
 from conan.internal.util.files import save
 
 
-class XcodeToolchain(object):
+class XcodeToolchain:
     filename = "conantoolchain"
     extension = ".xcconfig"
 
@@ -64,30 +64,27 @@ class XcodeToolchain(object):
 
     @property
     def _apple_deployment_target(self):
-        deployment_target_key = {
-            "Macos": "MACOSX_DEPLOYMENT_TARGET",
-            "iOS": "IPHONEOS_DEPLOYMENT_TARGET",
-            "tvOS": "TVOS_DEPLOYMENT_TARGET",
-            "watchOS": "WATCHOS_DEPLOYMENT_TARGET",
-            "visionOS": "XROS_DEPLOYMENT_TARGET",
-        }.get(str(self._conanfile.settings.get_safe("os")))
+        deployment_target_key = xcodebuild_deployment_target_key(self._conanfile.settings.get_safe("os"))
         return '{}{}={}'.format(deployment_target_key,
                                 _xcconfig_conditional(self._conanfile.settings, self.configuration),
-                                self.os_version) if self.os_version else ""
+                                self.os_version) if deployment_target_key and self.os_version else ""
 
     @property
     def _clang_cxx_library(self):
-        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile.settings, self.configuration),
+        return 'CLANG_CXX_LIBRARY{}={}'.format(_xcconfig_conditional(self._conanfile.settings,
+                                                                     self.configuration),
                                                self.libcxx) if self.libcxx else ""
 
     @property
     def _clang_cxx_language_standard(self):
         return 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(_xcconfig_conditional(self._conanfile.settings, self.configuration),
                                                          self._cppstd) if self._cppstd else ""
+
     @property
     def _vars_xconfig_filename(self):
-        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings, self.configuration),
-                                                                       self.extension)
+        return "conantoolchain{}{}".format(_xcconfig_settings_filename(self._conanfile.settings,
+                                                                       self.configuration),
+                                           self.extension)
 
     @property
     def _vars_xconfig_content(self):

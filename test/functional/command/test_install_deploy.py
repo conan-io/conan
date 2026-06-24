@@ -62,7 +62,7 @@ def test_install_deploy(client, powershell):
             "CMakeLists.txt": cmake,
             "main.cpp": gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])},
            clean_first=True)
-    pwsh = "-c tools.env.virtualenv:powershell=True" if powershell else ""
+    pwsh = "-c tools.env.virtualenv:powershell=powershell.exe" if powershell else ""
     c.run("install . -o *:shared=True "
           f"--deployer=deploy.py -of=mydeploy -g CMakeToolchain -g CMakeDeps {pwsh}")
     c.run("remove * -c")  # Make sure the cache is clean, no deps there
@@ -184,9 +184,9 @@ def test_multi_deploy():
             conanfile = graph.root.conanfile
             conanfile.output.info("deploy cache!!")
         """)
-    save(os.path.join(c.cache_folder, "extensions", "deploy", "deploy_cache.py"), deploy_cache)
+    save(os.path.join(c.cache_folder, "extensions", "deployers", "deploy_cache.py"), deploy_cache)
     # This should never be called in this test, always the local is found first
-    save(os.path.join(c.cache_folder, "extensions", "deploy", "mydeploy.py"), "CRASH!!!!")
+    save(os.path.join(c.cache_folder, "extensions", "deployers", "mydeploy.py"), "CRASH!!!!")
     c.save({"conanfile.txt": "",
             "mydeploy.py": deploy1,
             "sub/mydeploy2.py": deploy2})
@@ -437,6 +437,19 @@ def test_deploy_incorrect_folder():
         assert "ERROR: Deployer folder cannot be created" in c.out
 
 
+def _runtime_deploy_shared_lib_conanfile(name, versioned_so, body):
+    """Recipe with one versioned .so under lib/ and lib/libfoo.so -> that file (POSIX symlink)."""
+    return (GenConanfile(name, "1.0")
+            .with_package_type("shared-library")
+            .with_import("import os")
+            .with_import("from conan.tools.files import save, chdir")
+            .with_package(
+                f'save(self, os.path.join(self.package_folder, "lib", "{versioned_so}"), "{body}")',
+                'with chdir(self, os.path.join(self.package_folder, "lib")):',
+                f'    os.symlink(src="{versioned_so}", dst="libfoo.so")',
+            ))
+
+
 class TestRuntimeDeployer:
     def test_runtime_deploy(self):
         c = TestClient()
@@ -461,6 +474,16 @@ class TestRuntimeDeployer:
 
         expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
         assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
+
+        c.run("install --requires=pkga/1.0 --requires=pkgb/1.0 --deployer=runtime_deploy "
+              "--deployer-folder=myruntime -vvv")
+        assert "pkga.dll exists with same contents, skipping copy" in c.out
+        assert "pkga.so exists with same contents, skipping copy" in c.out
+        assert "pkgb.so exists with same contents, skipping copy" in c.out
+        c.save({"myruntime/pkga.dll": "other content"})
+        c.run("install --requires=pkga/1.0 --requires=pkgb/1.0 --deployer=runtime_deploy "
+              "--deployer-folder=myruntime -vvv")
+        assert "pkga.dll exists and will be overwritten" in c.out
 
     def test_runtime_not_deploy(self):
         # https://github.com/conan-io/conan/issues/16712
@@ -508,50 +531,195 @@ class TestRuntimeDeployer:
         c.run("install --requires=pkga/1.0 --requires=pkgb/1.0 --deployer=runtime_deploy "
               "--deployer-folder=myruntime -vvv")
 
-        expected = sorted(["pkga.so", "pkgb.so", "pkga.dll"])
-        assert sorted(os.listdir(os.path.join(c.current_folder, "myruntime"))) == expected
+        assert (sorted(os.listdir(os.path.join(c.current_folder, "myruntime")))
+                == sorted(["bin", "lib"]))
+        assert (sorted(os.listdir(os.path.join(c.current_folder, "myruntime", "lib")))
+                == sorted(['pkga.so', 'pkgb.so']))
+        assert (sorted(os.listdir(os.path.join(c.current_folder, "myruntime", "bin")))
+                == sorted(['pkga.dll']))
 
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires POSIX symlinks")
+    @pytest.mark.parametrize("symlink, expected",
+                             [(True, ["libfoo.so.0.1.0", "libfoo.so.0", "libfoo.so"]),
+                              (False, ["libfoo.so.0.1.0"])])
+    def test_runtime_deploy_symlinks(self, symlink, expected):
+        """ The deployer runtime_deploy should preserve symlinks when deploying shared libraries
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+               from conan import ConanFile
+               from conan.tools.files import copy, chdir
+               import os
+               class Pkg(ConanFile):
+                   package_type = "shared-library"
+                   def package(self):
+                       copy(self, "*.so*", src=self.build_folder, dst=self.package_folder)
+                       with chdir(self, os.path.join(self.package_folder, "lib")):
+                           os.symlink(src="libfoo.so.0.1.0", dst="libfoo.so.0")
+                           os.symlink(src="libfoo.so.0", dst="libfoo.so")
+               """)
+        c.save({"foo/conanfile.py": conanfile,
+                "foo/lib/libfoo.so.0.1.0": ""})
+        c.run("export-pkg foo/ --name=foo --version=0.1.0")
+        c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output "
+              f"-c:a tools.deployer:symlinks={symlink}")
 
-@pytest.mark.parametrize("symlink, expected",
-                         [(True, ["libfoo.so.0.1.0", "libfoo.so.0", "libfoo.so"]),
-                          (False, ["libfoo.so.0.1.0"])])
-def test_runtime_deploy_symlinks(symlink, expected):
-    """ The deployer runtime_deploy should preserve symlinks when deploying shared libraries
-    """
-    c = TestClient()
-    conanfile = textwrap.dedent("""
-           from conan import ConanFile
-           from conan.tools.files import copy, chdir
-           import os
-           class Pkg(ConanFile):
-               package_type = "shared-library"
-               def package(self):
-                   copy(self, "*.so*", src=self.build_folder, dst=self.package_folder)
-                   with chdir(self, os.path.join(self.package_folder, "lib")):
-                       os.symlink(src="libfoo.so.0.1.0", dst="libfoo.so.0")
-                       os.symlink(src="libfoo.so.0", dst="libfoo.so")
-           """)
-    c.save({"foo/conanfile.py": conanfile,
-            "foo/lib/libfoo.so.0.1.0": ""})
-    c.run("export-pkg foo/ --name=foo --version=0.1.0")
-    c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output -c:a tools.deployer:symlinks={symlink}")
-
-    sorted_expected = sorted(expected)
-    assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == sorted_expected
-    link_so_0 = os.path.join(c.current_folder, "output", "libfoo.so.0")
-    link_so = os.path.join(c.current_folder, "output", "libfoo.so")
-    lib = os.path.join(c.current_folder, "output", "libfoo.so.0.1.0")
-    # INFO: This test requires in Windows to have symlinks enabled, otherwise it will fail
-    if symlink and platform.system() != "Windows":
-        assert os.path.islink(link_so_0)
-        assert os.path.islink(link_so)
-        assert not os.path.isabs(os.readlink(link_so_0))
-        assert not os.path.isabs(os.readlink(os.path.join(link_so)))
-        assert os.path.realpath(link_so) == os.path.realpath(link_so_0)
-        assert os.path.realpath(link_so_0) == os.path.realpath(lib)
+        sorted_expected = sorted(expected)
+        assert sorted(os.listdir(os.path.join(c.current_folder, "output"))) == sorted_expected
+        link_so_0 = os.path.join(c.current_folder, "output", "libfoo.so.0")
+        link_so = os.path.join(c.current_folder, "output", "libfoo.so")
+        lib = os.path.join(c.current_folder, "output", "libfoo.so.0.1.0")
+        # INFO: This test requires in Windows to have symlinks enabled, otherwise it will fail
+        if symlink:
+            assert os.path.islink(link_so_0)
+            assert os.path.islink(link_so)
+            assert not os.path.isabs(os.readlink(link_so_0))
+            assert not os.path.isabs(os.readlink(os.path.join(link_so)))
+            assert os.path.realpath(link_so) == os.path.realpath(link_so_0)
+            assert os.path.realpath(link_so_0) == os.path.realpath(lib)
         assert not os.path.islink(lib)
-    else:
-        assert not os.path.islink(lib)
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires POSIX symlinks")
+    def test_runtime_deploy_symlink_overwrite(self):
+        """Two deps may ship the same symlink name pointing at different targets; overwrite must
+        not raise FileExistsError (https://github.com/conan-io/conan/issues/19968).
+        """
+        c = TestClient()
+        pkga = _runtime_deploy_shared_lib_conanfile("pkga", "libfoo.so.1", "v1")
+        pkgb = _runtime_deploy_shared_lib_conanfile("pkgb", "libfoo.so.2", "v2")
+        c.save({"pkga/conanfile.py": pkga,
+                "pkgb/conanfile.py": pkgb,
+                "conanfile.txt": "[requires]\npkga/1.0\npkgb/1.0\n"})
+        c.run("export-pkg pkga --name=pkga --version=1.0")
+        c.run("export-pkg pkgb --name=pkgb --version=1.0")
+        c.run("install . --deployer=runtime_deploy --deployer-folder=myruntime -vvv")
+        assert "libfoo.so exists and will be overwritten" in c.out
+        link = os.path.join(c.current_folder, "myruntime", "libfoo.so")
+        assert os.path.islink(link)
+        # Last dependency in host order wins the symlink target; both outcomes are valid.
+        assert os.readlink(link) in ("libfoo.so.1", "libfoo.so.2")
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires POSIX symlinks")
+    def test_runtime_deploy_recovers_broken_symlink_on_redeploy(self):
+        """Broken symlink in the deploy dir (filecmp can raise); redeploy must replace it."""
+        c = TestClient()
+        c.save({"pkga/conanfile.py": _runtime_deploy_shared_lib_conanfile("pkga", "libfoo.so.1", "v1"),
+                "conanfile.txt": "[requires]\npkga/1.0\n"})
+        c.run("export-pkg pkga --name=pkga --version=1.0")
+        out = os.path.join(c.current_folder, "out")
+        c.run("install . --deployer=runtime_deploy --deployer-folder=out -vvv")
+        deployed_soname = os.path.join(out, "libfoo.so.1")
+        os.remove(deployed_soname)
+        link = os.path.join(out, "libfoo.so")
+        assert os.path.islink(link)
+        assert not os.path.exists(deployed_soname)
+        c.run("install . --deployer=runtime_deploy --deployer-folder=out -vvv")
+        assert os.path.isfile(deployed_soname)
+        assert os.readlink(link) == "libfoo.so.1"
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires POSIX symlinks")
+    def test_runtime_deploy_same_ref_reinstall_different_options(self):
+        """Same pkga/1.0 reinstalled with a different option: symlink name unchanged, target differs
+        (https://github.com/conan-io/conan/issues/19968).
+        """
+        pkga = (GenConanfile("pkga", "1.0")
+                .with_package_type("shared-library")
+                .with_settings("os", "compiler", "build_type", "arch")
+                .with_option("which", ["1", "2"])
+                .with_default_option("which", "1")
+                .with_import("import os")
+                .with_import("from conan.tools.files import save, chdir")
+                .with_package(*textwrap.dedent("""
+                    lib_dir = os.path.join(self.package_folder, "lib")
+                    os.makedirs(lib_dir, exist_ok=True)
+                    if self.options.which == "1":
+                        save(self, os.path.join(lib_dir, "libfoo.so.1"), "v1")
+                        with chdir(self, lib_dir):
+                            os.symlink("libfoo.so.1", "libfoo.so")
+                    else:
+                        save(self, os.path.join(lib_dir, "libfoo.so.2"), "v2")
+                        with chdir(self, lib_dir):
+                            os.symlink("libfoo.so.2", "libfoo.so")
+                    """).strip().splitlines()))
+        c = TestClient()
+        c.save({"pkga/conanfile.py": pkga,
+                "conanfile.txt": "[requires]\npkga/1.0\n"})
+        c.run("create pkga -o pkga/*:which=1 --build=missing")
+        c.run("create pkga -o pkga/*:which=2 --build=missing")
+        out = os.path.join(c.current_folder, "deploy_out")
+        c.run("install . -o pkga/*:which=1 --deployer=runtime_deploy --deployer-folder=deploy_out")
+        c.run("install . -o pkga/*:which=2 --deployer=runtime_deploy --deployer-folder=deploy_out")
+        link = os.path.join(out, "libfoo.so")
+        assert os.path.islink(link)
+        assert os.readlink(link) == "libfoo.so.2"
+
+    def test_runtime_deploy_subfolder(self):
+        """ The deployer runtime_deploy should preserve subfolder structure when deploying
+        shared libraries
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+               from conan import ConanFile
+               from conan.tools.files import copy
+               import os
+               class Pkg(ConanFile):
+                   package_type = "shared-library"
+                   def package(self):
+                       copy(self, "*.so*", src=self.build_folder, dst=self.package_folder,
+                            keep_path=True)
+               """)
+        c.save({"foo/conanfile.py": conanfile,
+                "foo/lib/libfoo.so": "",
+                "foo/lib/subfolder/libbar.so": "",
+                "foo/lib/subfolder/subsubfolder/libqux.so": "",})
+        c.run("export-pkg foo/ --name=foo --version=0.1.0")
+        c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output")
+
+        assert (sorted(os.listdir(os.path.join(c.current_folder, "output"))) ==
+                ["libfoo.so", "subfolder"])
+        assert (sorted(os.listdir(os.path.join(c.current_folder, "output", "subfolder"))) ==
+                ["libbar.so", "subsubfolder"])
+        assert sorted(os.listdir(os.path.join(c.current_folder, "output", "subfolder",
+                                              "subsubfolder"))) == ["libqux.so"]
+
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires POSIX symlinks")
+    def test_runtime_deploy_subfolder_symlink(self):
+        """ The deployer runtime_deploy should preserve subfolder structure when deploying shared
+            libraries with symlinks
+        """
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+               from conan import ConanFile
+               from conan.tools.files import copy, chdir, mkdir
+               import os
+               class Pkg(ConanFile):
+                   package_type = "shared-library"
+                   def package(self):
+                       copy(self, "*.so*", src=self.build_folder, dst=self.package_folder)
+                       with chdir(self, os.path.join(self.package_folder, "lib")):
+                            os.symlink(src="subfolder/libfoo.so.1.0", dst="libfoo.so.1")
+                            os.symlink(src="libfoo.so.1", dst="libfoo.so")
+               """)
+        c.save({"foo/conanfile.py": conanfile,
+                "foo/lib/subfolder/libfoo.so.1.0": "",})
+        c.run("export-pkg foo/ --name=foo --version=0.1.0")
+        c.run(f"install --requires=foo/0.1.0 --deployer=runtime_deploy --deployer-folder=output "
+              f"-c:a tools.deployer:symlinks=True")
+
+        assert os.listdir(os.path.join(c.current_folder, "output", "subfolder")) == ["libfoo.so.1.0"]
+        # INFO: This test requires in Windows to have symlinks enabled, otherwise it will fail
+        if platform.system() != "Windows":
+            assert (sorted(os.listdir(os.path.join(c.current_folder, "output"))) ==
+                    ["libfoo.so", "libfoo.so.1", "subfolder"])
+            link_so_0 = os.path.join(c.current_folder, "output", "libfoo.so.1")
+            link_so = os.path.join(c.current_folder, "output", "libfoo.so")
+            lib = os.path.join(c.current_folder, "output", "subfolder", "libfoo.so.1.0")
+            assert os.path.islink(link_so_0)
+            assert os.path.islink(link_so)
+            assert not os.path.isabs(os.readlink(link_so_0))
+            assert not os.path.isabs(os.readlink(os.path.join(link_so)))
+            assert os.path.realpath(link_so) == os.path.realpath(link_so_0)
+            assert os.path.realpath(link_so_0) == os.path.realpath(lib)
 
 
 def test_deployer_errors():

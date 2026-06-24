@@ -52,6 +52,23 @@ class TestLRU:
         assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" not in c.out
         assert "dep" not in c.out
 
+    def test_lru_just_created(self):
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        c.run("list * --lru=1d", assert_error=True)
+        assert "'--lru' must be used with recipe revision pattern" in c.out
+        c.run("list *#* --lru=1d")
+        assert "pkg/0.1" not in c.out
+        # What if no revision, but package id is passed
+        c.run("list pkg/0.1:* --lru=1d", assert_error=True)
+        assert "'--lru' must be used with package revision pattern" in c.out
+        # Doesn't fail, but packages is empty
+        c.run("list pkg/0.1:*#* --lru=1d --format=json")
+        pkgs = json.loads(c.stdout)
+        rev = pkgs["Local Cache"]["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]
+        assert rev["packages"] == {}
+
     def test_update_lru_when_used_as_dependency(self):
         """Show that using a recipe as a dependency will update its LRU"""
         c = TestClient()
@@ -65,3 +82,20 @@ class TestLRU:
         c.run("remove * --lru=1s -c -f=json", redirect_stdout="removed.json")
         removed = json.loads(c.load("removed.json"))
         assert len(removed["Local Cache"]) == 0
+
+    def test_lru_invalid_time_unit(self):
+        c = TestClient(light=True)
+        c.run(f"list *#* --lru=1x")
+        assert "ERROR: Unrecognized time unit: 'x'" in c.out
+
+    def test_lru_invalid_time_value_edge_cases(self):
+        c = TestClient(light=True)
+        c.run("list *#* --lru=as")
+        assert "ERROR: invalid literal for int() with base 10: 'a'" in c.out
+        c.run("list *#* --lru=s")
+        assert "ERROR: invalid literal for int() with base 10: ''" in c.out
+
+    def test_lru_not_in_remotes(self):
+        c = TestClient(light=True, default_server_user=True)
+        c.run("list *#* --lru=1s -r=default", assert_error=True)
+        assert "'--lru' cannot be used in remotes, only in cache" in c.out

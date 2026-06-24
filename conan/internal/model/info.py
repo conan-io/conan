@@ -20,11 +20,15 @@ class _VersionRepr:
             return self.major()
 
     def major(self):
+        # This check is to avoid breaking non-integer major versions
+        # for legacy reasons. Users are warned against using them
         if not isinstance(self._version.major.value, int):
             return str(self._version.major)
         return ".".join([str(self._version.major), 'Y', 'Z'])
 
     def minor(self):
+        # This check is to avoid breaking non-integer major versions
+        # for legacy reasons. Users are warned against using them
         if not isinstance(self._version.major.value, int):
             return str(self._version.major)
 
@@ -33,6 +37,8 @@ class _VersionRepr:
         return ".".join([v0, v1, 'Z'])
 
     def patch(self):
+        # This check is to avoid breaking non-integer major versions
+        # for legacy reasons. Users are warned against using them
         if not isinstance(self._version.major.value, int):
             return str(self._version.major)
 
@@ -42,6 +48,8 @@ class _VersionRepr:
         return ".".join([v0, v1, v2])
 
     def pre(self):
+        # This check is to avoid breaking non-integer major versions
+        # for legacy reasons. Users are warned against using them
         if not isinstance(self._version.major.value, int):
             return str(self._version.major)
 
@@ -147,7 +155,7 @@ class RequirementInfo:
         self.user = self._ref.user
         self.channel = self._ref.channel
         self.package_id = None
-        self.recipe_revision = self._ref.revision
+        self.recipe_revision = self._ref.revision if self._ref.revision != "platform" else None
 
     def full_mode(self):
         self.name = self._ref.name
@@ -155,7 +163,7 @@ class RequirementInfo:
         self.user = self._ref.user
         self.channel = self._ref.channel
         self.package_id = self._package_id
-        self.recipe_revision = self._ref.revision
+        self.recipe_revision = self._ref.revision if self._ref.revision != "platform" else None
 
     full_recipe_mode = full_version_mode
     recipe_revision_mode = full_mode  # to not break everything and help in upgrade

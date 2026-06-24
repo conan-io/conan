@@ -57,13 +57,14 @@ class ConanFileLoader:
 
         try:
             module, conanfile = _parse_conanfile(conanfile_path)
+            conanfile._conan_required_version = getattr(module, "required_conan_version", None)
             if isinstance(tested_python_requires, RecipeReference):
                 if getattr(conanfile, "python_requires", None) == "tested_reference_str":
                     conanfile.python_requires = tested_python_requires.repr_notime()
             elif tested_python_requires:
                 if getattr(conanfile, "python_requires", None) != "tested_reference_str":
                     ConanOutput().warning("test_package/conanfile.py should declare 'python_requires"
-                                      " = \"tested_reference_str\"'", warn_tag="deprecated")
+                                          " = \"tested_reference_str\"'", warn_tag="deprecated")
                 conanfile.python_requires = tested_python_requires
 
             if self._pyreq_loader:
@@ -133,6 +134,9 @@ class ConanFileLoader:
                                      % (channel, conanfile.channel))
             conanfile.channel = channel
 
+        if conanfile.channel and not conanfile.user:
+            raise ConanException(f"{conanfile_path}: Can't specify channel '{conanfile.channel}' without user")
+
         if hasattr(conanfile, "set_name"):
             with conanfile_exception_formatter("conanfile.py", "set_name"):
                 conanfile.set_name()
@@ -155,7 +159,6 @@ class ConanFileLoader:
 
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         conanfile.display_name = str(ref)
-        conanfile.output.scope = conanfile.display_name
         return conanfile
 
     def load_consumer(self, conanfile_path, name=None, version=None, user=None,
@@ -167,14 +170,11 @@ class ConanFileLoader:
                                     remotes, update, check_update,
                                     tested_python_requires=tested_python_requires)
 
-        if conanfile.channel and not conanfile.user:
-            raise ConanException(f"{conanfile_path}: Can't specify channel without user")
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         if str(ref):
             conanfile.display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))
         else:
             conanfile.display_name = os.path.basename(conanfile_path)
-        conanfile.output.scope = conanfile.display_name
         conanfile._conan_is_consumer = True
         return conanfile
 
@@ -253,6 +253,7 @@ class ConanFileLoader:
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(display_name="cli")
+        conanfile._conan_helpers = self._conanfile_helpers
 
         if tool_requires:
             for reference in tool_requires:

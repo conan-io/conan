@@ -1,3 +1,4 @@
+import os
 import textwrap
 
 import pytest
@@ -36,8 +37,8 @@ def test_buildenv_profile_cli(client):
     client.save({"profile2": profile2})
 
     client.run("install . -pr=profile1 -pr=profile2")
-    assert "conanfile.py: MyVar1=MyValue1_2!!" in client.out
-    assert "conanfile.py: MyVar2=MyValue2_1 MyValue2_2" in client.out
+    assert "MyVar1=MyValue1_2!!" in client.out
+    assert "MyVar2=MyValue2_1 MyValue2_2" in client.out
 
 
 def test_buildenv_profile_include(client):
@@ -50,8 +51,8 @@ def test_buildenv_profile_include(client):
     client.save({"profile2": profile2})
 
     client.run("install . -pr=profile2")
-    assert "conanfile.py: MyVar1=MyValue1_2!!" in client.out
-    assert "conanfile.py: MyVar2=MyValue2_1 MyValue2_2" in client.out
+    assert "MyVar1=MyValue1_2!!" in client.out
+    assert "MyVar2=MyValue2_1 MyValue2_2" in client.out
 
 
 def test_buildenv_package_patterns():
@@ -132,3 +133,52 @@ def test_buildenv_package_patterns():
     assert "WARN: dep ENV:Foo" in client.out
     assert "WARN: pkg ENV:Foo2" in client.out
     assert "WARN: None ENV:Var" in client.out
+
+
+def test_buildenv_error_unset():
+    # https://github.com/conan-io/conan/issues/19285#issuecomment-3569891282
+    c = TestClient()
+    profile = textwrap.dedent("""
+        [buildenv]
+        CLASSPATH=!
+        OTHERPATH=
+        """)
+    c.save({"conanfile.txt": "",
+            "profile": profile})
+
+    c.run("install . -pr=profile -s:a os=Linux")
+    env = c.load("conanbuildenv.sh")
+    assert "unset CLASSPATH" in env
+    assert 'export OTHERPATH=""' in env
+
+
+def test_buildenv_priority_copy():
+    # https://github.com/conan-io/conan/issues/19570
+    c = TestClient()
+    profile = textwrap.dedent("""
+        [buildenv]
+        alib/*:CUSTOM_PATH=+(path)/only_alib
+        CUSTOM_PATH=+(path)/common
+        """)
+    lib = textwrap.dedent("""
+        from conan import ConanFile
+        class AlibConan(ConanFile):
+            version = "1.0"
+
+            def build(self):
+                v = self.buildenv.vars(self).get("CUSTOM_PATH")
+                self.output.info(f"[{self.name}] CUSTOM_PATH={v}!!!")
+        """)
+    conanfile_txt = textwrap.dedent("""
+        [requires]
+        alib/1.0
+        blib/1.0
+        """)
+    c.save({"lib/conanfile.py": lib,
+            "conanfile.txt": conanfile_txt,
+            "profile": profile})
+    c.run("export lib --name=alib")
+    c.run("export lib --name=blib")
+    c.run("install . -pr=profile -s os=Windows --build=missing")
+    assert f"alib/1.0: [alib] CUSTOM_PATH=/common{os.pathsep}/only_alib!!!" in c.out
+    assert "blib/1.0: [blib] CUSTOM_PATH=/common!!!" in c.out

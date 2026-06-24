@@ -2,8 +2,11 @@ import os
 
 import pytest
 
+from conan.internal.graph.graph_builder import DepsGraphBuilder
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
+
+DepsGraphBuilder.ALLOW_ALIAS = True
 
 
 @pytest.mark.parametrize("requires", ["requires", "tool_requires"])

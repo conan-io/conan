@@ -1,11 +1,11 @@
-import unittest
+from requests import Response
 
 from conan.internal import REVISIONS
 from conan.test.utils.tools import TestClient, TestServer, TestRequester
 from collections import namedtuple
 
 
-class Error200NoJson(unittest.TestCase):
+class TestError200NoJson:
 
     def test_error_no_json(self):
         class RequesterMock(TestRequester):
@@ -20,7 +20,7 @@ class Error200NoJson(unittest.TestCase):
                             inputs=["admin", "password"])
 
         client.run("install --requires=pkg/ref@user/testing", assert_error=True)
-        self.assertIn("Response from remote is not json, but 'None'", client.out)
+        assert "Response from remote is not json, but 'None'" in client.out
 
     def test_error_broken_json(self):
         class RequesterMock(TestRequester):
@@ -37,7 +37,7 @@ class Error200NoJson(unittest.TestCase):
                             inputs=["admin", "password"])
 
         client.run("install --requires=pkg/ref@user/testing", assert_error=True)
-        self.assertIn("Remote responded with broken json: <>", client.out)
+        assert "Remote responded with broken json: <>" in client.out
 
     def test_error_json(self):
         class RequesterMock(TestRequester):
@@ -55,4 +55,18 @@ class Error200NoJson(unittest.TestCase):
                             inputs=["admin", "password"])
 
         client.run("install --requires=pkg/ref@user/testing", assert_error=True)
-        self.assertIn("Unexpected server response [1, 2, 3]", client.out)
+        assert "Unexpected server response [1, 2, 3]" in client.out
+
+
+def test_unrecongized_exception():
+    class BuggyRequester(TestRequester):
+        def get(self, *args, **kwargs):
+            resp = Response()
+            resp.status_code = 444
+            resp._content = 'some 444 error message'
+            return resp
+
+    c = TestClient(default_server_user=True, requester_class=BuggyRequester)
+    c.run("install --requires=zlib/1.2 -r=default", assert_error=True)
+    assert ("ERROR: Package 'zlib/1.2' not resolved: Server exception 444:"
+            " some 444 error message") in c.out

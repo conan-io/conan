@@ -16,23 +16,25 @@ from contextlib import contextmanager
 from inspect import getframeinfo, stack
 from urllib.parse import urlsplit, urlunsplit
 
-import mock
+from unittest import mock
 import pytest
 import requests
-from mock import Mock
+from unittest.mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
-from conan.api.subapi.config import ConfigAPI
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS
+from conan.internal.api.detect.detect_api import detect_os, detect_msvc_compiler, \
+    default_msvc_ide_version
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal import REVISIONS
 from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote
 from conan.cli.cli import Cli, _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH
+from conan.internal.model.conf import load_global_conf
 from conan.test.utils.env import environment_update
 from conan.internal.errors import NotFoundException
 from conan.api.model import PkgReference
@@ -50,6 +52,10 @@ NO_SETTINGS_PACKAGE_ID = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
 arch = platform.machine()
 arch_setting = "armv8" if arch in ["arm64", "aarch64"] else arch
+compiler, msvc_version, exe = detect_msvc_compiler()
+default_msvc_version = msvc_version
+default_vs_ide_version = default_msvc_ide_version(msvc_version)
+
 default_profiles = {
     "Windows": textwrap.dedent("""\
         [settings]
@@ -74,14 +80,14 @@ default_profiles = {
         os=Macos
         arch={arch_setting}
         compiler=apple-clang
-        compiler.version=15
+        compiler.version=17
         compiler.libcxx=libc++
         build_type=Release
         """)
 }
 
 
-class TestingResponse(object):
+class TestingResponse:
     """Wraps a response from TestApp external tool
     to guarantee the presence of response.ok, response.content
     and response.status_code, as it was a requests library object.
@@ -130,7 +136,7 @@ class TestingResponse(object):
     def text(self):
         return self.test_response.text
 
-    def iter_content(self, chunk_size=1):  # @UnusedVariable
+    def iter_content(self, chunk_size=1):  # noqa
         return [self.content]
 
     @property
@@ -138,10 +144,7 @@ class TestingResponse(object):
         return self.test_response.status_code
 
     def json(self):
-        try:
-            return json.loads(self.test_response.content)
-        except:
-            raise ValueError("The response is not a JSON")
+        return json.loads(self.test_response.content)
 
 
 class TestRequester:
@@ -253,7 +256,7 @@ class TestRequester:
     def mount(self, *args, **kwargs):
         pass
 
-    def Session(self):
+    def Session(self):  # noqa
         return self
 
     @property
@@ -331,11 +334,6 @@ class TestServer:
     def latest_recipe(self, ref):
         ref = self.test_server.server_store.get_last_revision(ref)
         return ref
-
-    def recipe_revision_time(self, ref):
-        if not ref.revision:
-            raise Exception("Pass a ref with revision (Testing framework)")
-        return self.test_server.server_store.get_revision_time(ref)
 
     def latest_package(self, pref):
         if not pref.ref.revision:
@@ -435,8 +433,8 @@ class TestClient:
 
         # create default profile
         if light:
-            text = "[settings]\nos=Linux"  # Needed at least build-os
-            save(self.paths.settings_path, "os: [Linux, Windows]")
+            text = f"[settings]\nos={detect_os()}"  # Needed at least build-os
+            save(self.paths.settings_path, "os: [Linux, Windows, Macos]")
         else:
             text = default_profiles[platform.system()]
         save(os.path.join(self.cache_folder, "profiles", "default"), text)
@@ -469,9 +467,9 @@ class TestClient:
         return self.open(os.path.join(self.cache_folder, filename))
 
     @property
-    def cache(self):
+    def cache(self) -> PkgCache:
         # Returns a temporary cache object intended for inspecting it
-        return PkgCache(self.cache_folder, ConfigAPI.load_config(self.cache_folder))
+        return PkgCache(self.cache_folder, load_global_conf(self.cache_folder))
 
     @property
     def paths(self):
@@ -496,7 +494,6 @@ class TestClient:
             else:
                 remotes.append(Remote(name, server))
         _save(HomePaths(self.cache_folder).remotes_path, remotes)
-
 
     def update_providers(self):
         default_providers = {
@@ -663,7 +660,7 @@ class TestClient:
             self.run("export .")
         tmp = copy.copy(ref)
         tmp.revision = None
-        rrev = self.cache.get_latest_recipe_reference(tmp).revision
+        rrev = self.cache.get_latest_recipe_revision(tmp).revision
         tmp = copy.copy(ref)
         tmp.revision = rrev
         return tmp
@@ -696,7 +693,7 @@ class TestClient:
     def get_latest_package_reference(self, ref, package_id=None) -> PkgReference:
         """Get the latest PkgReference given a ConanReference"""
         ref_ = RecipeReference.loads(ref) if isinstance(ref, str) else ref
-        latest_rrev = self.cache.get_latest_recipe_reference(ref_)
+        latest_rrev = self.cache.get_latest_recipe_revision(ref_)
         if package_id:
             pref = PkgReference(latest_rrev, package_id)
         else:
@@ -706,19 +703,19 @@ class TestClient:
                                           f"provide a single package_id instead" \
                                           if len(package_ids) > 0 else "No binary packages found"
             pref = package_ids[0]
-        return self.cache.get_latest_package_reference(pref)
+        return self.cache.get_latest_package_revision(pref)
 
     def get_latest_pkg_layout(self, pref: PkgReference) -> PackageLayout:
         """Get the latest PackageLayout given a file reference"""
         # Let's make it easier for all the test clients
-        latest_prev = self.cache.get_latest_package_reference(pref)
+        latest_prev = self.cache.get_latest_package_revision(pref)
         pkg_layout = self.cache.pkg_layout(latest_prev)
         return pkg_layout
 
     def get_latest_ref_layout(self, ref) -> RecipeLayout:
         """Get the latest RecipeLayout given a file reference"""
         if not ref.revision:
-            ref = self.cache.get_latest_recipe_reference(ref)
+            ref = self.cache.get_latest_recipe_revision(ref)
         ref_layout = self.cache.recipe_layout(ref)
         return ref_layout
 
@@ -731,11 +728,11 @@ class TestClient:
         return api.profiles.get_profile([api.profiles.get_default_build()])
 
     def recipe_exists(self, ref):
-        rrev = self.cache.get_recipe_revisions_references(ref)
+        rrev = self.cache.get_recipe_revisions(ref)
         return True if rrev else False
 
     def package_exists(self, pref):
-        prev = self.cache.get_package_revisions_references(pref)
+        prev = self.cache.get_package_revisions(pref)
         return True if prev else False
 
     def assert_listed_require(self, requires, build=False, python=False, test=False,
@@ -824,14 +821,14 @@ class TestClient:
 
     def created_package_reference(self, ref):
         pref = re.search(r"{}: Full package reference: (\S+)".format(str(ref)),
-                               str(self.out)).group(1)
+                         str(self.out)).group(1)
         return PkgReference.loads(pref)
 
     def exported_recipe_revision(self):
-        return re.search(r": Exported: .*#(\S+)", str(self.out)).group(1)
+        return re.search(r"Exported: .*#(\S+)", str(self.out)).group(1)
 
     def exported_layout(self):
-        m = re.search(r": Exported: (\S+)", str(self.out)).group(1)
+        m = re.search(r"Exported: (\S+)", str(self.out)).group(1)
         ref = RecipeReference.loads(m)
         return self.cache.recipe_layout(ref)
 

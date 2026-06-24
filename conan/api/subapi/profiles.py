@@ -13,10 +13,13 @@ DEFAULT_PROFILE_NAME = "default"
 
 
 class ProfilesAPI:
+    """ This ProfilesAPI is used to list, manage and load Conan profiles
+    """
 
-    def __init__(self, conan_api):
+    def __init__(self, conan_api, api_helpers):
         self._conan_api = conan_api
-        self._home_paths = HomePaths(conan_api.cache_folder)
+        self._api_helpers = api_helpers
+        self._home_paths = HomePaths(conan_api.home_folder)
 
     def get_default_host(self):
         """
@@ -25,7 +28,7 @@ class ProfilesAPI:
         """
         default_profile = os.environ.get("CONAN_DEFAULT_PROFILE")
         if default_profile is None:
-            global_conf = self._conan_api.config.global_conf
+            global_conf = self._api_helpers.global_conf
             default_profile = global_conf.get("core:default_profile", default=DEFAULT_PROFILE_NAME)
 
         default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
@@ -42,8 +45,11 @@ class ProfilesAPI:
         :return: the path to the default "build" profile, either in the cache or as
             defined by the user in configuration
         """
-        global_conf = self._conan_api.config.global_conf
-        default_profile = global_conf.get("core:default_build_profile", default=DEFAULT_PROFILE_NAME)
+        default_profile = os.environ.get("CONAN_DEFAULT_BUILD_PROFILE")
+        if default_profile is None:
+            global_conf = self._api_helpers.global_conf
+            default_profile = global_conf.get("core:default_build_profile",
+                                              default=DEFAULT_PROFILE_NAME)
         default_profile = os.path.join(self._home_paths.profiles_path, default_profile)
         if not os.path.exists(default_profile):
             msg = ("The default build profile '{}' doesn't exist.\n"
@@ -57,9 +63,8 @@ class ProfilesAPI:
         build_profiles = args.profile_build or [self.get_default_build()]
         host_profiles = args.profile_host or [self.get_default_host()]
 
-        global_conf = self._conan_api.config.global_conf
-        global_conf.validate()  # TODO: Remove this from here
-        cache_settings = self._conan_api.config.settings_yml
+        global_conf = self._api_helpers.global_conf
+        cache_settings = self._api_helpers.settings_yml
         profile_plugin = self._load_profile_plugin()
         cwd = os.getcwd()
         profile_build = self._get_profile(build_profiles, args.settings_build, args.options_build,
@@ -73,11 +78,20 @@ class ProfilesAPI:
         """ Computes a Profile as the result of aggregating all the user arguments, first it
         loads the "profiles", composing them in order (last profile has priority), and
         finally adding the individual settings, options (priority over the profiles)
+
+        :param profiles: the list of profiles to load
+        :param settings: list of "key=value" settings to define the profile. Patterns allowed as
+           "pkg-pattern:key=value"
+        :param options: list of "key=value" options. Patterns allowed as "pkg-pattern:key=value"
+        :param conf: list of "key=value" configurations. Following "conf" definitions, patterns
+           are allowed as "pkg-pattern:key=value", values that are lists or dictionaries might be
+           allowed, and configuration operations like ``+=`` for appending are allowed.
+        :param cwd: the current working directory. If None, os.getcwd() will be used.
+        :param context: the context, "build" or "host" to which this profile belongs
         """
         assert isinstance(profiles, list), "Please provide a list of profiles"
-        global_conf = self._conan_api.config.global_conf
-        global_conf.validate()  # TODO: Remove this from here
-        cache_settings = self._conan_api.config.settings_yml
+        global_conf = self._api_helpers.global_conf
+        cache_settings = self._api_helpers.settings_yml
         profile_plugin = self._load_profile_plugin()
 
         profile = self._get_profile(profiles, settings, options, conf, cwd, cache_settings,
@@ -123,7 +137,8 @@ class ProfilesAPI:
 
     def list(self):
         """
-        List all the profiles file sin the cache
+        List all the profiles files in the cache
+
         :return: an alphabetically ordered list of profile files in the default cache location
         """
         # List is to be extended (directories should not have a trailing slash)
@@ -147,6 +162,11 @@ class ProfilesAPI:
     @staticmethod
     def detect():
         """
+        Detects a possible default profile.
+
+        The output of this detection is not guaranteed to be complete or stable, it might
+        change in future releases, following the same rules as the "conan profile detect" command.
+
         :return: an automatically detected Profile, with a "best guess" of the system settings
         """
         profile = Profile()

@@ -1,3 +1,4 @@
+from conan.api.output import ConanOutput
 from conan.internal.graph.proxy import should_update_reference
 from conan.errors import ConanException
 from conan.api.model import RecipeReference
@@ -6,10 +7,10 @@ from conan.internal.model.version_range import VersionRange
 
 class RangeResolver:
 
-    def __init__(self, conan_app, global_conf, editable_packages):
-        self._cache = conan_app.cache
+    def __init__(self, cache, remote_manager, global_conf, editable_packages):
+        self._cache = cache
         self._editable_packages = editable_packages
-        self._remote_manager = conan_app.remote_manager
+        self._remote_manager = remote_manager
         self._cached_cache = {}  # Cache caching of search result, so invariant wrt installations
         self._cached_remote_found = {}  # dict {ref (pkg/*): {remote_name: results (pkg/1, pkg/2)}}
         self.resolved_ranges = {}
@@ -25,6 +26,13 @@ class RangeResolver:
         if version_range is None:
             return
         assert isinstance(version_range, VersionRange)
+
+        if require.ref.revision is not None:
+            ConanOutput(base_conanref).warning("Specifying a revision for requirement "
+                                               f"'{require.ref.repr_notime()}' together with "
+                                               "a version range has no effect. "
+                                               "The revision will be ignored.",
+                                               warn_tag="risk")
 
         # Check if this ref with version range was already solved
         previous_ref = self.resolved_ranges.get(require.ref)

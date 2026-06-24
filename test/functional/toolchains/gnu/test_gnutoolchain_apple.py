@@ -13,8 +13,6 @@ from conan.test.utils.tools import TestClient
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("config", [("x86_64", "Macos", "10.14", None),
                                     ("armv8", "iOS", "10.0", "iphoneos"),
-                                    ("armv7", "iOS", "10.0", "iphoneos"),
-                                    ("x86", "iOS", "10.0", "iphonesimulator"),
                                     ("x86_64", "iOS", "10.0", "iphonesimulator"),
                                     ("armv8", "Macos", "10.14", None)  # M1
                                     ])

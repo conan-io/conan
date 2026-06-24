@@ -1187,7 +1187,7 @@ def test_pkg_config_deps_set_property():
     pkg_info = {"components": {"mycomp1": {"libs": ["mylib"]}}}
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("shared-library"),
             "other/conanfile.py": GenConanfile("other", "0.1").with_package_type("shared-library")
-                                                              .with_package_info(pkg_info, {}),
+                                                              .with_package_info(pkg_info),
             "app/conanfile.py": app})
     c.run("create dep")
     c.run("create other")

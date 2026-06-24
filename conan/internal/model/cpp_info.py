@@ -89,6 +89,8 @@ class _Component:
         self._sysroot = None
         self._requires = None
 
+        self._consumer_conanfile = None
+
         # LEGACY 1.X fields, can be removed in 2.X
         self.names = MockInfoProperty("cpp_info.names")
         self.filenames = MockInfoProperty("cpp_info.filenames")
@@ -103,6 +105,9 @@ class _Component:
         self._type = None
         self._location = None
         self._link_location = None
+
+    def set_consumer(self, conanfile):
+        self._consumer_conanfile = conanfile
 
     def serialize(self):
         return {
@@ -127,17 +132,31 @@ class _Component:
             "requires": self._requires,
             "properties": self._properties,
             "exe": self._exe,  # single exe, incompatible with libs
-            "type": self._type,
+            "type": str(self._type) if self._type else None,
             "location": self._location,
             "link_location": self._link_location,
             "languages": self._languages
         }
 
     @staticmethod
+    def _evaluate_cond(item, flags, conanfile):
+        if conanfile is None:
+            return flags
+        flags_map = conanfile._conan_helpers.flags_map  # noqa
+        if flags_map is None:
+            return flags
+        return flags_map(conanfile=conanfile, item=item, flags=flags)
+
+    @staticmethod
     def deserialize(contents):
         result = _Component()
         for field, value in contents.items():
-            setattr(result, f"_{field}", value)
+            if hasattr(result, field):
+                setattr(result, field, value)
+            else:
+                # If there's on setter, use the internal field, e.g, _properties which has
+                # set_property method, but not a setter
+                setattr(result, f"_{field}", value)
         return result
 
     def clone(self):
@@ -337,7 +356,7 @@ class _Component:
     def cflags(self):
         if self._cflags is None:
             self._cflags = []
-        return self._cflags
+        return self._evaluate_cond("cflags", self._cflags, self._consumer_conanfile)
 
     @cflags.setter
     def cflags(self, value):
@@ -347,7 +366,7 @@ class _Component:
     def cxxflags(self):
         if self._cxxflags is None:
             self._cxxflags = []
-        return self._cxxflags
+        return self._evaluate_cond("cxxflags", self._cxxflags, self._consumer_conanfile)
 
     @cxxflags.setter
     def cxxflags(self, value):
@@ -357,7 +376,8 @@ class _Component:
     def sharedlinkflags(self):
         if self._sharedlinkflags is None:
             self._sharedlinkflags = []
-        return self._sharedlinkflags
+        return self._evaluate_cond("sharedlinkflags", self._sharedlinkflags,
+                                   self._consumer_conanfile)
 
     @sharedlinkflags.setter
     def sharedlinkflags(self, value):
@@ -367,7 +387,7 @@ class _Component:
     def exelinkflags(self):
         if self._exelinkflags is None:
             self._exelinkflags = []
-        return self._exelinkflags
+        return self._evaluate_cond("exelinkflags", self._exelinkflags, self._consumer_conanfile)
 
     @exelinkflags.setter
     def exelinkflags(self, value):
@@ -447,8 +467,8 @@ class _Component:
 
     def merge(self, other, overwrite=False):
         """
-        @param overwrite:
-        @type other: _Component
+        :param overwrite:
+        :type other: _Component
         """
         def merge_list(o, d):
             d.extend(e for e in o if e not in d)
@@ -481,6 +501,14 @@ class _Component:
                 else:
                     current_values[k] = copy.copy(v)
 
+    def set_relative_base_relative_folder(self, relative_folder):
+        # This is using the relative folder location for the package root or build tree
+        # only
+        for prop in ["_location", "_link_location"]:
+            origin = getattr(self, prop)
+            if origin is not None:
+                setattr(self, prop, os.path.join(relative_folder, origin))
+
     def set_relative_base_folder(self, folder):
         for varname in _DIRS_VAR_NAMES:
             origin = getattr(self, varname)
@@ -505,6 +533,12 @@ class _Component:
             origin = getattr(self, varname)
             if origin is not None:
                 origin[:] = [relocate(f) for f in origin]
+
+        for prop in ["_location", "_link_location"]:
+            origin = getattr(self, prop)
+            if origin is not None:
+                setattr(self, prop, relocate(origin))
+
         properties = self._properties
         if properties is not None:
             modules = properties.get("cmake_build_modules")  # Only this prop at this moment
@@ -557,36 +591,25 @@ class _Component:
         libdirs = self.libdirs
         bindirs = self.bindirs
         libname = self.libs[0]
-        static_location = None
-        shared_location = None
         dll_location = None
         deduced_type = None
-        # libname is exactly the pattern, e.g., ["mylib.a"] instead of ["mylib"]
-        _, ext = os.path.splitext(libname)
-        if ext in (".lib", ".a", ".dll", ".so", ".dylib"):
-            if ext in (".lib", ".a"):
-                static_location = _find_matching(libdirs, libname)
-            elif ext in (".so", ".dylib"):
-                shared_location = _find_matching(libdirs, libname)
-            elif ext == ".dll":
-                dll_location = _find_matching(bindirs, libname)
-        else:
-            lib_sanitized = re.escape(libname)
-            component_sanitized = re.escape(library_name)
-            # At first, exact match
-            regex_static = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:a|lib)")
-            regex_shared = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:so|dylib)")
-            regex_dll = re.compile(rf".*(?:{lib_sanitized}|{component_sanitized}).*\.dll")
-            static_location = _find_matching(libdirs, regex_static)
-            shared_location = _find_matching(libdirs, regex_shared)
-            if not any([static_location, shared_location]):
-                # Let's extend a little bit the pattern search
-                regex_wider_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib)")
-                regex_wider_shared = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:so|dylib)")
-                static_location = _find_matching(libdirs, regex_wider_static)
-                shared_location = _find_matching(libdirs, regex_wider_shared)
-            if static_location or not shared_location:
-                dll_location = _find_matching(bindirs, regex_dll)
+        libname, ext = os.path.splitext(libname)
+        lib_sanitized = re.escape(libname)
+        component_sanitized = re.escape(library_name)
+        # At first, exact match
+        regex_static = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:a|lib)")
+        regex_shared = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:so|dylib)")
+        regex_dll = re.compile(rf".*(?:{lib_sanitized}|{component_sanitized}).*\.dll")
+        static_location = _find_matching(libdirs, regex_static)
+        shared_location = _find_matching(libdirs, regex_shared)
+        if not any([static_location, shared_location]):
+            # Let's extend a little bit the pattern search
+            regex_wider_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib)")
+            regex_wider_shared = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:so|dylib)")
+            static_location = _find_matching(libdirs, regex_wider_static)
+            shared_location = _find_matching(libdirs, regex_wider_shared)
+        if static_location or not shared_location:
+            dll_location = _find_matching(bindirs, regex_dll)
 
         if static_location:
             if shared_location:
@@ -622,7 +645,7 @@ class _Component:
                            f" '{libname}' that declared .type='{self._type}'")
         self._type = deduced_type
         if self._type != pkg_type:
-            out.warning(f"Lib {libname} deduced as '{self._type}, but 'package_type={pkg_type}'")
+            out.warning(f"Lib {libname} deduced as '{self._type}', but 'package_type={pkg_type}'")
 
     def deduce_locations(self, conanfile, component_name=""):
         name = f'{conanfile} cpp_info.components["{component_name}"]' if component_name \
@@ -648,7 +671,7 @@ class _Component:
                                  "cannot deduce locations")
         # fully defined by user in conanfile, nothing to do.
         if self._location or self._link_location:
-            if self._type not in [PackageType.SHARED, PackageType.STATIC]:
+            if self._type is None or self._type not in [PackageType.SHARED, PackageType.STATIC]:
                 raise ConanException(f"{name} location defined without defined library type")
             return
 
@@ -659,7 +682,7 @@ class _Component:
             return
 
         # automatic location deduction from a single .lib=["lib"]
-        if self._type not in [None, PackageType.SHARED, PackageType.STATIC]:
+        if self._type is not None and self._type not in [PackageType.SHARED, PackageType.STATIC]:
             raise ConanException(f"{name} has a library but .type {self._type} is not static/shared")
 
         # If no location is defined, it's time to guess the location
@@ -672,6 +695,11 @@ class CppInfo:
         self.components = defaultdict(lambda: _Component(set_defaults))
         self.default_components = None
         self._package = _Component(set_defaults)
+
+    def set_consumer(self, conanfile):
+        self._package.set_consumer(conanfile)
+        for comp in self.components.values():
+            comp.set_consumer(conanfile)
 
     def __getattr__(self, attr):
         # all cpp_info.xxx of not defined things will go to the global package
@@ -730,6 +758,12 @@ class CppInfo:
         self._package.set_relative_base_folder(folder)
         for component in self.components.values():
             component.set_relative_base_folder(folder)
+
+    def set_relative_base_relative_folder(self, folder):
+        """Prepend the folder to all the directories definitions, that are relative"""
+        self._package.set_relative_base_relative_folder(folder)
+        for component in self.components.values():
+            component.set_relative_base_relative_folder(folder)
 
     def deploy_base_folder(self, package_folder, deploy_folder):
         """Prepend the folder to all the directories"""
@@ -852,6 +886,9 @@ class CppInfo:
             common = self._package.clone()
             common.libs = []
             common.type = str(PackageType.HEADER)  # the type of components is a string!
+            if not common.requires:
+                common.requires = [f"{c.ref.name}::{c.ref.name}"
+                                   for c in conanfile.dependencies.direct_host.values()]
             result.components["_common"] = common
 
             for lib in self.libs:

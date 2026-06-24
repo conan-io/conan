@@ -1,20 +1,22 @@
+from fnmatch import fnmatch
+
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conan.internal.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                         RECIPE_NOT_IN_REMOTE, RECIPE_UPDATED, RECIPE_EDITABLE,
                                         RECIPE_INCACHE_DATE_UPDATED, RECIPE_UPDATEABLE)
-from conan.internal.errors import NotFoundException
+from conan.internal.errors import NotFoundException, ConanReferenceAlreadyExistsInDB
 from conan.errors import ConanException
 
 
 class ConanProxy:
-    def __init__(self, conan_app, editable_packages):
+    def __init__(self, cache, remote_manager, editable_packages, legacy_update=None):
         # collaborators
         self._editable_packages = editable_packages
-        self._cache = conan_app.cache
-        self._remote_manager = conan_app.remote_manager
+        self._cache = cache
+        self._remote_manager = remote_manager
         self._resolved = {}  # Cache of the requested recipes to optimize calls
-        self._legacy_update = conan_app.global_conf.get("core:update_policy", choices=["legacy"])
+        self._legacy_update = legacy_update
 
     def get_recipe(self, ref, remotes, update, check_update):
         """
@@ -25,6 +27,7 @@ class ConanProxy:
         resolved = self._resolved.get(ref)
         if resolved is None:
             resolved = self._get_recipe(ref, remotes, update, check_update)
+            ref = resolved[0].reference  # cache the resolved reference with revision
             self._resolved[ref] = resolved
         return resolved
 
@@ -32,15 +35,19 @@ class ConanProxy:
     def _get_recipe(self, reference, remotes, update, check_update):
         output = ConanOutput(scope=str(reference))
 
-        conanfile_path = self._editable_packages.get_path(reference)
-        if conanfile_path is not None:
-            return BasicLayout(reference, conanfile_path), RECIPE_EDITABLE, None
+        editable = self._editable_packages.get(reference)
+        if editable is not None:
+            path = editable["path"]
+            output_folder = editable.get("output_folder")
+            return BasicLayout(reference, path, output_folder), RECIPE_EDITABLE, None
 
         # check if it there's any revision of this recipe in the local cache
         try:
-            cache_ref = self._cache.get_latest_recipe_reference(reference) \
-                if reference.revision is None else reference
-            recipe_layout = self._cache.recipe_layout(cache_ref)
+            # Just do 1 call to the DB, not 2
+            if reference.revision is None:
+                recipe_layout = self._cache.recipe_layout_latest(reference)
+            else:
+                recipe_layout = self._cache.recipe_layout(reference)
             ref = recipe_layout.reference  # latest revision if it was not defined
         except ConanException:
             # NOT in disk, must be retrieved from remotes
@@ -48,8 +55,6 @@ class ConanProxy:
             layout, remote = self._download_recipe(reference, remotes, output, update, check_update)
             status = RECIPE_DOWNLOADED
             return layout, status, remote
-
-        self._cache.update_recipe_lru(ref)
 
         # TODO: cache2.0: check with new --update flows
         # TODO: If the revision is given, then we don't need to check for updates?
@@ -65,19 +70,22 @@ class ConanProxy:
             return recipe_layout, status, None
 
         # Something found in remotes, check if we already have the latest in local cache
-        # TODO: cache2.0 here if we already have a revision in the cache but we add the
-        #  --update argument and we find that same revision in server, we will not
-        #  download anything but we will UPDATE the date of that revision in the
-        #  local cache and WE ARE ALSO UPDATING THE REMOTE
-        #  Check if this is the flow we want to follow
         assert ref.timestamp
         cache_time = ref.timestamp
         if remote_ref.revision != ref.revision:
             if cache_time < remote_ref.timestamp:
                 # the remote one is newer
                 if should_update_reference(remote_ref, update):
-                    output.info("Retrieving from remote '%s'..." % remote.name)
-                    new_recipe_layout = self._download(remote_ref, remote)
+                    output.info(f"Updating to latest from remote '{remote.name}'...")
+                    try:
+                        new_recipe_layout = self._download(remote_ref, remote)
+                    except ConanReferenceAlreadyExistsInDB:
+                        # When updating to a newer revision in the server, but it already exists
+                        # in the cache with an older timestamp
+                        output.info(f"Latest from '{remote.name}' was found in "
+                                    "the cache, using it and updating its timestamp")
+                        new_recipe_layout = self._cache.recipe_layout(remote_ref)
+                        self._cache.update_recipe_timestamp(remote_ref)  # make it latest
                     status = RECIPE_UPDATED
                     return new_recipe_layout, status, remote
                 else:
@@ -113,13 +121,13 @@ class ConanProxy:
                         ConanProxy.update_policy_legacy_warning = True
                         ConanOutput().warning("The 'core:update_policy' conf is deprecated and will "
                                               "be removed in future versions", warn_tag="deprecated")
-                    refs = self._remote_manager.get_recipe_revisions_references(reference, remote)
+                    refs = self._remote_manager.get_recipe_revisions(reference, remote)
                     results.extend([{'remote': remote, 'ref': ref} for ref in refs])
                     continue
                 if not reference.revision:
-                    ref = self._remote_manager.get_latest_recipe_reference(reference, remote)
+                    ref = self._remote_manager.get_latest_recipe_revision(reference, remote)
                 else:
-                    ref = self._remote_manager.get_recipe_revision_reference(reference, remote)
+                    ref = self._remote_manager.get_recipe_revision(reference, remote)
                 if not need_update:
                     return remote, ref
                 results.append({'remote': remote, 'ref': ref})
@@ -175,4 +183,5 @@ def should_update_reference(reference, update):
     if isinstance(update, bool):
         return update
     # Legacy syntax had --update without pattern, it manifests as a "*" pattern
-    return any(name == "*" or reference.name == name for name in update)
+    return any(fnmatch(reference.name, pattern)
+               for pattern in update)

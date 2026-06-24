@@ -45,7 +45,8 @@ class TestSubsystems:
         - Inside msys2, install pacman -S mingw-w64-i686-toolchain (all pkgs)
         """
         client = TestClient()
-        client.run_command('uname')
+        with environment_update({"MSYSTEM": "MINGW32"}):
+            client.run_command('uname')
         assert "MINGW32_NT" in client.out
 
     @pytest.mark.tool("msys2")
@@ -55,14 +56,16 @@ class TestSubsystems:
         - Inside msys2, install pacman -S mingw-w64-ucrt-x86_64-toolchain (all pkgs)
         """
         client = TestClient()
-        client.run_command('uname')
+        with environment_update({"MSYSTEM": "UCRT64"}):
+            client.run_command('uname')
         assert "MINGW64_NT" in client.out
 
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("msys2_clang64")
     def test_clang64_available(self):
         client = TestClient()
-        client.run_command('uname')
+        with environment_update({"MSYSTEM": "CLANG64"}):
+            client.run_command('uname')
         assert "MINGW64_NT" in client.out
 
     @pytest.mark.tool("msys2")
@@ -72,7 +75,8 @@ class TestSubsystems:
         - Inside msys2, install pacman -S mingw-w64-x86_64-toolchain (all pkgs)
         """
         client = TestClient()
-        client.run_command('uname')
+        with environment_update({"MSYSTEM": "MINGW64"}):
+            client.run_command('uname')
         assert "MINGW64_NT" in client.out
 
     # It's important not to have uname in Path, that could
@@ -158,7 +162,9 @@ class TestSubsystemsBuild:
         $ pacman -S mingw-w64-clang-x86_64-toolchain
         """
         client = TestClient()
-        self._build(client, static_runtime=static)
+        # Not defined in msys2 clang by default
+        with environment_update({"CC": "clang", "CXX": "clang++"}):
+            self._build(client, static_runtime=static)
 
         check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None,
                       subsystem="mingw64")
@@ -224,6 +230,7 @@ class TestSubsystemsBuild:
         assert "__MINGW64__" in client.out
         assert "__CYGWIN__" not in client.out
 
+    @pytest.mark.slow
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("msys2_mingw64_clang64")
     def test_msys2_mingw64_clang64(self):
@@ -456,6 +463,7 @@ class TestSubsystemsCMakeBuild:
                       subsystem="mingw64")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="clang64")
 
+    @pytest.mark.slow
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("msys2_mingw64_clang64")
     def test_msys2_mingw64_clang64(self):
@@ -491,7 +499,8 @@ class TestSubsystemsCMakeBuild:
         check_exe_run(client.out, "main", "gcc", None, "Debug", "x86_64", None, subsystem="cygwin")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="cygwin")
 
-    @pytest.mark.tool("clang", "13")
+    @pytest.mark.tool("ninja")
+    @pytest.mark.tool("clang", "20")
     def test_clang(self):
         """
         native, LLVM/Clang compiler

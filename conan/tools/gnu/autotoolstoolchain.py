@@ -2,7 +2,7 @@ import os
 
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
-from conan.internal.internal_tools import raise_on_universal_arch
+from conan.internal.internal_tools import is_universal_arch
 from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string, save_toolchain_args
 from conan.tools.build.cross_building import cross_building
@@ -10,6 +10,8 @@ from conan.tools.build.flags import architecture_flag, architecture_link_flag, b
     build_type_link_flags, libcxx_flags, cstd_flag, llvm_clang_front, threads_flags
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
+from conan.tools.intel import IntelCC
+from conan.tools.intel.intel_cc import intel_cc_compilers
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.internal.model.pkg_type import PackageType
 
@@ -27,7 +29,6 @@ class AutotoolsToolchain:
                helper so that it reads the information from the proper file.
         :param prefix: Folder to use for ``--prefix`` argument ("/" by default).
         """
-        raise_on_universal_arch(conanfile)
 
         self._conanfile = conanfile
         self._namespace = namespace
@@ -62,13 +63,19 @@ class AutotoolsToolchain:
         if llvm_clang_front(self._conanfile) == "clang":
             self.msvc_runtime_link_flags = ["-fuse-ld=lld-link"]
 
+        self._is_universal_arch = is_universal_arch(conanfile.settings.get_safe("arch"),
+                                                    conanfile.settings.possible_values().get("arch"))
+        if self._is_universal_arch and not is_apple_os(self._conanfile):
+            arch_str = conanfile.settings.get_safe('arch')
+            raise ConanException(f"Universal arch '{arch_str}' is only supported in Apple OSes")
+
         # Cross build triplets
         self._host = self._conanfile.conf.get("tools.gnu:host_triplet")
         self._build = self._conanfile.conf.get("tools.gnu:build_triplet")
         self._target = None
 
         self.android_cross_flags = {}
-        self._is_cross_building = cross_building(self._conanfile)
+        self._is_cross_building = not self._is_universal_arch and cross_building(self._conanfile)
         if self._is_cross_building:
             compiler = self._conanfile.settings.get_safe("compiler")
             # If cross-building and tools.android:ndk_path is defined, let's try to guess the Android
@@ -86,8 +93,13 @@ class AutotoolsToolchain:
                 self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)["triplet"]
 
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
-        sysroot = sysroot.replace("\\", "/") if sysroot is not None else None
-        self.sysroot_flag = "--sysroot {}".format(sysroot) if sysroot else None
+        if sysroot:
+            root = sysroot.replace("\\", "/")
+            compiler = self._conanfile.settings.get_safe("compiler")
+            self.sysroot_flag = f"--sysroot {root}" if compiler != "qcc" else f"-Wc,-isysroot,{root}"
+        else:
+            self.sysroot_flag = None
+
         extra_configure_args = self._conanfile.conf.get("tools.gnu:extra_configure_args",
                                                         check_type=list,
                                                         default=[])
@@ -101,12 +113,15 @@ class AutotoolsToolchain:
         # Apple stuff
         is_cross_building_osx = (self._is_cross_building
                                  and conanfile.settings_build.get_safe('os') == "Macos"
-                                 and is_apple_os(conanfile))
-        min_flag, arch_flag, isysroot_flag = (
-            resolve_apple_flags(conanfile, is_cross_building=is_cross_building_osx)
+                                 and is_apple_os(conanfile)
+                                 and not self._is_universal_arch)
+
+        min_flag, arch_flags, isysroot_flag = (
+            resolve_apple_flags(conanfile, is_cross_building=is_cross_building_osx,
+                                is_universal=self._is_universal_arch)
         )
         # https://man.archlinux.org/man/clang.1.en#Target_Selection_Options
-        self.apple_arch_flag = arch_flag
+        self.apple_arch_flag = arch_flags
         # -isysroot makes all includes for your library relative to the build directory
         self.apple_isysroot_flag = isysroot_flag
         self.apple_min_version_flag = min_flag
@@ -245,6 +260,11 @@ class AutotoolsToolchain:
         ret = [self.ndebug, self.gcc_cxx11_abi] + self.extra_defines + conf_flags
         return self._filter_list_empty_fields(ret)
 
+    @property
+    def rcflags(self):
+        conf_flags = self._conanfile.conf.get("tools.build:rcflags", default=[], check_type=list)
+        return self._filter_list_empty_fields(conf_flags)
+
     def _include_obj_arc_flags(self, env):
         enable_arc = self._conanfile.conf.get("tools.apple:enable_arc", check_type=bool)
         fobj_arc = ""
@@ -278,16 +298,24 @@ class AutotoolsToolchain:
                         compiler = unix_path(self._conanfile, compiler)
                         env.define(env_var, compiler)
             compiler_setting = self._conanfile.settings.get_safe("compiler")
-            if compiler_setting == "msvc":
-                # None of them defined, if one is defined by user, user should define the other too
-                if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+            # None of them defined, if one is defined by user, user should define the other too
+            if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+                if compiler_setting == "msvc":
                     env.define("CC", "cl")
                     env.define("CXX", "cl")
+                # Default compilers for intel-cc when not configured
+                else:
+                    intel_defaults = intel_cc_compilers(self._conanfile)
+                    if intel_defaults:
+                        env.define("CC", intel_defaults["c"])
+                        env.define("CXX", intel_defaults["cpp"])
 
         env.append("CPPFLAGS", ["-D{}".format(d) for d in self.defines])
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
+        if self.rcflags:
+            env.append("RCFLAGS", self.rcflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
         # Objective C/C++
         self._include_obj_arc_flags(env)
@@ -313,6 +341,8 @@ class AutotoolsToolchain:
         env.save_script("conanautotoolstoolchain")
         self.generate_args()
         VCVars(self._conanfile).generate(scope=scope)
+        if self._conanfile.settings.get_safe("compiler") == "intel-cc":
+            IntelCC(self._conanfile).generate()
 
     def _default_configure_shared_flags(self):
         args = []

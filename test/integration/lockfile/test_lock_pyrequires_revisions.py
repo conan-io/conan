@@ -38,11 +38,11 @@ def test_transitive_py_requires_revisions():
     client.run("export dep --name=dep --version=0.1 --user=user --channel=channel")
 
     client.run("install consumer/conanfile.py")
-    assert "conanfile.py: VAR=42!!!" in client.out
+    assert "VAR=42!!!" in client.out
 
     os.remove(os.path.join(client.current_folder, "consumer/conan.lock"))
     client.run("install consumer/conanfile.py")
-    assert "conanfile.py: VAR=123!!!" in client.out
+    assert "VAR=123!!!" in client.out
 
 
 def test_transitive_matching_revisions():

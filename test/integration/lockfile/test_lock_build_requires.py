@@ -117,8 +117,8 @@ def test_lock_create_build_require_transitive():
     assert "dep/0.1: TARGET:Linux!!" in c.out
     assert "conanfile.py (tool/0.1): MYOS:Windows!!" in c.out
     assert "conanfile.py (tool/0.1): TARGET:Linux!!" in c.out
-    assert "conanfile.py (tool/0.1): MYOS-GEN:Windows!!" in c.out
-    assert "conanfile.py (tool/0.1): TARGET-GEN:Linux!!" in c.out
+    assert "MYOS-GEN:Windows!!" in c.out
+    assert "TARGET-GEN:Linux!!" in c.out
 
 
 class TestTransitiveBuildRequires:

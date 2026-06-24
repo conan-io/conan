@@ -12,10 +12,22 @@ class TestPackageTest:
 
     def test_basic(self):
         client = TestClient()
+        test_package = textwrap.dedent("""
+        from conan import ConanFile
+        class TestPackage(ConanFile):
+            def requirements(self):
+                self.requires(self.tested_reference_str)
+            def test(self):
+                self.output.info("TESTING")
+        """)
         client.save({CONANFILE: GenConanfile("hello", "0.1"),
-                     "test_package/conanfile.py": GenConanfile().with_test("pass")})
+                     "test_package/conanfile.py": test_package})
         client.run("create . --user=lasote --channel=stable")
         assert "hello/0.1@lasote/stable: Created package" in client.out
+        client.run("test test_package hello/0.1@lasote/stable")
+        assert "hello/0.1@lasote/stable (test package): TESTING" in client.out
+        client.run("test hello/0.1@lasote/stable")
+        assert "hello/0.1@lasote/stable (test package): TESTING" in client.out
 
     def test_basic_json(self):
         client = TestClient()
@@ -311,13 +323,6 @@ def test_tested_reference_str():
     """
     At the test_package/conanfile the variable `self.tested_reference_str` is injected with the
     str of the reference being tested. It is available in all the methods.
-
-    Compatibility with Conan 2.0:
-    If the 'test_type' is set to "explicit" the require won't be automatically injected and has to
-    be the user the one injecting the require or the build require using the
-    `self.tested_reference_str`. This 'test_type' can be removed in 2.0 if we consider it has
-    to be always explicit. The recipes will still work in Conan 2.0 because the 'test_type' will be
-    ignored.
     """
     client = TestClient()
     test_conanfile = textwrap.dedent("""
