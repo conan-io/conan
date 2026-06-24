@@ -14,6 +14,7 @@ from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
+from conan.tools.intel.intel_cc import intel_cc_compilers
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version, msvc_platform_from_arch
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.subsystems import deduce_subsystem, WINDOWS
@@ -965,11 +966,17 @@ class CompilersBlock(Block):
             if comp in compilers_by_conf:
                 compilers[lang] = compilers_by_conf[comp]
         compiler = self._conanfile.settings.get_safe("compiler")
-        if compiler == "msvc" and "Ninja" in str(self._toolchain.generator):
-            # None of them defined, if one is defined by user, user should define the other too
-            if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+        # None of them defined, if one is defined by user, user should define the other too
+        if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+            if compiler == "msvc" and "Ninja" in str(self._toolchain.generator):
                 compilers["C"] = "cl"
                 compilers["CXX"] = "cl"
+            # Default compilers for intel-cc when not configured
+            else:
+                intel_defaults = intel_cc_compilers(self._conanfile)
+                if intel_defaults:
+                    compilers["C"] = intel_defaults["c"]
+                    compilers["CXX"] = intel_defaults["cpp"]
         return {"compilers": compilers}
 
 

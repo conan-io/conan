@@ -27,6 +27,7 @@ class ConanProxy:
         resolved = self._resolved.get(ref)
         if resolved is None:
             resolved = self._get_recipe(ref, remotes, update, check_update)
+            ref = resolved[0].reference  # cache the resolved reference with revision
             self._resolved[ref] = resolved
         return resolved
 

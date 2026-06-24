@@ -142,7 +142,7 @@ class TestToolCopy:
         copied = copy(None, "dir*", src, dst)
 
         assert copied == [dst_dir_file, dst_dir_link]
-        assert os.listdir(dst) == os.listdir(src)
+        assert sorted(os.listdir(dst)) == sorted(os.listdir(src))
         assert os.path.islink(dst_dir_link)
 
     def test_excludes(self):

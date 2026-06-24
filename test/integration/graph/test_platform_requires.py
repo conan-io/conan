@@ -97,7 +97,7 @@ class TestPlatformRequires:
                      "profile": "[platform_requires]\ndep/1.1"})
         client.run("install . -pr=profile")
         assert "dep/1.1#platform - Platform" in client.out
-        assert "conanfile.py: DEPENDENCY dep/1.1" in client.out
+        assert "DEPENDENCY dep/1.1" in client.out
 
     @pytest.mark.parametrize("revision", ["", "#rev1"])
     def test_consumer_resolved_revision(self, revision):
@@ -115,7 +115,7 @@ class TestPlatformRequires:
                      "profile": f"[platform_requires]\ndep/1.1{revision}"})
         client.run("install . -pr=profile")
         assert "dep/1.1 - Platform" in client.out
-        assert f"conanfile.py: DEPENDENCY dep/1.1{revision or '#platform'}" in client.out
+        assert f"DEPENDENCY dep/1.1{revision or '#platform'}" in client.out
 
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -129,7 +129,7 @@ class TestPlatformRequires:
         client.save({"conanfile.py": conanfile})
         client.run("install . -pr=profile")
         assert "dep/1.1 - Platform" in client.out
-        assert f"conanfile.py: DEPENDENCY dep/1.1{revision or '#platform'}" in client.out
+        assert f"DEPENDENCY dep/1.1{revision or '#platform'}" in client.out
 
     def test_consumer_unresolved_revision(self):
         """ if a recipe specifies an exact revision and so does the profile

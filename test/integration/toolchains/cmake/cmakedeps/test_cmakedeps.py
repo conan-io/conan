@@ -953,3 +953,77 @@ def test_package_info_extra_variables():
     assert 'set(CMAKE_GENERATOR_INSTANCE "${GENERATOR_INSTANCE}/buildTools/")' in target
     assert 'set(FOO 42)' in target
     assert 'set(CACHE_VAR_DEFAULT_DOC "hello world" CACHE PATH "CACHE_VAR_DEFAULT_DOC")' in target
+
+
+def test_cmake_extra_interface_libs():
+    """ The cmake_extra_interface_libs property should add extra link items to the
+    generated target's INTERFACE_LINK_LIBRARIES. In CMakeDeps this is done by appending
+    them to the package (or component) SYSTEM_LIBS variable that ends up linked through
+    the <pkg>_DEPS_TARGET interface library.
+    """
+    tc = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_extra_interface_libs", ["MyOpenMPILib"])
+        """)
+    tc.save({"conanfile.py": dep})
+    tc.run("create .")
+    tc.run("install --requires=dep/0.1 -g CMakeDeps")
+    host_arch = tc.get_default_host_profile().settings["arch"]
+    data = tc.load(f"dep-release-{host_arch}-data.cmake")
+    assert "set(dep_SYSTEM_LIBS_RELEASE MyOpenMPILib)" in data
+
+
+def test_cmake_extra_interface_libs_components():
+    """ Same as ``test_cmake_extra_interface_libs`` but the property is set on a
+    component. The extra libs must end up in the component SYSTEM_LIBS variable.
+    """
+    tc = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.components["mycomp"].set_property("cmake_extra_interface_libs",
+                                                                ["MyOpenMPILib"])
+                self.cpp_info.components["mycomp"].libs = ["mycomplib"]
+        """)
+    tc.save({"conanfile.py": dep})
+    tc.run("create .")
+    tc.run("install --requires=dep/0.1 -g CMakeDeps")
+    host_arch = tc.get_default_host_profile().settings["arch"]
+    data = tc.load(f"dep-release-{host_arch}-data.cmake")
+    # Component CMake variables are prefixed with both the package name and the component
+    # target name (``dep::mycomp`` -> ``dep_mycomp``), hence the double ``dep_dep_mycomp``.
+    assert "set(dep_dep_mycomp_SYSTEM_LIBS_RELEASE MyOpenMPILib)" in data
+
+
+def test_cmake_extra_dependencies():
+    """ The cmake_extra_dependencies property adds extra ``find_dependency()`` calls
+    emitted by the generated ``<pkg>-config.cmake``. In CMakeDeps this is achieved by
+    appending them to the ``<pkg>_FIND_DEPENDENCY_NAMES`` list (driven from the
+    ``<pkg>-<config>-<arch>-data.cmake`` file) with an empty ``_FIND_MODE`` so that the
+    template iteration emits ``find_dependency(<extra> REQUIRED)``.
+    """
+    tc = TestClient()
+    dep = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "dep"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_extra_dependencies", ["MyOpenMPI"])
+        """)
+    tc.save({"conanfile.py": dep})
+    tc.run("create .")
+    tc.run("install --requires=dep/0.1 -g CMakeDeps")
+    host_arch = tc.get_default_host_profile().settings["arch"]
+    data = tc.load(f"dep-release-{host_arch}-data.cmake")
+    # The extra dep is appended to the package FIND_DEPENDENCY_NAMES list, with no mode.
+    assert "list(APPEND dep_FIND_DEPENDENCY_NAMES MyOpenMPI)" in data
+    assert 'set(MyOpenMPI_FIND_MODE "")' in data

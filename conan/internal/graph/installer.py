@@ -119,6 +119,7 @@ class _PackageBuilder:
         conanfile = node.conanfile
         pref = node.pref
 
+        ConanOutput().step("Source step")
         base_source = recipe_layout.source()
         base_package = package_layout.package()
 
@@ -202,19 +203,29 @@ class BinaryInstaller:
             install_graph = InstallGraph(graph)
             install_order = install_graph.install_order()
 
+        def _install_build(cfile):
+            if hasattr(cfile, "build_system_requirements"):
+                cfile._conan_build_system_requirements = True  # noqa
+                try:
+                    with conanfile_exception_formatter(cfile, "build_system_requirements"):
+                        cfile.build_system_requirements()
+                finally:
+                    del cfile._conan_build_system_requirements  # noqa
+
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
                     if not only_info and package.binary == BINARY_SKIP:
                         continue
                     conanfile = package.nodes[0].conanfile
-                    # TODO: Refactor magic strings and use _SystemPackageManagerTool.mode_xxx ones
                     mode = conanfile.conf.get("tools.system.package_manager:mode")
                     if only_info and mode is None:
                         continue
                     if hasattr(conanfile, "system_requirements"):
                         with conanfile_exception_formatter(conanfile, "system_requirements"):
                             conanfile.system_requirements()
+                    if package.binary == BINARY_BUILD:
+                        _install_build(conanfile)
                     for n in package.nodes:
                         n.conanfile.system_requires = conanfile.system_requires
 
@@ -225,6 +236,7 @@ class BinaryInstaller:
         if hasattr(conanfile, "system_requirements"):
             with conanfile_exception_formatter(conanfile, "system_requirements"):
                 conanfile.system_requirements()
+        _install_build(conanfile)
 
     def install_sources(self, graph, remotes):
         install_graph = InstallGraph(graph)
@@ -427,11 +439,13 @@ class BinaryInstaller:
                     # convert directory entries to be relative to the declared folders.build
                     build_cppinfo = conanfile.cpp.build
                     build_cppinfo.set_relative_base_folder(conanfile.build_folder)
+                    build_cppinfo.set_relative_base_relative_folder(conanfile.folders.build)
                     conanfile.layouts.build.set_relative_base_folder(conanfile.build_folder)
 
                     # convert directory entries to be relative to the declared folders.source
                     source_cppinfo = conanfile.cpp.source
                     source_cppinfo.set_relative_base_folder(conanfile.source_folder)
+                    source_cppinfo.set_relative_base_relative_folder(conanfile.folders.source)
                     conanfile.layouts.source.set_relative_base_folder(conanfile.source_folder)
 
                     full_editable_cppinfo = CppInfo()

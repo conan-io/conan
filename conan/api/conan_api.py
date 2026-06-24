@@ -208,7 +208,9 @@ class ConanAPI:
         def get_loader(self):
             ws_editables = self._conan_api.workspace.packages()
             editable_packages = self._editable_packages.update_copy(ws_editables)
+            return self._get_loader(editable_packages)
 
+        def _get_loader(self, editable_packages):
             legacy_update = self.global_conf.get("core:update_policy", choices=["legacy"])
             # This proxy is caching information
             proxy = ConanProxy(self.cache, self.remote_manager, editable_packages,
