@@ -4,6 +4,7 @@ import re
 import textwrap
 
 import pytest
+import yaml
 
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp
@@ -545,6 +546,7 @@ class TestGitShallowClone:
         assert "conanfile.py (pkg/0.1): MYFILE: myheader!" in c.out
         assert c.load("source/folder/CMakeLists.txt") == "mycmake"
         assert c.load("source/folder/src/myfile.h") == "myheader!"
+
 
 class TestGitCloneWithArgs:
     """ Git cloning passing additional arguments
@@ -1313,3 +1315,99 @@ class TestGitTreelessRemote:
         client.save({"conanfile.py": self.conanfile.format(url=url)})
         client.run("export .")
         assert f"get_remote_url(): {url} ===" in client.out
+
+
+@pytest.mark.tool("git")
+class TestGitTreeCoordinates:
+
+    conanfile_tree = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.scm import Git
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def export(self):
+                Git(self, self.recipe_folder).coordinates_to_conandata(use_tree=True)
+
+            def source(self):
+                Git(self).checkout_from_conandata_coordinates()
+        """)
+
+    def test_tree_sha_stable(self):
+        """Two repos with identical source content produce the same tree SHA."""
+        folder1 = os.path.join(temp_folder(), "repo1")
+        url1, _ = create_local_git_repo(
+            files={"conanfile.py": self.conanfile_tree, "src/myfile.h": "myheader!"},
+            folder=folder1)
+        c = TestClient(light=True)
+        c.run_command(f'git clone "file://{url1}" .')
+        c.run("export .")
+        data1 = yaml.safe_load(open(os.path.join(c.exported_layout().export(),
+                                                 "conandata.yml")).read())
+        assert "commit" not in data1["scm"]
+
+        folder2 = os.path.join(temp_folder(), "repo2")
+        url2, _ = create_local_git_repo(
+            files={"conanfile.py": self.conanfile_tree, "src/myfile.h": "myheader!"},
+            folder=folder2)
+        c2 = TestClient(light=True)
+        c2.run_command(f'git clone "file://{url2}" .')
+        c2.run("export .")
+        data2 = yaml.safe_load(open(os.path.join(c2.exported_layout().export(),
+                                                 "conandata.yml")).read())
+
+        assert data1["scm"]["tree"] == data2["scm"]["tree"]
+
+    def test_full_scm_use_tree(self):
+        """Full SCM flow: export with use_tree=True, upload, source retrieval on fresh machine."""
+        folder = os.path.join(temp_folder(), "myrepo")
+        url, _ = create_local_git_repo(
+            files={"conanfile.py": self.conanfile_tree, "src/myfile.h": "myheader!"},
+            folder=folder)
+        c = TestClient(default_server_user=True, light=True)
+        c.run_command(f'git clone "file://{url}" .')
+        c.run("create .")
+        c.run("upload * -c -r=default")
+
+        c2 = TestClient(servers=c.servers)
+        c2.run("install --requires=pkg/0.1@ --build=pkg*")
+        c2.run("cache path pkg/0.1 --folder=source")
+        source_folder = str(c2.out).strip()
+        assert open(os.path.join(source_folder, "src/myfile.h")).read() == "myheader!"
+
+    def test_full_scm_use_tree_squash_merge(self):
+        """After a squash merge, source retrieval finds the squash commit via matching tree SHA."""
+        url = git_create_bare_repo()
+        c = TestClient(default_server_user=True, light=True)
+        c.run_command(f'git clone "file://{url}" .')
+        c.save({"conanfile.py": self.conanfile_tree, "src/myfile.h": "myheader!"})
+        c.run_command("git checkout -b feature")
+        git_add_changes_commit(folder=c.current_folder)
+        c.run_command("git push --set-upstream origin feature")
+        c.run("create .")
+        c.run("upload * -c -r=default")
+
+        # Squash merge onto master — same files, new commit SHA; feature branch deleted
+        c.run_command("git checkout -b master")
+        c.run_command("git merge --squash feature")
+        git_add_changes_commit(folder=c.current_folder, msg="squash merge feature")
+        c.run_command("git push --set-upstream origin master")
+        c.run_command("git push origin --delete feature")
+
+        c2 = TestClient(servers=c.servers, light=True)
+        c2.run("install --requires=pkg/0.1@ --build=pkg*")
+        c2.run("cache path pkg/0.1 --folder=source")
+        source_folder = str(c2.out).strip()
+        assert open(os.path.join(source_folder, "src/myfile.h")).read() == "myheader!"
+
+    def test_dirty_repo_use_tree(self):
+        """Dirty repo raises an exception when capturing tree coordinates."""
+        c = TestClient(light=True)
+        c.save({"conanfile.py": self.conanfile_tree})
+        c.init_git_repo()
+        # Add an uncommitted file to make the repo dirty
+        c.save({"dirty_file.txt": "uncommitted"})
+        c.run("export .", assert_error=True)
+        assert "Repo is dirty, cannot capture tree" in c.out
