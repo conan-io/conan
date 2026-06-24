@@ -120,20 +120,21 @@ class CMakeConfigDeps:
                 direct_deps.append((require, dep))
             full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
             base_filename = self.get_cmake_filename(dep)
-            cmake_config_properties = self._get_cmake_config_properties(dep, full_cpp_info,
-                                                                        is_build_context=require.build)
-            config_version = ConfigVersionTemplate2(base_filename, dep.ref, cmake_config_properties)
+            config_version = ConfigVersionTemplate2(
+                base_filename, dep.ref, self._get_config_version_properties(dep))
             ret[config_version.filename] = config_version.content()
-            config = ConfigTemplate2(base_filename, dep.ref, self._conanfile,
-                                     full_cpp_info, cmake_config_properties,
-                                     is_build_context=require.build)
+            config = ConfigTemplate2(
+                base_filename, dep.ref, self._conanfile, full_cpp_info,
+                self._get_config_properties(dep, full_cpp_info, require.build),
+                is_build_context=require.build)
             ret[config.filename] = config.content()
             targets = TargetsTemplate2(base_filename, dep.ref)
             ret[targets.filename] = targets.content()
+            cmake_properties, dependencies, transitive_reqs = self._get_target_configuration_properties(
+                dep, full_cpp_info)
             target_configuration = TargetConfigurationTemplate2(
                 base_filename, dep, self._conanfile, full_cpp_info,
-                require.build, require.headers,
-                self._get_target_configuration_properties(dep, full_cpp_info))
+                require.build, require.headers, cmake_properties, dependencies, transitive_reqs)
             ret[target_configuration.filename] = target_configuration.content()
 
         self._print_help(direct_deps)
@@ -202,7 +203,13 @@ class CMakeConfigDeps:
         ret = self.get_property("cmake_file_name", dep)
         return ret or dep.ref.name
 
-    def _get_cmake_config_properties(self, dep, full_cpp_info=None, is_build_context=False):
+    def _get_config_version_properties(self, dep):
+        return {
+            "cmake_config_version_compat": self.get_property("cmake_config_version_compat", dep),
+            "system_package_version": self.get_property("system_package_version", dep),
+        }
+
+    def _get_config_properties(self, dep, full_cpp_info, is_build_context):
         conf_extra_variables = dep.conf.get("tools.cmake.cmaketoolchain:extra_variables", default={},
                                             check_type=dict)
         dep_extra_variables = self.get_property("cmake_extra_variables", dep, check_type=dict) or {}
@@ -211,50 +218,40 @@ class CMakeConfigDeps:
                                  dep not in conf_extra_variables}
         cmake_components = self.get_property("cmake_components", dep, check_type=list)
         if cmake_components is None:
-            cmake_components = self._get_default_cmake_components(dep)
+            cmake_components = []
+            # This assumes that cmake_components is only defined with not multi .libs=[lib1, lib2]
+            for name in dep.cpp_info.components:
+                if name.startswith("_"):  # Skip private components
+                    continue
+                comp_components = self.get_property("cmake_components", dep, name, check_type=list)
+                if comp_components:
+                    cmake_components.extend(comp_components)
+                else:
+                    cmakename = self.get_property("cmake_target_name", dep, name)
+                    if cmakename and "::" in cmakename:  # Remove package namespace
+                        cmakename = cmakename.split("::", 1)[1]
+                    cmake_components.append(cmakename or name)
         result = {
-            "cmake_config_version_compat": self.get_property("cmake_config_version_compat", dep),
-            "system_package_version": self.get_property("system_package_version", dep),
             "cmake_build_modules": self.get_property("cmake_build_modules", dep,
                                                      check_type=list) or [],
             "cmake_extra_variables": cmake_extra_variables,
             "cmake_additional_variables_prefixes": self.get_property(
                 "cmake_additional_variables_prefixes", dep, check_type=list) or [],
             "cmake_components": cmake_components,
-            "cmake_extra_dependencies": self.get_property("cmake_extra_dependencies", dep,
-                                                          check_type=list) or []
         }
-        if full_cpp_info is not None and not is_build_context:
-            result["cmake_legacy_libraries"] = self._get_legacy_libraries(dep, full_cpp_info)
-        return result
-
-    def _get_default_cmake_components(self, dep):
-        components = []
-        # This assumes that cmake_components is only defined with not multi .libs=[lib1, lib2]
-        for name in dep.cpp_info.components:
-            if name.startswith("_"):  # Skip private components
-                continue
-            comp_components = self.get_property("cmake_components", dep, name, check_type=list)
-            if comp_components:
-                components.extend(comp_components)
+        if not is_build_context:
+            pkg_name = dep.ref.name
+            libraries = []
+            if full_cpp_info.has_components:
+                for component in full_cpp_info.components.keys():
+                    root_target_name = self.get_property("cmake_target_name", dep,
+                                                           comp_name=component)
+                    libraries.append(root_target_name or f"{pkg_name}::{component}")
             else:
-                cmakename = self.get_property("cmake_target_name", dep, name)
-                if cmakename and "::" in cmakename:  # Remove package namespace
-                    cmakename = cmakename.split("::", 1)[1]
-                components.append(cmakename or name)
-        return components
-
-    def _get_legacy_libraries(self, dep, full_cpp_info):
-        pkg_name = dep.ref.name
-        libraries = []
-        if full_cpp_info.has_components:
-            for component in full_cpp_info.components.keys():
-                root_target_name = self.get_property("cmake_target_name", dep, comp_name=component)
-                libraries.append(root_target_name or f"{pkg_name}::{component}")
-        else:
-            root_target_name = self.get_property("cmake_target_name", dep)
-            libraries.append(root_target_name or f"{pkg_name}::{pkg_name}")
-        return " ".join(libraries) if libraries else ""
+                root_target_name = self.get_property("cmake_target_name", dep)
+                libraries.append(root_target_name or f"{pkg_name}::{pkg_name}")
+            result["cmake_legacy_libraries"] = " ".join(libraries) if libraries else ""
+        return result
 
     def _get_target_configuration_properties(self, dep, full_cpp_info):
         transitive_reqs = self.get_transitive_requires(dep)
@@ -285,9 +282,7 @@ class CMakeConfigDeps:
         dependencies = {self.get_cmake_filename(r): "CONFIG" for r in transitive_reqs.values()}
         extra_mods = self.get_property("cmake_extra_dependencies", dep, check_type=list) or []
         dependencies.update({extra_mod: "" for extra_mod in extra_mods})
-        return {"cmake_properties": cmake_properties,
-                "dependencies": dependencies,
-                "transitive_reqs": transitive_reqs}
+        return cmake_properties, dependencies, transitive_reqs
 
     def _get_find_mode(self, dep):
         tmp = self.get_property("cmake_find_mode", dep)

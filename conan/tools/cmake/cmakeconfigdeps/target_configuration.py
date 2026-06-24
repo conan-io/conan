@@ -15,21 +15,24 @@ class TargetConfigurationTemplate2:
     FooTarget-release.cmake
     """
     def __init__(self, filename, conanfile, consumer_conanfile, full_cpp_info,
-                 is_build_context, require_headers, target_properties):
+                 is_build_context, require_headers, cmake_properties, dependencies,
+                 transitive_reqs):
         self._filename = filename
         self._conanfile = conanfile  # The dependency conanfile, not the consumer one
         self._consumer_conanfile = consumer_conanfile
         self._full_cpp_info = full_cpp_info
         self._is_build_context = is_build_context
         self._require_headers = require_headers
-        self._target_properties = target_properties
+        self._cmake_properties = cmake_properties
+        self._dependencies = dependencies
+        self._transitive_reqs = transitive_reqs
 
     def _get_build_type(self):
         return self._conanfile.settings.get_safe(
             "build_type", str(self._consumer_conanfile.settings.build_type))
 
     def _cmake_prop(self, dep_name, prop, comp_name=None):
-        return self._target_properties["cmake_properties"][(dep_name, comp_name)][prop]
+        return self._cmake_properties[(dep_name, comp_name)][prop]
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
@@ -48,7 +51,7 @@ class TargetConfigurationTemplate2:
         pkg_name = self._conanfile.ref.name
         pkg_type = info.type
         assert isinstance(pkg_type, PackageType), f"Pkg type {pkg_type} {type(pkg_type)}"
-        transitive_reqs = self._target_properties["transitive_reqs"]
+        transitive_reqs = self._transitive_reqs
 
         if not requires and not components:  # global cpp_info without components definition
             # require the pkgname::pkgname base (user defined) or INTERFACE base target
@@ -158,7 +161,7 @@ class TargetConfigurationTemplate2:
 
         pkg_folder = relativize_path(pkg_folder, self._consumer_conanfile,
                                      "${CMAKE_CURRENT_LIST_DIR}")
-        dependencies = self._target_properties["dependencies"]
+        dependencies = self._dependencies
         return {"dependencies": dependencies,
                 "pkg_folder": pkg_folder,
                 "pkg_folder_var": pkg_folder_var,
