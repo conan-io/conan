@@ -439,7 +439,7 @@ def test_autotoolstoolchain_asflags_sysroot():
     """Test that sysroot and arch flags are propagated to ASFLAGS."""
     profile = textwrap.dedent("""
         [settings]
-        os=Linux
+        os=Macos
         arch=armv8
         compiler=gcc
         compiler.version=11
