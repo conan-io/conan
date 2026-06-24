@@ -126,11 +126,11 @@ def _calc_revision(scoped_output, path, manifest, revision_mode, conanfile):
                         "'{}'".format(revision_mode, path)
             raise ConanException("{}: {}".format(error_msg, exc))
 
-        if git.is_dirty(repository=repository):
-            raise ConanException("Can't have a dirty repository using revision_mode='scm'/'scm_folder' and doing"
-                                 " 'conan export', please commit the changes and run again, or "
-                                 "use 'revision_mode_excluded' recipe attribute or "
-                                 "'core.scm:excluded' global configuration to define the list of "
+        if git.is_dirty(repository):
+            raise ConanException("Can't have a dirty repository using revision_mode='scm'/"
+                                 "'scm_folder' and doing 'conan export', please commit the changes "
+                                 "and run again, or use 'revision_mode_excluded' recipe attribute "
+                                 "or 'core.scm:excluded' global configuration to define the list of "
                                  "excluded file patterns")
 
         scoped_output.info("Using git commit as the recipe revision: %s" % revision)
