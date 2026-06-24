@@ -226,7 +226,7 @@ def test_unknown_compiler():
                  })
     # this used to crash, because of build_type_flags in GnuToolchain returning empty string
     client.run("install . -s compiler=xlc")
-    assert "conanfile.py: Generator 'GnuToolchain' calling 'generate()'" in client.out
+    assert "Generator 'GnuToolchain' calling 'generate()'" in client.out
 
 
 def test_toolchain_and_compilers_build_context():

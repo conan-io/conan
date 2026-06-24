@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from conan.tools.build.flags import architecture_flag, cppstd_flag
 from conan.tools.intel import IntelCC
+from conan.tools.intel.intel_cc import intel_cc_compilers
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
 from conan.test.utils.mocks import ConanFileMock, MockSettings
@@ -162,3 +163,22 @@ def test_setvars_command_with_custom_arguments(platform_system, os_, call_comman
     """ % (fake_path, args)))
     expected = '%s "%s" %s' % (call_command, os.path.join(fake_path, setvars_file), args)
     assert IntelCC(conanfile).command == expected
+
+
+@pytest.mark.parametrize("mode,expected_c,expected_cpp", [
+    ("icx", "icx", "icpx"),
+    ("classic", "icc", "icpc"),
+    ("dpcpp", "icx", "dpcpp"),
+])
+def test_intel_cc_compilers(mode, expected_c, expected_cpp):
+    settings = MockSettings({"compiler": "intel-cc", "compiler.mode": mode})
+    conanfile = ConanFileMock(settings)
+    result = intel_cc_compilers(conanfile)
+    assert result["c"] == expected_c
+    assert result["cpp"] == expected_cpp
+
+
+def test_intel_cc_compilers_not_intel():
+    settings = MockSettings({"compiler": "gcc"})
+    conanfile = ConanFileMock(settings)
+    assert intel_cc_compilers(conanfile) is None

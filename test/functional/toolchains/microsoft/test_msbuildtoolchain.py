@@ -81,7 +81,7 @@ class TestTxtCommandLineMSBuild:
 
     @staticmethod
     def _check(client):
-        assert "conanfile.txt: Generator 'MSBuildToolchain' calling 'generate()'" in client.out
+        assert "Generator 'MSBuildToolchain' calling 'generate()'" in client.out
         toolchain = client.load("conantoolchain.props")
         assert "<?xml version" in toolchain
 

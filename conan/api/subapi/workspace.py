@@ -283,9 +283,20 @@ class WorkspaceAPI:
 
     def info(self):
         self._check_ws()
+        editable_packages = self._conan_api._api_helpers.editable_packages.update_copy({})  # noqa
+        self._ws._editable_packages = editable_packages
+        packages_list = []
+        for editable_info in self._ws.packages():
+            packages_list.append(editable_info)
+            ref_str = editable_info.get("ref")
+            if ref_str:
+                path = os.path.join(self._folder, editable_info["path"], "conanfile.py")
+                path = os.path.normpath(path)
+                reference = RecipeReference.loads(ref_str)
+                editable_packages._edited_refs[reference] = {"path": path}  # noqa
         return {"name": self._ws.name(),
                 "folder": self._folder,
-                "packages": self._ws.packages()}
+                "packages": packages_list}
 
     @staticmethod
     def _init_options(conanfile, options):

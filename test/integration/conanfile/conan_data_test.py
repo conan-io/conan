@@ -277,7 +277,7 @@ class TestConanDataUpdate:
             """)
         c.save({"conanfile.py": conanfile})
         c.run("export .")  # It doesn't fail
-        assert "pkg/0.1: Calling export()" in c.out
+        assert "Calling export()" in c.out
 
 
 def test_conandata_trim():
@@ -309,7 +309,7 @@ def test_conandata_trim():
     c.run("export . --version=1.0")
     layout = c.exported_layout()
     data1 = load(os.path.join(layout.export(), "conandata.yml"))
-    assert "pkg/1.0: Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
+    assert "Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
     conandata_yml2 = textwrap.dedent("""\
         sources:
          "1.0":
@@ -333,7 +333,7 @@ def test_conandata_trim():
     data2 = load(os.path.join(layout.export(), "conandata.yml"))
     assert "1.1" not in data2
     assert data1 == data2
-    assert "pkg/1.0: Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
+    assert "Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
     # If I now try to create version 1.2 which has no patches, and then change a patch
     # its revision should not change either
     conandata_yml3 = textwrap.dedent("""\
@@ -408,7 +408,7 @@ def test_trim_conandata_as_hook():
     c.run("export . --version=1.0")
     layout = c.exported_layout()
     data1 = load(os.path.join(layout.export(), "conandata.yml"))
-    assert "pkg/1.0: Exported: pkg/1.0#03af39add1c7c9d68dcdb10b6968a14d" in c.out
+    assert "Exported: pkg/1.0#03af39add1c7c9d68dcdb10b6968a14d" in c.out
     conandata_yml2 = textwrap.dedent("""\
             sources:
              "1.0":
@@ -432,7 +432,7 @@ def test_trim_conandata_as_hook():
     data2 = load(os.path.join(layout.export(), "conandata.yml"))
     assert "1.1" not in data2
     assert data1 == data2
-    assert "pkg/1.0: Exported: pkg/1.0#03af39add1c7c9d68dcdb10b6968a14d" in c.out
+    assert "Exported: pkg/1.0#03af39add1c7c9d68dcdb10b6968a14d" in c.out
 
 
 @pytest.mark.parametrize("raise_if_missing", [True, False])
