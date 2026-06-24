@@ -240,7 +240,8 @@ class AutotoolsToolchain:
 
     @property
     def asflags(self):
-        ret = [self.arch_flag, self.sysroot_flag, self.apple_isysroot_flag, self.apple_arch_flag]
+        ret = [self.arch_flag, self.sysroot_flag, self.apple_isysroot_flag, self.apple_arch_flag,
+               self.apple_min_version_flag]
         return self._filter_list_empty_fields(ret)
 
     @property
