@@ -57,12 +57,12 @@ default_msvc_version = msvc_version
 default_vs_ide_version = default_msvc_ide_version(msvc_version)
 
 default_profiles = {
-    "Windows": textwrap.dedent("""\
+    "Windows": textwrap.dedent(f"""\
         [settings]
         os=Windows
         arch=x86_64
         compiler=msvc
-        compiler.version=191
+        compiler.version={msvc_version}
         compiler.runtime=dynamic
         build_type=Release
         """),

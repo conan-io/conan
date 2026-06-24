@@ -1019,7 +1019,8 @@ def test_presets_ninja_msvc(arch, arch_toolset):
     client.save({"conanfile.py": conanfile, "CMakeLists.txt": "foo"})
     configs = ["-c tools.cmake.cmaketoolchain:toolset_arch={}".format(arch_toolset),
                "-c tools.cmake.cmake_layout:build_folder_vars='[\"settings.compiler.cppstd\"]'",
-               "-c tools.cmake.cmaketoolchain:generator=Ninja"]
+               "-c tools.cmake.cmaketoolchain:generator=Ninja"
+               '-c tools.microsoft.msbuild:installation_path=""']
     msvc = " -s compiler=msvc -s compiler.version=191 -s compiler.runtime=static " \
            "-s compiler.runtime_type=Release"
     client.run("install . {} -s compiler.cppstd=14 {} -s arch={}".format(" ".join(configs), msvc, arch))
