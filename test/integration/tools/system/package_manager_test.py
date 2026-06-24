@@ -555,3 +555,116 @@ def test_tools_apt_check_install_to_build_machine_arch_with_version(tool_class, 
         tool.check(["package=0.1"], host_package=False)
 
     assert tool._conanfile.command == result
+
+
+@pytest.mark.parametrize("package, check_cmd", [
+    ("libc6:i386", r"dpkg-query -W -f='${Architecture}\n' libc6 | grep -qEx '(i386|all)'"),
+    ("libc6:i386=2.39-0ubuntu8.7",
+     r"dpkg-query -W -f='${Architecture} ${Version}\n' libc6 | grep -qEx '(i386|all) 2.39-0ubuntu8.7'"),
+])
+def test_tools_apt_explicit_arch_suffix(package, check_cmd):
+    # https://github.com/conan-io/conan/issues/20012
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"arch": "x86_64"})
+    conanfile.settings_build = MockSettings({"arch": "x86_64"})
+    conanfile.conf.define("tools.system.package_manager:tool", Apt.tool_name)
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = Apt(conanfile)
+        tool.check([package], host_package=False)
+    assert tool._conanfile.command == check_cmd
+
+    conanfile.conf.define("tools.system.package_manager:mode", "install")
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=[])):
+            tool = Apt(conanfile)
+            tool.install([package], host_package=False)
+    assert "apt-get install" not in (tool._conanfile.command or "")
+
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=[package])):
+            tool = Apt(conanfile)
+            tool.install([package], host_package=False)
+    install_name = tool.get_package_name(package, host_package=False)
+    assert tool._conanfile.command == (
+        f"apt-get install -y --no-install-recommends {install_name}")
+
+
+def test_tools_yum_explicit_arch_suffix():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"arch": "x86_64"})
+    conanfile.settings_build = MockSettings({"arch": "x86_64"})
+    conanfile.conf.define("tools.system.package_manager:tool", Yum.tool_name)
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = Yum(conanfile)
+        tool.check(["glibc.i?86"], host_package=False)
+    assert tool._conanfile.command == "rpm -q glibc.i?86"
+
+    tool.check(["libfoo.bar"], host_package=False)
+    assert tool._conanfile.command == "rpm -q libfoo.bar"
+
+    conanfile.conf.define("tools.system.package_manager:mode", "install")
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=["glibc.i?86"])):
+            tool = Yum(conanfile)
+            tool.install(["glibc.i?86"], host_package=False)
+    assert tool._conanfile.command == "yum install -y glibc.i?86"
+
+    tool.check(["glibc.i686"], host_package=False)
+    assert tool._conanfile.command == "rpm -q glibc.i686"
+
+    tool.check(["glibc.i?86=1.2"], host_package=False)
+    assert tool._conanfile.command == "rpm -q glibc.i?86-1.2"
+
+
+def test_tools_apt_explicit_arch_suffix_invalid():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"arch": "x86_64"})
+    conanfile.conf.define("tools.system.package_manager:tool", Apt.tool_name)
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = Apt(conanfile)
+        tool.check(["libc6:foo"], host_package=False)
+    assert (tool._conanfile.command ==
+            r"dpkg-query -W -f='${Architecture}\n' libc6 | grep -qEx '(foo|all)'")
+
+
+def test_tools_apt_explicit_arch_suffix_cross_build():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"arch": "x86"})
+    conanfile.settings_build = MockSettings({"arch": "x86_64"})
+    conanfile.conf.define("tools.system.package_manager:tool", Apt.tool_name)
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = Apt(conanfile)
+        tool.check(["libc6:arm64"], host_package=True)
+    assert (tool._conanfile.command ==
+            r"dpkg-query -W -f='${Architecture}\n' libc6 | grep -qEx '(arm64|all)'")
+
+    conanfile.conf.define("tools.system.package_manager:mode", "install")
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=["libc6:arm64"])):
+            tool = Apt(conanfile)
+            tool.install(["libc6:arm64"], host_package=True)
+    assert tool._conanfile.command == "apt-get install -y --no-install-recommends libc6:arm64"
+
+
+def test_tools_apt_explicit_arch_suffix_multiple_packages():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"arch": "x86_64"})
+    conanfile.settings_build = MockSettings({"arch": "x86_64"})
+    conanfile.conf.define("tools.system.package_manager:tool", Apt.tool_name)
+    conanfile.conf.define("tools.system.package_manager:mode", "install")
+    with mock.patch('conan.ConanFile.context', new_callable=PropertyMock) as context_mock:
+        context_mock.return_value = "host"
+        tool = Apt(conanfile)
+        packages = ["libc6:i386", "libstdc++6:i386"]
+        with patch.object(_SystemPackageManagerTool, 'check', MagicMock(return_value=packages)):
+            tool.install(packages, host_package=False)
+    assert (tool._conanfile.command ==
+            "apt-get install -y --no-install-recommends libc6:i386 libstdc++6:i386")
