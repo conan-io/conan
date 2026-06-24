@@ -17,7 +17,7 @@ from conan.internal.model.options import Options, _PackageOptions
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
 from conan.internal.model.requires import Requirement
-from conan.internal.model.version_range import VersionRange
+from conan.internal.model.version_range import VersionRange, required_conan_version_policy
 
 
 class DepsGraphBuilder:
@@ -220,7 +220,9 @@ class DepsGraphBuilder:
         result = []
         skip_build = node.conanfile.conf.get("tools.graph:skip_build", check_type=bool)
         skip_test = node.conanfile.conf.get("tools.graph:skip_test", check_type=bool)
+        consistent_policy_new = required_conan_version_policy(node.conanfile, "2.27.9")
         for require in node.conanfile.requires.values():
+            require.consistent_policy_new = consistent_policy_new
             if not require.visible and not require.package_id_mode:
                 if skip_build and require.build:
                     node.skipped_build_requires = True
@@ -323,6 +325,9 @@ class DepsGraphBuilder:
                             return layout, ConanFile(str(d)), RECIPE_PLATFORM, None
 
     def _resolve_replace_requires(self, node, require, profile_build, profile_host, graph):
+        if node.recipe == RECIPE_VIRTUAL:
+            return  # CLI-specified requires have higher priority, do not replace them
+
         profile = profile_build if node.context == CONTEXT_BUILD else profile_host
         replacements = profile.replace_tool_requires if require.build else profile.replace_requires
         if not replacements:
@@ -464,6 +469,9 @@ class DepsGraphBuilder:
                 down_options = node.conanfile.private_up_options
             else:
                 down_options = Options(options_values=node.conanfile.default_build_options)
+
+        # down_options is the real propagated one, so update consumer self_options for state
+        node.conanfile.self_options.update(down_options)
         return down_options
 
     @staticmethod

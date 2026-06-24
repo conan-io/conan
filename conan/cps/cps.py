@@ -82,6 +82,7 @@ class CPSComponent:
     def from_cpp_info(cpp_info, conanfile, libname=None):
         cps_langs_mapping = {"C": "c", "C++": "cpp"}
         comp_langs = cpp_info.languages or conanfile.languages or []
+
         def definitions_from_conan(defines):
             result = {}
             for define in defines:

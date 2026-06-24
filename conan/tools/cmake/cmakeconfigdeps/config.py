@@ -11,11 +11,14 @@ class ConfigTemplate2:
     FooConfig.cmake
     foo-config.cmake
     """
-    def __init__(self, cmakedeps, require, conanfile, full_cpp_info):
-        self._cmakedeps = cmakedeps
-        self._require = require
-        self._conanfile = conanfile
+    def __init__(self, filename, reference, consumer_conanfile, full_cpp_info,
+                 cmake_config_properties, is_build_context=False):
+        self._filename = filename
+        self._reference = reference
+        self._consumer_conanfile = consumer_conanfile
         self._full_cpp_info = full_cpp_info
+        self._cmake_config_properties = cmake_config_properties
+        self._is_build_context = is_build_context
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
@@ -24,57 +27,32 @@ class ConfigTemplate2:
 
     @property
     def filename(self):
-        f = self._cmakedeps.get_cmake_filename(self._conanfile)
+        f = self._filename
         return f"{f}-config.cmake" if f == f.lower() else f"{f}Config.cmake"
 
     @property
     def _context(self):
-        f = self._cmakedeps.get_cmake_filename(self._conanfile)
+        f = self._filename
         targets_include = f"{f}Targets.cmake"
-        pkg_name = self._conanfile.ref.name
-        build_modules_paths = self._cmakedeps.get_property("cmake_build_modules", self._conanfile,
-                                                           check_type=list) or []
+        build_modules_paths = self._cmake_config_properties.get("cmake_build_modules", [])
         # FIXME: Proper escaping of paths for CMake and relativization
         # FIXME: build_module_paths coming from last config only
         build_modules_paths = [f.replace("\\", "/") for f in build_modules_paths]
-        build_modules_paths = [relativize_path(p, self._cmakedeps._conanfile,
+        build_modules_paths = [relativize_path(p, self._consumer_conanfile,
                                                "${CMAKE_CURRENT_LIST_DIR}")
                                for p in build_modules_paths]
-        components = self._cmakedeps.get_property("cmake_components", self._conanfile,
-                                                  check_type=list)
-        if components is None:  # Lets compute the default components names
-            components = []
-            # This assumes that cmake_components is only defined with not multi .libs=[lib1, lib2]
-            for name in self._conanfile.cpp_info.components:
-                if name.startswith("_"):  # Skip private components
-                    continue
-                comp_components = self._cmakedeps.get_property("cmake_components", self._conanfile,
-                                                               name, check_type=list)
-                if comp_components:
-                    components.extend(comp_components)
-                else:
-                    cmakename = self._cmakedeps.get_property("cmake_target_name", self._conanfile,
-                                                             name)
-                    if cmakename and "::" in cmakename:  # Remove package namespace
-                        cmakename = cmakename.split("::", 1)[1]
-                    components.append(cmakename or name)
+        components = self._cmake_config_properties.get("cmake_components", [])
         components = " ".join(components) if components else ""
 
         result = {"filename": f,
                   "components": components,
-                  "pkg_name": pkg_name,
+                  "pkg_name": self._reference.name,
                   "targets_include_file": targets_include,
                   "build_modules_paths": build_modules_paths}
 
-        conf_extra_variables = self._conanfile.conf.get("tools.cmake.cmaketoolchain:extra_variables",
-                                                        default={}, check_type=dict)
-        dep_extra_variables = self._cmakedeps.get_property("cmake_extra_variables", self._conanfile,
-                                                           check_type=dict) or {}
-        # The configuration variables have precedence over the dependency ones
-        extra_variables = {dep: value for dep, value in dep_extra_variables.items()
-                           if dep not in conf_extra_variables}
+        dep_extra_variables = self._cmake_config_properties.get("cmake_extra_variables", {})
         parsed_extra_variables = {}
-        for key, value in extra_variables.items():
+        for key, value in dep_extra_variables.items():
             parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",
                                                                key, value)
         result["extra_variables"] = parsed_extra_variables
@@ -84,35 +62,21 @@ class ConfigTemplate2:
 
     def _get_legacy_vars(self):
         # Auxiliary variables for legacy consumption and try_compile cases
-        pkg_name = self._conanfile.ref.name
-        prefixes = self._cmakedeps.get_property("cmake_additional_variables_prefixes",
-                                                self._conanfile, check_type=list) or []
-
-        f = self._cmakedeps.get_cmake_filename(self._conanfile)
+        prefixes = self._cmake_config_properties.get("cmake_additional_variables_prefixes", [])
+        f = self._filename
         prefixes = [f] + prefixes
         include_dirs = definitions = libraries = None
-        if not self._require.build:  # To add global variables for try_compile and legacy
+        if not self._is_build_context:  # To add global variables for try_compile and legacy
             aggregated_cppinfo = self._full_cpp_info.aggregated_components()
             # FIXME: Proper escaping of paths for CMake
-            incdirs = [i.replace("\\", "/") for i in aggregated_cppinfo.includedirs]
-            incdirs = [relativize_path(i, self._cmakedeps._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
-                       for i in incdirs]
+            incdirs = [relativize_path(i.replace("\\", "/"), self._consumer_conanfile,
+                                       "${CMAKE_CURRENT_LIST_DIR}")
+                       for i in aggregated_cppinfo.includedirs]
             include_dirs = ";".join(incdirs)
             definitions = ";".join("-D" + cmake_escape_value(d) for d in aggregated_cppinfo.defines)
-
-            libraries = []
-            if self._full_cpp_info.has_components:
-                for component in self._full_cpp_info.components.keys():
-                    root_target_name = self._cmakedeps.get_property("cmake_target_name",
-                                                                    self._conanfile,
-                                                                    comp_name=component)
-                    libraries.append(root_target_name or f"{pkg_name}::{component}")
-            else:
-                root_target_name = self._cmakedeps.get_property("cmake_target_name", self._conanfile)
-                libraries.append(root_target_name or f"{pkg_name}::{pkg_name}")
-            libraries = " ".join(libraries) if libraries else ""
+            libraries = self._cmake_config_properties.get("cmake_legacy_libraries", "")
         return {"additional_variables_prefixes": prefixes,
-                "version": self._conanfile.ref.version,
+                "version": self._reference.version,
                 "include_dirs": include_dirs,
                 "definitions": definitions,
                 "libraries": libraries}

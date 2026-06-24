@@ -6,7 +6,9 @@ import pytest
 import yaml
 
 from conan.api.model import RecipeReference
+from conan.api.subapi.config import ConfigAPI
 from conan.internal.cache.home_paths import HomePaths
+from conan.internal.model.conanconfig import loadconanconfig_yml
 from conan.internal.util.files import load
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
@@ -517,3 +519,150 @@ class TestConfigInstallPkgOptions:
         assert "Copying file global.conf" in c.out
         c.run("config show *")
         assert "user.myteam:myconf: my2value" in c.out
+
+
+class TestConanConfigYmlInsecureParsing:
+    """Unit tests for per-URL insecure parsing in conanconfig.yml"""
+
+    def test_url_string_form_defaults_secure(self, tmp_path):
+        yml = textwrap.dedent("""\
+            packages:
+              - myconf/0.1
+            urls:
+              - https://some.server.com
+            """)
+        (tmp_path / "conanconfig.yml").write_text(yml)
+        _, urls = loadconanconfig_yml(str(tmp_path / "conanconfig.yml"))
+        assert urls == [("https://some.server.com", True)]
+
+    def test_url_dict_form_no_verify_ssl_defaults_secure(self, tmp_path):
+        yml = textwrap.dedent("""\
+            packages:
+              - myconf/0.1
+            urls:
+              - url: https://some.server.com
+            """)
+        (tmp_path / "conanconfig.yml").write_text(yml)
+        _, urls = loadconanconfig_yml(str(tmp_path / "conanconfig.yml"))
+        assert urls == [("https://some.server.com", True)]
+
+    def test_url_dict_form_verify_ssl_false(self, tmp_path):
+        yml = textwrap.dedent("""\
+            packages:
+              - myconf/0.1
+            urls:
+              - url: https://some.server.com
+                verify_ssl: false
+            """)
+        (tmp_path / "conanconfig.yml").write_text(yml)
+        _, urls = loadconanconfig_yml(str(tmp_path / "conanconfig.yml"))
+        assert urls == [("https://some.server.com", False)]
+
+    def test_url_dict_form_verify_ssl_true_explicit(self, tmp_path):
+        yml = textwrap.dedent("""\
+            packages:
+              - myconf/0.1
+            urls:
+              - url: https://some.server.com
+                verify_ssl: true
+            """)
+        (tmp_path / "conanconfig.yml").write_text(yml)
+        _, urls = loadconanconfig_yml(str(tmp_path / "conanconfig.yml"))
+        assert urls == [("https://some.server.com", True)]
+
+    def test_url_mixed_forms(self, tmp_path):
+        yml = textwrap.dedent("""\
+            packages:
+              - myconf/0.1
+            urls:
+              - https://secure.server.com
+              - url: https://insecure.server.com
+                verify_ssl: false
+            """)
+        (tmp_path / "conanconfig.yml").write_text(yml)
+        _, urls = loadconanconfig_yml(str(tmp_path / "conanconfig.yml"))
+        assert urls == [("https://secure.server.com", True),
+                        ("https://insecure.server.com", False)]
+
+    def test_no_urls_section(self, tmp_path):
+        yml = textwrap.dedent("""\
+            packages:
+              - myconf/0.1
+            """)
+        (tmp_path / "conanconfig.yml").write_text(yml)
+        _, urls = loadconanconfig_yml(str(tmp_path / "conanconfig.yml"))
+        assert urls is None
+
+    def test_load_conanconfig_remotes_verify_ssl(self, tmp_path):
+        yml = textwrap.dedent("""\
+            packages:
+              - myconf/0.1
+            urls:
+              - https://secure.com
+              - url: https://insecure.com
+                verify_ssl: false
+            """)
+        (tmp_path / "conanconfig.yml").write_text(yml)
+        _, remotes = ConfigAPI.load_conanconfig(str(tmp_path / "conanconfig.yml"), remotes=None)
+        assert len(remotes) == 2
+        assert remotes[0].url == "https://secure.com"
+        assert remotes[0].verify_ssl is True
+        assert remotes[1].url == "https://insecure.com"
+        assert remotes[1].verify_ssl is False
+
+
+class TestConfigInstallPkgInsecure:
+    """Integration tests for --insecure and per-URL insecure in conanconfig.yml"""
+
+    def test_with_url_insecure(self, servers):
+        c = TestClient(servers=servers, light=True)
+        url = servers["default"].fake_url
+        c.run("remote remove default")
+        c.run(f"config install-pkg myconf_a/0.1 --url={url} --insecure")
+        assert "Installing new or updating configuration packages" in c.out
+        _check_conf(c, "myconf_a/0.1")
+        _check_conf_file(c, ["myconf_a/0.1"])
+
+    def test_with_url_insecure_error(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("remote remove default")
+        server_url = servers["default"].fake_url
+        conanconfig = yaml.dump({"packages": ["myconf_a/0.1"],
+                                 "urls": [{"url": server_url}]})
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg . --insecure", assert_error=True)
+        assert "'--insecure' argument requires '--url' argument" in c.out
+
+    def test_install_from_file_with_url_dict_form(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("remote remove default")
+        server_url = servers["default"].fake_url
+        conanconfig = yaml.dump({"packages": ["myconf_a/0.1"],
+                                 "urls": [{"url": server_url}]})
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg .")
+        _check_conf(c, "myconf_a/0.1")
+        _check_conf_file(c, ["myconf_a/0.1"])
+
+    def test_install_from_file_with_url_dict_verify_ssl_false(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("remote remove default")
+        server_url = servers["default"].fake_url
+        conanconfig = yaml.dump({"packages": ["myconf_a/0.1"],
+                                 "urls": [{"url": server_url, "verify_ssl": False}]})
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg .")
+        _check_conf(c, "myconf_a/0.1")
+        _check_conf_file(c, ["myconf_a/0.1"])
+
+    def test_install_from_file_mixed_url_forms(self, servers):
+        c = TestClient(servers=servers, light=True)
+        c.run("remote remove default")
+        server_url = servers["default"].fake_url
+        conanconfig = yaml.dump({"packages": ["myconf_a/0.1", "myconf_b/0.1"],
+                                 "urls": [server_url,
+                                          {"url": server_url, "verify_ssl": True}]})
+        c.save({"conanconfig.yml": conanconfig})
+        c.run("config install-pkg .")
+        _check_conf(c, "myconf_b/0.1")
+        _check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])

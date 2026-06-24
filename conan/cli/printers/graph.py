@@ -1,4 +1,5 @@
 from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE, LEVEL_DEBUG
+from conan.errors import ConanException
 
 
 def print_graph_basic(graph):
@@ -68,8 +69,19 @@ def print_graph_basic(graph):
     _format_resolved("Resolved version ranges", graph.resolved_ranges)
     for req in graph.resolved_ranges:
         if str(req.version) == "[]":
-            output.warning("Empty version range usage is discouraged. Use [*] instead",
-                           warn_tag="deprecated")
+            global_conf =  graph.root.conanfile._conan_helpers.global_conf  # noqa
+            deprecated_policies = global_conf.get("core:policies", check_type=list, default=list())
+            if "deprecated_empty_version_range" in deprecated_policies:
+                output.warning("Empty version range usage is discouraged. Use [*] instead. "
+                               "This behaviour is kept enabled because 'deprecated_empty_version_range' "
+                               "is present in the 'core:policies' conf list. "
+                               "The fallback will be removed in Conan 2.32.",
+                               warn_tag="deprecated")
+            else:
+                raise ConanException("Empty version range usage is disabled. Use [*] instead. "
+                                     "The old behaviour can be re-enabled by adding "
+                                     "'deprecated_empty_version_range' in the 'core:policies' conf list "
+                                     "until Conan 2.32, where it will be removed.")
             break
 
     overrides = graph.overrides()

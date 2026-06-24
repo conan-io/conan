@@ -63,4 +63,4 @@ def test_can_run_cross_building_with_explicit():
     conanfile.settings = settings
     conanfile.settings_build = settings_build
     conanfile.conf = config
-    assert True == can_run(conanfile)
+    assert can_run(conanfile)

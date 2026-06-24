@@ -190,7 +190,7 @@ def test_conan_audit_proxy():
     assert ("ERROR: Provider 'conancenter' not found. Please specify a valid provider name or add "
             "it using: 'conan audit provider add conancenter --url=https://audit.conan.io/ "
             "--type=conan-center-proxy --token=<token>'") in tc.out
-    assert "If you don't have a valid token, register at: https://audit.conan.io/register." in tc.out
+    assert "If you don't have a valid token, register at: https://conan.io/audit/register." in tc.out
 
     if platform.system() != "Windows":
         providers_stat = os.stat(os.path.join(tc.cache_folder, "audit_providers.json"))

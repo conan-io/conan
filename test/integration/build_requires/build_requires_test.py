@@ -142,7 +142,7 @@ def test_complete(client):
 
 
 def test_dependents_new_buildenv():
-    client = TestClient()
+    client = TestClient(light=True)
     boost = textwrap.dedent("""
         from conan import ConanFile
         class Boost(ConanFile):
@@ -516,10 +516,11 @@ class TestBuildTrackHost:
     ])
     def test_host_version_different_ref(self, host_version, assert_error, assert_msg):
         tc = TestClient(light=True)
+        app = (GenConanfile("app", "1.0").with_requires("libgettext/[>0.1]")
+               .with_tool_requirement(f"gettext/<host_version:{host_version}"))
         tc.save({"gettext/conanfile.py": GenConanfile("gettext"),
                  "libgettext/conanfile.py": GenConanfile("libgettext"),
-                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("libgettext/[>0.1]")
-                                                   .with_tool_requirement(f"gettext/<host_version:{host_version}")})
+                 "app/conanfile.py": app})
         tc.run("create libgettext --version=0.2")
         tc.run("create gettext --version=0.1 --build-require")
         tc.run("create gettext --version=0.2 --build-require")
@@ -768,3 +769,59 @@ def test_transitive_build_scripts_library_error():
     c.run("install --requires=tool/0.1", assert_error=True)
     assert ("ERROR: Package 'tool/0.1' with type 'build-scripts' cannot have "
             "a 'static-library' dependency to 'dep/0.1'") in c.out
+
+
+@pytest.mark.parametrize("min_conan_version, should_propagate", [
+    (None, True),
+    ("*", True),
+    (">=2.5", True),
+    (">=2.28", False),
+])
+def test_build_run_false(min_conan_version, should_propagate):
+    required_conan_version_line = ""
+    if min_conan_version:
+        required_conan_version_line = f"required_conan_version='{min_conan_version}'"
+    tc = TestClient(light=True)
+    cmake = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.files import save
+    import os
+
+    class CMake(ConanFile):
+        name = "mycmake"
+        version = "1.0"
+        settings = "os"
+
+        def package(self):
+            echo = "echo MYCMAKE!!!"
+            save(self, os.path.join(self.package_folder, "bin", "mycmake.sh"), echo)
+            save(self, os.path.join(self.package_folder, "bin", "mycmake.bat"), echo)
+            os.chmod(os.path.join(self.package_folder, "bin", "mycmake.sh"), 0o777)
+    """)
+
+    consumer = textwrap.dedent(f"""
+    from conan import ConanFile
+    import platform
+    {required_conan_version_line}
+
+    class Pkg(ConanFile):
+        name = "pkg"
+        version = "0.1"
+        settings = "os"
+
+        def build_requirements(self):
+            self.tool_requires("mycmake/1.0", run=False)
+
+        def build(self):
+            cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
+            self.run(cmd)
+    """)
+    tc.save({"consumer/conanfile.py": consumer,
+             "cmake/conanfile.py": cmake})
+    tc.run("create cmake")
+    tc.run("create consumer", assert_error=not should_propagate)
+    if should_propagate:
+        assert "MYCMAKE!!!" in tc.out
+    else:
+        assert "MYCMAKE!!!" not in tc.out
+        assert "Error in build() method" in tc.out

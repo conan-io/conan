@@ -12,7 +12,6 @@ from conan.api.output import (
     LEVEL_QUIET,
     LEVEL_ERROR,
     LEVEL_WARNING,
-    LEVEL_STATUS,
     LEVEL_VERBOSE,
     LEVEL_DEBUG,
     LEVEL_TRACE,

@@ -17,13 +17,19 @@ from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.model.settings import SettingsItem
 from conan.internal.util.files import load, save
 
-required_conan_version_msg = """\
-Raise if current version does not match the defined range.
-   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id is applied
-   These behaviors also apply for 'required_conan_version' in recipes, but the global one has precedence."""
+
+policies_msg = """\
+A list of opt-in behaviors that can be defined in the configuration to control specific aspects of Conan's behavior,
+such as keeping deprecated behaviours:
+   - deprecated_build_order_args: Allow deprecated skipping of --order-by argument in conan graph build-order - To be removed in Conan 2.32
+   - deprecated_empty_version_range: Allow using deprecated empty version range expressions - To be removed in Conan 2.32
+If the policy 'required_conan_version>=version' is defined, different behaviors can be enabled:
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19849 for VirtualBuildEnv bindir path propagation based on requirement run trait
+   - If required_conan_version>=2.28, https://github.com/conan-io/conan/pull/19286 defaults the new 'consistent' trait to True for the host context, even when 'visible=False'"""
 
 BUILT_IN_CONFS = {
-    "core:required_conan_version": required_conan_version_msg,
+    "core:required_conan_version": "Raise if current version does not match the defined range.",
     "core:non_interactive": "Disable interactive user input, raises error if input necessary",
     "core:warnings_as_errors": "Treat warnings matching any of the patterns in this list as errors and then raise an exception. "
                                "Current warning tags are 'network', 'deprecated'",
@@ -42,6 +48,7 @@ BUILT_IN_CONFS = {
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
+    "core:policies": policies_msg,
     # Sources backup
     "core.sources:download_cache": "Folder to store the sources backup",
     "core.sources:download_urls": "List of URLs to download backup sources from",
@@ -104,7 +111,7 @@ BUILT_IN_CONFS = {
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
     "tools.cmake:ctest_args": "Add extra arguments to CMake.ctest() runner command line",
-    "tools.cmake:configure_args": "Add extra arguments to CMake.configure() command line ",
+    "tools.cmake:configure_args": "Add extra arguments to CMake.configure() command line",
     "tools.cmake:install_strip": "(Deprecated) Add --strip to cmake.install(). Use tools.build:install_strip instead",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
     "tools.files.download:retry": "(int, default: 2) Number of retries in case of failure when downloading",
@@ -593,7 +600,7 @@ class Conf:
 class ConfDefinition:
     # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
-               ("=!", "unset"), ("*=", "update"), ("=", "define"))
+               ("=!", "unset"), ("=~", "unset"), ("*=", "update"), ("=", "define"))
 
     def __init__(self):
         self._pattern_confs = {}
@@ -779,19 +786,26 @@ def load_global_conf(home_folder):
     home_paths = HomePaths(home_folder)
     global_conf_path = home_paths.global_conf_path
     new_config = ConfDefinition()
-    if os.path.exists(global_conf_path):
-        text = load(global_conf_path)
+
+    def render(tmp_text):
         distro = None
         if platform.system() in ["Linux", "FreeBSD"]:
             import distro
-        template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
-        home_folder = home_folder.replace("\\", "/")
+        template = Environment(loader=FileSystemLoader(home_folder)).from_string(tmp_text)
         from conan import conan_version
-        content = template.render({"platform": platform, "os": os, "distro": distro,
-                                   "conan_version": conan_version,
-                                   "conan_home_folder": home_folder,
-                                   "detect_api": detect_api,
-                                   "hashlib": hashlib})
+        home_folder_fwd = home_folder.replace("\\", "/")
+        try:
+            c = template.render({"platform": platform, "os": os, "distro": distro,
+                                 "conan_version": conan_version,
+                                 "conan_home_folder": home_folder_fwd, "detect_api": detect_api,
+                                 "hashlib": hashlib})
+        except Exception as e:
+            raise ConanException(f"Error loading 'global.conf' in home folder: {e}")
+        return c
+
+    if os.path.exists(global_conf_path):
+        text = load(global_conf_path)
+        content = render(text)
         new_config.loads(content)
     else:  # creation of a blank global.conf file for user convenience
         default_global_conf = textwrap.dedent("""\
@@ -802,4 +816,12 @@ def load_global_conf(home_folder):
             # tools.android:ndk_path = my/path/to/android/ndk
             """)
         save(global_conf_path, default_global_conf)
+
+    global_conf_path_user = home_paths.global_conf_path_user
+    if os.path.exists(global_conf_path_user):
+        text = load(global_conf_path_user)
+        content = render(text)
+        user_conf = ConfDefinition()
+        user_conf.loads(content)
+        new_config.update_conf_definition(user_conf)
     return new_config

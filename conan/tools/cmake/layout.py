@@ -1,8 +1,15 @@
 import os
 import tempfile
 
-from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
 from conan.errors import ConanException
+from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
+
+
+def is_consumer(conanfile):
+    try:
+        return conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE)  # noqa
+    except AttributeError:
+        pass
 
 
 def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"):
@@ -34,14 +41,11 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
     except ConanException:
         raise ConanException("'build_type' setting not defined, it is necessary for cmake_layout()")
 
-    try:  # TODO: Refactor this repeated pattern to deduce "is-consumer"
-        if conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE):
-            folder = "test_folder" if conanfile.tested_reference_str else "build_folder"
-            build_folder = conanfile.conf.get(f"tools.cmake.cmake_layout:{folder}") or build_folder
-            if build_folder == "$TMP" and folder == "test_folder":
-                build_folder = tempfile.mkdtemp()
-    except AttributeError:
-        pass
+    if is_consumer(conanfile):
+        folder = "test_folder" if conanfile.tested_reference_str else "build_folder"
+        build_folder = conanfile.conf.get(f"tools.cmake.cmake_layout:{folder}") or build_folder
+        if build_folder == "$TMP" and folder == "test_folder":
+            build_folder = tempfile.mkdtemp()
 
     build_folder = build_folder if not subproject else os.path.join(subproject, build_folder)
     config_build_folder, user_defined_build = get_build_folder_custom_vars(conanfile)
@@ -72,11 +76,7 @@ def get_build_folder_custom_vars(conanfile):
                      ["settings.compiler", "settings.compiler.version", "settings.arch",
                       "settings.compiler.cppstd", "settings.build_type", "options.shared"]
     else:
-        try:
-            is_consumer = conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE)
-        except AttributeError:
-            is_consumer = False
-        if is_consumer:
+        if is_consumer(conanfile):
             if build_vars is None:
                 build_vars = conanfile_vars or []
         else:

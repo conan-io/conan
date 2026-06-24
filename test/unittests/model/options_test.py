@@ -172,7 +172,8 @@ class TestOptionsPropagate:
 
         self_options, up_options, up_private = sut.get_upstream_options(down_options, ref, False)
         assert up_options.dumps() == "zlib/2.0:other=1"
-        assert self_options.dumps() == "boost/1.0:static=False\nzlib/2.0:other=1"
+        # zlib is not in self_options if not propagated to a dependency
+        assert self_options.dumps() == "boost/1.0:static=False"
         assert up_private.dumps() == ""
 
 

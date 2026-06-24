@@ -10,7 +10,6 @@ import time
 
 from contextlib import contextmanager
 
-from conan.api.output import ConanOutput
 from conan.errors import ConanException
 
 _DIRTY_FOLDER = ".dirty"
@@ -111,9 +110,9 @@ def check_with_algorithm_sum(algorithm_name, file_path, provided_hash):
         raise ConanException("%s hash failed for '%s' file. \n"
                              " Provided hash: %s  \n"
                              " Computed hash: %s" % (algorithm_name,
-                                                          os.path.basename(file_path),
-                                                          provided_hash,
-                                                          real_hash))
+                                                     os.path.basename(file_path),
+                                                     provided_hash,
+                                                     real_hash))
 
 
 def save(path, content, encoding="utf-8"):

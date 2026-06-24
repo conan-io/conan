@@ -62,7 +62,7 @@ class AuditAPI:
             )
 
             register_message = (
-                f"If you don't have a valid token, register at: https://audit.conan.io/register."
+                f"If you don't have a valid token, register at: https://conan.io/audit/register."
                 if provider_name == CONAN_CENTER_AUDIT_PROVIDER_NAME
                 else ""
             )

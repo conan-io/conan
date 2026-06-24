@@ -175,12 +175,18 @@ def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None
             if not os.path.exists(os.path.dirname(dest_filepath)):
                 os.makedirs(os.path.dirname(dest_filepath))
 
-            if os.path.exists(dest_filepath):
-                if filecmp.cmp(src_filepath, dest_filepath):  # Be efficient, do not copy
+            # lexists: detect existing symlinks; shutil.copy2(..., follow_symlinks=False) uses
+            # os.symlink() and fails with EEXIST if the destination path already exists.
+            if os.path.lexists(dest_filepath):
+                try:
+                    same = filecmp.cmp(src_filepath, dest_filepath, shallow=True)
+                except OSError:  # e.g. broken symlink at dest — replace via unlink below
+                    same = False
+                if same:  # Be efficient, do not copy
                     output.verbose(f"{dest_filepath} exists with same contents, skipping copy")
                     continue
-                else:
-                    output.warning(f"{dest_filepath} exists and will be overwritten")
+                output.warning(f"{dest_filepath} exists and will be overwritten")
+                os.unlink(dest_filepath)
 
             try:
                 file_count += 1
@@ -188,6 +194,7 @@ def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None
                 # copy all metadata from the src symbolic link to the newly created dst link
                 shutil.copy2(src_filepath, dest_filepath, follow_symlinks=not symlinks)
                 output.verbose(f"Copied {src_filepath} into {output_dir}")
+
             except Exception as e:
                 if "WinError 1314" in str(e):
                     ConanOutput().error("runtime_deploy: Windows symlinks require admin privileges "

@@ -117,6 +117,9 @@ def test_premake_msbuild_platform():
         compiler.runtime=dynamic
         compiler.version=194
         os=Windows
+
+        [conf]
+        tools.microsoft.msbuild:installation_path=
     """)
 
     conanfile = textwrap.dedent(
@@ -168,4 +171,3 @@ def test_premake_build_with_custom_configuration():
     )
     assert 'conanfile.premake5.lua" gmake --arch=arm64!!' in tc.out
     assert "Running make config=releasedll all -j4!!" in tc.out
-

@@ -3,6 +3,7 @@ import inspect
 import os
 import traceback
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.errors import conanfile_exception_formatter
@@ -79,12 +80,15 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
     _receive_conf(conanfile)
     _receive_generators(conanfile)
 
+    ConanOutput().step(f"Generate step")
+    old_display = conanfile.display_name
+    conanfile.display_name = ""
+    conanfile.output.info(f"Generating files for {old_display}")
+    conanfile.output.info(f"Generators folder: {new_gen_folder}")
     # TODO: Optimize this, so the global generators are not loaded every call to write_generators
     global_generators = load_cache_generators(HomePaths(home_folder).custom_generators_path)
     hook_manager.execute("pre_generate", conanfile=conanfile)
 
-    if conanfile.generators:
-        conanfile.output.highlight(f"Writing generators to {new_gen_folder}")
     # generators check that they are not present in the generators field,
     # to avoid duplicates between the generators attribute and the generate() method
     # They would raise an exception here if we don't invalidate the field while we call them
@@ -119,8 +123,7 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
     conanfile.generators = old_generators
 
     if hasattr(conanfile, "generate"):
-        conanfile.output.highlight("Calling generate()")
-        conanfile.output.info(f"Generators folder: {new_gen_folder}")
+        conanfile.output.highlight("Calling generate() method in recipe")
         mkdir(new_gen_folder)
         with chdir(new_gen_folder):
             with conanfile_exception_formatter(conanfile, "generate"):
@@ -144,6 +147,7 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
     from conan.tools.env.environment import generate_aggregated_env
     generate_aggregated_env(conanfile)
     hook_manager.execute("post_generate", conanfile=conanfile)
+    conanfile.display_name = old_display
 
 
 def _receive_conf(conanfile):

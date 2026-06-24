@@ -35,7 +35,8 @@ class TestAuthorize:
         """Bad login 2 times"""
         self.conan = TestClient(servers=self.servers, inputs=["bad", "1",
                                                               "bad2", "2",
-                                                              "nacho@gmail.com", "nachopass"])
+                                                              "nacho@gmail.com", "nachopass"],
+                                light=True)
         self.conan.save({"conanfile.py": GenConanfile("openssl", "2.0.1")})
         self.conan.run("export . --user=lasote --channel=testing")
         errors = self.conan.run("upload %s -r default --only-recipe -v=quiet" % str(self.ref))
@@ -88,7 +89,7 @@ class TestAuthorize:
         """Bad login 3 times"""
         client = TestClient(servers=self.servers, inputs=["baduser", "badpass",
                                                           "baduser", "badpass2",
-                                                          "baduser3", "badpass3"])
+                                                          "baduser3", "badpass3"], light=True)
         client.save({"conanfile.py": GenConanfile("openssl", "2.0.1")})
         client.run("export . --user=lasote --channel=testing")
         errors = client.run("upload %s -r default --only-recipe" % str(self.ref), assert_error=True)
@@ -107,7 +108,8 @@ class TestAuthorize:
         # Try with a load of names that contain special characters
         client = TestClient(servers=self.servers, inputs=["some_random.special!characters",
                                                           "badpass",
-                                                          "nacho@gmail.com", "nachopass"])
+                                                          "nacho@gmail.com", "nachopass"],
+                            light=True)
 
         client.save({"conanfile.py": GenConanfile("openssl", "2.0.1")})
         client.run("export . --user=lasote --channel=testing")
@@ -122,7 +124,7 @@ class TestAuthorize:
                 "on remote 'default'") in client.out
 
     def test_authorize_disabled_remote(self):
-        tc = TestClient(servers=self.servers)
+        tc = TestClient(servers=self.servers, light=True)
         # Sanity check, this should not fail
         tc.run("remote login default pepe -p pepepass")
         tc.run("remote logout default")
@@ -159,7 +161,7 @@ class TestAuthenticationTest:
                     resp_basic_auth.headers = {"Content-Type": "application/json"}
                 return resp_basic_auth
 
-        client = TestClient(requester_class=RequesterMock, default_server_user=True)
+        client = TestClient(requester_class=RequesterMock, default_server_user=True, light=True)
         client.run("remote login default user -p PASSWORD!")
         assert "Changed user of remote 'default' from 'None' (anonymous) to 'user'" in client.out
         client.run("search pkg -r=default")
@@ -186,7 +188,8 @@ def test_token_expired():
     save(os.path.join(server_folder, ".conan_server", "server.conf"), server_conf)
     server = TestServer(base_path=server_folder, users={"admin": "password", "other": "pass"})
 
-    c = TestClient(servers={"default": server}, inputs=["admin", "password", "other", "pass"])
+    c = TestClient(servers={"default": server}, inputs=["admin", "password", "other", "pass"],
+                   light=True)
     c.save({"conanfile.py": GenConanfile()})
     c.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
     c.run("upload * -r=default -c")
@@ -208,7 +211,7 @@ def test_token_expired():
 
 def test_auth_username_space():
     server = TestServer(users={"super admin": "password"})
-    c = TestClient(servers={"default": server}, inputs=["super admin", "password"])
+    c = TestClient(servers={"default": server}, inputs=["super admin", "password"], light=True)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("export .")
     c.run("upload * -r=default -c")

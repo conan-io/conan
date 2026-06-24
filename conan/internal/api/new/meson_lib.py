@@ -101,7 +101,17 @@ executable('example', 'src/example.cpp', dependencies: {{name}})
 
 _meson_build = """\
 project('{{name}} ', 'cpp')
+{% if requires is defined -%}
+{% for require in requires -%}
+{{as_name(require)}} = dependency('{{as_name(require)}}', required: true)
+{% endfor %}
+{%- endif %}
+{%- if requires is defined -%}
+library('{{name}}', 'src/{{name}}.cpp', install: true,
+        dependencies:  {{ names(requires) }} )
+{% else %}
 library('{{name}}', 'src/{{name}}.cpp', install: true)
+{% endif -%}
 install_headers('src/{{name}}.h')
 """
 

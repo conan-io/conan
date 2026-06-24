@@ -322,7 +322,7 @@ def chmod(conanfile, path: str, read: Optional[bool] = None, write: Optional[boo
     if not os.path.exists(path):
         raise ConanException(f"Could not change permission: Path \"{path}\" does not exist.")
 
-    def _change_permission(it_path:str):
+    def _change_permission(it_path: str):
         mode = os.stat(it_path).st_mode
         permissions = [
             (read, stat.S_IRUSR),
