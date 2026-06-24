@@ -13,7 +13,7 @@ from conan.internal.model.version import Version
 
 class CacheDatabase:
 
-    def __init__(self, filename, use_file_db=True):
+    def __init__(self, filename, use_file_db=False):
         if use_file_db:
             db_folder = os.path.join(os.path.dirname(filename), "db")
             self._recipes = RecipesJsonTable(db_folder)
