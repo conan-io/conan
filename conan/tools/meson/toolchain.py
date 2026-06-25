@@ -331,8 +331,6 @@ class MesonToolchain:
         self._resolve_apple_flags_and_variables(build_env, compilers_by_conf)
         if not native:
             self._resolve_android_cross_compilation()
-        #: Defines the Meson ``exe_wrapper`` variable
-        self.exe_wrapper = None
 
     def _get_default_dirs(self):
         """
@@ -491,7 +489,6 @@ class MesonToolchain:
             "windres": self.windres,
             "pkgconfig": self.pkgconfig,
             "pkg-config": self.pkgconfig,
-            "exe_wrapper": self.exe_wrapper,
         }
         if self._is_apple_system:
             ret.update({
@@ -545,14 +542,11 @@ class MesonToolchain:
         self.binaries.update(extra_variables.get("binaries", {}))
         self.project_options.update(extra_variables.get("project_options", {}))
 
-        # Issue: https://github.com/conan-io/conan/issues/19217
-        # Issue: https://github.com/conan-io/conan/issues/18718
-        # Evaluate needs_exe_wrapper at generation time to consider user-defined exe_wrapper
-        # exe_wrapper can be set via tc.exe_wrapper attribute or via tc.binaries["exe_wrapper"]
-        # or via tools.meson.mesontoolchain:extra_variables conf
         if self.cross_build:
-            has_exe_wrapper = self.exe_wrapper is not None or self.binaries.get("exe_wrapper") is not None
-            self.properties["needs_exe_wrapper"] = has_exe_wrapper or not can_run(self._conanfile)
+            has_exe_wrapper = self.binaries.get("exe_wrapper") is not None
+            # Auto evaluation of needs_exe_wrapper only if the user has not set it in the properties
+            if "needs_exe_wrapper" not in self.properties:
+                self.properties["needs_exe_wrapper"] = has_exe_wrapper or not can_run(self._conanfile)
 
         return {
             # https://mesonbuild.com/Machine-files.html#properties

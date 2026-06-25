@@ -1007,51 +1007,21 @@ def test_binaries_attribute():
     assert "c = '/path/to/c'" in content
 
 
-@pytest.mark.parametrize("wrapper_value", [
-    "'/usr/bin/qemu-aarch64'",
-    "['/usr/bin/qemu-aarch64', '-L', '/usr/aarch64-linux-gnu']",
-])
-def test_exe_wrapper(wrapper_value):
+def test_exe_wrapper_needs_wrapper():
     """Issue: https://github.com/conan-io/conan/issues/18718"""
     client = TestClient()
-    conanfile = textwrap.dedent(f"""
+    conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.meson import MesonToolchain
         class Pkg(ConanFile):
             settings = "os", "compiler", "arch", "build_type"
             def generate(self):
                 tc = MesonToolchain(self)
-                tc.exe_wrapper = {wrapper_value}
+                tc.binaries["exe_wrapper"] = "/usr/bin/qemu"
                 tc.generate()
         """)
     client.save({"conanfile.py": conanfile})
     client.run("install . -s arch=armv8 -s:b arch=x86_64")
-    content = client.load(MesonToolchain.cross_filename)
-    assert "needs_exe_wrapper = true" in content
-    assert f"exe_wrapper = {wrapper_value}" in content
-
-
-@pytest.mark.parametrize("attribute, extra_args", [
-    ("exe_wrapper", ""),
-    ("exe_wrapper", " -c tools.build.cross_building:can_run=True"),
-    ("binaries", ""),
-])
-def test_exe_wrapper_needs_wrapper(attribute, extra_args):
-    """Issue: https://github.com/conan-io/conan/issues/18718"""
-    client = TestClient()
-    attr_line = 'tc.exe_wrapper = "/usr/bin/qemu"' if attribute == "exe_wrapper" else 'tc.binaries["exe_wrapper"] = "/usr/bin/qemu"'
-    conanfile = textwrap.dedent(f"""
-        from conan import ConanFile
-        from conan.tools.meson import MesonToolchain
-        class Pkg(ConanFile):
-            settings = "os", "compiler", "arch", "build_type"
-            def generate(self):
-                tc = MesonToolchain(self)
-                {attr_line}
-                tc.generate()
-        """)
-    client.save({"conanfile.py": conanfile})
-    client.run(f"install . -s arch=armv8 -s:b arch=x86_64{extra_args}")
     content = client.load(MesonToolchain.cross_filename)
     assert "needs_exe_wrapper = true" in content
     assert "exe_wrapper = '/usr/bin/qemu'" in content
