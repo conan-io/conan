@@ -1,11 +1,10 @@
-import unittest
-from parameterized import parameterized
+import pytest
 from textwrap import dedent
 
 from conan.test.utils.tools import TestClient
 
 
-class CppStdMinimumVersionTests(unittest.TestCase):
+class TestCppStdMinimumVersion:
 
     CONANFILE = dedent("""
         import os
@@ -31,24 +30,25 @@ class CppStdMinimumVersionTests(unittest.TestCase):
         {}
         """)
 
-    def setUp(self):
+    @pytest.fixture(autouse=True)
+    def setup(self):
         self.client = TestClient()
-        self.client.save({"conanfile.py": CppStdMinimumVersionTests.CONANFILE})
+        self.client.save({"conanfile.py": TestCppStdMinimumVersion.CONANFILE})
 
-    @parameterized.expand(["17", "gnu17"])
+    @pytest.mark.parametrize("cppstd", ["17", "gnu17"])
     def test_cppstd_from_settings(self, cppstd):
-        profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "compiler.cppstd=%s" % cppstd)
+        profile = TestCppStdMinimumVersion.PROFILE.replace("{}", "compiler.cppstd=%s" % cppstd)
         self.client.save({"myprofile":  profile})
         self.client.run("create . --user=user --channel=channel -pr myprofile")
-        self.assertIn("valid standard", self.client.out)
+        assert "valid standard" in self.client.out
 
-    @parameterized.expand(["11", "gnu11"])
+    @pytest.mark.parametrize("cppstd", ["11", "gnu11"])
     def test_invalid_cppstd_from_settings(self, cppstd):
-        profile = CppStdMinimumVersionTests.PROFILE.replace("{}", "compiler.cppstd=%s" % cppstd)
+        profile = TestCppStdMinimumVersion.PROFILE.replace("{}", "compiler.cppstd=%s" % cppstd)
         self.client.save({"myprofile": profile})
         self.client.run("create . --user=user --channel=channel -pr myprofile", assert_error=True)
-        self.assertIn("Invalid: Current cppstd (%s) is lower than the required C++ standard (17)."
-                      % cppstd, self.client.out)
+        assert "Invalid: Current cppstd (%s) is lower than the required C++ standard (17)." \
+                      % cppstd in self.client.out
 
 
 def test_header_only_check_min_cppstd():

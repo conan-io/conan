@@ -42,13 +42,13 @@ app_conanfile = textwrap.dedent("""
 
 
 # needs at least 3.23.3 because of error with "empty identity"
-# https://stackoverflow.com/questions/72746725/xcode-14-beta-cmake-not-able-to-resolve-cmake-c-compiler-and-cmake-cxx-compiler
+# https://stackoverflow.com/questions/72746725/xcode-14-beta-cmake-not-able-to-resolve-cmake-c-compiler-and-cmake-cxx-compiler
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.tool("cmake", "3.23")
 def test_apple_framework_xcode(client):
     app_cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
-        project(Testing CXX)
+        project(Testing NONE)
         find_package(foolib REQUIRED)
         message(">>> foolib_FRAMEWORKS_FOUND_DEBUG: ${foolib_FRAMEWORKS_FOUND_DEBUG}")
         message(">>> foolib_FRAMEWORKS_FOUND_RELEASE: ${foolib_FRAMEWORKS_FOUND_RELEASE}")
@@ -91,6 +91,8 @@ conanfile = textwrap.dedent("""
                     self.cpp_info.includedirs = []
             """)
 cmake = textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
             project(MyHello CXX)
 
@@ -194,13 +196,15 @@ timer_cpp = textwrap.dedent("""
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("settings",
-         [('',),
-          ('-pr:b default -s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',),
-          ("-pr:b default -s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8",)])
+                         ['',
+                          '-s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',
+                          "-s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8"])
 def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 
     test_cmake = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(Testing CXX)
 
@@ -270,6 +274,8 @@ def test_apple_own_framework_cmake_deps():
     client = TestClient()
 
     test_cmake = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(Testing CXX)
         message(STATUS "CMAKE_BINARY_DIR ${CMAKE_BINARY_DIR}")
@@ -346,6 +352,8 @@ def test_apple_own_framework_cmake_find_package_multi():
     client = TestClient()
 
     test_cmake = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(Testing CXX)
         set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bin")
@@ -421,7 +429,7 @@ class HelloConan(ConanFile):
 
         self.cpp_info.components["libhello"].frameworks.extend(["CoreFoundation"])
         """)
-    hello_cpp = textwrap.dedent("""
+    hello_cpp_core = textwrap.dedent("""
 #include <CoreFoundation/CoreFoundation.h>
 
 void hello_api()
@@ -433,10 +441,12 @@ void hello_api()
         CFRelease(dict);
 }
         """)
-    hello_h = textwrap.dedent("""
+    hello_h_core = textwrap.dedent("""
 void hello_api();
         """)
     cmakelists_txt = textwrap.dedent("""
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 cmake_minimum_required(VERSION 3.15)
 project(hello)
 include(GNUInstallDirs)
@@ -489,8 +499,10 @@ int main()
 }
         """)
     test_cmakelists_txt = textwrap.dedent("""
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 cmake_minimum_required(VERSION 3.15)
-project(test_package)
+project(test_package CXX)
 
 find_package(HELLO REQUIRED CONFIG)
 
@@ -499,8 +511,8 @@ target_link_libraries(${PROJECT_NAME} hello::libhello)
         """)
     t = TestClient()
     t.save({'conanfile.py': conanfile_py,
-            'hello.cpp': hello_cpp,
-            'hello.h': hello_h,
+            'hello.cpp': hello_cpp_core,
+            'hello.h': hello_h_core,
             'CMakeLists.txt': cmakelists_txt,
             'test_package/conanfile.py': test_conanfile_py,
             'test_package/CMakeLists.txt': test_cmakelists_txt,
@@ -532,6 +544,8 @@ def test_iphoneos_crossbuild():
     #        at the toolchain (but it would require the toolchain to know about the deps)
     #        https://stackoverflow.com/questions/65494246/cmakes-find-package-ignores-the-paths-option-when-building-for-ios#
     cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(MyApp CXX)
     set(hello_DIR "${CMAKE_BINARY_DIR}")
@@ -540,7 +554,7 @@ def test_iphoneos_crossbuild():
     target_link_libraries(main hello::hello)
     """)
 
-    conanfile = textwrap.dedent("""
+    hello = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.cmake import CMake
 
@@ -556,7 +570,7 @@ def test_iphoneos_crossbuild():
                 cmake.build()
         """)
 
-    client.save({"conanfile.py": conanfile,
+    client.save({"conanfile.py": hello,
                  "CMakeLists.txt": cmakelists,
                  "main.cpp": main,
                  "ios-armv8": profile}, clean_first=True)

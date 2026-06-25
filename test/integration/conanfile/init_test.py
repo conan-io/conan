@@ -1,10 +1,9 @@
 import textwrap
-import unittest
 
 from conan.test.utils.tools import TestClient
 
 
-class InitTest(unittest.TestCase):
+class TestInit:
     def test_wrong_init(self):
         client = TestClient()
         conanfile = textwrap.dedent("""
@@ -16,8 +15,8 @@ class InitTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile})
         client.run("export .", assert_error=True)
-        self.assertIn("Error in init() method, line 5", client.out)
-        self.assertIn("name 'random_error' is not defined", client.out)
+        assert "Error in init() method, line 5" in client.out
+        assert "name 'random_error' is not defined" in client.out
 
     def test_init(self):
         client = TestClient()
@@ -45,8 +44,41 @@ class InitTest(unittest.TestCase):
                      "data.json": data})
 
         client.run("export . --name=pkg --version=version")
-        self.assertIn("description: MyDescription", client.out)
-        self.assertIn("license: MIT", client.out)
+        assert "description: MyDescription" in client.out
+        assert "license: MIT" in client.out
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        self.assertIn("description: MyDescription", client.out)
-        self.assertIn("license: MIT", client.out)
+        assert "description: MyDescription" in client.out
+        assert "license: MIT" in client.out
+
+    def test_options_from_yml(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class Lib(ConanFile):
+                name = "pkg"
+                version = "0.1"
+
+                def init(self):
+                    self.options.update(self.conan_data["options"],
+                                        self.conan_data["default_options"])
+            """)
+        conandata = textwrap.dedent("""\
+            options:
+                myopt1: [1, 2, 3]
+                myopt2: [null, potato]
+                myopt3: [null, ANY]
+            default_options:
+                myopt1: 2
+            """)
+        client.save({"conanfile.py": conanfile,
+                     "conandata.yml": conandata})
+
+        client.run("create . ")
+        client.run("create . -o &:myopt1=1 -o &:myopt2=potato -o &:myopt3=whatever")
+        client.run("list *:*")
+
+        assert "myopt1: 2" in client.out
+        assert "myopt1: 1" in client.out
+        assert "myopt2: potato" in client.out
+        assert "myopt3: whatever" in client.out

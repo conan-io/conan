@@ -8,14 +8,14 @@ from conan.internal.util.files import save_files
 
 
 def test_remove_files_by_mask_recursively():
-    tmpdir = temp_folder()
+    temp_dir = temp_folder()
 
-    with chdir(None, tmpdir):
+    with chdir(None, temp_dir):
         os.makedirs("subdir")
         os.makedirs("dir.pdb")
         os.makedirs(os.path.join("subdir", "deepdir"))
 
-    save_files(tmpdir, {"1.txt": "",
+    save_files(temp_dir, {"1.txt": "",
                         "1.pdb": "",
                         "1.pdb1": "",
                         os.path.join("subdir", "2.txt"): "",
@@ -25,45 +25,45 @@ def test_remove_files_by_mask_recursively():
                         os.path.join("subdir", "deepdir", "3.pdb"): "",
                         os.path.join("subdir", "deepdir", "3.pdb1"): ""})
 
-    rm(None, "*.sh", tmpdir, recursive=True)
+    rm(None, "*.sh", temp_dir, recursive=True)
 
-    removed_files = rm(None, "*.pdb", tmpdir, recursive=True)
+    rm(None, "*.pdb", temp_dir, recursive=True)
 
-    assert os.path.isdir(os.path.join(tmpdir, "dir.pdb"))
+    assert os.path.isdir(os.path.join(temp_dir, "dir.pdb"))
 
-    assert os.path.isfile(os.path.join(tmpdir, "1.txt"))
-    assert not os.path.isfile(os.path.join(tmpdir, "1.pdb"))
-    assert os.path.isfile(os.path.join(tmpdir, "1.pdb1"))
+    assert os.path.isfile(os.path.join(temp_dir, "1.txt"))
+    assert not os.path.isfile(os.path.join(temp_dir, "1.pdb"))
+    assert os.path.isfile(os.path.join(temp_dir, "1.pdb1"))
 
-    assert os.path.isfile(os.path.join(tmpdir, "subdir", "2.txt"))
-    assert not os.path.isfile(os.path.join(tmpdir, "subdir", "2.pdb"))
-    assert os.path.isfile(os.path.join(tmpdir, "subdir", "2.pdb1"))
+    assert os.path.isfile(os.path.join(temp_dir, "subdir", "2.txt"))
+    assert not os.path.isfile(os.path.join(temp_dir, "subdir", "2.pdb"))
+    assert os.path.isfile(os.path.join(temp_dir, "subdir", "2.pdb1"))
 
-    assert os.path.isfile(os.path.join(tmpdir, "subdir", "deepdir", "3.txt"))
-    assert not os.path.isfile(os.path.join(tmpdir, "subdir", "deepdir", "3.pdb"))
-    assert os.path.isfile(os.path.join(tmpdir, "subdir", "deepdir", "3.pdb1"))
+    assert os.path.isfile(os.path.join(temp_dir, "subdir", "deepdir", "3.txt"))
+    assert not os.path.isfile(os.path.join(temp_dir, "subdir", "deepdir", "3.pdb"))
+    assert os.path.isfile(os.path.join(temp_dir, "subdir", "deepdir", "3.pdb1"))
 
-    rm(None, "*.pdb", tmpdir, recursive=True)
+    rm(None, "*.pdb", temp_dir, recursive=True)
 
 
 def test_remove_files_by_mask_non_recursively():
-    tmpdir = temp_folder()
-    with chdir(None, tmpdir):
+    temp_dir = temp_folder()
+    with chdir(None, temp_dir):
         os.makedirs("subdir")
 
-    save_files(tmpdir, {"1.txt": "",
+    save_files(temp_dir, {"1.txt": "",
                         "1.pdb": "",
                         "1.pdb1": "",
                         os.path.join("subdir", "2.txt"): "",
                         os.path.join("subdir", "2.pdb"): "",
                         os.path.join("subdir", "2.pdb1"): ""})
 
-    rm(None, "*.pdb", tmpdir)
-    assert not os.path.exists(os.path.join(tmpdir, "1.pdb"))
-    assert os.path.exists(os.path.join(tmpdir, "subdir", "2.pdb"))
+    rm(None, "*.pdb", temp_dir)
+    assert not os.path.exists(os.path.join(temp_dir, "1.pdb"))
+    assert os.path.exists(os.path.join(temp_dir, "subdir", "2.pdb"))
 
-    assert os.path.exists(os.path.join(tmpdir, "1.txt"))
-    assert os.path.exists(os.path.join(tmpdir, "subdir", "2.txt"))
+    assert os.path.exists(os.path.join(temp_dir, "1.txt"))
+    assert os.path.exists(os.path.join(temp_dir, "subdir", "2.txt"))
 
 
 @pytest.mark.parametrize("recursive", [False, True])

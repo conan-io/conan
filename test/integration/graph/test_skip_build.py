@@ -46,7 +46,7 @@ def test_graph_skip_build_test():
 
     c.run("install app -c tools.graph:skip_build=True --build=pkg/*", assert_error=True)
     assert "ERROR: Package pkg/1.0 skipped its test/tool requires with tools.graph:skip_build, " \
-           "but was marked to be built " in c.out
+           "but was marked to be built" in c.out
 
 
 def test_skip():

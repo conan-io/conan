@@ -70,15 +70,13 @@ class DownloadCache:
                            for excluded_url in excluded_urls)
                        for url in backup_urls)
 
-        def should_upload_sources(package):
-            return any(prev.get("upload") for prev in package["revisions"].values())
-
         all_refs = set()
         if package_list is not None:
-            for k, ref in package_list.refs().items():
-                packages = ref.get("packages", {}).values()
-                if not only_upload or ref.get("upload") or any(should_upload_sources(p) for p in packages):
-                    all_refs.add(str(k))
+            for ref, packages in package_list.items():
+                ref_info = package_list.recipe_dict(ref)
+                if (not only_upload or ref_info.get("upload")
+                        or any(package_list.package_dict(p).get("upload") for p in packages)):
+                    all_refs.add(str(ref))
 
         path_backups_contents = []
 
@@ -87,7 +85,9 @@ class DownloadCache:
             if remove_if_dirty(os.path.join(path_backups, path)):
                 continue
             if path.endswith(dirty_ext):
-                # TODO: Clear the dirty file marker if it does not have a matching downloaded file
+                if not os.path.exists(os.path.join(path_backups, os.path.splitext(path)[0])):
+                    if os.path.exists(os.path.join(path_backups, path)):
+                        os.remove(os.path.join(path_backups, path))
                 continue
             if not path.endswith(".json"):
                 path_backups_contents.append(path)
@@ -111,6 +111,16 @@ class DownloadCache:
         return files_to_upload
 
     @staticmethod
+    def get_urls_from_backup_sources(cached_path):
+        """All download URLs stored in the backup-sources summary file ``<cached_path>.json``.
+        """
+        summary_path = cached_path + ".json"
+        if not os.path.exists(summary_path):
+            return set()
+        refs = json.loads(load(summary_path)).get("references") or {}
+        return {url for urls in refs.values() for url in urls}
+
+    @staticmethod
     def update_backup_sources_json(cached_path, conanfile, urls):
         """ create or update the sha256.json file with the references and new urls used
         """
@@ -123,15 +133,23 @@ class DownloadCache:
         try:
             summary_key = str(conanfile.ref)
         except AttributeError:
-            # The recipe path would be different between machines
-            # So best we can do is to set this as unknown
-            summary_key = "unknown"
+            # If there's no node associated with the conanfile,
+            # try to construct a reference from the conanfile itself.
+            # We accept it if we have a name and a version at least.
+            if conanfile.name and conanfile.version:
+                user = f"@{conanfile.user}" if conanfile.user else ""
+                channel = f"/{conanfile.channel}" if conanfile.channel else ""
+                summary_key = f"{conanfile.name}/{conanfile.version}{user}{channel}"
+            else:
+                # The recipe path would be different between machines
+                # So best we can do is to set this as unknown
+                summary_key = "unknown"
 
         if not isinstance(urls, (list, tuple)):
             urls = [urls]
         existing_urls = summary["references"].setdefault(summary_key, [])
         existing_urls.extend(url for url in urls if url not in existing_urls)
-        conanfile.output.verbose(f"Updating ${summary_path} summary file")
+        conanfile.output.verbose(f"Updating {summary_path} summary file")
         summary_dump = json.dumps(summary)
         conanfile.output.debug(f"New summary: ${summary_dump}")
         save(summary_path, json.dumps(summary))

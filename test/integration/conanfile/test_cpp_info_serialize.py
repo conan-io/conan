@@ -23,6 +23,10 @@ def test_cpp_info_serialize_round_trip():
                 cpp_info.includedirs = ["myinc"]
                 cpp_info.libs = ["mylib", "myother"]
                 cpp_info.libdirs = ["mylibs"]
+                cpp_info.type = "static-library"
+                cpp_info.set_property("myprop", "myvalue")
+                cpp_info.components["comp"].libs = []
+                cpp_info.components["comp"].type = None
                 p = os.path.join(self.package_folder, "cpp_info.json")
                 cpp_info.save(p)
 
@@ -38,3 +42,8 @@ def test_cpp_info_serialize_round_trip():
     assert cpp_info["includedirs"][0].endswith("myinc")
     assert cpp_info["libdirs"][0].endswith("mylibs")
     assert cpp_info["libs"] == ["mylib", "myother"]
+    assert cpp_info["type"] == "static-library"
+    assert cpp_info["properties"] == {"myprop": "myvalue"}
+
+    comp = graph["graph"]["nodes"]["1"]["cpp_info"]["comp"]
+    assert comp["type"] is None

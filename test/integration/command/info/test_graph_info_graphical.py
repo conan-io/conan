@@ -1,12 +1,10 @@
 import os
 import textwrap
-import unittest
-
 
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
-class InfoTest(unittest.TestCase):
+class TestInfo:
 
     def _create(self, name, version, deps=None, export=True):
         conanfile = textwrap.dedent("""
@@ -97,10 +95,9 @@ class InfoTest(unittest.TestCase):
         create_export(test_deps, "hello0")
 
         # arbitrary case - file will be named according to argument
-        self.client.run("graph info . --format=html")
-        html = self.client.stdout
+        self.client.run("graph info . --format=html", redirect_stdout="graph.html")
         # Just make sure it doesn't crash
-        self.assertIn("<body>", html)
+        assert "<body>" in self.client.load("graph.html")
 
 
 def test_user_templates():
@@ -161,3 +158,29 @@ def test_graph_conflict_diamond():
     c.run("graph info game --format=html", assert_error=True, redirect_stdout="graph.html")
     # check that it doesn't crash
     assert "ERROR: Version conflict: Conflict between math/1.0.1 and math/1.0 in the graph." in c.out
+
+
+def test_graph_conflict_loop():
+    c = TestClient(light=True)
+    c.save({"lib_a/conanfile.py": GenConanfile("lib_a", "1.0").with_requires("lib_b/1.0"),
+            "lib_b/conanfile.py": GenConanfile("lib_b", "1.0").with_requires("lib_c/1.0"),
+            "lib_c/conanfile.py": GenConanfile("lib_c", "1.0").with_requires("lib_a/1.0"),
+            "lib_x/conanfile.py": GenConanfile("lib_x", "1.0").with_requires("lib_a/1.0"),
+            })
+    c.run("export lib_a")
+    c.run("export lib_b")
+    c.run("export lib_c")
+    c.run("graph info lib_x --format=html", assert_error=True, redirect_stdout="graph.html")
+    # checked manually
+    # c.open("graph.html")
+
+
+def test_graph_missing_error():
+    c = TestClient()
+    c.save({"engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("math/1.0"),
+            "game/conanfile.py": GenConanfile("game", "1.0").with_requires("engine/1.0"),
+            })
+    c.run("export engine")
+    c.run("graph info game --format=html", assert_error=True, redirect_stdout="graph.html")
+    # check that it doesn't crash, tested manually
+    assert "ERROR: Package 'math/1.0' not resolved: No remote defined" in c.out

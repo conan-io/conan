@@ -9,12 +9,15 @@ import pytest
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from conan.test.utils.tools import TestClient
 from conan.api.model import RecipeReference
-from test.functional.toolchains.meson._base import TestMesonBase
+from test.functional.toolchains.meson._base import check_binary
 
 
-class MesonToolchainTest(TestMesonBase):
+@pytest.mark.tool("ninja")
+@pytest.mark.tool("meson")
+class TestMesonToolchain:
 
     def test_definition_of_global_options(self):
+        t = TestClient()
         conanfile_py = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.meson import Meson, MesonToolchain
@@ -83,45 +86,46 @@ class MesonToolchainTest(TestMesonBase):
 
         # Issue related: https://github.com/conan-io/conan/issues/14453
         # At first, let's add a raw option to see that it fails
-        self.t.save({"conanfile.py": conanfile_py.format(msg="self.options.msg"),
-                     "meson.build": meson_build,
-                     "meson_options.txt": meson_options_txt,
-                     "hello.h": hello_h,
-                     "hello.cpp": hello_cpp,
-                     "main.cpp": app})
-        self.t.run("build .", assert_error=True)
+        t.save({"conanfile.py": conanfile_py.format(msg="self.options.msg"),
+                "meson.build": meson_build,
+                "meson_options.txt": meson_options_txt,
+                "hello.h": hello_h,
+                "hello.cpp": hello_cpp,
+                "main.cpp": app})
+        t.run("build .", assert_error=True)
         # Using directly the options, the result is -> HELLO_MSG = Hi everyone, which is incorrect
         assert "WARN: deprecated: Please, do not use a Conan option value directly. " \
-               "Convert 'options.shared' into" in self.t.out
+               "Convert 'options.shared' into" in t.out
         assert "WARN: deprecated: Please, do not use a Conan option value directly. " \
-               "Convert 'options.msg' into" in self.t.out
-        assert "Malformed value" in self.t.out
+               "Convert 'options.msg' into" in t.out
+        assert "Malformed value" in t.out
         # Let's transform the Conan option into other allowed data type to solve the issue
-        self.t.save({"conanfile.py": conanfile_py.format(msg="str(self.options.msg)")})
-        self.t.run("build .")
-        content = self.t.load(os.path.join("build", "gen_folder", "conan_meson_native.ini"))
-        self.assertIn("[project options]", content)
-        self.assertIn("STRING_DEFINITION = 'Text'", content)
-        self.assertIn("TRUE_DEFINITION = true", content)
-        self.assertIn("FALSE_DEFINITION = false", content)
-        self.assertIn("DYNAMIC = False", content)  # Meson transforms correctly this value into bool
-        self.assertIn("HELLO_MSG = 'Hi everyone!'", content)
-        self.assertIn("INT_DEFINITION = 42", content)
-        self.assertIn("ARRAY_DEFINITION = ['Text1', 'Text2']", content)
-        self.assertIn("[built-in options]", content)
-        self.assertIn("buildtype = 'release'", content)
+        t.save({"conanfile.py": conanfile_py.format(msg="str(self.options.msg)")})
+        t.run("build .")
+        content = t.load(os.path.join("build", "gen_folder", "conan_meson_native.ini"))
+        assert "[project options]" in content
+        assert "STRING_DEFINITION = 'Text'" in content
+        assert "TRUE_DEFINITION = true" in content
+        assert "FALSE_DEFINITION = false" in content
+        assert "DYNAMIC = False" in content  # Meson transforms correctly this value into bool
+        assert "HELLO_MSG = 'Hi everyone!'" in content
+        assert "INT_DEFINITION = 42" in content
+        assert "ARRAY_DEFINITION = ['Text1', 'Text2']" in content
+        assert "[built-in options]" in content
+        assert "buildtype = 'release'" in content
 
-        self.t.run_command(os.path.join("build", "demo"))
-        self.assertIn("hello: Release!", self.t.out)
-        self.assertIn("STRING_DEFINITION: Text", self.t.out)
-        self.assertIn("[properties]", content)
-        self.assertNotIn("needs_exe_wrapper", content)
+        t.run_command(os.path.join("build", "demo"))
+        assert "hello: Release!" in t.out
+        assert "STRING_DEFINITION: Text" in t.out
+        assert "[properties]" in content
+        assert "needs_exe_wrapper" not in content
 
-        self._check_binary()
+        check_binary(t)
 
     def test_meson_default_dirs(self):
-        self.t.run("new meson_exe -d name=hello -d version=1.0")
-        # self.t.run("new meson_exe -d name=hello -d version=1.0 -m meson_exe")
+        t = TestClient()
+        t.run("new meson_exe -d name=hello -d version=1.0")
+        # t.run("new meson_exe -d name=hello -d version=1.0 -m meson_exe")
 
         meson_build = textwrap.dedent("""
         project('tutorial', 'cpp')
@@ -171,20 +175,20 @@ class MesonToolchainTest(TestMesonBase):
                     self.run("demo", env="conanrun")
         """)
         # Replace meson.build, conanfile.py and test_package/conanfile.py
-        self.t.save({"meson.build": meson_build,
-                     "conanfile.py": conanfile,
-                     "test_package/conanfile.py": test_conanfile,
-                     "src/file1.txt": "", "src/file2.txt": ""})
-        self.t.run("create . -c tools.build:verbosity=quiet -c tools.compilation:verbosity=verbose")
+        t.save({"meson.build": meson_build,
+                "conanfile.py": conanfile,
+                "test_package/conanfile.py": test_conanfile,
+                "src/file1.txt": "", "src/file2.txt": ""})
+        t.run("create . -c tools.build:verbosity=quiet -c tools.compilation:verbosity=verbose")
         # Check verbosity control
-        assert "unrecognized arguments" not in self.t.out
-        assert re.search("meson compile .*? --verbose", self.t.out)
-        assert re.search("meson install .*? --quiet", self.t.out)
+        assert "unrecognized arguments" not in t.out
+        assert re.search("meson compile .*? --verbose", t.out)
+        assert re.search("meson install .*? --quiet", t.out)
 
         # Check if all the files are in the final directories
         ref = RecipeReference.loads("hello/1.0")
-        pref = self.t.get_latest_package_reference(ref)
-        package_folder = self.t.get_latest_pkg_layout(pref).package()
+        pref = t.get_latest_package_reference(ref)
+        package_folder = t.get_latest_pkg_layout(pref).package()
         if platform.system() == "Windows":
             assert os.path.exists(os.path.join(package_folder, "lib", "hello.lib"))
             assert os.path.exists(os.path.join(package_folder, "bin", "hello.dll"))
@@ -250,6 +254,7 @@ def test_meson_and_additional_machine_files_composition():
     assert match
 
 
+@pytest.mark.tool("ninja")
 @pytest.mark.tool("meson")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for Windows")
 @pytest.mark.skipif(sys.version_info.minor < 8, reason="Latest Meson versions needs Python >= 3.8")

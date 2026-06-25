@@ -1,11 +1,10 @@
 import json
 import textwrap
-import unittest
 
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
-class PerPackageSettingTest(unittest.TestCase):
+class TestPerPackageSetting:
 
     def test_per_package_setting(self):
         client = TestClient()
@@ -18,7 +17,7 @@ class PerPackageSettingTest(unittest.TestCase):
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Windows")
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("create . --name=consumer --version=0.1 --user=user --channel=testing -s os=Linux -s pkg*:os=Windows")
-        self.assertIn("consumer/0.1@user/testing: Created package", client.out)
+        assert "consumer/0.1@user/testing: Created package" in client.out
 
     def test_per_package_setting_build_type(self):
         """ comes from https://github.com/conan-io/conan/pull/9842
@@ -47,7 +46,7 @@ class PerPackageSettingTest(unittest.TestCase):
         client.run('create . -s *:os=Linux -s *-model*:os=Windows '
                    '-s "*-model*:build_type=Debug" -s build_type=Release --build=*')
         assert "pkg-model/0.1: BUILDTYPE Windows:Debug!!!!" in client.out
-        self.assertIn("consumer/0.1: Created package", client.out)
+        assert "consumer/0.1: Created package" in client.out
 
     def test_per_package_setting_no_userchannel(self):
         client = TestClient()
@@ -60,7 +59,7 @@ class PerPackageSettingTest(unittest.TestCase):
         client.run("create . --name=pkg --version=0.1 -s os=Windows")
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
         client.run("create . --name=consumer --version=0.1 -s os=Linux -s pkg*:os=Windows")
-        self.assertIn("consumer/0.1: Created package", client.out)
+        assert "consumer/0.1: Created package" in client.out
 
     def test_per_package_subsetting(self):
         client = TestClient()
@@ -75,7 +74,7 @@ class PerPackageSettingTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("create . --name=consumer --version=0.1 --user=user --channel=testing %s -s compiler.libcxx=libstdc++ "
                    "-s pkg*:compiler.libcxx=libstdc++11" % settings)
-        self.assertIn("consumer/0.1@user/testing: Created package", client.out)
+        assert "consumer/0.1@user/testing: Created package" in client.out
 
     def test_per_package_setting_all_packages_without_user_channel(self):
         client = TestClient()
@@ -180,3 +179,49 @@ def test_package_settings_mixed_patterns():
     assert "mypkg/0.1@test/test: BUILD_TYPE=Release!" in c.out
     assert "mypkg/0.1@test/test: COMPILER_VERSION=12!" in c.out
     assert "mypkg/0.1@test/test: COMPILER_LIBCXX=libstdc++!" in c.out
+
+
+def test_package_settings_negate_patterns():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Dep(ConanFile):
+            version = "0.1"
+            settings = "os"
+            def build(self):
+                self.output.info(f"BUILD OS={self.settings.os}!!!")
+            """)
+    c.save({"dep/conanfile.py": conanfile,
+            "pkg/conanfile.py": GenConanfile().with_requires("dep1/0.1", "dep2/0.1", "dep3/0.1")})
+    c.run("export dep --name=dep1")
+    c.run("export dep --name=dep2")
+    c.run("export dep --name=dep3")
+
+    c.run("install pkg --build=* -s os=Linux -s ~dep1/*:os=Macos")
+    assert "dep1/0.1: BUILD OS=Linux!!!" in c.out
+    assert "dep2/0.1: BUILD OS=Macos!!!" in c.out
+    assert "dep3/0.1: BUILD OS=Macos!!!" in c.out
+
+    # Order doesn't matter if using the base "os=Linux"
+    c.run("install pkg --build=* -s ~dep1/*:os=Macos -s os=Linux")
+    assert "dep1/0.1: BUILD OS=Linux!!!" in c.out
+    assert "dep2/0.1: BUILD OS=Macos!!!" in c.out
+    assert "dep3/0.1: BUILD OS=Macos!!!" in c.out
+
+    # Order DOES matter if using the pattern "*:os=Linux"
+    c.run("install pkg --build=* -s ~dep1/*:os=Macos -s *:os=Linux")
+    assert "dep1/0.1: BUILD OS=Linux!!!" in c.out
+    assert "dep2/0.1: BUILD OS=Linux!!!" in c.out
+    assert "dep3/0.1: BUILD OS=Linux!!!" in c.out
+
+    # dep3 comes later, works
+    c.run("install pkg --build=* -s os=Linux -s ~dep1/*:os=Macos -s dep3/*:os=Windows")
+    assert "dep1/0.1: BUILD OS=Linux!!!" in c.out
+    assert "dep2/0.1: BUILD OS=Macos!!!" in c.out
+    assert "dep3/0.1: BUILD OS=Windows!!!" in c.out
+
+    # dep3 comes first, then last !dep1 pattern prevails
+    c.run("install pkg --build=* -s os=Linux -s dep3/*:os=Windows -s ~dep1/*:os=Macos")
+    assert "dep1/0.1: BUILD OS=Linux!!!" in c.out
+    assert "dep2/0.1: BUILD OS=Macos!!!" in c.out
+    assert "dep3/0.1: BUILD OS=Macos!!!" in c.out

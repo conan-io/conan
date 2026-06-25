@@ -180,6 +180,15 @@ def test_cppstd_server():
     c.assert_listed_binary({"dep/0.1": ("ce92fac7c26ace631e30875ddbb3a58a190eb601",
                                         "Download (default)")})
 
+    # Now what happens if we have it in cache already
+    c.run(f"install consumer {base_settings} -s compiler.cppstd=17 --update")
+    assert "dep/0.1: Checking 3 compatible configurations" in c.out
+    assert "dep/0.1: Main binary package '6179018ccb6b15e6443829bf3640e25f2718b931' missing" in c.out
+    assert "Found compatible package 'ce92fac7c26ace631e30875ddbb3a58a190eb601': " \
+           "compiler.cppstd=14" in c.out
+    c.assert_listed_binary({"dep/0.1": ("ce92fac7c26ace631e30875ddbb3a58a190eb601",
+                                        "Cache")})
+
 
 class TestDefaultCompat:
 
@@ -475,3 +484,14 @@ class TestErrorsCompatibility:
         c.save({"conanfile.txt": ""})
         c.run("install .", assert_error=True)
         assert "ERROR: The 'compatibility.py' plugin file doesn't exist" in c.out
+
+
+def test_compatible_prev_from_cache():
+    tc = TestClient()
+    tc.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("compiler")})
+    settings = ("-s os=Linux -s arch=x86_64 -s compiler=gcc -s compiler.version=8 "
+                "-s compiler.libcxx=libstdc++11")
+    tc.run(f"create . {settings} -s=compiler.cppstd=17")
+    tc.run(f"install --requires=pkg/0.1 {settings} -s=compiler.cppstd=14 -u")
+    tc.assert_listed_binary({"pkg/0.1": ("6179018ccb6b15e6443829bf3640e25f2718b931",
+                                         "Cache")})

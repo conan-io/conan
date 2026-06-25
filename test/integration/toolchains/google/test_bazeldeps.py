@@ -1,6 +1,10 @@
 import os
 import pathlib
+import platform
+import re
 import textwrap
+
+import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
@@ -31,7 +35,7 @@ def test_bazel():
             "consumer/conanfile.py": conanfile})
     c.run("create dep")
     c.run("install consumer")
-    assert "conanfile.py: Generator 'BazelToolchain' calling 'generate()'" in c.out
+    assert "Generator 'BazelToolchain' calling 'generate()'" in c.out
 
 
 def test_bazel_relative_paths():
@@ -52,7 +56,7 @@ def test_bazel_relative_paths():
             "consumer/conanfile.py": conanfile})
     c.run("create dep")
     c.run("install consumer")
-    assert "conanfile.py: Generator 'BazelToolchain' calling 'generate()'" in c.out
+    assert "Generator 'BazelToolchain' calling 'generate()'" in c.out
     build_file = c.load("consumer/conandeps/dep/BUILD.bazel")
     expected = textwrap.dedent("""\
     # Components precompiled libs
@@ -64,7 +68,9 @@ def test_bazel_relative_paths():
         name = "dep",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -165,7 +171,9 @@ def test_bazeldeps_and_tool_requires():
         name = "dep",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -266,11 +274,18 @@ def test_pkg_with_public_deps_and_component_requires():
     client2.run("install .")
     content = client2.load("third/BUILD.bazel")
     assert textwrap.dedent("""\
+    # Components precompiled libs
+    # Root package precompiled libs
+
+    # Components libraries declaration
+    # Package library declaration
     cc_library(
         name = "third",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -283,12 +298,19 @@ def test_pkg_with_public_deps_and_component_requires():
     )""") in content
     content = client2.load("second/BUILD.bazel")
     assert textwrap.dedent("""\
+    # Components precompiled libs
+
+
+    # Root package precompiled libs
+
     # Components libraries declaration
     cc_library(
         name = "second-mycomponent",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -303,7 +325,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "second-myfirstcomp",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -319,7 +343,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "second",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -346,7 +372,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "myfirstlib-cmp1",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -362,7 +390,9 @@ def test_pkg_with_public_deps_and_component_requires():
         name = "myfirstlib",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -443,12 +473,18 @@ def test_pkg_with_public_deps_and_component_requires_2():
     client2.run("install .")
     content = client2.load("pkg/BUILD.bazel")
     assert textwrap.dedent("""\
+    # Components precompiled libs
+    # Root package precompiled libs
+
+    # Components libraries declaration
     # Package library declaration
     cc_library(
         name = "pkg",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -479,7 +515,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "component1",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -494,7 +532,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "fancy_name-cmp2",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -509,7 +549,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "component3",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -525,7 +567,9 @@ def test_pkg_with_public_deps_and_component_requires_2():
         name = "fancy_name",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -576,6 +620,7 @@ def test_pkgconfigdeps_with_test_requires():
     client.save({"conanfile.py": conanfile}, clean_first=True)
     client.run("install . -g BazelDeps")
     expected = textwrap.dedent("""\
+    # Components precompiled libs
     # Root package precompiled libs
     cc_import(
         name = "lib{0}_precompiled",
@@ -588,7 +633,9 @@ def test_pkgconfigdeps_with_test_requires():
         name = "{0}",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -644,7 +691,7 @@ def test_with_editable_layout():
         # Bazel 7.x
         content = client.load("conan_deps_module_extension.bzl")
         assert textwrap.dedent(f"""\
-        def _load_dependenies_impl(mctx):
+        def _load_dependencies_impl(mctx):
             conan_dependency_repo(
                 name = "dep",
                 package_path = "{recipes_folder}/dep",
@@ -653,6 +700,8 @@ def test_with_editable_layout():
         content = client.load("dep/BUILD.bazel")
         assert pathlib.Path(client.current_folder, "conan_deps_repo_rules.bzl").exists()
         assert textwrap.dedent("""\
+        # Components precompiled libs
+        # Root package precompiled libs
         cc_import(
             name = "mylib_precompiled",
             static_library = "bazel-bin/main/libmylib.a",
@@ -664,7 +713,9 @@ def test_with_editable_layout():
             name = "dep",
             hdrs = glob([
                 "include/**",
-            ]),
+            ],
+            allow_empty = True
+            ),
             includes = [
                 "include",
             ],
@@ -762,7 +813,9 @@ def test_tool_requires():
         name = "component1",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -777,7 +830,9 @@ def test_tool_requires():
         name = "libother-cmp2",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -792,7 +847,9 @@ def test_tool_requires():
         name = "component3",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -808,7 +865,9 @@ def test_tool_requires():
         name = "libother",
         hdrs = glob([
             "include/**",
-        ]),
+        ],
+        allow_empty = True
+        ),
         includes = [
             "include",
         ],
@@ -1051,7 +1110,6 @@ class TestBazelGenerationBuildContext:
         assert "Install finished successfully" in c.out  # the asserts in build() didn't fail
 
 
-
 def test_shared_windows_find_libraries():
     """
     Testing the ``_get_libs`` mechanism in Windows, the shared libraries and their
@@ -1157,8 +1215,8 @@ def test_shared_windows_find_libraries():
             "zlib/conanfile.py": zlib,
             "openssl/conanfile.py": openssl,
             "libcurl/conanfile.py": libcurl,
-            "libiconv/conanfile.py": libiconv,
-    })
+            "libiconv/conanfile.py": libiconv
+            })
     c.run("export-pkg zlib -o:a shared=True")
     c.run("export-pkg openssl -o:a shared=True")
     c.run("export-pkg libcurl -o:a shared=True")
@@ -1191,6 +1249,8 @@ def test_shared_windows_find_libraries():
     )
     """)
     zlib_expected = textwrap.dedent("""\
+    # Components precompiled libs
+    # Root package precompiled libs
     cc_import(
         name = "zdll_precompiled",
         shared_library = "bin/zlib1.dll",
@@ -1198,13 +1258,13 @@ def test_shared_windows_find_libraries():
     )
     """)
     iconv_expected = textwrap.dedent("""\
+    # Components precompiled libs
+    # Root package precompiled libs
     cc_import(
         name = "iconv_precompiled",
         shared_library = "bin/iconv-2.dll",
         interface_library = "lib/iconv.lib",
     )
-    """)
-    charset_expected = textwrap.dedent("""\
     cc_import(
         name = "charset_precompiled",
         shared_library = "bin/charset-1.dll",
@@ -1214,4 +1274,145 @@ def test_shared_windows_find_libraries():
     assert libcurl_expected in libcurl_bazel_build
     assert zlib_expected in zlib_bazel_build
     assert openssl_expected in openssl_bazel_build
-    assert iconv_expected in libiconv_bazel_build and charset_expected in libiconv_bazel_build
+    assert iconv_expected in libiconv_bazel_build
+
+
+def test_pkg_with_duplicated_component_requires():
+    """
+    Testing that even having duplicated component requires, the PC does not include them.
+    Issue: https://github.com/conan-io/conan/issues/18283
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            def package_info(self):
+                self.cpp_info.components["mycomponent"].libs = []
+                self.cpp_info.components["myfirstcomp"].requires.append("mycomponent")
+                # Duplicate one
+                self.cpp_info.components["myfirstcomp"].requires.append("mycomponent")
+
+        """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create . --name=mylib --version=0.1")
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_require("mylib/0.1")},
+                clean_first=True)
+    client.run("install . -g BazelDeps")
+    build_content = load(None, os.path.join(client.current_folder, "mylib", "BUILD.bazel"))
+    myfirstcomp_expected = textwrap.dedent("""\
+    cc_library(
+        name = "mylib-myfirstcomp",
+        hdrs = glob([
+            "include/**",
+        ],
+        allow_empty = True
+        ),
+        includes = [
+            "include",
+        ],
+        visibility = ["//visibility:public"],
+        deps = [
+            # do not sort
+            ":mylib-mycomponent",
+        ],
+    )
+    """)
+    assert myfirstcomp_expected in build_content
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="Unix paths only")
+def test_apple_frameworks_and_frameworkdirs():
+    """
+    Testing that Apple frameworks are included as linkopts
+    Issue: https://github.com/conan-io/conan/issues/18748
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class PkgConfigConan(ConanFile):
+            def package_info(self):
+                self.cpp_info.frameworks = ["CoreFoundation", "Cocoa"]
+                self.cpp_info.frameworkdirs = ["/my/path/to/frw1"]
+
+        """)
+    client.save({"conanfile.py": conanfile}, clean_first=True)
+    client.run("create . --name=mylib --version=0.1")
+    client.save({"conanfile.py": GenConanfile("pkg", "0.1").with_require("mylib/0.1")},
+                clean_first=True)
+    client.run("install . -g BazelDeps")
+    build_content = load(None, os.path.join(client.current_folder, "mylib", "BUILD.bazel"))
+    build_file_expected = textwrap.dedent("""\
+    # Components precompiled libs
+    # Root package precompiled libs
+
+    # Components libraries declaration
+    # Package library declaration
+    cc_library(
+        name = "mylib",
+        hdrs = glob([
+            "include/**",
+        ],
+        allow_empty = True
+        ),
+        includes = [
+            "include",
+        ],
+        linkopts = [
+            "-framework",
+            "CoreFoundation",
+            "-framework",
+            "Cocoa",
+            "-F",
+            "/my/path/to/frw1",
+        ],
+        visibility = ["//visibility:public"],
+    )
+    """)
+    assert build_file_expected in build_content
+
+
+def test_shared_libs_and_unix_includes_rpath():
+    """
+    Testing the RPATH flag is added to the BUILD.bazel file if these conditions
+    are given: shared library and UNIX systems.
+
+    Issue: https://github.com/conan-io/conan/issues/19190
+    Issue: https://github.com/conan-io/conan/issues/19135
+    """
+    client = TestClient()
+    csm = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+        class Pkg(ConanFile):
+            name = "csm"
+            version = "1.0"
+            settings = "os"
+            options = {"shared": [True, False]}
+            default_options = {"shared": False}
+            def package(self):
+                if self.settings.os == "Windows":
+                    save(self, os.path.join(self.package_folder, "bin", "csmapi.dll"), "")
+                    save(self, os.path.join(self.package_folder, "lib", "csmapi.lib"), "")
+                else:
+                    save(self, os.path.join(self.package_folder, "lib", "libcsmapi.so"), "")
+            def package_info(self):
+                self.cpp_info.libs = ["csmapi"]
+        """)
+    consumer = textwrap.dedent("""
+        [requires]
+        csm/1.0
+        [options]
+        *:shared=True
+    """)
+    client.save({"conanfile.txt": consumer, "csm/conanfile.py": csm})
+    client.run("export-pkg csm -o '*:shared=True' -s 'os=Windows'")
+    client.run("export-pkg csm -o '*:shared=True' -s 'os=Linux'")
+    client.run("install . -g BazelDeps -s 'os=Windows'")
+    build_content = load(None, os.path.join(client.current_folder, "csm", "BUILD.bazel"))
+    assert '"-Wl,-rpath,' not in build_content
+    client.run("install . -g BazelDeps -s 'os=Linux'")
+    build_content = load(None, os.path.join(client.current_folder, "csm", "BUILD.bazel"))
+    assert re.search('"-Wl,-rpath,.*/p/lib"', build_content.replace("\\", "/"))

@@ -8,7 +8,7 @@ class TestEditablePackageTest:
         ref = "--name=lib --version=version  --user=user --channel=name"
         t = TestClient()
         t.save({'conanfile.py': GenConanfile()})
-        t.run('editable add . {}'.format(ref))
+        t.run('editable add {}'.format(ref))
         assert "Reference 'lib/version@user/name' in editable mode" in t.out
 
     def test_editable_list_search(self):
@@ -50,7 +50,6 @@ def test_editable_no_name_version_test_package():
     tc = TestClient()
     tc.save({"conanfile.py": GenConanfile(),
              "test_package/conanfile.py": GenConanfile("test_package")
-             .with_class_attribute("test_type = 'explicit'")
             .with_test("self.output.info('Testing the package')")})
     tc.run("editable add . --name=foo", assert_error=True)
     assert "ERROR: Editable package recipe should declare its name and version" in tc.out

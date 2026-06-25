@@ -19,7 +19,7 @@ def setup():
     client.run("install --requires={} -s os=Linux --build missing".format(ref))
     client.run("install --requires={} -s os=Linux -s arch=x86 --build missing".format(ref))
     client.run("upload {} -r default".format(ref))
-    latest_rrev = client.cache.get_latest_recipe_reference(ref)
+    latest_rrev = client.cache.get_latest_recipe_revision(ref)
     packages = client.cache.get_package_references(latest_rrev)
     package_ids = [package.package_id for package in packages]
     return client, ref, package_ids, str(conanfile)

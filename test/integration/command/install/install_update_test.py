@@ -76,7 +76,7 @@ def test_update_not_date():
 
     ref = RecipeReference.loads("hello0/1.0@lasote/stable")
 
-    initial_recipe_timestamp = client.cache.get_latest_recipe_reference(ref).timestamp
+    initial_recipe_timestamp = client.cache.get_latest_recipe_revision(ref).timestamp
     initial_package_timestamp = prev.timestamp
 
     # Change and rebuild package
@@ -85,7 +85,7 @@ def test_update_not_date():
     client.run("export . --user=lasote --channel=stable")
     client.run("install --requires=hello0/1.0@lasote/stable --build='*'")
 
-    rebuild_recipe_timestamp = client.cache.get_latest_recipe_reference(ref).timestamp
+    rebuild_recipe_timestamp = client.cache.get_latest_recipe_revision(ref).timestamp
     rebuild_package_timestamp = client.get_latest_package_reference(ref).timestamp
 
     assert rebuild_recipe_timestamp != initial_recipe_timestamp
@@ -100,7 +100,7 @@ def test_update_not_date():
 
     client.assert_listed_require({"hello0/1.0@lasote/stable": "Newer"})
 
-    failed_update_recipe_timestamp = client.cache.get_latest_recipe_reference(ref).timestamp
+    failed_update_recipe_timestamp = client.cache.get_latest_recipe_revision(ref).timestamp
     failed_update_package_timestamp = client.get_latest_package_reference(ref).timestamp
 
     assert rebuild_recipe_timestamp == failed_update_recipe_timestamp

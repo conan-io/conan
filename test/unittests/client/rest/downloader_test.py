@@ -1,7 +1,6 @@
 import os
 import re
 import tempfile
-import unittest
 
 import pytest
 
@@ -54,8 +53,9 @@ class MockRequester:
         return response
 
 
-class DownloaderUnitTest(unittest.TestCase):
-    def setUp(self):
+class TestDownloaderUnit:
+    @pytest.fixture(autouse=True)
+    def setup(self):
         d = tempfile.mkdtemp()
         self.target = os.path.join(d, "target")
 
@@ -65,7 +65,7 @@ class DownloaderUnitTest(unittest.TestCase):
         downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target)
         actual_content = open(self.target, "rb").read()
-        self.assertEqual(expected_content, actual_content)
+        assert expected_content == actual_content
 
     def test_resume_download_to_file_if_interrupted(self):
         expected_content = b"some data"
@@ -74,7 +74,7 @@ class DownloaderUnitTest(unittest.TestCase):
         downloader.download("fake_url", file_path=self.target, verify_ssl=None,
                             retry=0, retry_wait=0)
         actual_content = open(self.target, "rb").read()
-        self.assertEqual(expected_content, actual_content)
+        assert expected_content == actual_content
 
     def test_fail_interrupted_download_to_file_if_no_progress(self):
         expected_content = b"some data"
@@ -97,7 +97,7 @@ class DownloaderUnitTest(unittest.TestCase):
         downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target)
         actual_content = open(self.target, "rb").read()
-        self.assertEqual(expected_content, actual_content)
+        assert expected_content == actual_content
 
     def test_download_with_compressed_content_and_smaller_content_length(self):
         expected_content = b"some data"
@@ -106,4 +106,4 @@ class DownloaderUnitTest(unittest.TestCase):
         downloader = FileDownloader(requester=requester)
         downloader.download("fake_url", file_path=self.target)
         actual_content = open(self.target, "rb").read()
-        self.assertEqual(expected_content, actual_content)
+        assert expected_content == actual_content

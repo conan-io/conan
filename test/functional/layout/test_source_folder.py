@@ -2,7 +2,7 @@ import os
 import platform
 from shutil import copy
 
-import mock
+from unittest import mock
 import pytest
 
 from conan.test.assets.cmake import gen_cmakelists

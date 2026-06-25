@@ -132,8 +132,8 @@ find_modes = [
 
 
 @pytest.mark.tool("cmake")
-@pytest.mark.parametrize("find_mode_PKGA, find_mode_PKGB, find_mode_consumer", find_modes)
-def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_consumer):
+@pytest.mark.parametrize("find_mode_pkga, find_mode_pkgb, find_mode_consumer", find_modes)
+def test_transitive_modules_found(find_mode_pkga, find_mode_pkgb, find_mode_consumer):
     """
     related to https://github.com/conan-io/conan/issues/10224
     modules files variables were set with the pkg_name_FOUND or pkg_name_VERSION
@@ -169,7 +169,7 @@ def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_cons
 
     cmakelist = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.1)
-        project(test_package CXX)
+        project(test_package NONE)
         find_package(MYPKGB REQUIRED {find_mode})
         message("MYPKGB_VERSION: ${{MYPKGB_VERSION}}")
         message("MYPKGB_VERSION_STRING: ${{MYPKGB_VERSION_STRING}}")
@@ -187,8 +187,8 @@ def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_cons
         """)
 
     client.save({"pkgb.py": conan_pkg.format(requires='requires="pkga/1.0"', filename='MYPKGB', module_filename='MYPKGB',
-                                             mode=find_mode_PKGB),
-                 "pkga.py": conan_pkg.format(requires='', filename='MYPKGA', module_filename='unicorns', mode=find_mode_PKGA),
+                                             mode=find_mode_pkgb),
+                 "pkga.py": conan_pkg.format(requires='', filename='MYPKGA', module_filename='unicorns', mode=find_mode_pkga),
                  "consumer.py": consumer,
                  "CMakeLists.txt": cmakelist.format(find_mode=find_mode_consumer)})
 
@@ -210,6 +210,6 @@ def test_transitive_modules_found(find_mode_PKGA, find_mode_PKGB, find_mode_cons
     assert "MYPKGB_DEFINITIONS: -DDEFINE_MYPKGB" in client.out
     assert "Conan: Target declared 'pkga::pkga'"
 
-    if find_mode_PKGA == "module":
+    if find_mode_pkga == "module":
         assert 'Found unicorns: 1.0 (found version "1.0")' in client.out
 

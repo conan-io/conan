@@ -35,7 +35,7 @@ class _QbsDepsModuleFile:
             'package_name': self._dep.ref.name,
             'package_dir': self._get_package_dir(),
             'version': str(self._version),
-            'cpp_info': {k : getattr(self._component, k) for k in cpp_info_attrs},
+            'cpp_info': {k: getattr(self._component, k) for k in cpp_info_attrs},
             'build_bindirs': self._build_bindirs,
             'dependencies': [{'name': n, "version": str(v)} for n, v in self._deps],
             'settings': {k: v for k, v in self._dep.settings.items()},

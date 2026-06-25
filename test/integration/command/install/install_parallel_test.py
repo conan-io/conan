@@ -1,9 +1,7 @@
-import unittest
-
 from conan.test.utils.tools import GenConanfile, TestClient
 
 
-class InstallParallelTest(unittest.TestCase):
+class TestInstallParallel:
 
     def test_basic_parallel_install(self):
         client = TestClient(default_server_user=True)
@@ -26,6 +24,6 @@ class InstallParallelTest(unittest.TestCase):
 
         client.save({"conanfile.txt": conanfile_txt}, clean_first=True)
         client.run("install .")
-        self.assertIn("Downloading binary packages in %s parallel threads" % threads, client.out)
+        assert "Downloading binary packages in %s parallel threads" % threads in client.out
         for i in range(counter):
-            self.assertIn("pkg%s/0.1@user/testing: Package installed" % i, client.out)
+            assert "pkg%s/0.1@user/testing: Package installed" % i in client.out

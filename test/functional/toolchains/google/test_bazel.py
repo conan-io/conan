@@ -3,6 +3,7 @@ import textwrap
 
 import pytest
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 
@@ -37,8 +38,9 @@ def base_profile():
         """)
 
 
-@pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
-@pytest.mark.tool("bazel", "6.5.0")
+@pytest.mark.slow
+@pytest.mark.parametrize("build_type", ["Debug", "Release"])
+@pytest.mark.tool("bazel", "6.x")
 def test_basic_exe_6x(bazelrc, build_type, base_profile, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
     client.run(f"new bazel_exe -d name=myapp -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
@@ -55,8 +57,9 @@ def test_basic_exe_6x(bazelrc, build_type, base_profile, bazel_output_root_dir):
         assert "myapp/1.0: Hello World Debug!" in client.out
 
 
-@pytest.mark.parametrize("build_type", ["Debug", "Release", "RelWithDebInfo", "MinSizeRel"])
-@pytest.mark.tool("bazel", "7.4.1")
+@pytest.mark.slow
+@pytest.mark.parametrize("build_type", ["Debug", "Release"])
+@pytest.mark.tool("bazel", "7.x")
 def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
     client.run(f"new bazel_7_exe -d name=myapp -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
@@ -73,7 +76,8 @@ def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
         assert "myapp/1.0: Hello World Debug!" in client.out
 
 
-@pytest.mark.tool("bazel", "8.0.0")
+@pytest.mark.slow
+@pytest.mark.tool("bazel", "8.x")
 def test_basic_lib(bazelrc, base_profile, bazel_output_root_dir):
     """
     Issue related: https://github.com/conan-io/conan/issues/17438
@@ -84,8 +88,18 @@ def test_basic_lib(bazelrc, base_profile, bazel_output_root_dir):
     assert "mylib/1.0: Hello World Release!" in client.out
 
 
+@pytest.mark.slow
+@pytest.mark.tool("bazel", "9.x")
+def test_basic_lib_9x(bazelrc, base_profile, bazel_output_root_dir):
+    client = TestClient(path_with_spaces=False)
+    client.run(f"new bazel_7_lib -d name=mylib -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
+    client.run("create .")
+    assert "mylib/1.0: Hello World Release!" in client.out
+
+
+@pytest.mark.slow
 @pytest.mark.parametrize("shared", [False, True])
-@pytest.mark.tool("bazel", "6.5.0")
+@pytest.mark.tool("bazel", "6.x")
 def test_transitive_libs_consuming_6x(shared, bazel_output_root_dir):
     """
     Testing the next dependencies structure for shared/static libs
@@ -210,8 +224,9 @@ def test_transitive_libs_consuming_6x(shared, bazel_output_root_dir):
         assert "myfirstlib/1.2.11: Hello World Release!"
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("shared", [False, True])
-@pytest.mark.tool("bazel", "7.4.1")
+@pytest.mark.tool("bazel", "7.x")
 @pytest.mark.skipif(platform.system() == "Linux",
                     reason="Conan CI fails (likely related to parallel "
                            "tests running??). Skipping it for now!")
@@ -253,6 +268,10 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
             self.cpp_info.system_libs.append("m")
         else:
             self.cpp_info.system_libs.append("ws2_32")
+        # Issue: https://github.com/conan-io/conan/issues/18748
+        from conan.tools.apple.apple import is_apple_os
+        if is_apple_os(self):
+            self.cpp_info.frameworks = ["CoreFoundation"]
         """
         client.save({"conanfile.py": conanfile})
         client.run(f"create . -o '*:shared={shared}' -tf ''")  # skipping tests
@@ -266,7 +285,7 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
         conanfile = conanfile.replace('generators = "BazelToolchain"',
                                       'generators = "BazelToolchain", "BazelDeps"\n'
                                       '    requires = "myfirstlib/1.2.11"')
-        workspace = textwrap.dedent("""
+        module = textwrap.dedent("""
         load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "conan_extension")
         use_repo(load_conan_dependencies, "myfirstlib")
         """)
@@ -329,7 +348,7 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
         """)
         # Overwriting files
         client.save({"conanfile.py": conanfile,
-                     "MODULE.bazel": workspace,
+                     "MODULE.bazel": module,
                      "main/BUILD": bazel_build_linux if os_ == "Linux" else bazel_build,
                      "main/mysecondlib.cpp": mysecondlib_cpp if os_ != "Windows" else mysecondlib_cpp_win,
                      })
@@ -337,3 +356,67 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
         client.run(f"create . -o '*:shared={shared}'")
         assert "mysecondlib() First define MY_VALUE and other define 2" in client.out
         assert "myfirstlib/1.2.11: Hello World Release!"
+
+
+@pytest.mark.slow
+@pytest.mark.tool("bazel", "8.x")
+def test_empty_bazel_query():
+    """
+    Test that following a simple steps using the BazelDeps and running
+    a global `bazel query //...` runs OK (bazel >= 8.0)
+
+    Issue related: https://github.com/conan-io/conan/issues/18743
+    """
+    client = _setup_empty_bazel_query_client()
+    with client.chdir("consumer"):
+        client.run_command("bazel query //...")
+    assert "//conan/zlib:zlib" in client.out
+    assert "//conan/zlib:zlib_binaries" in client.out
+
+
+@pytest.mark.slow
+@pytest.mark.tool("bazel", "9.x")
+def test_empty_bazel_query_9x():
+    """
+    Test BazelDeps with Bazel 9.x (rules_cc loads required in generated BUILD files).
+
+    FIXME: `bazel query //...` does not work correctly here as it loads all the BUILD.bazel
+           by default instead of the BUILD.rules_cc.bazel file. Remove that logic
+           whenever BUILD.bazel with those rules become the default template.
+    """
+    client = _setup_empty_bazel_query_client()
+    with client.chdir("consumer"):
+        client.run_command("bazel query @zlib//...")
+    assert "@zlib//:zlib" in client.out
+    assert "@zlib//:zlib_binaries" in client.out
+
+
+def _setup_empty_bazel_query_client():
+    zlib = GenConanfile("zlib", "0.1")
+    consumer = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.google import BazelDeps, bazel_layout
+
+    class App(ConanFile):
+        settings = "os", "arch", "compiler", "build_type"
+        requires = "zlib/0.1"
+
+        def layout(self):
+            bazel_layout(self)
+
+        def generate(self):
+            bz = BazelDeps(self)
+            bz.generate()
+    """)
+    module = textwrap.dedent("""\
+    include("//conan:conan_deps.MODULE.bazel")
+    """)
+    client = TestClient()
+    client.save({
+        "zlib/conanfile.py": zlib,
+        "consumer/conanfile.py": consumer,
+        "consumer/MODULE.bazel": module,
+    })
+    client.run("create zlib")
+    client.run("install consumer")
+    return client

@@ -109,7 +109,7 @@ def test_package_vendor_editable():
             })
     c.run("create pkga")
     c.run("editable add pkgb")
-    c.run("install app -s os=Linux")
+    c.run("install app -s os=Linux --build=editable")
     assert "pkga" in c.out
     # The environment file of "app" doesn't have any visibility of the "pkga" paths
     envfile_app = c.load("app/conanrunenv.sh")

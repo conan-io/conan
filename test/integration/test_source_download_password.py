@@ -17,7 +17,7 @@ from conan.internal.util.files import save
 
 
 def test_source_download_password():
-    c = TestClient()
+    c = TestClient(light=True)
     file_server = TestFileServer()
     c.servers["file_server"] = file_server
     save(os.path.join(file_server.store, "myfile.txt"), "hello world!")
@@ -71,7 +71,7 @@ def test_source_download_password():
 
 def test_source_credentials_only_download():
     # https://github.com/conan-io/conan/issues/16396
-    c = TestClient(default_server_user=True)
+    c = TestClient(default_server_user=True, light=True)
     url = c.servers["default"].fake_url
 
     content = {"credentials": [{"url": url, "token": "password stpaces"}]}
@@ -106,7 +106,7 @@ def test_blocked_malicius_tgz():
             def source(self):
                 get(self, "http://fake_url/myfiles.tgz")
             """)
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": conan_file})
 
     with mock.patch("conan.tools.files.files.download") as mock_download:

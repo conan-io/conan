@@ -103,8 +103,8 @@ class TestDownloadCache:
            """ % file_server.fake_url)
         client.save({"conanfile.py": conanfile})
         client.run("source .", assert_error=True)
-        assert "ConanException: md5 signature failed for" in client.out
-        assert "Provided signature: kk" in client.out
+        assert "ConanException: md5 hash failed for" in client.out
+        assert "Provided hash: kk" in client.out
 
         # There are 2 things in the cache, not sha256, no caching
         assert 0 == len(os.listdir(tmp_folder))  # Nothing was cached
@@ -140,7 +140,7 @@ class TestDownloadCache:
         assert "some content 3" in client.load("myfile3.txt")
 
         # disabling cache will make it fail
-        save(client.paths.new_config_path, "")
+        client.save_home({"global.conf": ""})
         client.run("source .", assert_error=True)
         assert "ERROR: conanfile.py: Error in source() method, line 10" in client.out
         assert "Not found" in client.out

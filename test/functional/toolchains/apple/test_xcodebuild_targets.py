@@ -60,8 +60,6 @@ test = textwrap.dedent("""
     class HelloTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
         generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
-        apply_env = False
-        test_type = "explicit"
         options = {"shared": [True, False], "fPIC": [True, False]}
         default_options = {"shared": False, "fPIC": True}
 
@@ -87,6 +85,8 @@ test = textwrap.dedent("""
     """)
 
 cmakelists = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(PackageTest CXX)
 

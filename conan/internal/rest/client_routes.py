@@ -42,12 +42,15 @@ class ClientV2Router:
             query = "?%s" % urlencode(params)
         return self.base_url + "%s%s" % (self.routes.common_search, query)
 
-    def search_packages(self, ref):
+    def search_packages(self, ref, list_only):
         """URL search packages for a recipe"""
         route = self.routes.common_search_packages_revision \
             if ref.revision else self.routes.common_search_packages
         url = _format_ref(route, ref)
-        return self.base_url + url
+
+        params = {"list_only": list_only}
+        query = "?%s" % urlencode(params)
+        return self.base_url + url + query
 
     def common_authenticate(self):
         return self.base_url + self.routes.common_authenticate

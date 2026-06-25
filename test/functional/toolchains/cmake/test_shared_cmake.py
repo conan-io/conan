@@ -64,6 +64,7 @@ def test_other_client_can_link_cmake(transitive_shared_client):
 
 # FIXME: Move to the correct Meson space
 @pytest.mark.tool("meson")
+@pytest.mark.tool("ninja")
 @pytest.mark.tool("pkg_config")
 def test_other_client_can_link_meson(transitive_shared_client):
     client = transitive_shared_client

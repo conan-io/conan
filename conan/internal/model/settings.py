@@ -1,7 +1,12 @@
+import os
+
 import yaml
 
+from conan.internal.cache.home_paths import HomePaths
+from conan.internal.default_settings import default_settings_yml
 from conan.internal.internal_tools import is_universal_arch
 from conan.errors import ConanException
+from conan.internal.util.files import save, load
 
 
 def bad_value_msg(name, value, value_range):
@@ -180,7 +185,7 @@ class SettingsItem:
             subsetting.rm_safe(name)
 
 
-class Settings(object):
+class Settings:
     def __init__(self, definition=None, name="settings", parent_value="settings"):
         if parent_value is None and definition:
             raise ConanException("settings.yml: null setting can't have subsettings")
@@ -359,3 +364,43 @@ class Settings(object):
         for key, element in self._data.items():
             ret[key] = element.possible_values()
         return ret
+
+
+def load_settings_yml(home_folder):
+    """Returns {setting: [value, ...]} defining all the possible
+               settings without values"""
+    _home_paths = HomePaths(home_folder)
+    settings_path = _home_paths.settings_path
+    if not os.path.exists(settings_path):
+        save(settings_path, default_settings_yml)
+        save(settings_path + ".orig", default_settings_yml)  # stores a copy, to check migrations
+
+    def _load_settings(path):
+        try:
+            return yaml.safe_load(load(path)) or {}
+        except yaml.YAMLError as ye:
+            raise ConanException("Invalid settings.yml format: {}".format(ye))
+
+    settings = _load_settings(settings_path)
+    user_settings_file = _home_paths.settings_path_user
+    if os.path.exists(user_settings_file):
+        settings_user = _load_settings(user_settings_file)
+
+        def appending_recursive_dict_update(d, u):
+            # Not the same behavior as conandata_update, because this append lists
+            for k, v in u.items():
+                if isinstance(v, list):
+                    current = d.get(k) or []
+                    d[k] = current + [value for value in v if value not in current]
+                elif isinstance(v, dict):
+                    current = d.get(k) or {}
+                    if isinstance(current, list):  # convert to dict lists
+                        current = {k: None for k in current}
+                    d[k] = appending_recursive_dict_update(current, v)
+                else:
+                    d[k] = v
+            return d
+
+        appending_recursive_dict_update(settings, settings_user)
+
+    return Settings(settings)

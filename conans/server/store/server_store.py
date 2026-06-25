@@ -211,13 +211,6 @@ class ServerStore(object):
         p_folder = join(tmp, revision, SERVER_PACKAGES_FOLDER, pref.package_id)
         return join(p_folder, REVISIONS_FILE)
 
-    def get_revision_time(self, ref):
-        try:
-            rev_list = self._load_revision_list(ref)
-        except IOError:
-            return None
-        return rev_list.get_time(ref.revision)
-
     def get_package_revision_time(self, pref):
         try:
             rev_list = self._load_package_revision_list(pref)

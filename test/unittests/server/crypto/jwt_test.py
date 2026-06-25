@@ -10,7 +10,7 @@ from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManag
 
 def test_jwt_manager():
     # Instance the manager to generate tokens that expires in 10 ms
-    manager = JWTCredentialsManager(secret="1234asdf", expire_time=timedelta(seconds=1))
+    manager = JWTCredentialsManager(secret="1234asdf" * 4, expire_time=timedelta(seconds=1))
 
     # Encrypt a profile
     token = manager.get_token_for("myuser")

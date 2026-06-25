@@ -347,6 +347,7 @@ def test_autotools_fix_shared_libs():
     assert "Bye, bye!" in client.out
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(platform.system() != "Windows", reason="Using msys2")
 @pytest.mark.tool("msys2")
 class TestAutotoolsTemplateWindows:
@@ -361,15 +362,13 @@ class TestAutotoolsTemplateWindows:
             tools.microsoft.bash:subsystem=msys2
             tools.microsoft.bash:path=bash
             """)
-        test_conanfile = c.load("test_package/conanfile.py")
+        # test_conanfile = c.load("test_package/conanfile.py")
         # GnuToolchain solves the test_package in Windows
-        test_conanfile = test_conanfile.replace("AutotoolsToolchain", "GnuToolchain")
-        conanfile = c.load("conanfile.py")
+        #test_conanfile = test_conanfile.replace("AutotoolsToolchain", "GnuToolchain")
+        #conanfile = c.load("conanfile.py")
         # GnuToolchain solves the test_package in Windows
-        conanfile = conanfile.replace("AutotoolsToolchain", "GnuToolchain")
-        c.save({"msys2": msys2,
-                "conanfile.py": conanfile,
-                "test_package/conanfile.py": test_conanfile})
+        # conanfile = conanfile.replace("AutotoolsToolchain", "GnuToolchain")
+        c.save({"msys2": msys2})
         c.run("create . -pr=msys2")
         assert "hello/1.0: Hello World Release!" in c.out
         assert "conanvcvars.bat: Activating environment" in c.out

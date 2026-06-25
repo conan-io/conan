@@ -1,4 +1,5 @@
 import os
+import re
 import textwrap
 
 import pytest
@@ -99,6 +100,30 @@ def test_unused_requirement(component):
            "by any '(cpp_info/components).requires'." in t.out
 
 
+def test_unused_requirement_not_propagated():
+    # https://github.com/conan-io/conan/issues/19026
+    t = TestClient()
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            requires = "header/0.1", "lib/0.1"
+
+            def package_info(self):
+                self.cpp_info.requires = ["lib::lib", "header::header"]
+    """)
+    t.save({"header/conanfile.py": GenConanfile("header", "0.1").with_package_type("header-library"),
+            "lib/conanfile.py": GenConanfile("lib", "0.1").with_package_type("static-library"),
+            "pkg/conanfile.py": conanfile,
+            "app/conanfile.py": GenConanfile().with_requires("pkg/0.1")})
+    t.run('create header')
+    t.run('create lib')
+    t.run('create pkg')
+    t.run("install app")
+    assert re.search(r"Skipped binaries(\s*)header/0.1", t.out)
+
+
 @pytest.mark.parametrize("component", [True, False])
 def test_wrong_requirement(component):
     """ If we require a wrong requirement, we get a meaninful error.
@@ -167,3 +192,26 @@ def test_unused_tool_requirement():
     t.run('create top.py --name=top2 --version=version')
     t.run('create consumer.py --name=wrong --version=version')
     # This runs without crashing, because it is not chcking that top::other doesn't exist
+
+
+def test_component_double_colon_error_message():
+    c = TestClient()
+    t2 = textwrap.dedent("""
+        from conan import ConanFile
+
+        class t2Conan(ConanFile):
+            name = "t2"
+            version = "0.1.0"
+            requires = "t1/0.1.0"
+            def package_info(self):
+                self.cpp_info.requires.append("t1::comp1::other")
+        """)
+
+    c.save({"t1/conanfile.py": GenConanfile("t1", "0.1.0"),
+            "t2/conanfile.py": t2,
+            "t2/test_package/conanfile.py": GenConanfile().with_settings("build_type")
+                                                          .with_generator("CMakeDeps")
+                                                          .with_test("pass")})
+    c.run("create t1")
+    c.run("create t2", assert_error=True)
+    assert "Component 't1::comp1::other' not found in 't1' package requirement" in c.out

@@ -34,7 +34,7 @@ def print_serial(item, indent=None, color_index=None):
     if isinstance(item, dict):
         for k, v in item.items():
             if isinstance(v, (str, int)):
-                if k.lower() == "error":
+                if k.lower() in ("error", "pkgsign_error"):
                     color = Color.BRIGHT_RED
                     k = "ERROR"
                 elif k.lower() == "warning":
@@ -57,7 +57,7 @@ def print_serial(item, indent=None, color_index=None):
 
 def print_list_text(results):
     """ Do a little format modification to serialized
-    list bundle, so it looks prettier on text output
+    package list, so it looks prettier on text output
     """
     info = results["results"]
 
@@ -89,6 +89,19 @@ def print_list_text(results):
             return result
         return item
     info = {remote: format_timestamps(values) for remote, values in info.items()}
+
+    def format_empty_packages(item):
+        if isinstance(item, dict):
+            result = {}
+            for k, v in item.items():
+                if k == "packages" and isinstance(v, dict) and not v:
+                    result[k] = ["No packages found for this revision"]
+                else:
+                    result[k] = format_empty_packages(v)
+            return result
+        return item
+    info = {remote: format_empty_packages(values) for remote, values in info.items()}
+
     print_serial(info)
 
 
@@ -264,6 +277,13 @@ def list(conan_api: ConanAPI, parser, *args):
                                            args.filter_settings or args.filter_options):
             raise ConanException("--package-query and --filter-xxx can only be done for binaries, "
                                  "a 'pkgname/version:*' pattern is necessary")
+        if args.lru:
+            if not ref_pattern.rrev and not ref_pattern.package_id:  # If package_id => #latest
+                raise ConanException("'--lru' must be used with recipe revision pattern, "
+                                     "use 'pkg/version#*' argument")
+            if ref_pattern.package_id and not ref_pattern.prev:
+                raise ConanException("'--lru' must be used with package revision pattern, "
+                                     "use 'pkg/version:*#*' argument")
         # If neither remote nor cache are defined, show results only from cache
         pkglist = MultiPackagesList()
         profile = conan_api.profiles.get_profile(args.filter_profile or [],

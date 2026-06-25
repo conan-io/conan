@@ -1,15 +1,17 @@
 import json
 import os
+import platform
 
 import pytest
 
+from conan.api.model import RecipeReference, PkgReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
 @pytest.fixture(scope="module")
 def created_package():
-    t = TestClient()
+    t = TestClient(light=True)
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name foo --version 1.0")
     recipe_layout = t.exported_layout()
@@ -115,6 +117,7 @@ def test_cache_path_does_not_exist_folder():
     client.run(f"cache path {pref} --folder build", assert_error=True)
     assert f"ERROR: 'build' folder does not exist for the reference {pref}" in client.out
 
+
 def test_cache_path_output_json():
     client = TestClient()
     conanfile = GenConanfile("mypkg", "0.1")
@@ -124,3 +127,60 @@ def test_cache_path_output_json():
     client.run("cache path mypkg/0.1 --format=json")
     output = json.loads(client.stdout)
     assert output == {"cache_path": os.path.join(layout.base_folder, "e")}
+
+
+class TestCacheRef:
+
+    def test_cache_path(self, created_package):
+        t, recipe_layout, pkg_layout = created_package
+
+        t.run(f'cache ref "{os.path.dirname(recipe_layout.export())}"')
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
+
+        t.run(f'cache ref "{recipe_layout.export()}"')
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
+
+        t.run(f'cache ref "{recipe_layout.source()}"')
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
+
+        t.run(f'cache ref "{os.path.dirname(pkg_layout.package())}"')
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
+
+        t.run(f'cache ref "{pkg_layout.build()}"')
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
+
+        t.run(f'cache ref "{pkg_layout.package()}"')
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
+
+    def test_downloaded_paths(self):
+        t = TestClient(light=True, default_server_user=True)
+        t.save({"conanfile.py": GenConanfile()})
+        t.run("create . --name foo --version 1.0")
+        t.run("upload * -c -r=default")
+        t.run("remove * -c")
+        t.run("install --requires=foo/1.0")
+        ref = RecipeReference.loads("foo/1.0#4d670581ccb765839f2239cc8dff8fbd")
+        pref = PkgReference(ref, "da39a3ee5e6b4b0d3255bfef95601890afd80709")
+        recipe_layout = t.get_latest_ref_layout(ref)
+        pkg_layout = t.get_latest_pkg_layout(pref)
+
+        t.run(f'cache ref "{os.path.dirname(recipe_layout.export())}"')
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
+
+        t.run(f'cache ref "{recipe_layout.export()}"')
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
+
+        t.run(f'cache ref "{os.path.dirname(pkg_layout.package())}"')
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
+
+        t.run(f'cache ref "{pkg_layout.package()}"')
+        assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
+
+    def test_errors(self):
+        t = TestClient(light=True)
+        t.run('cache ref "/some/non/existing/path"', assert_error=True)
+        assert "ERROR: Reference for this path not found in cache" in t.out
+
+        if platform.system() == "Windows":
+            t.run("cache ref J:/not/path", assert_error=True)
+            assert "ERROR: Invalid path: J:/not/path" in t.out

@@ -296,6 +296,8 @@ def _create_find_package_project(client):
             CMakeToolchain
             """),
         'CMakeLists.txt': textwrap.dedent("""
+            set(CMAKE_CXX_COMPILER_WORKS 1)
+            set(CMAKE_CXX_ABI_COMPILED 1)
             cmake_minimum_required(VERSION 3.15)
             project(executable CXX)
 

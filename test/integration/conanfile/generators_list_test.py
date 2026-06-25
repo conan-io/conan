@@ -1,10 +1,9 @@
 import textwrap
-import unittest
 
 from conan.test.utils.tools import TestClient
 
 
-class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
+class TestConanfileRepeatedGenerators:
 
     def test_conanfile_txt(self):
         conanfile = textwrap.dedent("""
@@ -16,7 +15,7 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
         t = TestClient()
         t.save({'conanfile.txt': conanfile})
         t.run("install conanfile.txt")
-        self.assertEqual(str(t.out).count("Generator 'CMakeDeps' calling 'generate()'"), 1)
+        assert str(t.out).count("Generator 'CMakeDeps' calling 'generate()'") == 1
 
     def test_conanfile_py(self):
         conanfile = textwrap.dedent("""
@@ -29,7 +28,7 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
         t = TestClient()
         t.save({'conanfile.py': conanfile})
         t.run("install conanfile.py")
-        self.assertEqual(str(t.out).count("Generator 'CMakeDeps' calling 'generate()'"), 1)
+        assert str(t.out).count("Generator 'CMakeDeps' calling 'generate()'") == 1
 
     def test_python_requires_inheritance(self):
         pyreq = textwrap.dedent("""
@@ -60,7 +59,7 @@ class ConanfileRepeatedGeneratorsTestCase(unittest.TestCase):
         t.save({'pyreq.py': pyreq, 'conanfile.py': conanfile})
         t.run("export pyreq.py --name=base --version=1.0")
         t.run("install conanfile.py")
-        self.assertEqual(str(t.out).count("Generator 'CMakeDeps' calling 'generate()'"), 1)
+        assert str(t.out).count("Generator 'CMakeDeps' calling 'generate()'") == 1
 
     def test_duplicated_generator_in_member_and_attribue(self):
         """

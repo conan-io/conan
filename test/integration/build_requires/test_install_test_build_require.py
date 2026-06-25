@@ -152,7 +152,8 @@ def test_build_require_conanfile_text(client):
     client.save({"conanfile.txt": "[tool_requires]\nmycmake/1.0"}, clean_first=True)
     client.run("install . -g VirtualBuildEnv")
     ext = ".bat" if platform.system() == "Windows" else ".sh"
-    cmd = environment_wrap_command(ConanFileMock(),"conanbuild", client.current_folder, f"mycmake{ext}")
+    cmd = environment_wrap_command(ConanFileMock(), "conanbuild", client.current_folder,
+                                   f"mycmake{ext}")
     client.run_command(cmd)
     system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
     assert "MYCMAKE={}!!".format(system) in client.out
@@ -162,7 +163,8 @@ def test_build_require_conanfile_text(client):
 def test_build_require_command_line_build_context(client):
     client.run("install --tool-requires=mycmake/1.0@ -g VirtualBuildEnv -pr:b=default")
     ext = ".bat" if platform.system() == "Windows" else ".sh"
-    cmd = environment_wrap_command(ConanFileMock(),"conanbuild", client.current_folder, f"mycmake{ext}")
+    cmd = environment_wrap_command(ConanFileMock(), "conanbuild", client.current_folder,
+                                   f"mycmake{ext}")
     client.run_command(cmd)
     system = {"Darwin": "Macos"}.get(platform.system(), platform.system())
     assert "MYCMAKE={}!!".format(system) in client.out
@@ -215,8 +217,8 @@ def test_bootstrap_other_architecture():
     c.assert_listed_binary({"tool/1.0": (win_pkg_id, "Build")}, build=True)
 
     c.run("graph build-order --requires=tool/1.0 -s:b os=Windows -s:h os=Linux --build=* "
-          "--format=json", redirect_stdout="o.json")
-    order = json.loads(c.load("o.json"))
+          "--order-by=recipe --format=json", redirect_stdout="o.json")
+    order = json.loads(c.load("o.json"))['order']
     package1 = order[0][0]["packages"][0][0]
     package2 = order[0][0]["packages"][1][0]
     assert package1["package_id"] == win_pkg_id

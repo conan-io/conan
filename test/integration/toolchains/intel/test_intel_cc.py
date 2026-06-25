@@ -1,3 +1,4 @@
+import os
 import platform
 import textwrap
 
@@ -55,3 +56,16 @@ def test_intel_cc_generator_linux():
     conanintelsetvars = get_intel_cc_generator_file(os_, installation_path, "conanintelsetvars.sh")
     expected = '. "/opt/intel/oneapi/setvars.sh" intel64'
     assert conanintelsetvars == expected
+
+
+def test_avoid_generation():
+    # The empty string for tools.intel:installation_path avoids the generation
+    profile = intelprofile % ("Linux", "")
+    client = TestClient()
+    client.save({
+        "conanfile.txt": conanfile,
+        "intelprofile": profile,
+    })
+    client.run("install . -pr intelprofile")
+    files = os.listdir(client.current_folder)
+    assert "conanintelsetvars" not in ",".join(files)

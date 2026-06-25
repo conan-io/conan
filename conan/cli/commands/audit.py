@@ -3,7 +3,7 @@ import os
 
 from conan.api.conan_api import ConanAPI
 from conan.api.input import UserInput
-from conan.api.model import MultiPackagesList
+from conan.api.model import MultiPackagesList, RecipeReference
 from conan.api.output import cli_out_write, ConanOutput
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME
 from conan.cli import make_abs_path
@@ -31,13 +31,14 @@ def _parse_error_threshold(result: dict, error_level: float) -> None:
     """
     if "conan_error" not in result:
         for ref in result["data"]:
+            if "vulnerabilities" not in result["data"][ref]:
+                continue
             for edge in result["data"][ref]["vulnerabilities"]["edges"]:
                 preferred_base_score = float(edge["node"]["cvss"].get("preferredBaseScore", 0.0))
                 if preferred_base_score >= error_level:
-                    result.update(
-                        {"conan_error":
-                             f"The package {ref} has a CVSS score {preferred_base_score} and "
-                             f"exceeded the threshold severity level {error_level}."})
+                    error_msg = (f"The package {ref} has a CVSS score {preferred_base_score} and "
+                                 f"exceeded the threshold severity level {error_level}.")
+                    result["conan_error"] = error_msg
                     break
 
 
@@ -57,6 +58,9 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args) -> dict:
                            help="Set threshold for severity level to raise an error. "
                                 "By default raises an error for any critical CVSS (9.0 or higher). "
                                 " Use 100.0 to disable it.")
+    subparser.add_argument("--context", help="Context to scan, by default both contexts are scanned "
+                                             "if not specified",
+                           choices=["host", "build"], default=None)
 
     _add_provider_arg(subparser)
     args = parser.parse_args(*args)
@@ -73,6 +77,7 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args) -> dict:
     overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=path, cwd=cwd,
                                                partial=args.lockfile_partial, overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
@@ -94,7 +99,7 @@ def audit_scan(conan_api: ConanAPI, parser, subparser, *args) -> dict:
 
     provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_AUDIT_PROVIDER_NAME)
 
-    scan_result = conan_api.audit.scan(deps_graph, provider)
+    scan_result = conan_api.audit.scan(deps_graph, provider, args.context)
     _parse_error_threshold(scan_result, args.severity_level)
     return scan_result
 
@@ -106,17 +111,14 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
     """
     List the vulnerabilities of the given reference.
     """
-    subparser.add_argument("reference", help="Reference to list vulnerabilities for", nargs="?")
-    subparser.add_argument("-l", "--list", help="pkglist file to list vulnerabilities for")
+    input_group = subparser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument("reference", help="Reference to list vulnerabilities for", nargs="?")
+    input_group.add_argument("-l", "--list", help="Package list file to list vulnerabilities for")
+    input_group.add_argument("-s", "--sbom", help="SBOM file to list vulnerabilities for")
+    input_group.add_argument("-lock", "--lockfile", help="Path to the lockfile to check for vulnerabilities")
     subparser.add_argument("-r", "--remote", help="Remote to use for listing")
     _add_provider_arg(subparser)
     args = parser.parse_args(*args)
-
-    if not args.reference and not args.list:
-        raise ConanException("Please specify a reference or a pkglist file")
-
-    if args.reference and args.list:
-        raise ConanException("Please specify a reference or a pkglist file, not both")
 
     provider = conan_api.audit.get_provider(args.provider or CONAN_CENTER_AUDIT_PROVIDER_NAME)
 
@@ -128,7 +130,20 @@ def audit_list(conan_api: ConanAPI, parser, subparser, *args):
         refs_to_list = package_list.serialize()
         references = list(refs_to_list.keys())
         if not references:  # the package list might contain only refs, no revs
-            ConanOutput().warning("Nothing to list, package list do not contain recipe revisions")
+            ConanOutput().warning("Nothing to list, package list does not contain recipe revisions")
+    elif args.sbom:
+        sbom_file = make_abs_path(args.sbom)
+        with open(sbom_file, 'r') as f:
+            sbom = json.load(f)
+        if sbom.get("bomFormat") != "CycloneDX":
+            raise ConanException(f"Unsupported SBOM format, only CycloneDX is supported.")
+        purls = [component["purl"] for component in sbom["components"]]
+        references = [purl.split("pkg:conan/")[1].replace("@", "/") for purl in purls]
+    elif args.lockfile:
+        lock_file = make_abs_path(args.lockfile)
+        lockfile = conan_api.lockfile.get_lockfile(lock_file).serialize()
+        references = [str(RecipeReference.loads(ref[0] if isinstance(ref, tuple) else ref))
+                      for ref in lockfile["requires"]]
     else:
         references = [args.reference]
     return conan_api.audit.list(references, provider)

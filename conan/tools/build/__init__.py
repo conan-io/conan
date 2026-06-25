@@ -7,10 +7,11 @@ from conan.tools.build.flags import cppstd_flag
 from conan.tools.build.cppstd import check_max_cppstd, check_min_cppstd, \
     valid_max_cppstd, valid_min_cppstd, default_cppstd, supported_cppstd
 from conan.tools.build.cstd import check_max_cstd, check_min_cstd, \
-    valid_max_cstd, valid_min_cstd, supported_cstd
+    valid_max_cstd, valid_min_cstd, default_cstd, supported_cstd
 from conan.tools.build.cpu import build_jobs
 from conan.tools.build.cross_building import cross_building, can_run
 from conan.tools.build.stdcpp_library import stdcpp_library
+from conan.tools.build.compiler import check_min_compiler_version
 from conan.errors import ConanException
 
 CONAN_TOOLCHAIN_ARGS_FILE = "conanbuild.conf"
@@ -20,9 +21,9 @@ CONAN_TOOLCHAIN_ARGS_SECTION = "toolchain"
 def use_win_mingw(conanfile):
     os_build = conanfile.settings_build.get_safe('os')
     if os_build == "Windows":
-        compiler = conanfile.settings.get_safe("compiler")
+        compiler_ = conanfile.settings.get_safe("compiler")
         sub = conanfile.settings.get_safe("os.subsystem")
-        if sub in ("cygwin", "msys2", "msys") or compiler == "qcc":
+        if sub in ("cygwin", "msys2", "msys") or compiler_ == "qcc":
             return False
         else:
             return True

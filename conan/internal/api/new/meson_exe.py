@@ -3,6 +3,7 @@ from conan.internal.api.new.cmake_lib import source_cpp, source_h, test_main
 conanfile_exe = """from conan import ConanFile
 from conan.tools.meson import MesonToolchain, Meson
 from conan.tools.gnu import PkgConfigDeps
+from conan.tools.layout import basic_layout
 
 
 class {{package_name}}Conan(ConanFile):
@@ -24,7 +25,7 @@ class {{package_name}}Conan(ConanFile):
     {%- endif %}
 
     def layout(self):
-        self.folders.build = "build"
+        basic_layout(self)
 
     def generate(self):
         deps = PkgConfigDeps(self)

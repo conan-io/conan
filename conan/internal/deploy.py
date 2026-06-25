@@ -8,7 +8,7 @@ from conan.api.output import ConanOutput
 from conan.internal.loader import load_python_file
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
-from conan.internal.util.files import rmdir, mkdir
+from conan.internal.util.files import rmdir, mkdir, save
 
 
 def _find_deployer(d, cache_deploy_folder):
@@ -38,7 +38,9 @@ def _find_deployer(d, cache_deploy_folder):
         return _load(cache_path)
     builtin_deploy = {"full_deploy.py": full_deploy,
                       "direct_deploy.py": direct_deploy,
-                      "runtime_deploy.py": runtime_deploy}.get(d)
+                      "runtime_deploy.py": runtime_deploy,
+                      "cyclone_1.6.py": cyclonedx_1_6,
+                      "cyclone_1.4.py": cyclonedx_1_4}.get(d)
     if builtin_deploy is not None:
         return builtin_deploy
     raise ConanException(f"Cannot find deployer '{d}'")
@@ -102,6 +104,7 @@ def runtime_deploy(graph, output_folder):
     Deploy all the shared libraries and the executables of the dependencies in a flat directory.
 
     It preserves symlinks in case the configuration tools.deployer:symlinks is True.
+    It preserves the directory structure when having subfolders
     """
     conanfile = graph.root.conanfile
     output = ConanOutput(scope="runtime_deploy")
@@ -134,9 +137,23 @@ def runtime_deploy(graph, output_folder):
     conanfile.output.success(f"Runtime deployed to folder: {output_folder}")
 
 
+def cyclonedx_1_4(graph, output_folder):
+    from conan.tools.sbom import cyclonedx_1_4
+    import json
+    sbom = cyclonedx_1_4(graph.root.conanfile)
+    save(os.path.join(output_folder, "sbom-cyclonedx-1.4.json"), json.dumps(sbom, indent=2))
+
+
+def cyclonedx_1_6(graph, output_folder):
+    from conan.tools.sbom import cyclonedx_1_6
+    import json
+    sbom = cyclonedx_1_6(graph.root.conanfile)
+    save(os.path.join(output_folder, "sbom-cyclonedx-1.6.json"), json.dumps(sbom, indent=2))
+
+
 def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None):
     """
-    Copy all the files from the source directory in a flat output directory.
+    Copy all the files from the source directory in a flat output directory, respecting subfolders.
     An optional string, named extension_filter, can be set to copy only the files with
     the listed extensions.
     """
@@ -144,22 +161,32 @@ def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None
 
     output = ConanOutput(scope="runtime_deploy")
     for src_dirpath, _, src_filenames in os.walk(src_dir, followlinks=symlinks):
+        rel_path = os.path.relpath(src_dirpath, src_dir)
         for src_filename in src_filenames:
             if extension_filter and not any(fnmatch.fnmatch(src_filename, f'*{ext}') for ext in extension_filter):
                 continue
 
             src_filepath = os.path.join(src_dirpath, src_filename)
-            dest_filepath = os.path.join(output_dir, src_filename)
+            dest_filepath = os.path.join(output_dir, rel_path, src_filename)
 
             if not symlinks and os.path.islink(src_filepath):
                 continue
 
-            if os.path.exists(dest_filepath):
-                if filecmp.cmp(src_filepath, dest_filepath):  # Be efficient, do not copy
+            if not os.path.exists(os.path.dirname(dest_filepath)):
+                os.makedirs(os.path.dirname(dest_filepath))
+
+            # lexists: detect existing symlinks; shutil.copy2(..., follow_symlinks=False) uses
+            # os.symlink() and fails with EEXIST if the destination path already exists.
+            if os.path.lexists(dest_filepath):
+                try:
+                    same = filecmp.cmp(src_filepath, dest_filepath, shallow=True)
+                except OSError:  # e.g. broken symlink at dest — replace via unlink below
+                    same = False
+                if same:  # Be efficient, do not copy
                     output.verbose(f"{dest_filepath} exists with same contents, skipping copy")
                     continue
-                else:
-                    output.warning(f"{dest_filepath} exists and will be overwritten")
+                output.warning(f"{dest_filepath} exists and will be overwritten")
+                os.unlink(dest_filepath)
 
             try:
                 file_count += 1
@@ -167,6 +194,7 @@ def _flatten_directory(dep, src_dir, output_dir, symlinks, extension_filter=None
                 # copy all metadata from the src symbolic link to the newly created dst link
                 shutil.copy2(src_filepath, dest_filepath, follow_symlinks=not symlinks)
                 output.verbose(f"Copied {src_filepath} into {output_dir}")
+
             except Exception as e:
                 if "WinError 1314" in str(e):
                     ConanOutput().error("runtime_deploy: Windows symlinks require admin privileges "

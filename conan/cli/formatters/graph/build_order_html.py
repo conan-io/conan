@@ -4,6 +4,7 @@ from conan.api.output import cli_out_write
 build_order_html = r"""
 <html lang="en">
     <head>
+        <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABCFBMVEUAAAA+uf4Ah/2p3PxyvPqNzPkSmP6b0/qTz/mIyPeGx/eIyPeZ0vonpv1qu/ii2fx1wviGx/cFjP0erf+p3PyAxfeAxPcWof6q3PyHyPeKyfgJi/2HzfxCuv4Lk/6p3Pyd2PyGx/cBh/0cqP+Hx/ep3PyGx/dTrvmp3PyGx/cRm/6p3Pya1vyGx/eJyPcGjf0brf+Y0vqp3PwXov6ExvcMlf6p3Pyi2vwap/+FzP2IyPeHyPcPmf4Jkv4Di/16w/gerf8VoP6Ex/hErftft/o8t/4vrv4Ljv2h2Pwsn/xStvtZuvpZtPpNsPpvwvlVsfl0wPh/xPcdrP8Un/40pfwjnPw8qfuLyvgsmPXHAAAANnRSTlMA/sR/BxT+/v7CpjQr/v729fX06ufn59nZ2c/HxMDAp6Wcj46Eg4B8cG9tW1JRUE1FRTYkHRKiySDqAAAAsklEQVQY003P1RqCQBQE4KNid3d3N+quugrYUub7v4ko8sFczfx3A2o8xZoV9FibSYScPeo/qa4TS9czF3C5f9vtCsrs88Wz+3O0MgGoxxASD1eM8GUv4NQQ0icf4g48kRlCsONoAfPaxkri6cExmLHT9BdWS++FEOZtX8w0uM93gmNG67Cd30zKMMJGgyqUQkaItIHq52wa+PMjUDJtxVXIdLQ343J4d0w0jH8H2YJHbR8fvSVyLKSviQAAAABJRU5ErkJggg==">
         <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.0/cytoscape.min.js"
         integrity="sha512-zHc90yHSbkgx0bvVpDK/nVgxANlE+yKN/jKy91tZ4P/vId8AL7HyjSpZqHmEujWDWNwxYXcfaLdYWjAULl35MQ=="
         crossorigin="anonymous"

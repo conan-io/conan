@@ -103,6 +103,7 @@ def profile_list(conan_api, parser, subparser, *args):  # noqa
     """
     List all profiles in the cache.
     """
+    parser.parse_args(*args)
     result = conan_api.profiles.list()
     return result
 

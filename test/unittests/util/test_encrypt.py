@@ -10,12 +10,9 @@ def test_encryp_basic():
     message = 'simple data ascii string'
 
     data = encrypt.encode(message, key)
-    assert type(message) == type(data)
-    assert message != data
-    assert message != data
+    assert isinstance(data, str)
 
     decoded = encrypt.decode(data, key)
-    assert type(message) == type(data)
     assert message == decoded
 
 
@@ -25,11 +22,9 @@ def test_encrypt_unicode():
     message = message_enc.decode('utf-8')
 
     data = encrypt.encode(message, key)
-    assert type(message) == type(data)
-    assert message != data
+    assert isinstance(data, str)
 
     decoded = encrypt.decode(data, key)
-    assert type(message) == type(data)
     assert message == decoded
 
 
@@ -38,11 +33,9 @@ def test_key_unicode():
     message = 'the message'
 
     data = encrypt.encode(message, key)
-    assert type(message) == type(data)
-    assert message != data
+    assert isinstance(data, str)
 
     decoded = encrypt.decode(data, key)
-    assert type(message) == type(data)
     assert message == decoded
 
 

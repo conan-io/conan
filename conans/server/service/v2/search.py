@@ -11,13 +11,16 @@ from conans.server.utils.files import list_folder_subdirs
 from conan.internal.util.files import load
 
 
-def _get_local_infos_min(server_store, ref):
+def _get_local_infos_min(server_store, ref, list_only):
     result = {}
     new_ref = ref
     subdirs = list_folder_subdirs(server_store.packages(new_ref), level=1)
     # Seems that Python3.12 os.walk is retrieving a different order of folders
     for package_id in sorted(subdirs):
         if package_id in result:
+            continue
+        if list_only:
+            result[package_id] = {}
             continue
         # Read conaninfo
         pref = PkgReference(new_ref, package_id)
@@ -35,7 +38,7 @@ def _get_local_infos_min(server_store, ref):
     return result
 
 
-def search_packages(server_store, ref):
+def search_packages(server_store, ref, list_only):
     """
     Return a dict like this:
 
@@ -52,7 +55,7 @@ def search_packages(server_store, ref):
     ref_norev.revision = None
     if not os.path.exists(server_store.conan_revisions_root(ref_norev)):
         raise RecipeNotFoundException(ref)
-    infos = _get_local_infos_min(server_store, ref)
+    infos = _get_local_infos_min(server_store, ref, list_only)
     return infos
 
 
@@ -63,10 +66,10 @@ class SearchService(object):
         self._server_store = server_store
         self._auth_user = auth_user
 
-    def search_packages(self, reference):
+    def search_packages(self, reference, list_only=False):
         """Shared between v1 and v2, v1 will iterate rrevs"""
         self._authorizer.check_read_conan(self._auth_user, reference)
-        info = search_packages(self._server_store, reference)
+        info = search_packages(self._server_store, reference, list_only)
         return info
 
     def _search_recipes(self, pattern=None, ignorecase=True):

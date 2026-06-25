@@ -96,7 +96,8 @@ def test_lock_pyrequires_prereleases():
     dep_rrev = tc.exported_recipe_revision()
     tc.run("lock create app --lockfile-out=app.lock", assert_error=True)
     # Makes sense, prereleases are not active
-    assert "Version range '>=0' from requirement 'dep/[>=0]' required by 'python_requires' could not be resolved"
+    assert ("Version range '>=0' from requirement 'dep/[>=0]' required by "
+            "'python_requires' could not be resolved") in tc.out
 
     tc.save_home({"global.conf": "core.version_ranges:resolve_prereleases=True"})
     # This used to crash even with the conf activated
@@ -136,9 +137,84 @@ def test_lock_pyrequires_export_transitive():
 def test_lock_export_transitive_pyrequire():
     c = TestClient(light=True)
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("python-require"),
-            "pkg/conanfile.py": GenConanfile("pkg", "0.1") .with_python_requires("dep/0.1")})
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("dep/0.1")})
     c.run("export dep")
     c.run("export pkg --lockfile-out=conan.lock")
     lock = json.loads(c.load("conan.lock"))
     assert "pkg/0.1#dfd6bc1becb3915043a671111860baee" in lock["requires"][0]
     assert "dep/0.1#5d31586a2a4355d68898875dc591009a" in lock["python_requires"][0]
+
+
+def test_pyrequires_test_package_lockfile_error():
+    # https://github.com/conan-io/conan/issues/19340
+    c = TestClient(light=True)
+    c.save({"utils/conanfile.py": GenConanfile("utils").with_package_type("python-require"),
+            "bar/conanfile.py": GenConanfile("bar", "8.0").with_python_requires("utils/[^1]"),
+            "bar/test_package/conanfile.py": GenConanfile().with_test("pass")
+                                                           .with_python_requires("utils/[^1]"),
+            "foo/conanfile.py": GenConanfile("foo", "1.0").with_requires("bar/[*]")
+                                                          .with_python_requires("utils/1.7.1")})
+
+    c.run("create utils --version=1.7.1")
+    c.run("create utils --version=1.8.0")
+    c.run("create bar --lockfile-out=bar.lock")
+    c.run("create foo", assert_error=True)
+    assert "Missing prebuilt package for 'bar/8.0'" in c.out
+
+    c.run("create foo --lockfile=bar.lock --lockfile-partial --lockfile-out=foo.lock")
+    c.assert_listed_require({"utils/1.7.1": "Cache",
+                             "utils/1.8.0": "Cache"}, python=True)
+    lock = json.loads(c.load("foo.lock"))
+    assert "utils/1.8.0" in lock["python_requires"][0]
+    assert "utils/1.7.1" in lock["python_requires"][1]
+
+    # The lockfile works, because the fixed version is an older one, and the lock can have
+    # both, the range resolves to 1.8.0, and the fixed resolves to 1.7.1
+    # This lockfile can be used with same results
+    c.run("create foo --lockfile=foo.lock")
+    c.assert_listed_require({"utils/1.7.1": "Cache",
+                             "utils/1.8.0": "Cache"}, python=True)
+
+
+def test_pyrequires_test_package_lockfile_error_forward():
+    # https://github.com/conan-io/conan/issues/19340
+    c = TestClient(light=True)
+    c.save({"utils/conanfile.py": GenConanfile("utils").with_package_type("python-require"),
+            "bar/conanfile.py": GenConanfile("bar", "8.0").with_python_requires("utils/[^1]"),
+            "bar/test_package/conanfile.py": GenConanfile().with_test("pass")
+                                                           .with_python_requires("utils/[^1]"),
+            "foo/conanfile.py": GenConanfile("foo", "1.0").with_requires("bar/[*]")
+                                                          .with_python_requires("utils/1.9.0")})
+
+    # bar binary is built with utils/1.8.0
+    c.run("create utils --version=1.8.0")
+    c.run("create bar --lockfile-out=bar.lock")
+    c.assert_listed_require({"utils/1.8.0": "Cache"}, python=True)
+    lock = json.loads(c.load("bar.lock"))
+    assert "utils/1.8.0" in lock["python_requires"][0]
+
+    # now a new utils/1.9.0 is out, so the regular consumption of bar will fail with missing binary
+    # this will happen even if foo doesn't declare python-requires
+    c.run("create utils --version=1.9.0")
+    c.run("create foo", assert_error=True)
+    assert "Missing prebuilt package for 'bar/8.0'" in c.out
+    c.assert_listed_require({"utils/1.9.0": "Cache"}, python=True)
+
+    # If we try to force bar strict dependencies with lockfile, it will fail, as expected
+    c.run("create foo --lockfile=bar.lock", assert_error=True)
+    assert "Requirement 'utils/1.9.0' not in lockfile 'python_requires'" in c.out
+
+    # we can relax the lockfile, and it will be able to resolve,
+    # but it will still fail with missing binary for bar
+    c.run("create foo --lockfile=bar.lock --lockfile-partial", assert_error=True)
+    assert "Missing prebuilt package for 'bar/8.0'" in c.out
+
+    c.run("create foo --lockfile=bar.lock --lockfile-partial --build=missing "
+          "--lockfile-out=foo.lock")
+    c.assert_listed_require({"utils/1.9.0": "Cache"}, python=True)
+    assert "utils/1.8.0" not in c.out
+
+    # This build is reproducible with this lockfile
+    c.run("create foo --lockfile=foo.lock")
+    c.assert_listed_require({"utils/1.9.0": "Cache"}, python=True)
+    assert "utils/1.8.0" not in c.out

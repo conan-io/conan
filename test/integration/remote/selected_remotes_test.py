@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
@@ -9,11 +7,11 @@ from conan.test.utils.tools import TestClient, TestServer
 class TestSelectedRemotesInstall:
     @pytest.fixture(autouse=True)
     def _setup(self):
-        servers = OrderedDict()
+        servers = {}
         for index in range(3):
             servers[f"server{index}"] = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                                    users={"user": "password"})
-        self.client = TestClient(servers=servers, inputs=3 * ["user", "password"])
+        self.client = TestClient(light=True, servers=servers, inputs=3 * ["user", "password"])
 
     def test_selected_remotes(self):
         self.client.save({"conanfile.py": GenConanfile("liba", "1.0").with_build_msg("OLDREV")})

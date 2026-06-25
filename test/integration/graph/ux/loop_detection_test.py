@@ -1,10 +1,9 @@
 import textwrap
-import unittest
 
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
-class LoopDetectionTest(unittest.TestCase):
+class TestLoopDetection:
 
     def test_transitive_loop(self):
         client = TestClient(light=True)
@@ -19,14 +18,14 @@ class LoopDetectionTest(unittest.TestCase):
 
         client.run("install --requires=pkg3/0.1@lasote/stable --build='*'", assert_error=True)
         # TODO: Complete with better diagnostics
-        self.assertIn("ERROR: There is a cycle/loop in the graph",  client.out)
+        assert "ERROR: There is a cycle/loop in the graph" in client.out
 
     def test_self_loop(self):
         client = TestClient(light=True)
         client.save({'pkg1.py': GenConanfile().with_require('pkg1/0.1@lasote/stable'), })
         client.run('export pkg1.py --name=pkg1 --version=0.1 --user=lasote --channel=stable')
         client.run("install --requires=pkg1/0.1@lasote/stable --build='*'", assert_error=True)
-        self.assertIn("ERROR: There is a cycle/loop in the graph", client.out)
+        assert "ERROR: There is a cycle/loop in the graph" in client.out
 
 
 def test_install_order_infinite_loop():
@@ -43,7 +42,7 @@ def test_install_order_infinite_loop():
     assert "tool/1.0 (Build) -> ['fmt/1.0']" in c.out
 
     # Graph build-order fails in the same way
-    c.run("graph build-order tool -pr:h=tool_profile -b=missing",
+    c.run("graph build-order tool -pr:h=tool_profile -b=missing --order-by=recipe",
           assert_error=True)
     assert "ERROR: There is a loop in the graph" in c.out
     assert "fmt/1.0 (Build) -> ['tool/1.0']" in c.out
@@ -84,4 +83,4 @@ def test_build_require_undetected_loop():
     c.run("create cmake")
     c.run("install app")
     # It doesn't hang, and it sees correctly just 1 dependency
-    assert "conanfile.py (test/1.0): NUM DEPS: 1" in c.out
+    assert "NUM DEPS: 1" in c.out

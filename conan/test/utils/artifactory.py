@@ -12,7 +12,7 @@ ARTIFACTORY_DEFAULT_PASSWORD = os.getenv("ARTIFACTORY_DEFAULT_PASSWORD", "passwo
 ARTIFACTORY_DEFAULT_URL = os.getenv("ARTIFACTORY_DEFAULT_URL", "http://localhost:8090/artifactory")
 
 
-class _ArtifactoryServerStore(object):
+class _ArtifactoryServerStore:
 
     def __init__(self, repo_url, user, password):
         self._user = user or ARTIFACTORY_DEFAULT_USER
@@ -67,7 +67,7 @@ class _ArtifactoryServerStore(object):
         return revisions[0]
 
 
-class ArtifactoryServer(object):
+class ArtifactoryServer:
 
     def __init__(self, *args, **kwargs):
         self._user = ARTIFACTORY_DEFAULT_USER
@@ -88,13 +88,6 @@ class ArtifactoryServer(object):
     @property
     def repo_api_url(self):
         return "{}/api/conan/{}".format(self._url, self._repo_name)
-
-    def recipe_revision_time(self, ref):
-        revs = self.server_store.get_recipe_revisions_references(ref)
-        for r in revs:
-            if r.revision == ref.revision:
-                return r.time
-        return None
 
     def package_revision_time(self, pref):
         revs = self.server_store.get_package_revisions_references(pref)

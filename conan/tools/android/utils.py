@@ -10,7 +10,8 @@ def android_abi(conanfile, context="host"):
     :return: Android-NDK ABI
     """
     if context not in ("host", "build", "target"):
-        raise ConanException(f"context argument must be either 'host', 'build' or 'target', was '{context}'")
+        raise ConanException(f"context argument must be either 'host', 'build' or 'target', "
+                             f"was '{context}'")
 
     try:
         settings = getattr(conanfile, f"settings_{context}")
