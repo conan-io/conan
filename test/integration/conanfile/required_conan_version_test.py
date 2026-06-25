@@ -71,7 +71,7 @@ def test_required_conan_version_with_loading_issues():
                         """)
     client.save({"conanfile.py": conanfile})
     client.run("export . --name=pkg --version=1.0")
-    assert "pkg/1.0: Exported" in client.out
+    assert "Exported: pkg/1.0" in client.out
 
 
 def test_comment_after_required_conan_version():

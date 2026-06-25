@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 from conan.internal.graph.graph_error import GraphError, GraphConflictError
-from conan.api.output import ConanOutput
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 

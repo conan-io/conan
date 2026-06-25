@@ -6,7 +6,6 @@ from json import JSONDecodeError
 from typing import Iterable, Tuple, Dict
 
 from conan.api.model import RecipeReference, PkgReference
-from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.errors import NotFoundException
 from conan.internal.model.version_range import VersionRange
@@ -189,7 +188,7 @@ class MultiPackagesList:
         pref_contexts = {}
         for node in graph["graph"]["nodes"].values():
             if (node["recipe"] not in (RECIPE_CONSUMER, RECIPE_VIRTUAL)
-                and node["ref"] and node["package_id"]):
+                    and node["ref"] and node["package_id"]):
                 pref = node["ref"] + ":" + node["package_id"]
                 pref_contexts.setdefault(pref, set()).add(node['context'])
 

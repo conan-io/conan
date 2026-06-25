@@ -1,7 +1,5 @@
 import os
 
-from conan.api.output import ConanOutput
-
 _EXTENSIONS_FOLDER = "extensions"
 _PLUGINS = "plugins"
 
@@ -19,6 +17,10 @@ class HomePaths:
     @property
     def global_conf_path(self):
         return os.path.join(self._home, "global.conf")
+
+    @property
+    def global_conf_path_user(self):
+        return os.path.join(self._home, "global_user.conf")
 
     @property
     def deployers_path(self):

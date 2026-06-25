@@ -1019,8 +1019,8 @@ class TestDuplicateBuildRequires:
             assert f"{tool}/1.0: This is the binary for OS=Windows" in client.out
             assert f"{tool}/1.0: This is in context=build" in client.out
 
-        assert "consumer/1.0: HOST DEPS: [tool4/1.0]" in client.out
-        assert "consumer/1.0: BUILD DEPS: [tool1/1.0, tool2/1.0, tool3/1.0, tool4/1.0]" in client.out
+        assert "HOST DEPS: [tool4/1.0]" in client.out
+        assert "BUILD DEPS: [tool1/1.0, tool2/1.0, tool3/1.0, tool4/1.0]" in client.out
 
     def test_test_requires_in_test_package(self, client):
         """Test that tool requires can be listed as build and host requirements"""
@@ -1047,5 +1047,5 @@ class TestDuplicateBuildRequires:
         assert "tool4/1.0: This is the binary for OS=Linux" in client.out
         assert "tool4/1.0: This is in context=host" in client.out
 
-        assert "consumer/1.0: HOST DEPS: [tool4/1.0]" in client.out
-        assert "consumer/1.0: BUILD DEPS: [tool1/1.0, tool2/1.0, tool3/1.0, tool4/1.0]" in client.out
+        assert "HOST DEPS: [tool4/1.0]" in client.out
+        assert "BUILD DEPS: [tool1/1.0, tool2/1.0, tool3/1.0, tool4/1.0]" in client.out

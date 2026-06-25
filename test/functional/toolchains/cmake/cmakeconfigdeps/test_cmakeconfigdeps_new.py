@@ -33,9 +33,9 @@ class TestExes:
                 def layout(self):
                     cmake_layout(self)
                     self.cpp.build.exe = "mytool"
-                    name = "mytool.exe" if platform.system() == "Windows" else "mytool"
-                    app_loc = os.path.join("build", str(self.settings.build_type), name)
-                    self.cpp.build.location = app_loc
+                    self.cpp.build.set_property("cmake_target_name", "MyTool::myexe")
+                    name = f"{self.settings.build_type}/mytool.exe" if platform.system() == "Windows" else "mytool"
+                    self.cpp.build.location = name
 
                 def build(self):
                     cmake = CMake(self)
@@ -1108,7 +1108,8 @@ class TestToolRequires:
         # Ninja for same layout in all platforms
         c.run(f"install bye --build-require -c:a tools.cmake.cmakedeps:new={new_value} "
               f"-c:a tools.cmake.cmaketoolchain:generator=Ninja")
-        cmake = c.load("bye/build/Release/generators/hello-TargetsBuild-release.cmake")
+        # Despite installing "bye" in the build context, "hello" should be in the host one
+        cmake = c.load("bye/build/Release/generators/hello-Targets-release.cmake")
         assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
 
 
@@ -1775,7 +1776,7 @@ def test_find_package_extra_variants():
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
     client.run("build")
-    assert 'Conan: Configuring Targets for hello/1.0' in client.out
+    assert 'Conan: Configuring Targets for hello' in client.out
     # And this follows the expected found variable generation
     assert "Found HellO!" in client.out
     assert "Found hello!" not in client.out

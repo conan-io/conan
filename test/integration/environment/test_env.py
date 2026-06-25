@@ -65,7 +65,7 @@ def client():
             def package_info(self):
                 self.runenv_info.define("MYGTESTVAR", "MyGTestValue{}".format(self.settings.os))
             """)
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"cmake/conanfile.py": cmake,
                  "gtest/conanfile.py": gtest,
                  "openssl/conanfile.py": openssl})
@@ -132,7 +132,7 @@ def test_complete(client, gtest_run_true):
 
 
 def test_profile_included_multiple():
-    client = TestClient()
+    client = TestClient(light=True)
     conanfile = textwrap.dedent("""\
         import os, platform
         from conan import ConanFile
@@ -173,7 +173,7 @@ def test_profile_included_multiple():
 
 
 def test_profile_buildenv():
-    client = TestClient()
+    client = TestClient(light=True)
     conanfile = textwrap.dedent("""\
         import os, platform
         from conan import ConanFile
@@ -253,7 +253,7 @@ def test_transitive_order():
                 self.runenv_info.append("MYVAR", "MyCMakeRunValue")
                 self.buildenv_info.append("MYVAR", "MyCMakeBuildValue")
         """)
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"gcc/conanfile.py": gcc,
                  "cmake/conanfile.py": cmake,
                  "openssl/conanfile.py": openssl})
@@ -304,7 +304,7 @@ def test_buildenv_from_requires():
             def package_info(self):
                 self.buildenv_info.append("Poco_ROOT", "MyPoco{}Value".format(self.settings.os))
         """)
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"poco/conanfile.py": poco,
                  "openssl/conanfile.py": openssl})
 
@@ -381,7 +381,7 @@ def test_diamond_repeated():
                 self.output.info("MYVAR4: {}!!!".format(runenv.get("MYVAR4")))
                 env.generate()
        """)
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"pkga/conanfile.py": pkga,
                  "pkgb/conanfile.py": pkgb,
                  "pkgc/conanfile.py": pkgc,
@@ -425,7 +425,7 @@ def test_environment_scripts_generated_envvars(require_run):
             generators = "VirtualRunEnv", "VirtualBuildEnv"
         """)
 
-    client = TestClient()
+    client = TestClient(light=True)
     conanfile_br = (GenConanfile().with_package_file("bin/myapp", "myexe")
                                   .with_package_file("lib/mylib", "mylibcontent")
                                   .with_settings("os"))
@@ -512,7 +512,7 @@ def test_multiple_deactivate(deactivation_mode):
         echo VAR1=$VAR1!!
         echo VAR2=$VAR2!!
         """)
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": conanfile,
                  "display.bat": display_bat,
                  "display.sh": display_sh})
@@ -560,7 +560,7 @@ def test_multiple_deactivate_order(deactivation_mode):
     display_sh = textwrap.dedent("""\
         echo MYVAR=$MYVAR!!
         """)
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": conanfile,
                  "display.bat": display_bat,
                  "display.sh": display_sh})
@@ -726,7 +726,7 @@ def test_profile_build_env_spaces(deactivation_mode):
     display_sh = textwrap.dedent("""\
         echo VAR1=$VAR1!!
         """)
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.txt": "",
                  "profile": "[buildenv]\nVAR1 = VALUE1",
                  "display.bat": display_bat,
@@ -782,7 +782,7 @@ def test_skip_virtualbuildenv_run():
                def package_info(self):
                    self.buildenv_info.define("FOO", "BAR")
            """)
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"pkg.py": conanfile})
     client.run("create pkg.py --name pkg --version 1.0")
 
@@ -818,18 +818,17 @@ def test_files_always_created():
     """ test that even if there are no env-variables, the generators always create files,
     they will be mostly empty, but exist
     """
-    c = TestClient()
+    c = TestClient(light=True)
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
             "consumer/conanfile.txt": "[requires]\ndep/0.1"})
     c.run("create dep")
     c.run("install consumer -g VirtualBuildEnv -g VirtualRunEnv -of=.")
     ext = "bat" if platform.system() == "Windows" else "sh"
 
-    arch = c.get_default_host_profile().settings['arch']
     assert os.path.isfile(os.path.join(c.current_folder, f"conanbuild.{ext}"))
     assert os.path.isfile(os.path.join(c.current_folder, f"conanrun.{ext}"))
-    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuildenv-release-{arch}.{ext}"))
-    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuildenv-release-{arch}.{ext}"))
+    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuildenv.{ext}"))
+    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuildenv.{ext}"))
 
 
 def test_error_with_dots_virtualenv():
@@ -917,7 +916,7 @@ def test_runenv_info_propagated():
 
 
 def test_deactivate_relocatable_substitute():
-    c = TestClient()
+    c = TestClient(light=True)
     # this cannot be tested in CI, because permissions over root folder
     # c.current_folder = "/build"
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
@@ -929,7 +928,7 @@ def test_deactivate_relocatable_substitute():
 
 class TestDotEnv:
     def test_dotenv(self):
-        c = TestClient()
+        c = TestClient(light=True)
         other_path = os.path.join(c.current_folder, "my", "rel", "path")
         myprofile = textwrap.dedent(f"""
             [buildenv]
@@ -946,19 +945,19 @@ class TestDotEnv:
             """)
         c.save({"conanfile.txt": "",
                 "myprofile": myprofile})
-        c.run("install . -pr=myprofile -s build_type=Release")
-        dotenv = c.load("conanbuildenv-Release.env")
+        c.run("install . -pr=myprofile")
+        dotenv = c.load("conanbuildenv.env")
         expected = os.path.join(c.current_folder, "my", "rel", "path")
         assert f'MYOTHER_PATH="{expected}"' in dotenv
         assert f'MYPATH="/some/path/here"' in dotenv
         assert 'MYVAR3="MyVal3"' in dotenv
         assert 'MYVAR1="MyVal1"' in dotenv
-        dotenv = c.load("conanrunenv-Release.env")
+        dotenv = c.load("conanrunenv.env")
         assert f'MYRUNVAR="SomeVal1"' in dotenv
 
     def test_generate_only_dotenv(self):
         # If for some reason a recipe only wants the dot env files, doable
-        c = TestClient()
+        c = TestClient(light=True)
         myprofile = textwrap.dedent(f"""
             [buildenv]
             MYVAR1=MyVal1
@@ -983,7 +982,7 @@ class TestDotEnv:
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires shell")
 @pytest.mark.parametrize("path", [False, True])
 def test_hardened_sh(path):
-    c = TestClient()
+    c = TestClient(light=True)
     echo_sh = textwrap.dedent("""
         set -eu
         . ./conanbuild.sh

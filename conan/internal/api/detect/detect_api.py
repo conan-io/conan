@@ -8,7 +8,7 @@ import textwrap
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.model.version import Version
-from conan.internal.util.files import load, save
+from conan.internal.util.files import load
 from conan.internal.util.runners import check_output_runner, detect_runner
 
 
@@ -304,6 +304,8 @@ def default_cppstd(compiler, compiler_version):
         return "gnu98" if version < "6" else "gnu14"
 
     def _gcc_cppstd_default(version):
+        if version >= "16":
+            return "gnu20"
         if version >= "11":
             return "gnu17"
         return "gnu98" if version < "6" else "gnu14"

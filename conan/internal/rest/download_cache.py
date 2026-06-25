@@ -111,6 +111,16 @@ class DownloadCache:
         return files_to_upload
 
     @staticmethod
+    def get_urls_from_backup_sources(cached_path):
+        """All download URLs stored in the backup-sources summary file ``<cached_path>.json``.
+        """
+        summary_path = cached_path + ".json"
+        if not os.path.exists(summary_path):
+            return set()
+        refs = json.loads(load(summary_path)).get("references") or {}
+        return {url for urls in refs.values() for url in urls}
+
+    @staticmethod
     def update_backup_sources_json(cached_path, conanfile, urls):
         """ create or update the sha256.json file with the references and new urls used
         """

@@ -35,10 +35,14 @@ def conanfile_exception_formatter(conanfile, funcname):
         yield
     except ConanInvalidConfiguration as exc:
         # TODO: This is never called from `conanfile.validate()` but could be called from others
-        msg = "{}: Invalid configuration: {}".format(str(conanfile), exc)
+        header = str(conanfile)
+        header = f"{header}: " if header else ""
+        msg = f"{header}Invalid configuration: {exc}"
         raise ConanInvalidConfiguration(msg)
     except Exception as exc:
-        m = scoped_traceback(f"{conanfile}: Error in {funcname}() method", exc, scope="conanfile.py")
+        header = str(conanfile)
+        header = f"{header}: " if header else ""
+        m = scoped_traceback(f"{header}Error in {funcname}() method", exc, scope="conanfile.py")
         from conan.api.output import LEVEL_DEBUG, ConanOutput
         if ConanOutput.level_allowed(LEVEL_DEBUG):
             m = traceback.format_exc() + "\n" + m

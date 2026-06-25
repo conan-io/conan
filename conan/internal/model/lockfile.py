@@ -175,9 +175,7 @@ class Lockfile:
 
     @staticmethod
     def load(path):
-        if not path:
-            raise IOError("Invalid path")
-        if not os.path.isfile(path):
+        if not path or not os.path.isfile(path):
             raise ConanException("Missing lockfile in: %s" % path)
         content = load(path)
         try:
@@ -251,7 +249,7 @@ class Lockfile:
 
     @staticmethod
     def deserialize(data):
-        """ constructs a GraphLock from a json like dict
+        """ constructs a Lockfile from a json like dict
         """
         graph_lock = Lockfile()
         version = data.get("version")
