@@ -228,14 +228,19 @@ def _is_valid_spdx_expression(license_value):
             _normalized_expresion += "L"
         elif w in _VALID_SPDX_OPERATORS:
             _normalized_expresion += "O"
-        elif w in ("(", ")"):
-            _normalized_expresion += w
+        elif w == "(":
+            _normalized_expresion += "<"
+        elif w == ")":
+            _normalized_expresion += ">"
         else:
             return False
     if not _normalized_expresion:
         return False
-    _SPDX_EXPR_TERM = r'(?:L|\((?:L|\([^()]*\))(?:O(?:L|\([^()]*\)))*\))'
-    return re.compile(rf'^{_SPDX_EXPR_TERM}(?:O{_SPDX_EXPR_TERM})*$').fullmatch(_normalized_expresion) is not None
+    # L = license, O = operator (AND/OR/WITH), <> = grouping from parentheses.
+    _operand = r'(?:L|<[^>]*>)'
+    _grouped_operand = rf'(?:L|<{_operand}(?:O{_operand})*>)'
+    _expression = rf'^{_grouped_operand}(?:O{_grouped_operand})*$'
+    return re.compile(_expression).fullmatch(_normalized_expresion) is not None
 
 
 def _calculate_licenses(component):
