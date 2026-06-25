@@ -194,53 +194,9 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
     return sbom_cyclonedx_1_6
 
 
-def _is_valid_spdx_license(license_value):
-    from conan.tools.sbom.spdx_licenses import NORMALIZED_VALID_SPDX_LICENSES
-
-    token = license_value.lower()
-    if token.endswith("+") and len(token) > 1:
-        return token[:-1] in NORMALIZED_VALID_SPDX_LICENSES
-    if token in NORMALIZED_VALID_SPDX_LICENSES:
-        return True
-    if token.startswith("licenseref-"):
-        value = token[len("licenseref-"):]
-        return bool(value) and all(c.isalnum() or c in ".-" for c in value)
-    if token.startswith("documentref-") and ":" in token:
-        document_ref, right = token.split(":", 1)
-        ref_id = document_ref[len("documentref-"):]
-        if not ref_id or not all(c.isalnum() or c in ".-" for c in ref_id):
-            return False
-        if right.startswith("licenseref-"):
-            value = right[len("licenseref-"):]
-            return bool(value) and all(c.isalnum() or c in ".-" for c in value)
-        if right.endswith("+") and len(right) > 1:
-            return right[:-1] in NORMALIZED_VALID_SPDX_LICENSES
-        return right in NORMALIZED_VALID_SPDX_LICENSES
-    return (bool(token) and all(c.isalnum() or c in ".-" for c in token)
-            and "exception" in token)
-
-def _is_valid_spdx_expression(license_value):
-    import re
-    _VALID_SPDX_OPERATORS = ["AND", "OR", "WITH"]
-    _normalized_expresion = ""
-    for w in (t for t in re.findall(r"\(|\)|[^\s()]+", license_value)):
-        if _is_valid_spdx_license(w):
-            _normalized_expresion += "L"
-        elif w in _VALID_SPDX_OPERATORS:
-            _normalized_expresion += "O"
-        elif w == "(":
-            _normalized_expresion += "<"
-        elif w == ")":
-            _normalized_expresion += ">"
-        else:
-            return False
-    if not _normalized_expresion:
-        return False
-    # L = license, O = operator (AND/OR/WITH), <> = grouping from parentheses.
-    _operand = r'(?:L|<[^>]*>)'
-    _grouped_operand = rf'(?:L|<{_operand}(?:O{_operand})*>)'
-    _expression = rf'^{_grouped_operand}(?:O{_grouped_operand})*$'
-    return re.compile(_expression).fullmatch(_normalized_expresion) is not None
+def _is_expr(license_value):
+     v = license_value.upper()
+     return " AND " in v or " OR " in v or " WITH " in v
 
 
 def _calculate_licenses(component):
@@ -254,7 +210,7 @@ def _calculate_licenses(component):
     for lic in licenses:
         if lic.lower() in NORMALIZED_VALID_SPDX_LICENSES:
             field = "id"
-        elif _is_valid_spdx_expression(lic):
+        elif _is_expr(lic):
             field = "expression"
         else:
             field = "name"
