@@ -1,5 +1,8 @@
 import pytest
 
+from conan.tools.sbom.cyclonedx import _calculate_licenses
+from conan.test.utils.mocks import ConanFileMock
+
 
 @pytest.mark.parametrize(
     "license_value, expected",
