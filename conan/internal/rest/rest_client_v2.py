@@ -10,7 +10,7 @@ from uuid import getnode as get_mac
 
 from conan.api.output import ConanOutput
 from conan.internal.paths import EXPORT_SOURCES_FILE_NAME, CONANINFO, CONAN_MANIFEST, \
-    EXPORT_FILE_NAME, PACKAGE_FILE_NAME
+    EXPORT_FILE_NAME, PACKAGE_FILE_NAME, CONAN_METADATA_SUBFOLDER
 from conan.internal.rest.caching_file_downloader import ConanInternalCacheDownloader
 from conan.internal.rest import response_to_str
 from conan.internal.rest.client_routes import ClientV2Router
@@ -212,7 +212,8 @@ class RestV2Methods:
         result = {}
 
         if not only_metadata:
-            accepted_files = ["conanfile.py", CONAN_MANIFEST,  "metadata/sign"]
+            accepted_files = ["conanfile.py", CONAN_MANIFEST, "metadata/sign",
+                              f"metadata/{CONAN_METADATA_SUBFOLDER}"]
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
             export_file = self._find_compressed_file(ref, server_files, EXPORT_FILE_NAME)
             if export_file is not None:

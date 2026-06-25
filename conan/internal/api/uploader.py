@@ -11,7 +11,7 @@ from conan.internal.source import retrieve_exports_sources
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
 from conan.internal.paths import CONAN_MANIFEST, CONANFILE, CONANINFO, COMPRESSIONS, \
-    EXPORT_SOURCES_FILE_NAME, EXPORT_FILE_NAME, PACKAGE_FILE_NAME
+    EXPORT_SOURCES_FILE_NAME, EXPORT_FILE_NAME, PACKAGE_FILE_NAME, CONAN_METADATA_SUBFOLDER
 from conan.internal.util.files import (clean_dirty, is_dirty, gather_files,
                                        set_dirty_context_manager, mkdir, human_size)
 
@@ -133,6 +133,9 @@ class PackagePreparator:
             bundle.pop("upload-urls", None)
             if bundle.get("upload") or force:
                 self._prepare_recipe(recipe_layout, ref, bundle, conanfile, enabled_remotes)
+                conan_files = _conan_metadata_files(recipe_layout.metadata())
+                if conan_files:
+                    bundle.setdefault("files", {}).update(conan_files)
 
             # Package metadata files too
             if metadata != [""] and (metadata or bundle.get("upload")):
@@ -375,6 +378,21 @@ def _total_size(cache_files):
         stat = os.stat(file)
         total_size += stat.st_size
     return human_size(total_size)
+
+
+def _conan_metadata_files(metadata_folder):
+    """Collect files from metadata/.conan subfolder for automatic upload with the recipe."""
+    conan_subfolder = os.path.join(metadata_folder, CONAN_METADATA_SUBFOLDER)
+    result = {}
+    if not os.path.isdir(conan_subfolder):
+        return result
+    for root, _, files in os.walk(conan_subfolder):
+        for f in files:
+            abs_path = os.path.join(root, f)
+            relpath = os.path.relpath(abs_path, metadata_folder)
+            path = os.path.join("metadata", relpath).replace("\\", "/")
+            result[path] = abs_path
+    return result
 
 
 def _metadata_files(folder, metadata):
