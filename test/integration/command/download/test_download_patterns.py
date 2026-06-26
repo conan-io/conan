@@ -11,8 +11,7 @@ from conan.test.utils.env import environment_update
 class TestDownloadPatterns:
     # The fixture is very similar from TestUploadPatterns, but not worth extracting
     @pytest.fixture(scope="class")
-    @classmethod
-    def client(cls):
+    def client(self):
         """ create a few packages, with several recipe revisions, several pids, several prevs
         """
         client = TestClient(default_server_user=True)
@@ -143,8 +142,7 @@ class TestDownloadPatterns:
 class TestDownloadPatterErrors:
 
     @pytest.fixture(scope="class")
-    @classmethod
-    def client(cls):
+    def client(self):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         client.run(f"create .")
