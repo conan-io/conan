@@ -1056,6 +1056,24 @@ def test_extra_variables_conf_binaries():
     assert "needs_exe_wrapper = true" in content
 
 
+def test_extra_variables_needs_exe_wrapper():
+    """
+    Test that needs_exe_wrapper can be overridden via extra_variables conf.
+    """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0")
+                .with_settings("os", "arch", "compiler", "build_type")
+                .with_generator("MesonToolchain")})
+    # Cross-compilation with exe_wrapper defined would normally set needs_exe_wrapper=true
+    # But we override it to false via conf to demonstrate conf has priority
+    client.run('install . -s arch=armv8 -s:b arch=x86_64 '
+               '-c:h tools.meson.mesontoolchain:extra_variables="{\\"binaries\\": {\\"exe_wrapper\\": \\"/usr/bin/qemu\\"}, \\"properties\\": {\\"needs_exe_wrapper\\": \\"false\\"}}"')
+    content = client.load(MesonToolchain.cross_filename)
+    assert "exe_wrapper = '/usr/bin/qemu'" in content
+    print(content)
+    assert "needs_exe_wrapper = 'false'" in content
+
+
 def test_extra_variables_conf_has_priority_over_toolchain():
     """Issue: https://github.com/conan-io/conan/issues/18718"""
     client = TestClient()

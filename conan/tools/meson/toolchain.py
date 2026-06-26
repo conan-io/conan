@@ -233,6 +233,8 @@ class MesonToolchain:
                 sdk_host = conanfile.settings.get_safe("os.sdk")
                 self.cross_build["host"]["subsystem"] = get_apple_subsystem(sdk_host)
                 self.cross_build["build"]["subsystem"] = get_apple_subsystem(sdk_build)
+            # Issue: https://github.com/conan-io/conan/issues/19217
+            self.properties["needs_exe_wrapper"] = not can_run(self._conanfile)
             if hasattr(conanfile, 'settings_target') and conanfile.settings_target:
                 settings_target = conanfile.settings_target
                 os_target = settings_target.get_safe("os")
@@ -541,12 +543,6 @@ class MesonToolchain:
         self.properties.update(extra_variables.get("properties", {}))
         self.binaries.update(extra_variables.get("binaries", {}))
         self.project_options.update(extra_variables.get("project_options", {}))
-
-        if self.cross_build:
-            has_exe_wrapper = self.binaries.get("exe_wrapper") is not None
-            # Auto evaluation of needs_exe_wrapper only if the user has not set it in the properties
-            if "needs_exe_wrapper" not in self.properties:
-                self.properties["needs_exe_wrapper"] = has_exe_wrapper or not can_run(self._conanfile)
 
         return {
             # https://mesonbuild.com/Machine-files.html#properties
