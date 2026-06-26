@@ -176,6 +176,14 @@ class ConanFileDependencies(UserRequirementsDict):
     def build(self):
         return self.filter({"build": True})
 
+    def items(self, remove_system=True):
+        # deps = self.filter({}, remove_system=remove_system)
+        # return super(ConanFileDependencies, deps).items()
+        data = self._data
+        if remove_system:
+            data = OrderedDict((k, v) for k, v in data.items() if v.recipe != RECIPE_PLATFORM)
+        return data.items()
+
 
 def get_transitive_requires(consumer, dependency):
     """ the transitive requires that we need are the consumer ones, not the current dependencey
