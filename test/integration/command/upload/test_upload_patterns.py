@@ -8,8 +8,8 @@ from conan.test.utils.env import environment_update
 
 
 class TestUploadPatterns:
-    @classmethod
     @pytest.fixture(scope="class")  # Takes 6 seconds, reuse it
+    @classmethod
     def client(cls):
         """ create a few packages, with several recipe revisions, several pids, several prevs
         """
@@ -144,8 +144,8 @@ class TestUploadPatterns:
 
 class TestUploadPatternErrors:
 
-    @classmethod
     @pytest.fixture(scope="class")
+    @classmethod
     def client(cls):
         client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
