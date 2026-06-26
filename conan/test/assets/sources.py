@@ -11,6 +11,10 @@ _function_cpp = r"""
 #include "{{it}}.h"
 {% endfor %}
 
+{% for it in sys_includes -%}
+#include <{{it}}.h>
+{% endfor %}
+
 int {{name}}(){
     #ifdef NDEBUG
     std::cout << "{{ msg or name }}: Release!\n";
@@ -135,6 +139,10 @@ _function_c = r"""
 #include "{{it}}.h"
 {% endfor %}
 
+{% for it in sys_includes -%}
+#include <{{it}}.h>
+{% endfor %}
+
 int {{name}}(){
     #ifdef NDEBUG
     printf("{{ msg or name }}: Release!\n");
@@ -249,6 +257,10 @@ _function_h = """
 
 {% for it in includes -%}
 #include "{{it}}.h"
+{%- endfor %}
+
+{% for it in sys_includes -%}
+#include <{{it}}.h>
 {%- endfor %}
 
 #ifdef _WIN32

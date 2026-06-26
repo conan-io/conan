@@ -62,7 +62,7 @@ if conandeps == nil then conandeps = {{}} end
 conan_premake_tmerge(conandeps, t_conandeps)
 """
 PREMAKE_TEMPLATE_ROOT_BUILD = """
-        includedirs(conandeps[conf][pkg]["includedirs"])
+        externalincludedirs(conandeps[conf][pkg]["includedirs"])
         bindirs(conandeps[conf][pkg]["bindirs"])
         defines(conandeps[conf][pkg]["defines"])
 """

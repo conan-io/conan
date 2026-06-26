@@ -1,3 +1,6 @@
+import re
+from io import StringIO
+
 from conan.tools.apple.apple import to_apple_arch, xcodebuild_deployment_target_key
 from conan.tools.build import cmd_args_to_string
 
@@ -57,3 +60,44 @@ class XcodeBuild:
             cmd += " " + cmd_args_to_string(cli_args)
 
         self._conanfile.run(cmd)
+
+    def build_workspace(self, xcworkspace, scheme, configuration=None, cli_args=None):
+        """
+        Call to ``xcodebuild`` to build a Xcode workspace.
+
+        :param xcworkspace: the *xcworkspace* workspace to build.
+        :param scheme: the name of the scheme to build
+        :param configuration: Build configuration to use (e.g., ``Debug``, ``Release``).
+                              Defaults to the recipe's ``settings.build_type``.
+        :param cli_args: Extra options to pass directly to ``xcodebuild`` (list of strings).
+                              Examples: ``["-xcconfig", "<path/to/file.xcconfig>"]`` or custom
+                              Xcode build settings like ``["BUILD_LIBRARY_FOR_DISTRIBUTION=YES"]``.
+        :return: the return code for the launched ``xcodebuild`` command.
+        """
+        build_config = configuration or self._build_type
+        cmd = "xcodebuild -workspace '{}' -scheme {} -configuration {} -arch {} " \
+              "{} {}".format(xcworkspace, scheme, build_config, self._arch, self._sdkroot,
+                                self._verbosity)
+        deployment_target_key = xcodebuild_deployment_target_key(self._os)
+        if deployment_target_key and self._os_version:
+            cmd += f" {deployment_target_key}={self._os_version}"
+
+        if cli_args:
+            cmd += " " + cmd_args_to_string(cli_args)
+
+        self._conanfile.run(cmd)
+
+    def discover_workspace_schemes(self, xcworkspace):
+        """
+        Call to ``xcodebuild`` to discovers all schemes in a Xcode workspace
+
+        :param xcworkspace: the *xcworkspace* workspace to discover.
+        :return: ``List[str]`` of all schemes in workspace
+        """
+
+        cmd = "xcodebuild -list -workspace '{}'".format(xcworkspace)
+        output = StringIO()
+        self._conanfile.run(cmd, stdout=output)
+
+        schemesString = re.search(r"Schemes:\s*(.*)", output.getvalue().strip(), re.M | re.S).group(1)
+        return re.findall(r"\S+", schemesString)
