@@ -25,9 +25,10 @@ class TestInvalidConfiguration:
     invalid = "Invalid"
 
     @pytest.fixture(scope="class")
-    def client(self):
+    @classmethod
+    def client(cls):
         client = TestClient()
-        client.save({"pkg/conanfile.py": self.conanfile})
+        client.save({"pkg/conanfile.py": cls.conanfile})
         client.run("create pkg --name=pkg --version=0.1 -s os=Linux")
         return client
 
@@ -134,9 +135,10 @@ class TestInvalidBuildPackageID:
     windows_package_id = NO_SETTINGS_PACKAGE_ID
 
     @pytest.fixture(scope="class")
-    def client(self):
+    @classmethod
+    def client(cls):
         client = TestClient()
-        client.save({"pkg/conanfile.py": self.conanfile})
+        client.save({"pkg/conanfile.py": cls.conanfile})
         client.run("create pkg --name=pkg --version=0.1 -s os=Linux")
         return client
 
