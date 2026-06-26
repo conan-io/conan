@@ -68,7 +68,7 @@ class GraphManagerTest:
         self._cache_recipe(ref, conanfile)
 
     @staticmethod
-    def recipe_consumer(reference=None, requires=None, build_requires=None):
+    def recipe_consumer(reference=None, requires=None, build_requires=None, shared=None):
         path = temp_folder()
         path = os.path.join(path, "conanfile.py")
         conanfile = GenConanfile()
@@ -81,6 +81,8 @@ class GraphManagerTest:
         if build_requires:
             for r in build_requires:
                 conanfile.with_build_requires(r)
+        if shared is not None:
+            conanfile.with_shared_option(shared)
         save(path, str(conanfile))
         return path
 

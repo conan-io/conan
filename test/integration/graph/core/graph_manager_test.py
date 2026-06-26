@@ -524,12 +524,16 @@ class TestLinear(GraphManagerTest):
         # node, headers, lib, build, run
         _check_transitive(app, [(liba, True, False, False, False)])
 
-    def test_header_only(self):
+    @pytest.mark.parametrize("app_shared", [True, False, None])
+    @pytest.mark.parametrize("libb_shared", [True, False, None])
+    def test_header_only(self, app_shared, libb_shared):
         # app -> libb0.1 -> liba0.1 (header_only)
         self.recipe_conanfile("liba/0.1", GenConanfile().with_package_type("header-library"))
         libb = GenConanfile().with_requirement("liba/0.1")
+        if libb_shared is not None:
+            libb.with_shared_option(libb_shared)
         self.recipe_conanfile("libb/0.1", libb)
-        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"], shared=app_shared)
 
         deps_graph = self.build_consumer(consumer)
 
@@ -544,7 +548,7 @@ class TestLinear(GraphManagerTest):
 
         # node, headers, lib, build, run
         _check_transitive(app, [
-            (libb, True, True, False, False, None, None),
+            (libb, True, True, False, bool(libb_shared), None, None),
             (liba, False, False, False, False, None, None)
         ])
         _check_transitive(libb, [
