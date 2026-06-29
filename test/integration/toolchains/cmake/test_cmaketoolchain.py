@@ -560,6 +560,31 @@ def test_cmaketoolchain_rcflags():
     assert 'string(APPEND CMAKE_RC_FLAGS_INIT " ${CONAN_RC_FLAGS}")' in toolchain
 
 
+def test_cmaketoolchain_asmflags():
+    """Test that tools.build:asmflags is applied to CONAN_ASM_FLAGS and CMAKE_ASM_FLAGS_INIT"""
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:asmflags=["-mfoo", "-mbar"]
+        """)
+
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:host=profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_ASM_FLAGS " -mfoo -mbar")' in toolchain
+    assert 'string(APPEND CMAKE_ASM_FLAGS_INIT " ${CONAN_ASM_FLAGS}")' in toolchain
+
+
 def test_bitcode_enable_flag():
     profile = textwrap.dedent("""
         [settings]
@@ -1422,6 +1447,7 @@ def test_extra_flags():
                 tc = CMakeToolchain(self)
                 tc.extra_cxxflags = ["extra_cxxflags"]
                 tc.extra_cflags = ["extra_cflags"]
+                tc.extra_asmflags = ["extra_asmflags"]
                 tc.extra_sharedlinkflags = ["extra_sharedlinkflags"]
                 tc.extra_exelinkflags = ["extra_exelinkflags"]
                 tc.generate()
@@ -1431,6 +1457,7 @@ def test_extra_flags():
         [conf]
         tools.build:cxxflags+=['cxxflags']
         tools.build:cflags+=['cflags']
+        tools.build:asmflags+=['asmflags']
         tools.build:sharedlinkflags+=['sharedlinkflags']
         tools.build:exelinkflags+=['exelinkflags']
         """)
@@ -1440,6 +1467,7 @@ def test_extra_flags():
 
     assert 'string(APPEND CONAN_CXX_FLAGS " extra_cxxflags cxxflags")' in toolchain
     assert 'string(APPEND CONAN_C_FLAGS " extra_cflags cflags")' in toolchain
+    assert 'string(APPEND CONAN_ASM_FLAGS " extra_asmflags asmflags")' in toolchain
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " extra_sharedlinkflags sharedlinkflags")' in toolchain
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " extra_exelinkflags exelinkflags")' in toolchain
 

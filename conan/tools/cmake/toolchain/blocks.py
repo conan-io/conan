@@ -783,6 +783,9 @@ class ExtraFlagsBlock(Block):
         {% if cflags %}
         string(APPEND CONAN_C_FLAGS{{suffix}} "{% for cflag in cflags %} {{ cflag }}{% endfor %}")
         {% endif %}
+        {% if asmflags %}
+        string(APPEND CONAN_ASM_FLAGS{{suffix}} "{% for asmflag in asmflags %} {{ asmflag }}{% endfor %}")
+        {% endif %}
         {% if sharedlinkflags %}
         string(APPEND CONAN_SHARED_LINKER_FLAGS{{suffix}} "{% for sharedlinkflag in sharedlinkflags %} {{ sharedlinkflag }}{% endfor %}")
         {% endif %}
@@ -840,6 +843,7 @@ class ExtraFlagsBlock(Block):
         # Now, it's time to get all the flags defined by the user
         cxxflags = self._toolchain.extra_cxxflags + self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         cflags = self._toolchain.extra_cflags + self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        asmflags = self._toolchain.extra_asmflags + self._conanfile.conf.get("tools.build:asmflags", default=[], check_type=list)
         sharedlinkflags = self._toolchain.extra_sharedlinkflags + self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._toolchain.extra_exelinkflags + self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         rcflags = self._conanfile.conf.get("tools.build:rcflags", default=[], check_type=list)
@@ -863,6 +867,7 @@ class ExtraFlagsBlock(Block):
             "suffix": suffix,
             "cxxflags": cxxflags,
             "cflags": cflags,
+            "asmflags": asmflags,
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags,
             "rcflags": rcflags,
@@ -882,6 +887,9 @@ class CMakeFlagsInitBlock(Block):
             if(DEFINED CONAN_C_FLAGS_${config})
               string(APPEND CMAKE_C_FLAGS_${config}_INIT " ${CONAN_C_FLAGS_${config}}")
             endif()
+            if(DEFINED CONAN_ASM_FLAGS_${config})
+              string(APPEND CMAKE_ASM_FLAGS_${config}_INIT " ${CONAN_ASM_FLAGS_${config}}")
+            endif()
             if(DEFINED CONAN_SHARED_LINKER_FLAGS_${config})
               string(APPEND CMAKE_SHARED_LINKER_FLAGS_${config}_INIT " ${CONAN_SHARED_LINKER_FLAGS_${config}}")
             endif()
@@ -898,6 +906,9 @@ class CMakeFlagsInitBlock(Block):
         endif()
         if(DEFINED CONAN_C_FLAGS)
           string(APPEND CMAKE_C_FLAGS_INIT " ${CONAN_C_FLAGS}")
+        endif()
+        if(DEFINED CONAN_ASM_FLAGS)
+          string(APPEND CMAKE_ASM_FLAGS_INIT " ${CONAN_ASM_FLAGS}")
         endif()
         if(DEFINED CONAN_SHARED_LINKER_FLAGS)
           string(APPEND CMAKE_SHARED_LINKER_FLAGS_INIT " ${CONAN_SHARED_LINKER_FLAGS}")

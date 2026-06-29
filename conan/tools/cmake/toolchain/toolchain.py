@@ -96,6 +96,7 @@ class CMakeToolchain:
 
         self.extra_cxxflags = []
         self.extra_cflags = []
+        self.extra_asmflags = []
         self.extra_sharedlinkflags = []
         self.extra_exelinkflags = []
         self.add_rpath_link = False
