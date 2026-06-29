@@ -96,3 +96,27 @@ class TestSourceLayout:
         client.run("source .")
         assert "layout_src" in client.out
         assert client.load("layout_src/file.cpp") == "content"
+
+    def test_layout_source_called_for_consumer_during_install(self):
+        # layout_source() on a consumer conanfile is called during graph evaluation (conan install).
+        # Unlike non-consumer packages where it replaces layout(), for the consumer both run.
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Consumer(ConanFile):
+                def layout_source(self):
+                    self.folders.source = "consumer_src"
+
+                def layout(self):
+                    self.folders.build = "consumer_build"
+
+                def generate(self):
+                    self.output.info(f"source_folder={self.source_folder}!!!")
+                    self.output.info(f"build_folder={self.build_folder}!!!")
+        """)
+        client = TestClient(light=True)
+        client.save({"conanfile.py": consumer})
+        client.run("install .")
+        # Both layout_source() and layout() must have been applied to the consumer
+        assert "consumer_src!!!" in client.out
+        assert "consumer_build!!!" in client.out

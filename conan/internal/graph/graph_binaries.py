@@ -526,6 +526,9 @@ class GraphBinariesAnalyzer:
                 # For .py we keep evaluating the package_id, validate(), etc
                 compute_package_id(node, self._modes, config_version, self._hook_manager)
             # To support the ``[layout]`` in conanfile.txt
+            if hasattr(node.conanfile, "layout_source"):
+                with conanfile_exception_formatter(node.conanfile, "layout_source"):
+                    node.conanfile.layout_source()
             if hasattr(node.conanfile, "layout"):
                 with conanfile_exception_formatter(node.conanfile, "layout"):
                     node.conanfile.layout()
