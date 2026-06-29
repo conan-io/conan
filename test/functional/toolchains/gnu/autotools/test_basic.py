@@ -57,91 +57,6 @@ def test_autotools(matrix_client_nospace):
     assert "matrix/1.0: Hello World Release!" in client.out
 
 
-r"""
-======== Calling build() ========
->>> Build step
-Building conanfile.py
-conanfile.py: Calling build()
-conanfile.py: RUN: aclocal
-conanvcvars.bat: Activating environment Visual Studio 15 - amd64 - winsdk_version=None - vcvars_ver=14.1
-[vcvarsall.bat] Environment initialized for: 'x64'
-
-conanfile.py: RUN: autoconf
-conanvcvars.bat: Activating environment Visual Studio 15 - amd64 - winsdk_version=None - vcvars_ver=14.1
-[vcvarsall.bat] Environment initialized for: 'x64'
-
-conanfile.py: RUN: automake --add-missing --foreign
-conanvcvars.bat: Activating environment Visual Studio 15 - amd64 - winsdk_version=None - vcvars_ver=14.1
-[vcvarsall.bat] Environment initialized for: 'x64'
-configure.ac:6: installing './ar-lib'
-configure.ac:6: installing './compile'
-configure.ac:3: installing './install-sh'
-configure.ac:3: installing './missing'
-Makefile.am: installing './depcomp'
-
-conanfile.py: RUN: "/c/conan_tests/tmpx0lplb5mconans/pathwithoutspaces/configure" --prefix=/ --bindir=${prefix}/bin --sbindir=${prefix}/bin --libdir=${prefix}/lib --includedir=${prefix}/include --oldincludedir=${prefix}/include
-conanvcvars.bat: Activating environment Visual Studio 15 - amd64 - winsdk_version=None - vcvars_ver=14.1
-[vcvarsall.bat] Environment initialized for: 'x64'
-configure: loading site script /etc/config.site
-checking for a BSD-compatible install... /usr/bin/install -c
-checking whether sleep supports fractional seconds... yes
-checking filesystem timestamp resolution... 0.01
-checking whether build environment is sane... yes
-checking for a race-free mkdir -p... /usr/bin/mkdir -p
-checking for gawk... gawk
-checking whether make sets $(MAKE)... yes
-checking whether make supports nested variables... yes
-checking xargs -n works... yes
-checking whether UID '197609' is supported by ustar format... yes
-checking whether GID '197121' is supported by ustar format... yes
-checking how to create a ustar tar archive... gnutar
-checking whether the C++ compiler works... yes
-checking for C++ compiler default output file name... conftest.exe
-checking for suffix of executables... .exe
-checking whether we are cross compiling... no
-checking for suffix of object files... obj
-checking whether the compiler supports GNU C++... no
-checking whether cl accepts -g... yes
-checking whether make supports the include directive... yes (GNU style)
-checking dependency style of cl... msvc7
-checking for ranlib... ranlib
-checking for gcc... cl
-checking whether the compiler supports GNU C... no
-checking whether cl accepts -g... yes
-checking for cl option to enable C23 features... unsupported
-checking for cl option to enable C11 features... unsupported
-checking for cl option to enable C99 features... unsupported
-checking for cl option to enable C89 features... none needed
-checking whether cl understands -c and -o together... no
-checking dependency style of /c/conan_tests/tmpx0lplb5mconans/pathwithoutspaces/compile cl... msvc7
-checking for ar... ar
-checking the archiver (ar) interface... ar
-checking that generated files are newer than configure... done
-configure: creating ./config.status
-config.status: creating Makefile
-config.status: executing depfiles commands
-
-conanfile.py: RUN: make -j8
-conanvcvars.bat: Activating environment Visual Studio 15 - amd64 - winsdk_version=None - vcvars_ver=14.1
-[vcvarsall.bat] Environment initialized for: 'x64'
-source='main.cpp' object='main.obj' libtool=no \
-DEPDIR=.deps depmode=msvc7 /bin/sh ./depcomp \
-cl -DPACKAGE_NAME=\"main\" -DPACKAGE_TARNAME=\"main\" -DPACKAGE_VERSION=\"1.0\" -DPACKAGE_STRING=\"main\ 1.0\" -DPACKAGE_BUGREPORT=\"some@email.com\" -DPACKAGE_URL=\"\" -DPACKAGE=\"main\" -DVERSION=\"1.0\" -I.   -DNDEBUG  -MD -O2 -Ob2 -FS -c -o main.obj `cygpath -w 'main.cpp'`
-main.cpp
-C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\include\xlocale(319): warning C4530: C++ exception handler used, but unwind semantics are not enabled. Specify /EHsc
-main.cpp(6): fatal error C1083: Cannot open include file: 'matrix.h': No such file or directory
-Microsoft (R) C/C++ Optimizing Compiler Version 19.16.27054 for x64
-Copyright (C) Microsoft Corporation.  All rights reserved.
-
-cl : Command line warning D9035 : option 'o' has been deprecated and will be removed in a future release
-make: *** [Makefile:393: main.obj] Error 2
-
-ERROR: conanfile.py: Error in build() method, line 18
-autotools.make()
-ConanException: Error 2 while executing
-"""
-
-
 @pytest.mark.tool("msys2")
 def test_autotools_msvc():
     client = TestClient(path_with_spaces=False)
@@ -188,11 +103,12 @@ def test_autotools_msvc():
                  "windows": profile}, clean_first=True)
 
     client.run("build . -pr=windows")
-    print(client.out)
-    print(client.current_folder)
     client.run_command(r".\main")
-    print(client.out)
     assert "matrix/1.0: Hello World Release!" in client.out
+    assert "main _MSC_VER19" in client.out
+    assert "main _MSVC_LANG20" in client.out
+    assert "matrix/1.0: _MSC_VER19" in client.out
+    assert "matrix/1.0: _MSVC_LANG20" in client.out
 
 
 def build_windows_subsystem(profile, make_program, subsystem):

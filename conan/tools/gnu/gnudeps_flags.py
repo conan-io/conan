@@ -65,7 +65,7 @@ class GnuDepsFlags:
     def _format_library_paths(self, library_paths):
         if not library_paths:
             return []
-        pattern = "%s"
+        pattern = "-LIBPATH:%s" if is_msvc(self._conanfile) else "-L%s"
         return [pattern % self._adjust_path(library_path)
                 for library_path in library_paths if library_path]
 

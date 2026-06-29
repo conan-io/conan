@@ -3,6 +3,7 @@ from conan.internal.model.pkg_type import PackageType
 from conan.tools import CppInfo
 from conan.tools.env import Environment
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
+from conan.tools.microsoft import is_msvc
 
 
 class AutotoolsDeps:
@@ -72,8 +73,10 @@ class AutotoolsDeps:
             env = Environment()
             env.append("CPPFLAGS", cpp_flags)
             env.append("LIBS", libs)
-            env.append("LDFLAGS", ldflags)
-            env.append("LIB", flags.lib_paths)
+            if is_msvc(self._conanfile):
+                env.append("LINK", ldflags)
+            else:
+                env.append("LDFLAGS", ldflags)
             env.append("CXXFLAGS", cxxflags)
             env.append("CFLAGS", cflags)
             self._environment = env
