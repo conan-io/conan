@@ -460,6 +460,9 @@ class GraphBinariesAnalyzer:
         # it could even be delayed until installation time, but if we got enough info here for
         # package_id, we can run it
         conanfile = node.conanfile
+        if hasattr(conanfile, "layout_source"):
+            with conanfile_exception_formatter(conanfile, "layout_source"):
+                conanfile.layout_source()
         if hasattr(conanfile, "layout"):
             with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()

@@ -330,7 +330,10 @@ class WorkspaceAPI:
             level_order = []
             for node in items:
                 conanfile = node.conanfile
-                if hasattr(conanfile, "layout"):
+                if hasattr(conanfile, "layout_source"):
+                    with conanfile_exception_formatter(conanfile, "layout_source"):
+                        conanfile.layout_source()
+                elif hasattr(conanfile, "layout"):
                     with conanfile_exception_formatter(conanfile, "layout"):
                         conanfile.layout()
                 base_folder = find_folder(node.ref)

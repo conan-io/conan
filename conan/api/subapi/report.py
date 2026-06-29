@@ -93,7 +93,10 @@ def _configure_source(conan_api, hook_manager, conanfile_path, ref, remotes):
     profile = conan_api.profiles.get_profile([])
     initialize_conanfile_profile(conanfile, profile, profile, CONTEXT_HOST, False)
     # This is important, otherwise the ``conan source`` doesn't define layout and fails
-    if hasattr(conanfile, "layout"):
+    if hasattr(conanfile, "layout_source"):
+        with conanfile_exception_formatter(conanfile, "layout_source"):
+            conanfile.layout_source()
+    elif hasattr(conanfile, "layout"):
         with conanfile_exception_formatter(conanfile, "layout"):
             conanfile.layout()
 
