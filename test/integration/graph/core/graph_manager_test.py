@@ -365,9 +365,9 @@ class TestLinear(GraphManagerTest):
 
         # # node, headers, lib, build, run, (transitive_headers, transitive_libs)
         _check_transitive(consumer, [
-            (shared1, True, True, False, True, None, None),
-            (static2, True, False, False, False, None, None),
-            (static3, False, False, False, False, None, None),
+            (shared1, True, True, False, True, (None, None), None),
+            (static2, True, False, False, False, (None, None), None),
+            (static3, False, False, False, False, (None, None), None),
         ])
 
     def test_middle_shared_up_static(self):
