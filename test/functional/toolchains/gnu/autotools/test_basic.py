@@ -57,6 +57,8 @@ def test_autotools(matrix_client_nospace):
     assert "matrix/1.0: Hello World Release!" in client.out
 
 
+@pytest.mark.slow
+@pytest.mark.skipif(platform.system()!="Windows", reason="Requires windows msys2")
 @pytest.mark.tool("msys2")
 def test_autotools_msvc():
     client = TestClient(path_with_spaces=False)
