@@ -10,7 +10,7 @@ from uuid import getnode as get_mac
 
 from conan.api.output import ConanOutput
 from conan.internal.paths import EXPORT_SOURCES_FILE_NAME, CONANINFO, CONAN_MANIFEST, \
-    EXPORT_FILE_NAME, PACKAGE_FILE_NAME
+    EXPORT_FILE_NAME, PACKAGE_FILE_NAME, CONAN_INTERNAL_FILE_NAME
 from conan.internal.rest.caching_file_downloader import ConanInternalCacheDownloader
 from conan.internal.rest import response_to_str
 from conan.internal.rest.client_routes import ClientV2Router
@@ -217,6 +217,9 @@ class RestV2Methods:
             export_file = self._find_compressed_file(ref, server_files, EXPORT_FILE_NAME)
             if export_file is not None:
                 files.append(export_file)
+            internal_file = self._find_compressed_file(ref, server_files, CONAN_INTERNAL_FILE_NAME)
+            if internal_file is not None:
+                files.append(internal_file)
             # If we didn't indicated reference, server got the latest, use absolute now, it's safer
             urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
             self._download_and_save_files(urls, dest_folder, files, parallel=True)
