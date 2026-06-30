@@ -23,6 +23,7 @@ from unittest.mock import Mock
 from requests.exceptions import HTTPError
 from webtest.app import TestApp
 
+from conan import conan_version
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS
@@ -438,6 +439,7 @@ class TestClient:
         else:
             text = default_profiles[platform.system()]
         save(os.path.join(self.cache_folder, "profiles", "default"), text)
+        save(os.path.join(self.cache_folder, "global.conf"), f'core:policies=["required_conan_version>={conan_version}"]')
         # Using internal env variable to add another custom commands folder
         self._custom_commands_folder = custom_commands_folder
 
