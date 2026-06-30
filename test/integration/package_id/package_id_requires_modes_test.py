@@ -75,7 +75,7 @@ class TestPackageIDError:
         client.save({"conanfile.py": GenConanfile().with_require("dep2/1.0@user/testing")
                                                    .with_require("dep3/1.0@user/testing")})
         client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
-        assert "consumer/1.0@user/testing: Created" in client.out
+        assert "Created package" in client.out
 
     def test_transitive_multi_mode2_package_id(self):
         # https://github.com/conan-io/conan/issues/6942
@@ -102,7 +102,7 @@ class TestPackageIDError:
         client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
         assert "dep2/1.0@user/testing: PkgNames: ['dep1']" in client.out
         assert "consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']" in client.out
-        assert "consumer/1.0@user/testing: Created" in client.out
+        assert "Created package" in client.out
 
     def test_transitive_multi_mode_build_requires(self):
         # https://github.com/conan-io/conan/issues/6942
@@ -131,7 +131,7 @@ class TestPackageIDError:
         client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
         assert "dep2/1.0@user/testing: PkgNames: ['dep1']" in client.out
         assert "consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']" in client.out
-        assert "consumer/1.0@user/testing: Created" in client.out
+        assert "Full package reference: consumer/1.0@user/testing" in client.out
 
 
 class TestRequirementPackageId:

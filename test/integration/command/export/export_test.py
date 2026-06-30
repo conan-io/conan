@@ -93,7 +93,7 @@ class TestExportSettings:
         assert load(os.path.join(export_path, "file1.txt")) == "file1"
         assert load(os.path.join(export_src_path, "file2.txt")) == "file2"
         client.run("install --requires=hello/1.2@lasote/stable --build=missing")
-        assert "hello/1.2@lasote/stable: Generating the package" in client.out
+        assert "Generating the package hello/1.2@lasote/stable:" in client.out
 
         client.save({CONANFILE: conanfile,
                      "file1.txt": "",
@@ -109,7 +109,7 @@ class TestExportSettings:
         assert load(os.path.join(export_path, "file1.txt")) == ""
         assert load(os.path.join(export_src_path, "file2.txt")) == ""
         client.run("install --requires=hello/1.2@lasote/stable --build=hello*")
-        assert "hello/1.2@lasote/stable: Generating the package" in client.out
+        assert "Generating the package hello/1.2@lasote/stable:" in client.out
 
     def test_code_parent(self):
         # when referencing the parent, the relative folder "sibling" will be kept

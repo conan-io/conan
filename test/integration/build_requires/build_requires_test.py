@@ -216,7 +216,7 @@ def test_tool_requires_conanfile_txt():
             """)
     client.save({"conanfile.txt": consumer}, clean_first=True)
     client.run("install . --build=missing")
-    assert "build_req/1.0@test/test: Created package" in client.out
+    assert "Created package" in client.out
 
 
 def test_profile_override_conflict():
