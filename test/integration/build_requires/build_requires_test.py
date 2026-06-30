@@ -104,7 +104,7 @@ def test_complete(client):
         from conan import ConanFile
         class Pkg(ConanFile):
             requires = "openssl/1.0"
-            build_requires = "mycmake/1.0"
+            tool_requires = "mycmake/1.0"
             settings = "os"
 
             def build_requirements(self):
@@ -781,7 +781,7 @@ def test_build_run_false(min_conan_version, should_propagate):
     required_conan_version_line = ""
     if min_conan_version:
         required_conan_version_line = f"required_conan_version='{min_conan_version}'"
-    tc = TestClient(light=True)
+    tc = TestClient(light=True, force_version_policy=False)
     cmake = textwrap.dedent("""
     from conan import ConanFile
     from conan.tools.files import save

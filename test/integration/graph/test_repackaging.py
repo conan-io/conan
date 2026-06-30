@@ -103,7 +103,7 @@ def test_repackage_library_self_multiple():
             def requirements(self):
                 # To avoid conflict among liba versions
                 self.requires("liba/1.0", headers=False, libs=False, visible=False)
-                self.requires("liba/2.0", visible=False)
+                self.requires("liba/2.0", visible=False, consistent=False)
 
             def package(self):
                 for _, dep in self.dependencies.items():

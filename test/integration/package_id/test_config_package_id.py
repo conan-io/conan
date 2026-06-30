@@ -57,17 +57,17 @@ def test_config_package_id_clear(config_version, mode, result):
 
 
 def test_recipe_revision_mode():
-    clienta = TestClient()
+    clienta = TestClient(force_version_policy=False)
     clienta.save_home({"global.conf": "core.package_id:default_unknown_mode=recipe_revision_mode"})
 
     clienta.save({"conanfile.py": GenConanfile()})
     clienta.run("create . --name=liba --version=0.1 --user=user --channel=testing")
 
-    clientb = TestClient(cache_folder=clienta.cache_folder)
+    clientb = TestClient(cache_folder=clienta.cache_folder, force_version_policy=False)
     clientb.save({"conanfile.py": GenConanfile("libb", "0.1").with_require("liba/0.1@user/testing")})
     clientb.run("create . --user=user --channel=testing")
 
-    clientc = TestClient(cache_folder=clienta.cache_folder)
+    clientc = TestClient(cache_folder=clienta.cache_folder, force_version_policy=False)
     clientc.save({"conanfile.py": GenConanfile("libc", "0.1").with_require("libb/0.1@user/testing")})
     clientc.run("install . --user=user --channel=testing")
 

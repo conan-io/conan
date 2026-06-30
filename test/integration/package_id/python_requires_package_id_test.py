@@ -94,12 +94,12 @@ class TestPythonRequiresPackageID:
 
 
 def test_python_requires_for_build_requires():
-    client = TestClient()
+    client = TestClient(force_version_policy=False)
     client.save_home({"global.conf": "core.package_id:default_python_mode=full_version_mode"})
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=tool --version=1.1.1")
 
-    client2 = TestClient(cache_folder=client.cache_folder)
+    client2 = TestClient(cache_folder=client.cache_folder, force_version_policy=False)
     client2.save({"conanfile.py": GenConanfile().with_python_requires("tool/[>=0.0]"),
                  "myprofile": "[tool_requires]\ntool/[>=0.0]\n"})
 

@@ -188,7 +188,7 @@ def test_msbuild_compile_options():
 
 
 def test_conf_package_patterns():
-    client = TestClient()
+    client = TestClient(force_version_policy=False)
     conanfile = GenConanfile()
     generate = """
     def generate(self):

@@ -231,7 +231,7 @@ class TestTransitiveStatic:
                               ])
     def test_transitive_statics(self, recipe_approach, conf_approach, apply_fix):
         # https://github.com/conan-io/conan/issues/19664
-        c = TestClient(light=True)
+        c = TestClient(light=True, force_version_policy=False)
         required_conan_version = ''
         if recipe_approach is not None:
             required_conan_version = f'required_conan_version = ">={recipe_approach}"'

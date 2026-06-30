@@ -67,7 +67,7 @@ class TestRequiredVersion:
         cache_folder = temp_folder()
         save(os.path.join(cache_folder, "global.conf"),
              f"core:required_conan_version={required_version}")
-        c = TestClient(cache_folder, light=True)
+        c = TestClient(cache_folder, light=True, force_version_policy=False)
         c.run("version", assert_error=True)
         assert (f"Current Conan version ({__version__}) does not satisfy "
                 f"the defined one ({required_version})") in c.out

@@ -579,7 +579,7 @@ class TestErrorDuplicates:
                 version = "0.1"
                 def requirements(self):
                     self.requires("dep/0.1#f8c2264d0b32a4c33f251fe2944bb642", headers=False,
-                                  libs=False, visible=False)
+                                  libs=False, visible=False, consistent=False)
                     self.requires("dep/0.1#7b91e6100797b8b012eb3cdc5544800b", headers=True,
                                   libs=False, visible=False)
                 """)

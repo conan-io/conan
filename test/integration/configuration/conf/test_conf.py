@@ -324,7 +324,7 @@ def test_nonexisting_conf_global_conf():
 
 
 def test_global_conf_auto_created():
-    c = TestClient()
+    c = TestClient(force_version_policy=False)
     c.run("config list")  # all commands will trigger
     global_conf = c.load_home("global.conf")
     assert "# core:non_interactive = True" in global_conf

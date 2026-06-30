@@ -13,7 +13,7 @@ def test_require_different_versions(min_conan_version):
 
     https://github.com/conan-io/conan/issues/13521
     """
-    c = TestClient()
+    c = TestClient(force_version_policy=False)
     required_conan_version_line = ""
     if min_conan_version:
         required_conan_version_line = f"required_conan_version='{min_conan_version}'"
@@ -98,11 +98,19 @@ def test_require_different_versions_profile_override():
         import os, platform
         from conan import ConanFile
         from conan.tools.files import save, chdir
+        from conan.tools.env import VirtualBuildEnv
         class Pkg(ConanFile):
             name = "wine"
             version = "1.0"
             def build_requirements(self):
                 self.tool_requires("gcc/1.0", run=False)
+
+            def generate(self):
+                venv = VirtualBuildEnv(self)
+                env = venv.environment()
+                env.append_path("PATH", self.dependencies.build["gcc/1.0"].cpp_info.bindir)
+                env.append_path("PATH", self.dependencies.build["gcc/2.0"].cpp_info.bindir)
+                venv.generate()
 
             def build(self):
                 ext = "bat" if platform.system() == "Windows" else "sh"
@@ -172,6 +180,7 @@ def test_require_different_options():
         import os, platform
         from conan import ConanFile
         from conan.tools.files import save, chdir
+        from conan.tools.env import VirtualBuildEnv
         class Pkg(ConanFile):
             name = "wine"
             version = "1.0"
@@ -184,6 +193,11 @@ def test_require_different_options():
                 assert gcc1.options.myoption == "1"
                 gcc2 = self.dependencies.build.get("gcc", options={"myoption": 2})
                 assert gcc2.options.myoption == "2"
+                venv = VirtualBuildEnv(self)
+                env = venv.environment()
+                env.append_path("PATH", gcc1.cpp_info.bindir)
+                env.append_path("PATH", gcc2.cpp_info.bindir)
+                venv.generate()
 
             def build(self):
                 ext = "bat" if platform.system() == "Windows" else "sh"

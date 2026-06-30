@@ -101,7 +101,7 @@ def test_both_types(client):
 
             def requirements(self):
                 self.requires(self.tested_reference_str)
-                self.build_requires(self.tested_reference_str)
+                self.tool_requires(self.tested_reference_str)
 
             def build(self):
                 mybuild_cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
