@@ -585,6 +585,53 @@ def test_cmaketoolchain_asmflags():
     assert 'string(APPEND CMAKE_ASM_FLAGS_INIT " ${CONAN_ASM_FLAGS}")' in toolchain
 
 
+def test_cmaketoolchain_preset_name():
+    """tools.cmake.cmaketoolchain:preset_name builds the full CMake preset name (no 'conan-' prefix)
+    from a list of vars (same grammar as build_folder_vars), shared by the configure/build/test
+    presets and independent from the build folder (build_folder_vars)."""
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+        [conf]
+        tools.cmake.cmaketoolchain:preset_name=['settings.compiler', 'settings.build_type']
+        tools.cmake.cmake_layout:build_folder_vars=['settings.arch']
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+
+    # preset_name and build_folder_vars are independent: the preset name is built from preset_name
+    # (compiler-build_type), NOT from build_folder_vars (arch).
+    client.run("install . -pr:h=profile")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert presets["configurePresets"][0]["name"] == "gcc-release"
+    assert presets["buildPresets"][0]["name"] == "gcc-release"
+    assert presets["buildPresets"][0]["configurePreset"] == "gcc-release"
+    assert presets["testPresets"][0]["configurePreset"] == "gcc-release"
+
+    # Without the conf, the default '<prefix>-<build_type>' naming is preserved (backward compat).
+    profile_default = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+        """)
+    client.save({"profile_default": profile_default})
+    client.run("install . -pr:h=profile_default")
+    presets = json.loads(client.load("CMakePresets.json"))
+    assert presets["configurePresets"][0]["name"] == "conan-release"
+    assert presets["buildPresets"][0]["name"] == "conan-release"
+
+
 def test_bitcode_enable_flag():
     profile = textwrap.dedent("""
         [settings]

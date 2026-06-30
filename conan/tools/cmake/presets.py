@@ -4,7 +4,7 @@ import platform
 import textwrap
 
 from conan.api.output import Color
-from conan.tools.cmake.layout import get_build_folder_custom_vars, is_consumer
+from conan.tools.cmake.layout import get_build_folder_custom_vars, is_consumer, format_folder_vars_name
 from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.build import build_jobs
@@ -120,9 +120,17 @@ class _CMakePresets:
     def _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig,
                           preset_prefix, buildenv, cmake_executable):
         build_type = conanfile.settings.get_safe("build_type")
-        name = _CMakePresets._configure_preset_name(conanfile, multiconfig)
-        if preset_prefix:
-            name = f"{preset_prefix}-{name}"
+        custom_name = _CMakePresets._custom_preset_name(conanfile)
+        if custom_name and multiconfig:
+            conanfile.output.warning("tools.cmake.cmaketoolchain:preset_name is ignored "
+                                     "for multi-config generators")
+            custom_name = None
+        if custom_name:
+            name = custom_name
+        else:
+            name = _CMakePresets._configure_preset_name(conanfile, multiconfig)
+            if preset_prefix:
+                name = f"{preset_prefix}-{name}"
         if not multiconfig and build_type:
             cache_variables["CMAKE_BUILD_TYPE"] = build_type
         ret = {
@@ -199,11 +207,17 @@ class _CMakePresets:
     @staticmethod
     def _common_preset_fields(conanfile, multiconfig, preset_prefix):
         build_type = conanfile.settings.get_safe("build_type")
-        configure_preset_name = _CMakePresets._configure_preset_name(conanfile, multiconfig)
-        build_preset_name = _CMakePresets._build_and_test_preset_name(conanfile)
-        if preset_prefix:
-            configure_preset_name = f"{preset_prefix}-{configure_preset_name}"
-            build_preset_name = f"{preset_prefix}-{build_preset_name}"
+        custom_name = None if multiconfig else _CMakePresets._custom_preset_name(conanfile)
+        if custom_name:
+            # configure and build/test presets share the rendered name so that
+            # buildPresets[].configurePreset resolves to the existing configurePreset
+            configure_preset_name = build_preset_name = custom_name
+        else:
+            configure_preset_name = _CMakePresets._configure_preset_name(conanfile, multiconfig)
+            build_preset_name = _CMakePresets._build_and_test_preset_name(conanfile)
+            if preset_prefix:
+                configure_preset_name = f"{preset_prefix}-{configure_preset_name}"
+                build_preset_name = f"{preset_prefix}-{build_preset_name}"
         ret = {"name": build_preset_name, "configurePreset": configure_preset_name}
         if multiconfig:
             ret["configuration"] = build_type
@@ -256,6 +270,21 @@ class _CMakePresets:
             return "{}-{}".format(custom_conf, str(build_type).lower())
         else:
             return str(build_type).lower()
+
+    @staticmethod
+    def _custom_preset_name(conanfile):
+        # Build the full CMake preset name (no 'conan-' prefix) from the user-provided list of vars in
+        # 'tools.cmake.cmaketoolchain:preset_name', e.g. ['settings.compiler', 'settings.build_type'].
+        # Same grammar/formatting as 'tools.cmake.cmake_layout:build_folder_vars' (settings/options/
+        # self/const, lowercased, '-'-joined), but an independent conf so the preset name can differ
+        # from the build folder. Returns None when unset/empty -> the caller falls back to the default
+        # '<prefix>-<build_type>' naming. Single-config generators only.
+        preset_vars = conanfile.conf.get("tools.cmake.cmaketoolchain:preset_name", check_type=list)
+        if not preset_vars:
+            return None
+        name = format_folder_vars_name(conanfile, preset_vars,
+                                       "tools.cmake.cmaketoolchain:preset_name")
+        return name or None
 
 
 class _IncludingPresets:

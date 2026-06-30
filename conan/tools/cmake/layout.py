@@ -82,8 +82,20 @@ def get_build_folder_custom_vars(conanfile):
         else:
             build_vars = conanfile_vars or []
 
+    name = format_folder_vars_name(conanfile, build_vars,
+                                   "tools.cmake.cmake_layout:build_folder_vars")
+    user_defined_build = "settings.build_type" in build_vars
+    return name, user_defined_build
+
+
+def format_folder_vars_name(conanfile, folder_vars, conf_name):
+    """Resolve a list of 'settings.x'/'options.x'/'self.x'/'const.x' specs into a single
+    '-'-joined, lowercased name, dropping empty values. This is the grammar used by
+    'tools.cmake.cmake_layout:build_folder_vars'; it is shared by the build-folder layout and the
+    CMake preset name ('tools.cmake.cmaketoolchain:preset_name'). ``conf_name`` only feeds the
+    error message for an invalid entry."""
     ret = []
-    for s in build_vars:
+    for s in folder_vars:
         group, var = s.split(".", 1)
         tmp = None
         if group == "settings":
@@ -102,10 +114,8 @@ def get_build_folder_custom_vars(conanfile):
         elif group == "const":
             tmp = var
         else:
-            raise ConanException("Invalid 'tools.cmake.cmake_layout:build_folder_vars' value, it has"
-                                 f" to start with 'settings.', 'options.', 'self.' or 'const.': {s}")
+            raise ConanException(f"Invalid '{conf_name}' value, it has to start with 'settings.', "
+                                 f"'options.', 'self.' or 'const.': {s}")
         if tmp:
             ret.append(tmp.lower())
-
-    user_defined_build = "settings.build_type" in build_vars
-    return "-".join(ret), user_defined_build
+    return "-".join(ret)
