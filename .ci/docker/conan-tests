@@ -80,7 +80,8 @@ RUN apt-get update && \
         g++-9-multilib \
         gcc-11-multilib \
         g++-11-multilib \
-        scons && \
+        scons \
+        fish && \
     # fix: asm/errno.h: No such file or directory
     ln -s /usr/include/asm-generic/ /usr/include/asm && \
     add-apt-repository -y ppa:ubuntu-toolchain-r/test && \

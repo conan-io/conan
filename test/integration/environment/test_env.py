@@ -5,8 +5,10 @@ import textwrap
 
 import pytest
 
+from conan.internal.util.files import save
 from conan.test.utils.env import environment_update
 from conan.test.utils.mocks import ConanFileMock
+from conan.test.utils.test_files import temp_folder
 from conan.tools.env.environment import environment_wrap_command
 from conan.test.utils.tools import TestClient, GenConanfile
 
@@ -1014,3 +1016,58 @@ def test_hardened_sh(path):
         assert f"MYENVVAR1=value1{sep}init1!!" in c.out
         assert f"MYENVVAR2=init2{sep}value2!!" in c.out
         assert f"MYENVVAR3=value3{sep}init3{sep}value4!!" in c.out
+
+
+def test_virtualenv_fish_additive_with_underlying_shell():
+    """ tools.env.virtualenv:fish must ADDITIONALLY generate a .fish launcher, without ever
+    replacing the .bat/.sh one used internally by self.run(): the same idea as the (still open)
+    PR #19649 for powershell, applied to fish.
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.buildenv_info.define("MYFISHVAR", "MYVALUE")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . --name=pkg --version=0.1")
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        class App(ConanFile):
+            settings = "os"
+            tool_requires = "pkg/0.1"
+            generators = "VirtualBuildEnv"
+        """)
+    client.save({"conanfile.py": consumer}, clean_first=True)
+    ext = "bat" if platform.system() == "Windows" else "sh"
+
+    client.run("install . -c tools.env.virtualenv:fish=True")
+    assert os.path.isfile(os.path.join(client.current_folder, f"conanbuild.{ext}"))
+    assert os.path.isfile(os.path.join(client.current_folder, "conanbuild.fish"))
+
+    # Without the conf, only the usual launcher is generated, no .fish at all
+    client.save({"conanfile.py": consumer}, clean_first=True)
+    client.run("install .")
+    assert os.path.isfile(os.path.join(client.current_folder, f"conanbuild.{ext}"))
+    assert not os.path.isfile(os.path.join(client.current_folder, "conanbuild.fish"))
+
+
+def test_environment_wrap_command_fish_requires_explicit_extension():
+    """ self.run() must never implicitly pick up a ".fish" launcher, only ".bat"/".sh": fish is
+    only used when the ".fish" extension is explicitly requested through the "env" argument,
+    since fish cannot reliably run arbitrary commands written in bat/sh syntax.
+    """
+    conanfile = ConanFileMock()
+    folder = temp_folder()
+    save(os.path.join(folder, "conanrunenv.sh"), "echo sh-launcher")
+    save(os.path.join(folder, "conanrunenv.fish"), "echo fish-launcher")
+
+    cmd = environment_wrap_command(conanfile, "conanrunenv", folder, "mycmd")
+    assert "conanrunenv.sh" in cmd
+    assert "fish" not in cmd
+
+    cmd = environment_wrap_command(conanfile, "conanrunenv.fish", folder, "mycmd")
+    assert cmd.startswith("fish -c ")
+    assert "conanrunenv.fish" in cmd
