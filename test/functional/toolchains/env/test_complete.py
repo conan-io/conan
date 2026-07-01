@@ -32,7 +32,7 @@ def test_cmake_virtualenv(matrix_client):
             settings = "os", "arch", "compiler", "build_type"
             exports_sources = "CMakeLists.txt", "main.cpp"
             requires = "matrix/1.0"
-            build_requires = "cmakewrapper/0.1"
+            tool_requires = "cmakewrapper/0.1"
             generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv"
 
             def build(self):
@@ -133,7 +133,7 @@ def test_complete():
         from conan.tools.cmake import CMake
         class Pkg(ConanFile):
             settings = "os", "compiler", "build_type", "arch"
-            build_requires = "mycmake/1.0"
+            tool_requires = "mycmake/1.0"
             requires = "myopenssl/1.0"
             default_options = {"myopenssl/*:shared": True}
             exports_sources = "CMakeLists.txt", "main.cpp"
