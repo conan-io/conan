@@ -634,19 +634,20 @@ class EnvVars:
     def save_script(self, filename):
         """
         Saves a script file (bat, sh, ps1, fish) with a launcher to set the environment.
-        If the conf "tools.env.virtualenv:powershell" is not an empty string
-        it will additionally generate a powershell launcher if Windows.
-        If the conf "tools.env.virtualenv:fish" is set to True, it will additionally generate a
-        fish launcher, meant to be manually sourced by the final consumer in their own shell.
+        If the conf "tools.env.virtualenv:powershell" is not an empty string it will generate a
+        powershell launcher *instead of* the bat one if Windows (this is legacy behavior, kept
+        as-is for now: ``self.run()`` will then wrap commands with that ps1 launcher too).
 
-        Note that the ps1/fish launchers are always generated *in addition to* the bat/sh one,
-        never replacing it: internally, ``self.run()`` always keeps using the bat/sh launcher
-        unless one of these other extensions is requested explicitly.
+        If the conf "tools.env.virtualenv:fish" is set to True, it will *additionally* generate a
+        fish launcher, on top of (never replacing) the bat/sh one. This one is only meant to be
+        manually sourced by the final consumer in their own shell: internally, ``self.run()``
+        always keeps using the bat/sh launcher regardless of this conf, unless the ".fish"
+        extension is requested explicitly.
 
         :param filename: Name of the file to generate. If the extension is provided, it will generate
                          the launcher script for that extension, otherwise the format will be deduced
                          checking if we are running inside Windows (checking also the subsystem) or
-                         not, plus any additional powershell/fish launcher that might be configured.
+                         not, plus any additional fish launcher that might be configured.
         """
         name, ext = os.path.splitext(filename)
         if ext:
