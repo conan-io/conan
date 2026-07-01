@@ -427,6 +427,18 @@ def test_runtime_lib_dirs_multiconf(lib_dir_setup):
     assert "<CONFIG:Debug>" in runtime_lib_dirs
 
 
+def test_disable_package_registry():
+    # https://github.com/conan-io/conan/issues/19749
+    client = TestClient(light=True)
+    client.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
+    client.run("install .")
+    toolchain = client.load("conan_toolchain.cmake")
+    before_output_dirs, output_dirs_block = toolchain.split("########## 'output_dirs' block #############\n", 1)
+    assert "CMAKE_EXPORT_PACKAGE_REGISTRY" not in before_output_dirs
+    assert "cmake_policy(SET CMP0090 NEW)" in output_dirs_block
+    assert "set(CMAKE_EXPORT_PACKAGE_REGISTRY OFF)" in toolchain
+
+
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_cmaketoolchain_cmake_system_processor_cross_apple():
     """
@@ -521,6 +533,56 @@ def test_extra_flags_via_conf():
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " --flag5 --flag6")' in toolchain
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " --flag7 --flag8")' in toolchain
     assert 'add_compile_definitions( "D1" "D2")' in toolchain
+
+
+def test_cmaketoolchain_rcflags():
+    """Test that tools.build:rcflags is applied to CONAN_RC_FLAGS and CMAKE_RC_FLAGS_INIT"""
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:rcflags=["/nologo", "/flag-rc"]
+        """)
+
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:host=profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_RC_FLAGS " /nologo /flag-rc")' in toolchain
+    assert 'string(APPEND CMAKE_RC_FLAGS_INIT " ${CONAN_RC_FLAGS}")' in toolchain
+
+
+def test_cmaketoolchain_asmflags():
+    """Test that tools.build:asmflags is applied to CONAN_ASM_FLAGS and CMAKE_ASM_FLAGS_INIT"""
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:asmflags=["-mfoo", "-mbar"]
+        """)
+
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:host=profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'string(APPEND CONAN_ASM_FLAGS " -mfoo -mbar")' in toolchain
+    assert 'string(APPEND CMAKE_ASM_FLAGS_INIT " ${CONAN_ASM_FLAGS}")' in toolchain
 
 
 def test_bitcode_enable_flag():
@@ -1385,6 +1447,7 @@ def test_extra_flags():
                 tc = CMakeToolchain(self)
                 tc.extra_cxxflags = ["extra_cxxflags"]
                 tc.extra_cflags = ["extra_cflags"]
+                tc.extra_asmflags = ["extra_asmflags"]
                 tc.extra_sharedlinkflags = ["extra_sharedlinkflags"]
                 tc.extra_exelinkflags = ["extra_exelinkflags"]
                 tc.generate()
@@ -1394,6 +1457,7 @@ def test_extra_flags():
         [conf]
         tools.build:cxxflags+=['cxxflags']
         tools.build:cflags+=['cflags']
+        tools.build:asmflags+=['asmflags']
         tools.build:sharedlinkflags+=['sharedlinkflags']
         tools.build:exelinkflags+=['exelinkflags']
         """)
@@ -1403,6 +1467,7 @@ def test_extra_flags():
 
     assert 'string(APPEND CONAN_CXX_FLAGS " extra_cxxflags cxxflags")' in toolchain
     assert 'string(APPEND CONAN_C_FLAGS " extra_cflags cflags")' in toolchain
+    assert 'string(APPEND CONAN_ASM_FLAGS " extra_asmflags asmflags")' in toolchain
     assert 'string(APPEND CONAN_SHARED_LINKER_FLAGS " extra_sharedlinkflags sharedlinkflags")' in toolchain
     assert 'string(APPEND CONAN_EXE_LINKER_FLAGS " extra_exelinkflags exelinkflags")' in toolchain
 

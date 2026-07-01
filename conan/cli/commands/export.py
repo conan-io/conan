@@ -43,6 +43,8 @@ def export(conan_api, parser, *args):
                         help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
+    # Only enable scoped output if None. If it is False, it means that
+    # we have explicitly disabled (e.g. tests), so we should not enable it
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []

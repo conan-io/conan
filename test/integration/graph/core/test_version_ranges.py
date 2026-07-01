@@ -1,4 +1,3 @@
-from collections import OrderedDict
 import pytest
 
 from conan.api.model import Remote
@@ -278,10 +277,7 @@ class TestVersionRangesOverridesDiamond(GraphManagerTest):
         deps_graph = self.build_consumer(consumer, install=False)
 
         assert type(deps_graph.error) is GraphConflictError
-
         assert 2 == len(deps_graph.nodes)
-        app = deps_graph.root
-        libb = app.edges[0].dst
 
     def test_transitive_fixed_conflict_forced(self):
         # app ---> libb/0.1 -----------> liba/1.2
@@ -368,6 +364,7 @@ def test_mixed_user_channel():
 def test_remote_version_ranges():
     t = TestClient(default_server_user=True, light=True)
     t.save({"conanfile.py": GenConanfile()})
+    t.save_home({"global.conf": "core:policies=['deprecated_empty_version_range']"})
     for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
         t.run(f"create . --name=dep --version={v}")
     t.run("upload * --confirm -r default")
@@ -391,21 +388,18 @@ def test_remote_version_ranges():
 
 
 def test_different_user_channel_resolved_correctly():
-    server1 = TestServer()
-    server2 = TestServer()
-    servers = OrderedDict([("server1", server1), ("server2", server2)])
-
-    client = TestClient(servers=servers, inputs=2*["admin", "password"], light=True)
+    client = TestClient(servers={"server1": TestServer(), "server2": TestServer()},
+                        inputs=2*["admin", "password"], light=True)
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=lib --version=1.0 --user=conan --channel=stable")
     client.run("create . --name=lib --version=1.0 --user=conan --channel=testing")
     client.run("upload lib/1.0@conan/stable -r=server1")
     client.run("upload lib/1.0@conan/testing -r=server2")
 
-    client2 = TestClient(servers=servers, light=True)
+    client2 = TestClient(servers=client.servers, light=True)
     client2.run("install --requires=lib/[>=1.0]@conan/testing")
     assert f"lib/1.0@conan/testing: Retrieving package {NO_SETTINGS_PACKAGE_ID} " \
-           f"from remote 'server2' " in client2.out
+           f"from remote 'server2'" in client2.out
 
 
 def test_unknown_options():
@@ -439,11 +433,23 @@ def test_bad_options_syntax(version_range, should_warn):
         assert "its presence unconditionally enables prereleases" not in tc.out
 
 
-def test_empty_version_ranger():
+def test_deprecated_empty_version_ranger():
     tc = TestClient(light=True)
     tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0"),
              "app/conanfile.py": GenConanfile("app", "1.0").with_requires("lib/[]")})
     tc.run("export lib")
+    tc.run("graph info app", assert_error=True)
+    assert "lib/[]: lib/1.0" in tc.out
+    assert "Empty version range usage is disabled" in tc.out
+
+    tc.save_home({"global.conf": "core:policies=['deprecated_empty_version_range']"})
     tc.run("graph info app")
     assert "lib/[]: lib/1.0" in tc.out
     assert "Empty version range usage is discouraged" in tc.out
+
+    from conan import __version__ as conan_version
+    from conan.tools.scm import Version
+    from conan.internal.model.version_range import VersionRange
+    r = VersionRange(f">=2.32,include_prerelease")
+    assert not r.contains(Version(conan_version), None), \
+        "Remove empty version range support"

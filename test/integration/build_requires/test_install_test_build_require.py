@@ -217,8 +217,8 @@ def test_bootstrap_other_architecture():
     c.assert_listed_binary({"tool/1.0": (win_pkg_id, "Build")}, build=True)
 
     c.run("graph build-order --requires=tool/1.0 -s:b os=Windows -s:h os=Linux --build=* "
-          "--format=json", redirect_stdout="o.json")
-    order = json.loads(c.load("o.json"))
+          "--order-by=recipe --format=json", redirect_stdout="o.json")
+    order = json.loads(c.load("o.json"))['order']
     package1 = order[0][0]["packages"][0][0]
     package2 = order[0][0]["packages"][1][0]
     assert package1["package_id"] == win_pkg_id

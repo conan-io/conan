@@ -207,7 +207,7 @@ def test_xcodedeps_aggregate_components():
         assert f"conan_libb_libb_comp{index}.xcconfig" in lib_entry
 
     component7_entry = client.load("conan_libb_libb_comp7.xcconfig")
-    assert '#include "conan_liba.xcconfig"' in component7_entry
+    assert '#include "conan_liba.xcconfig"' not in component7_entry
 
     arch_setting = client.get_default_host_profile().settings['arch']
     arch = "arm64" if arch_setting == "armv8" else arch_setting
@@ -401,10 +401,10 @@ def test_xcodedeps_cppinfo_requires():
             version = "1.0"
             settings = "os", "compiler", "build_type", "arch"
             def package_info(self):
-                self.cpp_info.components["cmp1"].includedirs = ["include"]
-                self.cpp_info.components["cmp2"].includedirs = ["include"]
-                self.cpp_info.components["cmp3"].includedirs = ["include"]
-                self.cpp_info.components["cmp4"].includedirs = ["include"]
+                self.cpp_info.components["cmp1"].includedirs = ["include_cmp1"]
+                self.cpp_info.components["cmp2"].includedirs = ["include_cmp2"]
+                self.cpp_info.components["cmp3"].includedirs = ["include_cmp3"]
+                self.cpp_info.components["cmp4"].includedirs = ["include_cmp4"]
         """)
 
     lib = textwrap.dedent("""
@@ -451,21 +451,20 @@ def test_xcodedeps_cppinfo_requires():
     So we will only link against the components specified in the cpp_info.requires of lib_b and lib_c
     """
 
-    lib_b = client.load(os.path.join("consumer", "conan_lib_b_lib_b.xcconfig"))
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
 
-    # check that nothing from other components than the specified in the cpp_info.requires
-    # from lib_b and lib_c exist in the xcconfig that adds the includes from components
-    assert "cmp1" in lib_b
-    assert "cmp2" not in lib_b
-    assert "cmp3" not in lib_b
-    assert "cmp4" not in lib_b
+    lib_b_props = client.load(os.path.join("consumer", f"conan_lib_b_lib_b_release_{arch}.xcconfig"))
+    assert "include_cmp1" in lib_b_props
+    assert "include_cmp2" not in lib_b_props
+    assert "include_cmp3" not in lib_b_props
+    assert "include_cmp4" not in lib_b_props
 
-    lib_c = client.load(os.path.join("consumer", "conan_lib_c_lib_c.xcconfig"))
-
-    assert "cmp1" not in lib_c
-    assert "cmp2" in lib_c
-    assert "cmp3" not in lib_c
-    assert "cmp4" not in lib_c
+    lib_c_props = client.load(os.path.join("consumer", f"conan_lib_c_lib_c_release_{arch}.xcconfig"))
+    assert "include_cmp1" not in lib_c_props
+    assert "include_cmp2" in lib_c_props
+    assert "include_cmp3" not in lib_c_props
+    assert "include_cmp4" not in lib_c_props
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
@@ -508,9 +507,107 @@ def test_dependency_of_dependency_components():
 
     lib_b_xconfig = client.load("conan_lib_b_lib_b.xcconfig")
 
-    assert '#include "conan_lib_c_cmp1.xcconfig"' in lib_b_xconfig
-    assert '#include "conan_lib_c_cmp1.xcconfig"' in lib_b_xconfig
+    assert '#include "conan_lib_c_cmp1.xcconfig"' not in lib_b_xconfig
     assert '#include "conan_lib_c_lib_c.xcconfig"' not in lib_b_xconfig
+
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
+    lib_b_props = client.load(f"conan_lib_b_lib_b_release_{arch}.xcconfig")
+    assert "include_cmp1" in lib_b_props
+    assert "include_cmp2" in lib_b_props
+
+
+def test_diamond_dependency_components():
+    """
+    Diamond: math (with components vectors, matrices, geometry) is reached through two paths.
+    graphics::client requires math::vectors. audio::audio requires math::matrices.
+    geometry is not required by anyone and must not be inlined.
+
+    app -> engine -> graphics (client -> common, math::vectors) -> math (vectors, matrices, geometry)
+                  -> audio (requires math::matrices)            -> math (vectors, matrices, geometry)
+    """
+    client = TestClient()
+    app = GenConanfile("app", "1.0").with_require("engine/1.0").with_settings("os", "arch", "build_type", "compiler")
+
+    engine = textwrap.dedent("""
+        from conan import ConanFile
+        class EngineConan(ConanFile):
+            name = "engine"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "graphics/1.0", "audio/1.0"
+        """)
+
+    graphics = textwrap.dedent("""
+        from conan import ConanFile
+        class GraphicsConan(ConanFile):
+            name = "graphics"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "math/1.0"
+            def package_info(self):
+                self.cpp_info.components["common"].includedirs = ["include_common"]
+                self.cpp_info.components["client"].includedirs = ["include_client"]
+                self.cpp_info.components["client"].requires = ["common", "math::vectors"]
+        """)
+
+    audio = textwrap.dedent("""
+        from conan import ConanFile
+        class AudioConan(ConanFile):
+            name = "audio"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "math/1.0"
+            def package_info(self):
+                self.cpp_info.includedirs = ["include_audio"]
+                self.cpp_info.requires = ["math::matrices"]
+        """)
+
+    math = textwrap.dedent("""
+        from conan import ConanFile
+        class MathConan(ConanFile):
+            name = "math"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            def package_info(self):
+                self.cpp_info.components["vectors"].includedirs = ["include_vectors"]
+                self.cpp_info.components["matrices"].includedirs = ["include_matrices"]
+                self.cpp_info.components["geometry"].includedirs = ["include_geometry"]
+        """)
+
+    client.save({
+        'conanfile.py': app,
+        'engine/conanfile.py': engine,
+        'graphics/conanfile.py': graphics,
+        'audio/conanfile.py': audio,
+        'math/conanfile.py': math,
+    })
+
+    client.run("create math")
+    client.run("create audio")
+    client.run("create graphics")
+    client.run("create engine")
+    client.run("install . -g XcodeDeps")
+
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
+
+    # engine is the only direct dep of app — its props file must inline everything:
+    # graphics (common, client), audio, math::vectors (via graphics), math::matrices (via audio)
+    engine_props = client.load(f"conan_engine_engine_release_{arch}.xcconfig")
+    assert "include_common" in engine_props
+    assert "include_client" in engine_props
+    assert "include_audio" in engine_props
+    assert "include_vectors" in engine_props
+    assert "include_matrices" in engine_props
+    # math::geometry is not required by anyone, so it must NOT be inlined
+    assert "include_geometry" not in engine_props
+
+    # no inter-package #includes in engine wrapper
+    engine_xcconfig = client.load("conan_engine_engine.xcconfig")
+    assert '#include "conan_graphics' not in engine_xcconfig
+    assert '#include "conan_audio' not in engine_xcconfig
+    assert '#include "conan_math' not in engine_xcconfig
 
 
 def test_skipped_not_included():
@@ -576,8 +673,15 @@ def test_correctly_handle_transitive_components():
     assert '#include "conan_has_components.xcconfig"' not in conandeps
     assert '#include "conan_uses_components.xcconfig"' in conandeps
     conan_uses_xcconfig = client.load("conan_uses_components_uses_components.xcconfig")
-    assert '#include "conan_has_components_first.xcconfig"' in conan_uses_xcconfig
+    assert '#include "conan_has_components_first.xcconfig"' not in conan_uses_xcconfig
     assert '#include "conan_has_components_second.xcconfig"' not in conan_uses_xcconfig
+
+    arch_setting = client.get_default_host_profile().settings['arch']
+    arch = "arm64" if arch_setting == "armv8" else arch_setting
+    uses_props = client.load(f"conan_uses_components_uses_components_release_{arch}.xcconfig")
+    assert "-lfirst" in uses_props
+    assert "-luses_only_first" in uses_props
+    assert "donottouch" not in uses_props
 
 
 def test_dont_add_skipped_xcconfigs_when_required_by_components():
@@ -628,12 +732,12 @@ def test_dont_add_skipped_xcconfigs_when_required_by_components():
 
     conandeps = client.load("conan_regular_lib_component.xcconfig")
     assert '#include "conan_header_skip.xcconfig"' not in conandeps
-    assert '#include "conan_header_transitive.xcconfig"' in conandeps
+    assert '#include "conan_header_transitive.xcconfig"' not in conandeps
 
     # Verify that header_skip xcconfig files are NOT generated (skipped dependency)
     skip_files = [f for f in os.listdir(client.current_folder) if 'header_skip' in f and f.endswith('.xcconfig')]
     assert len(skip_files) == 0, f"Header skip files should not be generated: {skip_files}"
 
-    # Verify that header_transitive xcconfig files ARE generated (transitive dependency)
+    # Transitive deps no longer generate their own xcconfig files (data is inlined)
     transitive_files = [f for f in os.listdir(client.current_folder) if 'header_transitive' in f and f.endswith('.xcconfig')]
-    assert len(transitive_files) > 0, f"Header transitive files should be generated: {transitive_files}"
+    assert len(transitive_files) == 0, f"Header transitive files should not be generated: {transitive_files}"

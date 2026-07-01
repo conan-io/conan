@@ -34,11 +34,11 @@ def build_id(conan_file):
 
 class _PackageBuilder:
 
-    def __init__(self, app, hook_manager):
-        self._cache = app.cache
+    def __init__(self, cache, remote_manager, cache_folder, hook_manager):
+        self._cache = cache
         self._hook_manager = hook_manager
-        self._remote_manager = app.remote_manager
-        self._home_folder = app.cache_folder
+        self._remote_manager = remote_manager
+        self._home_folder = cache_folder
 
     def _get_build_folder(self, conanfile, package_layout):
         # Build folder can use a different package_ID if build_id() is defined.
@@ -119,6 +119,7 @@ class _PackageBuilder:
         conanfile = node.conanfile
         pref = node.pref
 
+        ConanOutput().step("Source step")
         base_source = recipe_layout.source()
         base_package = package_layout.package()
 
@@ -165,14 +166,13 @@ class BinaryInstaller:
     locally in case they are not found in remotes
     """
 
-    def __init__(self, app, global_conf, editable_packages, hook_manager):
-        self._app = app
-        self._editable_packages = editable_packages
-        self._cache = app.cache
-        self._remote_manager = app.remote_manager
+    def __init__(self, api, global_conf, hook_manager):
+        helpers = api._api_helpers  # noqa
+        self._cache = helpers.cache
+        self._remote_manager = helpers.remote_manager
         self._hook_manager = hook_manager
         self._global_conf = global_conf
-        self._home_folder = app.cache_folder
+        self._home_folder = api.home_folder
 
     def _install_source(self, node, remotes, need_conf=False):
         conanfile = node.conanfile
@@ -182,7 +182,7 @@ class BinaryInstaller:
             return
 
         conanfile = node.conanfile
-        if node.binary == BINARY_EDITABLE:
+        if node.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
             return
 
         recipe_layout = self._cache.recipe_layout(node.ref)
@@ -203,19 +203,29 @@ class BinaryInstaller:
             install_graph = InstallGraph(graph)
             install_order = install_graph.install_order()
 
+        def _install_build(cfile):
+            if hasattr(cfile, "build_system_requirements"):
+                cfile._conan_build_system_requirements = True  # noqa
+                try:
+                    with conanfile_exception_formatter(cfile, "build_system_requirements"):
+                        cfile.build_system_requirements()
+                finally:
+                    del cfile._conan_build_system_requirements  # noqa
+
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
                     if not only_info and package.binary == BINARY_SKIP:
                         continue
                     conanfile = package.nodes[0].conanfile
-                    # TODO: Refactor magic strings and use _SystemPackageManagerTool.mode_xxx ones
                     mode = conanfile.conf.get("tools.system.package_manager:mode")
                     if only_info and mode is None:
                         continue
                     if hasattr(conanfile, "system_requirements"):
                         with conanfile_exception_formatter(conanfile, "system_requirements"):
                             conanfile.system_requirements()
+                    if package.binary == BINARY_BUILD:
+                        _install_build(conanfile)
                     for n in package.nodes:
                         n.conanfile.system_requires = conanfile.system_requires
 
@@ -226,6 +236,7 @@ class BinaryInstaller:
         if hasattr(conanfile, "system_requirements"):
             with conanfile_exception_formatter(conanfile, "system_requirements"):
                 conanfile.system_requirements()
+        _install_build(conanfile)
 
     def install_sources(self, graph, remotes):
         install_graph = InstallGraph(graph)
@@ -351,12 +362,9 @@ class BinaryInstaller:
         # It will only run generation
         node = install_node.nodes[0]
         conanfile = node.conanfile
-        ref = node.ref
-        editable = self._editable_packages.get(ref)
-        conanfile_path = editable["path"]
-        output_folder = editable.get("output_folder")
 
-        base_path = os.path.dirname(conanfile_path)
+        output_folder = node.editable_output_folder
+        base_path = conanfile.recipe_folder
 
         conanfile.folders.set_base_folders(base_path, output_folder)
 
@@ -394,7 +402,8 @@ class BinaryInstaller:
         with pkg_layout.package_lock():
             pkg_layout.package_remove()
             with pkg_layout.set_dirty_context_manager():
-                builder = _PackageBuilder(self._app, self._hook_manager)
+                builder = _PackageBuilder(self._cache, self._remote_manager, self._home_folder,
+                                          self._hook_manager)
                 pref = builder.build_package(node, recipe_layout, pkg_layout)
             assert node.prev, "Node PREV shouldn't be empty"
             assert node.pref.revision, "Node PREF revision shouldn't be empty"
@@ -430,11 +439,13 @@ class BinaryInstaller:
                     # convert directory entries to be relative to the declared folders.build
                     build_cppinfo = conanfile.cpp.build
                     build_cppinfo.set_relative_base_folder(conanfile.build_folder)
+                    build_cppinfo.set_relative_base_relative_folder(conanfile.folders.build)
                     conanfile.layouts.build.set_relative_base_folder(conanfile.build_folder)
 
                     # convert directory entries to be relative to the declared folders.source
                     source_cppinfo = conanfile.cpp.source
                     source_cppinfo.set_relative_base_folder(conanfile.source_folder)
+                    source_cppinfo.set_relative_base_relative_folder(conanfile.folders.source)
                     conanfile.layouts.source.set_relative_base_folder(conanfile.source_folder)
 
                     full_editable_cppinfo = CppInfo()
@@ -486,4 +497,4 @@ class BinaryInstaller:
                                                'finalize'):
                         conanfile.finalize()
 
-            conanfile.output.success(f"Finalized folder {finalize_folder}")
+                conanfile.output.success(f"Finalized folder {finalize_folder}")

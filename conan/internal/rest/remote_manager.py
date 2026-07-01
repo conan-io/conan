@@ -12,7 +12,7 @@ from conan.internal.paths import CONANINFO, CONAN_MANIFEST, PACKAGE_FILE_NAME, E
 from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
-from conan.internal.cache.conan_reference_layout import METADATA, PackageLayout
+from conan.internal.cache.conan_reference_layout import METADATA
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.errors import ConanConnectionError, NotFoundException, PackageNotFoundException
 from conan.errors import ConanException
@@ -110,7 +110,7 @@ class RemoteManager:
         """
         assert ref.revision, "get_recipe without revision specified"
         output = ConanOutput(scope=str(ref))
-        output.info("Retrieving recipe metadata from remote '%s' " % remote.name)
+        output.info("Retrieving recipe metadata from remote '%s'" % remote.name)
         download_export = recipe_layout.download_export()
         try:
             self._call_remote(remote, "get_recipe", ref, download_export, metadata,
@@ -140,7 +140,7 @@ class RemoteManager:
 
     def get_package(self, pref, remote, metadata=None):
         output = ConanOutput(scope=str(pref.ref))
-        output.info("Retrieving package %s from remote '%s' " % (pref.package_id, remote.name))
+        output.info("Retrieving package %s from remote '%s'" % (pref.package_id, remote.name))
 
         assert pref.revision is not None
 
@@ -154,7 +154,7 @@ class RemoteManager:
         only download the metadata, not the packge itself
         """
         output = ConanOutput(scope=str(pref.ref))
-        output.info("Retrieving package metadata %s from remote '%s' "
+        output.info("Retrieving package metadata %s from remote '%s'"
                     % (pref.package_id, remote.name))
 
         assert pref.revision is not None

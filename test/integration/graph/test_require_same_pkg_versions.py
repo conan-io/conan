@@ -1,17 +1,22 @@
 import re
 import textwrap
+import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-def test_require_different_versions():
+@pytest.mark.parametrize("min_conan_version", [None, ">=2.28"])
+def test_require_different_versions(min_conan_version):
     """ this test demostrates that it is possible to tool_require different versions
     of the same thing, deactivating run=False (as long as their executables are not called the same)
 
     https://github.com/conan-io/conan/issues/13521
     """
     c = TestClient()
+    required_conan_version_line = ""
+    if min_conan_version:
+        required_conan_version_line = f"required_conan_version='{min_conan_version}'"
     gcc = textwrap.dedent(r"""
         import os
         from conan import ConanFile
@@ -24,10 +29,13 @@ def test_require_different_versions():
                 save(self, os.path.join(self.package_folder, "bin", f"mygcc{self.version}.sh"), echo)
                 os.chmod(os.path.join(self.package_folder, "bin", f"mygcc{self.version}.sh"), 0o777)
             """)
-    wine = textwrap.dedent("""
+    wine = textwrap.dedent(f"""
         import os, platform
         from conan import ConanFile
         from conan.tools.files import save, chdir
+        from conan.tools.env import VirtualBuildEnv
+        {required_conan_version_line}
+
         class Pkg(ConanFile):
             name = "wine"
             version = "1.0"
@@ -40,11 +48,19 @@ def test_require_different_versions():
                 assert gcc1.ref.version == "1.0"
                 gcc2 = self.dependencies.build["gcc/2.0"]
                 assert gcc2.ref.version == "2.0"
+                # In the new behaviour enabled in newer versions,
+                # we have a way to bring back both bindirs to the path
+                if {bool(required_conan_version_line)}:
+                    venv = VirtualBuildEnv(self)
+                    env = venv.environment()
+                    env.prepend_path("PATH", gcc1.cpp_info.bindir)
+                    env.prepend_path("PATH", gcc2.cpp_info.bindir)
+                    venv.generate()
 
             def build(self):
                 ext = "bat" if platform.system() == "Windows" else "sh"
-                self.run(f"mygcc1.0.{ext}")
-                self.run(f"mygcc2.0.{ext}")
+                self.run(f"mygcc1.0.{{ext}}")
+                self.run(f"mygcc2.0.{{ext}}")
             """)
     c.save({"gcc/conanfile.py": gcc,
             "wine/conanfile.py": wine})
@@ -419,3 +435,26 @@ class TestTransitiveBuild:
         assert "MYGCC=1.0!!" in c.out
         assert "wrapperb=1.0!!" in c.out
         assert "MYGCC=2.0!!" in c.out
+
+    def test_require_different_versions_transitive_conflict_require(self):
+        c = TestClient(light=True)
+        c.save({"abseil/conanfile.py": GenConanfile("abseil")
+                    .with_package_type("shared-library"),
+                "protobuf1/conanfile.py": GenConanfile("protobuf", "1.0")
+                    .with_requirement("abseil/[~1]"),
+                "protobuf2/conanfile.py": GenConanfile("protobuf", "2.0")
+                    .with_requirement("abseil/[~2]"),
+                "consumer/conanfile.py": GenConanfile("consumer", "1.0")
+                    .with_tool_requirement("protobuf/1.0", run=False)
+                    .with_tool_requirement("protobuf/2.0", run=False)
+                })
+
+        c.run("create abseil --version=1.0")
+        c.run("create abseil --version=2.0")
+        c.run("create protobuf1")
+        c.run("create protobuf2")
+        c.run("export consumer")
+        c.run("install consumer")
+        # No conflict, because both protobufs are run=False,
+        # so the shared-library abseil is not propagated with run=True in any of the branches
+        assert "Install finished successfully" in c.out

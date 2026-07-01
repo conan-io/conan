@@ -58,7 +58,7 @@ class _PCFilesDeps:
             if (dep.ref.name == comp_ref_name or
                 # Or a "replace_require" is used and cpp_info.requires is the root one, e.g.,
                 # zlib/*: zlib-ng/*, and self.cpp_info.requires = ["zlib::zlib"]
-                (dep.ref.name != pkg_name and pkg_name == comp_ref_name)):
+                    (dep.ref.name != pkg_name and pkg_name == comp_ref_name)):
                 return _get_dep_aliases()
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=dep.ref.name,
@@ -78,7 +78,7 @@ class _PCFilesDeps:
             if (dep.ref.name == comp_ref_name or
                 # Or a "replace_require" is used and cpp_info.requires is the root one, e.g.,
                 # zlib/*: zlib-ng/*, and self.cpp_info.requires = ["zlib::zlib"]
-                (dep.ref.name != pkg_name and pkg_name == comp_ref_name)):
+                    (dep.ref.name != pkg_name and pkg_name == comp_ref_name)):
                 return _get_dep_name()
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=dep.ref.name,
@@ -123,7 +123,7 @@ class _PCFilesDeps:
 
         # If editable, package_folder can be None
         prefix_path = (dep.recipe_folder if dep.package_folder is None
-                                   else dep.package_folder).replace("\\", "/")
+                       else dep.package_folder).replace("\\", "/")
         pc_variables = {"prefix": prefix_path}
         # Already formatted directories
         pc_variables.update(self._get_formatted_dirs("libdir", cpp_info.libdirs, prefix_path))
@@ -162,7 +162,8 @@ class _PCFilesDeps:
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
         return " ".join(libdirsflags + system_libs + shared_flags + framework_flags)
 
-    def _get_cflags(self, includedirvars, cpp_info):
+    @staticmethod
+    def _get_cflags(includedirvars, cpp_info):
         includedirsflags = ['-I"${%s}"' % d for d in includedirvars]
         cxxflags = [var.replace('"', '\\"') for var in cpp_info.cxxflags]
         cflags = [var.replace('"', '\\"') for var in cpp_info.cflags]

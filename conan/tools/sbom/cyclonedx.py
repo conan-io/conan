@@ -194,21 +194,28 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
     return sbom_cyclonedx_1_6
 
 
+def _is_expr(license_value):
+     v = license_value.upper()
+     return " AND " in v or " OR " in v or " WITH " in v
+
+
 def _calculate_licenses(component):
     from conan.tools.sbom.spdx_licenses import NORMALIZED_VALID_SPDX_LICENSES
+
     licenses = component.conanfile.license
+    if isinstance(licenses, str):
+        licenses = [licenses]
 
-    if isinstance(licenses, str):  # Just one license
-        field = "id" if licenses.lower() in NORMALIZED_VALID_SPDX_LICENSES else "name"
-        return [{"license": {field: licenses}}]
-
-    return [
-        # More than one license
-        {"license": {
-            "id" if lic.lower() in NORMALIZED_VALID_SPDX_LICENSES else "name": lic
-        }}
-        for lic in licenses
-    ]
+    result = []
+    for lic in licenses:
+        if lic.lower() in NORMALIZED_VALID_SPDX_LICENSES:
+            field = "id"
+        elif _is_expr(lic):
+            field = "expression"
+        else:
+            field = "name"
+        result.append({"license": {field: lic}})
+    return result
 
 
 def _calculate_bomref(component):

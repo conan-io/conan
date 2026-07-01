@@ -1,13 +1,14 @@
 import os
 import platform
 import re
+import subprocess
 import tempfile
 import textwrap
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.model.version import Version
-from conan.internal.util.files import load, save
+from conan.internal.util.files import load
 from conan.internal.util.runners import check_output_runner, detect_runner
 
 
@@ -223,29 +224,25 @@ def detect_libcxx(compiler, version, compiler_exe=None):
         main = textwrap.dedent("""
             #include <string>
 
-            using namespace std;
             static_assert(sizeof(std::string) != sizeof(void*), "using libstdc++");
             int main(){}
             """)
-        t = tempfile.mkdtemp()
-        filename = os.path.join(t, "main.cpp")
-        save(filename, main)
-        old_path = os.getcwd()
-        os.chdir(t)
-        try:
-            error, out_str = detect_runner(f'"{executable}" main.cpp -std=c++11')
-            if error:
-                if "using libstdc++" in out_str:
-                    output.info("gcc C++ standard library: libstdc++")
-                    return "libstdc++"
-                # Other error, but can't know, lets keep libstdc++11
-                output.warning("compiler.libcxx check error: %s" % out_str)
-                output.warning("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
-            else:
-                output.info("gcc C++ standard library: libstdc++11")
-            return "libstdc++11"
-        finally:
-            os.chdir(old_path)
+        # -fsyntax-only to omit the output and stop early (but enough for our static_assert).
+        # -xc++ and - to tell the compiler to compile code from stdin and treat it as C++.
+        completed_process = subprocess.run([executable, "-std=c++11", "-fsyntax-only", "-xc++", "-"],
+                                           input=main, stdout=subprocess.PIPE,
+                                           stderr=subprocess.STDOUT, text=True)
+        error, out_str = completed_process.returncode, completed_process.stdout
+        if error:
+            if "using libstdc++" in out_str:
+                output.info("gcc C++ standard library: libstdc++")
+                return "libstdc++"
+            # Other error, but can't know, lets keep libstdc++11
+            output.warning("compiler.libcxx check error: %s" % out_str)
+            output.warning("Couldn't deduce compiler.libcxx for gcc>=5.1, assuming libstdc++11")
+        else:
+            output.info("gcc C++ standard library: libstdc++11")
+        return "libstdc++11"
 
         # This is not really a detection in most cases
         # Get compiler C++ stdlib
@@ -307,6 +304,8 @@ def default_cppstd(compiler, compiler_version):
         return "gnu98" if version < "6" else "gnu14"
 
     def _gcc_cppstd_default(version):
+        if version >= "16":
+            return "gnu20"
         if version >= "11":
             return "gnu17"
         return "gnu98" if version < "6" else "gnu14"
@@ -520,13 +519,6 @@ def detect_gcc_compiler(compiler_exe="gcc"):
             return compiler, Version(installed_version), compiler_exe
     except (Exception,):  # to disable broad-except
         return None, None, None
-
-
-def detect_compiler():
-    ConanOutput(scope="detect_api").warning("detect_compiler() is deprecated, "
-                                            "use detect_default_compiler()", warn_tag="deprecated")
-    compiler, version, _ = detect_default_compiler()
-    return compiler, version
 
 
 def detect_intel_compiler(compiler_exe="icx"):

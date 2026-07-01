@@ -83,6 +83,19 @@ def test_recipe_reference_compare():
     assert sorted([r2, r1]) == [r1, r2]
 
 
+def test_recipe_reference_dict_key_revision_lookup():
+    """Using a RecipeReference as a dict key works when revisions are not defined
+    """
+    d = {RecipeReference.loads("pkg/0.1"): "v1",
+         RecipeReference.loads("foo/0.1#rev1"): "v2"}
+
+    assert d[RecipeReference.loads("pkg/0.1")] == "v1"
+    assert d[RecipeReference.loads("pkg/0.1#rev2")] == "v1"
+    assert d[RecipeReference.loads("foo/0.1")] == "v2"
+    assert d[RecipeReference.loads("foo/0.1#rev1")] == "v2"
+    assert d.get(RecipeReference.loads("foo/0.1#rev2")) is None
+
+
 def test_error_pref():
     r1 = RecipeReference.loads("pkg/1.0#rrev1:pid#rrev2")
     with pytest.raises(ConanException) as exc:

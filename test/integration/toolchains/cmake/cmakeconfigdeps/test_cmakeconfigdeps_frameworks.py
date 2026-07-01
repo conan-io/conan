@@ -5,8 +5,6 @@ import pytest
 
 from conan.test.utils.tools import TestClient
 
-new_value = "will_break_next"
-
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_package_framework_needs_location():
@@ -40,8 +38,9 @@ def test_package_framework_needs_location():
         'test_package/conanfile.py': test_conanfile,
         'conanfile.py': conanfile
     })
-    client.run(f"create . -c tools.cmake.cmakedeps:new={new_value}", assert_error=True)
-    assert "Error in generator 'CMakeConfigDeps': cpp_info.location missing for framework MyFramework" in client.out
+    client.run(f"create .", assert_error=True)
+    assert ("Error in generator 'CMakeConfigDeps': cpp_info.location"
+            " missing for framework MyFramework") in client.out
 
 
 def test_framework_only_component_generates_target():
@@ -63,6 +62,61 @@ def test_framework_only_component_generates_target():
     tc = TestClient()
     tc.save({"conanfile.py": conanfile})
     tc.run("create .")
-    tc.run(f"install --requires=frame/1.0 -g CMakeConfigDeps -c=tools.cmake.cmakedeps:new={new_value}")
+    tc.run(f"install --requires=frame/1.0 -g CMakeConfigDeps")
     targets = tc.load("frame-Targets-release.cmake")
     assert "add_library(frame::frame INTERFACE IMPORTED)" in targets
+
+
+def test_framework_add_imported_configurations():
+    """
+    Issue: https://github.com/conan-io/conan/issues/20034
+    """
+    conanfile = textwrap.dedent(f"""
+    import os
+    from conan import ConanFile
+
+    class MyFramework(ConanFile):
+        name = "frame"
+        version = "1.0"
+        settings = "os", "arch", "compiler", "build_type"
+
+        def package_info(self):
+            self.cpp_info.set_property("cmake_target_name", "frame::frame")
+            self.cpp_info.type = "static-library"
+            self.cpp_info.package_framework = "Frame"
+            self.cpp_info.location = os.path.join(self.package_folder, "Frame.framework")
+    """)
+    tc = TestClient()
+    tc.save({"conanfile.py": conanfile})
+    tc.run("create -s build_type=Debug")
+    tc.run(f"install --requires=frame/1.0 -g CMakeConfigDeps -s build_type=Debug")
+    targets = tc.load("frame-Targets-debug.cmake")
+    assert "set_property(TARGET frame::frame APPEND PROPERTY IMPORTED_CONFIGURATIONS DEBUG)" in targets
+
+
+def test_framework_raises_error_if_libs():
+    """
+    Tests it's raised an exception when libs and package_framework
+    are used together
+    """
+    conanfile = textwrap.dedent(f"""
+    import os
+    from conan import ConanFile
+
+    class MyFramework(ConanFile):
+        name = "frame"
+        version = "1.0"
+        settings = "os", "arch", "compiler", "build_type"
+
+        def package_info(self):
+            self.cpp_info.libs = ["myframe"]
+            self.cpp_info.set_property("cmake_target_name", "frame::frame")
+            self.cpp_info.type = "static-library"
+            self.cpp_info.package_framework = "Frame"
+            self.cpp_info.location = os.path.join(self.package_folder, "Frame.framework")
+    """)
+    tc = TestClient()
+    tc.save({"conanfile.py": conanfile})
+    tc.run("create")
+    tc.run(f"install --requires=frame/1.0 -g CMakeConfigDeps", assert_error=True)
+    assert "Can't define .libs and .package_framework for the same component" in tc.out

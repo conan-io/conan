@@ -463,13 +463,13 @@ def test_install_reference_gcc():
 
     client.run('install . -s os=Windows -s compiler=msvc '
                '-s compiler.version=194 -s compiler.runtime=dynamic')
-    assert "conanfile.py: Generator 'MSBuildDeps' calling 'generate()'" in client.out
+    assert "Generator 'MSBuildDeps' calling 'generate()'" in client.out
     props = client.load("conan_pkg_release_x64.props")
     assert '<?xml version="1.0" encoding="utf-8"?>' in props
     # This will overwrite the existing one, cause configuration and arch is the same
     client.run("install . -s os=Linux -s compiler=gcc -s compiler.version=5.2 '"
                "'-s compiler.libcxx=libstdc++")
-    assert "conanfile.py: Generator 'MSBuildDeps' calling 'generate()'" in client.out
+    assert "Generator 'MSBuildDeps' calling 'generate()'" in client.out
     pkg_props = client.load("conan_pkg.props")
     assert 'Project="conan_pkg_release_x64.props"' in pkg_props
 

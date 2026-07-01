@@ -1,3 +1,5 @@
+from fnmatch import fnmatch
+
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conan.internal.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
@@ -8,11 +10,11 @@ from conan.errors import ConanException
 
 
 class ConanProxy:
-    def __init__(self, conan_app, editable_packages, legacy_update=None):
+    def __init__(self, cache, remote_manager, editable_packages, legacy_update=None):
         # collaborators
         self._editable_packages = editable_packages
-        self._cache = conan_app.cache
-        self._remote_manager = conan_app.remote_manager
+        self._cache = cache
+        self._remote_manager = remote_manager
         self._resolved = {}  # Cache of the requested recipes to optimize calls
         self._legacy_update = legacy_update
 
@@ -25,6 +27,7 @@ class ConanProxy:
         resolved = self._resolved.get(ref)
         if resolved is None:
             resolved = self._get_recipe(ref, remotes, update, check_update)
+            ref = resolved[0].reference  # cache the resolved reference with revision
             self._resolved[ref] = resolved
         return resolved
 
@@ -32,9 +35,11 @@ class ConanProxy:
     def _get_recipe(self, reference, remotes, update, check_update):
         output = ConanOutput(scope=str(reference))
 
-        conanfile_path = self._editable_packages.get_path(reference)
-        if conanfile_path is not None:
-            return BasicLayout(reference, conanfile_path), RECIPE_EDITABLE, None
+        editable = self._editable_packages.get(reference)
+        if editable is not None:
+            path = editable["path"]
+            output_folder = editable.get("output_folder")
+            return BasicLayout(reference, path, output_folder), RECIPE_EDITABLE, None
 
         # check if it there's any revision of this recipe in the local cache
         try:
@@ -178,4 +183,5 @@ def should_update_reference(reference, update):
     if isinstance(update, bool):
         return update
     # Legacy syntax had --update without pattern, it manifests as a "*" pattern
-    return any(name == "*" or reference.name == name for name in update)
+    return any(fnmatch(reference.name, pattern)
+               for pattern in update)

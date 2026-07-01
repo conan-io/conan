@@ -1,4 +1,5 @@
 import platform
+from io import StringIO
 
 from conan.tools.build import cross_building
 from conan.internal.graph.graph import CONTEXT_BUILD
@@ -26,12 +27,14 @@ class _SystemPackageManagerTool:
         :param conanfile: The current recipe object. Always use ``self``.
         """
         self._conanfile = conanfile
-        self._active_tool = self._conanfile.conf.get("tools.system.package_manager:tool", default=self.get_default_tool())
+        self._active_tool = self._conanfile.conf.get("tools.system.package_manager:tool") or self.get_default_tool()
         self._sudo = self._conanfile.conf.get("tools.system.package_manager:sudo", default=False, check_type=bool)
         self._sudo_askpass = self._conanfile.conf.get("tools.system.package_manager:sudo_askpass", default=False, check_type=bool)
         self._mode = self._conanfile.conf.get("tools.system.package_manager:mode", default=self.mode_check)
-        self._arch = self._conanfile.settings_build.get_safe('arch') \
-            if self._conanfile.context == CONTEXT_BUILD else self._conanfile.settings.get_safe('arch')
+        self._build_only = getattr(self._conanfile, '_conan_build_system_requirements', False)
+        _build_ctx = self._conanfile.context == CONTEXT_BUILD or self._build_only
+        settings = self._conanfile.settings_build if _build_ctx else self._conanfile.settings
+        self._arch = settings.get_safe('arch')
         self._arch_names = {}
         self._arch_separator = ""
 
@@ -49,7 +52,7 @@ class _SystemPackageManagerTool:
                            "dnf": ["fedora", "rhel", "centos", "mageia", "nobara", "almalinux",
                                    "rocky", "oracle"],
                            "brew": ["Darwin"],
-                           "pacman": ["arch", "manjaro", "msys2", "endeavouros"],
+                           "pacman": ["arch", "manjaro", "msys2", "endeavouros", "cachyos"],
                            "choco": ["Windows"],
                            "zypper": ["opensuse", "sles"],
                            "pkg": ["freebsd"],
@@ -71,13 +74,29 @@ class _SystemPackageManagerTool:
         self._conanfile.output.info("A default system package manager couldn't be found for {}, "
                                     "system packages will not be installed.".format(os_name))
 
+    def _is_valid_explicit_arch(self, explicit_arch):
+        return True
+
+    def _parse_explicit_arch_suffix(self, name):
+        if not self._arch_separator or self._arch_separator not in name:
+            return name, ""
+        base_name, _, explicit_arch = name.rpartition(self._arch_separator)
+        if base_name and explicit_arch and self._is_valid_explicit_arch(explicit_arch):
+            return base_name, explicit_arch
+        return name, ""
+
     def _split_package_name(self, package, host_package):
 
         name, version = (package.split("=")[0], package.split("=")[1]) if "=" in package else (package, "")
         arch_separator, arch_name = "", ""
         version_separator = self.version_separator if version else ""
 
-        if self._arch in self._arch_names and cross_building(self._conanfile) and host_package:
+        name, explicit_arch = self._parse_explicit_arch_suffix(name)
+        if explicit_arch:
+            arch_separator = self._arch_separator
+            arch_name = explicit_arch
+        elif self._arch in self._arch_names and cross_building(self._conanfile) and host_package \
+                and not self._build_only:
             arch_separator = self._arch_separator
             arch_name = self._arch_names.get(self._arch)
         return name, version, arch_separator, arch_name, version_separator
@@ -108,9 +127,17 @@ class _SystemPackageManagerTool:
 
     def _conanfile_run(self, command, accepted_returns, quiet=True):
         # When checking multiple packages, this is too noisy
-        ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet)
+        # Capture output and show it only on failure.
+        stdout_buf = StringIO() if quiet else None
+        stderr_buf = StringIO() if quiet else None
+        ret = self._conanfile.run(command, ignore_errors=True, quiet=quiet, stdout=stdout_buf, stderr=stderr_buf)
         if ret not in accepted_returns:
-            raise ConanException("Command '%s' failed" % command)
+            msg = f"Command '{command}' failed with exit code {ret}"
+            if stderr_buf is not None and stderr_buf.getvalue():
+                msg += f"\nstderr: {stderr_buf.getvalue().strip()}"
+            if stdout_buf is not None and stdout_buf.getvalue():
+                msg += f"\nstdout: {stdout_buf.getvalue().strip()}"
+            raise ConanException(msg)
         return ret
 
     def install_substitutes(self, *args, **kwargs):
@@ -330,6 +357,10 @@ class Yum(_SystemPackageManagerTool):
                             "s390x": "s390x",
                             "riscv64": "riscv64"} if arch_names is None else arch_names
         self._arch_separator = "."
+
+    def _is_valid_explicit_arch(self, explicit_arch):
+        # '.' is common in package names (e.g. libfoo.bar); only split when suffix is a known arch.
+        return explicit_arch in self._arch_names.values()
 
 
 class Dnf(Yum):

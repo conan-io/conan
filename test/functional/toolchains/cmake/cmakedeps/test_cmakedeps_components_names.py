@@ -10,7 +10,6 @@ from conan.test.assets.sources import gen_function_h, gen_function_cpp
 from conan.test.utils.tools import TestClient
 
 
-@pytest.mark.tool("cmake")
 @pytest.fixture(scope="module")
 def setup_client_with_greetings():
     """

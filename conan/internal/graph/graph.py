@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 from conan.internal.graph.graph_error import GraphError, GraphConflictError
-from conan.api.output import ConanOutput
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 
@@ -71,13 +70,7 @@ class Node:
         self.is_conf = False
         self.replaced_requires = {}  # To track the replaced requires for self.edges[old-ref]
         self.skipped_build_requires = False
-
-    @property
-    def dependencies(self):
-        ConanOutput().warning("Node.dependencies is private and shouldn't be used. It is now "
-                              "node.edges. Please fix your code, Node.dependencies will be removed "
-                              "in future versions", warn_tag="deprecated")
-        return self.edges
+        self.editable_output_folder = None  # In case this node is editable
 
     def subgraph(self):
         nodes = [self]
@@ -159,7 +152,8 @@ class Node:
             d = self.dependants[0]
 
         down_require = d.require.transform_downstream(self.conanfile.package_type, require,
-                                                      node.conanfile.package_type)
+                                                      node.conanfile.package_type,
+                                                      d.src.conanfile)
         if down_require is None:
             return
 
@@ -211,7 +205,8 @@ class Node:
         # TODO: Implement an optimization where the requires is checked against a graph global
         # print("    Lets check_downstream one more")
         down_require = dependant.require.transform_downstream(self.conanfile.package_type,
-                                                              require, None)
+                                                              require, None,
+                                                              dependant.src.conanfile)
 
         if down_require is None:
             # print("    No need to check downstream more")

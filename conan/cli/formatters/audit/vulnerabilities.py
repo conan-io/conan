@@ -72,16 +72,17 @@ def text_vuln_formatter(result):
             name = node["name"]
             sev = node.get("severity", "Medium")
             sev_color = severity_colors.get(sev, Color.BRIGHT_YELLOW)
-            score = node.get("cvss", {}).get("preferredBaseScore")
-            score_txt = f", CVSS: {score}" if score else ""
+            cvss = node.get("cvss", {})
+            preferred_score = cvss.get("preferredBaseScore")
+            score_txt = f" - {preferred_score}" if preferred_score else ""
             desc = node.get("description", "")
             desc = (desc[:240] + "...") if len(desc) > 240 else desc
             desc_wrapped = wrap_and_indent(desc)
-            isWithdrawn = node.get("withdrawn", False)
-            publishedAt = node.get("publishedAt")
+            is_withdrawn = node.get("withdrawn", False)
+            published_at = node.get("publishedAt")
 
             cli_out_write(f"- {name}", fg=Color.BRIGHT_WHITE, endline="")
-            if isWithdrawn:
+            if is_withdrawn:
                 cli_out_write(" [WITHDRAWN]", fg=Color.BRIGHT_CYAN, endline="")
             cli_out_write(f" (Severity: {sev}{score_txt})", fg=sev_color)
             advisories = node.get("advisories", {})
@@ -110,23 +111,34 @@ def text_vuln_formatter(result):
 
             cli_out_write("\n" + desc_wrapped)
 
-            if publishedAt:
+            if published_at:
                 cli_out_write(f"  Published at: ", endline="", fg=Color.BRIGHT_BLUE)
-                cli_out_write(publishedAt)
+                cli_out_write(published_at)
 
             references = node.get("references")
             if references:
                 cli_out_write(f"  url: ", endline="", fg=Color.BRIGHT_BLUE)
                 cli_out_write(references[0])
 
-            vulnerablePackages = node.get("vulnerablePackages")
-            if vulnerablePackages:
-                fixVersions = [fix['version']
-                               for fix_edge in vulnerablePackages.get("edges", [])
-                               for fix in fix_edge['node'].get("fixVersions", [])]
-                if fixVersions:
+            vulnerable_packages = node.get("vulnerablePackages")
+            if vulnerable_packages:
+                fix_versions = [fix['version']
+                                for fix_edge in vulnerable_packages.get("edges", [])
+                                for fix in fix_edge['node'].get("fixVersions", [])]
+                if fix_versions:
                     cli_out_write(f"  fixed in version(s): ", endline="", fg=Color.BRIGHT_BLUE)
-                    cli_out_write(', '.join(fixVersions))
+                    cli_out_write(', '.join(fix_versions))
+
+            if "v3" in cvss and cvss["v3"].get("baseScore", 0) > 0:
+                score_v3 = cvss["v3"].get("baseScore", 0)
+                if score_v3:
+                    cli_out_write(f"  CVSS v3: ", endline="", fg=Color.BRIGHT_BLUE)
+                    cli_out_write(score_v3)
+            if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
+                score_v4 = cvss["v4"].get("baseScore", 0)
+                if score_v4:
+                    cli_out_write(f"  CVSS v4: ", endline="", fg=Color.BRIGHT_BLUE)
+                    cli_out_write(score_v4)
             cli_out_write("")
 
     color_for_total = Color.BRIGHT_RED if total_vulns else Color.BRIGHT_GREEN
@@ -237,18 +249,20 @@ vuln_html = """
             {{ vuln.package }}
           </td>
           <td>
-            <span style="display: none">{{ vuln.score }}</span>
-            {% if vuln.withdrawn %}
-                <span style="color: #00ced1; font-weight: bold;">[WITHDRAWN]</span><br>
-            {% endif %}
-            {{ vuln.vuln_id }}
-            <br>
+            <span style="display: none">{{ vuln.preferred_score }}</span>
             {% if vuln.severity not in ['N/A', ''] %}
-              <span class="severity-badge severity-{{ severity_label }}">{{ severity_label }}</span>
+              <span class="severity-badge severity-{{ severity_label }}">{{ severity_label }} {% if vuln.preferred_score %}({{ vuln.preferred_score }}){% endif %}</span>
             {% else %}
               {{ vuln.severity }}
             {% endif %}
-            {{ vuln.score }}
+            <br>
+            <br>
+            {% if vuln.withdrawn %}
+                <span style="color: #00ced1; font-weight: bold;">[WITHDRAWN]</span><br>
+            {% endif %}
+            <b>{{ vuln.vuln_id }}</b>
+            {% if vuln.score_v3 %}<br/>CVSS <i>v3</i>: {{ vuln.score_v3 }}{% endif %}
+            {% if vuln.score_v4 %}<br/>CVSS <i>v4</i>: {{ vuln.score_v4 }}{% endif %}
           </td>
           <td>
             {% for research in vuln.advisories %}
@@ -349,30 +363,38 @@ def html_vuln_formatter(result):
                 name = node.get("name")
                 sev = node.get("severity", "Medium")
                 sev = f"{severity_order.get(sev, 2)} - {sev}"
-                score = node.get("cvss", {}).get("preferredBaseScore")
-                score_txt = f"CVSS: {score}" if score else "-"
+                cvss = node.get("cvss", {})
+                preferred_score = cvss.get("preferredBaseScore")
+                score_v3 = 0
+                score_v4 = 0
+                if "v3" in cvss and cvss["v3"].get("baseScore", 0) > 0:
+                    score_v3 = cvss["v3"].get("baseScore", 0)
+                if "v4" in cvss and cvss["v4"].get("baseScore", 0) > 0:
+                    score_v4 = cvss["v4"].get("baseScore", 0)
                 aliases = node.get("aliases", [])
                 references = node.get("references", [])
                 desc = node.get("description", "")
                 withdrawn = node.get("withdrawn", False)
                 advisories = node.get("advisories", [])
-                jfrogAdvisories = [adv for adv in advisories
-                                   if adv.get("name", "").startswith("JFSA-")]
-                fixVersions = [fix['version']
-                               for fix_edge in node.get("vulnerablePackages", {}).get("edges", [])
-                               for fix in fix_edge['node'].get("fixVersions", [])]
+                jfrog_advisories = [adv for adv in advisories
+                                    if adv.get("name", "").startswith("JFSA-")]
+                fix_versions = [fix['version']
+                                for fix_edge in node.get("vulnerablePackages", {}).get("edges", [])
+                                for fix in fix_edge['node'].get("fixVersions", [])]
                 vulns.append({
                     "package": ref,
                     "vuln_id": name,
                     "aliases": aliases,
                     "severity": sev,
-                    "score": score_txt,
+                    "preferred_score": preferred_score,
+                    "score_v3": score_v3,
+                    "score_v4": score_v4,
                     "description": desc,
                     "references": references,
                     "withdrawn": withdrawn,
-                    "advisories": jfrogAdvisories,
+                    "advisories": jfrog_advisories,
                     "provider_url": result.get("provider_url"),
-                    "fixVersions": fixVersions,
+                    "fixVersions": fix_versions,
                     "publishedAt": node.get("publishedAt")
                 })
 

@@ -111,7 +111,7 @@ class ConanOutput:
             to the output messages. If not provided, it defaults to an empty string.
         """
         self.stream = sys.stderr
-        self._scope = scope
+        self._scope = str(scope)
         # FIXME:  This is needed because in testing we are redirecting the sys.stderr to a buffer
         #         stream to capture it, so colorama is not there to strip the color bytes
         self._color = _color_enabled(self.stream)
@@ -221,10 +221,11 @@ class ConanOutput:
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 
         if self._scope:
+            scope = self._scope if self._scope.isspace() else f"{self._scope}:"
             if self._color:
-                ret = f"{fg or ''}{bg or ''}{self._scope}: {msg}{Style.RESET_ALL}"
+                ret = f"{fg or ''}{bg or ''}{scope} {msg}{Style.RESET_ALL}"
             else:
-                ret = f"{self._scope}: {msg}"
+                ret = f"{scope} {msg}"
         else:
             if self._color:
                 ret = f"{fg or ''}{bg or ''}{msg}{Style.RESET_ALL}"
@@ -301,6 +302,12 @@ class ConanOutput:
         if self._conan_output_level <= LEVEL_NOTICE:
             self._write_message("\n-------- {} --------".format(msg),
                                 fg=Color.BRIGHT_MAGENTA)
+        return self
+
+    def step(self, msg: str):
+        """ Draws a subtitle around the message, useful for important messages"""
+        if self._conan_output_level <= LEVEL_NOTICE:
+            self._write_message(f">>> {msg}", fg=Color.BRIGHT_CYAN)
         return self
 
     def highlight(self, msg: str):
