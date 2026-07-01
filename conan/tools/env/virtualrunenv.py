@@ -1,5 +1,6 @@
 import os
 
+from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.env import Environment
 from conan.tools.files import copy
@@ -46,7 +47,11 @@ class VirtualRunEnv:
         self.arch = conanfile.settings.get_safe("arch")
         if self.arch:
             self.arch = self.arch.lower()
-        self._runtime_copy = runtime_copy
+        conf_copy = conanfile.conf.get("tools.env:runtime_copy")
+        runcopy = conf_copy if conf_copy is not None else runtime_copy
+        if runcopy and os.path.isabs(runcopy):
+            raise ConanException("runtime_copy must be a relative path, not an absolute one")
+        self._runtime_copy = os.path.join(conanfile.generators_folder, runcopy) if runcopy else None
 
     @property
     def _filename(self):
@@ -81,7 +86,7 @@ class VirtualRunEnv:
             if require.run:  # Only if the require is run (shared or application to be run)
                 _os = self._conanfile.settings.get_safe("os")
                 if self._runtime_copy:
-                    self._runtime_copy_exe(dep)
+                    self._runtime_copy_files(dep)
                 else:
                     runenv = runenv_from_cpp_info(dep, _os)
                     self._runenv.compose_env(runenv)
@@ -92,7 +97,7 @@ class VirtualRunEnv:
             self._runenv.prepend_path("DYLD_LIBRARY_PATH", self._runtime_copy)
         return self._runenv
 
-    def _runtime_copy_exe(self, dep):
+    def _runtime_copy_files(self, dep):
         # Avoid adding all deps to PATH, copy them to a specific folder
         cpp_info = dep.cpp_info.aggregated_components()
         for bindir in cpp_info.bindirs:

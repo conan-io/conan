@@ -1,6 +1,5 @@
 import os.path
 import platform
-import sys
 import textwrap
 
 import pytest
@@ -92,10 +91,10 @@ def test_other_client_can_link_autotools(transitive_shared_client):
     # client.run("create . --build=missing")
 
 
-def test_virtualrunenv_relocator(transitive_shared_client):
+def test_virtualrunenv_runtime_copy(transitive_shared_client):
     client = TestClient(servers=transitive_shared_client.servers)
     conanfile = textwrap.dedent("""
-        import os, shutil
+        import os
         from conan import ConanFile
         from conan.tools.env import VirtualRunEnv
 
@@ -106,10 +105,8 @@ def test_virtualrunenv_relocator(transitive_shared_client):
                 self.requires("app/0.1")
 
             def generate(self):
-                # Windows, *.dll
-                # Copy to generators folder + "imported-bin"
-                binpath = os.path.join(self.generators_folder, "imported-bin")
-                runenv = VirtualRunEnv(self, runtime_copy=binpath)
+                # Copy to "imported-bin" inside generators folder
+                runenv = VirtualRunEnv(self, runtime_copy="imported-bin")
                 runenv.generate()
 
             def build(self):
