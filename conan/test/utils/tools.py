@@ -439,9 +439,10 @@ class TestClient:
         else:
             text = default_profiles[platform.system()]
         save(os.path.join(self.cache_folder, "profiles", "default"), text)
-        if force_version_policy:
+        global_conf_path = os.path.join(self.cache_folder, "global.conf")
+        if force_version_policy and not os.path.exists(global_conf_path):
             from conan import conan_version
-            save(os.path.join(self.cache_folder, "global.conf"), f'core:policies=["required_conan_version>={conan_version}"]')
+            save(global_conf_path, f'core:policies=["required_conan_version>={conan_version}"]')
         # Using internal env variable to add another custom commands folder
         self._custom_commands_folder = custom_commands_folder
 

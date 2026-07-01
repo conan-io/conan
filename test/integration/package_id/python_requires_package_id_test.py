@@ -94,26 +94,26 @@ class TestPythonRequiresPackageID:
 
 
 def test_python_requires_for_build_requires():
-    client = TestClient(force_version_policy=False)
-    client.save_home({"global.conf": "core.package_id:default_python_mode=full_version_mode"})
+    cc = "-cc core.package_id:default_python_mode=full_version_mode"
+    client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=tool --version=1.1.1")
 
-    client2 = TestClient(cache_folder=client.cache_folder, force_version_policy=False)
+    client2 = TestClient(cache_folder=client.cache_folder)
     client2.save({"conanfile.py": GenConanfile().with_python_requires("tool/[>=0.0]"),
                  "myprofile": "[tool_requires]\ntool/[>=0.0]\n"})
 
-    client2.run("create . --name=pkg --version=0.1 -pr=myprofile")
+    client2.run(f"create . --name=pkg --version=0.1 -pr=myprofile {cc}")
     assert "tool/1.1.1" in client2.out
     assert f"pkg/0.1: Package '{PKG_ID_1}' created" in client2.out
 
     client.run("create . --name=tool --version=1.1.2")
-    client2.run("install --requires=pkg/0.1@ -pr=myprofile", assert_error=True)
+    client2.run(f"install --requires=pkg/0.1@ -pr=myprofile {cc}", assert_error=True)
     assert f"ERROR: Missing binary: pkg/0.1:{PKG_ID_2}" in client2.out
     assert "tool/1.1.2" in client2.out
     assert "tool/1.1.1" not in client2.out
 
-    client2.run("create . --name=pkg --version=0.1 -pr=myprofile")
+    client2.run(f"create . --name=pkg --version=0.1 -pr=myprofile {cc}")
     # assert "pkg/0.1: Applying build-requirement: tool/1.1.2", client2.out)
     assert f"pkg/0.1: Package '{PKG_ID_2}' created" in client2.out
 
