@@ -4,6 +4,7 @@ import stat
 import platform
 import shutil
 import subprocess
+import sys
 from typing import Optional
 from contextlib import contextmanager
 from fnmatch import fnmatch
@@ -375,7 +376,11 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     output.info(f"Uncompressing {filename} to {destination}")
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
-            filename.endswith(".tar")):
+            filename.endswith(".tar") or filename.endswith(".tar.xz") or
+            filename.endswith(".txz") or filename.endswith(".tar.zst")):
+        if filename.endswith(".tar.zst") and sys.version_info.minor < 14:
+            raise ConanException(f"File {os.path.basename(filename)} compressed with 'zst', "
+                                 f"unsupported for Python<3.14 ")
         return untargz(filename, destination, pattern, strip_root, extract_filter,
                        excludes=excludes)
     if filename.endswith(".gz"):
@@ -387,9 +392,6 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
             with open(target_name, "wb") as fout:
                 shutil.copyfileobj(fin, fout)
         return
-    if filename.endswith(".tar.xz") or filename.endswith(".txz"):
-        return untargz(filename, destination, pattern, strip_root, extract_filter,
-                       excludes=excludes)
 
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
