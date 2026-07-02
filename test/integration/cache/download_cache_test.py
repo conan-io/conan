@@ -1,5 +1,6 @@
 import os
 import textwrap
+from unittest.mock import patch
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.file_server import TestFileServer
@@ -9,6 +10,17 @@ from conan.internal.util.files import save, set_dirty
 
 
 class TestDownloadCache:
+    # a package containing a file > 10MB, the only case that leaves a trace in the output
+    # of whether a file was really downloaded, or served from the download cache instead
+    _big_file_conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package(self):
+                fileSizeInBytes = 11000000
+                with open(os.path.join(self.package_folder, "data.txt"), 'wb') as fout:
+                    fout.write(os.urandom(fileSizeInBytes))
+        """)
 
     def test_download_skip(self):
         """ basic proof that enabling download_cache avoids downloading things again
@@ -164,18 +176,7 @@ class TestDownloadCache:
         too, so a later download of the same artifacts doesn't hit the network at all
         """
         client = TestClient(default_server_user=True)
-        # generate large random package file, like in test_download_skip, to get the
-        # "from download cache" trace, only emitted for files > 10MB
-        conanfile = textwrap.dedent("""
-            import os
-            from conan import ConanFile
-            class Pkg(ConanFile):
-                def package(self):
-                    fileSizeInBytes = 11000000
-                    with open(os.path.join(self.package_folder, "data.txt"), 'wb') as fout:
-                        fout.write(os.urandom(fileSizeInBytes))
-                """)
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": self._big_file_conanfile})
         client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
 
         tmp_folder = temp_folder()
@@ -189,6 +190,25 @@ class TestDownloadCache:
         client.run("install --requires=mypkg/0.1@user/testing")
         assert "mypkg/0.1@user/testing: Downloading" not in client.out
         assert "conan_package.tgz from download cache, instead of downloading it" in client.out
+
+    def test_upload_without_cache_conf_stores_nothing(self):
+        """ the opposite of test_upload_populates_download_cache: without
+        core.download:download_cache configured, upload must not write a cache anywhere,
+        neither in some default/implicit location nor by ever touching DownloadCache at all
+        """
+        client = TestClient(default_server_user=True)
+        client.save({"conanfile.py": self._big_file_conanfile})
+        client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
+
+        # no core.download:download_cache set at all
+        with patch("conan.internal.rest.download_cache.DownloadCache.cache_file") as cache_file:
+            client.run("upload * --confirm -r default")
+        cache_file.assert_not_called()
+
+        # and a later install must still really download the package over the network
+        client.run("remove * -c")
+        client.run("install --requires=mypkg/0.1@user/testing")
+        assert "mypkg/0.1@user/testing: Downloading" in client.out
 
     def test_upload_download_cache_skips_metadata(self):
         """ metadata files can be overwritten without a new revision, so they are never served
