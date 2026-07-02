@@ -1004,3 +1004,33 @@ class TestReplaceRequiresCLIPriority:
         # CLI-specified pkg/1.0 must not be replaced by pkgng/1.0
         assert "Replaced requires" not in c.out
         c.assert_listed_require({"pkg/1.0": "Cache"})
+
+
+@pytest.mark.parametrize("replace", [True, False])
+def test_issue_with_requires(replace):
+    tc = TestClient(light=True)
+
+    ref = "replaced" if replace else "common"
+    profile = "include(default)\n[replace_requires]\nreplaced/*: common/1.0" if replace else "include(default)"
+
+    conanfile = textwrap.dedent(f"""
+    from conan import ConanFile
+    class Consumer(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        def requirements(self):
+            self.requires("two/1.0")
+            self.test_requires("{ref}/1.0")
+        def package_info(self):
+            self.cpp_info.requires = ["two::two"]
+    """)
+
+    tc.save({"common/conanfile.py": GenConanfile("common", "1.0"),
+             "one/conanfile.py": GenConanfile("one", "1.0").with_requires(f"{ref}/1.0"),
+             "two/conanfile.py": GenConanfile("two", "1.0").with_requires("one/1.0"),
+             "conanfile.py": conanfile,
+             "profile": profile})
+    tc.run("create common")
+    tc.run("export one")
+    tc.run("export two")
+    tc.run("create -pr=profile -b=missing")
