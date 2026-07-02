@@ -1007,11 +1007,16 @@ class TestReplaceRequiresCLIPriority:
 
 
 @pytest.mark.parametrize("replace", [True, False])
-def test_issue_with_requires(replace):
+@pytest.mark.parametrize("requires_first", [True, False])
+def test_replace_requires_cpp_info_requires_issue(replace, requires_first):
+    """ See https://github.com/conan-io/conan/issues/20138
+    A replace_require'ed divergent diamond structure like this used to give
+    a wrong error about cpp_info requires not being valid"""
     tc = TestClient(light=True)
 
     ref = "replaced" if replace else "common"
     profile = "include(default)\n[replace_requires]\nreplaced/*: common/1.0" if replace else "include(default)"
+    requires = 'self.requires("two/1.0")'
 
     conanfile = textwrap.dedent(f"""
     from conan import ConanFile
@@ -1019,8 +1024,9 @@ def test_issue_with_requires(replace):
         name = "consumer"
         version = "1.0"
         def requirements(self):
-            self.requires("two/1.0")
+            {requires if requires_first else ''}
             self.test_requires("{ref}/1.0")
+            {'' if requires_first else requires}
         def package_info(self):
             self.cpp_info.requires = ["two::two"]
     """)
@@ -1034,3 +1040,4 @@ def test_issue_with_requires(replace):
     tc.run("export one")
     tc.run("export two")
     tc.run("create -pr=profile -b=missing")
+    assert f"The direct dependency '{ref}' is not used" not in tc.out
