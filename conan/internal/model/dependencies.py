@@ -98,6 +98,9 @@ class ConanFileDependencies(UserRequirementsDict):
         if node.replaced_requires:
             cant_be_removed = set()
             for old_req, new_req in node.replaced_requires.items():
+                # skip replace_requires that do not apply to this node
+                if new_req not in d:
+                    continue
                 # Two different replaced_requires can point to the same real requirement
                 existing = d[new_req]
                 added_req = new_req.copy_requirement()
