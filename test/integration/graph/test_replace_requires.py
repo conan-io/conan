@@ -1004,3 +1004,27 @@ class TestReplaceRequiresCLIPriority:
         # CLI-specified pkg/1.0 must not be replaced by pkgng/1.0
         assert "Replaced requires" not in c.out
         c.assert_listed_require({"pkg/1.0": "Cache"})
+
+
+def test_replace_requires_unused_override():
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+
+    class Test(ConanFile):
+
+        def requirements(self):
+            self.requires("openssl/1.0")
+            self.requires("zlib/1.0", override=True)
+
+        def generate(self):
+            self.dependencies["openssl"]
+
+    """)
+    c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+            "openssl/conanfile.py": GenConanfile("openssl", "1.0"),
+            "conanfile.py": conanfile,
+            "profile": "include(default)\n[replace_requires]\nzlib/*: zlib/1.0"})
+    c.run("create zlib")
+    c.run("create openssl")
+    c.run("install -pr=profile")
