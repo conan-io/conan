@@ -548,6 +548,29 @@ class TestComplete:
         assert "pkgc/0.1" in c.out
         assert "pkgx/0.1" not in c.out
 
+    @pytest.mark.parametrize("flip_order", [True, False])
+    def test_complete_ordering(self, flip_order):
+        """Ordering of packages in the workspace should not affect the complete command.
+
+        See https://github.com/conan-io/conan/issues/20149
+        """
+        c = TestClient(light=True)
+        c.save({"pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1")})
+        c.run("export pkgb")
+        c.run("workspace init")
+        if flip_order:
+            c.run("workspace add pkga")
+            c.run("workspace add pkgc")
+        else:
+            c.run("workspace add pkgc")
+            c.run("workspace add pkga")
+        c.run("workspace complete")
+        c.run("workspace info")
+        # This used not to be included due to the ordering of the packages in the workspace
+        assert "pkgb/0.1" in c.out
+
 
 class TestWorkspaceBuild:
 
