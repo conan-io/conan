@@ -130,11 +130,11 @@ class CMakeConfigDeps:
             ret[config.filename] = config.content()
             targets = TargetsTemplate2(base_filename, dep.ref)
             ret[targets.filename] = targets.content()
-            cmake_properties, dependencies, transitive_reqs = self._get_target_configuration_properties(
-                dep, full_cpp_info)
+            transitive_reqs = self.get_transitive_requires(dep)
+            cmake_properties = self._get_target_configuration_properties(dep, transitive_reqs, full_cpp_info)
             target_configuration = TargetConfigurationTemplate2(
                 base_filename, dep, self._conanfile, full_cpp_info,
-                require.build, require.headers, cmake_properties, dependencies, transitive_reqs)
+                require.build, require.headers, cmake_properties, transitive_reqs)
             ret[target_configuration.filename] = target_configuration.content()
 
         self._print_help(direct_deps)
@@ -253,13 +253,14 @@ class CMakeConfigDeps:
             result["cmake_legacy_libraries"] = " ".join(libraries) if libraries else ""
         return result
 
-    def _get_target_configuration_properties(self, dep, full_cpp_info):
-        transitive_reqs = self.get_transitive_requires(dep)
+    def _get_target_configuration_properties(self, dep, transitive_reqs, full_cpp_info):
         cmake_properties = {}
 
         def add(dep_conanfile, comp_name=None):
             key = (dep_conanfile.ref.name, comp_name)
             cmake_properties[key] = {
+                "cmake_file_name": self.get_property("cmake_file_name", dep_conanfile)
+                                   or dep_conanfile.ref.name,
                 "cmake_target_name": self.get_property("cmake_target_name", dep_conanfile,
                                                        comp_name),
                 "cmake_link_feature": self.get_property("cmake_link_feature", dep_conanfile,
@@ -271,6 +272,8 @@ class CMakeConfigDeps:
             }
 
         add(dep)
+        cmake_properties[(dep.ref.name, None)]["cmake_extra_dependencies"] = \
+            self.get_property("cmake_extra_dependencies", dep, check_type=list) or []
         if full_cpp_info.has_components:
             for name in full_cpp_info.components:
                 add(dep, name)
@@ -279,10 +282,7 @@ class CMakeConfigDeps:
             for comp_name in transitive_dep.cpp_info.components:
                 add(transitive_dep, comp_name)
 
-        dependencies = {self.get_cmake_filename(r): "CONFIG" for r in transitive_reqs.values()}
-        extra_mods = self.get_property("cmake_extra_dependencies", dep, check_type=list) or []
-        dependencies.update({extra_mod: "" for extra_mod in extra_mods})
-        return cmake_properties, dependencies, transitive_reqs
+        return cmake_properties
 
     def _get_find_mode(self, dep):
         tmp = self.get_property("cmake_find_mode", dep)
