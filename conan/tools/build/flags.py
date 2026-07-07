@@ -84,11 +84,8 @@ def architecture_flag(conanfile):
     elif compiler == "emcc":
         if arch == "wasm64":
             # Emscripten 6.0.0 added the standard `-m64` flag as an alias for
-            # the legacy `-sMEMORY64` setting (emscripten-core/emscripten#26765),
-            # and 6.0.1 deprecated `-sMEMORY64` in favor of it (#27025), which
-            # makes emcc emit a deprecation warning on every compile and link
-            # invocation. Prefer `-m64` on toolchains that understand it, and
-            # fall back to `-sMEMORY64=1` on older Emscripten that does not.
+            # the legacy `-sMEMORY64` setting and 6.0.1 deprecated `-sMEMORY64`
+            # in favor of it, which makes emcc emit a deprecation warning.
             compiler_version = settings.get_safe("compiler.version")
             if compiler_version and Version(compiler_version) >= "6.0.0":
                 return "-m64"
