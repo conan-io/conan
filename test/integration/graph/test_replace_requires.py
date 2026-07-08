@@ -1004,3 +1004,40 @@ class TestReplaceRequiresCLIPriority:
         # CLI-specified pkg/1.0 must not be replaced by pkgng/1.0
         assert "Replaced requires" not in c.out
         c.assert_listed_require({"pkg/1.0": "Cache"})
+
+
+@pytest.mark.parametrize("replace", [True, False])
+@pytest.mark.parametrize("requires_first", [True, False])
+def test_replace_requires_cpp_info_requires_issue(replace, requires_first):
+    """ See https://github.com/conan-io/conan/issues/20138
+    A replace_require'ed divergent diamond structure like this used to give
+    a wrong error about cpp_info requires not being valid"""
+    tc = TestClient(light=True)
+
+    ref = "replaced" if replace else "common"
+    profile = "include(default)\n[replace_requires]\nreplaced/*: common/1.0" if replace else "include(default)"
+    requires = 'self.requires("two/1.0")'
+
+    conanfile = textwrap.dedent(f"""
+    from conan import ConanFile
+    class Consumer(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        def requirements(self):
+            {requires if requires_first else ''}
+            self.test_requires("{ref}/1.0")
+            {'' if requires_first else requires}
+        def package_info(self):
+            self.cpp_info.requires = ["two::two"]
+    """)
+
+    tc.save({"common/conanfile.py": GenConanfile("common", "1.0"),
+             "one/conanfile.py": GenConanfile("one", "1.0").with_requires(f"{ref}/1.0"),
+             "two/conanfile.py": GenConanfile("two", "1.0").with_requires("one/1.0"),
+             "conanfile.py": conanfile,
+             "profile": profile})
+    tc.run("create common")
+    tc.run("export one")
+    tc.run("export two")
+    tc.run("create -pr=profile -b=missing")
+    assert f"The direct dependency '{ref}' is not used" not in tc.out

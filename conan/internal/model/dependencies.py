@@ -102,6 +102,12 @@ class ConanFileDependencies(UserRequirementsDict):
                 existing = d[new_req]
                 added_req = new_req.copy_requirement()
                 added_req.ref = RecipeReference.loads(old_req)
+                # copy_requirement() doesn't propagate these, as they shouldn't transitively
+                # propagate downstream, but here we are aliasing the same requirement, not
+                # propagating it, so the traits must exactly match the replaced one
+                added_req.test = new_req.test
+                added_req.is_test = new_req.is_test
+                added_req.direct = new_req.direct
                 d[added_req] = existing
                 if new_req.ref.name == added_req.ref.name:
                     cant_be_removed.add(new_req)
