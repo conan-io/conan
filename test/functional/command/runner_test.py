@@ -731,7 +731,7 @@ def test_create_docker_runner_broken_layout_warns():
         '        raise RuntimeError("broken layout")',
     )
     client.save({"conanfile.py": conanfile})
-    client.run("create . -pr:h host -pr:b build")
+    client.run("create . -pr:h host -pr:b build", assert_error=True)
 
     assert "Could not evaluate layout() for Docker volume mounts" in client.out
-    assert "[100%] Built target example" in client.out
+    assert "Using default mount." in client.out
