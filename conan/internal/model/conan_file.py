@@ -387,7 +387,7 @@ class ConanFile:
             order to source files)
         :parameter scope: The scope of the command, either ``"build"`` or ``"run"``.
         """
-        assert env is None or shell, "ConanFile.run(..., shell=False) needs env=False"
+        assert env is None or shell, "ConanFile.run(..., shell=False) needs env=None"
         assert isinstance(command, str), (
             "ConanFile.run() requires command to be a string.\n"
             "Tip: use ' '.join(f'\"{arg}\"' for arg in args) to format your parameter list"

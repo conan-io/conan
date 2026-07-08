@@ -67,7 +67,7 @@ class Pkg(ConanFile):
                 def source(self):
                     self.run(["echo", "Hello"])
             """)
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({"conanfile.py": conanfile})
         client.run("source", assert_error=True)
         assert "ConanFile.run() requires command to be a string" in client.out
@@ -79,7 +79,7 @@ class Pkg(ConanFile):
                 def source(self):
                     self.run("echo Hello", shell=False, env="conanbuild")
             """)
-        client = TestClient()
+        client = TestClient(light=True)
         client.save({"conanfile.py": conanfile})
         client.run("source", assert_error=True)
         assert "ConanFile.run(..., shell=False) needs env=False" in client.out
