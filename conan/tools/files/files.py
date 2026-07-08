@@ -374,11 +374,8 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     output = conanfile.output
     extract_filter = conanfile.conf.get("tools.files.unzip:filter") or extract_filter
     output.info(f"Uncompressing {filename} to {destination}")
-    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
-            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
-            filename.endswith(".tar") or filename.endswith(".tar.xz") or
-            filename.endswith(".txz") or filename.endswith(".tar.zst")):
-        if filename.endswith(".tar.zst") and sys.version_info.minor < 14:
+    if (filename.endswith((".tar.gz", ".tgz", ".tbz2", ".tar.bz2", ".tar", ".tar.xz", ".txz", ".tar.zst", ".tzst"))):
+        if filename.endswith((".tar.zst", ".tzst")) and sys.version_info.minor < 14:
             raise ConanException(f"File {os.path.basename(filename)} compressed with 'zst', "
                                  f"unsupported for Python<3.14 ")
         return untargz(filename, destination, pattern, strip_root, extract_filter,

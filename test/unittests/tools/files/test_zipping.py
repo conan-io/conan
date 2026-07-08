@@ -194,11 +194,11 @@ def test_untargz_zst():
 def test_untargz_zst_unsupported_python():
     # Fake a .tar.zst, the version check happens before any decompression is attempted
     archive = create_example_tar()
-    zst_archive = join(os.path.dirname(archive), "file.tar.zst")
+    zst_archive = join(os.path.dirname(archive), "file.tzst")
     os.rename(archive, zst_archive)
 
     conanfile = ConanFileMock({})
     dest_dir = temp_folder()
     with pytest.raises(ConanException) as error:
         unzip(conanfile, zst_archive, dest_dir)
-    assert "File file.tar.zst compressed with 'zst', unsupported for Python<3.14" in str(error.value)
+    assert "File file.tzst compressed with 'zst', unsupported for Python<3.14" in str(error.value)
