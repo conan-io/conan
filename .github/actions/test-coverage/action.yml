@@ -10,6 +10,11 @@ inputs:
     description: 'Test suite name'
     required: true
 
+  runner-type:
+    description: 'Name of the current runner'
+    required: false
+    default: ''
+
   duration:
     description: 'Show N slowest test durations (N=0 for all)'
     required: true
@@ -35,7 +40,7 @@ runs:
       - name: Rename coverage file
         if: github.ref == 'refs/heads/develop2'
         shell: bash
-        run: mv .coverage .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
+        run: mv .coverage .coverage.${{ runner.os }}${{inputs.runner-type}}-${{ inputs.python-version }}-${{ inputs.test-type }}
 
       - name: Upload coverage artifact
         if: github.ref == 'refs/heads/develop2'
