@@ -434,14 +434,14 @@ class TestSubsystemsCMakeBuild:
 
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("msys2_clang64")
-    @pytest.mark.tool("cmake", "3.19")
+    @pytest.mark.tool("cmake", "3.23")
     def test_msys2_clang64_external(self):
         """
         Exactly the same as the previous tests, but with a native cmake 3.19 (higher priority)
         """
         client = TestClient()
         build_out = self._build(client)
-        assert "MYCMAKE VERSION=3.19" in build_out
+        assert "MYCMAKE VERSION=3.23" in build_out
         check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None,
                       subsystem="mingw64")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="clang64")

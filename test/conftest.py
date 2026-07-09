@@ -24,12 +24,11 @@ tools_locations = {
         "3.15": {},
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
-        "3.19": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-windows-x86_64/bin"}},
         # To explicitly skip one tool for one version, define the path as 'skip-tests'
         # if you don't define the path for one platform it will run the test with the
         # tool in the path. For example here it will skip the test with CMake in Darwin but
         # in Linux it will run with the version found in the path if it's not specified
-        "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-windows-x86_64/bin",
+        "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.23.1-windows-x86_64/bin",
                           "Darwin": "skip-tests"}},
     },
     'ninja': {
@@ -78,11 +77,6 @@ tools_locations = {
             "path": {'Windows': 'C:/tools/cmake/3.15.7/cmake-3.15.7-win64-x64/bin',
                      'Darwin': '/Users/runner/Applications/CMake/3.15.7/bin',
                      'Linux': '/usr/share/cmake-3.15.7/bin'}
-        },
-        "3.19": {
-            "path": {'Windows': 'C:/tools/cmake/3.19.7/cmake-3.19.7-win64-x64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/3.19.7/bin',
-                     'Linux': '/usr/share/cmake-3.19.7/bin'}
         },
         "3.23": {
             "path": {'Windows': 'C:/tools/cmake/3.23.5/cmake-3.23.5-windows-x86_64/bin',
