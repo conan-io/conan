@@ -46,6 +46,6 @@ runs:
         if: github.ref == 'refs/heads/develop2'
         uses: actions/upload-artifact@v4
         with:
-          name: .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
-          path: .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
+          name: .coverage.${{ runner.os }}${{inputs.runner-type}}-${{ inputs.python-version }}-${{ inputs.test-type }}
+          path: .coverage.${{ runner.os }}${{inputs.runner-type}}-${{ inputs.python-version }}-${{ inputs.test-type }}
           include-hidden-files: true
