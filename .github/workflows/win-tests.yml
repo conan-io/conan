@@ -265,4 +265,5 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           test-type: functional
+          runner-type: ${{ matrix.runner }}
           tests: ${{ inputs.run-slow-tests == 'true' && 'test/functional' || 'test/functional -m "not slow"' }}
