@@ -10,7 +10,7 @@ from conan.test.assets.sources import gen_function_h, gen_function_cpp
 from conan.test.utils.tools import TestClient
 
 
-@pytest.mark.tool("cmake", "4.2")
+@pytest.mark.tool("cmake", "4.3")
 @pytest.mark.parametrize("shared", [False, True])
 def test_cps(shared):
     c = TestClient()
@@ -142,7 +142,7 @@ def test_cps(shared):
     assert "BAR: 42" in c.out
 
 
-@pytest.mark.tool("cmake", "4.2")
+@pytest.mark.tool("cmake", "4.3")
 @pytest.mark.parametrize("shared", [False, True])
 def test_cps_components(shared):
     c = TestClient()
@@ -300,7 +300,7 @@ def test_cps_components(shared):
     assert "mypkg_utils: Release!" in c.out
 
 
-@pytest.mark.tool("cmake", "4.2")
+@pytest.mark.tool("cmake", "4.3")
 @pytest.mark.parametrize("kind", ["static_public", "static_private", "shared_private"])
 def test_cps_components_requires(kind):
     if kind == "shared_private" and platform.system() == "Linux":
@@ -518,7 +518,7 @@ def test_cps_components_requires(kind):
     assert "liba_utils: Release!" in c.out
 
 
-@pytest.mark.tool("cmake", "4.2")
+@pytest.mark.tool("cmake", "4.3")
 def test_cps_name_mapping():
     c = TestClient()
     c.run("new cmake_lib")

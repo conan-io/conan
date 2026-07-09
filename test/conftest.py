@@ -88,10 +88,10 @@ tools_locations = {
                      'Darwin': '/Users/runner/Applications/CMake/3.27.9/bin',
                      'Linux': "/usr/share/cmake-3.27.9/bin"}
         },
-        "4.2": {
-            "path": {'Windows': 'C:/tools/cmake/4.2.1/cmake-4.2.1-windows-x86_64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/4.2.1/bin',
-                     'Linux': "/usr/share/cmake-4.2.1/bin"}
+        "4.3": {
+            "path": {'Windows': 'C:/tools/cmake/4.3.4/cmake-4.3.4-windows-x86_64/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/4.3.4/bin',
+                     'Linux': "/usr/share/cmake-4.3.4/bin"}
         }
     },
     'ninja': {
