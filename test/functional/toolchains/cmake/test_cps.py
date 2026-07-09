@@ -57,8 +57,6 @@ def test_cps(shared):
         cmake_minimum_required(VERSION 4.2)
         project(mypkg CXX)
 
-        set(CMAKE_EXPERIMENTAL_EXPORT_PACKAGE_INFO "b80be207-778e-46ba-8080-b23bba22639e")
-
         add_library(mypkg src/mypkg.cpp)
         target_include_directories(mypkg PUBLIC
                     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -86,8 +84,6 @@ def test_cps(shared):
         set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(PackageTest CXX)
-
-        set(CMAKE_EXPERIMENTAL_FIND_CPS_PACKAGES e82e467b-f997-4464-8ace-b00808fff261)
 
         find_package(mypkg CONFIG REQUIRED)
 
@@ -225,8 +221,6 @@ def test_cps_components(shared):
         cmake_minimum_required(VERSION 3.15)
         project(PackageTest CXX)
 
-        set(CMAKE_EXPERIMENTAL_FIND_CPS_PACKAGES e82e467b-f997-4464-8ace-b00808fff261)
-
         find_package(mypkg CONFIG REQUIRED)
 
         add_executable(example src/example.cpp)
@@ -353,7 +347,7 @@ def test_cps_components_requires(kind):
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
-        project({name} CXX)
+        project({name} LANGUAGES CXX VERSION 0.1)
 
         set(CMAKE_EXPERIMENTAL_EXPORT_PACKAGE_INFO "b80be207-778e-46ba-8080-b23bba22639e")
 
@@ -400,8 +394,6 @@ def test_cps_components_requires(kind):
         set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(PackageTest CXX)
-
-        set(CMAKE_EXPERIMENTAL_FIND_CPS_PACKAGES e82e467b-f997-4464-8ace-b00808fff261)
 
         find_package({name} CONFIG REQUIRED)
 
@@ -598,8 +590,6 @@ def test_cps_name_mapping():
         set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 4.2)
         project(PackageTest CXX)
-
-        set(CMAKE_EXPERIMENTAL_FIND_CPS_PACKAGES e82e467b-f997-4464-8ace-b00808fff261)
 
         find_package(potato CONFIG REQUIRED)
 
