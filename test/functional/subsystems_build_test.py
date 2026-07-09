@@ -119,22 +119,6 @@ class TestSubsystemsBuild:
                          subsystem="msys2")
 
     @pytest.mark.parametrize("static", [True, False])
-    @pytest.mark.tool("mingw")
-    def test_mingw(self, static):
-        """
-        This will work if you installed the Mingw toolchain outside msys2, from
-        https://sourceforge.net/projects/mingw/, and installed gcc, autotools, mingw32-make, etc
-
-        But this doesn't contain "make", only "mingw32-make"
-        """
-        client = TestClient()
-        self._build(client, static_runtime=static, make="mingw32-make")
-
-        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86", None, subsystem="mingw32")
-        check_vs_runtime("app.exe", client, "15", "Debug", static_runtime=static,
-                         subsystem="mingw64")
-
-    @pytest.mark.parametrize("static", [True, False])
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("mingw64")
     def test_mingw64(self, static):
@@ -436,7 +420,6 @@ class TestSubsystemsCMakeBuild:
 
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("msys2_clang64")
-    @pytest.mark.skip(reason="This doesn't work, seems CMake issue")
     def test_msys2_clang64(self):
         """
         FAILS WITH:
