@@ -269,7 +269,7 @@ def test_apple_own_framework_cross_build(settings):
 
 @pytest.mark.xfail(reason="run_environment=True no longer works")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_apple_own_framework_cmake_deps():
     client = TestClient()
 
@@ -394,7 +394,7 @@ def test_apple_own_framework_cmake_find_package_multi():
     assert "Hello World Release!" in client.out
 
 
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""
