@@ -769,9 +769,8 @@ def test_host_version_replace():
 
     tc = TestClient(light=True)
     tc.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
-             "conanfile.py": GenConanfile()
-                .with_requires("pkg/0.1@user/channel")
-                .with_tool_requires("pkg/<host_version>"),
+             "conanfile.py": GenConanfile().with_requires("pkg/0.1@user/channel")
+                                           .with_tool_requires("pkg/<host_version>"),
              "profile": profile})
     tc.run("create pkg")
     tc.run("create pkg --user=user --channel=channel")
@@ -787,16 +786,17 @@ def test_host_version_replace():
     tc.save({"tool_profile": tool_profile})
     tc.run("install -pr=tool_profile")
     tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"})
-    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"}, build=True)
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"},
+                             build=True)
 
     # Solution 2: Directly in the requirement
-    tc.save({"conanfile.py": GenConanfile()
-                .with_requires("pkg/0.1@user/channel")
-                .with_tool_requires("pkg/<host_version>@user/channel")})
+    tc.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1@user/channel")
+                                           .with_tool_requires("pkg/<host_version>@user/channel")})
 
     tc.run("install -pr=profile")
     tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"})
-    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"}, build=True)
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"},
+                             build=True)
 
 
 class TestReplaceRequiresCompose:
@@ -1015,7 +1015,8 @@ def test_replace_requires_cpp_info_requires_issue(replace, requires_first):
     tc = TestClient(light=True)
 
     ref = "replaced" if replace else "common"
-    profile = "include(default)\n[replace_requires]\nreplaced/*: common/1.0" if replace else "include(default)"
+    profile = "include(default)\n[replace_requires]\nreplaced/*: common/1.0" \
+        if replace else "include(default)"
     requires = 'self.requires("two/1.0")'
 
     conanfile = textwrap.dedent(f"""
