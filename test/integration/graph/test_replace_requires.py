@@ -1006,6 +1006,34 @@ class TestReplaceRequiresCLIPriority:
         c.assert_listed_require({"pkg/1.0": "Cache"})
 
 
+class TestReplaceRequiresRecipeOverride:
+    def test_unused_override(self):
+        c = TestClient(light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+                "openssl/conanfile.py": GenConanfile("openssl", "1.0"),
+                "conanfile.py": GenConanfile().with_requirement("openssl/1.0")
+                                              .with_requirement("zlib/1.0", override=True),
+                "profile": "include(default)\n[replace_requires]\nzlib/*: zlib/1.0"})
+        c.run("create zlib")
+        c.run("create openssl")
+        c.run("install -pr=profile")
+        # it doesn't fail
+
+    def test_replace_requires_override_priority(self):
+        # the profile replace_requires has more priority
+        c = TestClient(light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib"),
+                "openssl/conanfile.py": GenConanfile("openssl", "1.0").with_requires("zlib/1.0"),
+                "conanfile.py": GenConanfile().with_requirement("openssl/1.0")
+                                              .with_requirement("zlib/1.1", override=True),
+                "profile": "include(default)\n[replace_requires]\nzlib/*: zlib/1.0"})
+        c.run("create zlib --version=1.0")
+        c.run("create zlib --version=1.1")
+        c.run("create openssl")
+        c.run("install -pr=profile")
+        c.assert_listed_require({"zlib": ("1.0", "Cache")})
+
+
 @pytest.mark.parametrize("replace", [True, False])
 @pytest.mark.parametrize("requires_first", [True, False])
 def test_replace_requires_cpp_info_requires_issue(replace, requires_first):
