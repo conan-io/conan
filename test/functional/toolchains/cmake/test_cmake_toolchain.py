@@ -994,7 +994,7 @@ def test_no_build_type():
     assert "Don't specify 'build_type' at build time" not in client.out
 
 
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_redirect_stdout():
     client = TestClient()
     conanfile = textwrap.dedent("""
