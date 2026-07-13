@@ -83,6 +83,12 @@ def architecture_flag(conanfile):
                 "e2k-v7": "-march=elbrus-v7"}.get(arch, "")
     elif compiler == "emcc":
         if arch == "wasm64":
+            # Emscripten 6.0.0 added the standard `-m64` flag as an alias for
+            # the legacy `-sMEMORY64` setting and 6.0.1 deprecated `-sMEMORY64`
+            # in favor of it, which makes emcc emit a deprecation warning.
+            compiler_version = settings.get_safe("compiler.version")
+            if compiler_version and Version(compiler_version) >= "6.0.0":
+                return "-m64"
             return "-sMEMORY64=1"
     return ""
 
