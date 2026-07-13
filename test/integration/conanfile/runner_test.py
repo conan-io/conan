@@ -82,4 +82,5 @@ class Pkg(ConanFile):
         client = TestClient(light=True)
         client.save({"conanfile.py": conanfile})
         client.run("source", assert_error=True)
-        assert "ConanFile.run(..., shell=False) needs env=False" in client.out
+        print(client.out)
+        assert "ConanFile.run(..., shell=False) needs env=None" in client.out
