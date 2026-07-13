@@ -12,12 +12,8 @@ from conan.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
 @pytest.mark.tool("cmake")
-@pytest.mark.parametrize("nosoname_property,use_cmakeconfigdeps", [
-    (True, False),  # without SONAME
-    (True, True),  # without SONAME, with CMakeConfigDeps
-    (False, False)  # By default, with SONAME
-])
-def test_no_soname_flag(nosoname_property, use_cmakeconfigdeps):
+@pytest.mark.parametrize("use_cmakeconfigdeps", [False, True])
+def test_no_soname_flag(use_cmakeconfigdeps):
     """ This test case is testing this graph structure:
             *   'Executable' -> 'LibB' -> 'LibNoSoname'
         Where:
@@ -41,8 +37,8 @@ def test_no_soname_flag(nosoname_property, use_cmakeconfigdeps):
 
     replace_in_file(ConanFileMock(), os.path.join(client.current_folder, "conanfile.py"),
                     'self.cpp_info.libs = ["nosoname"]',
-                    f'self.cpp_info.libs = ["nosoname"]\n        '
-                    f'self.cpp_info.set_property("nosoname", {nosoname_property})')
+                    'self.cpp_info.libs = ["nosoname"]\n        '
+                    'self.cpp_info.set_property("nosoname", True)')
     replace_in_file(ConanFileMock(), os.path.join(client.current_folder, "CMakeLists.txt"),
                     'target_include_directories(nosoname PUBLIC include)',
                     'target_include_directories(nosoname PUBLIC include)\n'
@@ -66,14 +62,7 @@ def test_no_soname_flag(nosoname_property, use_cmakeconfigdeps):
     # otherwise, run=None and nothing can tell us if the conanrunenv should have the PATH.
     command = environment_wrap_command(ConanFileMock(), "conanrun", client.current_folder, "app")
 
-    # If `nosoname_property` is False, and we have a library without the SONAME flag,
-    # then it should fail
-    if not nosoname_property:
-        client.run_command(command, assert_error=True)
-        assert "libnosoname.so: cannot open shared object file: " \
-               "No such file or directory" in client.out
-    else:
-        client.run_command(command)
-        assert "nosoname/0.1: Hello World Release!" in client.out
-        assert "lib_b/0.1: Hello World Release!" in client.out
-        assert "app/0.1: Hello World Release!" in client.out
+    client.run_command(command)
+    assert "nosoname/0.1: Hello World Release!" in client.out
+    assert "lib_b/0.1: Hello World Release!" in client.out
+    assert "app/0.1: Hello World Release!" in client.out

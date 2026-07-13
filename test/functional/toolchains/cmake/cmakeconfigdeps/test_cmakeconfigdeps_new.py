@@ -1779,6 +1779,7 @@ def test_find_package_extra_variants():
     assert 'Conan: Configuring Targets for hello' in client.out
     # And this follows the expected found variable generation
     assert "Found HellO!" in client.out
+    assert "Found hello!" not in client.out
 
 
 class TestNoSoname:
