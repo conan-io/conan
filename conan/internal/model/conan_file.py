@@ -368,7 +368,7 @@ class ConanFile:
             shell=True, scope="build", stderr=None):
         """ Run a command in the current package context.
 
-        :parameter command: The command to run.
+        :parameter command: The command to run formatted as a plain string
         :parameter stdout: The output stream to write the command output. If ``None``, it defaults to
             the standard output stream.
         :parameter stderr: The error output stream to write the command error output. If ``None``,
@@ -383,8 +383,16 @@ class ConanFile:
         :parameter quiet: If ``True``, suppress the output of the command.
         :parameter shell: If ``True``, run the command in a shell. This is passed to the
             underlying ``Popen`` function.
+            If set to ``False``, ``env`` parameter should be set to ``None`` (a shell is needed in
+            order to source files)
         :parameter scope: The scope of the command, either ``"build"`` or ``"run"``.
         """
+        assert env is None or shell, "ConanFile.run(..., shell=False) needs env=None"
+        assert isinstance(command, str), (
+            "ConanFile.run() requires command to be a string.\n"
+            "Tip: use ' '.join(f'\"{arg}\"' for arg in args) to format your parameter list"
+        )
+
         # NOTE: "self.win_bash" is the new parameter "win_bash" for Conan 2.0
         command = self._conan_helpers.cmd_wrapper.wrap(command, conanfile=self)
         if env == "":  # This default allows not breaking for users with ``env=None`` indicating
