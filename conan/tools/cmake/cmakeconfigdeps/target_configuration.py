@@ -250,6 +250,9 @@ class TargetConfigurationTemplate2:
             link_languages = info.languages or self._conanfile.languages or []
             link_languages = ["CXX" if c == "C++" else c for c in link_languages]
             target["link_languages"] = link_languages
+            if lib_type == "SHARED" and self._cmakedeps.get_property("nosoname", self._conanfile,
+                                                                     comp_name, check_type=bool):
+                target["no_soname"] = True
         return target
 
     def _get_aliases(self, comp_name=None):
@@ -423,6 +426,9 @@ class TargetConfigurationTemplate2:
         set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         set_target_properties({{lib}} PROPERTIES IMPORTED_LOCATION_{{config}}
                               "{{lib_info["location"]}}")
+        {% if lib_info.get("no_soname") %}
+        set_target_properties({{lib}} PROPERTIES IMPORTED_NO_SONAME_{{config}} TRUE)
+        {% endif %}
         {% elif lib_info.get("type") == "INTERFACE" %}
         set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         {% endif %}

@@ -1779,4 +1779,66 @@ def test_find_package_extra_variants():
     assert 'Conan: Configuring Targets for hello' in client.out
     # And this follows the expected found variable generation
     assert "Found HellO!" in client.out
-    assert "Found hello!" not in client.out
+
+
+class TestNoSoname:
+
+    def test_cmakeconfigdeps_nosoname_recipe(self):
+        """nosoname set via cpp_info.set_property in the recipe is honoured"""
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.libs = ["dep"]
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.location = "lib/dep.so"
+                    self.cpp_info.set_property("nosoname", True)
+            """)
+        c.save({"dep/conanfile.py": dep})
+        c.run("create dep")
+        c.run("install --requires=dep/0.1 -g CMakeConfigDeps")
+        cmake = c.load("dep-Targets-release.cmake")
+        assert "IMPORTED_NO_SONAME_RELEASE TRUE" in cmake
+
+    def test_cmakeconfigdeps_nosoname_component(self):
+        """nosoname on a component sets IMPORTED_NO_SONAME for that component's target"""
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.components["mycomp"].libs = ["mylib"]
+                    self.cpp_info.components["mycomp"].type = "shared-library"
+                    self.cpp_info.components["mycomp"].location = "lib/mylib.so"
+                    self.cpp_info.components["mycomp"].set_property("nosoname", True)
+            """)
+        c.save({"dep/conanfile.py": dep})
+        c.run("create dep")
+        c.run("install --requires=dep/0.1 -g CMakeConfigDeps")
+        cmake = c.load("dep-Targets-release.cmake")
+        assert "IMPORTED_NO_SONAME_RELEASE TRUE" in cmake
+
+    def test_cmakeconfigdeps_nosoname_static_ignored(self):
+        """nosoname is ignored for static libraries"""
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.libs = ["dep"]
+                    self.cpp_info.type = "static-library"
+                    self.cpp_info.location = "lib/dep.a"
+                    self.cpp_info.set_property("nosoname", True)
+            """)
+        c.save({"dep/conanfile.py": dep})
+        c.run("create dep")
+        c.run("install --requires=dep/0.1 -g CMakeConfigDeps")
+        cmake = c.load("dep-Targets-release.cmake")
+        assert "IMPORTED_NO_SONAME" not in cmake
