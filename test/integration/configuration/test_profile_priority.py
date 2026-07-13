@@ -78,6 +78,46 @@ def test_profile_cli_priority():
     assert "user.myconf:myvalue5={'6': '7'}" in c.out
 
 
+def test_profiles_patterns_include_subsetting_before_base():
+    # https://github.com/conan-io/conan/issues/20162
+    # Sub-setting (compiler.cppstd) in an earlier include than the base setting (compiler)
+    # causes "ERROR: 'settings.compiler' value not defined"
+    c = TestClient()
+    product = textwrap.dedent("""\
+        [settings]
+        mypkg/*:compiler.cppstd=17
+        """)
+    os_profile = textwrap.dedent("""\
+        [settings]
+        mypkg/*:compiler=gcc
+        mypkg/*:compiler.version=11
+        mypkg/*:compiler.libcxx=libstdc++11
+        """)
+    leaf = textwrap.dedent("""\
+        include(./product.ini)
+        include(./os.ini)
+        [settings]
+        os=Linux
+        arch=x86_64
+        """)
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+        class MyPkg(ConanFile):
+            name = "mypkg"
+            version = "1.0"
+            settings = "os", "arch", "compiler", "build_type"
+        """)
+    c.save({"profiles/product.ini": product,
+            "profiles/os.ini": os_profile,
+            "profiles/leaf.ini": leaf,
+            "conanfile.py": conanfile})
+    c.run("export .")
+    # Should succeed: compiler base setting from os.ini must take effect even though
+    # product.ini (included first) only defines the sub-setting compiler.cppstd
+    c.run("install --requires=mypkg/1.0 -pr:a=./profiles/leaf.ini --build=missing")
+    assert "compiler=gcc compiler.cppstd=17 compiler.libcxx=libstdc++11 compiler.version=11" in c.out
+
+
 def test_profiles_patterns_include():
     # https://github.com/conan-io/conan/issues/16718
     c = TestClient()

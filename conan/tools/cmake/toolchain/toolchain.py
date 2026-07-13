@@ -26,7 +26,6 @@ from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
 from conan.errors import ConanException
 from conan.internal.model.options import _PackageOption
-from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
 from conan.internal.util.files import save
 
 
