@@ -12,11 +12,12 @@ from conan.test.utils.tools import TestClient
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only Linux")
 @pytest.mark.tool("cmake")
-@pytest.mark.parametrize("nosoname_property", [
-    True,  # without SONAME
-    False  # By default, with SONAME
+@pytest.mark.parametrize("nosoname_property,use_cmakeconfigdeps", [
+    (True, False),  # without SONAME
+    (True, True),  # without SONAME, with CMakeConfigDeps
+    (False, False)  # By default, with SONAME
 ])
-def test_no_soname_flag(nosoname_property):
+def test_no_soname_flag(nosoname_property, use_cmakeconfigdeps):
     """ This test case is testing this graph structure:
             *   'Executable' -> 'LibB' -> 'LibNoSoname'
         Where:
@@ -33,15 +34,19 @@ def test_no_soname_flag(nosoname_property):
             * If `self.cpp_info.set_property("nosoname", False), then the `Executable` fails.
     """
     client = TestClient(default_server_user=True)
+    if use_cmakeconfigdeps:
+        client.save_home({"global.conf": "tools.cmake.cmakedeps:new=will_break_next"})
     # Creating nosoname/0.1 library
     client.run("new cmake_lib -d name=nosoname -d version=0.1")
 
     replace_in_file(ConanFileMock(), os.path.join(client.current_folder, "conanfile.py"),
                     'self.cpp_info.libs = ["nosoname"]',
-                    f'self.cpp_info.libs = ["nosoname"]\n        self.cpp_info.set_property("nosoname", {nosoname_property})')
+                    f'self.cpp_info.libs = ["nosoname"]\n        '
+                    f'self.cpp_info.set_property("nosoname", {nosoname_property})')
     replace_in_file(ConanFileMock(), os.path.join(client.current_folder, "CMakeLists.txt"),
                     'target_include_directories(nosoname PUBLIC include)',
-                    'target_include_directories(nosoname PUBLIC include)\nset_target_properties(nosoname PROPERTIES NO_SONAME 1)')
+                    'target_include_directories(nosoname PUBLIC include)\n'
+                    'set_target_properties(nosoname PROPERTIES NO_SONAME 1)')
     client.run("create . -o nosoname/*:shared=True -tf=")
     # Creating lib_b/0.1 library (depends on nosoname/0.1)
     client.save({}, clean_first=True)
