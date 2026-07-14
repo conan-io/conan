@@ -6,6 +6,7 @@ import textwrap
 import pytest
 
 from conan.test.assets.cmake import gen_cmakelists
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from conan.test.utils.scm import create_local_git_repo, git_add_changes_commit, git_create_bare_repo
 from conan.test.utils.test_files import temp_folder
@@ -1313,3 +1314,27 @@ class TestGitTreelessRemote:
         client.save({"conanfile.py": self.conanfile.format(url=url)})
         client.run("export .")
         assert f"get_remote_url(): {url} ===" in client.out
+
+
+@pytest.mark.tool("git")
+def test_revision_mode_scm_dirty_whole_repo():
+    """Regression test for https://github.com/conan-io/conan/pull/18630
+    revision_mode=scm uses get_commit(repository=True), so is_dirty() must also
+    check the whole repository, not just the package subfolder.
+    Without the fix, a dirty file outside the package subfolder goes undetected.
+    """
+    t = TestClient()
+    pkg = GenConanfile("pkg", "0.1").with_revision_mode("scm")
+    commit = t.init_git_repo({"pkg/conanfile.py": str(pkg),
+                              "other/file.txt": "content"})
+
+    # Clean repo: export succeeds and uses the whole-repo commit as revision
+    t.run("export pkg")
+    assert t.exported_recipe_revision() == commit
+
+    # Dirty change outside pkga/ — only detectable by checking the whole repo
+    t.save({"other/file.txt": "modified content"})
+
+    # Must raise: revision_mode=scm checks the full repository for dirtiness
+    t.run("export pkg", assert_error=True)
+    assert "Can't have a dirty repository using revision_mode='scm'" in t.out

@@ -7,7 +7,6 @@ from jinja2 import Template
 from conan.errors import ConanException
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.pkg_type import PackageType
-from conan.internal.graph.graph import CONTEXT_BUILD
 from conan.tools.cmake.utils import cmake_escape_value
 
 
@@ -32,7 +31,7 @@ class TargetConfigurationTemplate2:
         # Fallback to consumer configuration if it doesn't have build_type
         config = self._conanfile.settings.get_safe("build_type", self._cmakedeps.configuration)
         config = (config or "none").lower()
-        build = "Build" if self._conanfile.context == CONTEXT_BUILD else ""
+        build = "Build" if self._require.build else ""
         return f"{f}-Targets{build}-{config}.cmake"
 
     def _requires(self, info, components):
@@ -123,7 +122,7 @@ class TargetConfigurationTemplate2:
         config = config.upper() if config else None
         pkg_folder = self._conanfile.package_folder.replace("\\", "/")
         config_folder = f"_{config}" if config else ""
-        build = "_BUILD" if self._conanfile.context == CONTEXT_BUILD else ""
+        build = "_BUILD" if self._require.build else ""
         pkg_folder_var = f"{pkg_name}_PACKAGE_FOLDER{config_folder}{build}"
 
         libs = {}
@@ -219,6 +218,9 @@ class TargetConfigurationTemplate2:
         # FIXME: We're ignoring this value at this moment. It relies on cmake_target_name or lib name
         #        Revisit when cpp.exe value is used too.
         if info.package_framework:
+            assert isinstance(info.package_framework, str), f"package_framework should be a str"
+            if info.libs:
+                raise ConanException("Can't define .libs and .package_framework for the same component")
             target["package_framework"] = {}
             lib_type = "SHARED" if info.type is PackageType.SHARED else \
                 "STATIC" if info.type is PackageType.STATIC else "STATIC"
@@ -248,6 +250,9 @@ class TargetConfigurationTemplate2:
             link_languages = info.languages or self._conanfile.languages or []
             link_languages = ["CXX" if c == "C++" else c for c in link_languages]
             target["link_languages"] = link_languages
+            if lib_type == "SHARED" and self._cmakedeps.get_property("nosoname", self._conanfile,
+                                                                     comp_name, check_type=bool):
+                target["no_soname"] = True
         return target
 
     def _get_aliases(self, comp_name=None):
@@ -421,6 +426,9 @@ class TargetConfigurationTemplate2:
         set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         set_target_properties({{lib}} PROPERTIES IMPORTED_LOCATION_{{config}}
                               "{{lib_info["location"]}}")
+        {% if lib_info.get("no_soname") %}
+        set_target_properties({{lib}} PROPERTIES IMPORTED_NO_SONAME_{{config}} TRUE)
+        {% endif %}
         {% elif lib_info.get("type") == "INTERFACE" %}
         set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         {% endif %}
@@ -470,6 +478,7 @@ class TargetConfigurationTemplate2:
                      "{{config_wrapper(config, lib_info["frameworks"])}}")
         {% endif %}
         {% if lib_info.get("package_framework") %}
+        set_property(TARGET {{lib}} APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
         set_target_properties({{lib}} PROPERTIES
             IMPORTED_LOCATION_{{config}} "{{lib_info["package_framework"]["location"]}}"
             FRAMEWORK TRUE)

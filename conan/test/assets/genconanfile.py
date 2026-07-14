@@ -28,6 +28,7 @@ class GenConanfile:
         self._deprecated = None
         self._package_lines = None
         self._finalize_lines = None
+        self._source_lines = None
         self._package_files = None
         self._package_files_env = None
         self._build_messages = None
@@ -224,6 +225,11 @@ class GenConanfile:
             self._finalize_lines.append(line)
         return self
 
+    def with_source(self, *lines):
+        self._source_lines = self._source_lines or []
+        self._source_lines.extend(lines)
+        return self
+
     def with_build_msg(self, msg):
         self._build_messages = self._build_messages or []
         self._build_messages.append(msg)
@@ -406,6 +412,20 @@ class GenConanfile:
         """.format("\n".join(lines))
 
     @property
+    def _source(self):
+        return self._source_lines or None
+
+    @property
+    def _source_render(self):
+        if not self._source_lines:
+            return None
+        lines = ["        {}".format(line) for line in self._source_lines]
+        return """
+    def source(self):
+{}
+    """.format("\n".join(lines))
+
+    @property
     def _build_render(self):
         if not self._build_messages and not self._cmake_build:
             return None
@@ -488,7 +508,7 @@ class GenConanfile:
         for member in ("name", "version", "package_type", "provides", "deprecated",
                        "exports_sources", "exports", "generators", "requires", "build_requires",
                        "tool_requires", "test_requires", "requirements", "python_requires",
-                       "revision_mode", "settings", "options", "default_options", "build",
+                       "revision_mode", "settings", "options", "default_options", "source", "build",
                        "package_method", "package_info", "package_id_lines", "test_lines",
                        "finalize_method"
                        ):

@@ -152,7 +152,8 @@ class Node:
             d = self.dependants[0]
 
         down_require = d.require.transform_downstream(self.conanfile.package_type, require,
-                                                      node.conanfile.package_type)
+                                                      node.conanfile.package_type,
+                                                      d.src.conanfile)
         if down_require is None:
             return
 
@@ -204,7 +205,8 @@ class Node:
         # TODO: Implement an optimization where the requires is checked against a graph global
         # print("    Lets check_downstream one more")
         down_require = dependant.require.transform_downstream(self.conanfile.package_type,
-                                                              require, None)
+                                                              require, None,
+                                                              dependant.src.conanfile)
 
         if down_require is None:
             # print("    No need to check downstream more")

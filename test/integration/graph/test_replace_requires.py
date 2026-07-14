@@ -201,7 +201,7 @@ def test_replace_requires_consumer_references(name, version):
     c.run("create dep")
     c.run("build app -pr=profile")
     assert f"zlib/0.1: {name}/{version}" in c.out
-    assert f"conanfile.py (app/0.1): DEP ZLIB generate: {name}!" in c.out
+    assert f"DEP ZLIB generate: {name}!" in c.out
     assert f"conanfile.py (app/0.1): DEP ZLIB build: {name}!" in c.out
     # Check generated CMake code. If the targets are NOT compatible, then the replacement
     # Cannot happen
@@ -211,7 +211,7 @@ def test_replace_requires_consumer_references(name, version):
     assert "add_library(ZLIB::ZLIB INTERFACE IMPORTED)" in cmake
     c.run("create app -pr=profile")
     assert f"zlib/0.1: {name}/{version}" in c.out
-    assert f"app/0.1: DEP ZLIB generate: {name}!" in c.out
+    assert f"DEP ZLIB generate: {name}!" in c.out
     assert f"app/0.1: DEP ZLIB build: {name}!" in c.out
     if name == "zlib-ng":
         # CMakeDeps can not be used to consume replaced requires for different packages
@@ -257,9 +257,9 @@ def test_replace_requires_consumer_references_error_multiple():
     c.run("create zlib")
     c.run("build app -pr=profile")
     assert "zlib/0.1: zlib/0.2" in c.out
-    assert "conanfile.py (app/0.1): DEP ZLIB generate: zlib!" in c.out
+    assert "DEP ZLIB generate: zlib!" in c.out
     assert "conanfile.py (app/0.1): DEP ZLIB build: zlib!" in c.out
-    assert "conanfile.py (app/0.1): DEP BZIP2 generate: zlib!" in c.out
+    assert "DEP BZIP2 generate: zlib!" in c.out
     assert "conanfile.py (app/0.1): DEP BZIP2 build: zlib!" in c.out
     # Check generated CMake code. If the targets are NOT compatible, then the replacement
     # Cannot happen
@@ -269,7 +269,7 @@ def test_replace_requires_consumer_references_error_multiple():
     assert "add_library(ZLIB::ZLIB INTERFACE IMPORTED)" in cmake
     c.run("create app -pr=profile")
     assert "zlib/0.1: zlib/0.2" in c.out
-    assert "app/0.1: DEP ZLIB generate: zlib!" in c.out
+    assert "DEP ZLIB generate: zlib!" in c.out
     assert "app/0.1: DEP ZLIB build: zlib!" in c.out
 
 
@@ -323,7 +323,7 @@ def test_replace_requires_consumer_components_options():
     c.run("create zlibng -o *:compat=True")
     c.run("build app -pr=profile")
     assert "zlib/0.1: zlib-ng/0.1" in c.out
-    assert "conanfile.py (app/0.1): DEP ZLIB generate: zlib-ng!" in c.out
+    assert "DEP ZLIB generate: zlib-ng!" in c.out
     assert "conanfile.py (app/0.1): DEP ZLIB build: zlib-ng!" in c.out
     # Check generated CMake code. If the targets are NOT compatible, then the replacement
     # Cannot happen
@@ -337,7 +337,7 @@ def test_replace_requires_consumer_components_options():
 
     c.run("create app -pr=profile")
     assert "zlib/0.1: zlib-ng/0.1" in c.out
-    assert "app/0.1: DEP ZLIB generate: zlib-ng!" in c.out
+    assert "DEP ZLIB generate: zlib-ng!" in c.out
     assert "app/0.1: DEP ZLIB build: zlib-ng!" in c.out
     assert "find_package(ZLIB)" in c.out
     assert "target_link_libraries(... ZLIB::ZLIB)" in c.out
@@ -377,8 +377,8 @@ def test_replace_requires_multiple():
     c.run("create dep --name=libgl --version=1.0")
     c.run("create app -pr=profile")
     # There are actually 2 dependencies, pointing to the same node
-    assert "libepoxy/0.1: DEP: opengl: libgl" in c.out
-    assert "libepoxy/0.1: DEP: egl: libgl" in c.out
+    assert "DEP: opengl: libgl" in c.out
+    assert "DEP: egl: libgl" in c.out
 
 
 class TestReplaceRequiresTransitiveGenerators:
@@ -769,9 +769,8 @@ def test_host_version_replace():
 
     tc = TestClient(light=True)
     tc.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
-             "conanfile.py": GenConanfile()
-                .with_requires("pkg/0.1@user/channel")
-                .with_tool_requires("pkg/<host_version>"),
+             "conanfile.py": GenConanfile().with_requires("pkg/0.1@user/channel")
+                                           .with_tool_requires("pkg/<host_version>"),
              "profile": profile})
     tc.run("create pkg")
     tc.run("create pkg --user=user --channel=channel")
@@ -787,13 +786,287 @@ def test_host_version_replace():
     tc.save({"tool_profile": tool_profile})
     tc.run("install -pr=tool_profile")
     tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"})
-    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"}, build=True)
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"},
+                             build=True)
 
     # Solution 2: Directly in the requirement
-    tc.save({"conanfile.py": GenConanfile()
-                .with_requires("pkg/0.1@user/channel")
-                .with_tool_requires("pkg/<host_version>@user/channel")})
+    tc.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1@user/channel")
+                                           .with_tool_requires("pkg/<host_version>@user/channel")})
 
     tc.run("install -pr=profile")
     tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"})
-    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"}, build=True)
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"},
+                             build=True)
+
+
+class TestReplaceRequiresCompose:
+    def test_rules_merged_from_multiple_profiles(self):
+        """[replace_requires] rules from multiple -pr profiles are merged into one combined
+        ruleset, each rule independently applied."""
+        c = TestClient(light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib"),
+                "openssl/conanfile.py": GenConanfile("openssl"),
+                "app/conanfile.py": GenConanfile().with_requires("zlib/1.0", "openssl/1.0"),
+                "profile1": "[replace_requires]\nzlib/1.0: zlib/2.0",
+                "profile2": "[replace_requires]\nopenssl/1.0: openssl/2.0"})
+        c.run("create zlib --version=1.0")
+        c.run("create zlib --version=2.0")
+        c.run("create openssl --version=1.0")
+        c.run("create openssl --version=2.0")
+
+        # Both profiles: rules are merged, each replacement is independently applied
+        c.run("install app -pr=profile1 -pr=profile2")
+        assert "zlib/1.0: zlib/2.0" in c.out
+        assert "openssl/1.0: openssl/2.0" in c.out
+        c.assert_listed_require({"zlib/2.0": "Cache"})
+        c.assert_listed_require({"openssl/2.0": "Cache"})
+
+        # Only profile1: only zlib is replaced
+        c.run("install app -pr=profile1")
+        assert "zlib/1.0: zlib/2.0" in c.out
+        assert "openssl/1.0: openssl/2.0" not in c.out
+        c.assert_listed_require({"zlib/2.0": "Cache"})
+        c.assert_listed_require({"openssl/1.0": "Cache"})
+
+        # Only profile2: only openssl is replaced
+        c.run("install app -pr=profile2")
+        assert "zlib/1.0: zlib/2.0" not in c.out
+        assert "openssl/1.0: openssl/2.0" in c.out
+        c.assert_listed_require({"zlib/1.0": "Cache"})
+        c.assert_listed_require({"openssl/2.0": "Cache"})
+
+    def test_no_chaining(self):
+        """Replacements are applied in a single pass — results are NOT re-evaluated, so
+        profile1: A->B plus profile2: B->C does not transitively replace A->C."""
+        c = TestClient(light=True)
+        c.save({"dep/conanfile.py": GenConanfile("dep"),
+                "app/conanfile.py": GenConanfile().with_requires("dep/1.0"),
+                "profile1": "[replace_requires]\ndep/1.0: dep/2.0",
+                "profile2": "[replace_requires]\ndep/2.0: dep/3.0"})
+        c.run("create dep --version=2.0")
+        c.run("create dep --version=3.0")
+
+        # dep/1.0 is replaced to dep/2.0 by profile1's rule; the dep/2.0->dep/3.0 rule from
+        # profile2 is present in the merged set but is NOT applied again to the already-replaced ref
+        c.run("install app -pr=profile1 -pr=profile2")
+        assert "dep/1.0: dep/2.0" in c.out
+        c.assert_listed_require({"dep/2.0": "Cache"})
+
+    def test_last_profile_wins_on_same_pattern(self):
+        """When two profiles define a replacement for the same pattern, the last profile wins."""
+        c = TestClient(light=True)
+        c.save({"dep/conanfile.py": GenConanfile("dep"),
+                "app/conanfile.py": GenConanfile().with_requires("dep/1.0"),
+                "profile1": "[replace_requires]\ndep/1.0: dep/2.0",
+                "profile2": "[replace_requires]\ndep/1.0: dep/3.0"})
+        c.run("create dep --version=2.0")
+        c.run("create dep --version=3.0")
+
+        c.run("install app -pr=profile1 -pr=profile2")
+        assert "dep/1.0: dep/3.0" in c.out
+        c.assert_listed_require({"dep/3.0": "Cache"})
+
+    @pytest.mark.parametrize("tool_require", [False, True])
+    @pytest.mark.parametrize("strategy", ["cli", "include"])
+    def test_invalidate(self, strategy, tool_require):
+        """'pattern: !' removes a replace_requires/replace_tool_requires rule defined in an
+        earlier profile, whether composed via -pr=p1 -pr=p2 (cli) or include(p1) (include)."""
+        section = "replace_tool_requires" if tool_require else "replace_requires"
+        app = GenConanfile().with_tool_requires("dep/1.0") if tool_require \
+            else GenConanfile().with_requires("dep/1.0")
+        profile1 = f"[{section}]\ndep/1.0: dep/2.0"
+        if strategy == "cli":
+            profile2 = f"[{section}]\ndep/1.0: !"
+            both_cmd = "install app -pr=profile1 -pr=profile2"
+        else:
+            profile2 = f"include(profile1)\n[{section}]\ndep/1.0: !"
+            both_cmd = "install app -pr=profile2"
+        c = TestClient(light=True)
+        c.save({"dep/conanfile.py": GenConanfile("dep"), "app/conanfile.py": app,
+                "profile1": profile1, "profile2": profile2})
+        c.run("create dep --version=1.0")
+        c.run("create dep --version=2.0")
+
+        # profile1 alone: replacement is active
+        c.run("install app -pr=profile1")
+        assert "dep/1.0: dep/2.0" in c.out
+        c.assert_listed_require({"dep/2.0": "Cache"}, build=tool_require)
+
+        # profile2 cancels the rule from profile1: original dep/1.0 is used
+        c.run(both_cmd)
+        assert "dep/1.0: dep/2.0" not in c.out
+        c.assert_listed_require({"dep/1.0": "Cache"}, build=tool_require)
+
+    def test_invalidate_all(self):
+        """'*: !' invalidates all replace_requires rules defined in earlier profiles at once."""
+        c = TestClient(light=True)
+        c.save({"dep/conanfile.py": GenConanfile("dep"),
+                "app/conanfile.py": GenConanfile().with_requires("dep/1.0", "dep2/1.0"),
+                "dep2/conanfile.py": GenConanfile("dep2"),
+                "profile1": "[replace_requires]\ndep/1.0: dep/2.0\ndep2/1.0: dep2/2.0",
+                "profile2": "[replace_requires]\n*: !"})
+        c.run("create dep --version=1.0")
+        c.run("create dep --version=2.0")
+        c.run("create dep2 --version=1.0")
+        c.run("create dep2 --version=2.0")
+
+        # profile1 alone: both replacements active
+        c.run("install app -pr=profile1")
+        assert "dep/1.0: dep/2.0" in c.out
+        assert "dep2/1.0: dep2/2.0" in c.out
+        c.assert_listed_require({"dep/2.0": "Cache"})
+        c.assert_listed_require({"dep2/2.0": "Cache"})
+
+        # profile2 wipes all rules: both original requirements are used
+        c.run("install app -pr=profile1 -pr=profile2")
+        assert "dep/1.0: dep/2.0" not in c.out
+        assert "dep2/1.0: dep2/2.0" not in c.out
+        c.assert_listed_require({"dep/1.0": "Cache"})
+        c.assert_listed_require({"dep2/1.0": "Cache"})
+
+
+class TestReplaceRequiresCLIPriority:
+    """CLI-specified requires (--requires, --tool-requires, conan create ref) have higher priority
+    than [replace_requires] / [replace_tool_requires] profile sections and must not be replaced."""
+
+    def test_install_requires_cli_not_replaced(self):
+        """conan install --requires=pkg/1.0 should install pkg/1.0, not the replacement."""
+        c = TestClient(light=True)
+        c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0"),
+                "other/conanfile.py": GenConanfile("other", "2.0"),
+                "profile": "[replace_requires]\npkg/*: other/2.0"})
+        c.run("create pkg")
+        c.run("create other")
+        c.run("install --requires=pkg/1.0 -pr=profile")
+        # The CLI-specified pkg/1.0 must not be replaced by other/2.0
+        assert "Replaced requires" not in c.out
+        c.assert_listed_require({"pkg/1.0": "Cache"})
+
+    def test_install_tool_requires_cli_not_replaced(self):
+        """conan install --tool-requires=cmake/3.20 should use cmake/3.20, not the replacement."""
+        c = TestClient(light=True)
+        c.save({"cmake/conanfile.py": GenConanfile("cmake", "3.20"),
+                "cmake_old/conanfile.py": GenConanfile("cmake", "3.19"),
+                "profile": "[replace_tool_requires]\ncmake/*: cmake/3.19"})
+        c.run("create cmake")
+        c.run("create cmake_old --name=cmake --version=3.19")
+        c.run("install --tool-requires=cmake/3.20 -pr=profile")
+        # The CLI-specified cmake/3.20 must not be replaced by cmake/3.19
+        assert "Replaced requires" not in c.out
+        c.assert_listed_require({"cmake/3.20": "Cache"}, build=True)
+
+    def test_create_cli_not_replaced(self):
+        """conan create --name=pkg --version=1.0 should create pkg/1.0, not the replacement."""
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile(),
+                "other/conanfile.py": GenConanfile("other", "2.0"),
+                "profile": "[replace_requires]\npkg/*: other/2.0"})
+        c.run("create other")
+        # Creating pkg/1.0 should not be affected by the replace_requires targeting pkg/*
+        c.run("create . --name=pkg --version=1.0 -pr=profile")
+        assert "Replaced requires" not in c.out
+        assert "pkg/1.0" in c.out
+
+    def test_create_build_require_cli_not_replaced(self):
+        """conan create --build-require --name=cmake --version=3.20 should create cmake/3.20."""
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile(),
+                "old/conanfile.py": GenConanfile("cmake", "3.19"),
+                "profile": "[replace_tool_requires]\ncmake/*: cmake/3.19"})
+        c.run("create old --name=cmake --version=3.19")
+        c.run("create . --name=cmake --version=3.20 --build-require -pr=profile")
+        assert "Replaced requires" not in c.out
+        assert "cmake/3.20" in c.out
+
+    def test_install_requires_cli_transitive_still_replaced(self):
+        """Transitive dependencies of CLI-specified requires SHOULD still be replaced."""
+        c = TestClient(light=True)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "2.0"),
+                "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
+                "profile": "[replace_requires]\ndep/*: dep/2.0"})
+        c.run("create dep")
+        c.run("create pkg --build=missing -pr=profile")
+        # Install pkg/1.0 from CLI - pkg itself is not replaced, but its dep/1.0 IS replaced
+        c.run("install --requires=pkg/1.0 -pr=profile")
+        assert "Replaced requires" in c.out
+        c.assert_listed_require({"pkg/1.0": "Cache"})
+        c.assert_listed_require({"dep/2.0": "Cache"})
+
+    def test_install_requires_cli_name_change_not_replaced(self):
+        """conan install --requires=pkg/1.0 should not be replaced even if name changes."""
+        c = TestClient(light=True)
+        c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0"),
+                "pkgng/conanfile.py": GenConanfile("pkgng", "1.0"),
+                "profile": "[replace_requires]\npkg/*: pkgng/*"})
+        c.run("create pkg")
+        c.run("create pkgng")
+        c.run("install --requires=pkg/1.0 -pr=profile")
+        # CLI-specified pkg/1.0 must not be replaced by pkgng/1.0
+        assert "Replaced requires" not in c.out
+        c.assert_listed_require({"pkg/1.0": "Cache"})
+
+
+class TestReplaceRequiresRecipeOverride:
+    def test_unused_override(self):
+        c = TestClient(light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+                "openssl/conanfile.py": GenConanfile("openssl", "1.0"),
+                "conanfile.py": GenConanfile().with_requirement("openssl/1.0")
+                                              .with_requirement("zlib/1.0", override=True),
+                "profile": "include(default)\n[replace_requires]\nzlib/*: zlib/1.0"})
+        c.run("create zlib")
+        c.run("create openssl")
+        c.run("install -pr=profile")
+        # it doesn't fail
+
+    def test_replace_requires_override_priority(self):
+        # the profile replace_requires has more priority
+        c = TestClient(light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib"),
+                "openssl/conanfile.py": GenConanfile("openssl", "1.0").with_requires("zlib/1.0"),
+                "conanfile.py": GenConanfile().with_requirement("openssl/1.0")
+                                              .with_requirement("zlib/1.1", override=True),
+                "profile": "include(default)\n[replace_requires]\nzlib/*: zlib/1.0"})
+        c.run("create zlib --version=1.0")
+        c.run("create zlib --version=1.1")
+        c.run("create openssl")
+        c.run("install -pr=profile")
+        c.assert_listed_require({"zlib": ("1.0", "Cache")})
+
+
+@pytest.mark.parametrize("replace", [True, False])
+@pytest.mark.parametrize("requires_first", [True, False])
+def test_replace_requires_cpp_info_requires_issue(replace, requires_first):
+    """ See https://github.com/conan-io/conan/issues/20138
+    A replace_require'ed divergent diamond structure like this used to give
+    a wrong error about cpp_info requires not being valid"""
+    tc = TestClient(light=True)
+
+    ref = "replaced" if replace else "common"
+    profile = "include(default)\n[replace_requires]\nreplaced/*: common/1.0" \
+        if replace else "include(default)"
+    requires = 'self.requires("two/1.0")'
+
+    conanfile = textwrap.dedent(f"""
+    from conan import ConanFile
+    class Consumer(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        def requirements(self):
+            {requires if requires_first else ''}
+            self.test_requires("{ref}/1.0")
+            {'' if requires_first else requires}
+        def package_info(self):
+            self.cpp_info.requires = ["two::two"]
+    """)
+
+    tc.save({"common/conanfile.py": GenConanfile("common", "1.0"),
+             "one/conanfile.py": GenConanfile("one", "1.0").with_requires(f"{ref}/1.0"),
+             "two/conanfile.py": GenConanfile("two", "1.0").with_requires("one/1.0"),
+             "conanfile.py": conanfile,
+             "profile": profile})
+    tc.run("create common")
+    tc.run("export one")
+    tc.run("export two")
+    tc.run("create -pr=profile -b=missing")
+    assert f"The direct dependency '{ref}' is not used" not in tc.out

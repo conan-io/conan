@@ -31,6 +31,7 @@ MSYS2 = 'msys2'
 MSYS = 'msys'
 CYGWIN = 'cygwin'
 WSL = 'wsl'  # Windows Subsystem for Linux
+MSYS2_ENVS = "ucrt64", "clang64", "clangarm64", "mingw32", "mingw64", "clang32"
 
 
 def command_env_wrapper(conanfile, command, envfiles, envfiles_folder, scope="build"):
@@ -58,14 +59,21 @@ def command_env_wrapper(conanfile, command, envfiles, envfiles_folder, scope="bu
     return wrapped_cmd
 
 
+def _extract_subsystem(conanfile):
+    subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
+    if subsystem is None:
+        return None, None
+    sub_part = subsystem.split("-", 1)
+    sub, env = (sub_part[0], sub_part[1]) if len(sub_part) == 2 else (subsystem, None)
+    if env and env not in MSYS2_ENVS:
+        raise ConanException(f"Defined msys2 environment '{env}' not in {MSYS2_ENVS}")
+    return sub, env
+
+
 def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
     from conan.tools.env import Environment
     from conan.tools.env.environment import environment_wrap_command
     """ Will wrap a unix command inside a bash terminal It requires to have MSYS2, CYGWIN, or WSL"""
-
-    subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
-    if not platform.system() == "Windows":
-        raise ConanException("Command only for Windows operating system")
 
     shell_path = conanfile.conf.get("tools.microsoft.bash:path")
     if not shell_path:
@@ -73,10 +81,14 @@ def _windows_bash_wrapper(conanfile, command, env, envfiles_folder):
                              "needed to run commands in a Windows subsystem")
     shell_path = shell_path.replace("\\", "/")  # Should work in all terminals
     env = env or []
+    subsystem, subsystem_env = _extract_subsystem(conanfile)
     if subsystem == MSYS2:
         # Configure MSYS2 to inherith the PATH
         msys2_mode_env = Environment()
-        _msystem = {"x86": "MINGW32"}.get(conanfile.settings.get_safe("arch"), "MINGW64")
+        if subsystem_env:
+            _msystem = subsystem_env.upper()
+        else:  # Previously existing default to not break
+            _msystem = {"x86": "MINGW32"}.get(conanfile.settings.get_safe("arch"), "MINGW64")
         # https://www.msys2.org/wiki/Launchers/ dictates that the shell should be launched with
         # - MSYSTEM defined
         # - CHERE_INVOKING is necessary to keep the CWD and not change automatically to the user home
@@ -138,7 +150,7 @@ def deduce_subsystem(conanfile, scope):
     if not str(the_os).startswith("Windows"):
         return None
 
-    subsystem = conanfile.conf.get("tools.microsoft.bash:subsystem")
+    subsystem, _ = _extract_subsystem(conanfile)
     if not subsystem:
         if conanfile.win_bash:
             raise ConanException("win_bash=True but tools.microsoft.bash:subsystem "
@@ -147,6 +159,7 @@ def deduce_subsystem(conanfile, scope):
             raise ConanException("win_bash_run=True but tools.microsoft.bash:subsystem "
                                  "configuration not defined")
         return WINDOWS
+
     active = conanfile.conf.get("tools.microsoft.bash:active", check_type=bool)
     if active:
         return subsystem

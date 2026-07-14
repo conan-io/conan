@@ -54,7 +54,7 @@ class TestCompilerFlags:
     @pytest.mark.parametrize("compiler,arch,the_os,flag",
                              [("clang", "x86", "Windows", ""),
                               ("clang", "x86_64", "Windows", "")
-                             ])
+                              ])
     def test_arch_flag_clangcl(self,  compiler, arch, the_os, flag):
         settings = MockSettings({"compiler": compiler,
                                  "arch": arch,
@@ -82,6 +82,16 @@ class TestCompilerFlags:
         conanfile = ConanFileMock()
         conanfile.settings = settings
         assert architecture_flag(conanfile) == "--target=arm64-apple-ios13.1-macabi"
+
+    def test_arch_flag_emcc(self):
+        settings = {"compiler": "emcc", "arch": "wasm64", "compiler.version": "5.0"}
+        conanfile = ConanFileMock()
+        conanfile.settings = MockSettings(settings)
+        assert architecture_flag(conanfile) == "-sMEMORY64=1"
+        settings["compiler.version"] = "6.0"
+        conanfile = ConanFileMock()
+        conanfile.settings = MockSettings(settings)
+        assert architecture_flag(conanfile) == "-m64"
 
     @pytest.mark.parametrize("os_,arch,flag",
                              [("Linux", "x86", "-m32"),

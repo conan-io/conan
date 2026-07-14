@@ -36,10 +36,9 @@ def _parse_error_threshold(result: dict, error_level: float) -> None:
             for edge in result["data"][ref]["vulnerabilities"]["edges"]:
                 preferred_base_score = float(edge["node"]["cvss"].get("preferredBaseScore", 0.0))
                 if preferred_base_score >= error_level:
-                    result.update(
-                        {"conan_error":
-                             f"The package {ref} has a CVSS score {preferred_base_score} and "
-                             f"exceeded the threshold severity level {error_level}."})
+                    error_msg = (f"The package {ref} has a CVSS score {preferred_base_score} and "
+                                 f"exceeded the threshold severity level {error_level}.")
+                    result["conan_error"] = error_msg
                     break
 
 

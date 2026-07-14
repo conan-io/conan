@@ -4,9 +4,9 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
+from conan.tools.cmake.layout import is_consumer
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import (ExtraVariablesBlock, ToolchainBlocks,
@@ -26,7 +26,6 @@ from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
 from conan.errors import ConanException
 from conan.internal.model.options import _PackageOption
-from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
 from conan.internal.util.files import save
 
 
@@ -96,6 +95,7 @@ class CMakeToolchain:
 
         self.extra_cxxflags = []
         self.extra_cflags = []
+        self.extra_asmflags = []
         self.extra_sharedlinkflags = []
         self.extra_exelinkflags = []
         self.add_rpath_link = False
@@ -180,7 +180,7 @@ class CMakeToolchain:
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             toolchain_file = self.filename
             save(os.path.join(self._conanfile.generators_folder, toolchain_file), self.content)
-            ConanOutput(str(self._conanfile)).info(f"CMakeToolchain generated: {toolchain_file}")
+            self._conanfile.output.info(f"CMakeToolchain generated: {toolchain_file}")
         # If we're using Intel oneAPI, we need to generate the environment file and run it
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
             IntelCC(self._conanfile).generate()
@@ -223,13 +223,9 @@ class CMakeToolchain:
             cmake_executable = cmake_executable or self._find_cmake_exe()
 
         user_presets = self.user_presets_path
-        try:  # TODO: Refactor this repeated pattern to deduce "is-consumer"
-            # The user conf user_presets ONLY applies to dev space, not in the cache
-            if self._conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE):
-                user_presets = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_presets",
-                                                        default=self.user_presets_path)
-        except AttributeError:
-            pass
+        if is_consumer(self._conanfile):
+            user_presets = self._conanfile.conf.get("tools.cmake.cmaketoolchain:user_presets",
+                                                    default=self.user_presets_path)
 
         write_cmake_presets(self._conanfile, toolchain_file, self.generator, cache_variables,
                             user_presets, self.presets_prefix, buildenv, runenv,

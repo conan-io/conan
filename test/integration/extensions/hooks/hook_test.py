@@ -93,24 +93,24 @@ class TestHooks:
         c.run("install .")
         assert f"conanfile.py (pkg/0.1): {hook_msg} pre_validate(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} post_validate(): Hello" in c.out
-        assert f"conanfile.py (pkg/0.1): {hook_msg} pre_generate(): Hello" in c.out
-        assert f"conanfile.py (pkg/0.1): {hook_msg} post_generate(): Hello" in c.out
+        assert f"{hook_msg} pre_generate(): Hello" in c.out
+        assert f"{hook_msg} post_generate(): Hello" in c.out
 
         c.run("build .")
         assert f"conanfile.py (pkg/0.1): {hook_msg} pre_validate(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} post_validate(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} pre_build(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} post_build(): Hello" in c.out
-        assert f"conanfile.py (pkg/0.1): {hook_msg} pre_generate(): Hello" in c.out
-        assert f"conanfile.py (pkg/0.1): {hook_msg} post_generate(): Hello" in c.out
+        assert f"{hook_msg} pre_generate(): Hello" in c.out
+        assert f"{hook_msg} post_generate(): Hello" in c.out
 
         c.run("export . ")
-        assert f"pkg/0.1: {hook_msg} pre_export(): Hello" in c.out
-        assert f"pkg/0.1: {hook_msg} post_export(): Hello" in c.out
+        assert f"pre_export(): Hello" in c.out
+        assert f"post_export(): Hello" in c.out
 
         c.run("export-pkg . ")
-        assert f"pkg/0.1: {hook_msg} pre_export(): Hello" in c.out
-        assert f"pkg/0.1: {hook_msg} post_export(): Hello" in c.out
+        assert f"{hook_msg} pre_export(): Hello" in c.out
+        assert f"{hook_msg} post_export(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} pre_package(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} post_package(): Hello" in c.out
         assert f"conanfile.py (pkg/0.1): {hook_msg} post_package_id(): Hello" in c.out

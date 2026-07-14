@@ -55,6 +55,11 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         dependency_filenames = self._get_dependency_filenames()
         # Get the nodes that have the property cmake_find_mode=None (no files to generate)
         dependency_find_modes = self._get_dependencies_find_modes()
+        # ``cmake_extra_dependencies`` lets a recipe declare extra ``find_dependency()`` calls
+        extra_dependencies = self.cmakedeps.get_property("cmake_extra_dependencies",
+                                                         self.conanfile, check_type=list) or []
+        dependency_filenames.extend(extra_dependencies)
+        dependency_find_modes.update({extra: "" for extra in extra_dependencies})
 
         # Make the root_folder relative to the generated xxx-data.cmake file
         root_folder = self._root_folder
@@ -311,7 +316,9 @@ class _TargetDataContext:
         self.build_paths = join_paths(cpp_info.builddirs)
         self.framework_paths = join_paths(cpp_info.frameworkdirs)
         self.libs = join_flags(" ", cpp_info.libs)
-        self.system_libs = join_flags(" ", cpp_info.system_libs)
+        extra_interface_libs = cmakedeps.get_property("cmake_extra_interface_libs", conanfile,
+                                                      comp_name, check_type=list) or []
+        self.system_libs = join_flags(" ", list(cpp_info.system_libs) + list(extra_interface_libs))
         self.frameworks = join_flags(" ", cpp_info.frameworks)
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)

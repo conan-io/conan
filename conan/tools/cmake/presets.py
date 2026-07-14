@@ -3,13 +3,12 @@ import os
 import platform
 import textwrap
 
-from conan.api.output import ConanOutput, Color
-from conan.tools.cmake.layout import get_build_folder_custom_vars
+from conan.api.output import Color
+from conan.tools.cmake.layout import get_build_folder_custom_vars, is_consumer
 from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.build import build_jobs
 from conan.tools.microsoft import is_msvc
-from conan.internal.graph.graph import RECIPE_CONSUMER
 from conan.errors import ConanException
 from conan.internal.util.files import save, load
 
@@ -17,10 +16,10 @@ from conan.internal.util.files import save, load
 def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
                         user_presets_path=None, preset_prefix=None, buildenv=None, runenv=None,
                         cmake_executable=None, absolute_paths=None):
-    preset_path, preset_data = _CMakePresets.generate(conanfile, toolchain_file, generator,
-                                                      cache_variables, preset_prefix, buildenv,
-                                                      runenv, cmake_executable, absolute_paths)
-    _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data,
+    preset_path = _CMakePresets.generate(conanfile, toolchain_file, generator, cache_variables,
+                                         preset_prefix, buildenv, runenv, cmake_executable,
+                                         absolute_paths)
+    _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix,
                                absolute_paths)
 
 
@@ -82,8 +81,8 @@ class _CMakePresets:
 
         preset_content = json.dumps(data, indent=4)
         save(preset_path, preset_content)
-        ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {preset_path}")
-        return preset_path, data
+        conanfile.output.info(f"CMakeToolchain generated: {preset_path}")
+        return preset_path
 
     @staticmethod
     def _insert_preset(data, preset_type, preset):
@@ -181,12 +180,8 @@ class _CMakePresets:
         def _format_val(val):
             return f'"{val}"' if type(val) is str and " " in val else f"{val}"
 
-        try:
-            is_consumer = conanfile._conan_node.recipe == RECIPE_CONSUMER and \
-                          conanfile.tested_reference_str is None
-        except:
-            is_consumer = False
-        if is_consumer:
+        # only for consumer that is not a "test_package"
+        if is_consumer(conanfile) and conanfile.tested_reference_str is None:
             # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
             vars_tip = " ".join([f"-D{k}={_format_val(v)}" for k, v in cache_variables.items()])
             tc_tip = f"-DCMAKE_TOOLCHAIN_FILE=<output_folder>/{toolchain_file} " \
@@ -195,7 +190,9 @@ class _CMakePresets:
             msg = textwrap.dedent(f"""\
                 CMakeToolchain: Preset '{name}' added to CMakePresets.json.
                     (cmake>=3.23) cmake --preset {name}
-                    (cmake<3.23) cmake <path> -G {_format_val(generator)} {tc_tip} {vars_tip}""")
+                    (cmake<3.23) cmake <path> -G {_format_val(generator)}
+                                 {tc_tip}
+                                 {vars_tip}""")
             conanfile.output.info(msg, fg=Color.CYAN)
         return ret
 
@@ -267,8 +264,7 @@ class _IncludingPresets:
     """
 
     @staticmethod
-    def generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data,
-                 absolute_paths):
+    def generate(conanfile, preset_path, user_presets_path, preset_prefix, absolute_paths):
         if not user_presets_path:
             return
 
@@ -316,7 +312,7 @@ class _IncludingPresets:
             data = _IncludingPresets._update_stubs(data, inherited_user, output_dir, absolute_paths)
 
         data = json.dumps(data, indent=4)
-        ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {user_presets_path}")
+        conanfile.output.info(f"CMakeToolchain generated: {user_presets_path}")
         save(user_presets_path, data)
 
     @staticmethod
@@ -332,11 +328,8 @@ class _IncludingPresets:
         }
         for inc in data.get("include", []):
             inc_path = os.path.join(output_dir, inc) if not absolute_paths else inc
-            assert os.path.exists(inc_path), f"Presets include must point to an existing file: '{inc_path}'"
-            try:
-                inc_json = json.loads(load(inc_path))
-            except Exception:
-                continue
+            assert os.path.exists(inc_path), f"Presets include file not found: '{inc_path}'"
+            inc_json = json.loads(load(inc_path))
             for preset_type in ("configurePresets", "buildPresets", "testPresets"):
                 for p in inc_json.get(preset_type, []):
                     name = p.get("name")

@@ -83,6 +83,12 @@ def architecture_flag(conanfile):
                 "e2k-v7": "-march=elbrus-v7"}.get(arch, "")
     elif compiler == "emcc":
         if arch == "wasm64":
+            # Emscripten 6.0.0 added the standard `-m64` flag as an alias for
+            # the legacy `-sMEMORY64` setting and 6.0.1 deprecated `-sMEMORY64`
+            # in favor of it, which makes emcc emit a deprecation warning.
+            compiler_version = settings.get_safe("compiler.version")
+            if compiler_version and Version(compiler_version) >= "6.0.0":
+                return "-m64"
             return "-sMEMORY64=1"
     return ""
 
@@ -110,11 +116,15 @@ def libcxx_flags(conanfile):
     if disable_flag(conanfile, "libcxx"):
         return None, None
     compiler = conanfile.settings.get_safe("compiler")
+    os = conanfile.settings.get_safe("os")
     lib = stdlib11 = None
     if compiler == "apple-clang":
         # In apple-clang 2 only values atm are "libc++" and "libstdc++"
         lib = f'-stdlib={libcxx}'
     elif compiler in ("clang", "intel-cc", "emcc"):
+        if compiler == "intel-cc" and os == "Windows":
+            # Intel C++ on Windows always uses the UCRT/MSVCRT runtime
+            return None, None
         if libcxx == "libc++":
             lib = "-stdlib=libc++"
         elif libcxx == "libstdc++" or libcxx == "libstdc++11":
@@ -279,8 +289,29 @@ def cppstd_flag(conanfile) -> str:
     if func:
         flag = func(Version(compiler_version), str(cppstd))
     if flag and llvm_clang_front(conanfile) == "clang-cl":
-        flag = flag.replace("=", ":")
+        flag = _to_clang_cl_cppstd_flag(flag)
     return flag
+
+
+def _to_clang_cl_cppstd_flag(flag):
+    """
+    Translate a GCC-style ``-std=...`` flag produced by ``_cppstd_clang`` into
+    a form that the ``clang-cl`` driver accepts.
+
+    ``clang-cl`` mimics ``cl.exe``'s ``/std:`` flag and only accepts a fixed
+    set of values (``c++14``, ``c++17``, ``c++20``, ``c++latest``
+    ``-std=c++23``). Anything else — pre-standard markers (``c++1y``,
+    ``c++2a``, ``c++2b``), ``gnu++`` extensions, ``c++26`` — is unknown to
+    the MSVC-compatible front and is therefore routed through the
+    ``-clang:`` passthrough so the inner clang frontend receives the
+    original GCC-style flag.
+    """
+    if not flag.startswith("-std="):
+        return flag
+    value = flag[len("-std="):]
+    if value in ("c++14", "c++17", "c++20"):
+        return f"-std:{value}"  # keep -std it is more portable
+    return f"-clang:{flag}"
 
 
 def cppstd_msvc_flag(visual_version, cppstd):
