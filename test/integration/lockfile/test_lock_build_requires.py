@@ -151,3 +151,44 @@ class TestTransitiveBuildRequires:
         client.run("install pkg/conanfile.py --build=missing --lockfile=conan.lock")
         assert "zlib/1.0: Created package" in client.out
         assert "cmake/1.0: Created package" in client.out
+
+
+class TestCreateTool:
+    def test_lock_buildrequires_create_test_package(self):
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("zlib", "1.0")})
+        c.run("create .")
+        test = textwrap.dedent("""
+            from conan import ConanFile
+            class Test(ConanFile):
+                def build_requirements(self):
+                    self.tool_requires(self.tested_reference_str)
+                def test(self):
+                    pass
+            """)
+        c.save({"conanfile.py": GenConanfile("tool", "0.1").with_requires("zlib/1.0"),
+                "test_package/conanfile.py": test}, clean_first=True)
+
+        # Failure mode
+        c.run("lock create .")
+        c.run("create .", assert_error=True)
+        assert "not in lockfile 'build_requires'" in c.out
+
+        # But if we add create_tool=True to the recipe, everything is smooth
+        c.save({"conanfile.py": GenConanfile("tool", "0.1").with_requires("zlib/1.0")
+                                                           .with_class_attribute('is_tool = True')})
+        c.run("lock create . --lockfile=")
+        c.run("create . --lockfile-out=conan.lock")
+        # Now it doesn't fail anymore
+        c.assert_listed_require({"tool/0.1": "Cache"}, build=True)
+        # We can even install it with the lockfile, it works
+        c.run("install --tool-requires=tool/0.1 --lockfile=conan.lock")
+
+    def test_install(self):
+        c = TestClient(light=True)
+        c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+                "app/conanfile.py": GenConanfile("app", "1.0").with_requires("dep/0.1")
+                                                          .with_class_attribute('is_tool=True')})
+        c.run("create dep")
+        c.run("install app")
+        c.assert_listed_require({"dep/0.1": "Cache"}, build=True)
