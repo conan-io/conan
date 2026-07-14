@@ -68,7 +68,7 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
 
     else:  # A static library cannot be checked the same
         client.run_command('{} && DUMPBIN /NOLOGO /DIRECTIVES "{}"'.format(vcvars, artifact))
-        assert build_type == "Debug"
+        assert build_type == "Release"
         assert "RuntimeLibrary=MD_DynamicRelease" in client.out
 
 
