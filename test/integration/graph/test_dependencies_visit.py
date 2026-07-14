@@ -48,13 +48,13 @@ def test_dependencies_visit():
     refs = client.cache.get_latest_recipe_revision(RecipeReference.loads("openssl/0.1"))
     pkgs = client.cache.get_package_references(refs)
     prev1 = client.cache.get_latest_package_revision(pkgs[0])
-    assert f"DefRef: {repr(prev1.ref)}!!!" in client.out
+    assert f"DefRef: {prev1.ref.repr_notime()}!!!" in client.out
     assert f"DefPRef: {prev1.repr_notime()}!!!" in client.out
 
     refs = client.cache.get_latest_recipe_revision(RecipeReference.loads("openssl/0.2"))
     pkgs = client.cache.get_package_references(refs)
     prev2 = client.cache.get_latest_package_revision(pkgs[0])
-    assert f"DefRefBuild: {repr(prev2.ref)}!!!" in client.out
+    assert f"DefRefBuild: {prev2.ref.repr_notime()}!!!" in client.out
     assert f"DefPRefBuild: {prev2.repr_notime()}!!!" in client.out
 
     assert "DIRECTBUILD True: cmake/0.1" in client.out

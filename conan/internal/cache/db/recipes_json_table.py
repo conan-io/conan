@@ -1,0 +1,201 @@
+"""
+JSON file-based implementation of the recipes cache table.
+Replaces SQLite for recipes to allow a distributed/shared Conan cache.
+
+Lock-free, designed for shared folders with eventual consistency:
+- Folder existence is the indicator of existence; data.json is read with retry on failure.
+- Writes use atomic replace (write to .tmp then rename).
+- Updates are rare; concurrent reads dominate. Occasional read-during-write is handled by retry.
+"""
+
+import os
+import shutil
+from typing import List
+
+from conan.api.model import RecipeReference
+from conan.internal.cache.db.json_db import ref_hash, write_json_atomic, read_json_with_retry
+from conan.errors import ConanException
+from conan.internal.errors import ConanReferenceDoesNotExistInDB, ConanReferenceAlreadyExistsInDB
+
+
+class RecipesJsonTable:
+    """
+    Lock-free, concurrent-safe recipes table for shared folders (eventual consistency).
+    Same public API as RecipesDBTable; uses folder existence + retry on data.json.
+
+    <db_folder>/<ref_hash>/data.json {"ref": ...}
+    <db_folder>/<ref_hash>/<rrev>/data.json {"timestamp": ..., "path": "..."}
+    <db_folder>/<ref_hash>/<rrev>/<pkgid>/<prev>/data.json {"timestamp": ..., "path": "...",
+                                                            "build_id": "..."}
+    """
+
+    def __init__(self, db_folder: str):
+        self._db_folder = os.path.abspath(db_folder)
+        os.makedirs(self._db_folder, exist_ok=True)
+
+    def create_table(self):
+        """No-op for API compatibility; folder is created in __init__."""
+        os.makedirs(self._db_folder, exist_ok=True)
+
+    def _ref_dir(self, ref: RecipeReference) -> str:
+        return os.path.join(self._db_folder, ref_hash(str(ref)))
+
+    def _revision_dir(self, ref: RecipeReference) -> str:
+        # The revision string itself is a safe hex value — use it directly as folder name.
+        assert ref.revision
+        return os.path.join(self._ref_dir(ref), ref.revision)
+
+    def create(self, path: str, ref: RecipeReference):
+        """
+        This is called when:
+        - RemoteManager.get_recipe() from a remote
+        - conan cache restore puts a recipe from a .tgz
+        - After export, when the recipe-revision is computed and ``assign_rrev()`` is called
+        """
+        assert ref is not None
+        assert ref.revision is not None
+        assert ref.timestamp is not None
+
+        rev_dir = self._revision_dir(ref)
+        ref_dir = self._ref_dir(ref)
+        os.makedirs(ref_dir, exist_ok=True)
+        # Always write ref data.json — content is deterministic so concurrent writes are safe.
+        write_json_atomic(os.path.join(ref_dir, "data.json"), {"ref": str(ref)})
+        # os.mkdir is an atomic syscall: exactly one concurrent caller succeeds.
+        try:
+            os.mkdir(rev_dir)
+        except FileExistsError:
+            raise ConanReferenceAlreadyExistsInDB(f"Reference '{repr(ref)}' already exists")
+        # The revision is the folder name — no need to store it in the file too.
+        write_json_atomic(os.path.join(rev_dir, "data.json"), {
+            "timestamp": ref.timestamp,
+            "path": path,
+        })
+
+    def update_timestamp(self, ref: RecipeReference):
+        """ called by Proxy.get_recipe() when need to update timestamp of an already existing
+        recipe
+        """
+        assert ref.revision is not None
+        assert ref.timestamp is not None
+
+        rev_dir = self._revision_dir(ref)
+        rev_data_path = os.path.join(rev_dir, "data.json")
+        assert os.path.isfile(rev_data_path), f"Reference '{ref}' does not exist in file DB"
+        data = read_json_with_retry(rev_data_path)
+        data["timestamp"] = ref.timestamp
+        write_json_atomic(rev_data_path, data)
+
+    def remove(self, ref: RecipeReference):
+        rev_dir = self._revision_dir(ref)
+        shutil.rmtree(rev_dir, ignore_errors=True)
+
+        ref_dir = self._ref_dir(ref)
+        if os.path.isdir(ref_dir):
+            remaining = os.listdir(ref_dir)
+            if remaining == ["data.json"]:
+                shutil.rmtree(ref_dir)
+
+    def all_references(self) -> List[RecipeReference]:
+        refs = []
+        for entry in os.listdir(self._db_folder):
+            ref_dir = os.path.join(self._db_folder, entry)
+            if not os.path.isdir(ref_dir):
+                continue
+            try:
+                data = read_json_with_retry(os.path.join(ref_dir, "data.json"))
+            except ConanException:
+                continue  # dir visible but data.json not yet written; skip transient entry
+            refs.append(RecipeReference.loads(data["ref"]))
+        return refs
+
+    def get_recipe(self, ref: RecipeReference) -> dict:
+        assert ref.revision is not None
+        rev_dir = self._revision_dir(ref)
+        if not os.path.isdir(rev_dir):
+            raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref.repr_notime()}' not found")
+
+        rev_data = read_json_with_retry(os.path.join(rev_dir, "data.json"))
+        result = ref.copy()
+        # revision is the folder name — already set on ref; just carry timestamp forward.
+        result.timestamp = rev_data["timestamp"]
+        return {
+            "ref": result,
+            "path": rev_data["path"]
+        }
+
+    def get_latest_recipe(self, ref: RecipeReference) -> dict:
+        ref_dir = self._ref_dir(ref)
+        if not os.path.isdir(ref_dir):
+            raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref}' not found")
+
+        best_name = None
+        best_ts = None
+        best_path = None
+
+        for rrev in os.listdir(ref_dir):
+            rev_dir = os.path.join(ref_dir, rrev)
+            if not os.path.isdir(rev_dir):
+                continue
+            rev_data = read_json_with_retry(os.path.join(rev_dir, "data.json"))
+            ts = rev_data["timestamp"]
+            if best_ts is None or ts > best_ts:
+                best_ts = ts
+                best_name = rrev
+                best_path = rev_data["path"]
+
+        if best_name is None:
+            raise ConanReferenceDoesNotExistInDB(f"Recipe '{ref}' not found")
+
+        result = ref.copy()
+        result.revision = best_name   # folder name IS the revision
+        result.timestamp = best_ts
+        return {
+            "ref": result,
+            "path": best_path
+        }
+
+    def get_recipe_revisions_references(self, ref: RecipeReference) -> List[RecipeReference]:
+        assert ref.revision is None
+        ref_dir = self._ref_dir(ref)
+        if not os.path.isdir(ref_dir):
+            return []
+
+        revs = []
+        for rrev in os.listdir(ref_dir):
+            if not os.path.isdir(os.path.join(ref_dir, rrev)):
+                continue
+            rev_data_path = os.path.join(ref_dir, rrev, "data.json")
+            rev_data = read_json_with_retry(rev_data_path)
+            revs.append((rev_data["timestamp"], rrev))  # name IS the revision string
+
+        revs.sort(key=lambda x: x[0], reverse=True)
+        result = []
+        for ts, rrev in revs:
+            r = ref.copy()
+            r.revision = rrev
+            r.timestamp = ts
+            result.append(r)
+        return result
+
+    def path_to_ref(self, path: str) -> RecipeReference | None:
+        if not os.path.isdir(self._db_folder):
+            return None
+        for entry in os.listdir(self._db_folder):
+            ref_dir = os.path.join(self._db_folder, entry)
+            if not os.path.isdir(ref_dir):
+                continue
+            ref_data = read_json_with_retry(os.path.join(ref_dir, "data.json"))
+            if ref_data is None:
+                continue
+            for rrev in os.listdir(ref_dir):
+                rev_dir = os.path.join(ref_dir, rrev)
+                if not os.path.isdir(rev_dir):
+                    continue
+                rev_data = read_json_with_retry(os.path.join(rev_dir, "data.json"))
+                if rev_data.get("path") == path:
+                    ref = RecipeReference.loads(ref_data["ref"])
+                    ref.revision = rrev   # folder name IS the revision
+                    ref.timestamp = rev_data["timestamp"]
+                    return ref
+        return None

@@ -31,7 +31,11 @@ class PkgCache:
             mkdir(self._store_folder)
             db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
             self._base_folder = os.path.abspath(self._store_folder)
-            self._db = CacheDatabase(filename=db_filename)
+            use_file_db = os.path.isfile(os.path.join(cache_folder, 'conan_incubating_file_db'))
+            if use_file_db and os.path.exists(db_filename):
+                raise ConanException("Cache is already using sqlite3 database, can't use file db. "
+                                     "Use it only on new empty Conan caches")
+            self._db = CacheDatabase(filename=db_filename, use_file_db=use_file_db)
         except Exception as e:
             raise ConanException(f"Couldn't initialize storage in {self._store_folder}: {e}")
 

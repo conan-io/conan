@@ -48,8 +48,8 @@ class TestBasicCliOutput:
         client.save({"conanfile.txt": "[requires]\npkg/0.2"}, clean_first=True)
         client.run("graph info .")
         assert textwrap.dedent(f"""
-            {repr(pref.ref)}:
-              ref: {repr(pref.ref)}
+            {pref.ref.repr_notime()}:
+              ref: {pref.ref.repr_notime()}
               id: 1
               recipe: Cache
               package_id: {pref.package_id}
