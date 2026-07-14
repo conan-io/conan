@@ -5,6 +5,7 @@ import pytest
 
 from test.conftest import tools_locations
 from conan.test.utils.tools import TestClient
+from conan.test.utils.env import environment_update
 
 
 @pytest.mark.tool("pkg_config")
@@ -135,3 +136,90 @@ def test_pkg_config_round_trip_cpp_info():
     # paths
     assert f'set(pkg_INCLUDE_DIRS_NONE "{prefix}/usr/local/include/libastral")' in pkg_data
     assert f'set(pkg_LIB_DIRS_NONE "{prefix}/usr/local/lib/libastral")' in pkg_data
+
+
+@pytest.mark.tool("pkg_config")
+@pytest.mark.tool("msys2")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Tests Windows PKG_CONFIG_PATH only")
+def test_windows_pkg_config_path():
+    """ Test pkg-config with MSYS2 on Windows mixing paths style for PKG_CONFIG_PATH
+
+        The test creates a dummy .pc file and checks if pkg-config can find it. It should work
+        for unix path style or forward slashes in Windows only. Mixing backslashes and forward slashes
+        in the same path is not supported by pkg-config.
+
+        https://www.msys2.org/docs/pkgconfig/#syntax-paths-escaping
+    """
+
+    try:
+        version = tools_locations["pkg_config"]["default"]
+        exe = tools_locations["pkg_config"]["exe"]
+        os_ = platform.system()
+        pkg_config_path = tools_locations["pkg_config"][version]["path"][os_] + "/" + exe
+    except KeyError:
+        pytest.skip("pkg-config path not defined")
+        return
+
+    try:
+        bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
+    except KeyError:
+        pytest.skip("msys2 path not defined")
+        return
+
+    client = TestClient(path_with_spaces=False)
+    current_folder = client.current_folder.replace("\\", "/").replace("C:", "/c")
+
+    libfoo_pc = textwrap.dedent("""\
+            libdir=/c/lib
+            includedir=/c/include
+
+            Name: libfoo
+            Description: Dummy library for testing pkg-config
+            Version: 0.1.0
+            Libs: -L${libdir}/libfoo -lfoo -lm -Wl,--whole-archive
+            Cflags: -I${includedir}/libfoo -D_USE_LIBFOO
+            """)
+    conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            from conan.tools.gnu import PkgConfig
+            from conan.tools.env import VirtualBuildEnv
+            import os
+
+            class TestPkg(ConanFile):
+                name = "test_pkg_config"
+                version = "0.1.0"
+                exports_sources = "*.pc"
+
+                def package(self):
+                    pkg_config = PkgConfig(self, "libfoo", pkg_config_path="{current_folder}")
+                    self.output.info(f"PROVIDES: {{pkg_config.provides}}")
+            """)
+    profile = textwrap.dedent(f"""
+            [conf]
+            tools.gnu:pkg_config={pkg_config_path}
+            tools.microsoft.bash:subsystem=msys2
+            tools.microsoft.bash:path={bash_path}
+            tools.microsoft.bash:active=True
+            """)
+
+    client.save({"conanfile.py": conanfile,
+                 "libfoo.pc": libfoo_pc,
+                 "profile": profile})
+    client.run("export .")
+
+    # Test using unix path style for PKG_CONFIG_PATH
+    # Expected PKG_CONFIG_PATH=/c/<current_folder>:/c/msys64/usr/lib/pkgconfig
+    with environment_update({"PKG_CONFIG_PATH": "/c/msys64/usr/lib/pkgconfig"}):
+        client.run("install --requires=test_pkg_config/0.1.0 -pr profile --build=missing")
+        assert "PROVIDES: libfoo = 0.1.0" in str(client.out)
+
+    # Test using forward slashes in PKG_CONFIG_PATH
+    # Expected PKG_CONFIG_PATH=/c/<current_folder>:C:/msys64/usr/lib/pkgconfig
+    with environment_update({"PKG_CONFIG_PATH": "C:/msys64/usr/lib/pkgconfig"}):
+        client.run("install --requires=test_pkg_config/0.1.0 -pr profile --build=missing")
+        assert "PROVIDES: libfoo = 0.1.0" in str(client.out)
+
+    # Test using mixed path styles (should fail)
+    # Expected PKG_CONFIG_PATH=/c/<current_folder>:C:\msys64\usr\lib\pkgconfig
+    with environment_update({"PKG_CONFIG_PATH": r"C:\msys64\usr\lib\pkgconfig"}):
+        client.run("install --requires=test_pkg_config/0.1.0 -pr profile --build=missing", assert_error=True)
