@@ -856,7 +856,7 @@ class CppInfo:
             if e not in external:
                 msg = f"{conanfile}: package_info(): The direct dependency '{e}' is not used by " \
                       f"any '(cpp_info/components).requires'."
-                raise ConanException(msg)
+                ConanOutput().warning(msg)
 
     @property
     def required_components(self):

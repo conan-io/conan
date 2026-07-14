@@ -91,12 +91,13 @@ def test_unused_requirement(component):
             def package_info(self):
                 self.cpp_info{'.components["foo"]' if component else ''}.requires = ["top::other"]
     """)
-    t.save({"top/conanfile.py": GenConanfile().with_package_info({"components": {"cmp1": {"libs": ["top_cmp1"]}}}),
+    top = GenConanfile().with_package_info({"components": {"cmp1": {"libs": ["top_cmp1"]}}})
+    t.save({"top/conanfile.py": top,
             "conanfile.py": conanfile})
     t.run('create top --name=top --version=version')
     t.run('create top --name=top2 --version=version')
-    t.run('create .', assert_error=True)
-    assert "ERROR: wrong/version: package_info(): The direct dependency 'top2' is not used " \
+    t.run('create .')
+    assert "WARN: wrong/version: package_info(): The direct dependency 'top2' is not used " \
            "by any '(cpp_info/components).requires'." in t.out
 
 
@@ -137,9 +138,11 @@ def test_wrong_requirement(component):
             version = "version"
             requires = "top/version"
             def package_info(self):
-                self.cpp_info{'.components["foo"]' if component else ''}.requires =  ["top::cmp1", "other::other"]
-    """)
-    t.save({"top/conanfile.py": GenConanfile().with_package_info({"components": {"cmp1": {"libs": ["top_cmp1"]}}}),
+                self.cpp_info{'.components["foo"]' if component else ''}.requires =  ["top::cmp1",
+                                                                                      "other::other"]
+        """)
+    top = GenConanfile().with_package_info({"components": {"cmp1": {"libs": ["top_cmp1"]}}})
+    t.save({"top/conanfile.py": top,
             "conanfile.py": conanfile})
     t.run('create top --name=top --version=version')
     t.run('create .', assert_error=True)
@@ -154,8 +157,10 @@ def test_missing_internal(component):
         from conan import ConanFile
         class Recipe(ConanFile):
             def package_info(self):
-                self.cpp_info{'.components["foo"]' if component else ''}.requires = ["other", "another"]
-                self.cpp_info{'.components["bar"]' if component else ''}.requires = ["other", "another"]
+                self.cpp_info{'.components["foo"]' if component else ''}.requires = ["other",
+                                                                                     "another"]
+                self.cpp_info{'.components["bar"]' if component else ''}.requires = ["other",
+                                                                                     "another"]
     """)
     t = TestClient(light=True)
     t.save({'conanfile.py': consumer})
