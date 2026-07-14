@@ -691,7 +691,7 @@ def test_create_docker_runner_in_subfolder():
 
 @pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
-def test_create_docker_runner_broken_layout_warns():
+def test_create_docker_runner_broken_layout_fails():
     # https://github.com/conan-io/conan/issues/20143
     client = TestClient()
     profile_build = textwrap.dedent(f"""\
@@ -733,5 +733,5 @@ def test_create_docker_runner_broken_layout_warns():
     client.save({"conanfile.py": conanfile})
     client.run("create . -pr:h host -pr:b build", assert_error=True)
 
-    assert "Could not evaluate layout() for Docker volume mounts" in client.out
-    assert "(Using default mount)" in client.out
+    assert "Error in layout() method" in client.out
+    assert "broken layout" in client.out

@@ -15,6 +15,7 @@ from conan.errors import ConanException
 from pathlib import Path
 from conan.internal.model.profile import Profile
 from conan.internal.model.version import Version
+from conan.internal.errors import conanfile_exception_formatter
 from conan.internal.runner.output import RunnerOutput
 
 
@@ -252,19 +253,15 @@ class DockerRunner:
         # In this case, mount the root folder as the base path and update the abs_docker_path to the
         # new relative path
         if hasattr(conanfile, "layout"):
-            try:
+            with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
-                if conanfile.folders.root:
-                    abs_path = self._get_abs_host_path(conanfile.folders.root)
-                    if self.abs_host_path.is_relative_to(abs_path):
-                        abs_docker_base_path /= abs_path.name
-                        volumes = {abs_path: {'bind': abs_docker_base_path.as_posix(), 'mode': 'rw'}}
-                        abs_docker_path = abs_docker_base_path / self.abs_host_path.relative_to(abs_path)
-                        return volumes, abs_docker_path.as_posix()
-            except Exception as e:
-                self.logger.warning(
-                    f"Could not evaluate layout() for Docker volume mounts. (Using default mount):\n\n{e}."
-                )
+            if conanfile.folders.root:
+                abs_path = self._get_abs_host_path(conanfile.folders.root)
+                if self.abs_host_path.is_relative_to(abs_path):
+                    abs_docker_base_path /= abs_path.name
+                    volumes = {abs_path: {'bind': abs_docker_base_path.as_posix(), 'mode': 'rw'}}
+                    abs_docker_path = abs_docker_base_path / self.abs_host_path.relative_to(abs_path)
+                    return volumes, abs_docker_path.as_posix()
         abs_docker_path = (abs_docker_base_path / self.abs_host_path.name).as_posix()
         volumes = {self.abs_host_path: {'bind': abs_docker_path, 'mode': 'rw'}}
         return volumes, abs_docker_path
