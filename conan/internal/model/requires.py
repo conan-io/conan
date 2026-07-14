@@ -40,7 +40,7 @@ class Requirement:
         self.skip = False
         self.required_nodes = set()  # store which intermediate nodes are required, to compute "Skip"
         self.no_skip = no_skip
-        # git source: raw string "url" or "url@ref"; parsed at use time in DepsGraphBuilder
+        # git source: raw string for https://github.com public open source repositories
         self.git = git
         # computed ones, not default ones
         self.consistent_policy_new = False

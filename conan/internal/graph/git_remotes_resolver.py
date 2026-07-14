@@ -14,7 +14,13 @@ class GitRemotesResolver:
         self._cache = cache
         self._clones_base = os.path.join(cache.store, "git_clones")
 
-    def clone_and_export(self, ref, url, git_ref, loader, force_clone=False):
+    @staticmethod
+    def get_url(repo):
+        # Maybe we need to extend this to gitlab too, we could check a "gl:org/repo" format
+        return f"https://github.com/{repo}.git"
+
+    def clone_and_export(self, ref, repo, git_ref, loader, force_clone=False):
+        url = self.get_url(repo)
         clone_folder = self._clone_folder(url, git_ref)
         if force_clone and os.path.exists(clone_folder):
             rmdir(clone_folder)

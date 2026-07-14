@@ -310,10 +310,12 @@ class DepsGraphBuilder:
         ref = require.ref
         if ref.revision:
             raise ConanException(f"Ref {ref.revision} cannot be specified with git")
-        git = require.git  # raw string: "url" or "url@ref"
+        git = require.git  # raw string: "org/repo" or "org/repo@ref"
         idx = git.rsplit("@", 1)
-        url, git_ref = idx if len(idx) == 2 else (idx[0], None)
+        repo, git_ref = idx if len(idx) == 2 else (idx[0], None)
 
+        git_resolver = GitRemotesResolver(self._cache)
+        url = git_resolver.get_url(repo)
         output = ConanOutput(scope=str(ref))
         force_clone = should_update_reference(ref, self._update)
 
@@ -336,8 +338,8 @@ class DepsGraphBuilder:
         if git_ref:
             output.info(f"  git ref: {git_ref}")
 
-        exported_ref, _ = GitRemotesResolver(self._cache).clone_and_export(
-            ref, url, git_ref, self._loader, force_clone=force_clone)
+        exported_ref, _ = git_resolver.clone_and_export(ref, repo, git_ref, self._loader,
+                                                        force_clone=force_clone)
         # Get the recipe revision from the export, to annotate it and checke later with lockfile
         require.ref.revision = exported_ref.revision
 
