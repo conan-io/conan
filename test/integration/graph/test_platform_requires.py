@@ -270,7 +270,7 @@ class TestGenerators:
         client.run("install . -pr=profile")
         assert "dep/1.1 - Platform" in client.out
         assert not os.path.exists(os.path.join(client.current_folder, "dep-config.cmake"))
-        assert not os.path.exists(os.path.join(client.current_folder, "dep.pc"))
+        assert not os.path.exists(os.path.join(client.current_folder, "dep-uninstalled.pc"))
 
 
 class TestPackageID:

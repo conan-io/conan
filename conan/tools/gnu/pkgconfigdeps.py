@@ -376,7 +376,7 @@ class PkgConfigDeps:
             build = is_build_context and self.build_context_folder and not has_suffix
             # Issue: https://github.com/conan-io/conan/issues/12342
             # Issue: https://github.com/conan-io/conan/issues/14935
-            return f"{self.build_context_folder}/{name_}.pc" if build else f"{name_}.pc"
+            return f"{self.build_context_folder}/{name_}-uninstalled.pc" if build else f"{name_}-uninstalled.pc"
 
         check_duplicated_generator(self, self._conanfile)
         for require, dep in self._get_dependencies():

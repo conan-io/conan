@@ -648,9 +648,9 @@ class TestSystemPackageVersion:
         c.run("install --requires=dep/system -g CMakeDeps -g PkgConfigDeps")
         dep = c.load("dep-config-version.cmake")
         assert 'set(PACKAGE_VERSION "1.0")' in dep
-        dep = c.load("dep.pc")
+        dep = c.load("dep-uninstalled.pc")
         assert 'Version: 1.0' in dep
-        dep = c.load("dep-mycomp.pc")
+        dep = c.load("dep-mycomp-uninstalled.pc")
         assert 'Version: 2.3' in dep
 
     def test_component_version_consumer(self):
