@@ -31,7 +31,6 @@ def test_simple_cmake_mingw():
         compiler.cppstd=17
         """})
     client.run("create . --profile=mingw")
-    print(client.out)
     build_folder = client.created_test_build_folder("hello/1.0")
     # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
     #  and no one notices. It would be good to have some details in confuser.py to be consistent
@@ -488,6 +487,8 @@ class TestApple(Base):
 
         self._run_app(build_type, dyld_path=shared)
 
+        arch = host_profile.settings.get("arch")
+        check_exe_run(self.client.out, "main", "apple-clang", None, build_type, arch, cppstd=cppstd)
         self._modify_code()
         time.sleep(1)
         self._incremental_build()

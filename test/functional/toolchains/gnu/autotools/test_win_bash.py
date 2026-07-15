@@ -68,7 +68,7 @@ def test_autotools_bash_complete():
 def test_autotools_bash_complete_ucrt64():
     try:
         msys2_path = tools_locations["msys2"]["system"]["path"]["Windows"]
-    except KeyError:
+    except KeyError:  # pragma: no cover
         pytest.skip("msys2 path not defined")  # pragma: no cover
 
     client = TestClient(path_with_spaces=False)
@@ -217,7 +217,7 @@ def test_add_msys2_path_automatically(scope):
     bash_path = None
     try:
         bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
-    except KeyError:
+    except KeyError:  # pragma: no cover
         pytest.skip("msys2 path not defined")  # pragma: no cover
 
     client.save_home({"global.conf": textwrap.dedent("""
@@ -253,7 +253,7 @@ def test_conf_inherited_in_test_package():
     bash_path = None
     try:
         bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
-    except KeyError:
+    except KeyError:  # pragma: no cover
         pytest.skip("msys2 path not defined")  # pragma: no cover
 
     conanfile = textwrap.dedent("""
@@ -416,7 +416,7 @@ def test_autotools_support_custom_make():
     try:
         bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
         make_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/make.exe"
-    except KeyError:
+    except KeyError:  # pragma: no cover
         pytest.skip("msys2 path not defined")  # pragma: no cover
     if not os.path.exists(make_path):
         pytest.skip("msys2 make not installed")  # pragma: no cover
