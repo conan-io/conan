@@ -904,7 +904,111 @@ build_order_html = r"""
   </main>
 
   <script>
-    const ORDER_DATA = {{ order_data | tojson }};
+    const BUILD_ORDER = {{ build_order | tojson }};
+
+    // Conan build-order JSON has two shapes (--order-by=recipe vs configuration).
+    // The UI expects a flat list of package cards keyed by pref.
+    function makePref(ref, packageId, prev) {
+      let pref = `${ref}:${packageId}`;
+      if (prev) pref += `#${prev}`;
+      return pref;
+    }
+
+    function isRecipeOrder(order) {
+      return order.some(level => level.some(item => "packages" in item));
+    }
+
+    function flattenRecipeLevel(level) {
+      const flat = [];
+      for (const item of level) {
+        if (!("packages" in item)) {
+          flat.push({ ...item });
+          continue;
+        }
+        const ref = item.ref;
+        const recipeDepends = item.depends || [];
+        for (const packageLevel of item.packages) {
+          for (const pkg of packageLevel) {
+            flat.push({
+              ref,
+              pref: makePref(ref, pkg.package_id, pkg.prev),
+              package_id: pkg.package_id,
+              prev: pkg.prev ?? null,
+              context: pkg.context,
+              binary: pkg.binary,
+              options: pkg.options || [],
+              filenames: pkg.filenames || [],
+              depends: [...(pkg.depends || [])],
+              overrides: pkg.overrides || {},
+              build_args: pkg.build_args ?? null,
+              info: pkg.info || {},
+              _recipe_depends: [...recipeDepends],
+            });
+          }
+        }
+      }
+      return flat;
+    }
+
+    function resolveRecipeDepends(normalizedOrder) {
+      const refToPrefs = new Map();
+      for (const level of normalizedOrder) {
+        for (const pkg of level) {
+          if (pkg.ref && pkg.pref) {
+            if (!refToPrefs.has(pkg.ref)) refToPrefs.set(pkg.ref, []);
+            refToPrefs.get(pkg.ref).push(pkg.pref);
+          }
+        }
+      }
+
+      for (const level of normalizedOrder) {
+        for (const pkg of level) {
+          if (pkg._recipe_depends) {
+            const deps = [];
+            for (const depRef of pkg._recipe_depends) {
+              deps.push(...(refToPrefs.get(depRef) || []));
+            }
+            pkg.depends = deps;
+            delete pkg._recipe_depends;
+          } else if (!pkg.pref && pkg.package_id) {
+            pkg.pref = makePref(pkg.ref, pkg.package_id, pkg.prev);
+          }
+        }
+      }
+    }
+
+    function normalizeOrderData(raw) {
+      const data = Array.isArray(raw)
+        ? { order_by: "recipe", reduced: false, order: raw, profiles: {} }
+        : raw;
+      const orderBy = data.order_by || "recipe";
+      const order = data.order || [];
+      let normalizedOrder;
+
+      if (orderBy === "recipe" || isRecipeOrder(order)) {
+        normalizedOrder = order.map(flattenRecipeLevel);
+        resolveRecipeDepends(normalizedOrder);
+      } else {
+        normalizedOrder = order.map(level =>
+          level.map(pkg => {
+            const entry = { ...pkg };
+            if (!entry.pref && entry.package_id) {
+              entry.pref = makePref(entry.ref, entry.package_id, entry.prev);
+            }
+            return entry;
+          })
+        );
+      }
+
+      return {
+        order_by: orderBy,
+        reduced: data.reduced ?? false,
+        order: normalizedOrder,
+        profiles: data.profiles || {},
+      };
+    }
+
+    const ORDER_DATA = normalizeOrderData(BUILD_ORDER);
 
     function parseRef(ref) {
       const m = ref.match(/^([^/]+)\/([^#]+)/);
@@ -1314,107 +1418,7 @@ build_order_html = r"""
 """
 
 
-def _make_pref(ref, package_id, prev=None):
-    pref = f"{ref}:{package_id}"
-    if prev:
-        pref += f"#{prev}"
-    return pref
-
-
-def _flatten_recipe_level(level):
-    flat = []
-    for item in level:
-        if "packages" not in item:
-            flat.append(dict(item))
-            continue
-        ref = item["ref"]
-        recipe_depends = item.get("depends", [])
-        for package_level in item["packages"]:
-            for pkg in package_level:
-                flat.append({
-                    "ref": ref,
-                    "pref": _make_pref(ref, pkg["package_id"], pkg.get("prev")),
-                    "package_id": pkg["package_id"],
-                    "prev": pkg.get("prev"),
-                    "context": pkg.get("context"),
-                    "binary": pkg.get("binary"),
-                    "options": pkg.get("options", []),
-                    "filenames": pkg.get("filenames", []),
-                    "depends": list(pkg.get("depends") or []),
-                    "overrides": pkg.get("overrides", {}),
-                    "build_args": pkg.get("build_args"),
-                    "info": pkg.get("info") or {},
-                    "_recipe_depends": list(recipe_depends),
-                })
-    return flat
-
-
-def _is_recipe_order(order):
-    if not order:
-        return False
-    for level in order:
-        for item in level:
-            if "packages" in item:
-                return True
-    return False
-
-
-def _resolve_recipe_depends(normalized_order):
-    ref_to_prefs = {}
-    for level in normalized_order:
-        for pkg in level:
-            ref = pkg.get("ref")
-            pref = pkg.get("pref")
-            if ref and pref:
-                ref_to_prefs.setdefault(ref, []).append(pref)
-
-    for level in normalized_order:
-        for pkg in level:
-            recipe_depends = pkg.pop("_recipe_depends", None)
-            if recipe_depends is None:
-                if "pref" not in pkg and "package_id" in pkg:
-                    pkg["pref"] = _make_pref(pkg["ref"], pkg["package_id"], pkg.get("prev"))
-                continue
-            deps = []
-            for dep_ref in recipe_depends:
-                deps.extend(ref_to_prefs.get(dep_ref, []))
-            pkg["depends"] = deps
-
-
-def _normalize_order_data(data):
-    if isinstance(data, list):
-        data = {"order_by": "recipe", "reduced": False, "order": data, "profiles": {}}
-
-    order = data.get("order", [])
-    order_by = data.get("order_by", "recipe")
-
-    if order_by == "recipe" or _is_recipe_order(order):
-        normalized_order = [_flatten_recipe_level(level) for level in order]
-        _resolve_recipe_depends(normalized_order)
-    else:
-        normalized_order = []
-        for level in order:
-            level_pkgs = []
-            for pkg in level:
-                entry = dict(pkg)
-                if "pref" not in entry and "package_id" in entry:
-                    entry["pref"] = _make_pref(entry["ref"], entry["package_id"], entry.get("prev"))
-                level_pkgs.append(entry)
-            normalized_order.append(level_pkgs)
-
-    return {
-        "order_by": order_by,
-        "reduced": data.get("reduced", False),
-        "order": normalized_order,
-        "profiles": data.get("profiles", {}),
-    }
-
-
-def _render_build_order(order_data, template):
-    return template.render({"order_data": order_data})
-
-
 def format_build_order_html(result):
-    order_data = _normalize_order_data(result["build_order"])
+    build_order = result["build_order"]
     template = Template(build_order_html, autoescape=select_autoescape(['html', 'xml']))
-    cli_out_write(_render_build_order(order_data, template))
+    cli_out_write(template.render({"build_order": build_order}))
