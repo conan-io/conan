@@ -112,10 +112,6 @@ class WorkspaceAPI:
         if not self._folder or not self._enabled:
             return
         packages = {}
-        # Create a cpy of the global editables and pass it to the WS object
-        editable_packages = self._conan_api._api_helpers.editable_packages.update_copy({})  # noqa
-        self._ws._editable_packages = editable_packages
-
         for editable_info in self._ws.packages():
             rel_path = editable_info["path"]
             path = os.path.normpath(os.path.join(self._folder, rel_path, "conanfile.py"))
@@ -124,18 +120,22 @@ class WorkspaceAPI:
             ref = editable_info.get("ref")
             try:
                 conanfile = self._ws.load_conanfile(rel_path)
-                if ref is None:
+                if ref is not None:
+                    reference = RecipeReference.loads(ref)
+                elif conanfile.name and conanfile.version:
                     reference = RecipeReference(name=conanfile.name, version=conanfile.version,
                                                 user=conanfile.user, channel=conanfile.channel)
                 else:
-                    reference = RecipeReference.loads(ref)
+                    user_ref = self._ws.get_ref(rel_path)
+                    if user_ref is None:
+                        raise ConanException("name/version not defined in conanws.yml or conanfile"
+                                             " and get_ref() returned None")
+                    reference = RecipeReference.loads(str(user_ref))
                 reference.validate_ref(reference)
             except Exception as e:
                 raise ConanException(f"Workspace package reference could not be deduced by"
                                      f" {rel_path}/conanfile.py or it is not"
                                      f" correctly defined in the conanws.yml file: {e}")
-            # Update the local editables, so internal load_conanfile can work finding pyreqs
-            editable_packages._edited_refs[reference] = {"path": path}  # noqa
             if reference in packages:
                 raise ConanException(f"Workspace package '{str(reference)}' already exists.")
             packages[reference] = {"path": path, "conanfile": conanfile}
@@ -283,17 +283,7 @@ class WorkspaceAPI:
 
     def info(self):
         self._check_ws()
-        editable_packages = self._conan_api._api_helpers.editable_packages.update_copy({})  # noqa
-        self._ws._editable_packages = editable_packages
-        packages_list = []
-        for editable_info in self._ws.packages():
-            packages_list.append(editable_info)
-            ref_str = editable_info.get("ref")
-            if ref_str:
-                path = os.path.join(self._folder, editable_info["path"], "conanfile.py")
-                path = os.path.normpath(path)
-                reference = RecipeReference.loads(ref_str)
-                editable_packages._edited_refs[reference] = {"path": path}  # noqa
+        packages_list = list(self._ws.packages())
         return {"name": self._ws.name(),
                 "folder": self._folder,
                 "packages": packages_list}

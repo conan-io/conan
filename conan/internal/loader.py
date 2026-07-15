@@ -50,7 +50,8 @@ class ConanFileLoader:
         if cached:
             conanfile = cached[0](display)
             conanfile._conan_helpers = self._conanfile_helpers
-            if hasattr(conanfile, "init") and callable(conanfile.init):
+            # Skip init() without pyreqs; init() typically references python_requires
+            if self._pyreq_loader and hasattr(conanfile, "init") and callable(conanfile.init):
                 with conanfile_exception_formatter(conanfile, "init"):
                     conanfile.init()
             return conanfile, cached[1]
@@ -82,7 +83,7 @@ class ConanFileLoader:
             result = conanfile(display)
 
             result._conan_helpers = self._conanfile_helpers
-            if hasattr(result, "init") and callable(result.init):
+            if self._pyreq_loader and hasattr(result, "init") and callable(result.init):
                 with conanfile_exception_formatter(result, "init"):
                     result.init()
             return result, module

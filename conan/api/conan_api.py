@@ -210,7 +210,7 @@ class ConanAPI:
             editable_packages = self._editable_packages.update_copy(ws_editables)
             return self._get_loader(editable_packages)
 
-        def _get_loader(self, editable_packages):
+        def _get_loader(self, editable_packages, pyreq_loader=True):
             legacy_update = self.global_conf.get("core:update_policy", choices=["legacy"])
             # This proxy is caching information
             proxy = ConanProxy(self.cache, self.remote_manager, editable_packages,
@@ -223,7 +223,8 @@ class ConanAPI:
             conanfile_helpers = ConanFileHelpers(self._requester, cmd_wrap, self.global_conf,
                                                  self.cache, self._conan_api.home_folder,
                                                  self._conan_api, flags_map=self._flags_plugin())
-            pyreq_loader = PyRequireLoader(proxy, range_resolver, self.global_conf)
+            pyreq_loader = (PyRequireLoader(proxy, range_resolver, self.global_conf)
+                            if pyreq_loader else None)
             # This is caching too!
             loader = ConanFileLoader(pyreq_loader, conanfile_helpers)
             return proxy, range_resolver, loader, None

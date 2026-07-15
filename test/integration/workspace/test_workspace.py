@@ -1934,10 +1934,19 @@ class TestPyRequires:
               - path: pyreq
               - path: pkg
               """)
+        # pyreq and pkg inherit name/version from a python_requires base class, which is not
+        # resolved during workspace packages() discovery. Use get_ref() to supply the refs.
+        ws_py = textwrap.dedent("""\
+            from conan import Workspace
+            class MyWorkspace(Workspace):
+                def get_ref(self, folder):
+                    return {"pyreq": "pyreq/0.1", "pkg": "pkg/0.2"}.get(folder)
+            """)
         c.save({"pyreqbase/conanfile.py": pyreqbase,
                 "pyreq/conanfile.py": pyreq,
                 "pkg/conanfile.py": pkg,
-                "conanws.yml": ws})
+                "conanws.yml": ws,
+                "conanws.py": ws_py})
 
         c.run("workspace info --format=json")
         ws = json.loads(c.stdout)
@@ -1947,11 +1956,84 @@ class TestPyRequires:
         assert "conanfile.py (pkg/0.2)" in c.out
         assert "Python requires\n    pyreq/0.1 - Editable\n    pyreqbase/0.1 - Editable" in c.out
 
+    def test_ws_get_ref_hook(self):
+        # Users can supply get_ref() when the conanfile doesn't declare name/version
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+            class Lib(ConanFile):
+                pass
+            """)
+        ws_py = textwrap.dedent("""\
+            from conan import Workspace
+            from conan.api.model import RecipeReference
+            class MyWorkspace(Workspace):
+                def get_ref(self, folder):
+                    if folder == "a":
+                        return "pkga/1.0"
+                    if folder == "b":
+                        return RecipeReference("pkgb", "2.0")
+                    return None
+            """)
+        c.save({"conanws.yml": "packages:\n  - path: a\n  - path: b\n",
+                "conanws.py": ws_py,
+                "a/conanfile.py": conanfile,
+                "b/conanfile.py": conanfile})
+        c.run("workspace install")
+        assert "pkga/1.0 - Editable" in c.out
+        assert "pkgb/2.0 - Editable" in c.out
+
+    def test_ws_python_requires_only_in_remote(self):
+        # https://github.com/conan-io/conan/issues/20170
+        c = TestClient(light=True, default_server_user=True)
+        pyreq = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class BaseConan:
+                def source(self):
+                    self.output.info("BASE SOURCE!!!")
+                def build(self):
+                    self.output.info("BASE BUILD!!!")
+
+            class TestPackage(ConanFile):
+                name = "pyreq"
+                version = "0.1"
+                package_type = "python-require"
+            """)
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class TestPackage(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                python_requires = "pyreq/0.1"
+                python_requires_extend = "pyreq.BaseConan"
+            """)
+        c.save({"py/conanfile.py": pyreq})
+        c.run("create py")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        c.save({"conanws.yml": "packages:\n  - path: pkg\n",
+                "pkg/conanfile.py": pkg},
+               clean_first=True)
+        c.run("workspace source")
+        assert "pyreq/0.1: Downloaded" in c.out
+        assert "BASE SOURCE!!!" in c.out
+        c.run("remove * -c")
+        c.run("workspace build")
+        assert "pyreq/0.1: Downloaded" in c.out
+        assert "BASE BUILD!!!" in c.out
+        c.run("remove * -c")
+        c.run("workspace install")
+        assert "pyreq/0.1: Downloaded" in c.out
+        c.run("remove * -c")
+        c.run("workspace super-install")
+        assert "pyreq/0.1: Downloaded" in c.out
+
     def test_super_install(self):
         c = TestClient()
 
         c.save({"conanws.yml": "",
-                "dep/conanfile.py": GenConanfile("dep","0.1").with_package_type("python-require"),
+                "dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("python-require"),
                 "liba/conanfile.py": GenConanfile("liba", "0.1").with_python_requires("dep/0.1"),
                 "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1")})
 

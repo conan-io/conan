@@ -25,14 +25,12 @@ class Workspace:
         self.conan_data = self._conan_load_data()
         self._conan_api = conan_api
         self.output = ConanOutput(scope=f"Workspace '{self.name()}'")
-        # This will be injected from the outside before load_conanfile() is called
-        self._editable_packages = None
 
     def __getattribute__(self, item):
         # Return a protected wrapper around workspace overridable callables in order to
         # be able to have clean errors if user errors in conanws.py code
         myattr = object.__getattribute__(self, item)
-        if item not in ("name", "packages", "add", "remove", "clean", "build_order"):
+        if item not in ("name", "packages", "add", "remove", "clean", "build_order", "get_ref"):
             return myattr
 
         def wrapper(*args, **kwargs):
@@ -117,9 +115,16 @@ class Workspace:
     def packages(self):
         return self.conan_data.get("packages", [])
 
+    def get_ref(self, folder):  # noqa
+        # Fallback for the built-in packages() when the conanfile has no name/version
+        # (e.g. inherited from a python_requires, which is not resolved during discovery)
+        # Return a RecipeReference, a "name/version[@user/channel]" string, or None
+        return None
+
     def load_conanfile(self, conanfile_path):
         conanfile_path = os.path.join(self.folder, conanfile_path, "conanfile.py")
-        _, _, loader, _ = self._conan_api._api_helpers._get_loader(self._editable_packages)  # noqa
+        _, _, loader, _ = self._conan_api._api_helpers._get_loader(editable_packages=None,  # noqa
+                                                                   pyreq_loader=False)
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
                                       channel=None, remotes=None, graph_lock=None)
         return conanfile
