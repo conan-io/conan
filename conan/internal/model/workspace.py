@@ -122,9 +122,19 @@ class Workspace:
         return None
 
     def load_conanfile(self, conanfile_path):
+        # Standalone loader without pyreq resolver: workspace ref-discovery must not
+        # depend on remotes, cache or version-range resolution
+        from conan.internal.cache.home_paths import HomePaths
+        from conan.internal.conan_app import CmdWrapper, ConanFileHelpers
+        from conan.internal.loader import ConanFileLoader
+        home_folder = self._conan_api.home_folder
+        cmd_wrap = CmdWrapper(HomePaths(home_folder).wrapper_path)
+        helpers = ConanFileHelpers(requester=None, cmd_wrapper=cmd_wrap,
+                                   global_conf=self._conan_api._api_helpers.global_conf,  # noqa
+                                   cache=None, home_folder=home_folder,
+                                   conan_api=self._conan_api)
+        loader = ConanFileLoader(pyreq_loader=None, conanfile_helpers=helpers)
         conanfile_path = os.path.join(self.folder, conanfile_path, "conanfile.py")
-        _, _, loader, _ = self._conan_api._api_helpers._get_loader(editable_packages=None,  # noqa
-                                                                   pyreq_loader=False)
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
                                       channel=None, remotes=None, graph_lock=None)
         return conanfile
