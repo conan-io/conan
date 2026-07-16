@@ -1281,6 +1281,8 @@ def test_pkg_skip_component():
     assert "pkg_c.pc" in install_contents
     # Components can not skip the PC file creation
     assert "none.pc" in install_contents
+    # Related issue: https://github.com/conan-io/conan-center-index/issues/30526
+    assert "none" not in b_cmp1_content
 
 
 def test_pkg_none_requirement_with_default_components():
