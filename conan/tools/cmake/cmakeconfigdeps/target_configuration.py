@@ -33,6 +33,17 @@ class TargetConfigurationTemplate2:
         self._pkg_folder_var = (f"{conanfile.ref.name}_PACKAGE_FOLDER"
                                 f"{config_folder}{build_suffix}")
 
+    def content(self):
+        t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
+                     undefined=jinja2.StrictUndefined)
+        return t.render(self._context)
+
+    @property
+    def filename(self):
+        config = (self._get_build_type() or "none").lower()
+        build = "Build" if self._is_build_context else ""
+        return f"{self._filename}-Targets{build}-{config}.cmake"
+
     def _get_build_type(self):
         return self._conanfile.settings.get_safe(
             "build_type", str(self._consumer_conanfile.settings.build_type))
@@ -133,17 +144,6 @@ class TargetConfigurationTemplate2:
                         "link_feature": link_feature
                     }
         return result
-
-    def content(self):
-        t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
-                     undefined=jinja2.StrictUndefined)
-        return t.render(self._context)
-
-    @property
-    def filename(self):
-        config = (self._get_build_type() or "none").lower()
-        build = "Build" if self._is_build_context else ""
-        return f"{self._filename}-Targets{build}-{config}.cmake"
 
     @property
     def _context(self):
