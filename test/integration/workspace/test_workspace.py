@@ -1983,6 +1983,63 @@ class TestPyRequires:
         assert "pkga/1.0 - Editable" in c.out
         assert "pkgb/2.0 - Editable" in c.out
 
+    def test_ws_init_runs_during_discovery(self):
+        # init() is still executed during workspace ref discovery when it doesn't fail
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+            class Lib(ConanFile):
+                def init(self):
+                    self.name = "pkg"
+                    self.version = "0.1"
+            """)
+        c.save({"conanws.yml": "packages:\n  - path: pkg\n",
+                "pkg/conanfile.py": conanfile})
+        c.run("workspace install")
+        assert "pkg/0.1 - Editable" in c.out
+
+    def test_ws_init_fails_silently_when_needs_pyreqs(self):
+        # init() that references self.python_requires (unresolved during discovery) must not
+        # abort discovery; set_name/set_version (or static attrs) still supply the ref
+        c = TestClient(light=True, default_server_user=True)
+        c.save({"py/conanfile.py":
+                GenConanfile("pyreq", "0.1").with_package_type("python-require")})
+        c.run("create py")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class Lib(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                python_requires = "pyreq/0.1"
+                def init(self):
+                    # Would throw during discovery since pyreqs are not resolved
+                    _ = self.python_requires["pyreq"].module
+            """)
+        c.save({"conanws.yml": "packages:\n  - path: pkg\n",
+                "pkg/conanfile.py": pkg},
+               clean_first=True)
+        c.run("workspace install")
+        assert "pkg/0.1 - Editable" in c.out
+
+    def test_ws_ref_not_deducible_error(self):
+        # When all ref-resolution paths fail, the error must list all alternatives
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+            class Lib(ConanFile):
+                pass
+            """)
+        c.save({"conanws.yml": "packages:\n  - path: pkg\n",
+                "pkg/conanfile.py": conanfile})
+        c.run("workspace install", assert_error=True)
+        assert "Workspace package reference could not be deduced for 'pkg'" in c.out
+        assert "'ref: name/version[@user/channel]' in conanws.yml" in c.out
+        assert "'name' and 'version' as class attributes in conanfile.py" in c.out
+        assert "'set_name()' / 'set_version()' methods in conanfile.py" in c.out
+        assert "'get_ref(folder)' method in conanws.py" in c.out
+
     def test_ws_python_requires_only_in_remote(self):
         # https://github.com/conan-io/conan/issues/20170
         c = TestClient(light=True, default_server_user=True)

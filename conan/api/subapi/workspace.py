@@ -127,15 +127,23 @@ class WorkspaceAPI:
                                                 user=conanfile.user, channel=conanfile.channel)
                 else:
                     user_ref = self._ws.get_ref(rel_path)
-                    if user_ref is None:
-                        raise ConanException("name/version not defined in conanws.yml or conanfile"
-                                             " and get_ref() returned None")
-                    reference = RecipeReference.loads(str(user_ref))
-                reference.validate_ref(reference)
+                    reference = (RecipeReference.loads(str(user_ref))
+                                 if user_ref is not None else None)
             except Exception as e:
                 raise ConanException(f"Workspace package reference could not be deduced by"
                                      f" {rel_path}/conanfile.py or it is not"
                                      f" correctly defined in the conanws.yml file: {e}")
+            if reference is None:
+                raise ConanException(
+                    f"Workspace package reference could not be deduced for '{rel_path}'. "
+                    f"Provide one of:\n"
+                    f"  - 'ref: name/version[@user/channel]' in conanws.yml\n"
+                    f"  - 'name' and 'version' as class attributes in conanfile.py\n"
+                    f"  - 'set_name()' / 'set_version()' methods in conanfile.py\n"
+                    f"  - 'get_ref(folder)' method in conanws.py (typically needed when "
+                    f"set_name/set_version are inherited from a python_requires, since "
+                    f"python_requires are not resolved during workspace discovery)")
+            reference.validate_ref(reference)
             if reference in packages:
                 raise ConanException(f"Workspace package '{str(reference)}' already exists.")
             packages[reference] = {"path": path, "conanfile": conanfile}
