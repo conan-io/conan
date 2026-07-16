@@ -111,13 +111,13 @@ class TargetConfigurationTemplate2:
                         if dep.package_type is PackageType.APP:
                             continue  # It doesn't make sense to link a package that is an App
                         comp = None
-                        default_target = self._get_cmake_target_name(dep.ref.name)
+                        default_target = f"{dep.ref.name}::{dep.ref.name}"  # replace_requires
                         link = req.libs  # Do what the requirement to that package says
                     else:
                         if dep_comp.type is PackageType.APP or dep_comp.exe:
                             continue  # It doesn't make sense to link a package that is an App
                         comp = required_comp
-                        default_target = self._get_cmake_target_name(required_pkg, required_comp)
+                        default_target = f"{required_pkg}::{required_comp}"
                         # if it contains a requirement of a specific component of the other package
                         # and the other package can be an APP, but containing a LIB component
                         # the req.libs will not be defined. This is the libtool->automake(app) case
