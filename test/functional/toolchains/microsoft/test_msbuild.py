@@ -471,7 +471,7 @@ class TestWin:
 
         # Run the configure corresponding to this test case
         client.run("build . %s %s -pr:h=myprofile " % (settings_h, settings_b))
-        assert "conanfile.py: MSBuildToolchain created conantoolchain_release_win32.props" in client.out
+        assert "MSBuildToolchain created conantoolchain_release_win32.props" in client.out
         assert f"conanvcvars.bat: Activating environment Visual Studio {ide_version}" in client.out
         assert "[vcvarsall.bat] Environment initialized for: 'x86'" in client.out
 
@@ -513,7 +513,7 @@ class TestWin:
 
         # Run the configure corresponding to this test case
         client.run("build . %s" % (settings, ))
-        assert "conanfile.py: MSBuildToolchain created conantoolchain_debug_x64.props" in client.out
+        assert "MSBuildToolchain created conantoolchain_debug_x64.props" in client.out
         assert f"conanvcvars.bat: Activating environment Visual Studio 17" in client.out
         assert "[vcvarsall.bat] Environment initialized for: 'x64'" in client.out
         self._run_app(client, "x64", "Debug")

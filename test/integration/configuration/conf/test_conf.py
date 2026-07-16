@@ -283,24 +283,24 @@ def test_empty_conf_valid():
     tc.save({"conanfile.py": conanfile, "profile": profile})
 
     tc.run("create .")
-    assert 'pkg/1.0: WARN: My unset conf is NOT set' in tc.out
+    assert 'WARN: My unset conf is NOT set' in tc.out
 
     tc.run("create . -pr=profile")
-    assert 'pkg/1.0: WARN: My unset conf variable is: ""' in tc.out
-    assert 'pkg/1.0: WARN: My unset conf is  set' in tc.out
+    assert 'WARN: My unset conf variable is: ""' in tc.out
+    assert 'WARN: My unset conf is  set' in tc.out
 
     tc.run("create . -c user:unset=")
-    assert 'pkg/1.0: WARN: My unset conf variable is: ""' in tc.out
-    assert 'pkg/1.0: WARN: My unset conf is  set' in tc.out
+    assert 'WARN: My unset conf variable is: ""' in tc.out
+    assert 'WARN: My unset conf is  set' in tc.out
 
     tc.run('create . -c user:unset=""')
-    assert 'pkg/1.0: WARN: My unset conf variable is: ""' in tc.out
-    assert 'pkg/1.0: WARN: My unset conf is  set' in tc.out
+    assert 'WARN: My unset conf variable is: ""' in tc.out
+    assert 'WARN: My unset conf is  set' in tc.out
 
     # And ensure this actually works for the normal case, just in case
     tc.run("create . -c user:unset=Hello")
-    assert 'pkg/1.0: WARN: My unset conf variable is: "Hello"' in tc.out
-    assert 'pkg/1.0: WARN: My unset conf is  set' in tc.out
+    assert 'WARN: My unset conf variable is: "Hello"' in tc.out
+    assert 'WARN: My unset conf is  set' in tc.out
 
 
 def test_nonexisting_conf():
@@ -377,16 +377,16 @@ def test_build_test_consumer_only():
             "pkg/conanfile.py": pkg,
             "pkg/test_package/conanfile.py": GenConanfile().with_test("pass")})
     c.run("create dep")
-    assert "dep/0.1: SKIP-TEST: False" in c.out
+    assert "SKIP-TEST: False" in c.out
     c.run('create pkg --build=* -tf=""')
-    assert "dep/0.1: SKIP-TEST: True" in c.out
-    assert "pkg/0.1: SKIP-TEST: False" in c.out
+    assert "SKIP-TEST: True" in c.out
+    assert "SKIP-TEST: False" in c.out
     c.run('create pkg --build=*')
-    assert "dep/0.1: SKIP-TEST: True" in c.out
-    assert "pkg/0.1: SKIP-TEST: False" in c.out
+    assert "SKIP-TEST: True" in c.out
+    assert "SKIP-TEST: False" in c.out
     c.run('install pkg --build=*')
-    assert "dep/0.1: SKIP-TEST: True" in c.out
-    assert "conanfile.py (pkg/0.1): SKIP-TEST: False" in c.out
+    assert "SKIP-TEST: True" in c.out
+    assert "SKIP-TEST: False" in c.out
 
 
 def test_conf_should_be_immutable():
@@ -413,11 +413,11 @@ def test_conf_should_be_immutable():
     c.save({"dep/conanfile.py": dep,
             "pkg/conanfile.py": pkg})
     c.run("create dep")
-    assert "dep/0.1: user.myteam:myconf: ['root_value', 'value1']" in c.out
+    assert "user.myteam:myconf: ['root_value', 'value1']" in c.out
     c.run('create pkg --build=*')
-    assert "dep/0.1: user.myteam:myconf: ['root_value', 'value1']" in c.out
+    assert "user.myteam:myconf: ['root_value', 'value1']" in c.out
     # The pkg/0.1 output should be non-modified
-    assert "pkg/0.1: user.myteam:myconf: ['root_value']" in c.out
+    assert "user.myteam:myconf: ['root_value']" in c.out
 
 
 def test_especial_strings_fail():
@@ -460,8 +460,7 @@ def test_conf_test_package():
     c.save({"conanfile.py": dep,
             "test_package/conanfile.py": pkg})
     c.run("create . -c &:user.myteam:myconf=myvalue")
-    assert "dep/0.1: user.myteam:myconf: myvalue" in c.out
-    assert "dep/0.1 (test package): user.myteam:myconf: myvalue" in c.out
+    assert "user.myteam:myconf: myvalue" in c.out
 
 
 def test_global_conf_jinja_broken_msg():

@@ -26,7 +26,8 @@ such as keeping deprecated behaviours:
 If the policy 'required_conan_version>=version' is defined, different behaviors can be enabled:
    - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id
    - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19849 for VirtualBuildEnv bindir path propagation based on requirement run trait
-   - If required_conan_version>=2.28, https://github.com/conan-io/conan/pull/19286 defaults the new 'consistent' trait to True for the host context, even when 'visible=False'"""
+   - If required_conan_version>=2.28, https://github.com/conan-io/conan/pull/19286 defaults the new 'consistent' trait to True for the host context, even when 'visible=False'
+   - If required_conan_version>=2.30, bugfix https://github.com/conan-io/conan/pull/20073 for propagation of the 'transitive_header' trait"""
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -133,6 +134,7 @@ BUILT_IN_CONFS = {
     "tools.google.bazel:bazelrc_path": "List of paths to bazelrc files to be used as 'bazel --bazelrc=rcpath1 ... build'",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
     "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
+    "tools.meson.mesontoolchain:extra_variables": "Dict of dicts defining extra variables per meson file section: 'properties', 'binaries', 'project_options'",
     "tools.microsoft:winsdk_version": "Use this winsdk_version in vcvars",
     "tools.microsoft:msvc_update": "Force the specific update irrespective of compiler.update (CMakeToolchain and VCVars)",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version (15, 16, 17) when using the msvc compiler. Necessary if compiler.version specifies a toolset that is not the IDE default",
@@ -162,6 +164,7 @@ BUILT_IN_CONFS = {
     "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc'}",
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:asmflags": "List of extra ASM flags used by CMakeToolchain",
     "tools.build:defines": "List of extra definition flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:sharedlinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:exelinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",

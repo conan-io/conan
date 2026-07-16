@@ -64,6 +64,60 @@ def test_autotools_bash_complete():
     assert "conanvcvars.bat" in bat_contents
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_autotools_bash_complete_ucrt64():
+    try:
+        msys2_path = tools_locations["msys2"]["system"]["path"]["Windows"]
+    except KeyError:  # pragma: no cover
+        pytest.skip("msys2 path not defined")  # pragma: no cover
+
+    client = TestClient(path_with_spaces=False)
+    profile_win = textwrap.dedent(f"""
+        [settings]
+        os=Windows
+        compiler=gcc
+        compiler.version=16
+        compiler.libcxx=libstdc++
+        compiler.cppstd=17
+        arch=x86_64
+        build_type=Release
+
+        [conf]
+        tools.microsoft.bash:subsystem=msys2-ucrt64
+        tools.microsoft.bash:path={msys2_path}/bash.exe
+        """)
+
+    main = gen_function_cpp(name="main")
+    makefile = gen_makefile(apps=["app"])
+
+    conanfile = textwrap.dedent(r"""
+        from conan import ConanFile
+        from conan.tools.gnu import Autotools
+
+        class TestConan(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            generators = "AutotoolsToolchain"
+
+            win_bash = True
+
+            def build(self):
+                autotools = Autotools(self)
+                autotools.make()
+                import os
+                path = os.path.abspath(".").replace("\\", "/")
+                self.run(f"{path}/app.exe")
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "Makefile": makefile,
+                 "app.cpp": main,
+                 "profile_win": profile_win})
+    client.run("build . -pr=profile_win")
+    check_exe_run(client.out, "main", "gcc", "16", "Release", "x86_64", cppstd="17",
+                  cxx11_abi=0, subsystem="ucrt64")
+    check_vs_runtime("app.exe", client, "15", "Debug", subsystem="ucrt64")
+
+
 @pytest.mark.slow
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool("msys2")
@@ -163,8 +217,8 @@ def test_add_msys2_path_automatically(scope):
     bash_path = None
     try:
         bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
-    except KeyError:
-        pytest.skip("msys2 path not defined")
+    except KeyError:  # pragma: no cover
+        pytest.skip("msys2 path not defined")  # pragma: no cover
 
     client.save_home({"global.conf": textwrap.dedent("""
             tools.microsoft.bash:subsystem=msys2
@@ -199,8 +253,8 @@ def test_conf_inherited_in_test_package():
     bash_path = None
     try:
         bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
-    except KeyError:
-        pytest.skip("msys2 path not defined")
+    except KeyError:  # pragma: no cover
+        pytest.skip("msys2 path not defined")  # pragma: no cover
 
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -362,10 +416,10 @@ def test_autotools_support_custom_make():
     try:
         bash_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/bash.exe"
         make_path = tools_locations["msys2"]["system"]["path"]["Windows"] + "/make.exe"
-    except KeyError:
-        pytest.skip("msys2 path not defined")
+    except KeyError:  # pragma: no cover
+        pytest.skip("msys2 path not defined")  # pragma: no cover
     if not os.path.exists(make_path):
-        pytest.skip("msys2 make not installed")
+        pytest.skip("msys2 make not installed")  # pragma: no cover
 
     make_path = make_path.replace("/", "\\")
     assert os.path.exists(make_path)

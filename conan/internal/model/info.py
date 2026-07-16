@@ -477,7 +477,7 @@ class ConanInfo:
     def validate(self):
         # If the options are not fully defined, this is also an invalid case
         try:
-            self.options.validate()
+            self.options.conan_validate()
         except ConanException as e:
             self.invalid = str(e)
 

@@ -4,7 +4,6 @@ from collections import OrderedDict
 
 from jinja2 import Template
 
-from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
 from conan.tools.cmake.layout import is_consumer
@@ -27,7 +26,6 @@ from conan.tools.microsoft import VCVars
 from conan.tools.microsoft.visual import vs_ide_version
 from conan.errors import ConanException
 from conan.internal.model.options import _PackageOption
-from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
 from conan.internal.util.files import save
 
 
@@ -97,6 +95,7 @@ class CMakeToolchain:
 
         self.extra_cxxflags = []
         self.extra_cflags = []
+        self.extra_asmflags = []
         self.extra_sharedlinkflags = []
         self.extra_exelinkflags = []
         self.add_rpath_link = False
@@ -181,7 +180,7 @@ class CMakeToolchain:
         if toolchain_file is None:  # The main toolchain file generated only if user dont define
             toolchain_file = self.filename
             save(os.path.join(self._conanfile.generators_folder, toolchain_file), self.content)
-            ConanOutput(str(self._conanfile)).info(f"CMakeToolchain generated: {toolchain_file}")
+            self._conanfile.output.info(f"CMakeToolchain generated: {toolchain_file}")
         # If we're using Intel oneAPI, we need to generate the environment file and run it
         if self._conanfile.settings.get_safe("compiler") == "intel-cc":
             IntelCC(self._conanfile).generate()

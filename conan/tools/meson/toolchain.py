@@ -9,6 +9,8 @@ from conan.internal.internal_tools import raise_on_universal_arch
 from conan.internal.model.pkg_type import PackageType
 from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, \
     resolve_apple_flags, apple_extra_flags
+from conan.tools.intel import IntelCC
+from conan.tools.intel.intel_cc import intel_cc_compilers
 from conan.tools.build.cross_building import cross_building, can_run
 from conan.tools.build.flags import (architecture_link_flag, libcxx_flags, architecture_flag,
                                      threads_flags)
@@ -255,6 +257,11 @@ class MesonToolchain:
             default_comp = "cl"
             default_comp_cpp = "cl"
 
+        intel_compilers = intel_cc_compilers(self._conanfile)
+        if intel_compilers:
+            default_comp = intel_compilers["c"]
+            default_comp_cpp = intel_compilers["cpp"]
+
         # Read configuration for sys_root property (honoring existing conf)
         self._sys_root = self._conanfile_conf.get("tools.build:sysroot", check_type=str)
 
@@ -490,7 +497,7 @@ class MesonToolchain:
             "as": self.as_,
             "windres": self.windres,
             "pkgconfig": self.pkgconfig,
-            "pkg-config": self.pkgconfig
+            "pkg-config": self.pkgconfig,
         }
         if self._is_apple_system:
             ret.update({
@@ -535,6 +542,15 @@ class MesonToolchain:
                     raise ConanException("MesonToolchain.subproject_options must be a list of dicts")
                 subproject_options[subproject] = [{k: to_meson_value(v) for k, v in keypair.items()}
                                                   for keypair in listkeypair]
+
+        # Apply extra_variables from conf at generation time so conf has priority over toolchain attributes
+        # Issue: https://github.com/conan-io/conan/issues/18718
+        extra_variables = self._conanfile_conf.get("tools.meson.mesontoolchain:extra_variables",
+                                                   default={}, check_type=dict)
+        self.properties.update(extra_variables.get("properties", {}))
+        self.binaries.update(extra_variables.get("binaries", {}))
+        self.project_options.update(extra_variables.get("project_options", {}))
+
         return {
             # https://mesonbuild.com/Machine-files.html#properties
             "properties": {k: to_meson_value(v) for k, v in self.properties.items()},
@@ -606,3 +622,5 @@ class MesonToolchain:
         save(self._filename, self._content)
         # FIXME: Should we check the OS and compiler to call VCVars?
         VCVars(self._conanfile).generate()
+        if self._conanfile.settings.get_safe("compiler") == "intel-cc":
+            IntelCC(self._conanfile).generate()

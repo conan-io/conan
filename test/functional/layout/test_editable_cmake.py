@@ -88,7 +88,7 @@ def test_editable_cmake_windows_folders():
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Ninja Multi-Config"])
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_editable_cmake_linux(generator):
     editable_cmake(generator)
 
@@ -151,7 +151,7 @@ def test_editable_cmake_windows_exe(generator):
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="Only linux")
 @pytest.mark.parametrize("generator", [None, "Ninja", "Ninja Multi-Config"])
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_editable_cmake_linux_exe(generator):
     editable_cmake_exe(generator)
 

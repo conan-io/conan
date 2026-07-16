@@ -83,6 +83,12 @@ def architecture_flag(conanfile):
                 "e2k-v7": "-march=elbrus-v7"}.get(arch, "")
     elif compiler == "emcc":
         if arch == "wasm64":
+            # Emscripten 6.0.0 added the standard `-m64` flag as an alias for
+            # the legacy `-sMEMORY64` setting and 6.0.1 deprecated `-sMEMORY64`
+            # in favor of it, which makes emcc emit a deprecation warning.
+            compiler_version = settings.get_safe("compiler.version")
+            if compiler_version and Version(compiler_version) >= "6.0.0":
+                return "-m64"
             return "-sMEMORY64=1"
     return ""
 
@@ -110,11 +116,15 @@ def libcxx_flags(conanfile):
     if disable_flag(conanfile, "libcxx"):
         return None, None
     compiler = conanfile.settings.get_safe("compiler")
+    os = conanfile.settings.get_safe("os")
     lib = stdlib11 = None
     if compiler == "apple-clang":
         # In apple-clang 2 only values atm are "libc++" and "libstdc++"
         lib = f'-stdlib={libcxx}'
     elif compiler in ("clang", "intel-cc", "emcc"):
+        if compiler == "intel-cc" and os == "Windows":
+            # Intel C++ on Windows always uses the UCRT/MSVCRT runtime
+            return None, None
         if libcxx == "libc++":
             lib = "-stdlib=libc++"
         elif libcxx == "libstdc++" or libcxx == "libstdc++11":

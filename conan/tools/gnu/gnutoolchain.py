@@ -11,6 +11,8 @@ from conan.tools.build.flags import architecture_flag, architecture_link_flag, b
     libcxx_flags, llvm_clang_front, threads_flags
 from conan.tools.env import Environment, VirtualBuildEnv
 from conan.tools.gnu.get_gnu_triplet import _get_gnu_triplet
+from conan.tools.intel import IntelCC
+from conan.tools.intel.intel_cc import intel_cc_compilers
 from conan.tools.microsoft import VCVars, msvc_runtime_flag, unix_path, check_min_vs, is_msvc
 from conan.internal.model.pkg_type import PackageType
 
@@ -236,6 +238,12 @@ class GnuToolchain:
                                   "OBJDUMP": ":",
                                   "RANLIB": ":",
                                   "STRIP": ":"}
+            # Default compilers for intel-cc
+            else:
+                intel_compilers = intel_cc_compilers(self._conanfile)
+                if intel_compilers:
+                    extra_env_vars["CC"] = intel_compilers["c"]
+                    extra_env_vars["CXX"] = intel_compilers["cpp"]
             extra_env_vars.update(self._resolve_compilers_mapping_variables())
         # Issue related: https://github.com/conan-io/conan/issues/15486
         if self._is_cross_building and self._conanfile.conf_build:
@@ -301,6 +309,14 @@ class GnuToolchain:
         conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
         vs_flag = self._add_msvc_flags(self.extra_cflags)
         ret = ret + self.build_type_flags + apple_flags + self.extra_cflags + vs_flag + conf_flags
+        return self._filter_list_empty_fields(ret)
+
+    @property
+    def asflags(self):
+        if not self._is_apple_system:
+            return []
+        ret = [self.arch_flag, self.sysroot_flag, self.apple_isysroot_flag, self.apple_arch_flag,
+               self.apple_min_version_flag]
         return self._filter_list_empty_fields(ret)
 
     @property
@@ -378,6 +394,8 @@ class GnuToolchain:
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
+        if self.asflags:
+            env.append("ASFLAGS", self.asflags)
         if self.rcflags:
             env.append("RCFLAGS", self.rcflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
@@ -399,3 +417,5 @@ class GnuToolchain:
         }
         save_toolchain_args(args, namespace=self._namespace)
         VCVars(self._conanfile).generate()
+        if self._conanfile.settings.get_safe("compiler") == "intel-cc":
+            IntelCC(self._conanfile).generate()
