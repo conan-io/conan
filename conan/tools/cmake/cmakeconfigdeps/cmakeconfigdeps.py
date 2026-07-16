@@ -269,6 +269,8 @@ class CMakeConfigDeps:
                                                            comp_name, check_type=list) or [],
                 "cmake_extra_interface_libs": self.get_property(
                     "cmake_extra_interface_libs", dep_conanfile, comp_name, check_type=list) or [],
+                "nosoname": self.get_property("nosoname", dep_conanfile, comp_name,
+                                              check_type=bool),
             }
 
         add(dep)

@@ -270,8 +270,8 @@ class TargetConfigurationTemplate2:
             link_languages = info.languages or self._conanfile.languages or []
             link_languages = ["CXX" if c == "C++" else c for c in link_languages]
             target["link_languages"] = link_languages
-            if lib_type == "SHARED" and self._cmakedeps.get_property("nosoname", self._conanfile,
-                                                                     comp_name, check_type=bool):
+            if lib_type == "SHARED" and self._cmake_prop(self._conanfile.ref.name, "nosoname",
+                                                         comp_name):
                 target["no_soname"] = True
         return target
 
