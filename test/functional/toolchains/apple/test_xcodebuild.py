@@ -131,7 +131,8 @@ def test_xcodebuild_test_different_sdk(client):
             exports_sources = "app.xcodeproj/*", "app/*"
             def build(self):
                 xcode = XcodeBuild(self)
-                xcode.build("app.xcodeproj")
+                # macOS 26 SDK requires signing/entitlements for a Command-line Tool, not needed for this test
+                xcode.build("app.xcodeproj", cli_args=["CODE_SIGNING_ALLOWED=NO"])
                 self.run("otool -l build/Release/app")
         """)
 
