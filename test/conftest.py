@@ -202,6 +202,10 @@ tools_locations = {
             "path": {"Linux": "/opt/intel/oneapi/compiler/2026.0/bin"},
             "root": {"Linux": "/opt/intel/oneapi"}
         }
+    },
+    'xcode_sdk': {
+        "26.0": {"path": {"Darwin": "/Applications/Xcode_26.0.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk"}},
+        "26.5": {"path": {"Darwin": "/Applications/Xcode_26.5.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk"}},
     }
 }
 
