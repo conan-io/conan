@@ -135,6 +135,18 @@ class TestDepDefinedMode:
         c.run("list pkg:*")
         assert "dep/1.0.0.1" in c.out
 
+        # More digits are ignored, same package_id
+        c.run("create dep --version=1.0.0.1.1")
+        c.run("create pkg")
+        new_static_id2 = c.created_package_id("pkg/0.1")
+        assert new_static_id2 == new_static_id
+        c.run("create pkg -o pkg/*:shared=True")
+        new_shared_id2 = c.created_package_id("pkg/0.1")
+        assert new_shared_id2 == new_shared_id
+        c.run("list pkg:*")
+        assert "dep/1.0.0.1" in c.out
+        assert "dep/1.0.0.1.1" not in c.out
+
     def test_dep_python_require_defined(self):
         c = TestClient()
         dep = textwrap.dedent("""
