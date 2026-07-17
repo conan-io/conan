@@ -141,16 +141,24 @@ def test_pkg_config_round_trip_cpp_info():
 def test_pkg_config_external_path():
     c = TestClient()
     conanfile = textwrap.dedent("""
+        import os
         from conan import ConanFile
         from conan.tools.gnu import PkgConfig
+        from conan.tools import CppInfo
 
         class Pkg(ConanFile):
-            name = "pkg"
+            name = "mypkg"
             version = "0.1"
 
-            def package_info(self):
+            def package(self):
                 pkg_config = PkgConfig(self, "mylibastral")
-                pkg_config.fill_cpp_info(self.cpp_info, is_system=False, system_libs=["m"])
+                cpp_info = CppInfo(self)
+                pkg_config.fill_cpp_info(cpp_info, is_system=False, system_libs=["m"])
+                cpp_info.save(os.path.join(self.package_folder, "cpp_info.json"))
+
+            def package_info(self):
+                self.output.info(f"MYCWD {os.getcwd()}")
+                self.cpp_info = CppInfo(self).load("cpp_info.json")
         """)
     prefix = "C:" if platform.system() == "Windows" else ""
     libastral_pc = textwrap.dedent("""\
@@ -176,16 +184,15 @@ def test_pkg_config_external_path():
             "mypcs/mylibastral.pc": libastral_pc,
             "profile": profile})
     c.run("create . -pr=profile")
-    # FIXME: THis install fails, no PKG_CONFIG_PATH injected
     # With the environment_update, it works
     # with environment_update({"PKG_CONFIG_PATH": f"{c.current_folder}/mypcs"}):
-    c.run("install --requires=pkg/0.1 -pr=profile -g CMakeDeps --build=*")
-    pkg_data = c.load("pkg-none-armv8-data.cmake")
-    assert 'set(pkg_DEFINITIONS_NONE "-D_USE_LIBASTRAL")' in pkg_data
-    assert 'set(pkg_SHARED_LINK_FLAGS_NONE "-Wl,--whole-archive")' in pkg_data
-    assert 'set(pkg_COMPILE_DEFINITIONS_NONE "_USE_LIBASTRAL")' in pkg_data
-    assert 'set(pkg_LIBS_NONE astral)' in pkg_data
-    assert 'set(pkg_SYSTEM_LIBS_NONE m)' in pkg_data
+    c.run("install --requires=mypkg/0.1 -pr=profile -g CMakeDeps")
+    pkg_data = c.load("mypkg-none-armv8-data.cmake")
+    assert 'set(mypkg_DEFINITIONS_NONE "-D_USE_LIBASTRAL")' in pkg_data
+    assert 'set(mypkg_SHARED_LINK_FLAGS_NONE "-Wl,--whole-archive")' in pkg_data
+    assert 'set(mypkg_COMPILE_DEFINITIONS_NONE "_USE_LIBASTRAL")' in pkg_data
+    assert 'set(mypkg_LIBS_NONE astral)' in pkg_data
+    assert 'set(mypkg_SYSTEM_LIBS_NONE m)' in pkg_data
     # paths
-    assert f'set(pkg_INCLUDE_DIRS_NONE "{prefix}/usr/local/include/libastral")' in pkg_data
-    assert f'set(pkg_LIB_DIRS_NONE "{prefix}/usr/local/lib/libastral")' in pkg_data
+    assert f'set(mypkg_INCLUDE_DIRS_NONE "{prefix}/usr/local/include/libastral")' in pkg_data
+    assert f'set(mypkg_LIB_DIRS_NONE "{prefix}/usr/local/lib/libastral")' in pkg_data
