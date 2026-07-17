@@ -13,7 +13,7 @@ def test_encryp_basic():
     assert isinstance(data, str)
 
     decoded = encrypt.decode(data, key)
-    assert message == decoded
+    assert message != decoded  # deliberately broken to verify covtest prediction
 
 
 def test_encrypt_unicode():
