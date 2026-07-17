@@ -40,9 +40,10 @@ jobs:
       python_versions_linux_windows: ${{ steps.set_versions.outputs.python_versions_linux_windows }}
       python_versions_macos: ${{ steps.set_versions.outputs.python_versions_macos }}
       run_slow_tests: ${{ steps.set_versions.outputs.run_slow_tests }}
+      run_covtest: ${{ steps.fetch_pr.outputs.run_covtest }}
     name: Determine Python versions
     steps:
-      - name: Fetch current PR body and check for slow-tests marker
+      - name: Fetch current PR body and check for slow-tests/covtest markers
         if: github.event_name == 'pull_request'
         id: fetch_pr
         run: |
@@ -53,6 +54,11 @@ jobs:
             echo "run_slow_tests=true" >> $GITHUB_OUTPUT
           else
             echo "run_slow_tests=false" >> $GITHUB_OUTPUT
+          fi
+          if echo "$BODY" | grep -Fq '$runcovtest'; then
+            echo "run_covtest=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_covtest=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Determine Python versions
@@ -76,28 +82,31 @@ jobs:
           fi
 
   linux_suite:
-    needs: [ensure_latest_tag_merged, set_python_versions]
+    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
     uses: ./.github/workflows/linux-tests.yml
     name: Linux test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
       run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
+      run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
   osx_suite:
-    needs: [ensure_latest_tag_merged, set_python_versions]
+    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
     uses: ./.github/workflows/osx-tests.yml
     name: OSX test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_macos }}
       run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
+      run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
   windows_suite:
-    needs: [ensure_latest_tag_merged, set_python_versions]
+    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
     uses: ./.github/workflows/win-tests.yml
     name: Windows test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
       run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
+      run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
   covtest_predict:
     runs-on: ubuntu-latest
