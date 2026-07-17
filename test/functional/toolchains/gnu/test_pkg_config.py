@@ -82,7 +82,7 @@ def test_pkg_config_round_trip_cpp_info():
         exe = tools_locations["pkg_config"]["exe"]
         os_ = platform.system()
         pkg_config_path = tools_locations["pkg_config"][version]["path"][os_] + "/" + exe
-    except KeyError:
+    except KeyError:  # pragma: no cover
         pytest.skip("pkg-config path not defined")  # pragma: no cover
 
     c = TestClient()
