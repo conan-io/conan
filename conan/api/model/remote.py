@@ -12,6 +12,7 @@ class Remote:
         but for the ``RemotesAPI.add()`` method, for which a new constructed object is necessary.
         It is recommended to use named arguments like ``Remote(..., verify_ssl=False)`` in
         the constructor.
+
         :param name: The name of the remote.
         :param url: The URL of the remote repository (or local folder for "local-recipes-index").
         :param verify_ssl: Enable SSL Certificate validation.

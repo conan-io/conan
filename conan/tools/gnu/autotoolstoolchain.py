@@ -239,6 +239,14 @@ class AutotoolsToolchain:
         return self._filter_list_empty_fields(ret)
 
     @property
+    def asflags(self):
+        if not is_apple_os(self._conanfile):
+            return []
+        ret = [self.arch_flag, self.sysroot_flag, self.apple_isysroot_flag, self.apple_arch_flag,
+               self.apple_min_version_flag]
+        return self._filter_list_empty_fields(ret)
+
+    @property
     def ldflags(self):
         ret = [self.arch_flag, self.sysroot_flag, self.arch_ld_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
@@ -314,6 +322,8 @@ class AutotoolsToolchain:
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
+        if self.asflags:
+            env.append("ASFLAGS", self.asflags)
         if self.rcflags:
             env.append("RCFLAGS", self.rcflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)

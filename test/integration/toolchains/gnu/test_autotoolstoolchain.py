@@ -433,3 +433,27 @@ def test_thread_flags(threads, flags):
         assert f'export CXXFLAGS="${{CXXFLAGS:-}}${{CXXFLAGS:+ }}-stdlib=libc++ {flags}"' in toolchain
         assert f'export CFLAGS="${{CFLAGS:-}}${{CFLAGS:+ }}{flags}"' in toolchain
         assert f'export LDFLAGS="${{LDFLAGS:-}}${{LDFLAGS:+ }}{flags}"' in toolchain
+
+
+def test_autotoolstoolchain_asflags_sysroot():
+    """Test that sysroot and arch flags are propagated to ASFLAGS."""
+    profile = textwrap.dedent("""
+        [settings]
+        os=Macos
+        arch=armv8
+        compiler=gcc
+        compiler.version=11
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:sysroot=/my/sysroot
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type") \
+        .with_generator("AutotoolsToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conanautotoolstoolchain.sh")
+    assert "ASFLAGS" in toolchain
+    assert "--sysroot /my/sysroot" in toolchain

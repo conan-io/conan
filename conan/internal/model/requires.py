@@ -1,7 +1,7 @@
 from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
-from conan.internal.model.version_range import VersionRange
+from conan.internal.model.version_range import VersionRange, required_conan_version_policy
 
 
 class Requirement:
@@ -21,6 +21,7 @@ class Requirement:
         self._run = run  # node contains executables, shared libs or data necessary at host run time
         self._visible = visible  # Even if not libsed or visible, the node is unique, can conflict
         self._transitive_headers = transitive_headers
+        self._fixed_transitive_headers = transitive_headers
         self._transitive_libs = transitive_libs
         self._test = test
         self._package_id_mode = package_id_mode
@@ -182,11 +183,13 @@ class Requirement:
         return result
 
     def copy_requirement(self):
-        return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
+        requirement = Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
                            run=self.run, visible=self.visible,
                            transitive_headers=self.transitive_headers,
                            transitive_libs=self.transitive_libs,
                            consistent=self.consistent)
+        requirement._fixed_transitive_headers = self._fixed_transitive_headers
+        return requirement
 
     @property
     def version_range(self):
@@ -236,6 +239,7 @@ class Requirement:
         src_pkg_type = src_node.conanfile.package_type
         if src_pkg_type is PackageType.HEADER:
             set_if_none("_transitive_headers", True)
+            set_if_none("_fixed_transitive_headers", True)
             set_if_none("_transitive_libs", True)
 
     def __hash__(self):
@@ -275,6 +279,7 @@ class Requirement:
         self.force |= other.force
         self.direct |= other.direct
         self.transitive_headers = self.transitive_headers or other.transitive_headers
+        self._fixed_transitive_headers = self._fixed_transitive_headers or other._fixed_transitive_headers
         self.transitive_libs = self.transitive_libs or other.transitive_libs
         if not other.test:
             self.test = False  # it it was previously a test, but also required by non-test
@@ -286,9 +291,9 @@ class Requirement:
             self.package_id_mode = other.package_id_mode
         self.required_nodes.update(other.required_nodes)
 
-    def transform_downstream(self, pkg_type, require, dep_pkg_type):
+    def transform_downstream(self, pkg_type, require, dep_pkg_type, source):
         """
-        consumer ---self--->  foo<pkg_type> ---require---> bar<dep_pkg_type>
+        consumer ---self--->  source<pkg_type> ---require---> bar<dep_pkg_type>
             \\ -------------------????-------------------- /
         Compute new Requirement to be applied to "consumer" translating the effect of the dependency
         to such "consumer".
@@ -350,10 +355,18 @@ class Requirement:
 
         assert require.visible, "at this point require should be visible"
 
-        if require.transitive_headers is not None:
-            downstream_require.headers = require.headers and require.transitive_headers
+        transitive_propagation = required_conan_version_policy(source, "2.29.9")
+        if transitive_propagation:
+            if require._fixed_transitive_headers is not None:
+                downstream_require.headers = require.headers and require._fixed_transitive_headers
+        else:
+            if require.transitive_headers is not None:
+               downstream_require.headers = require.headers and require.transitive_headers
+
         if self.transitive_headers is not None:
             downstream_require.transitive_headers = self.transitive_headers
+        if self._fixed_transitive_headers is not None:
+            downstream_require._fixed_transitive_headers = require._fixed_transitive_headers and self._fixed_transitive_headers
 
         if require.transitive_libs is not None:
             downstream_require.libs = require.libs and require.transitive_libs

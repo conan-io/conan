@@ -74,13 +74,28 @@ class _SystemPackageManagerTool:
         self._conanfile.output.info("A default system package manager couldn't be found for {}, "
                                     "system packages will not be installed.".format(os_name))
 
+    def _is_valid_explicit_arch(self, explicit_arch):
+        return True
+
+    def _parse_explicit_arch_suffix(self, name):
+        if not self._arch_separator or self._arch_separator not in name:
+            return name, ""
+        base_name, _, explicit_arch = name.rpartition(self._arch_separator)
+        if base_name and explicit_arch and self._is_valid_explicit_arch(explicit_arch):
+            return base_name, explicit_arch
+        return name, ""
+
     def _split_package_name(self, package, host_package):
 
         name, version = (package.split("=")[0], package.split("=")[1]) if "=" in package else (package, "")
         arch_separator, arch_name = "", ""
         version_separator = self.version_separator if version else ""
 
-        if self._arch in self._arch_names and cross_building(self._conanfile) and host_package  \
+        name, explicit_arch = self._parse_explicit_arch_suffix(name)
+        if explicit_arch:
+            arch_separator = self._arch_separator
+            arch_name = explicit_arch
+        elif self._arch in self._arch_names and cross_building(self._conanfile) and host_package \
                 and not self._build_only:
             arch_separator = self._arch_separator
             arch_name = self._arch_names.get(self._arch)
@@ -342,6 +357,10 @@ class Yum(_SystemPackageManagerTool):
                             "s390x": "s390x",
                             "riscv64": "riscv64"} if arch_names is None else arch_names
         self._arch_separator = "."
+
+    def _is_valid_explicit_arch(self, explicit_arch):
+        # '.' is common in package names (e.g. libfoo.bar); only split when suffix is a known arch.
+        return explicit_arch in self._arch_names.values()
 
 
 class Dnf(Yum):

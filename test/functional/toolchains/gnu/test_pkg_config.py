@@ -74,7 +74,7 @@ class TestPkgConfig:
         assert "VARIABLES: /usr/local" in c.out
 
 
-def test_pkg_config_round_tripe_cpp_info():
+def test_pkg_config_round_trip_cpp_info():
     """ test that serialize and deserialize CppInfo works
     """
     try:
@@ -82,9 +82,8 @@ def test_pkg_config_round_tripe_cpp_info():
         exe = tools_locations["pkg_config"]["exe"]
         os_ = platform.system()
         pkg_config_path = tools_locations["pkg_config"][version]["path"][os_] + "/" + exe
-    except KeyError:
-        pytest.skip("pkg-config path not defined")
-        return
+    except KeyError:  # pragma: no cover
+        pytest.skip("pkg-config path not defined")  # pragma: no cover
 
     c = TestClient()
     conanfile = textwrap.dedent("""

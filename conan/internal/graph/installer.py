@@ -439,11 +439,13 @@ class BinaryInstaller:
                     # convert directory entries to be relative to the declared folders.build
                     build_cppinfo = conanfile.cpp.build
                     build_cppinfo.set_relative_base_folder(conanfile.build_folder)
+                    build_cppinfo.set_relative_base_relative_folder(conanfile.folders.build)
                     conanfile.layouts.build.set_relative_base_folder(conanfile.build_folder)
 
                     # convert directory entries to be relative to the declared folders.source
                     source_cppinfo = conanfile.cpp.source
                     source_cppinfo.set_relative_base_folder(conanfile.source_folder)
+                    source_cppinfo.set_relative_base_relative_folder(conanfile.folders.source)
                     conanfile.layouts.source.set_relative_base_folder(conanfile.source_folder)
 
                     full_editable_cppinfo = CppInfo()

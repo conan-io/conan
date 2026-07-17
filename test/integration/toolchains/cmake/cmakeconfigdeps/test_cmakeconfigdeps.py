@@ -1060,3 +1060,153 @@ def test_implib_location_explicit_extension():
     assert "PROPERTIES IMPORTED_IMPLIB_RELEASE" in targets
     # And we find the dll
     assert "PROPERTIES IMPORTED_LOCATION_RELEASE" in targets
+
+
+class TestEditableExeLocation:
+    @pytest.mark.parametrize("absolute", [False, True])
+    def test_editable_exe(self, absolute):
+        # https://github.com/conan-io/conan/issues/20081
+        loc = 'self.package_folder,' if absolute else ''
+        conanfile = textwrap.dedent(f"""
+            import os
+            from conan import ConanFile
+
+            class AppConan(ConanFile):
+                name = "app"
+                version = "0.1"
+                package_type = "application"
+
+                def layout(self):
+                    self.folders.build = "mybuild"
+                    self.cpp.build.exe = "myexe"
+                    self.cpp.build.location = "myexe.exe"
+
+                def package_info(self):
+                    self.cpp_info.exe = "myexe"
+                    self.cpp_info.location = os.path.join({loc} "bin", "myexe.exe")
+            """)
+
+        c = TestClient()
+        c.save({"app/conanfile.py": conanfile})
+
+        c.run("create app")
+        c.run("install --requires=app/0.1 -g CMakeConfigDeps")
+        content = c.load("app-Targets-release.cmake")
+        assert "${app_PACKAGE_FOLDER_RELEASE}/bin/myexe.exe" in content
+
+        # Deployers are not really affected, CMakeConfigDeps already use relative paths
+        c.run("install --requires=app/0.1 -g CMakeConfigDeps --deployer=full_deploy")
+        content = c.load("app-Targets-release.cmake")
+        assert "${app_PACKAGE_FOLDER_RELEASE}/bin/myexe.exe" in content
+
+        c.run("editable add app")
+        c.run("install --requires=app/0.1 -g CMakeConfigDeps")
+        content = c.load("app-Targets-release.cmake")
+        assert "${app_PACKAGE_FOLDER_RELEASE}/mybuild/myexe.exe" in content
+
+    @pytest.mark.parametrize("absolute", [False, True])
+    def test_editable_component(self, absolute):
+        # https://github.com/conan-io/conan/issues/20081 (component variant)
+        # Same issue for cpp.build.components[...].location
+        loc = 'self.package_folder,' if absolute else ''
+        conanfile = textwrap.dedent(f"""
+            import os
+            from conan import ConanFile
+
+            class AppConan(ConanFile):
+                name = "app"
+                version = "0.1"
+                package_type = "application"
+
+                def layout(self):
+                    self.folders.build = "mybuild"
+                    self.cpp.build.components["mycomp"].exe = "myexe"
+                    self.cpp.build.components["mycomp"].location = "myexe.exe"
+
+                def package_info(self):
+                    self.cpp_info.components["mycomp"].exe = "myexe"
+                    self.cpp_info.components["mycomp"].location = os.path.join({loc} "bin",
+                                                                               "myexe.exe")
+            """)
+
+        c = TestClient()
+        c.save({"app/conanfile.py": conanfile})
+
+        c.run("create app")
+        c.run("install --requires=app/0.1 -g CMakeConfigDeps")
+        content = c.load("app-Targets-release.cmake")
+        assert "${app_PACKAGE_FOLDER_RELEASE}/bin/myexe.exe" in content
+
+        # Deployers are not really affected, CMakeConfigDeps already use relative paths
+        c.run("install --requires=app/0.1 -g CMakeConfigDeps --deployer=full_deploy")
+        content = c.load("app-Targets-release.cmake")
+        assert "${app_PACKAGE_FOLDER_RELEASE}/bin/myexe.exe" in content
+
+        c.run("editable add app")
+        c.run("install --requires=app/0.1 -g CMakeConfigDeps")
+
+        content = c.load("app-Targets-release.cmake")
+        assert "${app_PACKAGE_FOLDER_RELEASE}/mybuild/myexe.exe" in content
+
+
+class TestNoSoname:
+
+    def test_cmakeconfigdeps_nosoname_recipe(self):
+        """nosoname set via cpp_info.set_property in the recipe is honoured"""
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.libs = ["dep"]
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.location = "lib/dep.so"
+                    self.cpp_info.set_property("nosoname", True)
+            """)
+        c.save({"dep/conanfile.py": dep})
+        c.run("create dep")
+        c.run("install --requires=dep/0.1 -g CMakeConfigDeps")
+        cmake = c.load("dep-Targets-release.cmake")
+        assert "IMPORTED_NO_SONAME_RELEASE TRUE" in cmake
+
+    def test_cmakeconfigdeps_nosoname_component(self):
+        """nosoname on a component sets IMPORTED_NO_SONAME for that component's target"""
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.components["mycomp"].libs = ["mylib"]
+                    self.cpp_info.components["mycomp"].type = "shared-library"
+                    self.cpp_info.components["mycomp"].location = "lib/mylib.so"
+                    self.cpp_info.components["mycomp"].set_property("nosoname", True)
+            """)
+        c.save({"dep/conanfile.py": dep})
+        c.run("create dep")
+        c.run("install --requires=dep/0.1 -g CMakeConfigDeps")
+        cmake = c.load("dep-Targets-release.cmake")
+        assert "IMPORTED_NO_SONAME_RELEASE TRUE" in cmake
+
+    def test_cmakeconfigdeps_nosoname_static_ignored(self):
+        """nosoname is ignored for static libraries"""
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.libs = ["dep"]
+                    self.cpp_info.type = "static-library"
+                    self.cpp_info.location = "lib/dep.a"
+                    self.cpp_info.set_property("nosoname", True)
+            """)
+        c.save({"dep/conanfile.py": dep})
+        c.run("create dep")
+        c.run("install --requires=dep/0.1 -g CMakeConfigDeps")
+        cmake = c.load("dep-Targets-release.cmake")
+        assert "IMPORTED_NO_SONAME" not in cmake
