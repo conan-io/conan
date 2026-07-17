@@ -96,9 +96,34 @@ def test_unused_requirement(component):
             "conanfile.py": conanfile})
     t.run('create top --name=top --version=version')
     t.run('create top --name=top2 --version=version')
+    t.run('create .', assert_error=True)
+    assert "ERROR: wrong/version: package_info(): The direct dependency 'top2' is not used " \
+           "by any '(cpp_info/components).requires'. If this is intentional, add it to " \
+           "'self.cpp_info.not_required'." in t.out
+
+
+@pytest.mark.parametrize("component", [True, False])
+def test_not_required(component):
+    """ 'cpp_info.not_required' lets a recipe declare that a direct dependency is intentionally
+        not used in '(cpp_info/components).requires', silencing the check.
+    """
+    t = TestClient(light=True)
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            name = "wrong"
+            version = "version"
+            requires = "top/version", "top2/version"
+            def package_info(self):
+                self.cpp_info{'.components["foo"]' if component else ''}.requires = ["top::other"]
+                self.cpp_info.not_required = ["top2"]
+    """)
+    top = GenConanfile().with_package_info({"components": {"cmp1": {"libs": ["top_cmp1"]}}})
+    t.save({"top/conanfile.py": top, "conanfile.py": conanfile})
+    t.run('create top --name=top --version=version')
+    t.run('create top --name=top2 --version=version')
     t.run('create .')
-    assert "WARN: wrong/version: package_info(): The direct dependency 'top2' is not used " \
-           "by any '(cpp_info/components).requires'." in t.out
+    assert "'top2' is not used by any" not in t.out
 
 
 def test_unused_requirement_not_propagated():
