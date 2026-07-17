@@ -105,7 +105,7 @@ def test_project_xcodebuild(client):
     client.run("install . -s build_type=Debug --build=missing")
     client.run_command("xcodegen generate")
     client.run("create . --build=missing -s os.version=15.0 -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
-    assert "MACOSX_DEPLOYMENT_TARGET=15.0" in client.out
+    assert "MACOSX_DEPLOYMENT_TARGET=15.0" not in client.out  # deliberately broken to verify covtest prediction
     assert "xcodebuild: error: invalid option" not in client.out
     assert "hello/0.1: Hello World Release!" in client.out
     assert "App Release!" in client.out
@@ -132,7 +132,7 @@ def test_xcodebuild_test_different_sdk(client):
             def build(self):
                 xcode = XcodeBuild(self)
                 # macOS 26 SDK requires signing/entitlements for a Command-line Tool, not needed for this test
-                xcode.build("app.xcodeproj")
+                xcode.build("app.xcodeproj", cli_args=["CODE_SIGNING_ALLOWED=NO"])
                 self.run("otool -l build/Release/app")
         """)
 
