@@ -1229,7 +1229,7 @@ def test_pkg_with_duplicated_component_requires():
     assert "Requires: mylib-mycomponent" == get_requires_from_content(pc_content)
 
 
-def test_pkg_skip_component():
+def test_pkg_none_requirement_without_components():
     conanfile_a = textwrap.dedent("""
         from conan import ConanFile
         class PkgConfigConan(ConanFile):
@@ -1277,12 +1277,14 @@ def test_pkg_skip_component():
     assert "none" not in pkg_b_requires
     assert "b-cmp1.pc" in install_contents
     b_cmp1_content = tc.load(os.path.join("out", "b-cmp1.pc"))
+    # Related issue: https://github.com/conan-io/conan-center-index/issues/30526
     assert "Requires:" not in b_cmp1_content
+    assert "none" not in b_cmp1_content  # redundant, but just in case
+    assert ("You're requiring pkg_a/0.1 that has pkg_config_name='none' "
+            "and no components defined") in tc.out
     assert "pkg_c.pc" in install_contents
     # Components can not skip the PC file creation
     assert "none.pc" in install_contents
-    # Related issue: https://github.com/conan-io/conan-center-index/issues/30526
-    assert "none" not in b_cmp1_content
 
 
 def test_pkg_none_requirement_with_default_components():
@@ -1327,7 +1329,7 @@ def test_pkg_none_requirement_with_default_components():
     b_cmp1_content = tc.load(os.path.join("out", "b-cmp1.pc"))
     b_cmp1_requires = get_requires_from_content(b_cmp1_content)
     assert "a-cmp1" in b_cmp1_requires
-    assert "a-cmp2" not in b_cmp1_requires
+    assert "a-cmp2" not in b_cmp1_requires  # not in default_components
     assert "none" not in b_cmp1_requires
     assert "pkg_a" not in b_cmp1_requires
 
