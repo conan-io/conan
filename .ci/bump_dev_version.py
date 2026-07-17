@@ -1,4 +1,5 @@
 import os
+import re
 import time
 
 
@@ -16,7 +17,9 @@ def bump_dev():
     vfile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../conan/__init__.py")
     snapshot = "%s" % int(time.time())
     replace_in_file(vfile, "-dev'", "-dev%s'" % snapshot)
+    with open(vfile) as handle:
+        return re.search(r"__version__ = '([^']+)'", handle.read()).group(1)
 
 
 if __name__ == "__main__":
-    bump_dev()
+    print(bump_dev())

@@ -1,15 +1,33 @@
 import copy
+import hashlib
 import numbers
+import platform
 import re
 import os
 import fnmatch
+import textwrap
 
-from collections import OrderedDict
+from jinja2 import Environment, FileSystemLoader
 
 from conan.errors import ConanException
+from conan.internal.api.detect import detect_api
+from conan.internal.cache.home_paths import HomePaths
 from conan.internal.model.options import _PackageOption
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.model.settings import SettingsItem
+from conan.internal.util.files import load, save
+
+
+policies_msg = """\
+A list of opt-in behaviors that can be defined in the configuration to control specific aspects of Conan's behavior,
+such as keeping deprecated behaviours:
+   - deprecated_build_order_args: Allow deprecated skipping of --order-by argument in conan graph build-order - To be removed in Conan 2.32
+   - deprecated_empty_version_range: Allow using deprecated empty version range expressions - To be removed in Conan 2.32
+If the policy 'required_conan_version>=version' is defined, different behaviors can be enabled:
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id
+   - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19849 for VirtualBuildEnv bindir path propagation based on requirement run trait
+   - If required_conan_version>=2.28, https://github.com/conan-io/conan/pull/19286 defaults the new 'consistent' trait to True for the host context, even when 'visible=False'
+   - If required_conan_version>=2.30, bugfix https://github.com/conan-io/conan/pull/20073 for propagation of the 'transitive_header' trait"""
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -22,15 +40,16 @@ BUILT_IN_CONFS = {
     "core:default_build_profile": "Defines the default build profile ('default' by default)",
     "core:allow_uppercase_pkg_names": "Temporarily (will be removed in 2.X) allow uppercase names",
     "core.version_ranges:resolve_prereleases": "Whether version ranges can resolve to pre-releases or not",
-    "core.upload:retry": "Number of retries in case of failure when uploading to Conan server",
-    "core.upload:retry_wait": "Seconds to wait between upload attempts to Conan server",
+    "core.upload:retry": "(int, default: 1) Number of retries in case of failure when uploading to Conan server",
+    "core.upload:retry_wait": "(int, default: 5s) Seconds to wait between upload attempts to Conan server",
     "core.upload:parallel": "Number of concurrent threads to upload packages",
     "core.download:parallel": "Number of concurrent threads to download packages",
-    "core.download:retry": "Number of retries in case of failure when downloading from Conan server",
-    "core.download:retry_wait": "Seconds to wait between download attempts from Conan server",
+    "core.download:retry": " (int, default: 2) Number of retries in case of failure when downloading from Conan server",
+    "core.download:retry_wait": "(int, default: 1s) Seconds to wait between download attempts from Conan server",
     "core.download:download_cache": "Define path to a file download cache",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
+    "core:policies": policies_msg,
     # Sources backup
     "core.sources:download_cache": "Folder to store the sources backup",
     "core.sources:download_urls": "List of URLs to download backup sources from",
@@ -52,11 +71,16 @@ BUILT_IN_CONFS = {
     "core.net.http:cacert_path": "Path containing a custom Cacert file",
     "core.net.http:client_cert": "Path or tuple of files containing a client cert (and key)",
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
-    # Gzip compression
+    # Compression for `conan upload`
+    "core.upload:compression_format": "The compression format used when uploading Conan packages. "
+                                      "Possible values: 'zst', 'xz', 'gz' (default=gz)",
     "core.gzip:compresslevel": "The Gzip compression level for Conan artifacts (default=9)",
+    "core:compresslevel": "The compression level for Conan artifacts (default zstd=3, gz=9)",
     # Excluded from revision_mode = "scm" dirty and Git().is_dirty() checks
     "core.scm:excluded": "List of excluded patterns for builtin git dirty checks",
     "core.scm:local_url": "By default allows to store local folders as remote url, but not upload them. Use 'allow' for allowing upload and 'block' to completely forbid it",
+    # Compatibility opt-in, to be removed in future versions as optimized behavior becomes default
+    "core.graph:compatibility_mode": "(Experimental) Set this to 'optimized' to enable the improved compatibility behaviour when querying multiple compatible binaries in remotes",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
@@ -64,6 +88,7 @@ BUILT_IN_CONFS = {
     "tools.build:download_source": "Force download of sources for every package",
     "tools.build:jobs": "Default compile jobs number -jX Ninja, Make, /MP VS (default: max CPUs)",
     "tools.build:sysroot": "Pass the --sysroot=<tools.build:sysroot> flag if available. (None by default)",
+    "tools.build:add_rpath_link": "Add -Wl,-rpath-link flags pointing to all lib directories for host dependencies (CMake and Meson toolchains)",
     "tools.build.cross_building:can_run": "(boolean) Indicates whether is possible to run a non-native app on the same architecture. It's used by 'can_run' tool",
     "tools.build.cross_building:cross_build": "(boolean) Decides whether cross-building or not regardless of arch/OS settings. Used by 'cross_building' tool",
     "tools.build:verbosity": "Verbosity of build systems if set. Possible values are 'quiet' and 'verbose'",
@@ -86,10 +111,12 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",
     "tools.cmake:cmake_program": "Path to CMake executable",
     "tools.cmake.cmakedeps:new": "Use the new CMakeDeps generator",
-    "tools.cmake:install_strip": "Add --strip to cmake.install()",
+    "tools.cmake:ctest_args": "Add extra arguments to CMake.ctest() runner command line",
+    "tools.cmake:configure_args": "Add extra arguments to CMake.configure() command line",
+    "tools.cmake:install_strip": "(Deprecated) Add --strip to cmake.install(). Use tools.build:install_strip instead",
     "tools.deployer:symlinks": "Set to False to disable deployers copying symlinks",
-    "tools.files.download:retry": "Number of retries in case of failure when downloading",
-    "tools.files.download:retry_wait": "Seconds to wait between download attempts",
+    "tools.files.download:retry": "(int, default: 2) Number of retries in case of failure when downloading",
+    "tools.files.download:retry_wait": "(int, default: 5s) Seconds to wait between download attempts",
     "tools.files.download:verify": "If set, overrides recipes on whether to perform SSL verification for their downloaded files. Only recommended to be set while testing",
     "tools.files.unzip:filter": "Define tar extraction filter: 'fully_trusted', 'tar', 'data'",
     "tools.graph:vendor": "(Experimental) If 'build', enables the computation of dependencies of vendoring packages to build them",
@@ -97,14 +124,17 @@ BUILT_IN_CONFS = {
     "tools.graph:skip_build": "(Experimental) Do not expand build/tool_requires",
     "tools.graph:skip_test": "(Experimental) Do not expand test_requires. If building it might need 'tools.build:skip_test=True'",
     "tools.gnu:make_program": "Indicate path to make program",
+    "tools.gnu:disable_flags": "Disable the automatic addition of flags to some build systems. List of possible values: ['arch', 'arch_link', 'libcxx', 'build_type', 'build_type_link', 'threads','cppstd', 'cstd']",
     "tools.gnu:define_libcxx11_abi": "Force definition of GLIBCXX_USE_CXX11_ABI=1 for libstdc++11",
     "tools.gnu:pkg_config": "Path to pkg-config executable used by PkgConfig build helper",
     "tools.gnu:build_triplet": "Custom build triplet to pass to Autotools scripts",
     "tools.gnu:host_triplet": "Custom host triplet to pass to Autotools scripts",
+    "tools.gnu:extra_configure_args": "List of extra arguments to pass to configure when using AutotoolsToolchain and GnuToolchain",
     "tools.google.bazel:configs": "List of Bazel configurations to be used as 'bazel build --config=config1 ...'",
     "tools.google.bazel:bazelrc_path": "List of paths to bazelrc files to be used as 'bazel --bazelrc=rcpath1 ... build'",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
     "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
+    "tools.meson.mesontoolchain:extra_variables": "Dict of dicts defining extra variables per meson file section: 'properties', 'binaries', 'project_options'",
     "tools.microsoft:winsdk_version": "Use this winsdk_version in vcvars",
     "tools.microsoft:msvc_update": "Force the specific update irrespective of compiler.update (CMakeToolchain and VCVars)",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version (15, 16, 17) when using the msvc compiler. Necessary if compiler.version specifies a toolset that is not the IDE default",
@@ -114,31 +144,46 @@ BUILT_IN_CONFS = {
     "tools.microsoft.msbuildtoolchain:compile_options": "Dictionary with MSBuild compiler options",
     "tools.microsoft.bash:subsystem": "The subsystem to be used when conanfile.win_bash==True. Possible values: msys2, msys, cygwin, wsl, sfu",
     "tools.microsoft.bash:path": "The path to the shell to run when conanfile.win_bash==True",
-    "tools.microsoft.bash:active": "If Conan is already running inside bash terminal in Windows",
+    "tools.microsoft.bash:active": "Set True only when Conan runs in a POSIX Bash (MSYS2/Cygwin) where Python's subprocess (shell=True) uses a POSIX-compatible shell (e.g., /bin/sh). Do not set when using Conan from cmd/PowerShell or with native Windows Python ('win32').",
     "tools.intel:installation_path": "Defines the Intel oneAPI installation root path",
     "tools.intel:setvars_args": "Custom arguments to be passed onto the setvars.sh|bat script from Intel oneAPI",
     "tools.system.package_manager:tool": "Default package manager tool: 'apk', 'apt-get', 'yum', 'dnf', 'brew', 'pacman', 'choco', 'zypper', 'pkg' or 'pkgutil'",
     "tools.system.package_manager:mode": "Mode for package_manager tools: 'check', 'report', 'report-installed' or 'install'",
     "tools.system.package_manager:sudo": "Use 'sudo' when invoking the package manager tools in Linux (False by default)",
     "tools.system.package_manager:sudo_askpass": "Use the '-A' argument if using sudo in Linux to invoke the system package manager (False by default)",
+    "tools.system.pyenv:python_interpreter": "(Experimental) Path to the Python interpreter to be used to create the virtualenv",
+    "tools.system.pipenv:python_interpreter": "(Deprecated) Use 'tools.system.pyenv:python_interpreter' instead. Path to the Python interpreter to be used to create the virtualenv",
     "tools.apple:sdk_path": "Path to the SDK to be used",
     "tools.apple:enable_bitcode": "(boolean) Enable/Disable Bitcode Apple Clang flags",
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
-    "tools.env.virtualenv:powershell": "If specified, it generates PowerShell launchers (.ps1). Use this configuration setting the PowerShell executable you want to use (e.g., 'powershell.exe' or 'pwsh'). Setting it to True or False is deprecated as of Conan 2.11.0.",
+    "tools.env.virtualenv:powershell": "If specified, it generates PowerShell launchers (.ps1). Use this configuration setting the PowerShell executable you want to use (e.g., 'powershell.exe' or 'pwsh')",
+    "tools.env:dotenv": "(Experimental) Generate dotenv environment files",
+    "tools.env:deactivation_mode": "(Experimental) If 'function', generate a deactivate function instead of a script to unset the environment variables",
     # Compilers/Flags configurations
     "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc'}",
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:asmflags": "List of extra ASM flags used by CMakeToolchain",
     "tools.build:defines": "List of extra definition flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:sharedlinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:exelinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:rcflags": "List of extra RC (resource compiler) flags used by different toolchains like CMakeToolchain, MSBuildToolchain and MesonToolchain",
     "tools.build:linker_scripts": "List of linker script files to pass to the linker used by different toolchains like CMakeToolchain, AutotoolsToolchain, and MesonToolchain",
+    # Toolchain installation
+    "tools.build:install_strip": "(boolean or list) True/False to strip on install for every CMake, Meson and Autotools "
+                                 "integration, or a list of 'cmake', 'meson', 'autotools' to strip only for those.",
     # Package ID composition
     "tools.info.package_id:confs": "List of existing configuration to be part of the package ID",
 }
 
 BUILT_IN_CONFS = {key: value for key, value in sorted(BUILT_IN_CONFS.items())}
+
+
+_BUILT_IN_CONFS_TYPES = {
+    "core:required_conan_version": str,
+    "tools.microsoft:msvc_update": str
+}
 
 CORE_CONF_PATTERN = re.compile(r"^(core\..+|core):.*")
 TOOLS_CONF_PATTERN = re.compile(r"^(tools\..+|tools):.*")
@@ -147,8 +192,7 @@ USER_CONF_PATTERN = re.compile(r"^(user\..+|user):.*")
 
 def _is_profile_module(module_name):
     # These are the modules that are propagated to profiles and user recipes
-    _profiles_modules_patterns = USER_CONF_PATTERN, TOOLS_CONF_PATTERN
-    return any(pattern.match(module_name) for pattern in _profiles_modules_patterns)
+    return TOOLS_CONF_PATTERN.match(module_name) or USER_CONF_PATTERN.match(module_name)
 
 
 # FIXME: Refactor all the next classes because they are mostly the same as
@@ -159,16 +203,22 @@ class _ConfVarPlaceHolder:
 
 class _ConfValue:
 
-    def __init__(self, name, value, path=False, update=None):
-        if name != name.lower():
-            raise ConanException("Conf '{}' must be lowercase".format(name))
-        self._name = name
+    def __init__(self, name, value, path=False, update=None, important=False):
+        self.name = name
+        self._important = important
         self._value = value
         self._value_type = type(value)
-        if isinstance(value, (_PackageOption, SettingsItem)):
-            raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
         self._path = path
         self._update = update
+
+    @staticmethod
+    def parse(name, value, path=False, update=None):
+        if name != name.lower():
+            raise ConanException("Conf '{}' must be lowercase".format(name))
+        name, important = (name[:-1], True) if name[-1] == "!" else (name, False)
+        if isinstance(value, (_PackageOption, SettingsItem)):
+            raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
+        return _ConfValue(name, value, path=path, update=update, important=important)
 
     def __repr__(self):
         return repr(self._value)
@@ -183,19 +233,22 @@ class _ConfValue:
 
     def copy(self):
         # Using copy for when self._value is a mutable list
-        return _ConfValue(self._name, copy.copy(self._value), self._path, self._update)
+        return _ConfValue(self.name, copy.copy(self._value), self._path, self._update,
+                          self._important)
 
     def dumps(self):
+        name = f"{self.name}!" if self._important else self.name
         if self._value is None:
-            return "{}=!".format(self._name)  # unset
+            return "{}=!".format(name)  # unset
         elif self._value_type is list and _ConfVarPlaceHolder in self._value:
             v = self._value[:]
             v.remove(_ConfVarPlaceHolder)
-            return "{}={}".format(self._name, v)
+            return "{}={}".format(name, v)
         else:
-            return "{}={}".format(self._name, self._value)
+            return "{}={}".format(name, self._value)
 
     def serialize(self):
+        name = f"{self.name}!" if self._important else self.name
         if self._value is None:
             _value = "!"  # unset
         elif self._value_type is list and _ConfVarPlaceHolder in self._value:
@@ -204,7 +257,7 @@ class _ConfValue:
             _value = v
         else:
             _value = self._value
-        return {self._name: _value}
+        return {name: _value}
 
     def update(self, value):
         assert self._value_type is dict, "Only dicts can be updated"
@@ -247,30 +300,45 @@ class _ConfValue:
         """
         v_type = self._value_type
         o_type = other._value_type
+
+        important = other._important and not self._important
         if v_type is list and o_type is list:
+            # If important, we swap values to prioritize the other
+            v1, v2 = (other._value, self._value) if important else (self._value, other._value)
             try:
-                index = self._value.index(_ConfVarPlaceHolder)
+                index = v1.index(_ConfVarPlaceHolder)
             except ValueError:  # It doesn't have placeholder
-                pass
+                if important:
+                    self._value = other._value
             else:
-                new_value = self._value[:]  # do a copy
-                new_value[index:index + 1] = other._value  # replace the placeholder
+                new_value = v1[:]  # do a copy
+                new_value[index:index + 1] = v2  # replace the placeholder
                 self._value = new_value
         elif v_type is dict and o_type is dict:
             if self._update:
                 # only if the current one is marked as "*=" update, otherwise it remains
                 # as this is a "compose" operation, self has priority, it is the one updating
-                new_value = other._value.copy()
-                new_value.update(self._value)
+                # If important, we swap values to prioritize the other
+                v1, v2 = (other._value, self._value) if important else (self._value, other._value)
+                new_value = v2.copy()
+                new_value.update(v1)
                 self._value = new_value
-        elif self._value is None or other._value is None:
+            elif important:
+                self._value = other._value
+        elif ((issubclass(v_type, numbers.Number) and issubclass(o_type, numbers.Number)) or
+              # They might be different kind of numbers, so skip the check below
+              self._value is None or other._value is None):
             # It means any of those values were an "unset" so doing nothing because we don't
             # really know the original value type
-            pass
+            if important:
+                self._value = other._value
+                self._value_type = other._value_type
         elif o_type != v_type:
             raise ConanException("It's not possible to compose {} values "
                                  "and {} ones.".format(v_type.__name__, o_type.__name__))
         # TODO: In case of any other object types?
+        elif important:  # equal type, but just string
+            self._value = other._value
 
     def set_relative_base_folder(self, folder):
         if not self._path:
@@ -291,19 +359,10 @@ class Conf:
 
     def __init__(self):
         # It being ordered allows for Windows case-insensitive composition
-        self._values = OrderedDict()  # {var_name: [] of values, including separators}
+        self._values = {}  # {var_name: [] of values, including separators}
 
     def __bool__(self):
         return bool(self._values)
-
-    def __repr__(self):
-        return "Conf: " + repr(self._values)
-
-    def __eq__(self, other):
-        """
-        :type other: Conf
-        """
-        return other._values == self._values
 
     def clear(self):
         self._values.clear()
@@ -333,7 +392,9 @@ class Conf:
         conf_value = self._values.get(conf_name)
         if conf_value:
             v = conf_value.value
-            if choices is not None and v not in choices and v is not None:
+            if v is None:  # value was unset
+                return default
+            if choices is not None and v not in choices:
                 raise ConanException(f"Unknown value '{v}' for '{conf_name}'")
             # Some smart conversions
             if check_type is bool and not isinstance(v, bool):
@@ -344,9 +405,9 @@ class Conf:
                 raise ConanException(f"[conf] {conf_name} must be a boolean-like object "
                                      f"(true/false, 1/0, on/off) and value '{v}' does not match it.")
             elif check_type is str and not isinstance(v, str):
+                # TODO: this would be converting things like lists to strings without
+                #   proper error, is it worth trying to change it?
                 return str(v)
-            elif v is None:  # value was unset
-                return default
             elif (check_type is not None and not isinstance(v, check_type) or
                   check_type is int and isinstance(v, bool)):
                 raise ConanException(f"[conf] {conf_name} must be a "
@@ -375,14 +436,19 @@ class Conf:
 
     def copy(self):
         c = Conf()
-        c._values = OrderedDict((k, v.copy()) for k, v in self._values.items())
+        c._values = {k: v.copy() for k, v in self._values.items()}
+        return c
+
+    def filter_core(self):
+        c = Conf()
+        c._values = {k: v.copy() for k, v in self._values.items() if not CORE_CONF_PATTERN.match(k)}
         return c
 
     def dumps(self):
         """
         Returns a string with the format ``name=conf-value``
         """
-        return "\n".join([v.dumps() for v in sorted(self._values.values(), key=lambda x: x._name)])
+        return "\n".join([v.dumps() for v in sorted(self._values.values(), key=lambda x: x.name)])
 
     def serialize(self):
         """
@@ -400,10 +466,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value of the configuration.
         """
-        self._values[name] = _ConfValue(name, value)
+        v = _ConfValue.parse(name, value)
+        self._values[v.name] = v
 
     def define_path(self, name, value):
-        self._values[name] = _ConfValue(name, value, path=True)
+        v = _ConfValue.parse(name, value, path=True)
+        self._values[v.name] = v
 
     def unset(self, name):
         """
@@ -411,7 +479,8 @@ class Conf:
 
         :param name: Name of the configuration.
         """
-        self._values[name] = _ConfValue(name, None)
+        v = _ConfValue.parse(name, None)
+        self._values[v.name] = v
 
     def update(self, name, value):
         """
@@ -421,12 +490,12 @@ class Conf:
         :param value: Value of the configuration.
         """
         # Placeholder trick is not good for dict update, so we need to explicitly update=True
-        conf_value = _ConfValue(name, {}, update=True)
-        self._values.setdefault(name, conf_value).update(value)
+        conf_value = _ConfValue.parse(name, {}, update=True)
+        self._values.setdefault(conf_value.name, conf_value).update(value)
 
     def update_path(self, name, value):
-        conf_value = _ConfValue(name, {}, path=True, update=True)
-        self._values.setdefault(name, conf_value).update(value)
+        conf_value = _ConfValue.parse(name, {}, path=True, update=True)
+        self._values.setdefault(conf_value.name, conf_value).update(value)
 
     def append(self, name, value):
         """
@@ -435,12 +504,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value to append.
         """
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
-        self._values.setdefault(name, conf_value).append(value)
+        conf_value = _ConfValue.parse(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(conf_value.name, conf_value).append(value)
 
     def append_path(self, name, value):
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
-        self._values.setdefault(name, conf_value).append(value)
+        conf_value = _ConfValue.parse(name, [_ConfVarPlaceHolder], path=True)
+        self._values.setdefault(conf_value.name, conf_value).append(value)
 
     def prepend(self, name, value):
         """
@@ -449,12 +518,12 @@ class Conf:
         :param name: Name of the configuration.
         :param value: Value to prepend.
         """
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder])
-        self._values.setdefault(name, conf_value).prepend(value)
+        conf_value = _ConfValue.parse(name, [_ConfVarPlaceHolder])
+        self._values.setdefault(conf_value.name, conf_value).prepend(value)
 
     def prepend_path(self, name, value):
-        conf_value = _ConfValue(name, [_ConfVarPlaceHolder], path=True)
-        self._values.setdefault(name, conf_value).prepend(value)
+        conf_value = _ConfValue.parse(name, [_ConfVarPlaceHolder], path=True)
+        self._values.setdefault(conf_value.name, conf_value).prepend(value)
 
     def remove(self, name, value):
         """
@@ -481,13 +550,6 @@ class Conf:
             else:
                 existing.compose_conf_value(v)
         return self
-
-    def filter_user_modules(self):
-        result = Conf()
-        for k, v in self._values.items():
-            if _is_profile_module(k):
-                result._values[k] = v
-        return result
 
     def copy_conaninfo_conf(self):
         """
@@ -530,22 +592,21 @@ class Conf:
 
     @staticmethod
     def _check_conf_name(conf):
-        if USER_CONF_PATTERN.match(conf) is None and conf not in BUILT_IN_CONFS:
-            raise ConanException(f"[conf] Either '{conf}' does not exist in configuration list or "
-                                 f"the conf format introduced is not valid. Run 'conan config list' "
-                                 f"to see all the available confs.")
+        if conf.startswith("user"):
+            if USER_CONF_PATTERN.match(conf) is None:
+                raise ConanException(f"User conf '{conf}' invalid format, not 'user.org.group:conf'")
+        elif conf not in BUILT_IN_CONFS:
+            raise ConanException(f"[conf] '{conf}' does not exist in configuration list. "
+                                 "Run 'conan config list' to see all the available confs.")
 
 
 class ConfDefinition:
     # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
-               ("=!", "unset"), ("*=", "update"), ("=", "define"))
+               ("=!", "unset"), ("=~", "unset"), ("*=", "update"), ("=", "define"))
 
     def __init__(self):
-        self._pattern_confs = OrderedDict()
-
-    def __repr__(self):
-        return "ConfDefinition: " + repr(self._pattern_confs)
+        self._pattern_confs = {}
 
     def __bool__(self):
         return bool(self._pattern_confs)
@@ -624,7 +685,9 @@ class ConfDefinition:
         :type global_conf: ConfDefinition
         """
         result = ConfDefinition()
-        result._pattern_confs = global_conf._pattern_confs.copy()
+        # Do not add ``core.xxx`` configuration to profiles
+        for k, v in global_conf._pattern_confs.items():
+            result._pattern_confs[k] = v.filter_core()
         result.update_conf_definition(self)
         self._pattern_confs = result._pattern_confs
         return
@@ -684,7 +747,7 @@ class ConfDefinition:
         """
         try:
             value = eval(_v)  # This destroys Windows path strings with backslash
-        except:  # It means eval() failed because of a string without quotes
+        except (Exception,):  # It means eval() failed because of a string without quotes
             value = _v.strip()
         else:
             if not isinstance(value, (numbers.Number, bool, dict, list, set, tuple)) \
@@ -705,7 +768,10 @@ class ConfDefinition:
                 if len(tokens) != 2:
                     continue
                 pattern_name, value = tokens
-                parsed_value = ConfDefinition._get_evaluated_value(value)
+                _, name = self._split_pattern_name(pattern_name)
+                # We only implement str type at the moment
+                isstr = _BUILT_IN_CONFS_TYPES.get(name) is str
+                parsed_value = value.strip() if isstr else ConfDefinition._get_evaluated_value(value)
                 self.update(pattern_name, parsed_value, profile=profile, method=method)
                 break
             else:
@@ -717,3 +783,48 @@ class ConfDefinition:
 
     def clear(self):
         self._pattern_confs.clear()
+
+
+def load_global_conf(home_folder):
+    home_paths = HomePaths(home_folder)
+    global_conf_path = home_paths.global_conf_path
+    new_config = ConfDefinition()
+
+    def render(tmp_text):
+        distro = None
+        if platform.system() in ["Linux", "FreeBSD"]:
+            import distro
+        template = Environment(loader=FileSystemLoader(home_folder)).from_string(tmp_text)
+        from conan import conan_version
+        home_folder_fwd = home_folder.replace("\\", "/")
+        try:
+            c = template.render({"platform": platform, "os": os, "distro": distro,
+                                 "conan_version": conan_version,
+                                 "conan_home_folder": home_folder_fwd, "detect_api": detect_api,
+                                 "hashlib": hashlib})
+        except Exception as e:
+            raise ConanException(f"Error loading 'global.conf' in home folder: {e}")
+        return c
+
+    if os.path.exists(global_conf_path):
+        text = load(global_conf_path)
+        content = render(text)
+        new_config.loads(content)
+    else:  # creation of a blank global.conf file for user convenience
+        default_global_conf = textwrap.dedent("""\
+            # Core configuration (type 'conan config list' to list possible values)
+            # e.g, for CI systems, to raise if user input would block
+            # core:non_interactive = True
+            # some tools.xxx config also possible, though generally better in profiles
+            # tools.android:ndk_path = my/path/to/android/ndk
+            """)
+        save(global_conf_path, default_global_conf)
+
+    global_conf_path_user = home_paths.global_conf_path_user
+    if os.path.exists(global_conf_path_user):
+        text = load(global_conf_path_user)
+        content = render(text)
+        user_conf = ConfDefinition()
+        user_conf.loads(content)
+        new_config.update_conf_definition(user_conf)
+    return new_config

@@ -58,8 +58,7 @@ def client():
 @pytest.mark.parametrize("build_type,shared", [("Release", False), ("Debug", True)])
 @pytest.mark.tool("ninja")
 def test_locally_build_linux(build_type, shared, client):
-    settings = "-s os=Linux -s arch=x86_64 -s build_type={} -o hello/*:shared={}".format(build_type,
-                                                                                       shared)
+    settings = f"-s os=Linux -s arch=x86_64 -s build_type={build_type} -o hello/*:shared={shared}"
     client.run("install . {}".format(settings))
     client.run_command('cmake . -G "Ninja" -DCMAKE_TOOLCHAIN_FILE={} -DCMAKE_BUILD_TYPE={}'
                        .format(CMakeToolchain.filename, build_type))

@@ -5,13 +5,14 @@ import textwrap
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 from conan.api.model import RecipeReference
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def _metadata(c, ref):
     pref = c.get_latest_package_reference(RecipeReference.loads(ref))
     return c.get_latest_pkg_layout(pref).metadata()
-from conan.internal.model.lockfile import Lockfile
+
+
 def test_subgraph_reports():
     c = TestClient()
     subgraph_hook = textwrap.dedent("""\

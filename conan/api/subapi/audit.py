@@ -7,7 +7,7 @@ from conan.internal.api.audit.providers import ConanCenterProvider, PrivateProvi
 from conan.errors import ConanException
 from conan.internal.api.remotes.encrypt import encode, decode
 from conan.internal.model.recipe_ref import RecipeReference
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 CONAN_CENTER_AUDIT_PROVIDER_NAME = "conancenter"
 CYPHER_KEY = "private"
@@ -19,7 +19,7 @@ class AuditAPI:
     """
 
     def __init__(self, conan_api):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
         self._home_folder = conan_api.home_folder
         self._providers_path = os.path.join(self._home_folder, "audit_providers.json")
         self._provider_cls = {
@@ -28,12 +28,14 @@ class AuditAPI:
         }
 
     @staticmethod
-    def scan(deps_graph, provider):
+    def scan(deps_graph, provider, context=None):
         """
         Scan a given recipe for vulnerabilities in its dependencies.
         """
         refs = sorted(set(RecipeReference.loads(f"{node.ref.name}/{node.ref.version}")
-                          for node in deps_graph.nodes[1:]), key=lambda ref: ref.name)
+                          for node in deps_graph.nodes[1:]
+                          if context is None or node.context == context),
+                      key=lambda ref: ref.name)
         return provider.get_cves(refs)
 
     @staticmethod
@@ -60,15 +62,15 @@ class AuditAPI:
             )
 
             register_message = (
-                f"If you don't have a valid token, register at: https://audit.conan.io/register."
+                f"If you don't have a valid token, register at: https://conan.io/audit/register."
                 if provider_name == CONAN_CENTER_AUDIT_PROVIDER_NAME
                 else ""
             )
 
             raise ConanException(
-                f"Provider '{provider_name}' not found. Please specify a valid provider name or add it using: "
-                f"'conan audit provider add {provider_name} {add_arguments} --token=<token>'\n"
-                f"{register_message}"
+                f"Provider '{provider_name}' not found. Please specify a valid provider name or add "
+                f"it using: 'conan audit provider add {provider_name} {add_arguments} "
+                f"--token=<token>'\n{register_message}"
             )
 
         provider_data = providers[provider_name]
@@ -80,13 +82,15 @@ class AuditAPI:
             provider_data["token"] = env_token
         elif "token" in provider_data:
             try:
-                provider_data["token"] = decode(base64.standard_b64decode(provider_data["token"]).decode(), CYPHER_KEY)
-            except binascii.Error as e:
-                raise ConanException(f"Invalid token format for provider '{provider_name}'. The token might be corrupt.")
+                enc_token = base64.standard_b64decode(provider_data["token"]).decode()
+                provider_data["token"] = decode(enc_token, CYPHER_KEY)
+            except binascii.Error:
+                raise ConanException(f"Invalid token format for provider '{provider_name}'. "
+                                     f"The token might be corrupt.")
 
         provider_cls = self._provider_cls.get(provider_data["type"])
 
-        return provider_cls(self.conan_api, provider_name, provider_data)
+        return provider_cls(self._conan_api, provider_name, provider_data)
 
     def list_providers(self):
         """
@@ -96,7 +100,7 @@ class AuditAPI:
         result = []
         for name, provider_data in providers.items():
             provider_cls = self._provider_cls.get(provider_data["type"])
-            result.append(provider_cls(self.conan_api, name, provider_data))
+            result.append(provider_cls(self._conan_api, name, provider_data))
         return result
 
     def add_provider(self, name, url, provider_type):
@@ -140,7 +144,8 @@ class AuditAPI:
         providers = _load_providers(self._providers_path)
 
         assert provider.name in providers
-        providers[provider.name]["token"] = base64.standard_b64encode(encode(token, CYPHER_KEY).encode()).decode()
+        encode_token = encode(token, CYPHER_KEY).encode()
+        providers[provider.name]["token"] = base64.standard_b64encode(encode_token).decode()
         setattr(provider, "token", token)
         _save_providers(self._providers_path, providers)
 
@@ -160,3 +165,5 @@ def _load_providers(providers_path):
 
 def _save_providers(providers_path, providers):
     save(providers_path, json.dumps(providers, indent=4))
+    # Make readable & writeable only by current user
+    os.chmod(providers_path, 0o600)

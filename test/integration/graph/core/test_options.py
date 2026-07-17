@@ -15,10 +15,10 @@ class TestOptions(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -40,10 +40,10 @@ class TestOptions(GraphManagerTest):
 
         deps_graph = self.build_consumer(consumer)
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -66,12 +66,12 @@ class TestOptions(GraphManagerTest):
         # If we expand first the "libb", it will expand to "liba" as static (shared=False)
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer)
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba = libb.edges[0].dst
+        liba2 = libc.edges[0].dst
         assert liba is liba2
         self._check_node(app, "app/0.1", deps=[libc, libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -80,12 +80,12 @@ class TestOptions(GraphManagerTest):
         # Changing the order, will make "liba" shared=True
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1", "libb/0.1"])
         deps_graph = self.build_consumer(consumer)
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = app.dependencies[1].dst
-        liba = libb.dependencies[0].dst
-        liba2 = libc.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = app.edges[1].dst
+        liba = libb.edges[0].dst
+        liba2 = libc.edges[0].dst
         assert liba is liba2
         self._check_node(app, "app/0.1", deps=[libc, libb])
         self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -105,12 +105,12 @@ class TestOptions(GraphManagerTest):
                                                .with_default_option("liba*:shared", shared))
             deps_graph = self.build_consumer(consumer)
 
-            self.assertEqual(4, len(deps_graph.nodes))
+            assert 4 == len(deps_graph.nodes)
             app = deps_graph.root
-            libb = app.dependencies[0].dst
-            libc = app.dependencies[1].dst
-            liba = libb.dependencies[0].dst
-            liba2 = libc.dependencies[0].dst
+            libb = app.edges[0].dst
+            libc = app.edges[1].dst
+            liba = libb.edges[0].dst
+            liba2 = libc.edges[0].dst
             assert liba is liba2
             self._check_node(app, "app/0.1", deps=[libc, libb])
             self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -123,12 +123,12 @@ class TestOptions(GraphManagerTest):
                                                .with_default_option("liba*:shared", shared))
             deps_graph = self.build_consumer(consumer)
 
-            self.assertEqual(4, len(deps_graph.nodes))
+            assert 4 == len(deps_graph.nodes)
             app = deps_graph.root
-            libc = app.dependencies[0].dst
-            libb = app.dependencies[1].dst
-            liba = libb.dependencies[0].dst
-            liba2 = libc.dependencies[0].dst
+            libc = app.edges[0].dst
+            libb = app.edges[1].dst
+            liba = libb.edges[0].dst
+            liba2 = libc.edges[0].dst
             assert liba is liba2
             self._check_node(app, "app/0.1", deps=[libc, libb])
             self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
@@ -147,13 +147,13 @@ class TestBuildRequireOptions(GraphManagerTest):
         deps_graph = self.build_graph(GenConanfile("app", "0.1").with_require("lib/0.1"),
                                       options_build={"zlib*:shared": False})
 
-        self.assertEqual(6, len(deps_graph.nodes))
+        assert 6 == len(deps_graph.nodes)
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        protobuf_host = lib.dependencies[0].dst
-        protobuf_build = lib.dependencies[1].dst
-        zlib_shared = protobuf_host.dependencies[0].dst
-        zlib_static = protobuf_build.dependencies[0].dst
+        lib = app.edges[0].dst
+        protobuf_host = lib.edges[0].dst
+        protobuf_build = lib.edges[1].dst
+        zlib_shared = protobuf_host.edges[0].dst
+        zlib_static = protobuf_build.edges[0].dst
 
         self._check_node(app, "app/0.1@", deps=[lib], dependents=[])
         self._check_node(lib, "lib/0.1#123", deps=[protobuf_host, protobuf_build], dependents=[app])

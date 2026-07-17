@@ -1,213 +1,288 @@
-import json
 import os
-import platform
-import textwrap
-import yaml
-from jinja2 import Environment, FileSystemLoader
 
-from conan import conan_version
 from conan.api.output import ConanOutput
 
-from conan.internal.api.detect import detect_api
 from conan.internal.cache.home_paths import HomePaths
-from conan.internal.conan_app import ConanApp
-from conan.internal.default_settings import default_settings_yml
-from conans.client.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
-from conans.client.graph.graph_builder import DepsGraphBuilder
-from conans.client.graph.profile_node_definer import consumer_definer
+from conan.internal.graph.graph import CONTEXT_HOST, RECIPE_VIRTUAL, Node
+from conan.internal.graph.graph_builder import DepsGraphBuilder
+from conan.internal.graph.profile_node_definer import consumer_definer
 from conan.errors import ConanException
-from conan.internal.model.conf import ConfDefinition, BUILT_IN_CONFS, CORE_CONF_PATTERN
+
+from conan.internal.model.conanconfig import loadconanconfig, saveconanconfig, loadconanconfig_yml
+from conan.internal.model.conf import BUILT_IN_CONFS
 from conan.internal.model.pkg_type import PackageType
-from conan.api.model import RecipeReference
-from conan.internal.model.settings import Settings
-from conans.client.hook_manager import HookManager
-from conans.util.files import load, save, rmdir, remove
+from conan.api.model import RecipeReference, Remote
+from conan.internal.util.files import rmdir, remove
 
 
 class ConfigAPI:
+    """ This API provides methods to manage the Conan configuration in the Conan home folder.
+    It allows installing configurations from various sources, retrieving global configuration
+    values, and listing available configurations. It also provides methods to clean the
+    Conan home folder, resetting it to a clean state.
+    """
 
-    def __init__(self, conan_api):
-        self.conan_api = conan_api
-        self._new_config = None
-        self._cli_core_confs = None
-        self.hook_manager = HookManager(HomePaths(conan_api.home_folder).hooks_path)
+    def __init__(self, conan_api, helpers):
+        self._conan_api = conan_api
+        self._helpers = helpers
 
     def home(self):
-        return self.conan_api.cache_folder
+        """ return the current Conan home folder containing the configuration files like
+        remotes, settings, profiles, and the packages cache. It is provided for debugging
+        purposes. Recall that it is not allowed to write, modify or remove packages in the
+        packages cache, and that to automate tasks that uses packages from the cache Conan
+        provides mechanisms like deployers or custom commands.
+        """
+        return self._conan_api.cache_folder
 
-    def install(self, path_or_url, verify_ssl, config_type=None, args=None,
-                source_folder=None, target_folder=None):
-        # TODO: We probably want to split this into git-folder-http cases?
+    def install(self, path_or_url: str, verify_ssl, config_type=None, args=None,
+                source_folder=None, target_folder=None) -> None:
+        """ install Conan configuration from a git repo, from a zip file in an http server
+        or a local folder
+
+        Calling this method will cause a reinitilization of the full ConanAPI, with possible
+        invalidation of cached information, and references to objects from the ConanAPI might
+        become dangling or outdated.
+
+        :param path_or_url: path or url to install. It can be a http://.../somefile.zip, a
+            git repository URL, or a local folder
+        :param verify_ssl: Argument passed to python-requests library for SSL verification
+        :param config_type: type of configuration to install: "git", "dir", "file", "url"
+        :param args: additional arguments to pass to git repositories cloning
+        :param source_folder: If specified, install files from that folder of the origin only
+        :param target_folder: If the files are to be installed in a specific folder in the Conan
+            home. For example, if it is desired to install only profiles from a configuration and
+            using source_folder="profiles", it might be expected to use target_folder="profiles"
+            to keep the correct profile files location in the local home.
+        """
         from conan.internal.api.config.config_installer import configuration_install
-        cache_folder = self.conan_api.cache_folder
-        requester = self.conan_api.remotes.requester
-        configuration_install(cache_folder, requester, path_or_url, verify_ssl, config_type=config_type, args=args,
+        cache_folder = self._conan_api.cache_folder
+        requester = self._helpers.requester
+        configuration_install(cache_folder, requester, path_or_url, verify_ssl,
+                              config_type=config_type, args=args,
                               source_folder=source_folder, target_folder=target_folder)
-        self.conan_api.reinit()
+        self._conan_api.reinit()
 
-    def install_pkg(self, ref, lockfile=None, force=False, remotes=None, profile=None):
+    def install_package(self, require, lockfile=None, force=False, remotes=None, profile=None):
+        """ install Conan configuration from a Conan package
+
+        Calling this method will cause a reinitilization of the full ConanAPI, with possible
+        invalidation of cached information, and references to objects from the ConanAPI might
+        become dangling or outdated.
+
+        :param require: The package requirement to be installed. It can contain version range
+            expressions. If the revision is not specified, as a recipe ``requires``, it will
+            also resolve to the latest recipe-revision
+        :param lockfile: Lockfile to be used to constrain and lock the versions and recipe-revisions
+            from the input requirements, to the exact versions and revisions specified in the
+            lockfile
+        :param force: If the package has already been installed, nothing will be done unless
+            force is True
+        :param remotes: Remotes to look for the configuration package
+        :param profile: If specified, use that profile to resolve for profile-specific different
+            configurations, like depending on different settings.
+        :return: list of RecipeReferences of the installed configuration packages
+        """
         ConanOutput().warning("The 'conan config install-pkg' is experimental",
                               warn_tag="experimental")
-        conan_api = self.conan_api
+        require = RecipeReference.loads(require)
+        required_pkgs = self.fetch_packages([require], lockfile, remotes, profile)
+        installed_refs = self._install_pkgs(required_pkgs, force)
+        self._conan_api.reinit()
+        return installed_refs
+
+    @staticmethod
+    def load_conanconfig(path, remotes):
+        # Internal, do not document yet.
+        if os.path.isdir(path):
+            path = os.path.join(path, "conanconfig.yml")
+        requested_requires, urls = loadconanconfig_yml(path)
+        if urls:
+            new_remotes = [Remote(f"config_install_url{'_' + str(i)}", url=url,
+                                  verify_ssl=url_verify_ssl)
+                           for i, (url, url_verify_ssl) in enumerate(urls)]
+            remotes = remotes or []
+            remotes += new_remotes
+        return requested_requires, remotes
+
+    def install_conanconfig(self, path, lockfile=None, force=False, remotes=None, profile=None):
+        """ install Conan configuration from a Conan "conanconfig.yml" file
+
+        Calling this method will cause a reinitilization of the full ConanAPI, with possible
+        invalidation of cached information, and references to objects from the ConanAPI might
+        become dangling or outdated.
+
+        :param path: Path to the conanconfig.yml file containing the configuration packages
+            requirement definitions
+        :param lockfile: Lockfile to be used to constrain and lock the versions and recipe-revisions
+            from the input requirements, to the exact versions and revisions specified in the
+            lockfile
+        :param force: If the package has already been installed, nothing will be done unless
+            force is True
+        :param remotes: Remotes to look for the configuration package
+        :param profile: If specified, use that profile to resolve for profile-specific different
+            configurations, like depending on different settings.
+        :return: list of RecipeReferences of the installed configuration packages
+        """
+        ConanOutput().warning("The 'conan config install-pkg' is experimental",
+                              warn_tag="experimental")
+        requested_requires, remotes = self.load_conanconfig(path, remotes)
+        required_pkgs = self.fetch_packages(requested_requires, lockfile, remotes, profile)
+        installed_refs = self._install_pkgs(required_pkgs, force)
+        self._conan_api.reinit()
+        return installed_refs
+
+    def _install_pkgs(self, required_pkgs, force):
+        out = ConanOutput()
+        out.title("Configuration packages to install")
+        config_version_file = HomePaths(self._conan_api.home_folder).config_version_path
+        if not os.path.exists(config_version_file):
+            config_versions = []
+        else:
+            ConanOutput().info(f"Reading existing config-versions file: {config_version_file}")
+            config_versions = loadconanconfig(config_version_file)
+        config_versions_dict = {r.name: r for r in config_versions}
+        if len(config_versions_dict) < len(config_versions):
+            raise ConanException("There are multiple requirements for the same package "
+                                 f"with different versions: {config_version_file}")
+
+        new_config = config_versions_dict.copy()
+        for required_pkg in required_pkgs:
+            new_config.pop(required_pkg.ref.name, None)  # To ensure new order
+            new_config[required_pkg.ref.name] = required_pkg.ref
+        final_config_refs = [r for r in new_config.values()]
+
+        prev_refs = "\n\t".join(repr(r) for r in config_versions)
+        out.info(f"Previously installed configuration packages:\n\t{prev_refs}")
+
+        new_refs = "\n\t".join(r.repr_notime() for r in final_config_refs)
+        out.info(f"New configuration packages to install:\n\t{new_refs}")
+
+        if list(config_versions_dict) == list(new_config)[:len(config_versions_dict)]:
+            # There is no conflict in order, can be done safely
+            if final_config_refs == config_versions:
+                if force:
+                    out.warning("The requested configurations are identical to the already "
+                                "installed ones, but forcing re-installation because --force")
+                    to_install = required_pkgs
+                else:
+                    out.info("The requested configurations are identical to the already "
+                             "installed ones, skipping re-installation")
+                    to_install = []
+            else:
+                out.info("Installing new or updating configuration packages")
+                to_install = required_pkgs
+        else:
+            # Change in order of existing configuration
+            if force:
+                out.warning("Installing these configuration packages will break the "
+                            "existing order, with possible side effects. "
+                            "Forcing the installation because --force was defined", warn_tag="risk")
+                to_install = required_pkgs
+            else:
+                msg = ("Installing these configuration packages will break the "
+                       "existing order, with possible side effects, like breaking 'package_ids'.\n"
+                       "If you still want to enforce this configuration you can:\n"
+                       "   Use 'conan config clean' first to fully reset your configuration.\n"
+                       "   Or use 'conan config install-pkg --force' to force installation.")
+                raise ConanException(msg)
+
+        out.title("Installing configuration from packages")
+        # install things and update the Conan cache "config_versions.json" file
+        from conan.internal.api.config.config_installer import configuration_install
+        cache_folder = self._conan_api.cache_folder
+        requester = self._helpers.requester
+        for pkg in to_install:
+            out.info(f"Installing configuration from {pkg.ref}")
+            configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder,
+                                  verify_ssl=False, config_type="dir",
+                                  ignore=["conaninfo.txt", "conanmanifest.txt"])
+
+        saveconanconfig(config_version_file, final_config_refs)
+        return final_config_refs
+
+    def fetch_packages(self, requires, lockfile=None, remotes=None, profile=None):
+        """ get and download configuration packages into the Conan cache, without installing
+        such configuration in the current Conan home.
+
+        This shouldn't be necessary for regular Conan configuration, and used at the moment
+        exclusively for the "conan lock upgrade-config" experimental command.
+        """
+        conan_api = self._conan_api
         remotes = conan_api.remotes.list() if remotes is None else remotes
         profile_host = profile_build = profile or conan_api.profiles.get_profile([])
 
-        app = ConanApp(self.conan_api)
+        proxy, range_resolver, loader, _ = self._helpers.get_loader()
+        cache = self._helpers.cache
 
-        # Computation of a very simple graph that requires "ref"
-        conanfile = app.loader.load_virtual(requires=[RecipeReference.loads(ref)])
-        consumer_definer(conanfile, profile_host, profile_build)
-        root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
-        root_node.is_conf = True
-        update = ["*"]
-        builder = DepsGraphBuilder(app.proxy, app.loader, app.range_resolver, app.cache, remotes,
-                                   update, update, self.conan_api.config.global_conf)
-        deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
+        ConanOutput().title("Fetching requested configuration packages")
+        result = []
+        for ref in requires:
+            # Computation of a very simple graph that requires "ref"
+            # Need to convert input requires to RecipeReference
+            conanfile = loader.load_virtual(requires=[ref])
+            consumer_definer(conanfile, profile_host, profile_build)
+            root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST,
+                             recipe=RECIPE_VIRTUAL)
+            root_node.is_conf = True
+            update = ["*"]
+            builder = DepsGraphBuilder(proxy, loader, range_resolver, cache, remotes,
+                                       update, update, self._helpers.global_conf)
+            deps_graph = builder.load_graph(root_node, profile_host, profile_build, lockfile)
 
-        # Basic checks of the package: correct package_type and no-dependencies
-        deps_graph.report_graph_error()
-        pkg = deps_graph.root.dependencies[0].dst
-        ConanOutput().info(f"Configuration from package: {pkg}")
-        if pkg.conanfile.package_type is not PackageType.CONF:
-            raise ConanException(f'{pkg.conanfile} is not of package_type="configuration"')
-        if pkg.dependencies:
-            raise ConanException(f"Configuration package {pkg.ref} cannot have dependencies")
+            # Basic checks of the package: correct package_type and no-dependencies
+            deps_graph.report_graph_error()
+            pkg = deps_graph.root.edges[0].dst
+            ConanOutput().info(f"Configuration from package: {pkg}")
+            if pkg.conanfile.package_type is not PackageType.CONF:
+                raise ConanException(f'{pkg.conanfile} is not of package_type="configuration"')
+            if pkg.edges:
+                raise ConanException(f"Configuration package {pkg.ref} cannot have dependencies")
 
-        # The computation of the "package_id" and the download of the package is done as usual
-        # By default we allow all remotes, and build_mode=None, always updating
-        conan_api.graph.analyze_binaries(deps_graph, None, remotes, update=update, lockfile=lockfile)
-        conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
-
-        # We check if this specific version is already installed
-        config_pref = pkg.pref.repr_notime()
-        config_versions = []
-        config_version_file = HomePaths(conan_api.home_folder).config_version_path
-        if os.path.exists(config_version_file):
-            config_versions = json.loads(load(config_version_file))
-            config_versions = config_versions["config_version"]
-            if config_pref in config_versions:
-                if force:
-                    ConanOutput().info(f"Package '{pkg}' already configured, "
-                                       "but re-installation forced")
-                else:
-                    ConanOutput().info(f"Package '{pkg}' already configured, "
-                                       "skipping configuration install")
-                    return pkg.pref  # Already installed, we can skip repeating the install
-
-        from conan.internal.api.config.config_installer import configuration_install
-        cache_folder = self.conan_api.cache_folder
-        requester = self.conan_api.remotes.requester
-        configuration_install(cache_folder, requester, uri=pkg.conanfile.package_folder, verify_ssl=False,
-                              config_type="dir", ignore=["conaninfo.txt", "conanmanifest.txt"])
-        # We save the current package full reference in the file for future
-        # And for ``package_id`` computation
-        config_versions = {ref.split("/", 1)[0]: ref for ref in config_versions}
-        config_versions[pkg.pref.ref.name] = pkg.pref.repr_notime()
-        save(config_version_file, json.dumps({"config_version": list(config_versions.values())}))
-        self.conan_api.reinit()
-        return pkg.pref
+            # The computation of the "package_id" and the download of the package is done as usual
+            # By default we allow all remotes, and build_mode=None, always updating
+            conan_api.graph.analyze_binaries(deps_graph, None, remotes, update=update,
+                                             lockfile=lockfile)
+            conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes)
+            result.append(pkg)
+        return result
 
     def get(self, name, default=None, check_type=None):
-        return self.global_conf.get(name, default=default, check_type=check_type)
+        """ get the value of a global.conf item
 
-    def show(self, pattern):
-        return self.global_conf.show(pattern)
-
-    @property
-    def global_conf(self):
-        """ this is the new global.conf to replace the old conan.conf that contains
-        configuration defined with the new syntax as in profiles, this config will be composed
-        to the profile ones and passed to the conanfiles.conf, which can be passed to collaborators
+        :param name: configuration value to return
+        :param default: default value to return if the configuration doesn't contain a value
+        :param check_type: check if value is of type check_type, only if the value is defined
         """
-        # Lazy loading
-        if self._new_config is None:
-            self._new_config = ConfDefinition()
-            self._populate_global_conf()
-        return self._new_config
+        return self._helpers.global_conf.get(name, default=default, check_type=check_type)
 
-    def _populate_global_conf(self):
-        cache_folder = self.conan_api.cache_folder
-        new_config = self.load_config(cache_folder)
-        self._new_config.update_conf_definition(new_config)
-        if self._cli_core_confs is not None:
-            self._new_config.update_conf_definition(self._cli_core_confs)
+    def show(self, pattern) -> dict:
+        """ get the values of global.conf for those configurations that matches the pattern
+        that have an actual user definition.
+
+        Values with no user definitions will be skipped from the returned value,
+        defaults for those confs won't be shown.
+
+        :param pattern: pattern to match against
+        :return: dict of configuration values
+        """
+        return self._helpers.global_conf.show(pattern)
 
     @staticmethod
-    def load_config(home_folder):
-        # Do not document yet, keep it private
-        home_paths = HomePaths(home_folder)
-        global_conf_path = home_paths.global_conf_path
-        new_config = ConfDefinition()
-        if os.path.exists(global_conf_path):
-            text = load(global_conf_path)
-            distro = None
-            if platform.system() in ["Linux", "FreeBSD"]:
-                import distro
-            template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
-            home_folder = home_folder.replace("\\", "/")
-            content = template.render({"platform": platform, "os": os, "distro": distro,
-                                       "conan_version": conan_version,
-                                       "conan_home_folder": home_folder,
-                                       "detect_api": detect_api})
-            new_config.loads(content)
-        else:  # creation of a blank global.conf file for user convenience
-            default_global_conf = textwrap.dedent("""\
-                # Core configuration (type 'conan config list' to list possible values)
-                # e.g, for CI systems, to raise if user input would block
-                # core:non_interactive = True
-                # some tools.xxx config also possible, though generally better in profiles
-                # tools.android:ndk_path = my/path/to/android/ndk
-                """)
-            save(global_conf_path, default_global_conf)
-        return new_config
+    def conf_list() -> dict:
+        """ list all the available built-in configurations
 
-    @property
-    def builtin_confs(self):
-        return BUILT_IN_CONFS
+        :return: A sorted dictionary with all possible built-in configurations
+        """
+        return BUILT_IN_CONFS.copy()
 
-    @property
-    def settings_yml(self):
-        """Returns {setting: [value, ...]} defining all the possible
-                   settings without values"""
-        _home_paths = HomePaths(self.conan_api.cache_folder)
-        settings_path = _home_paths.settings_path
-        if not os.path.exists(settings_path):
-            save(settings_path, default_settings_yml)
-            save(settings_path + ".orig", default_settings_yml)  # stores a copy, to check migrations
-
-        def _load_settings(path):
-            try:
-                return yaml.safe_load(load(path)) or {}
-            except yaml.YAMLError as ye:
-                raise ConanException("Invalid settings.yml format: {}".format(ye))
-
-        settings = _load_settings(settings_path)
-        user_settings_file = _home_paths.settings_path_user
-        if os.path.exists(user_settings_file):
-            settings_user = _load_settings(user_settings_file)
-
-            def appending_recursive_dict_update(d, u):
-                # Not the same behavior as conandata_update, because this append lists
-                for k, v in u.items():
-                    if isinstance(v, list):
-                        current = d.get(k) or []
-                        d[k] = current + [value for value in v if value not in current]
-                    elif isinstance(v, dict):
-                        current = d.get(k) or {}
-                        if isinstance(current, list):  # convert to dict lists
-                            current = {k: None for k in current}
-                        d[k] = appending_recursive_dict_update(current, v)
-                    else:
-                        d[k] = v
-                return d
-
-            appending_recursive_dict_update(settings, settings_user)
-
-        return Settings(settings)
-
-    def clean(self):
+    def clean(self) -> None:
+        """ reset the Conan home folder to a clean state, removing all the user
+        custom configuration, custom files, and resetting modified files
+        """
         contents = os.listdir(self.home())
-        packages_folder = self.global_conf.get("core.cache:storage_path") or os.path.join(self.home(), "p")
+        packages_folder = (self._helpers.global_conf.get("core.cache:storage_path") or
+                           os.path.join(self.home(), "p"))
         for content in contents:
             content_path = os.path.join(self.home(), content)
             if content_path == packages_folder:
@@ -217,23 +292,47 @@ class ConfigAPI:
                 rmdir(content_path)
             else:
                 remove(content_path)
-        self.conan_api.reinit()
+        self._conan_api.reinit()
         # CHECK: This also generates a remotes.json that is not there after a conan profile show?
-        self.conan_api.migrate()
+        self._conan_api.migrate()
 
-    def set_core_confs(self, core_confs):
-        confs = ConfDefinition()
-        for c in core_confs:
-            if not CORE_CONF_PATTERN.match(c):
-                raise ConanException(f"Only core. values are allowed in --core-conf. Got {c}")
-        confs.loads("\n".join(core_confs))
-        confs.validate()
-        self._cli_core_confs = confs
-        # Last but not least, apply the new configuration
-        self.conan_api.reinit()
+    @property
+    def settings_yml(self):
+        """ Get the contents of the settings.yml and user_settings.yml files,
+        which define the possible values for settings.
 
-    def reinit(self):
-        if self._new_config is not None:
-            self._new_config.clear()
-            self._populate_global_conf()
-        self.hook_manager = HookManager(HomePaths(self.conan_api.home_folder).hooks_path)
+        Note that this is different from the settings present in a conanfile,
+        which represent the actual values for a specific package, while this
+        property represents the possible values for each setting.
+
+        This is intended to be a **read-only** value, do not try to attempt to modify,
+        inject or remove settings with this attribute.
+
+        :returns: A read-only object representing the settings scheme, with a
+            ``possible_values()`` method that returns a dictionary with the possible
+            values for each setting, and a ``fields`` property that returns an ordered
+            list with the fields of each setting.
+            Note that it's possible to access nested settings using attribute access,
+            such as ``settings_yml.compiler.possible_values()``.
+        """
+
+        class SettingsYmlInterface:
+            def __init__(self, settings):
+                self._settings = settings
+
+            def possible_values(self):
+                """ returns a dict with the possible values for each setting """
+                return self._settings.possible_values()
+
+            @property
+            def fields(self):
+                """ returns a dict with the fields of each setting """
+                return self._settings.fields
+
+            def __getattr__(self, item):
+                return SettingsYmlInterface(getattr(self._settings, item))
+
+            def __str__(self):
+                return str(self._settings)
+
+        return SettingsYmlInterface(self._helpers.settings_yml)

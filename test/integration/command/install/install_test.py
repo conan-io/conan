@@ -2,13 +2,12 @@ import json
 import os
 import re
 import textwrap
-from collections import OrderedDict
 
 import pytest
 
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID
 from conan.test.utils.tools import TestClient, TestServer, GenConanfile
-from conans.util.files import mkdir, save
+from conan.internal.util.files import mkdir, save
 
 
 @pytest.fixture()
@@ -28,11 +27,13 @@ def test_install_reference_txt(client):
 
 def test_install_reference_error(client):
     # Test to check the "conan install <path> <reference>" command argument
-    client.run("install --requires=pkg/0.1@myuser/testing --user=user --channel=testing", assert_error=True)
-    assert "ERROR: Can't use --name, --version, --user or --channel arguments with --requires" in client.out
+    client.run("install --requires=pkg/0.1@myuser/testing --user=user --channel=testing",
+               assert_error=True)
+    assert ("ERROR: Can't use --name, --version, "
+            "--user or --channel arguments with --requires") in client.out
     client.save({"conanfile.py": GenConanfile("pkg", "1.0")})
     client.run("install . --channel=testing", assert_error=True)
-    assert "Can't specify channel without user" in client.out
+    assert "Can't specify channel 'testing' without user" in client.out
 
 
 def test_install_args_error():
@@ -77,67 +78,67 @@ def test_install_transitive_pattern(client):
             def package_info(self):
                 self.output.info("PKG OPTION: %s" % self.options.shared)
         """)})
-    client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=True")
-    assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
+    client.run("create . --name=pkg --version=0.1  -o shared=True")
+    assert "pkg/0.1: PKG OPTION: True" in client.out
     client.save({"conanfile.py": textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):
-            requires = "pkg/0.1@user/testing"
+            requires = "pkg/0.1"
             options = {"shared": [True, False, "header"]}
             default_options = {"shared": False}
             def package_info(self):
                 self.output.info("PKG2 OPTION: %s" % self.options.shared)
         """)})
 
-    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True")
-    assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
-    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True")
-    assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
+    client.run("create . --name=pkg2 --version=0.1 -o *:shared=True")
+    assert "pkg/0.1: PKG OPTION: True" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: True" in client.out
+    client.run(" install --requires=pkg2/0.1 -o *:shared=True")
+    assert "pkg/0.1: PKG OPTION: True" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: True" in client.out
     # Priority of non-scoped options
-    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o shared=header -o *:shared=True")
-    assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install --requires=pkg2/0.1@user/testing -o shared=header -o *:shared=True")
-    assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    client.run("create . --name=pkg2 --version=0.1 -o shared=header -o *:shared=True")
+    assert "pkg/0.1: PKG OPTION: True" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: header" in client.out
+    client.run(" install --requires=pkg2/0.1 -o shared=header -o *:shared=True")
+    assert "pkg/0.1: PKG OPTION: True" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: header" in client.out
     # Prevalence of exact named option
-    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg2*:shared=header")
-    assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True -o pkg2*:shared=header")
-    assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    client.run("create . --name=pkg2 --version=0.1 -o *:shared=True -o pkg2*:shared=header")
+    assert "pkg/0.1: PKG OPTION: True" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: header" in client.out
+    client.run(" install --requires=pkg2/0.1 -o *:shared=True -o pkg2*:shared=header")
+    assert "pkg/0.1: PKG OPTION: True" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: header" in client.out
     # Prevalence of exact named option reverse
-    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg/*:shared=header "
+    client.run("create . --name=pkg2 --version=0.1 -o *:shared=True -o pkg/*:shared=header "
                "--build=missing")
-    assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
-    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True -o pkg/*:shared=header")
-    assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
+    assert "pkg/0.1: PKG OPTION: header" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: True" in client.out
+    client.run(" install --requires=pkg2/0.1 -o *:shared=True -o pkg/*:shared=header")
+    assert "pkg/0.1: PKG OPTION: header" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: True" in client.out
     # Prevalence of alphabetical pattern
-    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg2*:shared=header")
-    assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True -o pkg2*:shared=header")
-    assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    client.run("create . --name=pkg2 --version=0.1 -o *:shared=True -o pkg2*:shared=header")
+    assert "pkg/0.1: PKG OPTION: True" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: header" in client.out
+    client.run(" install --requires=pkg2/0.1 -o *:shared=True -o pkg2*:shared=header")
+    assert "pkg/0.1: PKG OPTION: True" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: header" in client.out
     # Prevalence of last match, even first pattern match
-    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o pkg2*:shared=header -o *:shared=True")
-    assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
-    client.run(" install --requires=pkg2/0.1@user/testing -o pkg2*:shared=header -o *:shared=True")
-    assert "pkg/0.1@user/testing: PKG OPTION: True" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: True" in client.out
+    client.run("create . --name=pkg2 --version=0.1 -o pkg2*:shared=header -o *:shared=True")
+    assert "pkg/0.1: PKG OPTION: True" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: True" in client.out
+    client.run(" install --requires=pkg2/0.1 -o pkg2*:shared=header -o *:shared=True")
+    assert "pkg/0.1: PKG OPTION: True" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: True" in client.out
     # Prevalence and override of alphabetical pattern
-    client.run("create . --name=pkg2 --version=0.1 --user=user --channel=testing -o *:shared=True -o pkg*:shared=header")
-    assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
-    client.run(" install --requires=pkg2/0.1@user/testing -o *:shared=True -o pkg*:shared=header")
-    assert "pkg/0.1@user/testing: PKG OPTION: header" in client.out
-    assert "pkg2/0.1@user/testing: PKG2 OPTION: header" in client.out
+    client.run("create . --name=pkg2 --version=0.1 -o *:shared=True -o pkg*:shared=header")
+    assert "pkg/0.1: PKG OPTION: header" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: header" in client.out
+    client.run(" install --requires=pkg2/0.1 -o *:shared=True -o pkg*:shared=header")
+    assert "pkg/0.1: PKG OPTION: header" in client.out
+    assert "pkg2/0.1: PKG2 OPTION: header" in client.out
 
 
 def test_install_package_folder(client):
@@ -191,9 +192,13 @@ def test_install_with_profile(client):
 
 
 def test_install_with_path_errors(client):
-    # Install without path param not allowed
+    # Install without path param allowed, but nothing found
     client.run("install", assert_error=True)
-    assert "ERROR: Please specify a path" in client.out
+    assert "Conanfile not found" in client.out
+
+    # Install without path param allowed, but nothing found
+    client.run("install . --requires=foo/1.0", assert_error=True)
+    assert "--requires and --tool-requires arguments are incompatible with [path]" in client.out
 
     # Path with wrong conanfile.txt path
     client.run("install not_real_dir/conanfile.txt", assert_error=True)
@@ -293,9 +298,9 @@ def test_install_no_remotes(client):
 
 
 def test_install_skip_disabled_remote():
-    client = TestClient(servers=OrderedDict({"default": TestServer(),
-                                             "server2": TestServer(),
-                                             "server3": TestServer()}),
+    client = TestClient(servers={"default": TestServer(),
+                                 "server2": TestServer(),
+                                 "server3": TestServer()},
                         inputs=2*["admin", "password"])
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")

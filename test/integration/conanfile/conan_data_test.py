@@ -1,8 +1,8 @@
+import json
 import os
 import shutil
 import sys
 import textwrap
-import unittest
 
 import pytest
 import yaml
@@ -11,13 +11,13 @@ from conan.api.model import RecipeReference
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import tgz_with_contents
 from conan.test.utils.tools import TestClient, GenConanfile
-from conans.util.files import md5sum, sha1sum, sha256sum, load
+from conan.internal.util.files import md5sum, sha1sum, sha256sum, load
 
 
-class ConanDataTest(unittest.TestCase):
+class TestConanData:
 
     def test_conan_exports_kept(self):
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Lib(ConanFile):
@@ -30,16 +30,16 @@ class ConanDataTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "myfile.txt": "bar",
                      "conandata.yml": conandata})
-        ref = RecipeReference.loads("lib/0.1@user/testing")
-        client.run(f"export . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
+        ref = RecipeReference.loads("lib/0.1")
+        client.run(f"export . --name={ref.name} --version={ref.version}")
         export_folder = client.get_latest_ref_layout(ref).export()
         exported_data = os.path.join(export_folder, "conandata.yml")
         data = yaml.safe_load(load(exported_data))
-        self.assertEqual(data, {"foo": {"bar": "as"}})
-        self.assertTrue(os.path.exists(os.path.join(export_folder, "myfile.txt")))
+        assert data == {"foo": {"bar": "as"}}
+        assert os.path.exists(os.path.join(export_folder, "myfile.txt"))
 
     def test_conan_data_everywhere(self):
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile = """from conan import ConanFile
 
 class Lib(ConanFile):
@@ -74,22 +74,22 @@ sources:
     url: "the url"
     other: "field"
 """})
-        ref = RecipeReference.loads("lib/0.1@user/testing")
-        client.run(f"create . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}")
-        self.assertIn("File 'conandata.yml' found. Exporting it...", client.out)
-        self.assertIn("My URL:", client.out)
+        ref = RecipeReference.loads("lib/0.1")
+        client.run(f"create . --name={ref.name} --version={ref.version}")
+        assert "File 'conandata.yml' found. Exporting it..." in client.out
+        assert "My URL:" in client.out
         export_folder = client.get_latest_ref_layout(ref).export()
-        self.assertTrue(os.path.exists(os.path.join(export_folder, "conandata.yml")))
+        assert os.path.exists(os.path.join(export_folder, "conandata.yml"))
 
         # Transitive loaded?
         client.save({"conanfile.txt": "[requires]\n{}".format(ref)}, clean_first=True)
         client.run("install . ")
-        self.assertIn("My URL:", client.out)
+        assert "My URL:" in client.out
         client.run("install . --build='*'")
-        self.assertIn("My URL:", client.out)
+        assert "My URL:" in client.out
 
     def test_conan_data_as_source_newtools(self):
-        client = TestClient()
+        client = TestClient(light=True)
         file_server = TestFileServer()
         client.servers["file_server"] = file_server
 
@@ -104,9 +104,9 @@ sources:
             md5_value = "babc50837f9aaf46e134455966230e3e"
             sha1_value = "1e5b8ff7ae58b40d698fe3d4da6ad2a47ec6f4f3"
             sha256_value = "3ff04581cb0e2f9e976a9baad036f4ca9d884907c3d9382bb42a8616d3c20e42"
-        self.assertEqual(md5_value, md5sum(tgz_path))
-        self.assertEqual(sha1_value, sha1sum(tgz_path))
-        self.assertEqual(sha256_value, sha256sum(tgz_path))
+        assert md5_value == md5sum(tgz_path)
+        assert sha1_value == sha1sum(tgz_path)
+        assert sha256_value == sha256sum(tgz_path)
 
         shutil.copy2(tgz_path, file_server.store)
 
@@ -133,30 +133,24 @@ sources:
                                                        sha256_value)})
 
         client.run(f"create . --name=pkg --version=0.1")
-        self.assertIn("OK!", client.out)
+        assert "OK!" in client.out
 
         ref_layout = client.exported_layout()
         source_folder = ref_layout.source()
         downloaded_file = os.path.join(source_folder, "foo.txt")
-        self.assertEqual("foo", load(downloaded_file))
+        assert "foo" == load(downloaded_file)
 
     def test_invalid_yml(self):
-        client = TestClient()
-        conanfile = """from conan import ConanFile
-
-class Lib(ConanFile):
-    pass
-"""
-        client.save({"conanfile.py": conanfile,
+        client = TestClient(light=True)
+        client.save({"conanfile.py": GenConanfile(),
                      "conandata.yml": ">>>> ::"})
-        ref = RecipeReference.loads("lib/0.1@user/testing")
-        client.run(f"create . --name={ref.name} --version={ref.version} --user={ref.user} --channel={ref.channel}", assert_error=True)
-        self.assertIn("ERROR: Error loading conanfile at", client.out)
-        self.assertIn(": Invalid yml format at conandata.yml: while scanning a block scalar",
-                      client.out)
+        ref = RecipeReference.loads("lib/0.1")
+        client.run(f"create . --name={ref.name} --version={ref.version}", assert_error=True)
+        assert "ERROR: Error loading conanfile at" in client.out
+        assert ": Invalid yml format at conandata.yml: while scanning a block scalar" in client.out
 
     def test_conan_data_development_flow(self):
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
 
@@ -187,11 +181,27 @@ class Lib(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "conandata.yml": conandata})
         client.run("source .")
-        self.assertIn("My URL: this url", client.out)
+        assert "My URL: this url" in client.out
         client.run("build . -of=tmp/build")
-        self.assertIn("My URL: this url", client.out)
+        assert "My URL: this url" in client.out
         client.run("export-pkg . --name=name --version=version")
-        self.assertIn("My URL: this url", client.out)
+        assert "My URL: this url" in client.out
+
+    def test_conan_data_serialize(self):
+        c = TestClient(light=True)
+        conandata = textwrap.dedent("""
+            src:
+                url: "this url"
+        """)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1"),
+                "conandata.yml": conandata})
+        c.run("graph info . --format=json")
+        graph = json.loads(c.stdout)
+        assert graph["graph"]["nodes"]["0"]["conandata"]["src"] == {"url": "this url"}
+
+        c.run("inspect . --format=json")
+        result = json.loads(c.stdout)
+        assert result["conandata"]["src"] == {"url": "this url"}
 
 
 class TestConanDataUpdate:
@@ -201,7 +211,7 @@ class TestConanDataUpdate:
     def test_conandata_update(self):
         """ test the update_conandata() helper
         """
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import update_conandata
@@ -238,7 +248,7 @@ class TestConanDataUpdate:
     def test_conandata_update_error(self):
         """ test the update_conandata() helper fails if used outside export()
         """
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import update_conandata
@@ -255,7 +265,7 @@ class TestConanDataUpdate:
     def test_conandata_create_if_not_exist(self):
         """ test the update_conandata() creates the file if it doesn't exist
         """
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import update_conandata
@@ -267,13 +277,13 @@ class TestConanDataUpdate:
             """)
         c.save({"conanfile.py": conanfile})
         c.run("export .")  # It doesn't fail
-        assert "pkg/0.1: Calling export()" in c.out
+        assert "Calling export()" in c.out
 
 
 def test_conandata_trim():
     """ test the explict trim_conandata() helper
     """
-    c = TestClient()
+    c = TestClient(light=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.files import trim_conandata
@@ -299,7 +309,7 @@ def test_conandata_trim():
     c.run("export . --version=1.0")
     layout = c.exported_layout()
     data1 = load(os.path.join(layout.export(), "conandata.yml"))
-    assert "pkg/1.0: Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
+    assert "Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
     conandata_yml2 = textwrap.dedent("""\
         sources:
          "1.0":
@@ -323,7 +333,7 @@ def test_conandata_trim():
     data2 = load(os.path.join(layout.export(), "conandata.yml"))
     assert "1.1" not in data2
     assert data1 == data2
-    assert "pkg/1.0: Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
+    assert "Exported: pkg/1.0#70612e15e4fc9af1123fe11731ac214f" in c.out
     # If I now try to create version 1.2 which has no patches, and then change a patch
     # its revision should not change either
     conandata_yml3 = textwrap.dedent("""\
@@ -374,7 +384,7 @@ def test_conandata_trim():
 
 
 def test_trim_conandata_as_hook():
-    c = TestClient()
+    c = TestClient(light=True)
     c.save_home({"extensions/hooks/hook_trim.py": textwrap.dedent("""
     from conan.tools.files import trim_conandata
 
@@ -398,7 +408,7 @@ def test_trim_conandata_as_hook():
     c.run("export . --version=1.0")
     layout = c.exported_layout()
     data1 = load(os.path.join(layout.export(), "conandata.yml"))
-    assert "pkg/1.0: Exported: pkg/1.0#03af39add1c7c9d68dcdb10b6968a14d" in c.out
+    assert "Exported: pkg/1.0#03af39add1c7c9d68dcdb10b6968a14d" in c.out
     conandata_yml2 = textwrap.dedent("""\
             sources:
              "1.0":
@@ -422,12 +432,12 @@ def test_trim_conandata_as_hook():
     data2 = load(os.path.join(layout.export(), "conandata.yml"))
     assert "1.1" not in data2
     assert data1 == data2
-    assert "pkg/1.0: Exported: pkg/1.0#03af39add1c7c9d68dcdb10b6968a14d" in c.out
+    assert "Exported: pkg/1.0#03af39add1c7c9d68dcdb10b6968a14d" in c.out
 
 
 @pytest.mark.parametrize("raise_if_missing", [True, False])
 def test_trim_conandata_as_hook_without_conandata(raise_if_missing):
-    c = TestClient()
+    c = TestClient(light=True)
     c.save_home({"extensions/hooks/hook_trim.py": textwrap.dedent(f"""
     from conan.tools.files import trim_conandata
 

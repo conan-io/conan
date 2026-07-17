@@ -1,7 +1,5 @@
 from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE, LEVEL_DEBUG
-from conans.client.graph.graph import BINARY_INVALID, BINARY_MISSING, RECIPE_CONSUMER, \
-    RECIPE_VIRTUAL, CONTEXT_BUILD, BINARY_SKIP, \
-    BINARY_PLATFORM, BINARY_BUILD
+from conan.errors import ConanException
 
 
 def print_graph_basic(graph):
@@ -20,9 +18,9 @@ def print_graph_basic(graph):
         if hasattr(node.conanfile, "python_requires"):
             for _, r in node.conanfile.python_requires.items():
                 python_requires[r.ref] = r.recipe, r.remote
-        if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+        if node.recipe in ("Consumer", "Cli"):
             continue
-        if node.context == CONTEXT_BUILD:
+        if node.context == "build":
             build_requires[node.ref] = node.recipe, node.remote
         else:
             if node.test:
@@ -64,14 +62,26 @@ def print_graph_basic(graph):
 
     _format_resolved("Resolved alias", graph.aliased)
     if graph.aliased:
-        output.warning("'alias' is a Conan 1.X legacy feature, no longer recommended and "
-                       "it might be removed in 3.0.")
+        output.warning("'alias' is a Conan 1.X legacy, unsupported and undocumented feature, "
+                       "completely discouraged. "
+                       "It might be removed in future Conan versions", warn_tag="deprecated")
         output.warning("Consider using version-ranges instead.")
     _format_resolved("Resolved version ranges", graph.resolved_ranges)
     for req in graph.resolved_ranges:
         if str(req.version) == "[]":
-            output.warning("Empty version range usage is discouraged. Use [*] instead",
-                           warn_tag="deprecated")
+            global_conf =  graph.root.conanfile._conan_helpers.global_conf  # noqa
+            deprecated_policies = global_conf.get("core:policies", check_type=list, default=list())
+            if "deprecated_empty_version_range" in deprecated_policies:
+                output.warning("Empty version range usage is discouraged. Use [*] instead. "
+                               "This behaviour is kept enabled because 'deprecated_empty_version_range' "
+                               "is present in the 'core:policies' conf list. "
+                               "The fallback will be removed in Conan 2.32.",
+                               warn_tag="deprecated")
+            else:
+                raise ConanException("Empty version range usage is disabled. Use [*] instead. "
+                                     "The old behaviour can be re-enabled by adding "
+                                     "'deprecated_empty_version_range' in the 'core:policies' conf list "
+                                     "until Conan 2.32, where it will be removed.")
             break
 
     overrides = graph.overrides()
@@ -101,6 +111,12 @@ def print_graph_basic(graph):
     if deprecated:
         output.warning("There are deprecated packages in the graph", warn_tag="risk")
 
+    if graph.visibility_conflicts:
+        msg = ["Packages required both with visible=True and visible=False"]
+        for ref, consumers in graph.visibility_conflicts.items():
+            msg.append(f"    {ref}: Required by {', '.join(str(c) for c in consumers)}")
+        output.warning("\n".join(msg), warn_tag="risk")
+
 
 def print_graph_packages(graph):
     # I am excluding the "download"-"cache" or remote information, that is not
@@ -113,18 +129,21 @@ def print_graph_packages(graph):
     skipped_requires = []
     tab = "    "
     for node in graph.nodes:
-        if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+        if node.recipe in ("Consumer", "Cli"):
             continue
         node_info = node.conanfile.info
-        if node.context == CONTEXT_BUILD:
-            existing = build_requires.setdefault(node.pref, [node.binary, node.binary_remote, node_info])
+        if node.context == "build":
+            existing = build_requires.setdefault(node.pref,
+                                                 [node.binary, node.binary_remote, node_info])
         else:
             if node.test:
-                existing = test_requires.setdefault(node.pref, [node.binary, node.binary_remote, node_info])
+                existing = test_requires.setdefault(node.pref,
+                                                    [node.binary, node.binary_remote, node_info])
             else:
-                existing = requires.setdefault(node.pref, [node.binary, node.binary_remote, node_info])
+                existing = requires.setdefault(node.pref,
+                                               [node.binary, node.binary_remote, node_info])
         # TO avoid showing as "skip" something that is used in other node of the graph
-        if existing[0] == BINARY_SKIP:
+        if existing[0] == "Skip":
             existing[0] = node.binary
 
     def _format_requires(title, reqs_to_print):
@@ -132,15 +151,15 @@ def print_graph_packages(graph):
             return
         output.info(title, Color.BRIGHT_YELLOW)
         for pref, (status, remote, info) in sorted(reqs_to_print.items(), key=repr):
-            name = pref.repr_notime() if status != BINARY_PLATFORM else str(pref.ref)
+            name = pref.repr_notime() if status != "Platform" else str(pref.ref)
             msg = f"{tab}{name} - "
-            if status == BINARY_SKIP:
+            if status == "Skip":
                 skipped_requires.append(str(pref.ref))
                 output.verbose(f"{msg}{status}", Color.BRIGHT_CYAN)
-            elif status == BINARY_MISSING or status == BINARY_INVALID:
+            elif status == "Missing" or status == "Invalid":
                 output.write(msg, Color.BRIGHT_CYAN)
                 output.writeln(status, Color.BRIGHT_RED)
-            elif status == BINARY_BUILD:
+            elif status == "Build":
                 output.write(msg, Color.BRIGHT_CYAN)
                 output.writeln(status, Color.BRIGHT_YELLOW)
             else:

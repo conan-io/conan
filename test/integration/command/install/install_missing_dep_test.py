@@ -1,10 +1,8 @@
-import unittest
-
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
-class InstallMissingDependency(unittest.TestCase):
+class TestInstallMissingDependency:
 
     def test_missing_dep(self):
         client = TestClient()
@@ -37,8 +35,8 @@ class InstallMissingDependency(unittest.TestCase):
         client.assert_overrides({"dep1/1.0@lasote/testing":
                                 ['dep1/2.0@lasote/testing']})
 
-        self.assertIn("Can't find a 'dep2/1.0@lasote/testing' package", client.out)
-        self.assertIn("dep1/2.Y.Z", client.out)
+        assert "Can't find a 'dep2/1.0@lasote/testing' package" in client.out
+        assert "dep1/2.Y.Z" in client.out
 
     def test_missing_multiple_dep(self):
         client = TestClient()
@@ -51,5 +49,5 @@ class InstallMissingDependency(unittest.TestCase):
         conanfile = GenConanfile().with_require("dep1/1.0").with_require("dep2/1.0")
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . --name=pkg --version=1.0", assert_error=True)
-        self.assertIn("ERROR: Missing prebuilt package for 'dep1/1.0', 'dep2/1.0'", client.out)
-        self.assertIn("Try to build locally from sources using the '--build=dep1/1.0 --build=dep2/1.0'", client.out)
+        assert "ERROR: Missing prebuilt package for 'dep1/1.0', 'dep2/1.0'" in client.out
+        assert "Try to build locally from sources using the '--build=dep1/1.0 --build=dep2/1.0'" in client.out

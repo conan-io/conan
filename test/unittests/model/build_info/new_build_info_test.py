@@ -64,7 +64,7 @@ def test_component_aggregation():
     # for example, cannot be aggregated. But "cmake_build_modules" is aggregated.
     assert ret.get_property("my_foo") is None
     assert ret.get_property("my_foo2") is None
-    assert ret.get_property("cmake_build_modules") == None
+    assert ret.get_property("cmake_build_modules") is None
 
     # If we change the internal graph the order is different
     cppinfo.components["c1"].requires = []
@@ -136,4 +136,4 @@ def test_cpp_info_merge_aggregating_components_first(aggregate_first):
                                                              "jar_{}_2".format(n)]
             assert getattr(cppinfo.components["boo2"], n) == ["jar2_{}_1".format(n),
                                                               "jar2_{}_2".format(n)]
-            assert getattr(cppinfo, n) == None
+            assert getattr(cppinfo, n) is None

@@ -1,3 +1,5 @@
+import os
+import sys
 import zipfile
 import tarfile
 from os.path import join, exists
@@ -7,13 +9,8 @@ import pytest
 from conan.tools.files import unzip
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save
+from conan.internal.util.files import save
 from conan.errors import ConanException
-
-
-def test_impossible_to_import_untargz():
-    with pytest.raises(ImportError) as exc:
-        from conan.tools.files import untargz
 
 
 def create_example_zip(root_file=True, subfolder=False):
@@ -49,6 +46,16 @@ def test_unzip_with_pattern():
 
     dest_dir = temp_folder()
     unzip(conanfile, archive, dest_dir, pattern="foo.txt")
+    assert exists(join(dest_dir, "foo.txt"))
+    assert not exists(join(dest_dir, "src", "bar.txt"))
+
+
+def test_unzip_with_exclude_pattern():
+    archive = create_example_zip(subfolder=True)
+    conanfile = ConanFileMock({})
+
+    dest_dir = temp_folder()
+    unzip(conanfile, archive, dest_dir, excludes=["src/*"])
     assert exists(join(dest_dir, "foo.txt"))
     assert not exists(join(dest_dir, "src", "bar.txt"))
 
@@ -99,14 +106,21 @@ def create_example_tar(root_file=True, subfolder=False):
 
 
 def test_untargz():
+    import io
+    from unittest.mock import patch
+
     archive = create_example_tar(subfolder=True)
     conanfile = ConanFileMock({})
 
-    # Unzip and check permissions are kept
-    dest_dir = temp_folder()
-    unzip(conanfile, archive, dest_dir)
-    assert exists(join(dest_dir, "foo.txt"))
-    assert exists(join(dest_dir, "src", "bar.txt"))
+    with patch('sys.stderr', new_callable=io.StringIO) as mock_stderr:
+        # Unzip and check permissions are kept
+        dest_dir = temp_folder()
+        unzip(conanfile, archive, dest_dir)
+        assert exists(join(dest_dir, "foo.txt"))
+        assert exists(join(dest_dir, "src", "bar.txt"))
+
+        stderr_output = mock_stderr.getvalue()
+        assert f"Uncompressing {archive} to {dest_dir}" in stderr_output
 
 
 def test_untargz_with_pattern():
@@ -115,6 +129,16 @@ def test_untargz_with_pattern():
 
     dest_dir = temp_folder()
     unzip(conanfile, archive, dest_dir, pattern="foo.txt")
+    assert exists(join(dest_dir, "foo.txt"))
+    assert not exists(join(dest_dir, "src", "bar.txt"))
+
+
+def test_untargz_with_exclude_pattern():
+    archive = create_example_tar(subfolder=True)
+    conanfile = ConanFileMock({})
+
+    dest_dir = temp_folder()
+    unzip(conanfile, archive, dest_dir, excludes=["src/*"])
     assert exists(join(dest_dir, "foo.txt"))
     assert not exists(join(dest_dir, "src", "bar.txt"))
 
@@ -135,9 +159,9 @@ def test_untargz_with_strip_root_fails():
 
     # Unzip and check permissions are kept
     dest_dir = temp_folder()
-    with pytest.raises(ConanException) as error:
+    with pytest.raises(ConanException) as e:
         unzip(conanfile, archive, dest_dir, strip_root=True)
-    assert "Can't untar a tgz containing files in the root with strip_root enabled" in str(error.value)
+    assert "Can't untar a tgz containing files in the root with strip_root enabled" in str(e.value)
 
 
 def test_untargz_with_strip_root_and_pattern():
@@ -149,3 +173,32 @@ def test_untargz_with_strip_root_and_pattern():
     unzip(conanfile, archive, dest_dir, pattern="src/*", strip_root=True)
     assert exists(join(dest_dir, "bar.txt"))
     assert not exists(join(dest_dir, "foo.txt"))
+
+
+@pytest.mark.skipif(sys.version_info.minor < 14, reason="zstd needs Python >= 3.14")
+def test_untargz_zst():
+    tmp_dir = temp_folder()
+    tar_path = join(tmp_dir, "file.tar.zst")
+    foo_txt = join(tmp_dir, "foo.txt")
+    save(foo_txt, "foo-content")
+    with tarfile.open(tar_path, "w:zst") as tar:
+        tar.add(foo_txt, "foo.txt")
+
+    conanfile = ConanFileMock({})
+    dest_dir = temp_folder()
+    unzip(conanfile, tar_path, dest_dir)
+    assert exists(join(dest_dir, "foo.txt"))
+
+
+@pytest.mark.skipif(sys.version_info.minor >= 14, reason="validate zstd error in python<3.14")
+def test_untargz_zst_unsupported_python():
+    # Fake a .tar.zst, the version check happens before any decompression is attempted
+    archive = create_example_tar()
+    zst_archive = join(os.path.dirname(archive), "file.tzst")
+    os.rename(archive, zst_archive)
+
+    conanfile = ConanFileMock({})
+    dest_dir = temp_folder()
+    with pytest.raises(ConanException) as error:
+        unzip(conanfile, zst_archive, dest_dir)
+    assert "File file.tzst compressed with 'zst', unsupported for Python<3.14" in str(error.value)

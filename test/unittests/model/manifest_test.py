@@ -5,7 +5,7 @@ import pytest
 
 from conan.internal.model.manifest import FileTreeManifest
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import load, md5, save
+from conan.internal.util.files import load, md5, save
 
 
 @pytest.mark.skipif(platform.system() == "Windows", reason="decent symlinks only")

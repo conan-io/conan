@@ -1,16 +1,14 @@
 import textwrap
-import unittest
-
 
 import pytest
 
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
-class OptionsTest(unittest.TestCase):
+class TestOptions:
 
     def test_general_scope_options_test_package(self):
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -21,37 +19,37 @@ class OptionsTest(unittest.TestCase):
         test = GenConanfile().with_test("pass")
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=1")
-        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
+        assert "pkg/0.1@user/testing: BUILD SHARED: 1" in client.out
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=2")
         assert 'legacy: Unscoped option definition is ambiguous' in client.out
-        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
+        assert "pkg/0.1@user/testing: BUILD SHARED: 2" in client.out
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=1")
-        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
+        assert "pkg/0.1@user/testing: BUILD SHARED: 1" in client.out
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o pkg*:shared=2")
-        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 2", client.out)
+        assert "pkg/0.1@user/testing: BUILD SHARED: 2" in client.out
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=1")
-        self.assertIn("pkg/0.1@user/testing: BUILD SHARED: 1", client.out)
+        assert "pkg/0.1@user/testing: BUILD SHARED: 1" in client.out
 
     def test_general_scope_options_test_package_notdefined(self):
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile = GenConanfile()
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=True")
-        self.assertIn("pkg/0.1@user/testing: Forced build from source", client.out)
+        assert "pkg/0.1@user/testing: Forced build from source" in client.out
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o shared=False", assert_error=True)
-        self.assertIn("option 'shared' doesn't exist", client.out)
+        assert "option 'shared' doesn't exist" in client.out
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -o *:shared=True")
-        self.assertIn("pkg/0.1@user/testing: Forced build from source", client.out)
-        self.assertIn("Testing the package: Building", client.out)
+        assert "pkg/0.1@user/testing: Forced build from source" in client.out
+        assert "Testing the package: Building" in client.out
 
     def test_general_scope_priorities(self):
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -63,26 +61,26 @@ class OptionsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         # Consumer has priority
         client.run("create . --name=pkg --version=0.1 -o *:shared=1 -o shared=2 -o p*:other=4")
-        self.assertIn("pkg/0.1: BUILD SHARED: 2 OTHER: 4", client.out)
+        assert "pkg/0.1: BUILD SHARED: 2 OTHER: 4" in client.out
         # Consumer has priority over pattern, even if the pattern specifies the package name
         client.run("create . --name=pkg --version=0.1 -o *:shared=1 -o pkg/*:shared=2 -o shared=3 -o p*:other=4")
-        self.assertIn("pkg/0.1: BUILD SHARED: 3 OTHER: 4", client.out)
+        assert "pkg/0.1: BUILD SHARED: 3 OTHER: 4" in client.out
         client.run("create . --name=pkg --version=0.1 -o pkg/0.1:shared=2 -o p*:other=4 -o pk*:other=5")
-        self.assertIn("pkg/0.1: BUILD SHARED: 2 OTHER: 5", client.out)
+        assert "pkg/0.1: BUILD SHARED: 2 OTHER: 5" in client.out
 
         # With test_package
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": GenConanfile().with_test("pass")})
         # Sorted (longest, alphabetical) patterns, have priority
         client.run("create . --name=pkg --version=0.1 -o *:shared=1 -o pkg/0.1:shared=2 -o other=4")
-        self.assertIn("pkg/0.1: BUILD SHARED: 2 OTHER: 4", client.out)
+        assert "pkg/0.1: BUILD SHARED: 2 OTHER: 4" in client.out
         client.run("create . --name=pkg --version=0.1 -o pk*:shared=2 -o p*:shared=1 -o pkg/0.1:other=5")
-        self.assertIn("pkg/0.1: BUILD SHARED: 1 OTHER: 5", client.out)
+        assert "pkg/0.1: BUILD SHARED: 1 OTHER: 5" in client.out
         client.run("create . --name=pkg --version=0.1 -o pk*:shared=2 -o p*:shared=1 -o pkg/0.1:other=5 -o *g*:other=6")
-        self.assertIn("pkg/0.1: BUILD SHARED: 1 OTHER: 6", client.out)
+        assert "pkg/0.1: BUILD SHARED: 1 OTHER: 6" in client.out
 
     def test_parsing(self):
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile = '''
 from conan import ConanFile
 class EqualerrorConan(ConanFile):
@@ -104,11 +102,11 @@ equal/1.0.0@user/testing:opt=a=b
 '''
         client.save({"conanfile.txt": conanfile}, clean_first=True)
         client.run("install . --build=missing")
-        self.assertIn("OPTION a=b", client.out)
+        assert "OPTION a=b" in client.out
 
     def test_general_scope_options(self):
         # https://github.com/conan-io/conan/issues/2538
-        client = TestClient()
+        client = TestClient(light=True)
         conanfile_liba = textwrap.dedent("""
             from conan import ConanFile
             class LibA(ConanFile):
@@ -119,7 +117,7 @@ equal/1.0.0@user/testing:opt=a=b
                 """)
         client.save({"conanfile.py": conanfile_liba})
         client.run("create . --name=liba --version=0.1 --user=danimtb --channel=testing -o *:shared=True")
-        self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
+        assert "liba/0.1@danimtb/testing: shared=True" in client.out
 
         conanfile_libb = textwrap.dedent("""
             from conan import ConanFile
@@ -141,19 +139,19 @@ equal/1.0.0@user/testing:opt=a=b
 
             # Test info
             client.run("graph info . -o *:shared=True")
-            self.assertIn("conanfile.py: shared=True", client.out)
-            self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
+            assert "conanfile.py: shared=True" in client.out
+            assert "liba/0.1@danimtb/testing: shared=True" in client.out
             # Test create
             client.run("create . --name=libb --version=0.1 --user=danimtb --channel=testing -o *:shared=True")
-            self.assertIn("libb/0.1@danimtb/testing: shared=True", client.out)
-            self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
+            assert "libb/0.1@danimtb/testing: shared=True" in client.out
+            assert "liba/0.1@danimtb/testing: shared=True" in client.out
             # Test install
             client.run("install . -o *:shared=True")
-            self.assertIn("conanfile.py: shared=True", client.out)
-            self.assertIn("liba/0.1@danimtb/testing: shared=True", client.out)
+            assert "conanfile.py: shared=True" in client.out
+            assert "liba/0.1@danimtb/testing: shared=True" in client.out
 
     def test_define_nested_option_not_freeze(self):
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -189,7 +187,7 @@ equal/1.0.0@user/testing:opt=a=b
         this test was failing because Options was protecting against removal of options with
         already assigned values. This has been relaxed, to make possible this case
         """
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -213,7 +211,7 @@ equal/1.0.0@user/testing:opt=a=b
         assert "pkg/0.1" in c.out  # Real test is the above doesn't crash
 
     def test_any(self):
-        c = TestClient()
+        c = TestClient(light=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class EqualerrorConan(ConanFile):
@@ -260,7 +258,7 @@ class TestOptionsPriorities:
                 def configure(self):
                     self.options["lib1/*"].foobar = self.options.logic_for_foobar
             """)
-        c = TestClient()
+        c = TestClient(light=True)
 
         c.save({"lib1/conanfile.py": lib1,
                 "lib2/conanfile.py": lib2})
@@ -299,60 +297,60 @@ class TestOptionsPriorities:
         c.save({"app/conanfile.py": self._app("lib1", "lib2", "not_configure")})
         # This order works, because lib1 is expanded first, it takes foobar=False
         c.run("install app -o lib2*:logic_for_foobar=True -o lib1*:foobar=False")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: True" in c.out
 
         # Now swap order
         c.save({"app/conanfile.py": self._app("lib2", "lib1", "not_configure")})
         c.run("install app -o lib2*:logic_for_foobar=True -o lib1*:foobar=False")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: True" in c.out
 
     def test_lib1_priority(self, _client):
         c = _client
         c.save({"app/conanfile.py": self._app("lib1", "lib2", "not_configure")})
         # This order works, because lib1 is expanded first, it takes foobar=False
         c.run("install app")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: False" in c.out
         c.run("install app -o lib1*:foobar=True")
-        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
-        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        assert "LIB1 FOOBAR: True" in c.out
+        assert "LIB2 LOGIC: False" in c.out
         c.run("install app -o lib2*:logic_for_foobar=True")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: True" in c.out
 
     def test_lib2_priority(self, _client):
         c = _client
         c.save({"app/conanfile.py": self._app("lib2", "lib1", "not_configure")})
         # This order works, because lib1 is expanded first, it takes foobar=False
         c.run("install app")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: False" in c.out
         c.run("install app -o lib1*:foobar=True")
-        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
-        assert "conanfile.py: LIB2 LOGIC: False" in c.out
+        assert "LIB1 FOOBAR: True" in c.out
+        assert "LIB2 LOGIC: False" in c.out
         c.run("install app -o lib2*:logic_for_foobar=True")
-        assert "conanfile.py: LIB1 FOOBAR: True" in c.out
-        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+        assert "LIB1 FOOBAR: True" in c.out
+        assert "LIB2 LOGIC: True" in c.out
 
     def test_consumer_configure_priority(self, _client):
         c = _client
         c.save({"app/conanfile.py": self._app("lib1", "lib2", "configure")})
         c.run("install app")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: True" in c.out
 
         # Now swap order
         c.save({"app/conanfile.py": self._app("lib1", "lib2", "configure")})
         c.run("install app")
-        assert "conanfile.py: LIB1 FOOBAR: False" in c.out
-        assert "conanfile.py: LIB2 LOGIC: True" in c.out
+        assert "LIB1 FOOBAR: False" in c.out
+        assert "LIB2 LOGIC: True" in c.out
 
 
 def test_configurable_default_options():
     # https://github.com/conan-io/conan/issues/11487
-    c = TestClient()
+    c = TestClient(light=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):
@@ -417,11 +415,11 @@ class TestMultipleOptionsPatterns:
         """
         https://github.com/conan-io/conan/issues/13240
         """
-        c = TestClient()
+        c = TestClient(light=True)
         consumer = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
-              settings = "os", "arch", "compiler", "build_type"
+              settings = "os"
 
               def requirements(self):
                   self.requires("dep1/1.0")
@@ -449,11 +447,11 @@ class TestMultipleOptionsPatterns:
         assert "dep4/1.0: SHARED: True!!" in c.out
 
     def test_multiple_options_patterns(self):
-        c = TestClient()
+        c = TestClient(light=True)
         configure_consumer = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
+                settings = "os"
 
                 def requirements(self):
                     self.requires("dep1/1.0")
@@ -479,11 +477,11 @@ class TestMultipleOptionsPatterns:
         assert "dep4/1.0: SHARED: True!!" in c.out
 
     def test_multiple_options_patterns_order(self):
-        c = TestClient()
+        c = TestClient(light=True)
         configure_consumer = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
-                settings = "os", "arch", "compiler", "build_type"
+                settings = "os"
 
                 def requirements(self):
                     self.requires("dep1/1.0")
@@ -507,6 +505,35 @@ class TestMultipleOptionsPatterns:
         assert "dep3/1.0: SHARED: True!!" in c.out
         assert "dep4/1.0: SHARED: True!!" in c.out
 
+    def test_pattern_version_range_warn(self):
+        c = TestClient(light=True)
+        profile = textwrap.dedent("""
+        include(default)
+
+        [tool_requires]
+        fmt/[*]:cmake/3.31.0
+
+        [options]
+        fmt/[*]:shared=True
+
+        [settings]
+        fmt/[*]:compiler.cppstd=17
+        """)
+        c.save({
+            "profile": profile,
+            "conanfile.py": GenConanfile("fmt", "1.0")})
+        c.run("create -pr=profile")
+        assert "WARN: risk: Settings pattern fmt/[*] contains a version range" in c.out
+        assert "WARN: risk: Options pattern fmt/[*] contains a version range" in c.out
+        assert "WARN: risk: Tool requires pattern fmt/[*] contains a version range" in c.out
+
+    def test_pattern_version_range_wrong_split(self):
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("foo", "1.0")})
+        c.run("create -o=foo/[>=1]:shared=True", assert_error=True)
+        # We split by the first =, so this version range we can't catch and warn before it breaks
+        assert "option 'foo/[>' doesn't exist" in c.out
+
 
 class TestTransitiveOptionsShared:
     """
@@ -514,7 +541,7 @@ class TestTransitiveOptionsShared:
     """
     @pytest.fixture()
     def client(self):
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"toollib/conanfile.py": GenConanfile("toollib", "0.1").with_shared_option(False),
                 "tool/conanfile.py": GenConanfile("tool", "0.1").with_shared_option(False)
                                                                 .with_requires("toollib/0.1"),
@@ -572,7 +599,7 @@ class TestTransitiveOptionsShared:
 
 
 def test_options_no_user_channel_patterns():
-    c = TestClient()
+    c = TestClient(light=True)
     conanfile = textwrap.dedent("""\
         from conan import ConanFile
         class Pkg(ConanFile):
@@ -611,6 +638,46 @@ def test_options_no_user_channel_patterns():
     assert "dep3/0.1@user/channel: MYOPTION: 1" in c.out
 
 
+def test_package_options_negate_patterns():
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Dep(ConanFile):
+            version = "0.1"
+            options = {"myoption": [1, 2, 3]}
+            def build(self):
+                self.output.info(f"MYOPTION={self.options.myoption}!!!")
+            """)
+    c.save({"dep/conanfile.py": conanfile,
+            "pkg/conanfile.py": GenConanfile().with_requires("dep1/0.1", "dep2/0.1", "dep3/0.1")})
+    c.run("export dep --name=dep1")
+    c.run("export dep --name=dep2")
+    c.run("export dep --name=dep3")
+
+    c.run("install pkg --build=* -o *:myoption=1 -o ~dep1/*:myoption=2")
+    assert "dep1/0.1: MYOPTION=1!!!" in c.out
+    assert "dep2/0.1: MYOPTION=2!!!" in c.out
+    assert "dep3/0.1: MYOPTION=2!!!" in c.out
+
+    # Order does matter for options with *:myoption patter, evaluates last
+    c.run("install pkg --build=* -o ~dep1/*:myoption=2 -o *:myoption=1")
+    assert "dep1/0.1: MYOPTION=1!!!" in c.out
+    assert "dep2/0.1: MYOPTION=1!!!" in c.out
+    assert "dep3/0.1: MYOPTION=1!!!" in c.out
+
+    # dep3 comes later, works
+    c.run("install pkg --build=* -o *:myoption=1 -o ~dep1/*:myoption=2 -o dep3/*:myoption=3")
+    assert "dep1/0.1: MYOPTION=1!!!" in c.out
+    assert "dep2/0.1: MYOPTION=2!!!" in c.out
+    assert "dep3/0.1: MYOPTION=3!!!" in c.out
+
+    # dep3 comes first, then last !dep1 pattern prevails
+    c.run("install pkg --build=* -o *:myoption=1 -o dep3/*:myoption=3 -o ~dep1/*:myoption=2")
+    assert "dep1/0.1: MYOPTION=1!!!" in c.out
+    assert "dep2/0.1: MYOPTION=2!!!" in c.out
+    assert "dep3/0.1: MYOPTION=2!!!" in c.out
+
+
 class TestTransitiveOptionsSharedInvisible:
     """
     https://github.com/conan-io/conan/issues/13854
@@ -618,7 +685,7 @@ class TestTransitiveOptionsSharedInvisible:
     """
     @pytest.fixture()
     def client(self):
-        c = TestClient()
+        c = TestClient(light=True)
         c.save({"dep2/conanfile.py": GenConanfile("dep2", "0.1").with_shared_option(False),
                 "dep1/conanfile.py": GenConanfile("dep1", "0.1").with_shared_option(False)
                                                                 .with_requirement("dep2/0.1",
@@ -672,7 +739,7 @@ class TestTransitiveOptionsSharedInvisible:
 class TestImportantOptions:
     @pytest.mark.parametrize("pkg", ["liba", "libb", "app"])
     def test_important_options(self, pkg):
-        c = TestClient()
+        c = TestClient(light=True)
 
         liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3])
         libb = GenConanfile("libb", "0.1").with_requires("liba/0.1")
@@ -703,12 +770,12 @@ class TestImportantOptions:
         assert "liba/0.1: MYOPTION: 3" in c.out
 
     def test_profile_shows_important(self):
-        c = TestClient()
+        c = TestClient(light=True)
         c.run("profile show  -o *:myoption!=3")
         assert "*:myoption!=3" in c.out
 
     def test_important_options_recipe_priority(self):
-        c = TestClient()
+        c = TestClient(light=True)
 
         liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3, 4])\
                                           .with_default_option("myoption!", 1)
@@ -734,6 +801,43 @@ class TestImportantOptions:
         c.run("graph info app -o *:myoption!=4")
         assert "liba/0.1: MYOPTION: 4" in c.out
 
+    def test_important_options_recipe_priority_conditional(self):
+        c = TestClient(light=True)
+
+        liba = textwrap.dedent("""
+            from conan import ConanFile
+            class Lib(ConanFile):
+                name = "liba"
+                version = "0.1"
+                settings = "os"
+                options = {"myoption": [1, 2, 3]}
+
+                def config_options(self):
+                    if self.settings.os == "Windows":
+                        setattr(self.options, "myoption!", 2)
+
+                def package_id(self):
+                    self.output.info(f"MYOPTION: {self.info.options.myoption}")
+            """)
+
+        c.save({"liba/conanfile.py": liba,
+                "app/conanfile.py": GenConanfile().with_requires("liba/0.1")})
+        c.run("export liba")
+
+        c.run("graph info app -s os=Linux -o *:myoption=3")
+        assert "liba/0.1: MYOPTION: 3" in c.out
+        c.run("graph info app -s os=Linux -o *:myoption=2")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+        c.run("graph info app -s os=Linux -o *:myoption=1")
+        assert "liba/0.1: MYOPTION: 1" in c.out
+
+        c.run("graph info app -s os=Windows -o *:myoption=3")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+        c.run("graph info app -s os=Windows -o *:myoption=2")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+        c.run("graph info app -s os=Windows -o *:myoption=1")
+        assert "liba/0.1: MYOPTION: 2" in c.out
+
     def test_wrong_option_syntax_no_trace(self):
         tc = TestClient(light=True)
         tc.save({"conanfile.py": GenConanfile().with_option("myoption", [1, 2, 3])})
@@ -746,7 +850,7 @@ class TestConflictOptionsWarnings:
 
     @pytest.mark.parametrize("important", [True, False])
     def test_options_warnings(self, important):
-        c = TestClient()
+        c = TestClient(light=True)
         liba = GenConanfile("liba", "0.1").with_option("myoption", [1, 2, 3], default=1)
         libb = GenConanfile("libb", "0.1").with_requires("liba/0.1")
         if important:
@@ -781,9 +885,20 @@ def test_get_safe_none_option_checks():
             .with_package("self.output.info(f'get_safe is None: {self.options.get_safe(\"myoption\") is None}')",
                           "self.output.info(f'get_safe is not None: {self.options.get_safe(\"myoption\") is not None}')",
                           "self.output.info(f'get_safe == None: {self.options.get_safe(\"myoption\") == None}')",
-                          "self.output.info(f'get_safe != None: {self.options.get_safe(\"myoption\") != None}')" )})
+                          "self.output.info(f'get_safe != None: {self.options.get_safe(\"myoption\") != None}')")})
     tc.run("create .")
     assert "get_safe is None: True" in tc.out
     assert "get_safe is not None: False" in tc.out
     assert "get_safe == None: True" in tc.out
     assert "get_safe != None: False" in tc.out
+
+
+def test_option_apply_version_range():
+    c = TestClient(light=True)
+    c.save({"conanfile.py": GenConanfile("dep", "0.1").with_shared_option(False)})
+    c.run("create -o shared=True")
+    c.run("install --requires=dep/0.1 -o shared=True")  # This worked without problem
+    c.run("install --requires=dep/[*] -o shared=True")
+    assert "WARN: risk" not in c.out
+    # This failed because of dep/[*] not matching pattern, now it works
+    assert "Install finished successfully" in c.out

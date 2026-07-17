@@ -4,7 +4,7 @@ import textwrap
 from conan.internal.model.manifest import FileTreeManifest
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def test_post_package():

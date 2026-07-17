@@ -2,6 +2,7 @@ import textwrap
 
 import pytest
 
+from conan.api.model import RecipeReference
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
 
@@ -275,6 +276,14 @@ def test_compose_conf_dict_updates():
                          "user.company:mydict2={'1': 'a', '2': 'b'}\n")
 
 
+def test_compose_conf_numbers():
+    c = ConfDefinition()
+    c.loads("user.version:value=8.1\n"
+            "foo/*:user.version:value=10")
+    assert c.get("user.version:value") == 8.1
+    assert c.get_conanfile_conf(RecipeReference.loads("foo/1.0")).get("user.version:value") == 10
+
+
 def test_conf_get_check_type_and_default():
     text = textwrap.dedent("""\
         user.company.cpu:jobs=5
@@ -381,8 +390,8 @@ def test_conf_scope_patterns_ok(scope, conf):
 
 @pytest.mark.parametrize("conf", ["user.foo.bar=1"])
 @pytest.mark.parametrize("scope, assert_message", [
-    ("", "Either 'user.foo.bar' does not exist in configuration list"),
-    ("pkg/1.0:", "Either 'pkg/1.0:user.foo.bar' does not exist in configuration list"),
+    ("", "User conf 'user.foo.bar' invalid format, not 'user.org.group:conf'"),
+    ("pkg/1.0:", "'pkg/1.0:user.foo.bar' does not exist in configuration list"),
 ])
 def test_conf_scope_patterns_bad(scope, conf, assert_message):
     final_conf = scope + conf
@@ -407,6 +416,26 @@ def test_unset_basic_same_behaviour(choices):
 
     c4 = ConfDefinition()
     c4.loads("user.company.cpu:jobs=!")
+    c3.update_conf_definition(c4)
+
+    assert c3.get("user.company.cpu:jobs", choices=choices) is None
+
+
+@pytest.mark.parametrize("choices", [None, ["Foo", "Bar"]])
+def test_unset_tilde_alias_same_behaviour(choices):
+    """=~ is an alias for =! (unset)"""
+    c = ConfDefinition()
+    assert c.get("user.company.cpu:jobs", choices=choices) is None
+
+    c2 = ConfDefinition()
+    c2.loads("user.company.cpu:jobs=~")
+    assert c2.get("user.company.cpu:jobs", choices=choices) is None
+
+    c3 = ConfDefinition()
+    c3.loads("user.company.cpu:jobs=4")
+
+    c4 = ConfDefinition()
+    c4.loads("user.company.cpu:jobs=~")
     c3.update_conf_definition(c4)
 
     assert c3.get("user.company.cpu:jobs", choices=choices) is None

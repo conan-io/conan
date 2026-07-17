@@ -121,14 +121,14 @@ def test_complete(client):
     client.run("install . -s build_type=Debug --build=missing")
     # Run the BUILD environment
     ext = "bat" if platform.system() == "Windows" else "sh"  # TODO: Decide on logic .bat vs .sh
-    cmd = environment_wrap_command(ConanFileMock(),"conanbuild", client.current_folder,
+    cmd = environment_wrap_command(ConanFileMock(), "conanbuild", client.current_folder,
                                    cmd="mycmake.{}".format(ext))
     client.run_command(cmd)
     assert "MYCMAKE=Release!!" in client.out
     assert "MYOPENSSL=Release!!" in client.out
 
     # Run the RUN environment
-    cmd = environment_wrap_command(ConanFileMock(),"conanrun", client.current_folder,
+    cmd = environment_wrap_command(ConanFileMock(), "conanrun", client.current_folder,
                                    cmd="mygtest.{ext} && .{sep}myrunner.{ext}".format(ext=ext,
                                                                                       sep=os.sep))
     client.run_command(cmd)
@@ -142,7 +142,7 @@ def test_complete(client):
 
 
 def test_dependents_new_buildenv():
-    client = TestClient()
+    client = TestClient(light=True)
     boost = textwrap.dedent("""
         from conan import ConanFile
         class Boost(ConanFile):
@@ -464,8 +464,6 @@ class TestBuildTrackHost:
         test = textwrap.dedent("""
                 from conan import ConanFile
                 class Test(ConanFile):
-                    test_type = "explicit"
-
                     def build_requirements(self):
                         self.tool_requires(self.tested_reference_str)
                     def test(self):
@@ -518,10 +516,11 @@ class TestBuildTrackHost:
     ])
     def test_host_version_different_ref(self, host_version, assert_error, assert_msg):
         tc = TestClient(light=True)
+        app = (GenConanfile("app", "1.0").with_requires("libgettext/[>0.1]")
+               .with_tool_requirement(f"gettext/<host_version:{host_version}"))
         tc.save({"gettext/conanfile.py": GenConanfile("gettext"),
                  "libgettext/conanfile.py": GenConanfile("libgettext"),
-                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("libgettext/[>0.1]")
-                                                   .with_tool_requirement(f"gettext/<host_version:{host_version}")})
+                 "app/conanfile.py": app})
         tc.run("create libgettext --version=0.2")
         tc.run("create gettext --version=0.1 --build-require")
         tc.run("create gettext --version=0.2 --build-require")
@@ -529,41 +528,154 @@ class TestBuildTrackHost:
         tc.run("create app", assert_error=assert_error)
         assert assert_msg in tc.out
 
-    @pytest.mark.parametrize("requires_tag,tool_requires_tag,fails", [
-        ("user/channel", "user/channel", False),
-        ("", "user/channel", True),
-        ("auser/achannel", "anotheruser/anotherchannel", True),
+    @pytest.mark.parametrize("requires_tag,tool_requires_tag", [
+        ("", ""),
+        ("", "user/channel"),
+        ("user/channel", "user/channel"),
+        ("", "user/channel"),
+        ("auser/achannel", "anotheruser/anotherchannel"),
     ])
-    def test_overriden_host_version_user_channel(self, requires_tag, tool_requires_tag, fails):
+    def test_overriden_host_version_user_channel(self, requires_tag, tool_requires_tag):
         """
         Make the tool_requires follow the regular require with the expression "<host_version>"
         """
         c = TestClient(light=True)
+        user_channel_reference = f"@{requires_tag}" if requires_tag else ""
         pkg = textwrap.dedent(f"""
             from conan import ConanFile
             class ProtoBuf(ConanFile):
                 name = "pkg"
                 version = "0.1"
                 def requirements(self):
-                    self.requires("protobuf/1.0@{requires_tag}")
+                    self.requires("protobuf/1.0{user_channel_reference}")
                 def build_requirements(self):
                     self.tool_requires("protobuf/<host_version>@{tool_requires_tag}")
             """)
         c.save({"protobuf/conanfile.py": GenConanfile("protobuf"),
                 "pkg/conanfile.py": pkg})
-        if "/" in requires_tag:
-            user, channel = requires_tag.split("/", 1)
-            user_channel = f"--user={user} --channel={channel}"
-        else:
-            user_channel = ""
-        c.run(f"create protobuf --version=1.0 {user_channel}")
+        for tag in (requires_tag, tool_requires_tag):
+            if "/" in tag:
+                user, channel = tag.split("/", 1)
+                user_channel = f"--user={user} --channel={channel}"
+            else:
+                user_channel = ""
+            c.run(f"create protobuf --version=1.0 {user_channel}")
 
-        c.run("create pkg", assert_error=fails)
-        if fails:
-            assert f"pkg/0.1 require 'protobuf/<host_version>@{tool_requires_tag}': didn't find a " \
-                   "matching host dependency" in c.out
-        else:
-            assert "pkg/0.1: Package '39f6a091994d2d080081ea888d75ef65c1d04c8d' created" in c.out
+        c.run("create pkg")
+        expected_tool_requires_tag = f"@{tool_requires_tag}" if tool_requires_tag else ""
+        c.assert_listed_require({f"protobuf/1.0{user_channel_reference}": "Cache"})
+        c.assert_listed_require({f"protobuf/1.0{expected_tool_requires_tag}": "Cache"}, build=True)
+
+    @pytest.mark.parametrize("shared", [True, False])
+    def test_host_version_transitive_contexts(self, shared):
+        # app ---------------------------------------> protobuf (shared)
+        #   \---tool-require-> grpc/<host> (shared) -> protobuf (shared)
+        #    \--tool-require-------(host)----------------/
+        tc = TestClient(light=True)
+        tc.save({"grpc/conanfile.py": GenConanfile("grpc", "0.1").with_shared_option(shared)
+                .with_requirement("protobuf/0.1"),
+                 "protobuf/conanfile.py": GenConanfile("protobuf", "0.1")
+                .with_shared_option(shared),
+                 "conanfile.py": GenConanfile("app", "0.1").with_requires("protobuf/[*]")
+                .with_tool_requirement("grpc/[*]")
+                .with_tool_requirement("protobuf/<host_version>")
+                 })
+        tc.run("export protobuf")
+        tc.run("export grpc")
+        tc.run("graph info .")
+        assert "Conflict between" not in tc.out
+
+    @pytest.mark.parametrize("shared", [True, False])
+    def test_host_version_transitive_contexts2(self, shared):
+        # app -> grpc (shared) -> protobuf (shared)
+        #  \-----------------------/
+        #   \---tool-require-> grpc/<host> (shared) -> protobuf (shared)
+        #    \--tool-require-------(host)----------------/
+        tc = TestClient(light=True)
+        tc.save({"grpc/conanfile.py": GenConanfile("grpc", "0.1").with_shared_option(shared)
+                .with_requirement("protobuf/0.1"),
+                 "protobuf/conanfile.py": GenConanfile("protobuf", "0.1")
+                .with_shared_option(shared),
+                 "conanfile.py": GenConanfile("app", "0.1").with_requires("grpc/0.1")
+                .with_requires("protobuf/[*]")
+                .with_tool_requirement("grpc/<host_version>")
+                .with_tool_requirement("protobuf/<host_version>")
+                 })
+        tc.run("export protobuf")
+        tc.run("export grpc")
+        tc.run("graph info .")
+        assert "Conflict between" not in tc.out
+
+    def test_host_version_transitive_contexts_orphan(self):
+        tc = TestClient(light=True)
+        tc.save({"grpc/conanfile.py": GenConanfile("grpc", "0.1")
+                .with_requirement("protobuf/0.1").with_shared_option(False),
+                 "protobuf/conanfile.py": GenConanfile("protobuf", "0.1").with_shared_option(False),
+                 "conanfile.py": GenConanfile("app", "0.1").with_requires("grpc/0.1")
+                .with_requires("protobuf/[*]")
+                .with_tool_requirement("protobuf/<host_version>")
+                .with_tool_requirement("grpc/<host_version>")})
+        tc.run("export protobuf")
+        tc.run("export grpc")
+        tc.run("graph info . -o:a=*:shared=True -f=json", redirect_stdout="graph.json")
+        data = json.loads(tc.load("graph.json"))
+
+        def _assert_no_orphan(deps_graph):
+            ids = set(deps_graph["nodes"].keys())
+            seen = set(deps_graph["root"].keys())
+            for node in deps_graph["nodes"].values():
+                seen.update(node["dependencies"].keys())
+            assert not ids - seen, f"Orphan nodes found: {ids - seen}"
+        _assert_no_orphan(data["graph"])
+
+    def test_user_channel_error(self):
+        lib = textwrap.dedent("""
+           from conan import ConanFile
+           class LibWithToolConan(ConanFile):
+               name = "lib_with_tool"
+               package_type = "static-library"
+               settings = "os", "arch"
+               # {}
+           """)
+        c = TestClient(default_server_user=True)
+        c.save({"conanfile.py": lib.format(1)})
+        c.run("create . --version 1.0.0 --user foobar")
+        c.save({"conanfile.py": lib.format(2)})
+        c.run("create . --version 1.1.0 --user foobar")
+        rev1 = c.exported_recipe_revision()
+        c.save({"conanfile.py": lib.format(3)})
+        c.run("create . --version 1.1.0 --user foobar")
+        rev2 = c.exported_recipe_revision()
+        assert rev1 != rev2
+
+        c.run(f"upload lib_with_tool/1.1.0@foobar#{rev2} -r=default")
+        c.run(f"remove lib_with_tool/1.1.0@foobar#{rev2} -c")
+
+        dep = textwrap.dedent("""
+           from conan import ConanFile
+           class DepLibConan(ConanFile):
+               name = "dep_lib"
+
+               package_type = "static-library"
+               settings = "os", "arch"
+
+               def build_requirements(self):
+                   self.tool_requires("lib_with_tool/<host_version>@foobar")
+
+               def requirements(self):
+                   self.requires("lib_with_tool/1.1.0@foobar")
+           """)
+        c.save({"conanfile.py": dep}, clean_first=True)
+        c.run("create . --version=1.0.0 --user=foobar")
+
+        conanfile = textwrap.dedent(f"""
+            [requires]
+            dep_lib/1.0.0@foobar
+            lib_with_tool/1.1.0@foobar#{rev2}
+            """)
+        c.save({"conanfile.txt": conanfile}, clean_first=True)
+        c.run("install .")
+        # No longer produces a conflict
 
 
 def test_build_missing_build_requires():
@@ -595,4 +707,121 @@ def test_requirement_in_wrong_method():
                 self.requires("foo/1.0")
         """)})
     tc.run('create . -cc="core:warnings_as_errors=[\'*\']"', assert_error=True)
-    assert "ERROR: deprecated: Requirements should only be added in the requirements()/build_requirements() methods, not configure()/config_options(), which might raise errors in the future." in tc.out
+    assert ("ERROR: deprecated: Requirements should only be added in the requirements()/"
+            "build_requirements() methods, not configure()/config_options(), which might "
+            "raise errors in the future.") in tc.out
+
+
+def test_transitive_build_scripts_error():
+    # https://github.com/conan-io/conan/issues/18235
+    c = TestClient(light=True)
+    meta = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Meta(ConanFile):
+            name = "meta"
+            version = "0.1"
+            package_type = "build-scripts"
+            def requirements(self):
+                self.requires("dep/0.1")
+        """)
+    product = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Product(ConanFile):
+            name = "product"
+            version = "0.1"
+            package_type = "build-scripts"
+            def requirements(self):
+                self.requires("meta/0.1")
+        """)
+
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
+            "meta/conanfile.py": meta,
+            "product/conanfile.py": product})
+    c.run("create dep")
+    c.run("create meta")
+    c.run("install product")
+    # It doesn't crash
+
+
+def test_transitive_build_scripts_library_error():
+    # https://github.com/conan-io/conan/issues/18856
+    c = TestClient(light=True)
+    tool = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Product(ConanFile):
+            name = "tool"
+            version = "0.1"
+            package_type = "build-scripts"
+            def requirements(self):
+                self.requires("dep/0.1")
+        """)
+
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("static-library"),
+            "tool/conanfile.py": tool})
+    c.run("create dep")
+    c.run("create tool")
+    # Tool-requires, not an issue
+    c.run("install --tool-requires=tool/0.1")
+    # requires, it crashed with traceback, now a clear error message
+    c.run("install --requires=tool/0.1", assert_error=True)
+    assert ("ERROR: Package 'tool/0.1' with type 'build-scripts' cannot have "
+            "a 'static-library' dependency to 'dep/0.1'") in c.out
+
+
+@pytest.mark.parametrize("min_conan_version, should_propagate", [
+    (None, True),
+    ("*", True),
+    (">=2.5", True),
+    (">=2.28", False),
+])
+def test_build_run_false(min_conan_version, should_propagate):
+    required_conan_version_line = ""
+    if min_conan_version:
+        required_conan_version_line = f"required_conan_version='{min_conan_version}'"
+    tc = TestClient(light=True)
+    cmake = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.files import save
+    import os
+
+    class CMake(ConanFile):
+        name = "mycmake"
+        version = "1.0"
+        settings = "os"
+
+        def package(self):
+            echo = "echo MYCMAKE!!!"
+            save(self, os.path.join(self.package_folder, "bin", "mycmake.sh"), echo)
+            save(self, os.path.join(self.package_folder, "bin", "mycmake.bat"), echo)
+            os.chmod(os.path.join(self.package_folder, "bin", "mycmake.sh"), 0o777)
+    """)
+
+    consumer = textwrap.dedent(f"""
+    from conan import ConanFile
+    import platform
+    {required_conan_version_line}
+
+    class Pkg(ConanFile):
+        name = "pkg"
+        version = "0.1"
+        settings = "os"
+
+        def build_requirements(self):
+            self.tool_requires("mycmake/1.0", run=False)
+
+        def build(self):
+            cmd = "mycmake.bat" if platform.system() == "Windows" else "mycmake.sh"
+            self.run(cmd)
+    """)
+    tc.save({"consumer/conanfile.py": consumer,
+             "cmake/conanfile.py": cmake})
+    tc.run("create cmake")
+    tc.run("create consumer", assert_error=not should_propagate)
+    if should_propagate:
+        assert "MYCMAKE!!!" in tc.out
+    else:
+        assert "MYCMAKE!!!" not in tc.out
+        assert "Error in build() method" in tc.out

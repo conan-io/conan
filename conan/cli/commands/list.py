@@ -1,4 +1,5 @@
 import json
+import datetime
 
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
@@ -7,7 +8,6 @@ from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.formatters.list import list_packages_html
 from conan.errors import ConanException
-from conans.util.dates import timestamp_to_str
 
 # Keep them so we don't break other commands that import them, but TODO: Remove later
 remote_color = Color.BRIGHT_BLUE
@@ -19,6 +19,12 @@ field_color = Color.BRIGHT_YELLOW
 value_color = Color.CYAN
 
 
+def _format_timestamp_human(timestamp):
+    # used by ref.repr_humantime() to print human readable time
+    return datetime.datetime.fromtimestamp(int(timestamp),
+                                           datetime.timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+
+
 def print_serial(item, indent=None, color_index=None):
     indent = "" if indent is None else (indent + "  ")
     color_index = 0 if color_index is None else (color_index + 1)
@@ -28,7 +34,7 @@ def print_serial(item, indent=None, color_index=None):
     if isinstance(item, dict):
         for k, v in item.items():
             if isinstance(v, (str, int)):
-                if k.lower() == "error":
+                if k.lower() in ("error", "pkgsign_error"):
                     color = Color.BRIGHT_RED
                     k = "ERROR"
                 elif k.lower() == "warning":
@@ -51,7 +57,7 @@ def print_serial(item, indent=None, color_index=None):
 
 def print_list_text(results):
     """ Do a little format modification to serialized
-    list bundle, so it looks prettier on text output
+    package list, so it looks prettier on text output
     """
     info = results["results"]
 
@@ -78,11 +84,24 @@ def print_list_text(results):
             for k, v in item.items():
                 if isinstance(v, dict) and v.get("timestamp"):
                     timestamp = v.pop("timestamp")
-                    k = f"{k} ({timestamp_to_str(timestamp)})"
+                    k = f"{k} ({_format_timestamp_human(timestamp)})"
                 result[k] = format_timestamps(v)
             return result
         return item
     info = {remote: format_timestamps(values) for remote, values in info.items()}
+
+    def format_empty_packages(item):
+        if isinstance(item, dict):
+            result = {}
+            for k, v in item.items():
+                if k == "packages" and isinstance(v, dict) and not v:
+                    result[k] = ["No packages found for this revision"]
+                else:
+                    result[k] = format_empty_packages(v)
+            return result
+        return item
+    info = {remote: format_empty_packages(values) for remote, values in info.items()}
+
     print_serial(info)
 
 
@@ -108,7 +127,7 @@ def prepare_pkglist_compact(pkglist):
             new_rrev = f"{ref}#{rrev}"
             timestamp = rrev_info.pop("timestamp", None)
             if timestamp:
-                new_rrev += f"%{timestamp} ({timestamp_to_str(timestamp)})"
+                new_rrev += f"%{timestamp} ({_format_timestamp_human(timestamp)})"
 
             packages = rrev_info.pop("packages", None)
             if packages:
@@ -258,6 +277,13 @@ def list(conan_api: ConanAPI, parser, *args):
                                            args.filter_settings or args.filter_options):
             raise ConanException("--package-query and --filter-xxx can only be done for binaries, "
                                  "a 'pkgname/version:*' pattern is necessary")
+        if args.lru:
+            if not ref_pattern.rrev and not ref_pattern.package_id:  # If package_id => #latest
+                raise ConanException("'--lru' must be used with recipe revision pattern, "
+                                     "use 'pkg/version#*' argument")
+            if ref_pattern.package_id and not ref_pattern.prev:
+                raise ConanException("'--lru' must be used with package revision pattern, "
+                                     "use 'pkg/version:*#*' argument")
         # If neither remote nor cache are defined, show results only from cache
         pkglist = MultiPackagesList()
         profile = conan_api.profiles.get_profile(args.filter_profile or [],

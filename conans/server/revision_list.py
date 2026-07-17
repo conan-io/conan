@@ -1,7 +1,7 @@
 import json
 from collections import namedtuple
 
-from conans.util.dates import revision_timestamp_now
+from conan.internal.util.dates import revision_timestamp_now
 
 _RevisionEntry = namedtuple("RevisionEntry", "revision time")
 

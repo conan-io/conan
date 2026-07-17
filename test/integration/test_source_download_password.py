@@ -13,11 +13,11 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def test_source_download_password():
-    c = TestClient()
+    c = TestClient(light=True)
     file_server = TestFileServer()
     c.servers["file_server"] = file_server
     save(os.path.join(file_server.store, "myfile.txt"), "hello world!")
@@ -71,7 +71,7 @@ def test_source_download_password():
 
 def test_source_credentials_only_download():
     # https://github.com/conan-io/conan/issues/16396
-    c = TestClient(default_server_user=True)
+    c = TestClient(default_server_user=True, light=True)
     url = c.servers["default"].fake_url
 
     content = {"credentials": [{"url": url, "token": "password stpaces"}]}
@@ -80,7 +80,7 @@ def test_source_credentials_only_download():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     # add_auth should never be called for regular upload/download
-    with mock.patch("conans.client.rest.conan_requester._SourceURLCredentials.add_auth", None):
+    with mock.patch("conan.internal.rest.conan_requester._SourceURLCredentials.add_auth", None):
         c.run("upload * -c -r=default")
         c.run("remove * -c")
         c.run("download pkg/0.1 -r=default")
@@ -106,7 +106,7 @@ def test_blocked_malicius_tgz():
             def source(self):
                 get(self, "http://fake_url/myfiles.tgz")
             """)
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": conan_file})
 
     with mock.patch("conan.tools.files.files.download") as mock_download:

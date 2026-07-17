@@ -1,7 +1,7 @@
 import os
 
-from conan.tools.microsoft.msbuild import msbuild_arch
 from conan.errors import ConanException
+from conan.tools.microsoft.visual import msvc_platform_from_arch
 
 
 def vs_layout(conanfile):
@@ -26,7 +26,7 @@ def vs_layout(conanfile):
         raise ConanException("The 'vs_layout' requires the 'arch' setting")
 
     if arch != "None" and arch != "x86":
-        msvc_arch = msbuild_arch(arch)
+        msvc_arch = msvc_platform_from_arch(arch)
         if not msvc_arch:
             raise ConanException(f"The 'vs_layout' doesn't work with the arch '{arch}'. "
                                  "Accepted architectures: 'x86', 'x86_64', 'armv7', 'armv8'")

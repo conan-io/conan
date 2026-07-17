@@ -150,6 +150,7 @@ def test_components_overrides():
     c.run("create app")
     assert "app/0.1: Created package" in c.out
 
+
 def test_duplication_component_properties():
     """ Regression for PR 17503 - component lists would be incorrectly aggregated """
     tc = TestClient(light=True)
@@ -187,5 +188,5 @@ def test_duplication_component_properties():
     tc.run("create dep")
     tc.run("create .")
     # The bug would give ccomp the prop_list values of the other two components
-    assert "pkg/0.1: ccomp list: ['value3', 'value2', 'value1']" not in tc.out
-    assert "pkg/0.1: ccomp list: ['value3']" in tc.out
+    assert "ccomp list: ['value3', 'value2', 'value1']" not in tc.out
+    assert "ccomp list: ['value3']" in tc.out

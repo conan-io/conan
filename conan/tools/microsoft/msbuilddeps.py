@@ -10,7 +10,8 @@ from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
-from conans.util.files import load, save
+from conan.tools.microsoft.visual import msvc_platform_from_arch
+from conan.internal.util.files import load, save
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
@@ -102,10 +103,7 @@ class MSBuildDeps:
         # TODO: This platform is not exactly the same as ``msbuild_arch``, because it differs
         # in x86=>Win32
         #: Platform name, e.g., ``Win32`` if ``settings.arch == "x86"``.
-        self.platform = {'x86': 'Win32',
-                         'x86_64': 'x64',
-                         'armv7': 'ARM',
-                         'armv8': 'ARM64'}.get(str(conanfile.settings.arch))
+        self.platform = msvc_platform_from_arch(str(conanfile.settings.arch))
         #: Defines the platform key used to conditionally select which property sheet to
         #: import (defaults to ``"Platform"``).
         self.platform_key = "Platform"
@@ -159,9 +157,17 @@ class MSBuildDeps:
         :return: varfile content
         """
 
-        def add_valid_ext(libname):
+        def add_valid_ext(libname, libdirs=None):
             ext = os.path.splitext(libname)[1]
-            return '%s;' % libname if ext in VALID_LIB_EXTENSIONS else '%s.lib;' % libname
+            if ext in VALID_LIB_EXTENSIONS:
+                return f"{libname};"
+
+            lib_name = f"{libname}.lib"
+            if libdirs and not any(lib_name in os.listdir(d) for d in libdirs if os.path.isdir(d)):
+                meson_name = f"lib{libname}.a"
+                if any(meson_name in os.listdir(d) for d in libdirs if os.path.isdir(d)):
+                    lib_name = meson_name
+            return f"{lib_name};"
 
         pkg_placeholder = "$(Conan{}RootFolder)".format(name)
 
@@ -193,7 +199,7 @@ class MSBuildDeps:
         res_dirs = join_paths(cpp_info.resdirs)
         include_dirs = join_paths(cpp_info.includedirs)
         lib_dirs = join_paths(cpp_info.libdirs)
-        libs = "".join([add_valid_ext(lib) for lib in cpp_info.libs])
+        libs = "".join([add_valid_ext(lib, cpp_info.libdirs) for lib in cpp_info.libs])
         # TODO: Missing objects
         system_libs = "".join([add_valid_ext(sys_dep) for sys_dep in cpp_info.system_libs])
         definitions = "".join("%s;" % d for d in cpp_info.defines)
@@ -288,9 +294,54 @@ class MSBuildDeps:
             import_node.setAttribute('Project', aggregated_filename)
             import_vars.appendChild(import_node)
 
+        # Import conan_dedup.props
+        if "conan_dedup.props" not in content_multi:
+            dedup_import = dom.createElement('Import')
+            dedup_import.setAttribute('Condition', "'$(ConanDedupPropsImported)' != 'True'")
+            dedup_import.setAttribute('Project', 'conan_dedup.props')
+            import_vars.appendChild(dedup_import)
+
         content_multi = dom.toprettyxml()
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
+
+    _conan_dedup_props = textwrap.dedent("""\
+        <?xml version="1.0" encoding="utf-8"?>
+        <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+          <PropertyGroup>
+            <ConanDedupPropsImported>True</ConanDedupPropsImported>
+          </PropertyGroup>
+          <Target Name="ConanDeduplicatePaths"
+                  BeforeTargets="ClCompile;Link;Midl;ResourceCompile"
+                  Condition="'$(ConanDedupTargetDefined)' != 'True'">
+            <PropertyGroup>
+              <ConanDedupTargetDefined>True</ConanDedupTargetDefined>
+            </PropertyGroup>
+            <ItemGroup>
+              <_ConanIncludePaths Include="%(ClCompile.AdditionalIncludeDirectories)" />
+            </ItemGroup>
+            <RemoveDuplicates Inputs="@(_ConanIncludePaths)">
+              <Output TaskParameter="Filtered" ItemName="_ConanUniqueIncludePaths" />
+            </RemoveDuplicates>
+            <ItemGroup>
+              <ClCompile Condition="'@(_ConanUniqueIncludePaths)' != ''">
+                <AdditionalIncludeDirectories>@(_ConanUniqueIncludePaths)</AdditionalIncludeDirectories>
+              </ClCompile>
+            </ItemGroup>
+            <ItemGroup>
+              <_ConanLibPaths Include="%(Link.AdditionalLibraryDirectories)" />
+            </ItemGroup>
+            <RemoveDuplicates Inputs="@(_ConanLibPaths)">
+              <Output TaskParameter="Filtered" ItemName="_ConanUniqueLibPaths" />
+            </RemoveDuplicates>
+            <ItemGroup>
+              <Link Condition="'@(_ConanUniqueLibPaths)' != ''">
+                <AdditionalLibraryDirectories>@(_ConanUniqueLibPaths)</AdditionalLibraryDirectories>
+              </Link>
+            </ItemGroup>
+          </Target>
+        </Project>
+        """)
 
     def _conandeps(self):
         """ this is a .props file including direct declared dependencies
@@ -343,7 +394,7 @@ class MSBuildDeps:
                         except KeyError:  # The transitive dep might have been skipped
                             required = None
                         if required:  # The transitive dep might have been skipped
-                            required_name = required.ref.name
+                            required_name = self._dep_name(required, build)
                             public_deps.append(required_name if required_pkg == required_comp
                                                else "{}_{}".format(required_name, required_comp))
                     else:  # Points to a component of same package
@@ -389,5 +440,7 @@ class MSBuildDeps:
 
         # Include all direct build_requires for host context. This might change
         result.update(self._conandeps())
+
+        result["conan_dedup.props"] = self._conan_dedup_props
 
         return result

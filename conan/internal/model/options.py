@@ -131,7 +131,7 @@ class _PackageOptions:
         # for header_only() clearing
         self._data.clear()
 
-    def freeze(self):
+    def conan_freeze(self):
         self._freeze = True
 
     def __contains__(self, option):
@@ -144,7 +144,7 @@ class _PackageOptions:
         # This should never raise any exception, in any case
         self._data.pop(field, None)
 
-    def validate(self):
+    def conan_validate(self):
         for child in self._data.values():
             child.validate()
 
@@ -242,6 +242,11 @@ class Options:
                                   "deprecated, use a pattern like `{}/*:{}` " \
                                   "instead".format(k, package, option)
                             raise ConanException(msg)
+                        if "[" in package:
+                            msg = (f"Options pattern {package} contains a version range, which has no effect. "
+                                   f"Only '&' for consumer and '*' as wildcard are supported in this context.")
+                            from conan.api.output import ConanOutput
+                            ConanOutput().warning(msg, warn_tag="risk")
                         self._deps_package_options.setdefault(package, _PackageOptions())[option] = v
                     else:
                         self._package_options[k] = v
@@ -326,7 +331,7 @@ class Options:
                 item += "/*"
         return self._deps_package_options.setdefault(item, _PackageOptions())
 
-    def scope(self, ref):
+    def conan_scope(self, ref):
         """ when there are free options like "shared=True", they apply to the "consumer" package
         Once we know the name of such consumer package, it can be defined in the data, so it will
         be later correctly apply when processing options """
@@ -384,7 +389,7 @@ class Options:
                     if ref_matches(own_ref, pattern, is_consumer=is_consumer):
                         self._package_options.update_options(options, is_pattern="*" in pattern)
 
-        self._package_options.freeze()
+        self._package_options.conan_freeze()
 
     def get_upstream_options(self, down_options, own_ref, is_consumer):
         """ compute which options should be propagated to the dependencies, a combination of the
@@ -399,12 +404,12 @@ class Options:
         # self_options are the minimal necessary for a build-order
         # TODO: check this, isn't this just a copy?
         self_options = Options()
-        self_options._deps_package_options = down_options._deps_package_options.copy()
-
         # compute now the necessary to propagate all down - self + self deps
         upstream_options = Options()
         for pattern, options in down_options._deps_package_options.items():
             if ref_matches(own_ref, pattern, is_consumer=is_consumer):
+                # keep it for reproduction of state
+                self_options._deps_package_options.update({pattern: options})
                 # Remove the exact match-name to this package, don't further propagate up
                 pattern_name = pattern.split("/", 1)[0]
                 if "*" not in pattern_name:

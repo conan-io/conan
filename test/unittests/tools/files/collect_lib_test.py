@@ -8,7 +8,7 @@ from conan.internal.model.cpp_info import CppInfo
 from conan.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import redirect_output
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def test_collect_libs():

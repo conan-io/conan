@@ -4,7 +4,7 @@ import textwrap
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
+from conan.test.utils.tools import TestClient
 
 
 def test_user_overrides():
@@ -362,11 +362,10 @@ class TestLockUpdate:
         assert new in lock
 
 
-
 class TestLockUpgrade:
     @pytest.mark.parametrize("kind, pkg, old, new", [
         ("requires", "math", "math/1.0", "math/1.1"),
-        ("build-requires", "cmake", "cmake/1.0", "cmake/1.1"),     # TODO there is not a --build-requires
+        ("build-requires", "cmake", "cmake/1.0", "cmake/1.1"),  # TODO there isn't a --build-requires
         # ("python-requires", "mytool", "mytool/1.0", "mytool/1.1"), # TODO nor a --python-requires
     ])
     def test_lock_upgrade(self, kind, pkg, old, new):
@@ -384,10 +383,8 @@ class TestLockUpgrade:
         rev1 = c.exported_recipe_revision()
         c.run(f"lock upgrade --{kind_create}={pkg}/[*] --update-{kind}={pkg}/[*]")
         lock = c.load("conan.lock")
-        print(lock)
         assert f"{old}#{rev0}" not in lock
         assert f"{new}#{rev1}" in lock
-
 
     def test_lock_upgrade_path(self):
         c = TestClient(light=True)
@@ -422,7 +419,7 @@ class TestLockUpgrade:
         c.run(f"export libb --version=1.2")
         c.run(f"export libc --version=1.1")
         c.run(f"export libd --version=1.1")
-        c.run("lock upgrade . --update-requires=liba/1.0 --update-requires=libb/[*] --update-build-requires=libc/[*] --update-python-requires=libd/1.0")
+        c.run("lock upgrade . -ur=liba/1.0 -ur=libb/[*] -ubr=libc/[*] -upr=libd/1.0")
         lock = c.load("conan.lock")
         assert "liba/1.9" in lock
         assert "libb/1.1" in lock
@@ -435,7 +432,6 @@ class TestLockUpgrade:
         lock = c.load("conan.lock")
         assert "libd/1.1" in lock
         assert "libd/1.2" not in lock
-
 
     def test_lock_upgrade_new_requirement(self):
         c = TestClient(light=True)
@@ -457,3 +453,49 @@ class TestLockUpgrade:
         assert "libb/2.0" in lock
         assert "libd/1.0" in lock
         assert "libc/1.0" in lock  # TODO: libc should be removed from lockfile? It is not required anymore...
+
+    def test_config_upgrade(self):
+        """ Test that it is possible to lock also config-requires
+        """
+        c = TestClient(light=True)
+
+        c.save({"config/conanfile.py": GenConanfile("config").with_package_type("configuration"),
+                "conanfile.py": GenConanfile("pkg", "1.0")})
+        c.run("create config --version=1.0")
+        c.run("create config --version=2.0")
+        c.run("config install-pkg config/1.0 --lockfile-out=conan.lock")
+
+        def _check(refs):
+            reqs = json.loads(c.load("conan.lock"))["config_requires"]
+            for a, b in zip(refs, reqs):
+                assert a in b
+
+        def _check_cache(refs):
+            reqs = json.loads(c.load_home("config_version.json"))["config_version"]
+            for a, b in zip(refs, reqs):
+                assert a in b
+
+        _check(["config/1.0"])
+        _check_cache(["config/1.0"])
+
+        c.run("lock upgrade-config --requires=config/[*] --update-config-requires=config/*")
+        _check(["config/2.0"])
+        _check_cache(["config/1.0"])
+
+        c.run("config install-pkg config/1.0 --lockfile=conan.lock", assert_error=True)
+        assert "ERROR: Requirement 'config/1.0' not in lockfile 'config_requires'" in c.out
+        c.run("config install-pkg config/2.0 --lockfile=conan.lock")
+        _check(["config/2.0"])
+        _check_cache(["config/2.0"])
+
+        # Force downgrade
+        c.run("config install-pkg config/1.0 --lockfile= --lockfile-out=conan.lock")
+        _check(["config/1.0"])
+        _check_cache(["config/1.0"])
+
+        c.save({"conanconfig.yml": "packages:\n    - config/[*]"})
+        c.run("lock upgrade-config . --update-config-requires=config/1.0")
+        _check(["config/2.0"])
+        _check_cache(["config/1.0"])
+        c.run("config install-pkg . --lockfile=conan.lock")
+        _check_cache(["config/2.0"])

@@ -1,9 +1,7 @@
-from collections import OrderedDict
-
 from conan.errors import ConanException
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
-from conan.internal.model.version_range import VersionRange
+from conan.internal.model.version_range import VersionRange, required_conan_version_policy
 
 
 class Requirement:
@@ -11,7 +9,8 @@ class Requirement:
     """
     def __init__(self, ref, *, headers=None, libs=None, build=False, run=None, visible=None,
                  transitive_headers=None, transitive_libs=None, test=None, package_id_mode=None,
-                 force=None, override=None, direct=None, options=None):
+                 force=None, override=None, direct=None, options=None, no_skip=False,
+                 consistent=None):
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
@@ -22,12 +21,14 @@ class Requirement:
         self._run = run  # node contains executables, shared libs or data necessary at host run time
         self._visible = visible  # Even if not libsed or visible, the node is unique, can conflict
         self._transitive_headers = transitive_headers
+        self._fixed_transitive_headers = transitive_headers
         self._transitive_libs = transitive_libs
         self._test = test
         self._package_id_mode = package_id_mode
         self._force = force
         self._override = override
         self._direct = direct
+        self._consistent = consistent
         self.options = options
         # Meta and auxiliary information
         # The "defining_require" is the require that defines the current value. If this require is
@@ -38,6 +39,12 @@ class Requirement:
         self.is_test = test  # to store that it was a test, even if used as regular requires too
         self.skip = False
         self.required_nodes = set()  # store which intermediate nodes are required, to compute "Skip"
+        self.no_skip = no_skip
+        # computed ones, not default ones
+        self.consistent_policy_new = False
+        if self.visible and not self.consistent:
+            raise ConanException(f"Requirement {ref} with visible=True and consistent=False is not"
+                                 f" supported. Please open a Github ticket to report it")
 
     @property
     def files(self):  # require needs some files in dependency package
@@ -104,6 +111,19 @@ class Requirement:
         self._direct = value
 
     @property
+    def consistent(self):
+        # Host by default has to be consistent too
+        if self.consistent_policy_new:
+            default_consistent = self.visible or self.test or not self.build
+        else:
+            default_consistent = self.visible or self.test
+        return self._default_if_none(self._consistent, default_consistent)
+
+    @consistent.setter
+    def consistent(self, value):
+        self._consistent = value
+
+    @property
     def build(self):
         return self._build
 
@@ -163,10 +183,13 @@ class Requirement:
         return result
 
     def copy_requirement(self):
-        return Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
+        requirement = Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
                            run=self.run, visible=self.visible,
                            transitive_headers=self.transitive_headers,
-                           transitive_libs=self.transitive_libs)
+                           transitive_libs=self.transitive_libs,
+                           consistent=self.consistent)
+        requirement._fixed_transitive_headers = self._fixed_transitive_headers
+        return requirement
 
     @property
     def version_range(self):
@@ -216,6 +239,7 @@ class Requirement:
         src_pkg_type = src_node.conanfile.package_type
         if src_pkg_type is PackageType.HEADER:
             set_if_none("_transitive_headers", True)
+            set_if_none("_fixed_transitive_headers", True)
             set_if_none("_transitive_libs", True)
 
     def __hash__(self):
@@ -230,7 +254,7 @@ class Requirement:
                  (self.headers and other.headers) or
                  (self.libs and other.libs) or
                  (self.run and other.run) or
-                 ((self.visible or self.test) and (other.visible or other.test)) or
+                 (self.consistent and other.consistent) or
                  (self.ref == other.ref and self.options == other.options)))
 
     def aggregate(self, other):
@@ -251,9 +275,11 @@ class Requirement:
         self.libs |= other.libs
         self.run = self.run or other.run
         self.visible |= other.visible
+        self.consistent |= other.consistent
         self.force |= other.force
         self.direct |= other.direct
         self.transitive_headers = self.transitive_headers or other.transitive_headers
+        self._fixed_transitive_headers = self._fixed_transitive_headers or other._fixed_transitive_headers
         self.transitive_libs = self.transitive_libs or other.transitive_libs
         if not other.test:
             self.test = False  # it it was previously a test, but also required by non-test
@@ -265,9 +291,9 @@ class Requirement:
             self.package_id_mode = other.package_id_mode
         self.required_nodes.update(other.required_nodes)
 
-    def transform_downstream(self, pkg_type, require, dep_pkg_type):
+    def transform_downstream(self, pkg_type, require, dep_pkg_type, source):
         """
-        consumer ---self--->  foo<pkg_type> ---require---> bar<dep_pkg_type>
+        consumer ---self--->  source<pkg_type> ---require---> bar<dep_pkg_type>
             \\ -------------------????-------------------- /
         Compute new Requirement to be applied to "consumer" translating the effect of the dependency
         to such "consumer".
@@ -282,7 +308,9 @@ class Requirement:
             # Build-requires will propagate its main trait for running exes/shared to downstream
             # consumers so run=require.run, irrespective of the 'self.run' trait
             downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                             run=require.run, visible=self.visible, direct=False)
+                                             run=require.run, visible=self.visible, direct=False,
+                                             # require.consistent is True, cause require.visible=True
+                                             consistent=self.consistent)
             return downstream_require
 
         if self.build:  # Build-requires
@@ -290,7 +318,9 @@ class Requirement:
             # visible=self.visible will further propagate it downstream
             if dep_pkg_type is PackageType.SHARED or require.run:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
-                                                 run=True, visible=self.visible, direct=False)
+                                                 run=self.run, visible=self.visible, direct=False,
+                                                 # require.visible=True => require.consistent=True
+                                                 consistent=self.consistent)
                 return downstream_require
             return
 
@@ -305,7 +335,9 @@ class Requirement:
             elif pkg_type is PackageType.HEADER:
                 downstream_require = Requirement(require.ref, headers=require.headers, libs=require.libs, run=require.run)
             else:
-                assert pkg_type == PackageType.UNKNOWN
+                if pkg_type != PackageType.UNKNOWN:
+                    raise ConanException(f"Package '{self.ref}' with type '{pkg_type}' cannot have "
+                                         f"a '{dep_pkg_type}' dependency to '{require.ref}'")
                 # TODO: This is undertested, changing it did not break tests
                 downstream_require = require.copy_requirement()
         elif dep_pkg_type is PackageType.HEADER:
@@ -323,15 +355,25 @@ class Requirement:
 
         assert require.visible, "at this point require should be visible"
 
-        if require.transitive_headers is not None:
-            downstream_require.headers = require.headers and require.transitive_headers
+        transitive_propagation = required_conan_version_policy(source, "2.29.9")
+        if transitive_propagation:
+            if require._fixed_transitive_headers is not None:
+                downstream_require.headers = require.headers and require._fixed_transitive_headers
+        else:
+            if require.transitive_headers is not None:
+               downstream_require.headers = require.headers and require.transitive_headers
+
         if self.transitive_headers is not None:
             downstream_require.transitive_headers = self.transitive_headers
+        if self._fixed_transitive_headers is not None:
+            downstream_require._fixed_transitive_headers = require._fixed_transitive_headers and self._fixed_transitive_headers
 
         if require.transitive_libs is not None:
             downstream_require.libs = require.libs and require.transitive_libs
         if self.transitive_libs is not None:
             downstream_require.transitive_libs = self.transitive_libs
+
+        downstream_require.consistent = require.consistent and self.consistent
 
         if self.visible is False:
             downstream_require.visible = False
@@ -356,8 +398,8 @@ class Requirement:
         downstream_require.direct = False
         return downstream_require
 
-    def deduce_package_id_mode(self, pkg_type, dep_node, non_embed_mode, embed_mode, build_mode,
-                               unknown_mode):
+    def deduce_package_id_mode(self, conanfile, dep_node, non_embed_mode, embed_mode, build_mode,
+                               unknown_mode, fix_transitive_static):
         # If defined by the ``require(package_id_mode=xxx)`` trait, that is higher priority
         # The "conf" values are defaults, no hard overrides
         if self.package_id_mode:
@@ -373,6 +415,7 @@ class Requirement:
                 self.package_id_mode = build_mode
             return
 
+        pkg_type = conanfile.package_type
         if pkg_type is PackageType.HEADER:
             self.package_id_mode = "unrelated_mode"
             return
@@ -390,8 +433,20 @@ class Requirement:
             elif pkg_type is PackageType.STATIC:
                 if dep_pkg_type is PackageType.HEADER:
                     self.package_id_mode = embed_mode
-                else:
+                elif self.headers or not fix_transitive_static:
                     self.package_id_mode = non_embed_mode
+                    if not self.headers and not fix_transitive_static:
+                        # Just to avoid multiple repeated warnings
+                        warned = getattr(conanfile, "_conan_fix_transitive_static", False)
+                        if not warned:
+                            msg = ("Transitive dependencies with 'headers=False' effect in "
+                                   "'package_id' is not necessary and suboptimal. Use "
+                                   "required_conan_version='>=2.28' to activate it")
+                            conanfile.output.warning(msg, warn_tag="risk")
+                            conanfile._conan_fix_transitive_static = True
+                else:
+                    self.package_id_mode = None
+                return
 
             if self.package_id_mode is None:
                 self.package_id_mode = unknown_mode
@@ -404,9 +459,11 @@ class BuildRequirements:
     # Just a wrapper around requires for backwards compatibility with self.build_requires() syntax
     def __init__(self, requires):
         self._requires = requires
+        self._called = False
 
     def __call__(self, ref, package_id_mode=None, visible=False, run=None, options=None,
                  override=None):
+        self._called = True
         # TODO: Check which arguments could be user-defined
         self._requires.build_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
                                      options=options, override=override)
@@ -438,7 +495,7 @@ class Requirements:
     """
     def __init__(self, declared=None, declared_build=None, declared_test=None,
                  declared_build_tool=None):
-        self._requires = OrderedDict()
+        self._requires = {}
         # Construct from the class definitions
         if declared is not None:
             if isinstance(declared, str):
@@ -489,7 +546,7 @@ class Requirements:
         as a result of an "alternative" replacement of the package name, otherwise the dictionary
         gets broken by modified key
         """
-        result = OrderedDict()
+        result = {}
         for k, v in self._requires.items():
             if k is require:
                 k.ref.name = new_name
@@ -499,7 +556,6 @@ class Requirements:
     def values(self):
         return self._requires.values()
 
-    # TODO: Plan the interface for smooth transition from 1.X
     def __call__(self, str_ref, **kwargs):
         if str_ref is None:
             return

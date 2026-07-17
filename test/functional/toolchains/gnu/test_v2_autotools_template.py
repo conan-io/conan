@@ -118,10 +118,8 @@ def test_autotools_relocatable_libs_darwin():
     assert "hello/0.1: Hello World Release!" in client.out
 
 
-# FIXME: investigate this test
 @pytest.mark.skipif(platform.system() not in ["Darwin"], reason="Requires Autotools")
 @pytest.mark.tool("autotools")
-@pytest.mark.xfail(reason="This test is failing for newer MacOS versions, but used to pass in the ci")
 def test_autotools_relocatable_libs_darwin_downloaded():
     client = TestClient(default_server_user=True, path_with_spaces=False)
     client2 = TestClient(servers=client.servers, path_with_spaces=False)
@@ -183,9 +181,6 @@ def test_autotools_relocatable_libs_darwin_downloaded():
 
     client2.run("install . -o hello/*:shared=True -r default")
     client2.run("build . -o hello/*:shared=True -r default")
-    # for some reason this is failing for newer macos
-    # although -Wl,-rpath -Wl, if passed to set the rpath when building
-    # it fails with LC_RPATH's not found
     client2.run_command("build-release/greet")
     # activating the environment should not be needed as the rpath is set when linking greet
     #client2.run_command(". build-release/conan/conanrun.sh && build-release/greet")
@@ -347,7 +342,8 @@ def test_autotools_fix_shared_libs():
     assert "Bye, bye!" in client.out
 
 
-@pytest.mark.skip(reason="Test too slow, and needs fix to AutotoolsDeps")
+@pytest.mark.slow
+@pytest.mark.skipif(platform.system() != "Windows", reason="Using msys2")
 @pytest.mark.tool("msys2")
 class TestAutotoolsTemplateWindows:
     def test_msys2_autotools_windows(self):

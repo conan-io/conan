@@ -1,14 +1,24 @@
 import os
 import tempfile
 
-from conans.client.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
 from conan.errors import ConanException
+from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
+
+
+def is_consumer(conanfile):
+    try:
+        return conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE)  # noqa
+    except AttributeError:
+        pass
 
 
 def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"):
     """
     :param conanfile: The current recipe object. Always use ``self``.
-    :param generator: Allow defining the CMake generator. In most cases it doesn't need to be passed, as it will get the value from the configuration              ``tools.cmake.cmaketoolchain:generator``, or it will automatically deduce the generator from the ``settings``
+    :param generator: Allow defining the CMake generator. In most cases it doesn't need to be passed,
+                      as it will get the value from the configuration
+                      ``tools.cmake.cmaketoolchain:generator``, or it will automatically deduce
+                      the generator from the ``settings``
     :param src_folder: Value for ``conanfile.folders.source``, change it if your source code
                        (and CMakeLists.txt) is in a subfolder.
     :param build_folder: Specify the name of the "base" build folder. The default is "build", but
@@ -31,14 +41,11 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
     except ConanException:
         raise ConanException("'build_type' setting not defined, it is necessary for cmake_layout()")
 
-    try:  # TODO: Refactor this repeated pattern to deduce "is-consumer"
-        if conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE):
-            folder = "test_folder" if conanfile.tested_reference_str else "build_folder"
-            build_folder = conanfile.conf.get(f"tools.cmake.cmake_layout:{folder}") or build_folder
-            if build_folder == "$TMP" and folder == "test_folder":
-                build_folder = tempfile.mkdtemp()
-    except AttributeError:
-        pass
+    if is_consumer(conanfile):
+        folder = "test_folder" if conanfile.tested_reference_str else "build_folder"
+        build_folder = conanfile.conf.get(f"tools.cmake.cmake_layout:{folder}") or build_folder
+        if build_folder == "$TMP" and folder == "test_folder":
+            build_folder = tempfile.mkdtemp()
 
     build_folder = build_folder if not subproject else os.path.join(subproject, build_folder)
     config_build_folder, user_defined_build = get_build_folder_custom_vars(conanfile)
@@ -69,11 +76,7 @@ def get_build_folder_custom_vars(conanfile):
                      ["settings.compiler", "settings.compiler.version", "settings.arch",
                       "settings.compiler.cppstd", "settings.build_type", "options.shared"]
     else:
-        try:
-            is_consumer = conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE)
-        except AttributeError:
-            is_consumer = False
-        if is_consumer:
+        if is_consumer(conanfile):
             if build_vars is None:
                 build_vars = conanfile_vars or []
         else:
@@ -85,6 +88,8 @@ def get_build_folder_custom_vars(conanfile):
         tmp = None
         if group == "settings":
             tmp = conanfile.settings.get_safe(var)
+            if tmp and var == "arch":  # handle Apple multi-arch/universal binaries
+                tmp = tmp.replace("|", "_")
         elif group == "options":
             value = conanfile.options.get_safe(var)
             if value is not None:

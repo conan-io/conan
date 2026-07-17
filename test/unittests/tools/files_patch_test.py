@@ -1,13 +1,12 @@
 import os
-import unittest
 from textwrap import dedent
 
-from parameterized.parameterized import parameterized
+import pytest
 
-from conans.client.loader import ConanFileLoader
+from conan.internal.loader import ConanFileLoader
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 base_conanfile = '''
 from conan import ConanFile
@@ -20,9 +19,9 @@ class ConanFileToolsTest(ConanFile):
 '''
 
 
-class ToolsFilesPatchTest(unittest.TestCase):
+class TestToolsFilesPatch:
 
-    @parameterized.expand([(0, ), (1, )])
+    @pytest.mark.parametrize("strip", [0, 1])
     def test_patch_from_file(self, strip):
         if strip:
             file_content = base_conanfile + '''
@@ -81,7 +80,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "example.patch": patch})
         client.run("source .")
-        self.assertEqual(client.load("newfile"), "New file!")
+        assert client.load("newfile") == "New file!"
 
     def test_patch_strip_delete(self):
         conanfile = dedent("""
@@ -100,9 +99,9 @@ class ToolsFilesPatchTest(unittest.TestCase):
                      "example.patch": patch,
                      "oldfile": "legacy code"})
         path = os.path.join(client.current_folder, "oldfile")
-        self.assertTrue(os.path.exists(path))
+        assert os.path.exists(path)
         client.run("source .")
-        self.assertFalse(os.path.exists(path))
+        assert not os.path.exists(path)
 
     def test_patch_strip_delete_no_folder(self):
         conanfile = dedent("""
@@ -121,9 +120,9 @@ class ToolsFilesPatchTest(unittest.TestCase):
                      "example.patch": patch,
                      "oldfile": "legacy code"})
         path = os.path.join(client.current_folder, "oldfile")
-        self.assertTrue(os.path.exists(path))
+        assert os.path.exists(path)
         client.run("source .")
-        self.assertFalse(os.path.exists(path))
+        assert not os.path.exists(path)
 
     def test_patch_new_delete(self):
         conanfile = base_conanfile + '''
@@ -149,9 +148,8 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . --user=user --channel=testing")
-        self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
-                      client.out)
-        self.assertIn("test/1.9.10@user/testing: OLD FILE=False", client.out)
+        assert "test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n" in client.out
+        assert "test/1.9.10@user/testing: OLD FILE=False" in client.out
 
     def test_patch_new_strip(self):
         conanfile = base_conanfile + '''
@@ -170,8 +168,7 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . --user=user --channel=testing")
-        self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
-                      client.out)
+        assert "test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n" in client.out
 
     def test_error_patch(self):
         file_content = base_conanfile + '''
@@ -184,10 +181,9 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client.save({"conanfile.py": file_content})
         client.run("install .")
         client.run("build .", assert_error=True)
-        self.assertIn("patch_ng: error: no patch data found!", client.out)
-        self.assertIn("ERROR: conanfile.py (test/1.9.10): "
-                      "Error in build() method, line 12", client.out)
-        self.assertIn("Failed to parse patch: string", client.out)
+        assert "patch_ng: error: no patch data found!" in client.out
+        assert "ERROR: conanfile.py (test/1.9.10): Error in build() method, line 12" in client.out
+        assert "Failed to parse patch: string" in client.out
 
     def test_add_new_file(self):
         """ Validate issue #5320
@@ -251,15 +247,16 @@ class ToolsFilesPatchTest(unittest.TestCase):
         client.run("install .")
         client.run("build .")
         bar_content = client.load("bar.txt")
-        self.assertIn(dedent("""Yo no creo en brujas, pero que las hay, las hay
-                             """), bar_content)
+        assert dedent("""Yo no creo en brujas, pero que las hay, las hay
+                             """) in bar_content
         foo_content = client.load("foo.txt")
-        self.assertIn(dedent("""For us, there is no spring.
-Just the wind that smells fresh before the storm."""), foo_content)
-        self.assertIn("Calling build()", client.out)
-        self.assertNotIn("Warning", client.out)
+        assert dedent("""For us, there is no spring.
+Just the wind that smells fresh before the storm.""") in foo_content
+        assert "Calling build()" in client.out
+        assert "Warning" not in client.out
 
-    def _save_files(self, file_content):
+    @staticmethod
+    def _save_files(file_content):
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "conanfile.py")
         text_file = os.path.join(tmp_dir, "text.txt")
@@ -267,7 +264,8 @@ Just the wind that smells fresh before the storm."""), foo_content)
         save(text_file, "ONE TWO THREE")
         return tmp_dir, file_path, text_file
 
-    def _build_and_check(self, tmp_dir, file_path, text_file, msg):
+    @staticmethod
+    def _build_and_check(tmp_dir, file_path, text_file, msg):
         loader = ConanFileLoader(None)
         ret = loader.load_consumer(file_path)
         curdir = os.path.abspath(os.curdir)
@@ -280,7 +278,7 @@ Just the wind that smells fresh before the storm."""), foo_content)
             os.chdir(curdir)
 
         content = load(text_file)
-        self.assertEqual(content, msg)
+        assert content == msg
 
     def test_fuzzy_patch(self):
         conanfile = dedent("""
@@ -319,4 +317,4 @@ Z""")
         client.run("install .")
         client.run("build .")
         content = client.load("Jamroot")
-        self.assertIn(expected, content)
+        assert expected in content

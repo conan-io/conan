@@ -7,7 +7,7 @@ import pytest
 from conan.test.utils.mocks import ConanFileMock
 from conan.tools.env.environment import environment_wrap_command
 from conan.test.utils.tools import TestClient
-from conans.util.files import rmdir
+from conan.internal.util.files import rmdir
 
 
 @pytest.fixture(scope="module")
@@ -64,6 +64,7 @@ def test_other_client_can_link_cmake(transitive_shared_client):
 
 # FIXME: Move to the correct Meson space
 @pytest.mark.tool("meson")
+@pytest.mark.tool("ninja")
 @pytest.mark.tool("pkg_config")
 def test_other_client_can_link_meson(transitive_shared_client):
     client = transitive_shared_client

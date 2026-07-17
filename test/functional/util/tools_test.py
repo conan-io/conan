@@ -37,7 +37,6 @@ class TestVisualStudioTools:
 
         # vswhere in PATH but not in ProgramFiles
         env = {"ProgramFiles": None, "ProgramFiles(x86)": None}
-        if not which("vswhere") and vswhere_path:
-            env.update({"PATH": os.path.dirname(vswhere_path)})
+        env.update({"PATH": os.path.dirname(vswhere_path)})
         with environment_update(env):
             assert vswhere()

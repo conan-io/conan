@@ -7,14 +7,13 @@ from conan.api.output import cli_out_write
 from conan.cli.formatters.graph.graph_info_text import filter_graph
 from conan.cli.formatters.graph.info_graph_dot import graph_info_dot
 from conan.cli.formatters.graph.info_graph_html import graph_info_html
-from conans.client.graph.graph_error import GraphConflictError
 
 
-def _render_graph(graph, error, template, template_folder):
+def _render_graph(graph, template, template_folder):
     deps_graph = graph.serialize()
     from conan import __version__
     template = Template(template, autoescape=select_autoescape(['html', 'xml']))
-    return template.render(deps_graph=deps_graph, error=error,
+    return template.render(deps_graph=deps_graph,
                            base_template_path=template_folder, version=__version__)
 
 
@@ -28,15 +27,7 @@ def format_graph_html(result):
     if os.path.isfile(user_template):
         with open(user_template, 'r', encoding="utf-8", newline="") as handle:
             template = handle.read()
-    error = {
-        "type": "unknown",
-        "context": graph.error,
-        "should_highlight_node": lambda node: False
-    }
-    if isinstance(graph.error, GraphConflictError):
-        error["type"] = "conflict"
-        error["should_highlight_node"] = lambda node: node.id == graph.error.node.id
-    cli_out_write(_render_graph(graph, error, template, template_folder))
+    cli_out_write(_render_graph(graph, template, template_folder))
 
 
 def format_graph_dot(result):
@@ -49,7 +40,7 @@ def format_graph_dot(result):
     if os.path.isfile(user_template):
         with open(user_template, 'r', encoding="utf-8", newline="") as handle:
             template = handle.read()
-    cli_out_write(_render_graph(graph, None, template, template_folder))
+    cli_out_write(_render_graph(graph, template, template_folder))
 
 
 def format_graph_json(result):

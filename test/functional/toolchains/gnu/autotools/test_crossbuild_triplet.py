@@ -4,7 +4,9 @@ import textwrap
 
 from conan.test.utils.tools import TestClient
 
-@pytest.mark.skipif(platform.system() not in  ["Darwin", "Linux"], reason="Autotools on Linux or macOS")
+
+@pytest.mark.skipif(platform.system() not in ["Darwin", "Linux"],
+                    reason="Autotools on Linux or macOS")
 def test_crossbuild_triplet_from_conf():
 
     settings_yml = textwrap.dedent("""

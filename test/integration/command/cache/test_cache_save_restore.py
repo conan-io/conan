@@ -2,15 +2,17 @@ import json
 import os
 import platform
 import shutil
+import sys
 import tarfile
 import time
 
 import pytest
 
+from conan.api.model import PkgReference, RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
-from conan.test.utils.tools import TestClient
-from conans.util.files import save, load
+from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
+from conan.internal.util.files import save, load
 
 
 def test_cache_save_restore():
@@ -122,6 +124,47 @@ def _validate_restore(cache_path):
     assert tree2 == tree
 
 
+def test_cache_save_excluded_folders():
+    # https://github.com/conan-io/conan/issues/18234
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile().with_exports("*.py").with_exports_sources("*.c"),
+            "somefile.py": "",
+            "mysrc.c": ""})
+    c.run("create . --name=pkg --version=1.0")
+    ref_layout = c.exported_layout()
+    pkg_layout = c.created_layout()
+    c.run("upload * --dry-run -r=default -c")
+    assert os.path.exists(os.path.join(ref_layout.download_export(), "conan_export.tgz"))
+    assert os.path.exists(os.path.join(ref_layout.download_export(), "conan_sources.tgz"))
+    assert os.path.exists(os.path.join(ref_layout.source(), "mysrc.c"))
+    assert os.path.exists(os.path.join(pkg_layout.download_package(), "conan_package.tgz"))
+    assert os.path.exists(pkg_layout.build())
+
+    c.run("cache save *:*")
+    cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
+
+    c2 = TestClient()
+    shutil.copy2(cache_path, c2.current_folder)
+    c2.run("cache restore conan_cache_save.tgz")
+
+    ref = RecipeReference.loads("pkg/1.0")
+    ref_layout = c2.get_latest_ref_layout(ref)
+    pkg_layout = c2.get_latest_pkg_layout(PkgReference(ref_layout.reference, NO_SETTINGS_PACKAGE_ID))
+    assert os.path.exists(os.path.join(ref_layout.source(), "mysrc.c"))
+    assert not os.path.exists(os.path.join(ref_layout.download_export(), "conan_export.tgz"))
+    assert not os.path.exists(os.path.join(ref_layout.download_export(), "conan_sources.tgz"))
+    assert not os.path.exists(os.path.join(pkg_layout.download_package(), "conan_package.tgz"))
+    assert not os.path.exists(pkg_layout.build())
+
+    # exclude source
+    c.run("cache save * --no-source")
+    c3 = TestClient()
+    shutil.copy2(cache_path, c3.current_folder)
+    c3.run("cache restore conan_cache_save.tgz")
+    ref_layout = c3.get_latest_ref_layout(ref)
+    assert not os.path.exists(os.path.join(ref_layout.source(), "mysrc.c"))
+
+
 def test_cache_save_restore_metadata():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile().with_settings("os")})
@@ -156,7 +199,8 @@ def test_cache_save_restore_metadata():
 
 
 # FIXME: check the timestamps of the conan cache restore
-@pytest.mark.skipif(platform.system() == "Windows", reason="Fails in windows in ci because of the low precission of the clock")
+@pytest.mark.skipif(platform.system() == "Windows",
+                    reason="Fails in windows in ci because of the low precission of the clock")
 def test_cache_save_restore_multiple_revisions():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
@@ -170,7 +214,6 @@ def test_cache_save_restore_multiple_revisions():
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("var=123")})
     c.run("create .")
     rrev3 = c.exported_recipe_revision()
-
 
     def check_ordered_revisions(client):
         client.run("list *#* --format=json")
@@ -249,4 +292,30 @@ def test_cache_save_restore_custom_storage_path(src_store, dst_store):
     shutil.copy2(cache_path, c2.current_folder)
     c2.run("cache restore conan_cache_save.tgz")
     c2.run("list *:*")
+    assert "pkg/1.0" in c2.out
+
+
+@pytest.mark.parametrize("compress", ["gz", "xz", "zst"])
+def test_cache_save_restore_compressions(compress):
+    """ we accept different compressions formats"""
+    if compress == "zst" and sys.version_info.minor < 14:
+        pytest.skip("Skipping zst compression tests")
+
+    conan_file = GenConanfile() \
+        .with_settings("os") \
+        .with_package_file("bin/file.txt", "content!!")
+
+    client = TestClient()
+    client.save({"conanfile.py": conan_file})
+    client.run("create . --name=pkg --version=1.0 -s os=Linux")
+    client.run(f"cache save pkg/*:* --file=mysave.t{compress}")
+    if compress in ("xz", "zst"):
+        assert f"WARN: experimental: The '{compress}' compression is experimental." in client.out
+    cache_path = os.path.join(client.current_folder, f"mysave.t{compress}")
+    assert os.path.exists(cache_path)
+
+    c2 = TestClient()
+    shutil.copy2(cache_path, c2.current_folder)
+    c2.run(f"cache restore mysave.t{compress}")
+    c2.run("list *:*#*")
     assert "pkg/1.0" in c2.out

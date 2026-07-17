@@ -1,61 +1,69 @@
-import unittest
-from collections import OrderedDict
+import textwrap
 
 from conan.tools.env.environment import ProfileEnvironment
 from conan.internal.model.profile import Profile
 
 
-class ProfileTest(unittest.TestCase):
+class TestProfile:
 
     def test_profile_settings_update(self):
         new_profile = Profile()
-        new_profile.update_settings(OrderedDict([("os", "Windows")]))
+        new_profile.update_settings({"os": "Windows"})
 
-        new_profile.update_settings(OrderedDict([("OTHER", "2")]))
-        self.assertEqual(new_profile.settings, OrderedDict([("os", "Windows"), ("OTHER", "2")]))
+        new_profile.update_settings({"OTHER": "2"})
+        assert new_profile.settings == {"os": "Windows", "OTHER": "2"}
 
-        new_profile.update_settings(OrderedDict([("compiler", "2"), ("compiler.version", "3")]))
-        self.assertEqual(new_profile.settings,
-                         OrderedDict([("os", "Windows"), ("OTHER", "2"),
-                                      ("compiler", "2"), ("compiler.version", "3")]))
+        new_profile.update_settings({"compiler": "2", "compiler.version": "3"})
+        assert new_profile.settings == {
+            "os": "Windows",
+            "OTHER": "2",
+            "compiler": "2",
+            "compiler.version": "3",
+        }
 
     def test_profile_subsettings_update(self):
         new_profile = Profile()
-        new_profile.update_settings(OrderedDict([("os", "Windows"),
-                                                ("compiler", "Visual Studio"),
-                                                ("compiler.runtime", "MT")]))
+        new_profile.update_settings({
+            "os": "Windows",
+            "compiler": "Visual Studio",
+            "compiler.runtime": "MT",
+        })
 
-        new_profile.update_settings(OrderedDict([("compiler", "gcc")]))
-        self.assertEqual(dict(new_profile.settings), {"compiler": "gcc", "os": "Windows"})
+        new_profile.update_settings({"compiler": "gcc"})
+        assert dict(new_profile.settings) == {"compiler": "gcc", "os": "Windows"}
 
         new_profile = Profile()
-        new_profile.update_settings(OrderedDict([("os", "Windows"),
-                                                 ("compiler", "Visual Studio"),
-                                                 ("compiler.runtime", "MT")]))
+        new_profile.update_settings({
+            "os": "Windows",
+            "compiler": "Visual Studio",
+            "compiler.runtime": "MT",
+        })
 
-        new_profile.update_settings(OrderedDict([("compiler", "Visual Studio"),
-                                                 ("compiler.subsetting", "3"),
-                                                 ("other", "value")]))
+        new_profile.update_settings({
+            "compiler": "Visual Studio",
+            "compiler.subsetting": "3",
+            "other": "value",
+        })
 
-        self.assertEqual(dict(new_profile.settings), {"compiler": "Visual Studio",
-                                                      "os": "Windows",
-                                                      "compiler.runtime": "MT",
-                                                      "compiler.subsetting": "3",
-                                                      "other": "value"})
+        assert dict(new_profile.settings) == {"compiler": "Visual Studio",
+                                              "os": "Windows",
+                                              "compiler.runtime": "MT",
+                                              "compiler.subsetting": "3",
+                                              "other": "value"}
 
     def test_package_settings_update(self):
         np = Profile()
         np.update_package_settings({"MyPackage": [("os", "Windows")]})
 
         np.update_package_settings({"MyPackage": [("OTHER", "2")]})
-        self.assertEqual(np.package_settings_values,
-                         {"MyPackage": [("os", "Windows"), ("OTHER", "2")]})
+        assert np.package_settings_values == {"MyPackage": [("OTHER", "2"), ("os", "Windows")]}
 
         np._package_settings_values = None  # invalidate caching
         np.update_package_settings({"MyPackage": [("compiler", "2"), ("compiler.version", "3")]})
-        self.assertEqual(np.package_settings_values,
-                         {"MyPackage": [("os", "Windows"), ("OTHER", "2"),
-                                        ("compiler", "2"), ("compiler.version", "3")]})
+        assert np.package_settings_values == {"MyPackage": [("OTHER", "2"),
+                                                            ("compiler", "2"),
+                                                            ("compiler.version", "3"),
+                                                            ("os", "Windows")]}
 
     def test_profile_dump_order(self):
         # Settings
@@ -65,17 +73,17 @@ class ProfileTest(unittest.TestCase):
         profile.settings["compiler"] = "Visual Studio"
         profile.settings["compiler.version"] = "12"
         profile.tool_requires["*"] = ["zlib/1.2.8@lasote/testing"]
-        profile.tool_requires["zlib/*"] = ["aaaa/1.2.3@lasote/testing",
-                                                 "bb/1.2@lasote/testing"]
-        self.assertEqual("""[settings]
-arch=x86_64
-compiler=Visual Studio
-compiler.version=12
-zlib:compiler=gcc
-[tool_requires]
-*: zlib/1.2.8@lasote/testing
-zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
-""".splitlines(), profile.dumps().splitlines())
+        profile.tool_requires["zlib/*"] = ["aaaa/1.2.3@lasote/testing", "bb/1.2@lasote/testing"]
+        assert textwrap.dedent("""\
+            [settings]
+            arch=x86_64
+            compiler=Visual Studio
+            compiler.version=12
+            zlib:compiler=gcc
+            [tool_requires]
+            *: zlib/1.2.8@lasote/testing
+            zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
+            """) == profile.dumps()
 
     def test_apply(self):
         # Settings
@@ -84,11 +92,10 @@ zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
         profile.settings["compiler"] = "Visual Studio"
         profile.settings["compiler.version"] = "12"
 
-        profile.update_settings(OrderedDict([("compiler.version", "14")]))
+        profile.update_settings({"compiler.version": "14"})
 
-        self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio'
-                         '\ncompiler.version=14\n',
-                         profile.dumps())
+        assert ('[settings]\narch=x86_64\n'
+                'compiler=Visual Studio\ncompiler.version=14\n') == profile.dumps()
 
 
 def test_update_build_requires():

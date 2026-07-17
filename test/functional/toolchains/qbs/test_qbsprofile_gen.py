@@ -4,7 +4,7 @@ import textwrap
 import pytest
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def exe_suffix():

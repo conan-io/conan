@@ -8,7 +8,7 @@ from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import PkgReference
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.model.requires import BuildRequirements, TestRequirements, ToolRequirements
-from conans.util.files import mkdir, chdir, save
+from conan.internal.util.files import mkdir, chdir, save
 
 
 def run_source_method(conanfile, hook_manager):
@@ -24,6 +24,11 @@ def run_source_method(conanfile, hook_manager):
 
 
 def run_build_method(conanfile, hook_manager):
+    ConanOutput().step("Build step")
+    ConanOutput().info(f"Building {conanfile}")
+    if os.path.isfile(conanfile.build_folder):
+        raise ConanException(f"{conanfile}: Failed to create build folder, there is already a file "
+                             f"named: {conanfile.build_folder}")
     mkdir(conanfile.build_folder)
     mkdir(conanfile.package_metadata_folder)
     with chdir(conanfile.build_folder):
@@ -52,6 +57,7 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     mkdir(conanfile.package_folder)
     scoped_output = conanfile.output
     # Make the copy of all the patterns
+    ConanOutput().step("Package step")
     scoped_output.info("Generating the package")
     scoped_output.info("Packaging in folder %s" % conanfile.package_folder)
 
@@ -128,6 +134,11 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     if hasattr(conanfile, "build_requirements"):
         with conanfile_exception_formatter(conanfile, "build_requirements"):
             conanfile.build_requirements()
+
+    if conanfile.build_requires._called:  # noqa
+        conanfile.output.warning(
+            "build_requires is deprecated, prefer to use tool_requires with correct traits",
+            warn_tag="deprecated")
 
 
 def auto_shared_fpic_config_options(conanfile):

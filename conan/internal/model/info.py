@@ -4,7 +4,7 @@ from conan.errors import ConanException
 from conan.internal.model.dependencies import UserRequirementsDict
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conans.util.config_parser import ConfigParser
+from conan.internal.util.config_parser import TextINIParse
 
 
 class _VersionRepr:
@@ -20,21 +20,25 @@ class _VersionRepr:
             return self.major()
 
     def major(self):
+        # This check is to avoid breaking non-integer major versions
+        # for legacy reasons. Users are warned against using them
         if not isinstance(self._version.major.value, int):
             return str(self._version.major)
         return ".".join([str(self._version.major), 'Y', 'Z'])
 
-    def minor(self, fill=True):
+    def minor(self):
+        # This check is to avoid breaking non-integer major versions
+        # for legacy reasons. Users are warned against using them
         if not isinstance(self._version.major.value, int):
             return str(self._version.major)
 
         v0 = str(self._version.major)
         v1 = str(self._version.minor) if self._version.minor is not None else "0"
-        if fill:
-            return ".".join([v0, v1, 'Z'])
-        return ".".join([v0, v1])
+        return ".".join([v0, v1, 'Z'])
 
     def patch(self):
+        # This check is to avoid breaking non-integer major versions
+        # for legacy reasons. Users are warned against using them
         if not isinstance(self._version.major.value, int):
             return str(self._version.major)
 
@@ -44,6 +48,8 @@ class _VersionRepr:
         return ".".join([v0, v1, v2])
 
     def pre(self):
+        # This check is to avoid breaking non-integer major versions
+        # for legacy reasons. Users are warned against using them
         if not isinstance(self._version.major.value, int):
             return str(self._version.major)
 
@@ -135,14 +141,6 @@ class RequirementInfo:
         self.package_id = None
         self.recipe_revision = None
 
-    def full_recipe_mode(self):
-        self.name = self._ref.name
-        self.version = self._ref.version
-        self.user = self._ref.user
-        self.channel = self._ref.channel
-        self.package_id = None
-        self.recipe_revision = None
-
     def full_package_mode(self):
         self.name = self._ref.name
         self.version = self._ref.version
@@ -157,7 +155,7 @@ class RequirementInfo:
         self.user = self._ref.user
         self.channel = self._ref.channel
         self.package_id = None
-        self.recipe_revision = self._ref.revision
+        self.recipe_revision = self._ref.revision if self._ref.revision != "platform" else None
 
     def full_mode(self):
         self.name = self._ref.name
@@ -165,8 +163,9 @@ class RequirementInfo:
         self.user = self._ref.user
         self.channel = self._ref.channel
         self.package_id = self._package_id
-        self.recipe_revision = self._ref.revision
+        self.recipe_revision = self._ref.revision if self._ref.revision != "platform" else None
 
+    full_recipe_mode = full_version_mode
     recipe_revision_mode = full_mode  # to not break everything and help in upgrade
 
 
@@ -312,7 +311,7 @@ class PythonRequiresInfo:
 
 def load_binary_info(text):
     # This is used for search functionality, search prints info from this file
-    parser = ConfigParser(text)
+    parser = TextINIParse(text)
     conan_info_json = {}
     for section, lines in parser.line_items():
         try:
@@ -478,7 +477,7 @@ class ConanInfo:
     def validate(self):
         # If the options are not fully defined, this is also an invalid case
         try:
-            self.options.validate()
+            self.options.conan_validate()
         except ConanException as e:
             self.invalid = str(e)
 

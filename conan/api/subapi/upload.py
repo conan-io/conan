@@ -1,95 +1,137 @@
 import os
 import time
 from multiprocessing.pool import ThreadPool
+from typing import List
 
+from conan.api.model import PackagesList, Remote
 from conan.api.output import ConanOutput
-from conan.internal.conan_app import ConanApp
-from conan.internal.api.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker, \
-    gather_metadata
-from conans.client.pkg_sign import PkgSignaturesPlugin
-from conans.client.rest.file_uploader import FileUploader
+from conan.internal.api.upload import add_urls
+from conan.internal.api.uploader import PackagePreparator, UploadExecutor, UploadUpstreamChecker
+from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
+from conan.internal.rest.file_uploader import FileUploader
 from conan.internal.errors import AuthenticationException, ForbiddenException
 from conan.errors import ConanException
 
 
 class UploadAPI:
+    """ This API is used to upload recipes and packages to a remote server."""
 
-    def __init__(self, conan_api):
-        self.conan_api = conan_api
+    def __init__(self, conan_api, api_helpers):
+        self._conan_api = conan_api
+        self._api_helpers = api_helpers
 
-    def check_upstream(self, package_list, remote, enabled_remotes, force=False):
-        """Check if the artifacts are already in the specified remote, skipping them from
-        the package_list in that case"""
-        app = ConanApp(self.conan_api)
-        for ref, bundle in package_list.refs().items():
-            layout = app.cache.recipe_layout(ref)
+    def check_upstream(self, package_list: PackagesList, remote: Remote,
+                       enabled_remotes: List[Remote], force=False):
+        """ Checks ``remote`` for the existence of the recipes and packages in ``package_list``.
+        Items that are not present in the remote will add an ``upload`` key to the entry
+        with the value ``True``.
+
+        If the recipe has an upload policy of ``skip``, it will be discarded from the upload list.
+
+        :parameter package_list: A ``PackagesList`` object with the recipes and packages to check.
+        :parameter remote: Remote to check.
+        :parameter enabled_remotes: List of enabled remotes. This is used to possibly load
+            python_requires from the listed recipes if necessary.
+        :parameter force: If ``True``, it will skip the check and mark that all items need to be
+            uploaded. A ``force_upload`` key will be added to the entries that will be uploaded.
+        """
+        loader = self._api_helpers.loader
+        for ref, _ in package_list.items():
+            layout = self._api_helpers.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
-            conanfile = app.loader.load_basic(conanfile_path, remotes=enabled_remotes)
+            conanfile = loader.load_basic(conanfile_path, remotes=enabled_remotes)
             if conanfile.upload_policy == "skip":
                 ConanOutput().info(f"{ref}: Skipping upload of binaries, "
                                    "because upload_policy='skip'")
-                bundle["packages"] = {}
+                package_list.recipe_dict(ref)["packages"] = {}
 
-        UploadUpstreamChecker(app).check(package_list, remote, force)
+        UploadUpstreamChecker(self._api_helpers.remote_manager).check(package_list, remote, force)
 
-    def prepare(self, package_list, enabled_remotes, metadata=None):
+    def prepare(self, package_list: PackagesList, enabled_remotes: List[Remote],
+                metadata: List[str] = None):
         """Compress the recipes and packages and fill the upload_data objects
         with the complete information. It doesn't perform the upload nor checks upstream to see
         if the recipe is still there
-        :param package_list:
-        :param enabled_remotes:
-        :param metadata: A list of patterns of metadata that should be uploaded. Default None
-        means all metadata will be uploaded together with the pkg artifacts. If metadata is empty
-        string (""), it means that no metadata files should be uploaded."""
+
+        :param package_list: A PackagesList object with the recipes and packages to upload.
+        :param enabled_remotes: A list of remotes that are enabled in the client.
+            Recipe sources will attempt to be fetched from these remotes.
+        :param metadata: A list of patterns of metadata that should be uploaded.
+            Default ``None`` means all metadata will be uploaded together with the package artifacts.
+            If metadata contains an empty string (``""``),
+            it means that no metadata files should be uploaded."""
         if metadata and metadata != [''] and '' in metadata:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
-        app = ConanApp(self.conan_api)
-        preparator = PackagePreparator(app, self.conan_api.config.global_conf)
-        preparator.prepare(package_list, enabled_remotes)
-        if metadata != ['']:
-            gather_metadata(package_list, app.cache, metadata)
-        signer = PkgSignaturesPlugin(app.cache, app.cache_folder)
-        # This might add files entries to package_list with signatures
-        signer.sign(package_list)
 
-    def upload(self, package_list, remote):
-        app = ConanApp(self.conan_api)
-        app.remote_manager.check_credentials(remote)
-        executor = UploadExecutor(app)
+        loader = self._api_helpers.loader
+        preparator = PackagePreparator(loader, self._api_helpers.cache,
+                                       self._api_helpers.remote_manager,
+                                       self._api_helpers.global_conf)
+        preparator.prepare(package_list, enabled_remotes, metadata)
+        signer = PkgSignaturesPlugin(self._api_helpers.cache, self._conan_api.home_folder)
+        if signer.is_sign_configured:
+            ConanOutput().warning("[Package sign] Implicitly signing packages in the upload "
+                                  "command has been removed. Use 'conan cache sign' command before "
+                                  "uploading instead.", warn_tag="deprecated")
+
+    def _upload(self, package_list, remote):
+        self._api_helpers.remote_manager.check_credentials(remote)
+        executor = UploadExecutor(self._api_helpers.remote_manager)
         executor.upload(package_list, remote)
 
-    def upload_full(self, package_list, remote, enabled_remotes, check_integrity=False, force=False,
-                    metadata=None, dry_run=False):
+    def upload_full(self, package_list: PackagesList, remote: Remote, enabled_remotes: List[Remote],
+                    check_integrity=False, force=False, metadata: List[str] = None, dry_run=False):
         """ Does the whole process of uploading, including the possibility of parallelizing
-        per recipe based on `core.upload:parallel`:
-        - calls check_integrity
-        - checks which revision already exist in the server (not necessary to upload)
-        - prepare the artifacts to upload (compress .tgz)
-        - execute the actual upload
-        - upload potential sources backups
+        per recipe based on the ``core.upload:parallel`` conf.
+
+        The steps that this method performs are:
+            - calls ``conan_api.cache.check_integrity`` to ensure the packages are not corrupted
+            - checks the upload policy of the recipes
+                - (if it is ``"skip"``, it will not upload the binaries, but will still upload
+                  the metadata)
+            - checks which revisions already exist in the server so that it can skip the upload
+            - prepares the artifacts to upload (compresses the conan_package.tgz)
+            - executes the actual upload
+            - uploads associated sources backups if any
+
+        :param package_list: A PackagesList object with the recipes and packages to upload.
+        :param remote: The remote to upload the packages to.
+        :param enabled_remotes: A list of remotes that are enabled in the client.
+            Recipe sources will attempt to be fetched from these remotes,
+            and to possibly load python_requires from the listed recipes if necessary.
+        :param check_integrity: If ``True``, it will check the integrity of the cache packages
+            before uploading them. This is useful to ensure that the packages are not corrupted.
+        :param force: If ``True``, it will force the upload of the recipes and packages,
+            even if they already exist in the remote. Note that this might update the timestamps
+        :param metadata: A list of patterns of metadata that should be uploaded.
+            Default ``None`` means all metadata will be uploaded together with the package artifacts.
+            If metadata contains an empty string (``""``),
+            it means that no metadata files should be uploaded.
+        :param dry_run: If ``True``, it will not perform the actual upload,
+            but will still prepare the artifacts and check the upstream.
         """
 
         def _upload_pkglist(pkglist, subtitle=lambda _: None):
             if check_integrity:
                 subtitle("Checking integrity of cache packages")
-                self.conan_api.cache.check_integrity(pkglist)
+                self._conan_api.cache.check_integrity(pkglist)
             # Check if the recipes/packages are in the remote
-            subtitle("Checking server existing packages")
+            subtitle("Checking server for existing packages")
             self.check_upstream(pkglist, remote, enabled_remotes, force)
             subtitle("Preparing artifacts for upload")
             self.prepare(pkglist, enabled_remotes, metadata)
 
             if not dry_run:
                 subtitle("Uploading artifacts")
-                self.upload(pkglist, remote)
-                backup_files = self.conan_api.cache.get_backup_sources(pkglist)
+                self._upload(pkglist, remote)
+                backup_files = self._conan_api.cache.get_backup_sources(pkglist)
                 self.upload_backup_sources(backup_files)
 
         t = time.time()
         ConanOutput().title(f"Uploading to remote {remote.name}")
-        parallel = self.conan_api.config.get("core.upload:parallel", default=1, check_type=int)
+        parallel = self._conan_api.config.get("core.upload:parallel", default=1, check_type=int)
         thread_pool = ThreadPool(parallel) if parallel > 1 else None
-        if not thread_pool or len(package_list.recipes) <= 1:
+        if not thread_pool or len(package_list._data) <= 1:  # FIXME: Iteration when multiple rrevs
             _upload_pkglist(package_list, subtitle=ConanOutput().subtitle)
         else:
             ConanOutput().subtitle(f"Uploading with {parallel} parallel threads")
@@ -99,9 +141,16 @@ class UploadAPI:
             thread_pool.join()
         elapsed = time.time() - t
         ConanOutput().success(f"Upload completed in {int(elapsed)}s\n")
+        add_urls(package_list, remote)
 
-    def upload_backup_sources(self, files):
-        config = self.conan_api.config.global_conf
+    def upload_backup_sources(self, files: List) -> None:
+        """
+        Upload to the server the backup sources files, that have been typically gathered by
+        CacheAPI.get_backup_sources()
+
+        :param files: The list of files that must be uploaded
+        """
+        config = self._api_helpers.global_conf
         url = config.get("core.sources:upload_url", check_type=str)
         if url is None:
             return
@@ -111,9 +160,9 @@ class UploadAPI:
         output.subtitle("Uploading backup sources")
         if not files:
             output.info("No backup sources files to upload")
-            return files
+            return
 
-        requester = self.conan_api.remotes.requester
+        requester = self._api_helpers.requester
         uploader = FileUploader(requester, verify=True, config=config, source_credentials=True)
         # TODO: For Artifactory, we can list all files once and check from there instead
         #  of 1 request per file, but this is more general
@@ -135,8 +184,7 @@ class UploadAPI:
                                    "Skipping updating file but continuing with upload. "
                                    f"Missing permissions?: {e}")
                 else:
-                    raise ConanException(f"The source backup server '{url}' needs authentication"
-                                         f"/permissions, please provide 'source_credentials.json': {e}")
+                    raise ConanException(f"Authentication to source backup server '{url}' failed, "
+                                         f"please check your 'source_credentials.json': {e}")
 
         output.success("Upload backup sources complete\n")
-        return files

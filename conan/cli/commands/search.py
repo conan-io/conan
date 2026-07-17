@@ -7,7 +7,6 @@ from conan.cli.commands.list import print_list_text, print_list_json
 from conan.errors import ConanException
 
 
-# FIXME: "conan search" == "conan list (*) -r="*"" --> implement @conan_alias_command??
 @conan_command(group="Consumer", formatters={"text": print_list_text,
                                              "json": print_list_json})
 def search(conan_api: ConanAPI, parser, *args):
@@ -31,11 +30,11 @@ def search(conan_api: ConanAPI, parser, *args):
     results = OrderedDict()
     for remote in remotes:
         try:
-            list_bundle = conan_api.list.select(ref_pattern, package_query=None, remote=remote)
+            pkglist = conan_api.list.select(ref_pattern, package_query=None, remote=remote)
         except Exception as e:
             results[remote.name] = {"error": str(e)}
         else:
-            results[remote.name] = list_bundle.serialize()
+            results[remote.name] = pkglist.serialize()
     return {
         "results": results
     }

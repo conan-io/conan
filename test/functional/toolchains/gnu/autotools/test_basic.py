@@ -12,7 +12,7 @@ from conan.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_m
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp
 from test.functional.utils import check_exe_run, check_vs_runtime
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, default_msvc_version
 
 
 @pytest.mark.skipif(platform.system() not in ["Linux", "Darwin"], reason="Requires Autotools")
@@ -95,8 +95,8 @@ def build_windows_subsystem(profile, make_program, subsystem):
                  "profile": profile}, clean_first=True)
 
     client.run("install . --profile=profile")
-    cmd = environment_wrap_command(ConanFileMock(), ["conanbuildenv",
-                                    "conanautotoolstoolchain",
+    cmd = environment_wrap_command(ConanFileMock(),
+                                   ["conanbuildenv", "conanautotoolstoolchain",
                                     "conanautotoolsdeps"], client.current_folder, make_program)
     client.run_command(cmd)
     client.run_command("app")
@@ -157,7 +157,7 @@ def test_autotoolsdeps_mingw_msys():
 @pytest.mark.tool("msys2")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 # If we use the cmake inside msys2, it fails, so better force our own cmake
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_autotoolsdeps_msys():
     gcc = textwrap.dedent("""
         [settings]
@@ -383,11 +383,11 @@ def test_autotools_arguments_override():
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only MSVC")
 def test_msvc_extra_flag():
-    profile = textwrap.dedent("""
+    profile = textwrap.dedent(f"""
         [settings]
         os=Windows
         compiler=msvc
-        compiler.version=193
+        compiler.version={default_msvc_version}
         compiler.runtime=dynamic
         arch=x86_64
         build_type=Release

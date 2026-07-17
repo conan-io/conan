@@ -49,10 +49,168 @@ def test_basic():
                  "android": android_profile}, clean_first=True)
 
     client.run("install . -pr=linux")
-    assert "conanfile.py: NDK: MY-NDK!!!" in client.out
+    assert "NDK: MY-NDK!!!" in client.out
 
     client.run("install . -pr:b=default -pr:h=android")
-    assert "conanfile.py: NDK: MY-SYSTEM-NDK!!!" in client.out
+    assert "NDK: MY-SYSTEM-NDK!!!" in client.out
+
+
+def test_basic_append():
+    c = TestClient()
+    tool = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def package_info(self):
+                self.conf_info.append("user.myorg:myconf", "myorgconf!!!")
+        """)
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            tool_requires = "tool/1.0"
+
+            def generate(self):
+                self.output.info("user.myorg:myconf: %s" % self.conf.get("user.myorg:myconf"))
+        """)
+
+    c.save({"tool/conanfile.py": tool,
+            "consumer/conanfile.py": consumer})
+    c.run("create tool --name=tool --version=1.0")
+    c.run("install consumer")
+    assert "user.myorg:myconf: ['myorgconf!!!']" in c.out
+
+    c.run("install consumer -c user.myorg:myconf=value", assert_error=True)
+    assert "ERROR: It's not possible to compose str values and list ones" in c.out
+
+    c.run("install consumer -c user.myorg:myconf=+value")
+    assert "user.myorg:myconf: ['value', 'myorgconf!!!']" in c.out
+
+
+class TestImportant:
+
+    @staticmethod
+    def client(action, value):
+        value = '' if not value else f', {value}'
+        conanfile = textwrap.dedent(f"""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                def package_info(self):
+                    self.conf_info.{action}("tools.android:ndk_path!"{value})
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                tool_requires = "android_ndk/1.0"
+                def generate(self):
+                    self.output.info("NDK: %s" % self.conf.get("tools.android:ndk_path"))
+            """)
+        c = TestClient(light=True)
+        c.save({"conanfile.py": conanfile})
+        c.run("create . --name=android_ndk --version=1.0")
+        c.save({"conanfile.py": app}, clean_first=True)
+        return c
+
+    @pytest.mark.parametrize("action", ["define", "define_path"])
+    def test_important_define(self, action):
+        c = self.client(action, '"MY-NDK!!"')
+        c.run("install")
+        assert "NDK: MY-NDK!!" in c.out
+
+        c.run("install -c tools.android:ndk_path=OTHERNDK!!")
+        assert "NDK: MY-NDK!!" in c.out
+
+        c.run("install -c tools.android:ndk_path+=OTHERNDK!!", assert_error=True)
+        assert "ERROR: It's not possible to compose list values and str ones." in c.out
+
+        c.run("install -c tools.android:ndk_path!=OTHERNDK!!")
+        assert "NDK: OTHERNDK!!" in c.out
+
+    @pytest.mark.parametrize("action", ["define", "define_path"])
+    def test_important_define_list(self, action):
+        c = self.client(action, '["MY-NDK!!"]')
+        c.run("install")
+        assert "NDK: ['MY-NDK!!']" in c.out
+
+        c.run("install -c tools.android:ndk_path=OTHERNDK!!", assert_error=True)
+        assert "ERROR: It's not possible to compose str values and list ones." in c.out
+
+        c.run("install -c tools.android:ndk_path+=OTHER! -c tools.android:ndk_path=+OTHER2!")
+        assert "NDK: ['MY-NDK!!']" in c.out
+
+        c.run("install -c tools.android:ndk_path!=OTHERNDK!!", assert_error=True)
+        assert "ERROR: It's not possible to compose str values and list ones." in c.out
+
+        c.run("install -c tools.android:ndk_path!+=OTHER! -c tools.android:ndk_path!=+OTHER2!")
+        assert "NDK: ['OTHER2!', 'MY-NDK!!', 'OTHER!']" in c.out
+
+    @pytest.mark.parametrize("action", ["append", "append_path"])
+    def test_important_append(self, action):
+        c = self.client(action, '"MY-NDK!!"')
+        c.run("install")
+        assert "NDK: ['MY-NDK!!']" in c.out
+
+        c.run("install -c tools.android:ndk_path=OTHER!", assert_error=True)
+        assert "ERROR: It's not possible to compose str values and list ones." in c.out
+
+        c.run("install -c tools.android:ndk_path+=OTHER! -c tools.android:ndk_path=+OTHER2!")
+        assert "NDK: ['OTHER2!', 'OTHER!', 'MY-NDK!!']" in c.out
+
+        c.run("install -c tools.android:ndk_path!+=OTHER! -c tools.android:ndk_path!=+OTHER2!")
+        assert "NDK: ['OTHER2!', 'MY-NDK!!', 'OTHER!']" in c.out
+
+    @pytest.mark.parametrize("action", ["prepend", "prepend_path"])
+    def test_important_prepend(self, action):
+        c = self.client(action, '"MY-NDK!!"')
+        c.run("install")
+        assert "NDK: ['MY-NDK!!']" in c.out
+        c.run("install -c tools.android:ndk_path=OTHER!", assert_error=True)
+        assert "ERROR: It's not possible to compose str values and list ones." in c.out
+
+        c.run("install -c tools.android:ndk_path+=OTHER! -c tools.android:ndk_path=+OTHER2!")
+        assert "NDK: ['MY-NDK!!', 'OTHER2!', 'OTHER!']" in c.out
+
+        c.run("install -c tools.android:ndk_path!+=OTHER! -c tools.android:ndk_path!=+OTHER2!")
+        assert "NDK: ['OTHER2!', 'MY-NDK!!', 'OTHER!']" in c.out
+
+    def test_important_unset(self):
+        c = self.client("unset", "")
+        c.run("install")
+        assert "NDK: None" in c.out
+
+        c.run("install -c tools.android:ndk_path=OTHER!")
+        assert "NDK: None" in c.out
+
+        c.run("install -c tools.android:ndk_path+=OTHER! -c tools.android:ndk_path=+OTHER2!")
+        assert "NDK: None" in c.out
+
+        c.run("install -c tools.android:ndk_path!=OTHER!")
+        assert "NDK: OTHER!" in c.out
+
+        c.run("install -c tools.android:ndk_path!+=OTHER! -c tools.android:ndk_path!=+OTHER2!")
+        assert "NDK: ['OTHER2!', 'OTHER!']" in c.out
+
+    @pytest.mark.parametrize("action", ["update", "update_path"])
+    def test_important_update(self, action):
+        c = self.client(action, {"MYVALUE": "MY-NDK!!"})
+        c.run("install")
+        assert "NDK: {'MYVALUE': 'MY-NDK!!'}" in c.out
+
+        c.run("install -c tools.android:ndk_path=OTHER!", assert_error=True)
+        assert "ERROR: It's not possible to compose str values and dict ones." in c.out
+
+        c.run("install -c tools.android:ndk_path=\"{'MYVALUE': 'OTHERVALUE!!', 'V2': 'O2!!'}\"")
+        assert "NDK: {'MYVALUE': 'MY-NDK!!'}" in c.out
+
+        c.run("install -c tools.android:ndk_path*=\"{'MYVALUE': 'OTHERVALUE!!', 'V2': 'O2!!'}\"")
+        assert "NDK: {'MYVALUE': 'MY-NDK!!', 'V2': 'O2!!'}" in c.out
+
+        c.run("install -c tools.android:ndk_path!=OTHER!", assert_error=True)
+        assert "ERROR: It's not possible to compose str values and dict ones." in c.out
+
+        c.run("install -c tools.android:ndk_path!=\"{'MYVALUE': 'OTHERVALUE!!', 'V2': 'O2!!'}\"")
+        assert "NDK: {'MYVALUE': 'OTHERVALUE!!', 'V2': 'O2!!'}" in c.out
+
+        c.run("install -c tools.android:ndk_path!*=\"{'MYVALUE': 'OTHERVALUE!!', 'V2': 'O2!!'}\"")
+        assert "NDK: {'MYVALUE': 'OTHERVALUE!!', 'V2': 'O2!!'}" in c.out
 
 
 def test_basic_conf_through_cli():
@@ -99,7 +257,7 @@ def test_basic_conf_through_cli():
     client.run('install . -c:b=tools.android:ndk_path="MY-NDK!!!" '
                '-c:h=tools.android:ndk_path="MY-SYSTEM-NDK!!!" -pr:b=default -pr:h=android')
     assert "android_ndk/1.0: NDK build: MY-NDK!!!" in client.out
-    assert "conanfile.py: NDK host: MY-SYSTEM-NDK!!!" in client.out
+    assert "NDK host: MY-SYSTEM-NDK!!!" in client.out
 
 
 def test_declared_generators_get_conf():
@@ -176,8 +334,8 @@ def test_propagate_conf_info():
         """)
     client.save({"conanfile.py": consumer}, clean_first=True)
     client.run("install . ")
-    assert "conanfile.py: CONF1: val1" in client.out
-    assert "conanfile.py: CONF2: val1" in client.out
+    assert "CONF1: val1" in client.out
+    assert "CONF2: val1" in client.out
 
 
 def test_conf_transitive_tool():
@@ -266,8 +424,8 @@ def test_conf_both_build_and_host():
                 clean_first=True)
     client.run('export myprotobuf')
     client.run("install app --build=missing -s:h build_type=Debug -s:b build_type=Release")
-    assert "myprotobuf/0.1: MYCONF build: Release" in client.out
-    assert "myprotobuf/0.1: MYCONF host: Debug" in client.out
+    assert "MYCONF build: Release" in client.out
+    assert "MYCONF host: Debug" in client.out
 
 
 @pytest.mark.parametrize("conf", ['define("user.myorg:myconf", self.options.myopt)',
@@ -293,3 +451,35 @@ def test_error_bad_types(conf):
     assert f'self.conf_info.{conf}' in c.out
     assert "Invalid 'conf' type, please use Python types (int, str, ...)" in c.out
 
+
+@pytest.mark.parametrize("conf", ["tools.myorg.myconf", "user.myorg.myconf"])
+def test_error_missing_colon_define(conf):
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "tool"
+            version = "0.1"
+            def package_info(self):
+                self.conf_info.define("{conf}", 42)
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .", assert_error=True)
+    assert "ERROR: tool/0.1: Error in package_info() method:" in c.out
+    if conf == "tools.myorg.myconf":
+        assert "[conf] 'tools.myorg.myconf' does not exist in configuration" in c.out
+    else:
+        assert f"User conf '{conf}' invalid format, not 'user.org.group:conf'" in c.out
+
+
+def test_error_missing_colon_consume():
+    c = TestClient(light=True)
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            def generate(self):
+                self.conf.get("user.myorg.myconf")
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("install .", assert_error=True)
+    assert "User conf 'user.myorg.myconf' invalid format, not 'user.org.group:conf'" in c.out

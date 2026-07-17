@@ -4,7 +4,7 @@ import os
 import shutil
 
 from conan.errors import ConanException
-from conans.util.files import mkdir
+from conan.internal.util.files import mkdir
 
 
 def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
@@ -62,6 +62,7 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
     filenames = []
     files_symlinked_to_folders = []
 
+    pattern = pattern.lower() if ignore_case else pattern
     if excludes:
         if not isinstance(excludes, (tuple, list)):
             excludes = (excludes, )
@@ -77,9 +78,10 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
 
         # Check if any of the subfolders is a symlink
         for subfolder in subfolders:
-            relative_path = os.path.relpath(os.path.join(root, subfolder), src)
             if os.path.islink(os.path.join(root, subfolder)):
-                if fnmatch.fnmatch(os.path.normpath(relative_path.lower()), pattern):
+                relative_path = os.path.relpath(os.path.join(root, subfolder), src)
+                compare_relative_path = relative_path.lower() if ignore_case else relative_path
+                if fnmatch.fnmatch(os.path.normpath(compare_relative_path), pattern):
                     files_symlinked_to_folders.append(relative_path)
 
         relative_path = os.path.relpath(root, src)
@@ -96,7 +98,6 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
             filenames.append(relative_name)
 
     if ignore_case:
-        pattern = pattern.lower()
         files_to_copy = [n for n in filenames if fnmatch.fnmatch(os.path.normpath(n.lower()),
                                                                  pattern)]
     else:
@@ -106,8 +107,12 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
     for exclude in excludes:
         if ignore_case:
             files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f.lower(), exclude)]
+            files_symlinked_to_folders =\
+                [f for f in files_symlinked_to_folders if not fnmatch.fnmatch(f.lower(), exclude)]
         else:
             files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatchcase(f, exclude)]
+            files_symlinked_to_folders =\
+                [f for f in files_symlinked_to_folders if not fnmatch.fnmatchcase(f, exclude)]
 
     return files_to_copy, files_symlinked_to_folders
 

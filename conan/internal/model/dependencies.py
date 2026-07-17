@@ -1,12 +1,12 @@
 from collections import OrderedDict
 
-from conans.client.graph.graph import RECIPE_PLATFORM
-from conan.errors import ConanException
 from conan.api.model import RecipeReference
+from conan.errors import ConanException
+from conan.internal.graph.graph import RECIPE_PLATFORM
 from conan.internal.model.conanfile_interface import ConanFileInterface
 
 
-class UserRequirementsDict(object):
+class UserRequirementsDict:
     """ user facing dict to allow access of dependencies by name
     """
     def __init__(self, data, require_filter=None):
@@ -84,20 +84,33 @@ class UserRequirementsDict(object):
             # so it's definitely in the dict
             return True
 
+    def of(self, ref, build=None, **kwargs):
+        # TODO: come up with a better name
+        return self._get(ref, build, **kwargs)
+
 
 class ConanFileDependencies(UserRequirementsDict):
 
     @staticmethod
     def from_node(node):
-        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile))
+        d = OrderedDict((require, ConanFileInterface(transitive.node.conanfile, node.conanfile))
                         for require, transitive in node.transitive_deps.items())
         if node.replaced_requires:
             cant_be_removed = set()
             for old_req, new_req in node.replaced_requires.items():
                 # Two different replaced_requires can point to the same real requirement
-                existing = d[new_req]
+                try:
+                    existing = d[new_req]
+                except KeyError:
+                    continue  # skip replace_requires that do not apply to this node (override=True)
                 added_req = new_req.copy_requirement()
                 added_req.ref = RecipeReference.loads(old_req)
+                # copy_requirement() doesn't propagate these, as they shouldn't transitively
+                # propagate downstream, but here we are aliasing the same requirement, not
+                # propagating it, so the traits must exactly match the replaced one
+                added_req.test = new_req.test
+                added_req.is_test = new_req.is_test
+                added_req.direct = new_req.direct
                 d[added_req] = existing
                 if new_req.ref.name == added_req.ref.name:
                     cant_be_removed.add(new_req)
@@ -117,9 +130,7 @@ class ConanFileDependencies(UserRequirementsDict):
 
         data = OrderedDict((k, v) for k, v in self._data.items() if filter_fn(k))
         if remove_system:
-            data = OrderedDict((k, v) for k, v in data.items()
-                               # TODO: Make "recipe" part of ConanFileInterface model
-                               if v._conanfile._conan_node.recipe != RECIPE_PLATFORM)
+            data = OrderedDict((k, v) for k, v in data.items() if v.recipe != RECIPE_PLATFORM)
         return ConanFileDependencies(data, require_filter)
 
     def transitive_requires(self, other):
