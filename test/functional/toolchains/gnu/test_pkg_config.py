@@ -149,7 +149,7 @@ def test_pkg_config_external_path():
             version = "0.1"
 
             def package_info(self):
-                pkg_config = PkgConfig(self, "libastral")
+                pkg_config = PkgConfig(self, "mylibastral")
                 pkg_config.fill_cpp_info(self.cpp_info, is_system=False, system_libs=["m"])
         """)
     prefix = "C:" if platform.system() == "Windows" else ""
@@ -159,7 +159,7 @@ def test_pkg_config_external_path():
         libdir=${exec_prefix}/lib
         includedir=${prefix}/include
 
-        Name: libastral
+        Name: mylibastral
         Description: Interface library for Astral data flows
         Version: 6.6.6
         Libs: -L${libdir}/libastral -lastral -lm -Wl,--whole-archive
@@ -173,10 +173,12 @@ def test_pkg_config_external_path():
         PKG_CONFIG_PATH+=(path){{{{profile_dir}}}}/mypcs
         """)
     c.save({"conanfile.py": conanfile,
-            "mypcs/libastral.pc": libastral_pc,
+            "mypcs/mylibastral.pc": libastral_pc,
             "profile": profile})
-    c.run("create .")
+    c.run("create . -pr=profile")
     # FIXME: THis install fails, no PKG_CONFIG_PATH injected
+    # With the environment_update, it works
+    # with environment_update({"PKG_CONFIG_PATH": f"{c.current_folder}/mypcs"}):
     c.run("install --requires=pkg/0.1 -pr=profile -g CMakeDeps --build=*")
     pkg_data = c.load("pkg-none-armv8-data.cmake")
     assert 'set(pkg_DEFINITIONS_NONE "-D_USE_LIBASTRAL")' in pkg_data
