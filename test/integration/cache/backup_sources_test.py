@@ -605,10 +605,6 @@ class TestDownloadCacheBackupSources:
 
             @staticmethod
             def _attach_to(app, store):  # noqa
-                @app.route("/internet/<file>", method=["GET"])
-                def get_internet_file(_):
-                    return HTTPError(401, "You Are Not Allowed Here")
-
                 @app.route("/downloader1/<file>", method=["GET"])
                 def get_file(file):
                     return static_file(file, http_server_base_folder_backup1)

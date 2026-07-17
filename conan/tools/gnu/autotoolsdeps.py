@@ -31,7 +31,7 @@ class AutotoolsDeps:
         flags = []
         for dep in self.ordered_deps:
             if dep.package_type is PackageType.SHARED:
-                flags.extend(["-Wl,-rpath -Wl,{}".format(libdir) for libdir in
+                flags.extend(["-Wl,-rpath,{}".format(libdir) for libdir in
                               dep.cpp_info.aggregated_components().libdirs])
         return flags
 

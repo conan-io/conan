@@ -233,7 +233,7 @@ class WorkspaceAPI:
 
             if not nodes_to_complete:
                 ConanOutput().info("There are no intermediate packages to add to the workspace")
-                return
+                continue
 
             for node in nodes_to_complete:
                 full_path = os.path.join(self._folder, node.name, "conanfile.py")
