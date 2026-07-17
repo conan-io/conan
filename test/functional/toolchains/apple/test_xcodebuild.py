@@ -141,7 +141,7 @@ def test_xcodebuild_test_different_sdk(client):
     client.run("install . --build=missing")
     client.run("install . -s build_type=Debug --build=missing")
     client.run_command("xcodegen generate")
-    client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=26.0 "
+    client.run("create . --build=missing -s os.sdk_version=26.0 "
                f"-c tools.apple:sdk_path='{tools_locations['xcode_sdk']['26.0']['path']['Darwin']}'")
     assert "sdk 26.0" in client.out
     client.run("create . --build=missing -s os.sdk_version=26.5 "
