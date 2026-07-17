@@ -255,7 +255,7 @@ class DockerRunner:
         initialize_conanfile_profile(conanfile, self.build_profile, self.host_profile,
                                      CONTEXT_HOST, False, ref)
         if ref.name:
-            self.host_profile.options.scope(ref)
+            self.host_profile.options.conan_scope(ref)
         abs_docker_base_path = Path('/') / self.docker_user_name / 'conanrunner'
         # Check if recipe has defined a root folder
         # In this case, mount the root folder as the base path and update the abs_docker_path to the
