@@ -31,7 +31,7 @@ class VirtualRunEnv:
         .bat or .sh script
     """
 
-    def __init__(self, conanfile, auto_generate=False, runtime_copy=None):
+    def __init__(self, conanfile, auto_generate=False, win_runtime_copy=None):
         """
 
         :param conanfile:  The current recipe object. Always use ``self``.
@@ -47,11 +47,11 @@ class VirtualRunEnv:
         self.arch = conanfile.settings.get_safe("arch")
         if self.arch:
             self.arch = self.arch.lower()
-        conf_copy = conanfile.conf.get("tools.env:runtime_copy")
-        runcopy = conf_copy if conf_copy is not None else runtime_copy
-        if runcopy and os.path.isabs(runcopy):
-            raise ConanException("runtime_copy must be a relative path, not an absolute one")
-        self._runtime_copy = os.path.join(conanfile.generators_folder, runcopy) if runcopy else None
+        if win_runtime_copy and os.path.isabs(win_runtime_copy):
+            raise ConanException("win_runtime_copy must be a relative path, not an absolute one")
+        is_windows = (conanfile.settings.get_safe("os") or "").startswith("Windows")
+        self._runtime_copy = (os.path.join(conanfile.generators_folder, win_runtime_copy)
+                              if win_runtime_copy and is_windows else None)
 
     @property
     def _filename(self):
@@ -93,8 +93,6 @@ class VirtualRunEnv:
 
         if self._runtime_copy:
             self._runenv.prepend_path("PATH", self._runtime_copy)
-            self._runenv.prepend_path("LD_LIBRARY_PATH", self._runtime_copy)
-            self._runenv.prepend_path("DYLD_LIBRARY_PATH", self._runtime_copy)
         return self._runenv
 
     def _runtime_copy_files(self, dep):
@@ -103,10 +101,6 @@ class VirtualRunEnv:
         for bindir in cpp_info.bindirs:
             if os.path.isdir(bindir):
                 copy(self._conanfile, "*", src=bindir, dst=self._runtime_copy)
-        for libdir in cpp_info.libdirs:
-            if os.path.isdir(libdir):
-                copy(self._conanfile, "*.so*", src=libdir, dst=self._runtime_copy)
-                copy(self._conanfile, "*.dylib*", src=libdir, dst=self._runtime_copy)
 
     def vars(self, scope="run"):
         """

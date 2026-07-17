@@ -91,10 +91,10 @@ def test_other_client_can_link_autotools(transitive_shared_client):
     # client.run("create . --build=missing")
 
 
-def test_virtualrunenv_runtime_copy(transitive_shared_client):
+@pytest.mark.skipif(platform.system() != "Windows", reason="win_runtime_copy is Windows-only")
+def test_virtualrunenv_win_runtime_copy(transitive_shared_client):
     client = TestClient(servers=transitive_shared_client.servers)
     conanfile = textwrap.dedent("""
-        import os
         from conan import ConanFile
         from conan.tools.env import VirtualRunEnv
 
@@ -106,7 +106,7 @@ def test_virtualrunenv_runtime_copy(transitive_shared_client):
 
             def generate(self):
                 # Copy to "imported-bin" inside generators folder
-                runenv = VirtualRunEnv(self, runtime_copy="imported-bin")
+                runenv = VirtualRunEnv(self, win_runtime_copy="imported-bin")
                 runenv.generate()
 
             def build(self):
@@ -117,16 +117,10 @@ def test_virtualrunenv_runtime_copy(transitive_shared_client):
     assert "app/0.1: Hello World Release!" in client.out
     assert "chat/0.1: Hello World Release!" in client.out
     assert "hello/0.1: Hello World Release!" in client.out
-    if platform.system() == "Windows":
-        client.run_command(r".\imported-bin\app")
-    elif platform.system() == "Linux":
-        client.run_command(r"LD_LIBRARY_PATH=./imported-bin ./imported-bin/app")
-    elif platform.system() == "Darwin":
-        client.run_command(r"DYLD_LIBRARY_PATH=./imported-bin ./imported-bin/app")
-    if platform.system() in ("Windows", "Linux", "Darwin"):
-        assert "app/0.1: Hello World Release!" in client.out
-        assert "chat/0.1: Hello World Release!" in client.out
-        assert "hello/0.1: Hello World Release!" in client.out
+    client.run_command(r".\imported-bin\app")
+    assert "app/0.1: Hello World Release!" in client.out
+    assert "chat/0.1: Hello World Release!" in client.out
+    assert "hello/0.1: Hello World Release!" in client.out
 
 
 @pytest.mark.tool("cmake")

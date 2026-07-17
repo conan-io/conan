@@ -27,61 +27,58 @@ class TestVirtualRunEnvRuntimeCopy:
         from conan.tools.env import VirtualRunEnv
 
         class Consumer(ConanFile):
+            settings = "os"
             requires = "dep/1.0"
 
             def generate(self):
-                VirtualRunEnv(self{}).generate()
+                VirtualRunEnv(self, win_runtime_copy="myruntime").generate()
         """)
 
-    def test_runtime_copy_from_recipe(self):
+    def test_win_runtime_copy(self):
         c = TestClient(light=True)
-        conanfile = self.consumer_conanfile.format(', runtime_copy="myruntime"')
         c.save({"dep/conanfile.py": self.dep_conanfile,
-                "consumer/conanfile.py": conanfile})
+                "consumer/conanfile.py": self.consumer_conanfile})
 
-        c.run("create dep")
-        c.run("install consumer")
+        c.run("create dep -s os=Windows")
+        c.run("install consumer -s os=Windows")
 
         assert c.load("consumer/myruntime/dep_app.exe") == "APP_CONTENT"
-        assert c.load("consumer/myruntime/dep_lib.so") == "LIB_CONTENT"
+        assert not os.path.exists(os.path.join(c.current_folder, "consumer",
+                                               "myruntime", "dep_lib.so"))
 
         runenv_files = glob.glob(os.path.join(c.current_folder, "consumer", "conanrunenv.*"))
         assert len(runenv_files) == 1
         runenv = c.load(runenv_files[0])
         assert "myruntime" in runenv
 
-    def test_runtime_copy_from_conf(self):
+    def test_win_runtime_copy_absolute_path_error(self):
         c = TestClient(light=True)
-        conanfile = self.consumer_conanfile.format("")
+        abs_path = os.path.abspath("myruntime").replace("\\", "/")
+        consumer = self.consumer_conanfile.replace('"myruntime"', f'r"{abs_path}"')
         c.save({"dep/conanfile.py": self.dep_conanfile,
-                "consumer/conanfile.py": conanfile})
+                "consumer/conanfile.py": consumer})
 
-        c.run("create dep")
-        c.run("install consumer -c tools.env:runtime_copy=myconfruntime")
+        c.run("create dep -s os=Windows")
+        c.run("install consumer -s os=Windows", assert_error=True)
+        assert "win_runtime_copy must be a relative path" in c.out
 
-        assert c.load("consumer/myconfruntime/dep_app.exe") == "APP_CONTENT"
-        assert c.load("consumer/myconfruntime/dep_lib.so") == "LIB_CONTENT"
+    def test_win_runtime_copy_with_full_deploy(self):
+        # Files must be copied from the deployed location, not the cache
+        c = TestClient(light=True)
+        c.save({"dep/conanfile.py": self.dep_conanfile,
+                "consumer/conanfile.py": self.consumer_conanfile})
+
+        c.run("create dep -s os=Windows")
+        c.run("install consumer -s os=Windows --deployer=full_deploy "
+              "--deployer-folder=deployed")
+
+        assert c.load("deployed/full_deploy/host/dep/1.0/bin/dep_app.exe") == "APP_CONTENT"
+        assert c.load("consumer/myruntime/dep_app.exe") == "APP_CONTENT"
 
         runenv_files = glob.glob(os.path.join(c.current_folder, "consumer", "conanrunenv.*"))
         assert len(runenv_files) == 1
         runenv = c.load(runenv_files[0])
-        assert "myconfruntime" in runenv
-
-    def test_conf_has_priority_over_recipe(self):
-        c = TestClient(light=True)
-        conanfile = self.consumer_conanfile.format(', runtime_copy="recipecopy"')
-        c.save({"dep/conanfile.py": self.dep_conanfile,
-                "consumer/conanfile.py": conanfile})
-
-        c.run("create dep")
-        c.run("install consumer -c tools.env:runtime_copy=confcopy")
-
-        assert c.load("consumer/confcopy/dep_app.exe") == "APP_CONTENT"
-        assert c.load("consumer/confcopy/dep_lib.so") == "LIB_CONTENT"
-        assert not os.path.exists(os.path.join(c.current_folder, "consumer", "recipecopy"))
-
-        runenv_files = glob.glob(os.path.join(c.current_folder, "consumer", "conanrunenv.*"))
-        assert len(runenv_files) == 1
-        runenv = c.load(runenv_files[0])
-        assert "confcopy" in runenv
-        assert "recipecopy" not in runenv
+        # PATH points to the deployed copy folder, not the cache or the deploy source
+        assert r"PATH=%~dp0\myruntime" in runenv
+        assert "deployed" not in runenv
+        assert ".conan2" not in runenv
