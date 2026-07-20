@@ -771,12 +771,12 @@ class ConfDefinition:
                     continue
                 pattern_name, value = tokens
                 _, name = self._split_pattern_name(pattern_name)
-                if op != "==":
+                if op == "==":
+                    parsed_value = value.strip()
+                else:
                     # We only implement str type at the moment
                     isstr = _BUILT_IN_CONFS_TYPES.get(name) is str
                     parsed_value = value.strip() if isstr else ConfDefinition._get_evaluated_value(value)
-                else:
-                    parsed_value = value.strip()
                 self.update(pattern_name, parsed_value, profile=profile, method=method)
                 break
             else:
