@@ -1,6 +1,9 @@
 import glob
 import os
+import platform
 import textwrap
+
+import pytest
 
 from conan.test.utils.tools import TestClient
 
@@ -62,6 +65,7 @@ class TestVirtualRunEnvRuntimeCopy:
         c.run("install consumer -s os=Windows", assert_error=True)
         assert "win_runtime_copy must be a relative path" in c.out
 
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
     def test_win_runtime_copy_with_full_deploy(self):
         # Files must be copied from the deployed location, not the cache
         c = TestClient(light=True)
