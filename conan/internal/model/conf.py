@@ -604,7 +604,7 @@ class ConfDefinition:
     # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
                ("=!", "unset"), ("=~", "unset"), ("*=", "update"),
-               ("==", "define"),
+               ("@=", "define"),
                ("=", "define"))
 
     def __init__(self):
@@ -771,7 +771,8 @@ class ConfDefinition:
                     continue
                 pattern_name, value = tokens
                 _, name = self._split_pattern_name(pattern_name)
-                if op == "==":
+                if op == "@=":
+                    # Literal parse of value
                     parsed_value = value.strip()
                 else:
                     # We only implement str type at the moment

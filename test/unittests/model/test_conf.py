@@ -446,8 +446,8 @@ def test_literal_conf():
     conf = textwrap.dedent("""
     user.foo:simple=1.10
     user.foo:quoted="1.10"
-    user.foo:literal==1.10
-    user.foo:literal_quoted=="1.10"
+    user.foo:literal@=1.10
+    user.foo:literal_quoted@="1.10"
     """)
     c.loads(conf)
 
