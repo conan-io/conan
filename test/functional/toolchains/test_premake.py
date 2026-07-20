@@ -1,4 +1,5 @@
 import os
+import re
 import platform
 import textwrap
 
@@ -98,8 +99,105 @@ def test_premake_shared_lib():
     c = TestClient()
     c.run("new premake_lib -d name=lib -d version=0.1 -o lib")
     c.run("create lib -o '&:shared=True'")
-    assert "lib/0.1: package(): Packaged 1 '.so' file: liblib.so" in c.out
+    assert re.search(
+        r"lib/0\.1: package\(\): Packaged 1 '.*\.(so|dll|dylib)' file: (lib)?lib\.(so|dll|dylib)",
+        c.out,
+        re.IGNORECASE
+    )
     assert "lib/0.1: package(): Packaged 1 '.a' file: liblib.a" not in c.out
+
+
+@pytest.mark.slow
+@pytest.mark.tool("premake")
+def test_system_style_includes(matrix_client):
+    main = gen_function_cpp(name="main", sys_includes=["matrix"], calls=["matrix"])
+    premake5 = gen_premake5(
+        workspace="Consumer",
+        projects=[
+            {"name": "consumer", "files": ["src/main.cpp"], "kind": "ConsoleApp"}
+        ],
+    )
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.layout import basic_layout
+        from conan.tools.premake import Premake
+
+        class ConsumerRecipe(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            package_type = "application"
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "*"
+            generators= "PremakeDeps", "PremakeToolchain"
+
+            def layout(self):
+                basic_layout(self)
+
+            def requirements(self):
+                self.requires("matrix/1.0")
+
+            def build(self):
+                premake = Premake(self)
+                premake.configure()
+                premake.build(workspace="Consumer")
+    """)
+
+    # Save and build to see if it works
+    c = matrix_client
+    c.save({"src/main.cpp": main,
+            "premake5.lua": premake5,
+            "conanfile.py": conanfile
+            })
+    c.run("build .")
+
+
+@pytest.mark.slow
+@pytest.mark.tool("premake")
+@pytest.mark.skipif(platform.system() != "Darwin",
+                    reason="Xcode is only available on MacOS")
+def test_system_style_includes_xcode(matrix_client):
+    main = gen_function_cpp(name="main", sys_includes=["matrix"], calls=["matrix"])
+    premake5 = gen_premake5(
+        workspace="Consumer",
+        projects=[
+            {"name": "consumer", "files": ["src/main.cpp"], "kind": "ConsoleApp"}
+        ],
+    )
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.layout import basic_layout
+        from conan.tools.premake import Premake
+
+        class ConsumerRecipe(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            package_type = "application"
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "*"
+            generators= "PremakeDeps", "PremakeToolchain"
+
+            def layout(self):
+                basic_layout(self)
+
+            def requirements(self):
+                self.requires("matrix/1.0")
+
+            def build(self):
+                premake = Premake(self)
+                premake.action = "xcode4"
+                premake.configure()
+                premake.build(workspace="Consumer")
+    """)
+
+    # Save and build to see if it works
+    c = matrix_client
+    c.save({"src/main.cpp": main,
+            "premake5.lua": premake5,
+            "conanfile.py": conanfile
+            })
+    c.run("build .")
 
 
 @pytest.mark.slow

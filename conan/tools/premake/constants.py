@@ -1,4 +1,5 @@
-# Source: https://premake.github.io/docs/architecture/
+# ! Please make sure to only take the normal "Parameters" and NOT the aliases
+#   When using aliases as cli arguments premake will reject them
 CONAN_TO_PREMAKE_ARCH = {
     "x86": "x86",
     "x86_64": "x86_64",
@@ -13,10 +14,10 @@ CONAN_TO_PREMAKE_ARCH = {
     "armv7s": "arm",
     "armv7k": "arm",
 
-    "armv8": "arm64",
-    "armv8_32": "arm64",
-    "armv8.3": "arm64",
-    "arm64ec": "arm64",
+    "armv8": "aarch64",
+    "armv8_32": "aarch64",
+    "armv8.3": "aarch64",
+    "arm64ec": "aarch64",
 
     "e2k-v2": "e2k",
     "e2k-v3": "e2k",
