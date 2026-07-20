@@ -603,7 +603,9 @@ class Conf:
 class ConfDefinition:
     # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
-               ("=!", "unset"), ("=~", "unset"), ("*=", "update"), ("=", "define"))
+               ("=!", "unset"), ("=~", "unset"), ("*=", "update"),
+               ("==", "define"),
+               ("=", "define"))
 
     def __init__(self):
         self._pattern_confs = {}
@@ -769,9 +771,12 @@ class ConfDefinition:
                     continue
                 pattern_name, value = tokens
                 _, name = self._split_pattern_name(pattern_name)
-                # We only implement str type at the moment
-                isstr = _BUILT_IN_CONFS_TYPES.get(name) is str
-                parsed_value = value.strip() if isstr else ConfDefinition._get_evaluated_value(value)
+                if op != "==":
+                    # We only implement str type at the moment
+                    isstr = _BUILT_IN_CONFS_TYPES.get(name) is str
+                    parsed_value = value.strip() if isstr else ConfDefinition._get_evaluated_value(value)
+                else:
+                    parsed_value = value.strip()
                 self.update(pattern_name, parsed_value, profile=profile, method=method)
                 break
             else:

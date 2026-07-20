@@ -439,3 +439,26 @@ def test_unset_tilde_alias_same_behaviour(choices):
     c3.update_conf_definition(c4)
 
     assert c3.get("user.company.cpu:jobs", choices=choices) is None
+
+
+def test_literal_conf():
+    c = ConfDefinition()
+    conf = textwrap.dedent("""
+    user.foo:simple=1.10
+    user.foo:quoted="1.10"
+    user.foo:literal==1.10
+    user.foo:literal_quoted=="1.10"
+    """)
+    c.loads(conf)
+
+    assert c.get("user.foo:simple") == 1.1
+    assert c.get("user.foo:simple", check_type=str) == "1.1"
+
+    assert c.get("user.foo:quoted") == '"1.10"'
+    assert c.get("user.foo:quoted", check_type=str) == '"1.10"'
+
+    assert c.get("user.foo:literal") == "1.10"
+    assert c.get("user.foo:literal", check_type=str) == "1.10"
+
+    assert c.get("user.foo:literal_quoted") == '"1.10"'
+    assert c.get("user.foo:literal_quoted", check_type=str) == '"1.10"'
