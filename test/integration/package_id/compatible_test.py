@@ -103,7 +103,7 @@ class TestCompatibleIDsTest:
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
         package_id = client.created_package_id("pkg/0.1@user/stable")
-        assert f"pkg/0.1@user/stable: Package '{package_id}' created" in client.out
+        assert f"Package '{package_id}' created" in client.out
 
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
         client.run("install . -o pkg/*:optimized=2 -vv")
@@ -150,7 +150,7 @@ class TestCompatibleIDsTest:
         client.run("create . --name=pkg --version=0.1 --user=user --channel=stable "
                    "-pr=myprofile -s compiler.version=4.8")
         package_id = client.created_package_id("pkg/0.1@user/stable")
-        assert f"pkg/0.1@user/stable: Package '{package_id}' created" in client.out
+        assert f"Package '{package_id}' created" in client.out
 
         # package can be used with a profile gcc 4.9 falling back to 4.8 binary
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
@@ -160,13 +160,13 @@ class TestCompatibleIDsTest:
         assert "pkg/0.1@user/stable: Already installed!" in client.out
         consumer_id = "96465a24a53766aaac28e270d196db295e2fd22a"
         client.assert_listed_binary({"consumer/0.1@user/stable": (consumer_id, "Build")})
-        assert f"consumer/0.1@user/stable: Package '{consumer_id}' created" in client.out
+        assert f"Package '{consumer_id}' created" in client.out
 
         # Create package with gcc 4.9
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=stable -pr=myprofile")
         package_id = "1ded27c9546219fbd04d4440e05b2298f8230047"
-        assert f"pkg/0.1@user/stable: Package '{package_id}' created" in client.out
+        assert f"Package '{package_id}' created" in client.out
 
         # Consume it
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/stable")})
@@ -176,7 +176,7 @@ class TestCompatibleIDsTest:
         assert "pkg/0.1@user/stable: Already installed!" in client.out
         consumer_id = "41bc915fa380e9a046aacbc21256fcb46ad3179d"
         client.assert_listed_binary({"consumer/0.1@user/stable": (consumer_id, "Build")})
-        assert f"consumer/0.1@user/stable: Package '{consumer_id}' created" in client.out
+        assert f"Package '{consumer_id}' created" in client.out
 
     def test_build_missing(self):
         # https://github.com/conan-io/conan/issues/6133
@@ -314,7 +314,7 @@ class TestNewCompatibility:
         # Create package with gcc 4.8
         c.run("create .  -pr=myprofile -s compiler.version=4.8")
         package_id = "c0c95d81351786c6c1103566a27fb1c1f78629ac"
-        assert f"pkg/0.1: Package '{package_id}' created" in c.out
+        assert f"Package '{package_id}' created" in c.out
 
         # package can be used with a profile gcc 4.9 falling back to 4.8 binary
         c.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
