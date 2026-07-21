@@ -9,9 +9,6 @@ build_order_html = r"""
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Conan Order Visualizer</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #f4f6fb;
@@ -51,7 +48,7 @@ build_order_html = r"""
       --radius-sm: 10px;
       --radius-xs: 6px;
       --mono: "SF Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
-      --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -127,7 +124,7 @@ build_order_html = r"""
     }
 
     .header-sub::before {
-      content: "·";
+      content: "\00B7";
       margin-right: 0.45rem;
       color: #cbd5e1;
     }
@@ -823,7 +820,7 @@ build_order_html = r"""
       line-height: 1.3;
     }
 
-    .depends-list li::before { content: "→ "; color: var(--muted); }
+    .depends-list li::before { content: "\2192 "; color: var(--muted); }
 
     .hash { display: none; }
 
@@ -884,7 +881,7 @@ build_order_html = r"""
     </div>
     <div class="header-toolbar">
       <div class="search-wrap">
-        <input type="search" id="search" placeholder="Search packages…">
+        <input type="search" id="search" placeholder="Search packages...">
       </div>
       <div class="legend">
         <span><span class="dot dot-cache"></span> Cache</span>
@@ -892,8 +889,8 @@ build_order_html = r"""
         <span><span class="dot dot-missing"></span> Missing</span>
         <span><span class="dot dot-build"></span> Build</span>
         <span class="legend-sep">|</span>
-        <span><span class="tag tag-deps-down legend-tag">↓</span> Depends on</span>
-        <span><span class="tag tag-deps-up legend-tag">↑</span> Depended on by</span>
+        <span><span class="tag tag-deps-down legend-tag">&darr;</span> Depends on</span>
+        <span><span class="tag tag-deps-up legend-tag">&uarr;</span> Depended on by</span>
       </div>
     </div>
   </header>
@@ -1317,15 +1314,15 @@ build_order_html = r"""
 
       return `
         <article class="pkg ${binaryClass(pkg.binary)}" id="${id}" data-pref="${escapeHtml(pkg.pref)}" data-ref="${escapeHtml(pkg.ref)}" data-binary="${escapeHtml(pkg.binary)}" data-search="${escapeHtml([pkg.ref, pkg.pref, pkg.package_id, pkg.prev, pkg.context, name].filter(Boolean).join(" ").toLowerCase())}">
-          <div class="pkg-head" title="${escapeHtml(pkg.ref)} • ${escapeHtml(pkg.binary)}${pkg.context ? ` • ${escapeHtml(pkg.context)}` : ""}">
+          <div class="pkg-head" title="${escapeHtml(pkg.ref)} &bull; ${escapeHtml(pkg.binary)}${pkg.context ? ` &bull; ${escapeHtml(pkg.context)}` : ""}">
             <span class="pkg-label">
               <span class="pkg-name">${escapeHtml(name)}</span>
               <span class="pkg-version">${escapeHtml(version)}</span>
             </span>
             <span class="pkg-tags">
               ${pkg.context ? `<span class="tag tag-context${contextClass}" title="Context">${escapeHtml(pkg.context)}</span>` : ""}
-              ${deps.length ? `<span class="tag tag-deps-down" title="Depends on">↓${deps.length}</span>` : ""}
-              ${dependents.length ? `<span class="tag tag-deps-up" title="Depended on by">↑${dependents.length}</span>` : ""}
+              ${deps.length ? `<span class="tag tag-deps-down" title="Depends on">&darr;${deps.length}</span>` : ""}
+              ${dependents.length ? `<span class="tag tag-deps-up" title="Depended on by">&uarr;${dependents.length}</span>` : ""}
             </span>
           </div>
           <div class="pkg-body">
@@ -1361,12 +1358,12 @@ build_order_html = r"""
             <div class="level-scroll">
               <div class="level-body">${pkgs}</div>
               <button type="button" class="scroll-hint scroll-hint-up" title="Related items above">
-                <span class="hint-icon">▲</span>
+                <span class="hint-icon">&#9650;</span>
                 <span class="hint-count"></span>
                 <span class="hint-label"></span>
               </button>
               <button type="button" class="scroll-hint scroll-hint-down" title="Related items below">
-                <span class="hint-icon">▼</span>
+                <span class="hint-icon">&#9660;</span>
                 <span class="hint-count"></span>
                 <span class="hint-label"></span>
               </button>
