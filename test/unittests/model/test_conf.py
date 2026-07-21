@@ -455,12 +455,16 @@ def test_literal_conf():
 
     assert c.get("user.foo:simple") == 1.1
     assert c.get("user.foo:simple", check_type=str) == "1.1"
+    assert c.get("user.foo:simple", check_type=float) == 1.1
 
     assert c.get("user.foo:quoted") == '"1.10"'
     assert c.get("user.foo:quoted", check_type=str) == '"1.10"'
 
     assert c.get("user.foo:literal") == "1.10"
     assert c.get("user.foo:literal", check_type=str) == "1.10"
+    with pytest.raises(ConanException) as exc_info:
+        assert c.get("user.foo:literal", check_type=float) == "1.10"
+    exc_info.match("user.foo:literal must be a float-like object. The value '1.10' introduced is a str object")
 
     assert c.get("user.foo:literal_quoted") == '"1.10"'
     assert c.get("user.foo:literal_quoted", check_type=str) == '"1.10"'
