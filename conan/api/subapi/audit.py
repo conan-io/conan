@@ -31,6 +31,10 @@ class AuditAPI:
     def scan(deps_graph, provider, context=None):
         """
         Scan a given recipe for vulnerabilities in its dependencies.
+
+        :param deps_graph: Dependency graph as returned by the :ref:`Graph API <conan.api.subapi.graph.GraphAPI>`
+        :param provider: Provider object as returned by :ref:`get_provider() <conan.api.subapi.audit.AuditAPI.get_provider>`
+        :param context: Context to filter the dependencies (e.g., ``"host"`` or ``"build"``). If ``None``, all contexts are considered.
         """
         refs = sorted(set(RecipeReference.loads(f"{node.ref.name}/{node.ref.version}")
                           for node in deps_graph.nodes[1:]
@@ -42,6 +46,9 @@ class AuditAPI:
     def list(references, provider):
         """
         List the vulnerabilities of the given reference.
+
+        :param references: List of reference strings
+        :param provider: Provider object as returned by :ref:`get_provider() <conan.api.subapi.audit.AuditAPI.get_provider>`
         """
         refs = [RecipeReference.loads(ref) for ref in references]
         for ref in refs:
@@ -51,8 +58,10 @@ class AuditAPI:
     def get_provider(self, provider_name):
         """
         Get the provider by name.
+
+        :param provider_name: Provider name
+        :return: Provider object
         """
-        # TODO: More work remains to be done here, hardcoded for now for testing
         providers = _load_providers(self._providers_path)
         if provider_name not in providers:
             add_arguments = (
@@ -95,6 +104,8 @@ class AuditAPI:
     def list_providers(self):
         """
         Get all available providers.
+
+        :return: The list of available providers
         """
         providers = _load_providers(self._providers_path)
         result = []
@@ -106,6 +117,10 @@ class AuditAPI:
     def add_provider(self, name, url, provider_type):
         """
         Add a provider.
+
+        :param name: Provider name
+        :param url: Provider url
+        :param provider_type: Provider type, either ``conan-center-proxy`` or ``private``
         """
         providers = _load_providers(self._providers_path)
         if name in providers:
@@ -125,6 +140,8 @@ class AuditAPI:
     def remove_provider(self, provider_name):
         """
         Remove a provider.
+
+        :param provider_name: Provider name
         """
         providers = _load_providers(self._providers_path)
         if provider_name not in providers:
@@ -136,7 +153,11 @@ class AuditAPI:
 
     def auth_provider(self, provider, token):
         """
-        Authenticate a provider.
+        Set authentication token for the provider.
+        Note that this does not perform an authentication attempt, it just stores the token for future use.
+
+        :param provider: Provider name
+        :param token: Provider token
         """
         if not provider:
             raise ConanException("Provider not found")
