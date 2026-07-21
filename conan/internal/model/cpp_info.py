@@ -88,7 +88,7 @@ class _Component:
 
         self._sysroot = None
         self._requires = None
-        self.not_required = []
+        self.ignored_requires = []
 
         self._consumer_conanfile = None
 
@@ -854,10 +854,10 @@ class CppInfo:
                 raise ConanException(msg)
         # TODO: discuss if there are cases that something is required but not transitive
         for e in direct_dependencies:
-            if e not in external and e not in self._package.not_required:
+            if e not in external and e not in self._package.ignored_requires:
                 msg = f"{conanfile}: package_info(): The direct dependency '{e}' is not used by " \
                       f"any '(cpp_info/components).requires'. If this is intentional, add it to " \
-                      f"'self.cpp_info.not_required'."
+                      f"'self.cpp_info.ignored_requires'."
                 raise ConanException(msg)
 
     @property
