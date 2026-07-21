@@ -36,7 +36,7 @@ class VirtualRunEnv:
 
         :param conanfile:  The current recipe object. Always use ``self``.
         :param auto_generate: Automatically generate .bat or .sh files
-        :param win_copy_folder: Copy the "bindirs" folders contengs from dependencies into this
+        :param win_copy_folder: Copy the "bindirs" folders contents from dependencies into this
                folder, and point the PATH environment variable to it, instead of the dependencies
                ones. Only for Windows, to avoid PATH and env-var overflow limits.
         """
