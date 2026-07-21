@@ -906,18 +906,38 @@ build_order_html = r"""
   <script>
     const BUILD_ORDER = {{ build_order | tojson }};
 
-    // Conan build-order JSON has two shapes (--order-by=recipe vs configuration).
-    // The UI expects a flat list of package cards keyed by pref.
+    /*
+     * Adapt Conan build-order JSON to the UI package-card model.
+     *
+     * Raw build-order JSON can be either:
+     *   - configuration: each level is already a list of package entries with pref/depends
+     *   - recipe: each level is a list of recipes, each with nested packages[]
+     *   - legacy: a bare array of levels (no order_by / reduced wrapper)
+     *
+     * "Normalized" data is always:
+     *   { order_by, reduced, profiles, order: [ [packageCard, ...], ... ] }
+     * where each packageCard is a flat dictionary with a unique pref, and depends
+     * list attibute witch points to other prefs (so the UI can index and link packages the same way
+     * for both --order-by modes).
+     */
+
+    /** Build a package preference string (ref:package_id[#prev]). */
     function makePref(ref, packageId, prev) {
       let pref = `${ref}:${packageId}`;
       if (prev) pref += `#${prev}`;
       return pref;
     }
 
+    /** Detect recipe-shaped levels (items with nested packages[]). */
     function isRecipeOrder(order) {
       return order.some(level => level.some(item => "packages" in item));
     }
 
+    /**
+     * Expand one recipe level into flat package cards.
+     * Recipe depends are kept temporarily as _recipe_depends for later
+     * resolution into pref-based depends.
+     */
     function flattenRecipeLevel(level) {
       const flat = [];
       for (const item of level) {
@@ -950,6 +970,11 @@ build_order_html = r"""
       return flat;
     }
 
+    /**
+     * Turn recipe-level depends (recipe refs) into package-level depends (prefs),
+     * and ensure every package card has a pref. Mutates the flattened levels
+     * in place.
+     */
     function resolveRecipeDepends(normalizedOrder) {
       const refToPrefs = new Map();
       for (const level of normalizedOrder) {
@@ -977,6 +1002,12 @@ build_order_html = r"""
       }
     }
 
+    /**
+     * Convert raw build-order JSON into the UI package-card model.
+     * Returns { order_by, reduced, profiles, order } with flat package cards
+     * keyed by pref, regardless of whether the input was recipe, configuration,
+     * or legacy list form.
+     */
     function normalizeOrderData(raw) {
       const data = Array.isArray(raw)
         ? { order_by: "recipe", reduced: false, order: raw, profiles: {} }
