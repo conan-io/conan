@@ -31,7 +31,7 @@ class VirtualRunEnv:
         .bat or .sh script
     """
 
-    def __init__(self, conanfile, auto_generate=False, win_runtime_copy=None):
+    def __init__(self, conanfile, auto_generate=False, win_copy_folder=None):
         """
 
         :param conanfile:  The current recipe object. Always use ``self``.
@@ -47,11 +47,11 @@ class VirtualRunEnv:
         self.arch = conanfile.settings.get_safe("arch")
         if self.arch:
             self.arch = self.arch.lower()
-        if win_runtime_copy and os.path.isabs(win_runtime_copy):
-            raise ConanException("win_runtime_copy must be a relative path, not an absolute one")
+        if win_copy_folder and os.path.isabs(win_copy_folder):
+            raise ConanException("win_copy_folder must be a relative path, not an absolute one")
         is_windows = (conanfile.settings.get_safe("os") or "").startswith("Windows")
-        self._runtime_copy = (os.path.join(conanfile.generators_folder, win_runtime_copy)
-                              if win_runtime_copy and is_windows else None)
+        self._runtime_copy = (os.path.join(conanfile.generators_folder, win_copy_folder)
+                              if win_copy_folder and is_windows else None)
 
     @property
     def _filename(self):
