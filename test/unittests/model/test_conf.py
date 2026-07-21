@@ -448,6 +448,8 @@ def test_literal_conf():
     user.foo:quoted="1.10"
     user.foo:literal@=1.10
     user.foo:literal_quoted@="1.10"
+    core:required_conan_version@=1.10
+    tools.microsoft:msvc_update@="1.10"
     """)
     c.loads(conf)
 
@@ -462,3 +464,12 @@ def test_literal_conf():
 
     assert c.get("user.foo:literal_quoted") == '"1.10"'
     assert c.get("user.foo:literal_quoted", check_type=str) == '"1.10"'
+
+    # Built-in confs with str support can be set with literal values,
+    # it has the same meaning
+
+    assert c.get("core:required_conan_version") == "1.10"
+    assert c.get("core:required_conan_version", check_type=str) == "1.10"
+
+    assert c.get("tools.microsoft:msvc_update") == '"1.10"'
+    assert c.get("tools.microsoft:msvc_update", check_type=str) == '"1.10"'
