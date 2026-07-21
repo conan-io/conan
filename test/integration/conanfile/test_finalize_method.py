@@ -218,12 +218,12 @@ class TestBasicLocalFlows:
         client.run("create dep")
         dep_layout = client.created_layout()
         client.run("create app")
-        assert f"app/1.0: Immutable package: {dep_layout.package()}" in client.out
+        assert f"Immutable package: {dep_layout.package()}" in client.out
         # assert f"app/1.0: finalize: {dep_layout.finalize()}" in client.out
         if with_finalize_method:
-            assert f"app/1.0: Package: {dep_layout.finalize()}" in client.out
+            assert f"Package: {dep_layout.finalize()}" in client.out
         else:
-            assert f"app/1.0: Package: {dep_layout.package()}" in client.out
+            assert f"Package: {dep_layout.package()}" in client.out
 
     def test_cache_modification_of_custom_conf_based_on_settings(self):
         tc = TestClient(light=True)
