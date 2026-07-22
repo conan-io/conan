@@ -444,12 +444,12 @@ def test_unset_tilde_alias_same_behaviour(choices):
 def test_literal_conf():
     c = ConfDefinition()
     conf = textwrap.dedent("""
-    core:required_conan_version=<1.10>
-    tools.microsoft:msvc_update=<"1.10">
-    user.foo:literal=<1.10>
+    core:required_conan_version=<str>1.10
+    tools.microsoft:msvc_update=<str>"1.10"
+    user.foo:literal=<str>1.10
     user.foo:literal_prepend=["1.10"]
-    user.foo:literal_prepend=+<1.20>
-    user.foo:literal_quoted=<"1.10">
+    user.foo:literal_prepend=+<str>1.20
+    user.foo:literal_quoted=<str>"1.10"
     user.foo:quoted="1.10"
     user.foo:simple=1.10
     """)
@@ -484,11 +484,23 @@ def test_literal_conf():
     assert c.get("tools.microsoft:msvc_update", check_type=str) == '"1.10"'
 
     assert c.dumps() == textwrap.dedent("""\
-        core:required_conan_version=1.10
-        tools.microsoft:msvc_update="1.10"
-        user.foo:literal=<1.10>
+        core:required_conan_version=<str>1.10
+        tools.microsoft:msvc_update=<str>"1.10"
+        user.foo:literal=<str>1.10
         user.foo:literal_prepend=['1.20', '1.10']
-        user.foo:literal_quoted=<"1.10">
+        user.foo:literal_quoted=<str>"1.10"
         user.foo:quoted="1.10"
         user.foo:simple=1.1
         """)
+
+    # A "<str>" marker with nothing after it yields an empty string (not None/unset),
+    # and re-dumps with the marker preserved so it round-trips
+    c = ConfDefinition()
+    c.loads("user.foo:bar=<str>")
+    assert c.get("user.foo:bar") == ""
+    assert c.get("user.foo:bar", check_type=str) == ""
+    assert c.dumps() == "user.foo:bar=<str>\n"
+    c2 = ConfDefinition()
+    c2.loads(c.dumps())
+    assert c2.get("user.foo:bar") == ""
+    assert c2.dumps() == c.dumps()

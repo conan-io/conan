@@ -201,25 +201,30 @@ class _ConfVarPlaceHolder:
     pass
 
 
+# A "<str>" value prefix forces the value to be a literal string, bypassing eval/type coercion
+_LITERAL_MARKER = "<str>"
+
+
 class _ConfValue:
 
-    def __init__(self, name, value, path=False, update=None, important=False):
+    def __init__(self, name, value, path=False, update=None, important=False, literal=False):
         self.name = name
         self._important = important
         self._value = value
         self._value_type = type(value)
         self._path = path
         self._update = update
-        self._literal = False
+        self._literal = literal
 
     @staticmethod
-    def parse(name, value, path=False, update=None):
+    def parse(name, value, path=False, update=None, literal=False):
         if name != name.lower():
             raise ConanException("Conf '{}' must be lowercase".format(name))
         name, important = (name[:-1], True) if name[-1] == "!" else (name, False)
         if isinstance(value, (_PackageOption, SettingsItem)):
             raise ConanException(f"Invalid 'conf' type, please use Python types (int, str, ...)")
-        return _ConfValue(name, value, path=path, update=update, important=important)
+        return _ConfValue(name, value, path=path, update=update, important=important,
+                          literal=literal)
 
     def __repr__(self):
         return repr(self._value)
@@ -235,7 +240,7 @@ class _ConfValue:
     def copy(self):
         # Using copy for when self._value is a mutable list
         return _ConfValue(self.name, copy.copy(self._value), self._path, self._update,
-                          self._important)
+                          self._important, self._literal)
 
     def dumps(self):
         name = f"{self.name}!" if self._important else self.name
@@ -246,12 +251,8 @@ class _ConfValue:
             v.remove(_ConfVarPlaceHolder)
             return "{}={}".format(name, v)
         else:
-            result = f"{name}="
-            if self._literal:
-                result += f"<{self._value}>"
-            else:
-                result += f"{self._value}"
-            return result
+            marker = _LITERAL_MARKER if self._literal else ""
+            return f"{name}={marker}{self._value}"
 
     def serialize(self):
         name = f"{self.name}!" if self._important else self.name
@@ -316,6 +317,7 @@ class _ConfValue:
             except ValueError:  # It doesn't have placeholder
                 if important:
                     self._value = other._value
+                    self._literal = other._literal
             else:
                 new_value = v1[:]  # do a copy
                 new_value[index:index + 1] = v2  # replace the placeholder
@@ -331,6 +333,7 @@ class _ConfValue:
                 self._value = new_value
             elif important:
                 self._value = other._value
+                self._literal = other._literal
         elif ((issubclass(v_type, numbers.Number) and issubclass(o_type, numbers.Number)) or
               # They might be different kind of numbers, so skip the check below
               self._value is None or other._value is None):
@@ -339,12 +342,14 @@ class _ConfValue:
             if important:
                 self._value = other._value
                 self._value_type = other._value_type
+                self._literal = other._literal
         elif o_type != v_type:
             raise ConanException("It's not possible to compose {} values "
                                  "and {} ones.".format(v_type.__name__, o_type.__name__))
         # TODO: In case of any other object types?
         elif important:  # equal type, but just string
             self._value = other._value
+            self._literal = other._literal
 
     def set_relative_base_folder(self, folder):
         if not self._path:
@@ -465,14 +470,15 @@ class Conf:
             ret.update(v.serialize())
         return ret
 
-    def define(self, name, value):
+    def define(self, name, value, literal=False):
         """
         Define a value for the given configuration name.
 
         :param name: Name of the configuration.
         :param value: Value of the configuration.
+        :param literal: If True, the value is dumped verbatim with a ``<str>`` prefix.
         """
-        v = _ConfValue.parse(name, value)
+        v = _ConfValue.parse(name, value, literal=literal)
         self._values[v.name] = v
 
     def define_path(self, name, value):
@@ -589,7 +595,7 @@ class Conf:
                 value = self.get(name)
                 # Pruning any empty values, those should not affect package ID
                 if value:
-                    result.define(name, value)
+                    result.define(name, value, literal=self._values[name]._literal)
         return result
 
     def set_relative_base_folder(self, folder):
@@ -609,8 +615,7 @@ class Conf:
 class ConfDefinition:
     # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
-               ("=!", "unset"), ("=~", "unset"), ("*=", "update"),
-               ("=", "define"))
+               ("=!", "unset"), ("=~", "unset"), ("*=", "update"), ("=", "define"))
 
     def __init__(self):
         self._pattern_confs = {}
@@ -703,6 +708,9 @@ class ConfDefinition:
         """
         Define/append/prepend/unset any Conf line
         >> update("tools.build:verbosity", "verbose")
+
+        :param literal: If True (only applies to method="define"), keep the value as a literal
+            string, dumped with a ``<str>`` prefix.
         """
         pattern, name = self._split_pattern_name(key)
 
@@ -720,6 +728,8 @@ class ConfDefinition:
         conf = Conf()
         if method == "unset":
             conf.unset(name)
+        elif method == "define":
+            conf.define(name, value, literal=literal)
         else:
             getattr(conf, method)(name, value)
         # Update
@@ -777,10 +787,10 @@ class ConfDefinition:
                 pattern_name, value = tokens
                 _, name = self._split_pattern_name(pattern_name)
                 stripped = value.strip()
-                literal = stripped.startswith("<") and stripped.endswith(">")
+                # A "<str>" prefix keeps the rest as a literal string (no eval/type coercion)
+                literal = stripped.startswith(_LITERAL_MARKER)
                 if literal:
-                    # Literal parse of value
-                    parsed_value = stripped[1:-1]
+                    parsed_value = stripped[len(_LITERAL_MARKER):]
                 else:
                     # We only implement str type at the moment
                     isstr = _BUILT_IN_CONFS_TYPES.get(name) is str
