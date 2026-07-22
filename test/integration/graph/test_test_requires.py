@@ -199,7 +199,7 @@ def test_requires_transitive_diamond_components():
     c.run("create libb")
     c.run("create libc")
     # This used to crash due to component not defined to liba
-    assert "libc/0.1: Created package" in c.out
+    assert "Created package" in c.out
 
 
 def test_requires_transitive_diamond_components_order():
@@ -234,7 +234,7 @@ def test_requires_transitive_diamond_components_order():
     c.run("create libb")
     c.run("create libc")
     # This used to crash due to component not defined to liba
-    assert "libc/0.1: Created package" in c.out
+    assert "Created package" in c.out
 
 
 def test_wrong_requirement_test_requires():

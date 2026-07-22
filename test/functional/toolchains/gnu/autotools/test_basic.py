@@ -57,6 +57,62 @@ def test_autotools(matrix_client_nospace):
     assert "matrix/1.0: Hello World Release!" in client.out
 
 
+@pytest.mark.slow
+@pytest.mark.skipif(platform.system()!="Windows", reason="Requires windows msys2")
+@pytest.mark.tool("msys2")
+def test_autotools_msvc():
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_lib -d name=matrix -d version=1.0")
+
+    profile = textwrap.dedent("""
+          include(default)
+
+          [conf]
+          tools.microsoft.bash:subsystem=msys2
+          tools.microsoft.bash:path=bash.exe
+          """)
+    client.save({"windows": profile})
+    client.run("create -pr=windows")
+
+    main = gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])
+    makefile_am = gen_makefile_am(main="main", main_srcs="main.cpp")
+    configure_ac = gen_configure_ac()
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import Autotools
+
+        class TestConan(ConanFile):
+            requires = "matrix/1.0"
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "configure.ac", "Makefile.am", "main.cpp"
+            generators = "AutotoolsDeps", "AutotoolsToolchain"
+            win_bash = True
+
+            def build(self):
+                self.run("aclocal")
+                self.run("autoconf")
+                self.run("automake --add-missing --foreign")
+                autotools = Autotools(self)
+                autotools.configure()
+                autotools.make()
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "configure.ac": configure_ac,
+                 "Makefile.am": makefile_am,
+                 "main.cpp": main,
+                 "windows": profile}, clean_first=True)
+
+    client.run("build . -pr=windows")
+    client.run_command(r".\main")
+    assert "matrix/1.0: Hello World Release!" in client.out
+    assert "main _MSC_VER19" in client.out
+    assert "main _MSVC_LANG20" in client.out
+    assert "matrix/1.0: _MSC_VER19" in client.out
+    assert "matrix/1.0: _MSVC_LANG20" in client.out
+
+
 def build_windows_subsystem(profile, make_program, subsystem):
     """ The AutotoolsDeps can be used also in pure Makefiles, if the makefiles follow
     the Autotools conventions

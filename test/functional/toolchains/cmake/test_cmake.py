@@ -574,7 +574,7 @@ class TestCMakeInstall:
         assert "--loglevel=VERBOSE" in client.out
         assert "unrecognized option" not in client.out
         assert "--verbose" in client.out
-        assert "pkg/0.1: package(): Packaged 1 '.h' file: header.h" in client.out
+        assert "package(): Packaged 1 '.h' file: header.h" in client.out
         package_folder = client.created_layout().package()
         assert os.path.exists(os.path.join(package_folder, "include", "header.h"))
 

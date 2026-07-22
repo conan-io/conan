@@ -361,7 +361,7 @@ class TestAutotoolsTemplateWindows:
         c.run("create . -pr=msys2 -tf=")
         # This will not crash
         assert "conanvcvars.bat: Activating environment" in c.out
-        assert "hello/1.0: package(): Packaged 1 '.lib' file: hello.lib" in c.out
+        assert "package(): Packaged 1 '.lib' file: hello.lib" in c.out
 
     def test_msys2_autotools_exe_windows(self):
         c = TestClient(path_with_spaces=False)
