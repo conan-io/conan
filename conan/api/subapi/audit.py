@@ -33,8 +33,8 @@ class AuditAPI:
         """
         Scan a given recipe for vulnerabilities in its dependencies.
 
-        :param deps_graph: Dependency graph as returned by the :ref:`Graph API <conan.api.subapi.graph.GraphAPI>`
-        :param provider: Provider object as returned by :ref:`get_provider() <conan.api.subapi.audit.AuditAPI.get_provider>`
+        :param deps_graph: Dependency graph as returned by the :class:`Graph API <conan.api.subapi.graph.GraphAPI>`
+        :param provider: Provider object as returned by :meth:`get_provider() <conan.api.subapi.audit.AuditAPI.get_provider>`
         :param context: Context to filter the dependencies (e.g., ``"host"`` or ``"build"``). If ``None``, all contexts are considered.
         :return: A ``dict`` mapping each scanned reference to its vulnerability information,
             together with some metadata about the request, with the following shape:
@@ -75,9 +75,9 @@ class AuditAPI:
         List the vulnerabilities of the given reference.
 
         :param references: List of reference strings
-        :param provider: Provider object as returned by :ref:`get_provider() <conan.api.subapi.audit.AuditAPI.get_provider>`
+        :param provider: Provider object as returned by :meth:`get_provider() <conan.api.subapi.audit.AuditAPI.get_provider>`
         :return: A ``dict`` with the vulnerability information for each reference, with the same
-            structure as the one returned by :ref:`scan() <conan.api.subapi.audit.AuditAPI.scan>`.
+            structure as the one returned by :meth:`scan() <conan.api.subapi.audit.AuditAPI.scan>`.
         """
         refs = [RecipeReference.loads(ref) for ref in references]
         for ref in refs:
