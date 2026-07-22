@@ -111,23 +111,26 @@ jobs:
   covtest_predict:
     runs-on: ubuntu-latest
     name: CovTest Prediction
-    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request'
         with:
           fetch-depth: 0
 
       - uses: actions/setup-python@v5
+        if: github.event_name == 'pull_request'
         with:
           python-version: '3.10'
 
       - name: Install covtest
+        if: github.event_name == 'pull_request'
         run: |
           git clone https://x-access-token:${{ secrets.COVTEST_READ_TOKEN }}@github.com/conan-io/covtest.git ./covtest_repo || true
           pip install ./covtest_repo || true
           rm -rf ./covtest_repo || true
 
       - name: Run covtest predict
+        if: github.event_name == 'pull_request'
         env:
           COVTEST_URL: ${{ secrets.COVTEST_SERVER_URL }}
           COVTEST_USER: ${{ secrets.COVTEST_SERVER_USER }}
@@ -138,6 +141,7 @@ jobs:
           touch .covtest/covtests.tests
 
       - uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request'
         with:
           name: covtest-prediction
           path: .covtest/covtests.tests
