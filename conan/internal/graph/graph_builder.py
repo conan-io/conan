@@ -241,7 +241,8 @@ class DepsGraphBuilder:
                 if not resolved:
                     self._resolve_alias(node, require, alias, graph)
             self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
-            self._prefetch_git_remote(require)
+            if require.git is not None:
+                self._prefetch_git_remote(require)
             if graph_lock:
                 graph_lock.resolve_overrides(require, node.context)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
@@ -300,9 +301,6 @@ class DepsGraphBuilder:
         before range resolution and proxy lookup run. This mirrors the _resolve_replace_requires
         pattern — acting early in _initialize_requires so the rest of graph resolution is
         transparent (proxy just finds the recipe in cache as usual)."""
-        if require.git is None:
-            return
-
         from conan.api.output import ConanOutput
         from conan.internal.graph.git_remotes_resolver import GitRemotesResolver
         from conan.internal.graph.proxy import should_update_reference
@@ -323,12 +321,9 @@ class DepsGraphBuilder:
             output.info(f"Updating from git remote '{url}'...")
         else:
             try:
-                if ref.revision:
-                    self._cache.recipe_layout(ref)
-                else:
-                    layout = self._cache.recipe_layout_latest(ref)
-                    # annotate revision to compare with lockfile one later
-                    require.ref.revision = layout.reference.revision
+                layout = self._cache.recipe_layout_latest(ref)
+                # annotate revision to compare with lockfile one later
+                require.ref.revision = layout.reference.revision
                 output.info(f"Found in cache (configured via git remote '{url}')")
                 return  # Already in cache, nothing to do
             except ConanException:
