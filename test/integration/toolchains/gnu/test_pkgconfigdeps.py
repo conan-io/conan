@@ -1280,8 +1280,6 @@ def test_pkg_none_requirement_without_components():
     # Related issue: https://github.com/conan-io/conan-center-index/issues/30526
     assert "Requires:" not in b_cmp1_content
     assert "none" not in b_cmp1_content  # redundant, but just in case
-    assert ("You're requiring pkg_a/0.1 that has pkg_config_name='none' "
-            "and no components defined") in tc.out
     assert "pkg_c.pc" in install_contents
     # Components can not skip the PC file creation
     assert "none.pc" in install_contents

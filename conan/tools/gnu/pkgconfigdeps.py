@@ -176,10 +176,6 @@ class _PCFilesDeps:
         replace a root requirement (pkg::pkg). If the package has no components, return [].
         """
         if not dep.cpp_info.has_components:
-            self._conanfile.output.warning(
-                f"You're requiring {str(dep.ref)} that has pkg_config_name='none' and no components "
-                f"defined."
-            )
             return []
         if dep.cpp_info.default_components is not None:
             comp_names = dep.cpp_info.default_components
