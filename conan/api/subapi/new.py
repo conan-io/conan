@@ -1,6 +1,7 @@
 import fnmatch
 import os
 import shutil
+from typing import Tuple
 
 from jinja2 import Template, StrictUndefined, UndefinedError, Environment, meta
 
@@ -16,7 +17,7 @@ class NewAPI:
     def __init__(self, conan_api):
         self._conan_api = conan_api
 
-    def save_template(self, template, defines=None, output_folder=None, force=False):
+    def save_template(self, template: str, defines=None, output_folder=None, force=False):
         """
         Save the ``template`` files in the ``output_folder``, replacing the template variables
         with the ``defines``
@@ -81,7 +82,7 @@ class NewAPI:
             output.success("File saved: %s" % f)
 
     @staticmethod
-    def get_builtin_template(template_name):
+    def get_builtin_template(template_name: str):
         """
         Get a named builtin template. The list of valid names is not guaranteed to be stable.
 
@@ -134,7 +135,7 @@ class NewAPI:
         template_files = new_templates.get(template_name)
         return template_files
 
-    def get_template(self, template_folder):
+    def get_template(self, template_folder: str):
         """ Load a template from a user absolute folder
         All files in the direct folder are considered as templates.
 
@@ -147,7 +148,7 @@ class NewAPI:
         if os.path.isdir(template_folder):
             return self._read_files(template_folder)
 
-    def get_home_template(self, template_name):
+    def get_home_template(self, template_name: str):
         """ Load a template from a subfolder of the Conan home ``templates/command/new`` folder
 
         A special file named ``not_templates`` can be present in the specified folder
@@ -161,7 +162,7 @@ class NewAPI:
         if os.path.isdir(folder_template):
             return self._read_files(folder_template)
 
-    def _read_files(self, template_folder):
+    def _read_files(self, template_folder: str) -> Tuple[dict, dict]:
         template_files, non_template_files = {}, {}
         excluded = os.path.join(template_folder, self._NOT_TEMPLATES)
         if os.path.exists(excluded):
@@ -186,7 +187,7 @@ class NewAPI:
         return template_files, non_template_files
 
     @staticmethod
-    def render(template_files, definitions):
+    def render(template_files: dict, definitions: dict):
         """
         Render the given template files with the given definitions using Jinja2 syntax.
 
