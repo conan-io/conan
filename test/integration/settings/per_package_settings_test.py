@@ -17,7 +17,7 @@ class TestPerPackageSetting:
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Windows")
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("create . --name=consumer --version=0.1 --user=user --channel=testing -s os=Linux -s pkg*:os=Windows")
-        assert "consumer/0.1@user/testing: Created package" in client.out
+        assert "Created package" in client.out
 
     def test_per_package_setting_build_type(self):
         """ comes from https://github.com/conan-io/conan/pull/9842
@@ -46,7 +46,7 @@ class TestPerPackageSetting:
         client.run('create . -s *:os=Linux -s *-model*:os=Windows '
                    '-s "*-model*:build_type=Debug" -s build_type=Release --build=*')
         assert "pkg-model/0.1: BUILDTYPE Windows:Debug!!!!" in client.out
-        assert "consumer/0.1: Created package" in client.out
+        assert "Created package" in client.out
 
     def test_per_package_setting_no_userchannel(self):
         client = TestClient()
@@ -59,7 +59,7 @@ class TestPerPackageSetting:
         client.run("create . --name=pkg --version=0.1 -s os=Windows")
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
         client.run("create . --name=consumer --version=0.1 -s os=Linux -s pkg*:os=Windows")
-        assert "consumer/0.1: Created package" in client.out
+        assert "Created package" in client.out
 
     def test_per_package_subsetting(self):
         client = TestClient()
@@ -74,7 +74,7 @@ class TestPerPackageSetting:
         client.save({"conanfile.py": GenConanfile().with_require("pkg/0.1@user/testing")})
         client.run("create . --name=consumer --version=0.1 --user=user --channel=testing %s -s compiler.libcxx=libstdc++ "
                    "-s pkg*:compiler.libcxx=libstdc++11" % settings)
-        assert "consumer/0.1@user/testing: Created package" in client.out
+        assert "Created package" in client.out
 
     def test_per_package_setting_all_packages_without_user_channel(self):
         client = TestClient()

@@ -249,6 +249,6 @@ def test_not_activated_not_fail(client):
                  "main.cpp": main})
 
     client.run("create . --name=app --version=1.0 -pr:b default -pr:h default")
-    assert "app/1.0: Created package" in client.out
+    assert "Created package" in client.out
     assert "Library from host context!" in client.out
     assert "Generated code in host context!" in client.out

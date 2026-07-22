@@ -1229,7 +1229,7 @@ def test_pkg_with_duplicated_component_requires():
     assert "Requires: mylib-mycomponent" == get_requires_from_content(pc_content)
 
 
-def test_pkg_skip_component():
+def test_pkg_none_requirement_without_components():
     conanfile_a = textwrap.dedent("""
         from conan import ConanFile
         class PkgConfigConan(ConanFile):
@@ -1246,6 +1246,7 @@ def test_pkg_skip_component():
             requires = "pkg_a/0.1"
             def package_info(self):
                 self.cpp_info.components["cmp1"].set_property("pkg_config_name", "b-cmp1")
+                self.cpp_info.components["cmp1"].requires = ["pkg_a::pkg_a"]
         """)
 
     conanfile_c = textwrap.dedent("""
@@ -1276,7 +1277,102 @@ def test_pkg_skip_component():
     assert "none" not in pkg_b_requires
     assert "b-cmp1.pc" in install_contents
     b_cmp1_content = tc.load(os.path.join("out", "b-cmp1.pc"))
+    # Related issue: https://github.com/conan-io/conan-center-index/issues/30526
     assert "Requires:" not in b_cmp1_content
+    assert "none" not in b_cmp1_content  # redundant, but just in case
     assert "pkg_c.pc" in install_contents
     # Components can not skip the PC file creation
     assert "none.pc" in install_contents
+
+
+def test_pkg_none_requirement_with_default_components():
+    """
+    When a requirement points to a package with pkg_config_name="none" and
+    cpp_info.default_components is defined, "none" is replaced by the default
+    components pkg-config names.
+    """
+    conanfile_a = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgConfigConan(ConanFile):
+            name = "pkg_a"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.set_property("pkg_config_name", "none")
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", "a-cmp1")
+                self.cpp_info.components["cmp2"].set_property("pkg_config_name", "a-cmp2")
+                self.cpp_info.default_components = ["cmp1"]
+        """)
+    conanfile_b = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgConfigConan(ConanFile):
+            name = "pkg_b"
+            version = "0.1"
+            requires = "pkg_a/0.1"
+            def package_info(self):
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", "b-cmp1")
+                self.cpp_info.components["cmp1"].requires = ["pkg_a::pkg_a"]
+        """)
+    tc = TestClient(light=True)
+    tc.save({"a/conanfile.py": conanfile_a, "b/conanfile.py": conanfile_b})
+    tc.run("create a")
+    tc.run("create b")
+    tc.run("install --requires=pkg_b/0.1 --generator=PkgConfigDeps -of=out")
+
+    install_contents = os.listdir(os.path.join(tc.current_folder, "out"))
+    assert "pkg_a.pc" not in install_contents
+    assert "a-cmp1.pc" in install_contents
+    assert "a-cmp2.pc" in install_contents
+    assert "none.pc" not in install_contents
+
+    b_cmp1_content = tc.load(os.path.join("out", "b-cmp1.pc"))
+    b_cmp1_requires = get_requires_from_content(b_cmp1_content)
+    assert "a-cmp1" in b_cmp1_requires
+    assert "a-cmp2" not in b_cmp1_requires  # not in default_components
+    assert "none" not in b_cmp1_requires
+    assert "pkg_a" not in b_cmp1_requires
+
+
+def test_pkg_none_requirement_with_all_components():
+    """
+    When a requirement points to a package with pkg_config_name="none" without
+    default_components but with components, "none" is replaced by all component
+    pkg-config names.
+    """
+    conanfile_a = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgConfigConan(ConanFile):
+            name = "pkg_a"
+            version = "0.1"
+            def package_info(self):
+                self.cpp_info.set_property("pkg_config_name", "none")
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", "a-cmp1")
+                self.cpp_info.components["cmp2"].set_property("pkg_config_name", "a-cmp2")
+        """)
+    conanfile_b = textwrap.dedent("""
+        from conan import ConanFile
+        class PkgConfigConan(ConanFile):
+            name = "pkg_b"
+            version = "0.1"
+            requires = "pkg_a/0.1"
+            def package_info(self):
+                self.cpp_info.components["cmp1"].set_property("pkg_config_name", "b-cmp1")
+                self.cpp_info.components["cmp1"].requires = ["pkg_a::pkg_a"]
+        """)
+    tc = TestClient(light=True)
+    tc.save({"a/conanfile.py": conanfile_a, "b/conanfile.py": conanfile_b})
+    tc.run("create a")
+    tc.run("create b")
+    tc.run("install --requires=pkg_b/0.1 --generator=PkgConfigDeps -of=out")
+
+    install_contents = os.listdir(os.path.join(tc.current_folder, "out"))
+    assert "pkg_a.pc" not in install_contents
+    assert "a-cmp1.pc" in install_contents
+    assert "a-cmp2.pc" in install_contents
+    assert "none.pc" not in install_contents
+
+    b_cmp1_content = tc.load(os.path.join("out", "b-cmp1.pc"))
+    b_cmp1_requires = get_requires_from_content(b_cmp1_content)
+    assert "a-cmp1" in b_cmp1_requires
+    assert "a-cmp2" in b_cmp1_requires
+    assert "none" not in b_cmp1_requires
+    assert "pkg_a" not in b_cmp1_requires

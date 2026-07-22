@@ -134,7 +134,7 @@ def test_error_cmakedeps_transitive_build_requires():
            clean_first=True)
     c.run("export tool")
     c.run("install consumer --build=missing -s:b build_type=Release -s:h build_type=Debug")
-    assert "tool/0.1: Created package" in c.out
+    assert "Full package reference: tool/0.1" in c.out
 
 
 def test_transitive_tool_requires_visible():

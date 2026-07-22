@@ -81,7 +81,7 @@ class TestOptions:
     def test_freeze(self):
         assert self.sut.static
 
-        self.sut.freeze()
+        self.sut.conan_freeze()
         # Should be freezed now
         # same value should not raise
         self.sut.static = True
@@ -99,7 +99,7 @@ class TestOptions:
         # Test None is possible to change
         sut2 = Options({"static": [True, False],
                         "other": [True, False]})
-        sut2.freeze()
+        sut2.conan_freeze()
         sut2.static = True
         assert "static=True" in sut2.dumps()
         # But not twice
@@ -243,15 +243,26 @@ class TestOptionsNone:
         """
         package_options = Options({"path": ["ANY"]})
         with pytest.raises(ConanException):
-            package_options.validate()
+            package_options.conan_validate()
         package_options.path = "Something"
-        package_options.validate()
+        package_options.conan_validate()
 
     def test_undefined_value_none(self):
         """ The value None is allowed as default, not necessary to default to it
         """
         package_options = Options({"path": [None, "Other"]})
-        package_options.validate()
+        package_options.conan_validate()
         package_options = Options({"path": ["None", "Other"]})
         with pytest.raises(ConanException):  # Literal "None" string not good to be undefined
-            package_options.validate()
+            package_options.conan_validate()
+
+
+def test_options_reserved_names():
+    options = {"freeze": ["potato", "tomato"],
+               "validate": [True, False],
+               "scope": [1, 2, 3]}
+    values = {"freeze": "potato", "validate": True, "scope": 2}
+    sut = Options(options, values)
+    assert sut.freeze == "potato"
+    assert sut.scope == 2
+    assert sut.validate == True # noqa
