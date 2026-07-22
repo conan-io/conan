@@ -10,6 +10,10 @@ on:
         required: false
         default: 'false'
         type: string
+      run-covtest:
+        required: false
+        default: 'false'
+        type: string
 
 jobs:
   build_container:
@@ -90,12 +94,20 @@ jobs:
           pip install -r conans/requirements_server.txt
           pip install meson
 
+      - name: Determine tests to run
+        id: determine_tests
+        uses: ./.github/actions/determine-tests
+        with:
+          test-types: ${{ matrix.test-type }}
+          run-slow-tests: ${{ inputs.run-slow-tests }}
+          run-covtest: ${{ inputs.run-covtest }}
+
       - name: Run tests
         uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
           test-type: ${{ matrix.test-type }}
-          tests: ${{ matrix.test-type == 'functional' && (inputs.run-slow-tests == 'true' && 'test/functional' || 'test/functional -m "not slow"') || format('test/{0}', matrix.test-type) }}
+          tests: ${{ steps.determine_tests.outputs.tests }}
 
   linux_runner_tests:
     needs: build_container
