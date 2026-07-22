@@ -1,5 +1,6 @@
 import gzip
 import os
+import re
 import stat
 import platform
 import shutil
@@ -526,31 +527,50 @@ def check_sha256(conanfile, file_path, signature):
     check_with_algorithm_sum("sha256", file_path, signature)
 
 
-def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding="utf-8"):
+def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding="utf-8",
+                    regex=False, flags=re.MULTILINE):
     """
     Replace a string ``search`` in the contents of the file ``file_path`` with the string replace.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param file_path: File path of the file to perform the replacing.
-    :param search: String you want to be replaced.
-    :param replace: String to replace the searched string.
+    :param search: String you want to be replaced, or a compiled ``re.Pattern`` for regex
+           replacement (flags from the pattern are used as-is).
+    :param replace: String to replace the searched string. With regex mode, backreferences
+           (``\\1``, ``\\g<name>``) are supported.
     :param strict: (Optional, Defaulted to ``True``) If ``True``, it raises an error if the searched
            string is not found, so nothing is actually replaced.
     :param encoding: (Optional, Defaulted to utf-8): Specifies the input and output files text
            encoding.
+    :param regex: (Optional, Defaulted to ``False``) If ``True``, ``search`` is treated as a
+           regular expression and applied with ``re.sub``. Ignored when ``search`` is already a
+           compiled ``re.Pattern``.
+    :param flags: (Optional, Defaulted to ``re.MULTILINE``) Flags passed to ``re.sub`` when
+           ``regex=True`` and ``search`` is a string. Ignored for compiled patterns.
     :return: ``True`` if the pattern was found, ``False`` otherwise if `strict` is ``False``.
     """
     output = conanfile.output
     content = load(conanfile, file_path, encoding=encoding)
-    if -1 == content.find(search):
+    if isinstance(search, re.Pattern):
+        new_content, n = re.subn(search, replace, content)
+        found = n > 0
+    elif regex:
+        try:
+            new_content, n = re.subn(search, replace, content, flags=flags)
+        except re.error as e:
+            raise ConanException("replace_in_file invalid regex '%s': %s" % (search, e))
+        found = n > 0
+    else:
+        found = content.find(search) != -1
+        new_content = content.replace(search, replace)
+    if not found:
         message = "replace_in_file didn't find pattern '%s' in '%s' file." % (search, file_path)
         if strict:
             raise ConanException(message)
         else:
             output.warning(message)
             return False
-    content = content.replace(search, replace)
-    save(conanfile, file_path, content, encoding=encoding)
+    save(conanfile, file_path, new_content, encoding=encoding)
     return True
 
 
