@@ -179,9 +179,3 @@ class TestUploadPatternErrors:
     def test_bad_package_query(self, client):
         error = "Invalid package query: blah. Invalid expression: blah"
         self.assert_error("* -p blah", error, client)
-
-
-def test_error_empty():
-    c = TestClient(default_server_user=True, light=True)
-    c.run("upload * -c -r=default")
-    print(c.out)
