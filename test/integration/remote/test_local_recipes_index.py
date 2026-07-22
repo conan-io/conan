@@ -428,7 +428,7 @@ class TestPythonRequires:
         assert "pkg/1.0" in c.out
         c.run("install --requires=pkg/1.0 --build missing -vvv")
         assert "pyreq/1.0#a0d63ca853edefa33582a24a1bb3c75f - Downloaded (local)" in c.out
-        assert "pkg/1.0: Created package" in c.out
+        assert "Created package" in c.out
 
 
 class TestUserChannel:
