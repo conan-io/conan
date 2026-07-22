@@ -74,7 +74,7 @@ class AutotoolsDeps:
             env.append("CPPFLAGS", cpp_flags)
             env.append("LIBS", libs)
             if is_msvc(self._conanfile):
-                env.append("LINK", ldflags)
+                env.append("_LINK_", ldflags)
             else:
                 env.append("LDFLAGS", ldflags)
             env.append("CXXFLAGS", cxxflags)
