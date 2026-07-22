@@ -206,9 +206,9 @@ class Requirement:
 
         src_pkg_type = src_node.conanfile.package_type
         if src_pkg_type is PackageType.HEADER:
-            set_if_none("_transitive_headers", True)
+            set_if_none("transitive_headers", True)
             set_if_none("_fixed_transitive_headers", True)
-            set_if_none("_transitive_libs", True)
+            set_if_none("transitive_libs", True)
 
     def __hash__(self):
         return hash((self.ref.name, self.build))
