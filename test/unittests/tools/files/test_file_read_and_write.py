@@ -2,7 +2,6 @@
 
 
 import os
-import re
 
 import pytest
 
@@ -100,13 +99,3 @@ def test_replace_in_file_regex():
     save(conanfile, file_path, "foo.*bar")
     assert replace_in_file(conanfile, file_path, "foo.*", "baz", regex=False)
     assert load(conanfile, file_path) == "bazbar"
-
-
-def test_replace_in_file_compiled_pattern():
-    conanfile = ConanFileMock({})
-    tmp = temp_folder()
-    file_path = os.path.join(tmp, "file.txt")
-    save(conanfile, file_path, "foo\nbar=123\nbaz\n")
-    pattern = re.compile(r"^bar=.*$", re.MULTILINE)
-    assert replace_in_file(conanfile, file_path, pattern, "bar=")
-    assert load(conanfile, file_path) == "foo\nbar=\nbaz\n"

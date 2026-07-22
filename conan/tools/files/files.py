@@ -534,8 +534,8 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param file_path: File path of the file to perform the replacing.
-    :param search: String you want to be replaced, or a compiled ``re.Pattern`` for regex
-           replacement (flags from the pattern are used as-is).
+    :param search: String you want to be replaced. With ``regex=True``, treated as a regular
+           expression.
     :param replace: String to replace the searched string. With regex mode, backreferences
            (``\\1``, ``\\g<name>``) are supported.
     :param strict: (Optional, Defaulted to ``True``) If ``True``, it raises an error if the searched
@@ -543,18 +543,14 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding
     :param encoding: (Optional, Defaulted to utf-8): Specifies the input and output files text
            encoding.
     :param regex: (Optional, Defaulted to ``False``) If ``True``, ``search`` is treated as a
-           regular expression and applied with ``re.sub``. Ignored when ``search`` is already a
-           compiled ``re.Pattern``.
+           regular expression and applied with ``re.sub``.
     :param flags: (Optional, Defaulted to ``re.MULTILINE``) Flags passed to ``re.sub`` when
-           ``regex=True`` and ``search`` is a string. Ignored for compiled patterns.
+           ``regex=True``.
     :return: ``True`` if the pattern was found, ``False`` otherwise if `strict` is ``False``.
     """
     output = conanfile.output
     content = load(conanfile, file_path, encoding=encoding)
-    if isinstance(search, re.Pattern):
-        new_content, n = re.subn(search, replace, content)
-        found = n > 0
-    elif regex:
+    if regex:
         try:
             new_content, n = re.subn(search, replace, content, flags=flags)
         except re.error as e:
