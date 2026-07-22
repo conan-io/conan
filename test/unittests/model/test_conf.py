@@ -444,12 +444,14 @@ def test_unset_tilde_alias_same_behaviour(choices):
 def test_literal_conf():
     c = ConfDefinition()
     conf = textwrap.dedent("""
-    user.foo:simple=1.10
+    core:required_conan_version=<1.10>
+    tools.microsoft:msvc_update=<"1.10">
+    user.foo:literal=<1.10>
+    user.foo:literal_prepend=["1.10"]
+    user.foo:literal_prepend=+<1.20>
+    user.foo:literal_quoted=<"1.10">
     user.foo:quoted="1.10"
-    user.foo:literal@=1.10
-    user.foo:literal_quoted@="1.10"
-    core:required_conan_version@=1.10
-    tools.microsoft:msvc_update@="1.10"
+    user.foo:simple=1.10
     """)
     c.loads(conf)
 
@@ -466,6 +468,9 @@ def test_literal_conf():
         assert c.get("user.foo:literal", check_type=float) == "1.10"
     exc_info.match("user.foo:literal must be a float-like object. The value '1.10' introduced is a str object")
 
+    assert c.get("user.foo:literal_prepend") == ['1.20', '1.10']
+    assert c.get("user.foo:literal_prepend", check_type=str) == "['1.20', '1.10']"
+
     assert c.get("user.foo:literal_quoted") == '"1.10"'
     assert c.get("user.foo:literal_quoted", check_type=str) == '"1.10"'
 
@@ -477,3 +482,13 @@ def test_literal_conf():
 
     assert c.get("tools.microsoft:msvc_update") == '"1.10"'
     assert c.get("tools.microsoft:msvc_update", check_type=str) == '"1.10"'
+
+    assert c.dumps() == textwrap.dedent("""\
+        core:required_conan_version=1.10
+        tools.microsoft:msvc_update="1.10"
+        user.foo:literal=<1.10>
+        user.foo:literal_prepend=['1.20', '1.10']
+        user.foo:literal_quoted=<"1.10">
+        user.foo:quoted="1.10"
+        user.foo:simple=1.1
+        """)

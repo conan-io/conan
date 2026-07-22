@@ -210,6 +210,7 @@ class _ConfValue:
         self._value_type = type(value)
         self._path = path
         self._update = update
+        self._literal = False
 
     @staticmethod
     def parse(name, value, path=False, update=None):
@@ -245,7 +246,12 @@ class _ConfValue:
             v.remove(_ConfVarPlaceHolder)
             return "{}={}".format(name, v)
         else:
-            return "{}={}".format(name, self._value)
+            result = f"{name}="
+            if self._literal:
+                result += f"<{self._value}>"
+            else:
+                result += f"{self._value}"
+            return result
 
     def serialize(self):
         name = f"{self.name}!" if self._important else self.name
@@ -604,7 +610,6 @@ class ConfDefinition:
     # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
                ("=!", "unset"), ("=~", "unset"), ("*=", "update"),
-               ("@=", "define"),
                ("=", "define"))
 
     def __init__(self):
@@ -694,7 +699,7 @@ class ConfDefinition:
         self._pattern_confs = result._pattern_confs
         return
 
-    def update(self, key, value, profile=False, method="define"):
+    def update(self, key, value, profile=False, method="define", literal=False):
         """
         Define/append/prepend/unset any Conf line
         >> update("tools.build:verbosity", "verbose")
@@ -771,14 +776,16 @@ class ConfDefinition:
                     continue
                 pattern_name, value = tokens
                 _, name = self._split_pattern_name(pattern_name)
-                if op == "@=":
+                stripped = value.strip()
+                literal = stripped.startswith("<") and stripped.endswith(">")
+                if literal:
                     # Literal parse of value
-                    parsed_value = value.strip()
+                    parsed_value = stripped[1:-1]
                 else:
                     # We only implement str type at the moment
                     isstr = _BUILT_IN_CONFS_TYPES.get(name) is str
-                    parsed_value = value.strip() if isstr else ConfDefinition._get_evaluated_value(value)
-                self.update(pattern_name, parsed_value, profile=profile, method=method)
+                    parsed_value = stripped if isstr else ConfDefinition._get_evaluated_value(value)
+                self.update(pattern_name, parsed_value, profile=profile, method=method, literal=literal)
                 break
             else:
                 raise ConanException("Bad conf definition: {}".format(line))
