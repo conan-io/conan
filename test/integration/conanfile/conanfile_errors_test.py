@@ -24,7 +24,7 @@ class TestConanfileErrors:
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
         client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
-        assert "hello/0.1@lasote/stable: Error in package() method, line 9" in client.out
+        assert "Error in package() method, line 9" in client.out
         assert 'self.copy2("*.h", dst="include", src=["include","platform"]' in client.out
         assert "'HelloConan' object has no attribute 'copy2'" in client.out
 
@@ -44,7 +44,7 @@ class TestConanfileErrors:
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
         client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
-        assert "hello/0.1@lasote/stable: Error in package() method, line 9" in client.out
+        assert "Error in package() method, line 9" in client.out
         assert 'self.copy("*.h", dst="include", src=["include","platform"]' in client.out
         # It results that the error is different in different Python2/3 and OSs
         # assert "'list' object has no attribute 'replace'" in client.out

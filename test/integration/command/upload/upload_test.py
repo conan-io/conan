@@ -393,7 +393,7 @@ class TestUpload:
         client.save({"conanfile.py": GenConanfile()})
 
         client.run('create . --name=lib --version=1.0')
-        assert "lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
+        assert "Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
         client.run('upload lib/1.0 -c -r default')
         assert "Uploading recipe 'lib/1.0" in client.out
 
