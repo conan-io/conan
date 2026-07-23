@@ -2,6 +2,7 @@ import binascii
 import json
 import os
 import base64
+from typing import List
 
 from conan.internal.api.audit.providers import ConanCenterProvider, PrivateProvider
 from conan.errors import ConanException
@@ -31,6 +32,36 @@ class AuditAPI:
     def scan(deps_graph, provider, context=None):
         """
         Scan a given recipe for vulnerabilities in its dependencies.
+
+        :param deps_graph: Dependency graph as returned by the :class:`Graph API <conan.api.subapi.graph.GraphAPI>`
+        :param provider: Provider object as returned by :meth:`get_provider() <conan.api.subapi.audit.AuditAPI.get_provider>`
+        :param context: Context to filter the dependencies (e.g., ``"host"`` or ``"build"``). If ``None``, all contexts are considered.
+        :return: A ``dict`` mapping each scanned reference to its vulnerability information,
+            together with some metadata about the request, with the following shape:
+
+            .. code-block:: python
+
+                {
+                    "data": {
+                        # One entry per scanned reference
+                        "openssl/3.2.0": {
+                            "vulnerabilities": {
+                                "totalCount": 2,
+                                # One "node" per vulnerability, holding its name,
+                                # description, severity, cvss, references,
+                                # advisories, fixed versions, etc.
+                                "edges": [{"node": {...}}, ...]
+                            }
+                        },
+                        # References that could not be scanned carry an error instead
+                        "unknown/1.0": {"error": {"details": "Package 'unknown/1.0' not scanned: Not found."}},
+                    },
+                    # URL of the provider that produced the data, or None
+                    "provider_url": "https://...",
+                    # Only present if the whole request failed (authentication,
+                    # rate limit, server error...). When set, the scan is aborted.
+                    "conan_error": "...",
+                }
         """
         refs = sorted(set(RecipeReference.loads(f"{node.ref.name}/{node.ref.version}")
                           for node in deps_graph.nodes[1:]
@@ -39,20 +70,29 @@ class AuditAPI:
         return provider.get_cves(refs)
 
     @staticmethod
-    def list(references, provider):
+    def list(references: List[str], provider):
         """
         List the vulnerabilities of the given reference.
+
+        :param references: List of reference strings
+        :param provider: Provider object as returned by :meth:`get_provider() <conan.api.subapi.audit.AuditAPI.get_provider>`
+        :return: A ``dict`` with the vulnerability information for each reference, with the same
+            structure as the one returned by :meth:`scan() <conan.api.subapi.audit.AuditAPI.scan>`.
         """
         refs = [RecipeReference.loads(ref) for ref in references]
         for ref in refs:
             ref.validate_ref()
         return provider.get_cves(refs)
 
-    def get_provider(self, provider_name):
+    def get_provider(self, provider_name: str):
         """
-        Get the provider by name.
+        Get the provider opaque object by name.
+        This object is only meant to be used as arguments for other methods in this class,
+        and should not be used/modified directly.
+
+        :param provider_name: Provider name
+        :return: Provider opaque object
         """
-        # TODO: More work remains to be done here, hardcoded for now for testing
         providers = _load_providers(self._providers_path)
         if provider_name not in providers:
             add_arguments = (
@@ -95,6 +135,8 @@ class AuditAPI:
     def list_providers(self):
         """
         Get all available providers.
+
+        :return: The list of available providers
         """
         providers = _load_providers(self._providers_path)
         result = []
@@ -103,9 +145,13 @@ class AuditAPI:
             result.append(provider_cls(self._conan_api, name, provider_data))
         return result
 
-    def add_provider(self, name, url, provider_type):
+    def add_provider(self, name: str, url: str, provider_type: str):
         """
         Add a provider.
+
+        :param name: Provider name
+        :param url: Provider url
+        :param provider_type: Provider type, either ``conan-center-proxy`` or ``private``
         """
         providers = _load_providers(self._providers_path)
         if name in providers:
@@ -122,9 +168,11 @@ class AuditAPI:
 
         _save_providers(self._providers_path, providers)
 
-    def remove_provider(self, provider_name):
+    def remove_provider(self, provider_name: str):
         """
         Remove a provider.
+
+        :param provider_name: Provider name
         """
         providers = _load_providers(self._providers_path)
         if provider_name not in providers:
@@ -134,9 +182,13 @@ class AuditAPI:
 
         _save_providers(self._providers_path, providers)
 
-    def auth_provider(self, provider, token):
+    def auth_provider(self, provider, token: str):
         """
-        Authenticate a provider.
+        Set authentication token for the provider.
+        Note that this does not perform an authentication attempt, it just stores the token for future use.
+
+        :param provider: Provider name
+        :param token: Provider token
         """
         if not provider:
             raise ConanException("Provider not found")
