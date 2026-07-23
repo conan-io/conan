@@ -22,7 +22,7 @@ class NewAPI:
         Save the ``template`` files in the ``output_folder``, replacing the template variables
         with the ``defines``
 
-        :param template: The name of the template to use
+        :param template: The name of the template to use, either built-in ones or those available under ``<conan_home>/templates/command/new/<template>``
         :param defines: A list with the ``k=v`` variables to replace in the template
         :param output_folder: The folder where the template files will be saved, cwd if ``None``
         :param force: If ``True``, overwrite the files if they already exist, otherwise raise an error
@@ -83,12 +83,6 @@ class NewAPI:
 
     @staticmethod
     def get_builtin_template(template_name: str):
-        """
-        Get a named builtin template. The list of valid names is not guaranteed to be stable.
-
-        :param template_name: The name of the builtin template, names are those listed in the conan new -h output message
-        :return: The files of the selected builtin template, or ``None`` if the template doesn't exist
-        """
         from conan.internal.api.new.basic import basic_file, basic_default_file
         from conan.internal.api.new.alias_new import alias_file
         from conan.internal.api.new.cmake_exe import cmake_exe_files
@@ -136,27 +130,10 @@ class NewAPI:
         return template_files
 
     def get_template(self, template_folder: str):
-        """ Load a template from a user absolute folder
-        All files in the direct folder are considered as templates.
-
-        A special file named ``not_templates`` can be present in the specified folder
-         to exclude files from being part of the template,
-         the file should contain a list of filenames or patterns to exclude.
-
-        :param template_folder: Absolute path of the template folder
-        """
         if os.path.isdir(template_folder):
             return self._read_files(template_folder)
 
     def get_home_template(self, template_name: str):
-        """ Load a template from a subfolder of the Conan home ``templates/command/new`` folder
-
-        A special file named ``not_templates`` can be present in the specified folder
-         to exclude files from being part of the template,
-         the file should contain a list of filenames or patterns to exclude.
-
-        :param template_name: Name of the template folder under the Conan home ``templates/command/new`` path
-        """
         folder_template = os.path.join(self._conan_api.home_folder, "templates", "command/new",
                                        template_name)
         if os.path.isdir(folder_template):
@@ -188,15 +165,6 @@ class NewAPI:
 
     @staticmethod
     def render(template_files: dict, definitions: dict):
-        """
-        Render the given template files with the given definitions using Jinja2 syntax.
-
-        The ``conan_version`` definition is automatically injected with the current Conan version
-
-        :param template_files: Template files as returned by the template getters of this subapi
-        :param definitions: Dictionary of definitions to render the templates.
-        :return: Dictionary of rendered template file paths and their contents
-        """
         result = {}
         name = definitions.get("name", "mypkg")
         if isinstance(name, list):
