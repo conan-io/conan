@@ -83,7 +83,7 @@ class WorkspaceAPI:
         self._folder = _find_ws_folder()
         if self._folder:
             ConanOutput().warning(f"Workspace found: {self._folder}")
-            ConanOutput().warning("The Workspace feature is experimental")
+            ConanOutput().warning("The Workspace feature is experimental", warn_tag="experimental")
             self._ws = _load_workspace(self._folder, conan_api)  # Error if not loading
 
     def enable(self, value):
