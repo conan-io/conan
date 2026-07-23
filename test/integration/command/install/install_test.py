@@ -622,7 +622,7 @@ def test_runconf_info_propagation():
         from conan import ConanFile
         class Consumer(ConanFile):
             settings = "build_type"
-            requires = "dep/1.0"
+            requires = "lib/1.0"
 
             def generate(self):
                 self.output.info("Consumer conf: {}".format(self.conf.get("user.myteam:myconf")))
@@ -631,6 +631,7 @@ def test_runconf_info_propagation():
     client.save({"conanfile.py": consumer})
     client.run("install .")
 
-    assert "Consumer conf: myvalue" in client.out
-    assert "Consumer conf2: None" in client.out
-    assert "Consumer conf2: myvalue" not in client.out
+    assert "Consumer conf: myvalue" not in client.out
+    assert "Consumer conf: None" in client.out
+    assert "Consumer conf2: myvalue" in client.out
+    assert "Consumer conf2: None" not in client.out
