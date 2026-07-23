@@ -113,10 +113,7 @@ class RemotesAPI:
         :param index: if not defined, the new remote will be last one. Pass an integer to insert
           the remote in that position instead of the last one
         """
-        add_local_recipes_index_remote(self._home_folder, remote)
         remotes = _load(self._remotes_file)
-        if remote.remote_type != LOCAL_RECIPES_INDEX:
-            _validate_url(remote.url)
         current = {r.name: r for r in remotes}.get(remote.name)
         if current:  # same name remote existing!
             if not force:
@@ -125,6 +122,9 @@ class RemotesAPI:
             ConanOutput().warning(f"Remote '{remote.name}' already exists in remotes")
             if current.url != remote.url:
                 ConanOutput().warning("Updating existing remote with new url")
+        add_local_recipes_index_remote(self._home_folder, remote)
+        if remote.remote_type != LOCAL_RECIPES_INDEX:
+            _validate_url(remote.url)
 
         _check_urls(remotes, remote.url, force, current)
         if index is None:  # append or replace in place
