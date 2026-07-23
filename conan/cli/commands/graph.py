@@ -108,8 +108,6 @@ def graph_build_order(conan_api, parser, subparser, *args):
     install_graph = conan_api.graph.build_order(deps_graph, args.order_by, args.reduce,
                                                 profile_args=args)
     install_order_serialized = install_graph.install_build_order()
-    if args.order_by is None:  # legacy
-        install_order_serialized = install_order_serialized["order"]
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
