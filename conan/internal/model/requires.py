@@ -17,14 +17,14 @@ class Requirement:
         self._required_ref = ref  # Store the original reference
         self._headers = headers  # This dependent node has headers that must be -I<headers-path>
         self._libs = libs
-        self._build = build  # This dependent node is a build tool that runs at build time only
+        self.build = build  # This dependent node is a build tool that runs at build time only
         self._run = run  # node contains executables, shared libs or data necessary at host run time
         self._visible = visible  # Even if not libsed or visible, the node is unique, can conflict
-        self._transitive_headers = transitive_headers
+        self.transitive_headers = transitive_headers
         self._fixed_transitive_headers = transitive_headers
-        self._transitive_libs = transitive_libs
+        self.transitive_libs = transitive_libs
         self._test = test
-        self._package_id_mode = package_id_mode
+        self.package_id_mode = package_id_mode
         self._force = force
         self._override = override
         self._direct = direct
@@ -124,44 +124,12 @@ class Requirement:
         self._consistent = value
 
     @property
-    def build(self):
-        return self._build
-
-    @build.setter
-    def build(self, value):
-        self._build = value
-
-    @property
     def run(self):
         return self._default_if_none(self._run, False)
 
     @run.setter
     def run(self, value):
         self._run = value
-
-    @property
-    def transitive_headers(self):
-        return self._transitive_headers
-
-    @transitive_headers.setter
-    def transitive_headers(self, value):
-        self._transitive_headers = value
-
-    @property
-    def transitive_libs(self):
-        return self._transitive_libs
-
-    @transitive_libs.setter
-    def transitive_libs(self, value):
-        self._transitive_libs = value
-
-    @property
-    def package_id_mode(self):
-        return self._package_id_mode
-
-    @package_id_mode.setter
-    def package_id_mode(self, value):
-        self._package_id_mode = value
 
     def __repr__(self):
         return repr(self.__dict__)
@@ -184,10 +152,10 @@ class Requirement:
 
     def copy_requirement(self):
         requirement = Requirement(self.ref, headers=self.headers, libs=self.libs, build=self.build,
-                           run=self.run, visible=self.visible,
-                           transitive_headers=self.transitive_headers,
-                           transitive_libs=self.transitive_libs,
-                           consistent=self.consistent)
+                                  run=self.run, visible=self.visible,
+                                  transitive_headers=self.transitive_headers,
+                                  transitive_libs=self.transitive_libs,
+                                  consistent=self.consistent)
         requirement._fixed_transitive_headers = self._fixed_transitive_headers
         return requirement
 
@@ -238,9 +206,9 @@ class Requirement:
 
         src_pkg_type = src_node.conanfile.package_type
         if src_pkg_type is PackageType.HEADER:
-            set_if_none("_transitive_headers", True)
+            set_if_none("transitive_headers", True)
             set_if_none("_fixed_transitive_headers", True)
-            set_if_none("_transitive_libs", True)
+            set_if_none("transitive_libs", True)
 
     def __hash__(self):
         return hash((self.ref.name, self.build))
@@ -361,7 +329,7 @@ class Requirement:
                 downstream_require.headers = require.headers and require._fixed_transitive_headers
         else:
             if require.transitive_headers is not None:
-               downstream_require.headers = require.headers and require.transitive_headers
+                downstream_require.headers = require.headers and require.transitive_headers
 
         if self.transitive_headers is not None:
             downstream_require.transitive_headers = self.transitive_headers

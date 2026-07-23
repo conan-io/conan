@@ -40,9 +40,10 @@ jobs:
       python_versions_linux_windows: ${{ steps.set_versions.outputs.python_versions_linux_windows }}
       python_versions_macos: ${{ steps.set_versions.outputs.python_versions_macos }}
       run_slow_tests: ${{ steps.set_versions.outputs.run_slow_tests }}
+      run_covtest: ${{ steps.fetch_pr.outputs.run_covtest }}
     name: Determine Python versions
     steps:
-      - name: Fetch current PR body and check for slow-tests marker
+      - name: Fetch current PR body and check for slow-tests/covtest markers
         if: github.event_name == 'pull_request'
         id: fetch_pr
         run: |
@@ -53,6 +54,11 @@ jobs:
             echo "run_slow_tests=true" >> $GITHUB_OUTPUT
           else
             echo "run_slow_tests=false" >> $GITHUB_OUTPUT
+          fi
+          if echo "$BODY" | grep -Fq '$runcovtest'; then
+            echo "run_covtest=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_covtest=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Determine Python versions
@@ -76,49 +82,55 @@ jobs:
           fi
 
   linux_suite:
-    needs: [ensure_latest_tag_merged, set_python_versions]
+    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
     uses: ./.github/workflows/linux-tests.yml
     name: Linux test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
       run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
+      run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
   osx_suite:
-    needs: [ensure_latest_tag_merged, set_python_versions]
+    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
     uses: ./.github/workflows/osx-tests.yml
     name: OSX test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_macos }}
       run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
+      run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
   windows_suite:
-    needs: [ensure_latest_tag_merged, set_python_versions]
+    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
     uses: ./.github/workflows/win-tests.yml
     name: Windows test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
       run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
+      run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
   covtest_predict:
     runs-on: ubuntu-latest
     name: CovTest Prediction
-    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request'
         with:
           fetch-depth: 0
 
       - uses: actions/setup-python@v5
+        if: github.event_name == 'pull_request'
         with:
           python-version: '3.10'
 
       - name: Install covtest
+        if: github.event_name == 'pull_request'
         run: |
           git clone https://x-access-token:${{ secrets.COVTEST_READ_TOKEN }}@github.com/conan-io/covtest.git ./covtest_repo || true
           pip install ./covtest_repo || true
           rm -rf ./covtest_repo || true
 
       - name: Run covtest predict
+        if: github.event_name == 'pull_request'
         env:
           COVTEST_URL: ${{ secrets.COVTEST_SERVER_URL }}
           COVTEST_USER: ${{ secrets.COVTEST_SERVER_USER }}
@@ -129,6 +141,7 @@ jobs:
           touch .covtest/covtests.tests
 
       - uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request'
         with:
           name: covtest-prediction
           path: .covtest/covtests.tests
