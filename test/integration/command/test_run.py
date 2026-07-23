@@ -103,3 +103,34 @@ def test_run_status_is_propagated(client):
     client.run("run false --requires=pkg/0.1", assert_error=True)
     assert "Error installing the dependencies" not in client.out
     assert "ERROR: Error 1 while executing" in client.out
+
+
+def test_run_tool_requires_buildenv_var():
+    # https://github.com/conan-io/conan/issues/20206
+    # buildenv_info variables from tool_requires should be available for shell
+    # expansion in the command passed to `conan run`
+    tc = TestClient()
+    tool_exe = "mytool.bat" if platform.system() == "Windows" else "mytool.sh"
+    var_ref = "%MYTOOL%" if platform.system() == "Windows" else "$MYTOOL"
+    tool = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.files import save
+        import os
+
+        class Tool(ConanFile):
+            name = "mytool"
+            version = "0.1"
+            package_type = "application"
+
+            def package(self):
+                exe = os.path.join(self.package_folder, "bin", "{tool_exe}")
+                save(self, exe, "@echo off\\necho Hello from mytool!")
+                os.chmod(exe, 0o755)
+
+            def package_info(self):
+                self.buildenv_info.define("MYTOOL", "{tool_exe}")
+        """)
+    tc.save({"mytool/conanfile.py": tool})
+    tc.run("create mytool")
+    tc.run(f'run "{var_ref}" --tool-requires=mytool/0.1')
+    assert "Hello from mytool!" in tc.out

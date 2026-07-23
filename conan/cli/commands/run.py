@@ -1,4 +1,5 @@
 import os
+import platform
 import tempfile
 
 from conan.api.output import ConanOutput, LEVEL_STATUS, Color, LEVEL_ERROR, LEVEL_QUIET
@@ -6,6 +7,7 @@ from conan.cli.args import common_graph_args, validate_common_graph_args
 from conan.cli.command import conan_command
 from conan.cli.commands.install import _run_install_command
 from conan.errors import ConanException
+from conan.internal.util.files import save
 
 
 @conan_command(group="Consumer")
@@ -51,5 +53,16 @@ def run(conan_api, parser, *args):
         }
         envfiles = list(context_env_map.values()) if args.context is None \
             else [context_env_map.get(args.context)]
+        # Defer command parsing until after env activation runs, so that
+        # $VAR/%VAR% references in the user command are expanded using the
+        # activated environment (buildenv/runenv from deps).
+        if platform.system() == "Windows":
+            script = os.path.join(tmpdir, "conanrun_cmd.bat")
+            save(script, f"@echo off\n{args.command}\n")
+            command = f'call "{script}"'
+        else:
+            script = os.path.join(tmpdir, "conanrun_cmd.sh")
+            save(script, f"{args.command}\n")
+            command = f'. "{script}"'
         ConanOutput.set_output_level(LEVEL_ERROR)
-        deps_graph.root.conanfile.run(args.command, cwd=cwd, env=envfiles)
+        deps_graph.root.conanfile.run(command, cwd=cwd, env=envfiles)
