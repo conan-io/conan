@@ -499,3 +499,8 @@ class TestLockUpgrade:
         _check_cache(["config/1.0"])
         c.run("config install-pkg . --lockfile=conan.lock")
         _check_cache(["config/2.0"])
+
+    def test_config_upgrade_conanfile(self):
+        c = TestClient(light=True)
+        c.run("lock upgrade-config -h")
+        assert "Path to a conanconfig.yml file" in c.out
