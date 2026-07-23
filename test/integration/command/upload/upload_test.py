@@ -107,7 +107,7 @@ class TestUpload:
     def test_pattern_upload_no_recipes(self):
         client = TestClient(default_server_user=True, light=True)
         client.run("upload bogus/*@dummy/testing --confirm -r default")
-        assert "WARN: No packages were uploaded because the package list is empty." in client.out
+        assert "WARN: No packages were uploaded because the selection is empty." in client.out
 
     def test_broken_sources_tgz(self):
         # https://github.com/conan-io/conan/issues/2854
