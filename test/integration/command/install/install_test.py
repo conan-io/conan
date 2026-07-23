@@ -599,3 +599,38 @@ def test_install_json_format_not_visible():
 
     c.run("create app")
     assert "pkg/0.0.1: LOADED! contents!!!" in c.out
+
+
+def test_runconf_info_propagation():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+
+        class MyTest(ConanFile):
+            settings = "build_type"
+            {attr}
+
+            def package_info(self):
+                self.runconf_info.define("user.myteam:{conf}", "myvalue")
+        """)
+    client.save({"dep/conanfile.py": conanfile.format(conf="myconf", attr=""),
+                 "lib/conanfile.py": conanfile.format(conf="myconf2", attr="requires='dep/1.0'")})
+    client.run("create dep --name=dep --version=1.0")
+    client.run("create lib --name=lib --version=1.0")
+
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            settings = "build_type"
+            requires = "dep/1.0"
+
+            def generate(self):
+                self.output.info("Consumer conf: {}".format(self.conf.get("user.myteam:myconf")))
+                self.output.info("Consumer conf2: {}".format(self.conf.get("user.myteam:myconf2")))
+    """)
+    client.save({"conanfile.py": consumer})
+    client.run("install .")
+
+    assert "Consumer conf: myvalue" in client.out
+    assert "Consumer conf2: None" in client.out
+    assert "Consumer conf2: myvalue" not in client.out
