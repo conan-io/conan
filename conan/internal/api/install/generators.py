@@ -161,6 +161,9 @@ def _receive_conf(conanfile):
     for build_require in conanfile.dependencies.direct_build.values():
         if build_require.conf_info:
             conanfile.conf.compose_conf(build_require.conf_info)
+    for require in conanfile.dependencies.direct_host.values():
+        if require.runconf_info:
+            conanfile.conf.compose_conf(require.runconf_info)
 
 
 def _receive_generators(conanfile):
