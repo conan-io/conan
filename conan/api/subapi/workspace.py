@@ -76,7 +76,6 @@ def _parse_module(conanfile_module, module_id):
 
 
 class WorkspaceAPI:
-    TEST_ENABLED = False
 
     def __init__(self, conan_api):
         self._enabled = True
@@ -84,12 +83,8 @@ class WorkspaceAPI:
         self._folder = _find_ws_folder()
         if self._folder:
             ConanOutput().warning(f"Workspace found: {self._folder}")
-            if (WorkspaceAPI.TEST_ENABLED or os.getenv("CONAN_WORKSPACE_ENABLE")) != "will_break_next":
-                ConanOutput().warning("Workspace ignored as CONAN_WORKSPACE_ENABLE is not set")
-                self._folder = None
-            else:
-                ConanOutput().warning(f"Workspace is a dev-only feature, exclusively for testing")
-                self._ws = _load_workspace(self._folder, conan_api)  # Error if not loading
+            ConanOutput().warning("The Workspace feature is experimental", warn_tag="experimental")
+            self._ws = _load_workspace(self._folder, conan_api)  # Error if not loading
 
     def enable(self, value):
         self._enabled = value

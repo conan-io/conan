@@ -15,8 +15,6 @@ from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save_files
 from conan.tools.files import replace_in_file
 
-WorkspaceAPI.TEST_ENABLED = "will_break_next"
-
 
 class TestWorkspaceRoot:
 
