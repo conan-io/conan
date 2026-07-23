@@ -2086,6 +2086,49 @@ class TestPyRequires:
         c.run("workspace super-install")
         assert "pyreq/0.1: Downloaded" in c.out
 
+    def test_ws_python_requires_editable(self):
+        c = TestClient(light=True)
+        pyreq = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class BaseConan:
+                def source(self):
+                    self.output.info("BASE SOURCE!!!")
+                def build(self):
+                    self.output.info("BASE BUILD!!!")
+
+            class TestPackage(ConanFile):
+                name = "pyreq"
+                version = "0.1"
+                package_type = "python-require"
+            """)
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class TestPackage(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                python_requires = "pyreq/0.1"
+                python_requires_extend = "pyreq.BaseConan"
+            """)
+
+        c.save({"py/conanfile.py": pyreq,
+                "conanws.yml": "packages:\n  - path: pkg\n",
+                "pkg/conanfile.py": pkg})
+
+        c.run("editable add py")
+
+        c.run("workspace source")
+        assert "BASE SOURCE!!!" in c.out
+
+        c.run("workspace build")
+        assert "BASE BUILD!!!" in c.out
+
+        c.run("workspace install")
+        c.assert_listed_require({"pyreq/0.1": "Editable"}, python=True)
+
+        c.run("workspace super-install")
+        c.assert_listed_require({"pyreq/0.1": "Editable"}, python=True)
+
     def test_super_install(self):
         c = TestClient()
 
