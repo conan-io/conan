@@ -108,12 +108,10 @@ def upload(conan_api: ConanAPI, parser, *args):
 
         conan_api.upload.upload_full(package_list, remote, enabled_remotes, args.check,
                                      args.force, args.metadata, args.dry_run)
-    elif args.list:
+    else:
         # Don't error on no recipes for automated workflows using list,
         # but warn to tell the user that no packages were uploaded
-        ConanOutput().warning(f"No packages were uploaded because the package list is empty.")
-    else:
-        raise ConanException("No recipes found matching pattern '{}'".format(args.pattern))
+        ConanOutput().warning("No packages were uploaded because the selection is empty.")
 
     pkglist = MultiPackagesList()
     pkglist.add(remote.name, package_list)
