@@ -66,3 +66,36 @@ def test_replace_in_file():
 
     assert not replace_in_file(conanfile, file_path, "not existing", "0",
                                encoding="utf-16", strict=False)
+
+
+def test_replace_in_file_regex():
+    conanfile = ConanFileMock({})
+    tmp = temp_folder()
+    file_path = os.path.join(tmp, "file.txt")
+    save(conanfile, file_path, "foo\nbar=123\nbaz\n")
+
+    # Search with regex
+    assert replace_in_file(conanfile, file_path, r"^bar=.*", "bar=", regex=True)
+    assert load(conanfile, file_path) == "foo\nbar=\nbaz\n"
+
+    # Search and replace with regex
+    save(conanfile, file_path, "foo=hello\nbar\n")
+    assert replace_in_file(conanfile, file_path, r"^foo=(.*)", r"foo=pre_\1", regex=True)
+    assert load(conanfile, file_path) == "foo=pre_hello\nbar\n"
+
+    # Not found replace with strict=False
+    assert not replace_in_file(conanfile, file_path, r"^missing=.*", "x",
+                               regex=True, strict=False)
+
+    # Not found with strict=True
+    with pytest.raises(ConanException, match="didn't find pattern"):
+        replace_in_file(conanfile, file_path, r"^missing=.*", "x", regex=True)
+
+    # Not valid regex
+    with pytest.raises(ConanException, match="invalid regex"):
+        replace_in_file(conanfile, file_path, r"[unclosed", "x", regex=True)
+
+    # regex=False keeps literal match even if search looks like a regex
+    save(conanfile, file_path, "foo.*bar")
+    assert replace_in_file(conanfile, file_path, "foo.*", "baz", regex=False)
+    assert load(conanfile, file_path) == "bazbar"
