@@ -552,12 +552,14 @@ def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding
     content = load(conanfile, file_path, encoding=encoding)
     if regex:
         try:
-            new_content = re.sub(search, replace, content, flags=flags)
+            new_content, count = re.subn(search, replace, content, flags=flags)
         except re.error as e:
             raise ConanException("replace_in_file invalid regex '%s': %s" % (search, e))
+        found = count > 0
     else:
+        found = search in content
         new_content = content.replace(search, replace)
-    if new_content == content:
+    if not found:
         message = "replace_in_file didn't find pattern '%s' in '%s' file." % (search, file_path)
         if strict:
             raise ConanException(message)
