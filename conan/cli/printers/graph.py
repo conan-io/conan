@@ -67,7 +67,6 @@ def print_graph_basic(graph):
                        "It might be removed in future Conan versions", warn_tag="deprecated")
         output.warning("Consider using version-ranges instead.")
     _format_resolved("Resolved version ranges", graph.resolved_ranges)
-            break
 
     overrides = graph.overrides()
     if overrides:
