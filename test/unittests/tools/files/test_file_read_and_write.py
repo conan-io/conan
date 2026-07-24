@@ -103,21 +103,20 @@ def test_replace_in_file_regex():
 
 def test_replace_in_file_noop_replace():
     """ Regression test for a replace that matches but produces identical content, e.g.
-    replace_in_file(conanfile, path, "AC_CHECK_LIB(z,", f"AC_CHECK_LIB({zlib_name},") when
-    zlib_name == "z", as happens in the libcurl recipe. This must not be reported as
-    "pattern not found" (https://github.com/conan-io/conan/pull/20194 regression).
+    replace_in_file(conanfile, path, search, replace) when search == replace, or when replace
+    reconstructs the exact same text. This must not be reported as "pattern not found"
+    (https://github.com/conan-io/conan/pull/20194 regression).
     """
     conanfile = ConanFileMock({})
     tmp = temp_folder()
     file_path = os.path.join(tmp, "file.txt")
-    save(conanfile, file_path, "AC_CHECK_LIB(z, deflate)\n")
+    save(conanfile, file_path, "foo bar baz\n")
 
     # search is present, but replace happens to produce the same text back
-    assert replace_in_file(conanfile, file_path, "AC_CHECK_LIB(z,", "AC_CHECK_LIB(z,")
-    assert load(conanfile, file_path) == "AC_CHECK_LIB(z, deflate)\n"
+    assert replace_in_file(conanfile, file_path, "bar", "bar")
+    assert load(conanfile, file_path) == "foo bar baz\n"
 
     # same, but for regex mode
-    save(conanfile, file_path, "AC_CHECK_LIB(z, deflate)\n")
-    assert replace_in_file(conanfile, file_path, r"AC_CHECK_LIB\(z,", "AC_CHECK_LIB(z,",
-                            regex=True)
-    assert load(conanfile, file_path) == "AC_CHECK_LIB(z, deflate)\n"
+    save(conanfile, file_path, "foo bar baz\n")
+    assert replace_in_file(conanfile, file_path, r"ba(r)", r"ba\1", regex=True)
+    assert load(conanfile, file_path) == "foo bar baz\n"
