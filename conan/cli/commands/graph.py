@@ -66,7 +66,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
     Compute the build order of a dependency graph.
     """
     common_graph_args(subparser)
-    subparser.add_argument("--order-by", choices=['recipe', 'configuration'], required=True,
+    subparser.add_argument("--order-by", choices=['recipe', 'configuration'], default='recipe',
                            help='Select how to order the output, "recipe" by default if not set.')
     subparser.add_argument("--reduce", action='store_true', default=False,
                            help='Reduce the build order, output only those to build. Use this '
