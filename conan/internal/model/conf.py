@@ -21,9 +21,6 @@ from conan.internal.util.files import load, save
 policies_msg = """\
 A list of opt-in behaviors that can be defined in the configuration to control specific aspects of Conan's behavior,
 such as keeping deprecated behaviours:
-   - deprecated_build_order_args: Allow deprecated skipping of --order-by argument in conan graph build-order - To be removed in Conan 2.32
-   - deprecated_empty_version_range: Allow using deprecated empty version range expressions - To be removed in Conan 2.32
-If the policy 'required_conan_version>=version' is defined, different behaviors can be enabled:
    - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id
    - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19849 for VirtualBuildEnv bindir path propagation based on requirement run trait
    - If required_conan_version>=2.28, https://github.com/conan-io/conan/pull/19286 defaults the new 'consistent' trait to True for the host context, even when 'visible=False'
