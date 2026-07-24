@@ -47,6 +47,14 @@ class _VersionRepr:
         v2 = str(self._version.patch) if self._version.patch is not None else "0"
         return ".".join([v0, v1, v2])
 
+    def micro(self):
+        # Not checking for cci.version, doesn't need to be legacy compatible
+        v0 = str(self._version.major)
+        v1 = str(self._version.minor) if self._version.minor is not None else "0"
+        v2 = str(self._version.patch) if self._version.patch is not None else "0"
+        v3 = str(self._version.micro) if self._version.micro is not None else "0"
+        return ".".join([v0, v1, v2, v3])
+
     def pre(self):
         # This check is to avoid breaking non-integer major versions
         # for legacy reasons. Users are warned against using them
@@ -120,6 +128,14 @@ class RequirementInfo:
     def patch_mode(self):
         self.name = self._ref.name
         self.version = _VersionRepr(self._ref.version).patch()
+        self.user = self._ref.user
+        self.channel = self._ref.channel
+        self.package_id = None
+        self.recipe_revision = None
+
+    def micro_mode(self):
+        self.name = self._ref.name
+        self.version = _VersionRepr(self._ref.version).micro()
         self.user = self._ref.user
         self.channel = self._ref.channel
         self.package_id = None
@@ -212,6 +228,10 @@ class RequirementsInfo(UserRequirementsDict):
         for r in self._data.values():
             r.patch_mode()
 
+    def micro_mode(self):
+        for r in self._data.values():
+            r.micro_mode()
+
     def minor_mode(self):
         for r in self._data.values():
             r.minor_mode()
@@ -281,6 +301,10 @@ class PythonRequiresInfo:
     def patch_mode(self):
         for r in self._refs:
             r.patch_mode()
+
+    def micro_mode(self):
+        for r in self._refs:
+            r.micro_mode()
 
     def minor_mode(self):
         for r in self._refs:
@@ -477,7 +501,7 @@ class ConanInfo:
     def validate(self):
         # If the options are not fully defined, this is also an invalid case
         try:
-            self.options.validate()
+            self.options.conan_validate()
         except ConanException as e:
             self.invalid = str(e)
 

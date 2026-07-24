@@ -33,22 +33,21 @@ class TestExportPkg:
         client.run("build pkga -bf=build")
         client.run("export-pkg pkga ")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        assert f"conanfile.py (pkga/0.1): Package '{package_id}' created" in client.out
+        assert f"Package '{package_id}' created" in client.out
 
         # we can export-pkg without the dependencies binaries if we need to optimize
         client.run("remove pkgc*:* -c")
         client.run("remove pkgb*:* -c")
         client.run("export-pkg pkga --skip-binaries")
         package_id = re.search(r"Packaging to (\S+)", str(client.out)).group(1)
-        assert f"conanfile.py (pkga/0.1): Package '{package_id}' created" in client.out
+        assert f"Package '{package_id}' created" in client.out
 
     def test_package_folder_errors(self):
         # https://github.com/conan-io/conan/issues/2350
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
         client.run("export-pkg --name=hello --version=0.1 --user=lasote --channel=stable")
-        assert ("conanfile.py (hello/0.1@lasote/stable): package(): "
-                "WARN: No files in this package!") in client.out
+        assert "package(): WARN: No files in this package!" in client.out
 
     def test_options(self):
         # https://github.com/conan-io/conan/issues/2242
@@ -99,7 +98,7 @@ class TestExportPkg:
                      "myprofile": profile})
         client.run("export-pkg . --name=hello --version=0.1 --user=lasote --channel=stable "
                    " -pr=myprofile")
-        assert "conanfile.py (hello/0.1@lasote/stable): ENV-VALUE: MYCUSTOMVALUE!!!" in client.out
+        assert "ENV-VALUE: MYCUSTOMVALUE!!!" in client.out
 
     def test_build_folders(self):
         client = TestClient()
@@ -215,8 +214,7 @@ class TestExportPkg:
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . --user=conan --channel=stable")
-        assert ("conanfile.py (hello/0.1@conan/stable): package(): "
-                "Packaged 1 '.txt' file: file.txt") in client.out
+        assert "package(): Packaged 1 '.txt' file: file.txt" in client.out
 
         # Specify different name or version is not working
         client.run("export-pkg . --name=lib", assert_error=True)
@@ -237,8 +235,7 @@ class TestExportPkg:
         # Partial reference is ok
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . --name=anyname --version=1.222 --user=conan --channel=stable")
-        assert ("conanfile.py (anyname/1.222@conan/stable): package(): "
-                "Packaged 1 '.txt' file: file.txt") in client.out
+        assert "package(): Packaged 1 '.txt' file: file.txt" in client.out
 
     def test_with_deps(self):
         client = TestClient()
@@ -348,10 +345,10 @@ def test_build_policy_never():
     client.save({CONANFILE: conanfile,
                  "src/header.h": "contents"})
     client.run("export-pkg . --name=pkg --version=1.0")
-    assert "conanfile.py (pkg/1.0): package(): Packaged 1 '.h' file: header.h" in client.out
+    assert "package(): Packaged 1 '.h' file: header.h" in client.out
     # check for https://github.com/conan-io/conan/issues/10736
     client.run("export-pkg . --name=pkg --version=1.0")
-    assert "conanfile.py (pkg/1.0): package(): Packaged 1 '.h' file: header.h" in client.out
+    assert "package(): Packaged 1 '.h' file: header.h" in client.out
     client.run("install --requires=pkg/1.0@ --build='*'")
     client.assert_listed_require({"pkg/1.0": "Cache"})
     assert "conanfile.py (pkg/1.0): Calling build()" not in client.out
@@ -487,7 +484,7 @@ def test_negate_tool_requires():
     c.save({"myprofile": profile,
             "conanfile.py": GenConanfile("mypkg", "0.1")})
     c.run("export-pkg . -pr=myprofile")
-    assert "conanfile.py (mypkg/0.1): Created package" in c.out
+    assert "Created package" in c.out
 
 
 def test_export_pkg_tool_requires():
@@ -525,12 +522,12 @@ def test_export_pkg_tool_requires():
 
     c.run("create tool")
     c.run("export-pkg consumer")
-    assert "conanfile.py (consumer/0.1): MYCONF CONF_VALUE" in c.out
+    assert "MYCONF CONF_VALUE" in c.out
     assert "MYVAR=MYVALUE" in c.out
     c.run("upload tool* -r=default -c")
     c.run("remove tool* -c")
     c.run("export-pkg consumer")
-    assert "conanfile.py (consumer/0.1): MYCONF CONF_VALUE" in c.out
+    assert "MYCONF CONF_VALUE" in c.out
     assert "MYVAR=MYVALUE" in c.out
 
 

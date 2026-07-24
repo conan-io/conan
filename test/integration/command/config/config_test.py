@@ -67,6 +67,23 @@ def test_config_install():
     tc.run("config install config --superinsecure", assert_error=True)
 
 
+def test_config_install_warns_when_config_version_exists():
+    """When 'conan config install' runs and config_version.json exists (from a previous
+    'conan config install-pkg'), warn the user that this install won't be tracked."""
+    tc = TestClient(light=True)
+    tc.save({'config/foo': ''})
+    # No previous config_version.json -> no warning
+    tc.run("config install config")
+    assert "config_version.json" not in tc.out
+
+    # Simulate a previous 'conan config install-pkg'
+    tc.save_home({"config_version.json": json.dumps(
+        {"config_version": ["myconf/1.0#aabbcc"]})})
+    tc.run("config install config")
+    assert "'config_version.json' already exists" in tc.out
+    assert "will not be tracked" in tc.out
+
+
 def test_config_install_conanignore():
     tc = TestClient()
     conanignore = textwrap.dedent("""
