@@ -30,7 +30,6 @@ class TestVersionRanges(GraphManagerTest):
         for expr, solution in [(">0.0", "2.2.1"),
                                (">0.1 <1", "0.3"),
                                (">0.1 <1||2.1", "2.1"),
-                               ("", "2.2.1"),
                                ("~0", "0.3"),
                                ("~1", "1.2.1"),
                                ("~1.1", "1.1.2"),
@@ -372,7 +371,6 @@ def test_remote_version_ranges():
     for expr, solution in [(">0.0", "2.2.1"),
                            (">0.1 <1", "0.3"),
                            (">0.1 <1||2.1", "2.1"),
-                           ("", "2.2.1"),
                            ("~0", "0.3"),
                            ("~1", "1.2.1"),
                            ("~1.1", "1.1.2"),
@@ -439,17 +437,5 @@ def test_deprecated_empty_version_ranger():
              "app/conanfile.py": GenConanfile("app", "1.0").with_requires("lib/[]")})
     tc.run("export lib")
     tc.run("graph info app", assert_error=True)
-    assert "lib/[]: lib/1.0" in tc.out
-    assert "Empty version range usage is disabled" in tc.out
-
-    tc.save_home({"global.conf": "core:policies=['deprecated_empty_version_range']"})
-    tc.run("graph info app")
-    assert "lib/[]: lib/1.0" in tc.out
-    assert "Empty version range usage is discouraged" in tc.out
-
-    from conan import __version__ as conan_version
-    from conan.tools.scm import Version
-    from conan.internal.model.version_range import VersionRange
-    r = VersionRange(f">=2.32,include_prerelease")
-    assert not r.contains(Version(conan_version), None), \
-        "Remove empty version range support"
+    assert "Recipe 'app/1.0' requires 'lib/[]' version-range definition error" in tc.out
+    assert "Error parsing empty version range" in tc.out
