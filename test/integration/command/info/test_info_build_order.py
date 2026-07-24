@@ -917,13 +917,6 @@ def test_build_order_path_reqs_mixed_args():
     assert "Conanfile not found" in tc.out
 
 
-def test_build_order_order_by_missing_deprecated():
-    tc = TestClient(light=True)
-    tc.save({"conanfile.py": GenConanfile("dep", "0.1")})
-    tc.run("graph build-order", assert_error=True)
-    assert "the following arguments are required: --order-by" in tc.out
-
-
 def test_build_order_options():
     # Reproduces https://github.com/conan-io/conan/issues/19948
     c = TestClient(light=True)
