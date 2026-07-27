@@ -10,7 +10,7 @@ from conan.test.utils.mocks import ConanFileMock
 from conan.tools.env.environment import environment_wrap_command
 from conan.test.assets.autotools import gen_makefile_am, gen_configure_ac, gen_makefile
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.assets.sources import gen_function_cpp
+from conan.test.assets.sources import gen_function_cpp, gen_function_c
 from test.functional.utils import check_exe_run, check_vs_runtime
 from conan.test.utils.tools import TestClient, default_msvc_version
 
@@ -55,6 +55,178 @@ def test_autotools(matrix_client_nospace):
     host_arch = client.get_default_host_profile().settings['arch']
     check_exe_run(client.out, "main", compiler, None, "Release", host_arch, None, cxx11_abi=cxx11_abi)
     assert "matrix/1.0: Hello World Release!" in client.out
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(platform.system()!="Windows", reason="Requires windows msys2")
+@pytest.mark.tool("msys2")
+def test_autotools_msvc():
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_lib -d name=matrix -d version=1.0")
+
+    profile = textwrap.dedent("""
+          include(default)
+
+          [conf]
+          tools.microsoft.bash:subsystem=msys2
+          tools.microsoft.bash:path=bash.exe
+          """)
+    client.save({"windows": profile})
+    client.run("create -pr=windows")
+
+    main = gen_function_cpp(name="main", includes=["matrix"], calls=["matrix"])
+    makefile_am = gen_makefile_am(main="main", main_srcs="main.cpp")
+    configure_ac = gen_configure_ac()
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import Autotools
+
+        class TestConan(ConanFile):
+            requires = "matrix/1.0"
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "configure.ac", "Makefile.am", "main.cpp"
+            generators = "AutotoolsDeps", "AutotoolsToolchain"
+            win_bash = True
+
+            def build(self):
+                self.run("aclocal")
+                self.run("autoconf")
+                self.run("automake --add-missing --foreign")
+                autotools = Autotools(self)
+                autotools.configure()
+                autotools.make()
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "configure.ac": configure_ac,
+                 "Makefile.am": makefile_am,
+                 "main.cpp": main,
+                 "windows": profile}, clean_first=True)
+
+    client.run("build . -pr=windows")
+    client.run_command(r".\main")
+    assert "matrix/1.0: Hello World Release!" in client.out
+    assert "main _MSC_VER19" in client.out
+    assert "main _MSVC_LANG20" in client.out
+    assert "matrix/1.0: _MSC_VER19" in client.out
+    assert "matrix/1.0: _MSVC_LANG20" in client.out
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires windows msys2")
+@pytest.mark.tool("msys2")
+def test_autotools_msvc_c():
+    """ Same as test_autotools_msvc, but the *consumer* is plain C instead of C++.
+    Automake emits a global "LINK" variable for C targets (it uses "CXXLINK" for
+    C++), which collides with the "LINK" environment variable AutotoolsDeps
+    exports for msvc, silently dropping the -LIBPATH flags before they reach
+    link.exe.
+    """
+    client = TestClient(path_with_spaces=False)
+
+    dep_conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMake, CMakeToolchain, cmake_layout
+
+        class MatrixCConan(ConanFile):
+            name = "matrixc"
+            version = "1.0"
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "CMakeLists.txt", "matrixc.c", "matrixc.h"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def generate(self):
+                CMakeToolchain(self).generate()
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                CMake(self).install()
+
+            def package_info(self):
+                self.cpp_info.libs = ["matrixc"]
+        """)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(matrixc LANGUAGES C)
+        add_library(matrixc STATIC matrixc.c)
+        install(TARGETS matrixc)
+        install(FILES matrixc.h DESTINATION include)
+        """)
+    matrixc_h = "int matrixc(void);\n"
+    matrixc_c = textwrap.dedent("""
+        #include "matrixc.h"
+        #include <stdio.h>
+        int matrixc(void) {
+            printf("matrixc/1.0: Hello World!\\n");
+            return 0;
+        }
+        """)
+    client.save({"conanfile.py": dep_conanfile,
+                 "CMakeLists.txt": cmakelists,
+                 "matrixc.h": matrixc_h,
+                 "matrixc.c": matrixc_c})
+
+    profile = textwrap.dedent("""
+          include(default)
+
+          [conf]
+          tools.microsoft.bash:subsystem=msys2
+          tools.microsoft.bash:path=bash.exe
+          """)
+    client.save({"windows": profile})
+    client.run("create . -pr=windows")
+
+    main = gen_function_c(name="main", includes=["matrixc"], calls=["matrixc"])
+    makefile_am = gen_makefile_am(main="main", main_srcs="main.c")
+    # NOTE: not using gen_configure_ac() here: it hardcodes AC_PROG_CXX, which
+    # would still let Automake pick "LINK" for a .c target, but AC_PROG_CC is the
+    # correct/explicit check to request for a pure-C project.
+    configure_ac = textwrap.dedent("""
+        AC_INIT([main], [1.0], [some@email.com])
+        AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+        AC_PROG_CC
+        AC_PROG_RANLIB
+        AM_PROG_AR
+        AC_CONFIG_FILES([Makefile])
+        AC_OUTPUT
+        """)
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.gnu import Autotools
+
+        class TestConan(ConanFile):
+            requires = "matrixc/1.0"
+            settings = "os", "compiler", "arch", "build_type"
+            exports_sources = "configure.ac", "Makefile.am", "main.c"
+            generators = "AutotoolsDeps", "AutotoolsToolchain"
+            win_bash = True
+
+            def build(self):
+                self.run("aclocal")
+                self.run("autoconf")
+                self.run("automake --add-missing --foreign")
+                autotools = Autotools(self)
+                autotools.configure()
+                autotools.make()
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                 "configure.ac": configure_ac,
+                 "Makefile.am": makefile_am,
+                 "main.c": main,
+                 "windows": profile}, clean_first=True)
+
+    client.run("build . -pr=windows")
+    client.run_command(r".\main")
+    assert "matrixc/1.0: Hello World!" in client.out
 
 
 def build_windows_subsystem(profile, make_program, subsystem):
@@ -157,7 +329,7 @@ def test_autotoolsdeps_mingw_msys():
 @pytest.mark.tool("msys2")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
 # If we use the cmake inside msys2, it fails, so better force our own cmake
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_autotoolsdeps_msys():
     gcc = textwrap.dedent("""
         [settings]

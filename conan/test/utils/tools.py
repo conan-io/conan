@@ -810,19 +810,19 @@ class TestClient:
         return build_folder.replace("\\", "/")
 
     def created_package_id(self, ref):
-        package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)),
+        package_id = re.search(r"Generating the package {}:(\S+)".format(re.escape(str(ref))),
                                str(self.out)).group(1)
         return package_id
 
     def created_package_revision(self, ref):
-        package_id = re.search(r"{}: Created package revision (\S+)".format(str(ref)),
-                               str(self.out)).group(1)
-        return package_id
+        pref_str = re.search(r"Full package reference: ({}[^:]*:\S+)".format(re.escape(str(ref))),
+                             str(self.out)).group(1)
+        return PkgReference.loads(pref_str).revision
 
     def created_package_reference(self, ref):
-        pref = re.search(r"{}: Full package reference: (\S+)".format(str(ref)),
-                         str(self.out)).group(1)
-        return PkgReference.loads(pref)
+        pref_str = re.search(r"Full package reference: ({}[^:]*:\S+)".format(re.escape(str(ref))),
+                             str(self.out)).group(1)
+        return PkgReference.loads(pref_str)
 
     def exported_recipe_revision(self):
         return re.search(r"Exported: .*#(\S+)", str(self.out)).group(1)
@@ -833,7 +833,7 @@ class TestClient:
         return self.cache.recipe_layout(ref)
 
     def created_layout(self):
-        pref = re.search(r"(?s:.*)Full package reference: (\S+)", str(self.out)).group(1)
+        pref = re.findall(r"Full package reference: (\S+)", str(self.out))[-1]
         pref = PkgReference.loads(pref)
         return self.cache.pkg_layout(pref)
 

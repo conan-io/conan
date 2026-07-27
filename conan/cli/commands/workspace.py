@@ -420,6 +420,3 @@ def workspace(conan_api, parser, *args):  # noqa
     """
     Manage Conan workspaces (group of packages in editable mode)
     """
-    if (WorkspaceAPI.TEST_ENABLED or os.getenv("CONAN_WORKSPACE_ENABLE")) != "will_break_next":
-        raise ConanException("Workspace command disabled without CONAN_WORKSPACE_ENABLE env var,"
-                             "please read the docs about this 'incubating' feature")

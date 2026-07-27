@@ -55,10 +55,12 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
                              "--build-folder and package folder can't be the same")
 
     mkdir(conanfile.package_folder)
-    scoped_output = conanfile.output
+    scoped_output = ConanOutput()
     # Make the copy of all the patterns
-    ConanOutput().step("Package step")
-    scoped_output.info("Generating the package")
+    scoped_output.step("Package step")
+    old_display = conanfile.display_name
+    conanfile.display_name = ""
+    scoped_output.info(f"Generating the package {ref}:{package_id}")
     scoped_output.info("Packaging in folder %s" % conanfile.package_folder)
 
     hook_manager.execute("pre_package", conanfile=conanfile)
@@ -73,7 +75,7 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     save(os.path.join(conanfile.package_folder, CONANINFO), conanfile.info.dumps())
     manifest = FileTreeManifest.create(conanfile.package_folder)
     manifest.save(conanfile.package_folder)
-    package_output = ConanOutput(scope="%s: package()" % scoped_output.scope)
+    package_output = ConanOutput(scope="package()")
     manifest.report_summary(package_output, "Packaged")
 
     prev = manifest.summary_hash
@@ -82,6 +84,7 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     pref.revision = prev
     scoped_output.success("Package '%s' created" % package_id)
     scoped_output.success("Full package reference: {}".format(pref.repr_notime()))
+    conanfile.display_name = old_display
     return prev
 
 

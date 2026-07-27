@@ -416,7 +416,7 @@ class BinaryInstaller:
             # but better make sure here, and be able to report the actual folder in case
             # something fails)
             node.conanfile.folders.set_base_package(pkg_layout.package())
-            node.conanfile.output.success("Package folder %s" % node.conanfile.package_folder)
+            ConanOutput().success("Package folder %s" % node.conanfile.package_folder)
 
             # Bundle-Lockfile
             if node.binary == BINARY_BUILD and self._global_conf.get("core.lockfile:auto",

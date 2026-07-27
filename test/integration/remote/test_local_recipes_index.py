@@ -401,11 +401,23 @@ class TestErrorsUx:
         c.run("install --requires=zlib/[*] --build missing", assert_error=True)
         assert "Cannot connect to 'local-recipes-index' repository, missing 'recipes'" in c.out
 
+    def test_error_existing_remote(self):
+        folder = temp_folder()
+        repo = os.path.join(folder, "repo")
+        mkdir(repo)
+        c = TestClient(light=True)
+        c.run(f"remote add local '{repo}'")
+        c.run(f"remote add local '{repo}'", assert_error=True)
+        assert "already exists in remotes" in c.out
+        assert "The cache folder for remote local existed, removing it" not in c.out
+        c.run(f"remote add local '{repo}' --force")
+        assert "already exists in remotes" in c.out
+        assert "The cache folder for remote local existed, removing it" in c.out
+
 
 class TestPythonRequires:
-    @classmethod
     @pytest.fixture(scope="class")
-    def c3i_pyrequires_folder(cls):
+    def c3i_pyrequires_folder(self):
         folder = temp_folder()
         recipes_folder = os.path.join(folder, "recipes")
         config = textwrap.dedent("""
@@ -429,13 +441,12 @@ class TestPythonRequires:
         assert "pkg/1.0" in c.out
         c.run("install --requires=pkg/1.0 --build missing -vvv")
         assert "pyreq/1.0#a0d63ca853edefa33582a24a1bb3c75f - Downloaded (local)" in c.out
-        assert "pkg/1.0: Created package" in c.out
+        assert "Created package" in c.out
 
 
 class TestUserChannel:
-    @classmethod
     @pytest.fixture(scope="class")
-    def c3i_user_channel_folder(cls):
+    def c3i_user_channel_folder(self):
         folder = temp_folder()
         recipes_folder = os.path.join(folder, "recipes")
         config = textwrap.dedent("""

@@ -514,7 +514,8 @@ class GenConanfile:
                        ):
             if member == "requirements":
                 # FIXME: This seems exclusive, but we could mix them?
-                v = self._requirements or self._tool_requirements or self._build_requirements
+                v = (self._requirements or self._tool_requirements
+                     or self._build_requirements or self._test_requirements)
             else:
                 v = getattr(self, "_{}".format(member), None)
             if v is not None:

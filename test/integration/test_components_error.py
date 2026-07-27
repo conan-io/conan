@@ -91,13 +91,39 @@ def test_unused_requirement(component):
             def package_info(self):
                 self.cpp_info{'.components["foo"]' if component else ''}.requires = ["top::other"]
     """)
-    t.save({"top/conanfile.py": GenConanfile().with_package_info({"components": {"cmp1": {"libs": ["top_cmp1"]}}}),
+    top = GenConanfile().with_package_info({"components": {"cmp1": {"libs": ["top_cmp1"]}}})
+    t.save({"top/conanfile.py": top,
             "conanfile.py": conanfile})
     t.run('create top --name=top --version=version')
     t.run('create top --name=top2 --version=version')
     t.run('create .', assert_error=True)
     assert "ERROR: wrong/version: package_info(): The direct dependency 'top2' is not used " \
-           "by any '(cpp_info/components).requires'." in t.out
+           "by any '(cpp_info/components).requires'. If this is intentional, add it to " \
+           "'self.cpp_info.ignored_requires'." in t.out
+
+
+@pytest.mark.parametrize("component", [True, False])
+def test_ignored_requires(component):
+    """ 'cpp_info.ignored_requires' lets a recipe declare that a direct dependency is intentionally
+        not used in '(cpp_info/components).requires', silencing the check.
+    """
+    t = TestClient(light=True)
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            name = "wrong"
+            version = "version"
+            requires = "top/version", "top2/version"
+            def package_info(self):
+                self.cpp_info{'.components["foo"]' if component else ''}.requires = ["top::other"]
+                self.cpp_info.ignored_requires = ["top2"]
+    """)
+    top = GenConanfile().with_package_info({"components": {"cmp1": {"libs": ["top_cmp1"]}}})
+    t.save({"top/conanfile.py": top, "conanfile.py": conanfile})
+    t.run('create top --name=top --version=version')
+    t.run('create top --name=top2 --version=version')
+    t.run('create .')
+    assert "'top2' is not used by any" not in t.out
 
 
 def test_unused_requirement_not_propagated():
@@ -137,9 +163,11 @@ def test_wrong_requirement(component):
             version = "version"
             requires = "top/version"
             def package_info(self):
-                self.cpp_info{'.components["foo"]' if component else ''}.requires =  ["top::cmp1", "other::other"]
-    """)
-    t.save({"top/conanfile.py": GenConanfile().with_package_info({"components": {"cmp1": {"libs": ["top_cmp1"]}}}),
+                self.cpp_info{'.components["foo"]' if component else ''}.requires =  ["top::cmp1",
+                                                                                      "other::other"]
+        """)
+    top = GenConanfile().with_package_info({"components": {"cmp1": {"libs": ["top_cmp1"]}}})
+    t.save({"top/conanfile.py": top,
             "conanfile.py": conanfile})
     t.run('create top --name=top --version=version')
     t.run('create .', assert_error=True)
@@ -154,8 +182,10 @@ def test_missing_internal(component):
         from conan import ConanFile
         class Recipe(ConanFile):
             def package_info(self):
-                self.cpp_info{'.components["foo"]' if component else ''}.requires = ["other", "another"]
-                self.cpp_info{'.components["bar"]' if component else ''}.requires = ["other", "another"]
+                self.cpp_info{'.components["foo"]' if component else ''}.requires = ["other",
+                                                                                     "another"]
+                self.cpp_info{'.components["bar"]' if component else ''}.requires = ["other",
+                                                                                     "another"]
     """)
     t = TestClient(light=True)
     t.save({'conanfile.py': consumer})

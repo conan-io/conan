@@ -98,8 +98,8 @@ def test_premake_shared_lib():
     c = TestClient()
     c.run("new premake_lib -d name=lib -d version=0.1 -o lib")
     c.run("create lib -o '&:shared=True'")
-    assert "lib/0.1: package(): Packaged 1 '.so' file: liblib.so" in c.out
-    assert "lib/0.1: package(): Packaged 1 '.a' file: liblib.a" not in c.out
+    assert "package(): Packaged 1 '.so' file: liblib.so" in c.out
+    assert "package(): Packaged 1 '.a' file: liblib.a" not in c.out
 
 
 @pytest.mark.slow

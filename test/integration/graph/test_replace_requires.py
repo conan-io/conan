@@ -769,9 +769,8 @@ def test_host_version_replace():
 
     tc = TestClient(light=True)
     tc.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
-             "conanfile.py": GenConanfile()
-                .with_requires("pkg/0.1@user/channel")
-                .with_tool_requires("pkg/<host_version>"),
+             "conanfile.py": GenConanfile().with_requires("pkg/0.1@user/channel")
+                                           .with_tool_requires("pkg/<host_version>"),
              "profile": profile})
     tc.run("create pkg")
     tc.run("create pkg --user=user --channel=channel")
@@ -787,16 +786,17 @@ def test_host_version_replace():
     tc.save({"tool_profile": tool_profile})
     tc.run("install -pr=tool_profile")
     tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"})
-    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"}, build=True)
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"},
+                             build=True)
 
     # Solution 2: Directly in the requirement
-    tc.save({"conanfile.py": GenConanfile()
-                .with_requires("pkg/0.1@user/channel")
-                .with_tool_requires("pkg/<host_version>@user/channel")})
+    tc.save({"conanfile.py": GenConanfile().with_requires("pkg/0.1@user/channel")
+                                           .with_tool_requires("pkg/<host_version>@user/channel")})
 
     tc.run("install -pr=profile")
     tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"})
-    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"}, build=True)
+    tc.assert_listed_require({"pkg/0.1@user/channel#485dad6cb11e2fa99d9afbe44a57a164": "Cache"},
+                             build=True)
 
 
 class TestReplaceRequiresCompose:
@@ -1004,3 +1004,69 @@ class TestReplaceRequiresCLIPriority:
         # CLI-specified pkg/1.0 must not be replaced by pkgng/1.0
         assert "Replaced requires" not in c.out
         c.assert_listed_require({"pkg/1.0": "Cache"})
+
+
+class TestReplaceRequiresRecipeOverride:
+    def test_unused_override(self):
+        c = TestClient(light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
+                "openssl/conanfile.py": GenConanfile("openssl", "1.0"),
+                "conanfile.py": GenConanfile().with_requirement("openssl/1.0")
+                                              .with_requirement("zlib/1.0", override=True),
+                "profile": "include(default)\n[replace_requires]\nzlib/*: zlib/1.0"})
+        c.run("create zlib")
+        c.run("create openssl")
+        c.run("install -pr=profile")
+        # it doesn't fail
+
+    def test_replace_requires_override_priority(self):
+        # the profile replace_requires has more priority
+        c = TestClient(light=True)
+        c.save({"zlib/conanfile.py": GenConanfile("zlib"),
+                "openssl/conanfile.py": GenConanfile("openssl", "1.0").with_requires("zlib/1.0"),
+                "conanfile.py": GenConanfile().with_requirement("openssl/1.0")
+                                              .with_requirement("zlib/1.1", override=True),
+                "profile": "include(default)\n[replace_requires]\nzlib/*: zlib/1.0"})
+        c.run("create zlib --version=1.0")
+        c.run("create zlib --version=1.1")
+        c.run("create openssl")
+        c.run("install -pr=profile")
+        c.assert_listed_require({"zlib": ("1.0", "Cache")})
+
+
+@pytest.mark.parametrize("replace", [True, False])
+@pytest.mark.parametrize("requires_first", [True, False])
+def test_replace_requires_cpp_info_requires_issue(replace, requires_first):
+    """ See https://github.com/conan-io/conan/issues/20138
+    A replace_require'ed divergent diamond structure like this used to give
+    a wrong error about cpp_info requires not being valid"""
+    tc = TestClient(light=True)
+
+    ref = "replaced" if replace else "common"
+    profile = "include(default)\n[replace_requires]\nreplaced/*: common/1.0" \
+        if replace else "include(default)"
+    requires = 'self.requires("two/1.0")'
+
+    conanfile = textwrap.dedent(f"""
+    from conan import ConanFile
+    class Consumer(ConanFile):
+        name = "consumer"
+        version = "1.0"
+        def requirements(self):
+            {requires if requires_first else ''}
+            self.test_requires("{ref}/1.0")
+            {'' if requires_first else requires}
+        def package_info(self):
+            self.cpp_info.requires = ["two::two"]
+    """)
+
+    tc.save({"common/conanfile.py": GenConanfile("common", "1.0"),
+             "one/conanfile.py": GenConanfile("one", "1.0").with_requires(f"{ref}/1.0"),
+             "two/conanfile.py": GenConanfile("two", "1.0").with_requires("one/1.0"),
+             "conanfile.py": conanfile,
+             "profile": profile})
+    tc.run("create common")
+    tc.run("export one")
+    tc.run("export two")
+    tc.run("create -pr=profile -b=missing")
+    assert f"The direct dependency '{ref}' is not used" not in tc.out
