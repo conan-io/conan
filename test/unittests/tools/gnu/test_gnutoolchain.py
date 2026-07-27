@@ -134,9 +134,10 @@ def test_get_gnu_triplet_for_cross_building_raise_error():
 
 
 def test_compilers_mapping():
-    autotools_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC"}
-    compilers = {"c": "path_to_c", "cpp": "path_to_cpp", "cuda": "path_to_cuda",
-                 "fortran": "path_to_fortran"}
+    autotools_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
+                         "rc": "RC", "objc": "OBJC", "objcpp": "OBJCXX", "asm": "AS",
+                         "nm": "NM", "ranlib": "RANLIB", "objdump": "OBJDUMP", "strip": "STRIP"}
+    compilers = {k: f"path_to_{k}" for k in autotools_mapping}
     settings = MockSettings({"build_type": "Release",
                              "os": "Windows",
                              "arch": "x86_64",
