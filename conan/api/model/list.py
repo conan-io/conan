@@ -396,6 +396,11 @@ class ListPattern:
         if vrange:
             return str(RecipeReference(self.name, "*", self.user, self.channel))
         if "*" in self.ref or not self.version or (self.package_id is None and self.rrev is None):
+            # Normalize: if no version specified but user/channel is present, add explicit /*
+            # so remote servers (where * doesn't cross /) work correctly, e.g. *@myuser* -> */*@myuser*
+            if not self.version and self.user is not None:
+                user_channel = f"{self.user}/{self.channel}" if self.channel else self.user
+                return f"{self.name}/*@{user_channel}"
             return self.ref
 
     @property

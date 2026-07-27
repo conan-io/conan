@@ -104,6 +104,26 @@ def test_pkg_config_name():
     assert os.path.exists(module_path)
 
 
+def test_qbs_file_name():
+    # Checks we can override module name using the "qbs_file_name" property
+    conanfile = textwrap.dedent('''
+        from conan import ConanFile
+
+        class Recipe(ConanFile):
+            name = 'mylib'
+            version = '0.1'
+            def package_info(self):
+                self.cpp_info.set_property("qbs_file_name", "MyFirstLib")
+        ''')
+    client = TestClient()
+    client.save({'conanfile.py': conanfile})
+    client.run('create .')
+    client.run('install --requires=mylib/0.1@ -g QbsDeps')
+
+    module_path = os.path.join(client.current_folder, 'conan-qbs-deps', 'MyFirstLib.json')
+    assert os.path.exists(module_path)
+
+
 @pytest.mark.parametrize('host_os, arch, build_type', [
     ('Linux', 'x86_64', 'Debug'),
     ('Linux', 'x86_64', 'Release'),

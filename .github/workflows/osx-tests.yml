@@ -10,6 +10,10 @@ on:
         required: false
         default: 'false'
         type: string
+      run-covtest:
+        required: false
+        default: 'false'
+        type: string
 
 jobs:
   osx_setup:
@@ -52,10 +56,9 @@ jobs:
         with:
           path: |
             ~/Applications/CMake/3.15.7
-            ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
             ~/Applications/CMake/3.27.9
-            ~/Applications/CMake/4.2.1
+            ~/Applications/CMake/4.3.4
             ~/Applications/bazel/6.6.0
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
@@ -85,7 +88,7 @@ jobs:
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
           set -e
-          CMAKE_PRECOMP_VERSIONS=("3.19.7" "3.23.5" "3.27.9" "4.2.1")
+          CMAKE_PRECOMP_VERSIONS=("3.23.5" "3.27.9" "4.3.4")
           for version in "${CMAKE_PRECOMP_VERSIONS[@]}"; do
             echo "Downloading and installing precompiled universal CMake version ${version}..."
             wget -q --no-check-certificate https://cmake.org/files/v${version%.*}/cmake-${version}-macos-universal.tar.gz
@@ -136,10 +139,9 @@ jobs:
         with:
           path: |
             ~/Applications/CMake/3.15.7
-            ~/Applications/CMake/3.19.7
             ~/Applications/CMake/3.23.5
             ~/Applications/CMake/3.27.9
-            ~/Applications/CMake/4.2.1
+            ~/Applications/CMake/4.3.4
             ~/Applications/bazel/6.6.0
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
@@ -178,9 +180,17 @@ jobs:
           pip install -r conans/requirements_dev.txt
           pip install meson
 
+      - name: Determine tests to run
+        id: determine_tests
+        uses: ./.github/actions/determine-tests
+        with:
+          test-types: ${{ matrix.test-type }}
+          run-slow-tests: ${{ inputs.run-slow-tests }}
+          run-covtest: ${{ inputs.run-covtest }}
+
       - name: Run tests
         uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
           test-type: ${{ matrix.test-type }}
-          tests: ${{ matrix.test-type == 'functional' && (inputs.run-slow-tests == 'true' && 'test/functional' || 'test/functional -m "not slow"') || format('test/{0}', matrix.test-type) }}
+          tests: ${{ steps.determine_tests.outputs.tests }}

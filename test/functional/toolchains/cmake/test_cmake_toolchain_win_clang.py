@@ -200,7 +200,7 @@ class TestVSClangCL:
         check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=False)
 
 
-@pytest.mark.tool("cmake", "4.2")
+@pytest.mark.tool("cmake", "4.3")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 class TestMsysClang:
     @pytest.mark.tool("msys2_clang64")

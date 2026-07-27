@@ -58,6 +58,15 @@ class ConfigAPI:
         from conan.internal.api.config.config_installer import configuration_install
         cache_folder = self._conan_api.cache_folder
         requester = self._helpers.requester
+        config_version_file = HomePaths(self._conan_api.home_folder).config_version_path
+        if os.path.exists(config_version_file):
+            ConanOutput().warning(
+                "You are installing configuration from a non-package source, but "
+                "'config_version.json' already exists from a previous 'conan config install-pkg'. "
+                "This installation will not be tracked in 'config_version.json' and may result "
+                "in a configuration that is inconsistent with the tracked versions. "
+                "Consider running 'conan config clean' first, or avoid mixing "
+                "'conan config install' with 'conan config install-pkg'.")
         configuration_install(cache_folder, requester, path_or_url, verify_ssl,
                               config_type=config_type, args=args,
                               source_folder=source_folder, target_folder=target_folder)

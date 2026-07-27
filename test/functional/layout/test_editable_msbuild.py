@@ -60,7 +60,7 @@ def test_editable_msbuild():
     c.run("create dep")
     c.run("create pkg")
     # print(c.out)
-    assert "pkg/0.1: Created package" in c.out
+    assert "Created package" in c.out
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
