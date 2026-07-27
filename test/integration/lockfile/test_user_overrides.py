@@ -504,3 +504,14 @@ class TestLockUpgrade:
         c = TestClient(light=True)
         c.run("lock upgrade-config -h")
         assert "Path to a conanconfig.yml file" in c.out
+
+    def test_config_upgrade_rejects_conanfile_path(self):
+        # Regression for https://github.com/conan-io/conan/issues/20205:
+        # 'conan lock upgrade-config ... conanfile.py' used to try parsing the recipe as YAML.
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile("app", "1.0")})
+        c.run("lock upgrade-config --update-config-requires 'whatever/*' conanfile.py",
+              assert_error=True)
+        assert "conanfile" in c.out and "conanconfig.yml" in c.out
+        # And no YAML parser traceback should leak through
+        assert "mapping values are not allowed here" not in c.out

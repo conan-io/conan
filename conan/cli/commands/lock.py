@@ -241,8 +241,9 @@ def lock_upgrade_config(conan_api, parser, subparser, *args):
     (Experimental) Upgrade config requires in a lockfile
     """
     # This is similar to common_graph_args(subparser) but without the name/version args
-    subparser.add_argument("path", nargs="?", help="Path to a conanconfig.yml file",
-                           default=None)
+    subparser.add_argument("path", nargs="?", default=None,
+                           help="Path to a conanconfig.yml file "
+                                "(defaults to current directory)")
     add_common_install_arguments(subparser)
     subparser.add_argument("--requires", action="append",
                            help='Directly provide requires instead of a conanfile')
@@ -254,17 +255,17 @@ def lock_upgrade_config(conan_api, parser, subparser, *args):
                            help='Update config-requires from lockfile')
     args = parser.parse_args(*args)
 
-    # This is a bit repeated from validate_common_graph_args() but without name/version args
     if args.path and (args.requires or args.tool_requires):
         raise ConanException("--requires and --tool-requires arguments are incompatible with "
                              f"[path] '{args.path}' argument")
 
+    if args.path and args.path.endswith(".py"):
+        raise ConanException(f"'{args.path}' looks like a conanfile, but 'conan lock "
+                             "upgrade-config' expects a conanconfig.yml file. Use --requires "
+                             "to specify recipe references instead.")
+
     if not args.requires and not args.tool_requires and args.path is None:
         args.path = "."
-
-    # graph build-order command does not define a build-require argument
-    if not args.path and getattr(args, "build_require", False):
-        raise ConanException("--build-require should only be used with <path> argument")
 
     if not args.update_config_requires:
         raise ConanException("At least one --update-config-requires should be specified")
