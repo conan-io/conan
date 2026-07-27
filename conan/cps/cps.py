@@ -280,9 +280,7 @@ class CPS:
             elif comp.location:
                 location = comp.location
                 lib_location(location, cpp_comp)
-            print()
-            print("*******************************************************")
-            print("COMP DYLD_REQUIRES!!!!!!!!!!!!!", comp.dyld_requires)
+            # TODO: Conan is using requires for everything, this could be an issue later?
             requires = comp.link_requires + comp.requires + comp.dyld_requires
             for r in requires:
                 cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
