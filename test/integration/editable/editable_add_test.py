@@ -33,6 +33,32 @@ class TestEditablePackageTest:
         t.run('install --requires=lib/version@user/name')
         t.assert_listed_require({"lib/version@user/name": "Editable"})
 
+    def test_ref_shortcut(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --ref=lib/1.0@user/channel')
+        assert "Reference 'lib/1.0@user/channel' in editable mode" in t.out
+        t.run("editable list")
+        assert "lib/1.0@user/channel" in t.out
+
+    def test_ref_shortcut_no_user_channel(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --ref=lib/1.0')
+        assert "Reference 'lib/1.0' in editable mode" in t.out
+
+    def test_ref_incompatible_with_name(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --ref=lib/1.0 --name=other', assert_error=True)
+        assert "--ref is incompatible with --name/--version/--user/--channel" in t.out
+
+    def test_ref_rejects_revision(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --ref=lib/1.0#abc123', assert_error=True)
+        assert "cannot contain a revision" in t.out
+
     def test_pyrequires_remote(self):
         t = TestClient(default_server_user=True)
         t.save({"conanfile.py": GenConanfile("pyreq", "1.0")})
