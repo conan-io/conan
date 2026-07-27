@@ -1,9 +1,11 @@
 import gzip
 import os
+import re
 import stat
 import platform
 import shutil
 import subprocess
+import sys
 from typing import Optional
 from contextlib import contextmanager
 from fnmatch import fnmatch
@@ -373,9 +375,10 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     output = conanfile.output
     extract_filter = conanfile.conf.get("tools.files.unzip:filter") or extract_filter
     output.info(f"Uncompressing {filename} to {destination}")
-    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
-            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
-            filename.endswith(".tar")):
+    if (filename.endswith((".tar.gz", ".tgz", ".tbz2", ".tar.bz2", ".tar", ".tar.xz", ".txz", ".tar.zst", ".tzst"))):
+        if filename.endswith((".tar.zst", ".tzst")) and sys.version_info.minor < 14:
+            raise ConanException(f"File {os.path.basename(filename)} compressed with 'zst', "
+                                 f"unsupported for Python<3.14 ")
         return untargz(filename, destination, pattern, strip_root, extract_filter,
                        excludes=excludes)
     if filename.endswith(".gz"):
@@ -387,9 +390,6 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
             with open(target_name, "wb") as fout:
                 shutil.copyfileobj(fin, fout)
         return
-    if filename.endswith(".tar.xz") or filename.endswith(".txz"):
-        return untargz(filename, destination, pattern, strip_root, extract_filter,
-                       excludes=excludes)
 
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
@@ -527,31 +527,46 @@ def check_sha256(conanfile, file_path, signature):
     check_with_algorithm_sum("sha256", file_path, signature)
 
 
-def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding="utf-8"):
+def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding="utf-8",
+                    regex=False, flags=re.MULTILINE):
     """
     Replace a string ``search`` in the contents of the file ``file_path`` with the string replace.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param file_path: File path of the file to perform the replacing.
-    :param search: String you want to be replaced.
-    :param replace: String to replace the searched string.
+    :param search: String you want to be replaced. With ``regex=True``, treated as a regular
+           expression.
+    :param replace: String to replace the searched string. With regex mode, backreferences
+           (``\\1``, ``\\g<name>``) are supported.
     :param strict: (Optional, Defaulted to ``True``) If ``True``, it raises an error if the searched
            string is not found, so nothing is actually replaced.
     :param encoding: (Optional, Defaulted to utf-8): Specifies the input and output files text
            encoding.
+    :param regex: (Optional, Defaulted to ``False``) If ``True``, ``search`` is treated as a
+           regular expression and applied with ``re.sub``.
+    :param flags: (Optional, Defaulted to ``re.MULTILINE``) Flags passed to ``re.sub`` when
+           ``regex=True``.
     :return: ``True`` if the pattern was found, ``False`` otherwise if `strict` is ``False``.
     """
     output = conanfile.output
     content = load(conanfile, file_path, encoding=encoding)
-    if -1 == content.find(search):
+    if regex:
+        try:
+            new_content, count = re.subn(search, replace, content, flags=flags)
+        except re.error as e:
+            raise ConanException("replace_in_file invalid regex '%s': %s" % (search, e))
+        found = count > 0
+    else:
+        found = search in content
+        new_content = content.replace(search, replace)
+    if not found:
         message = "replace_in_file didn't find pattern '%s' in '%s' file." % (search, file_path)
         if strict:
             raise ConanException(message)
         else:
             output.warning(message)
             return False
-    content = content.replace(search, replace)
-    save(conanfile, file_path, content, encoding=encoding)
+    save(conanfile, file_path, new_content, encoding=encoding)
     return True
 
 

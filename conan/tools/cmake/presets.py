@@ -16,10 +16,10 @@ from conan.internal.util.files import save, load
 def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
                         user_presets_path=None, preset_prefix=None, buildenv=None, runenv=None,
                         cmake_executable=None, absolute_paths=None):
-    preset_path, preset_data = _CMakePresets.generate(conanfile, toolchain_file, generator,
-                                                      cache_variables, preset_prefix, buildenv,
-                                                      runenv, cmake_executable, absolute_paths)
-    _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data,
+    preset_path = _CMakePresets.generate(conanfile, toolchain_file, generator, cache_variables,
+                                         preset_prefix, buildenv, runenv, cmake_executable,
+                                         absolute_paths)
+    _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix,
                                absolute_paths)
 
 
@@ -82,7 +82,7 @@ class _CMakePresets:
         preset_content = json.dumps(data, indent=4)
         save(preset_path, preset_content)
         conanfile.output.info(f"CMakeToolchain generated: {preset_path}")
-        return preset_path, data
+        return preset_path
 
     @staticmethod
     def _insert_preset(data, preset_type, preset):
@@ -264,8 +264,7 @@ class _IncludingPresets:
     """
 
     @staticmethod
-    def generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data,
-                 absolute_paths):
+    def generate(conanfile, preset_path, user_presets_path, preset_prefix, absolute_paths):
         if not user_presets_path:
             return
 
@@ -329,11 +328,8 @@ class _IncludingPresets:
         }
         for inc in data.get("include", []):
             inc_path = os.path.join(output_dir, inc) if not absolute_paths else inc
-            assert os.path.exists(inc_path), f"Presets include must point to an existing file: '{inc_path}'"
-            try:
-                inc_json = json.loads(load(inc_path))
-            except Exception:
-                continue
+            assert os.path.exists(inc_path), f"Presets include file not found: '{inc_path}'"
+            inc_json = json.loads(load(inc_path))
             for preset_type in ("configurePresets", "buildPresets", "testPresets"):
                 for p in inc_json.get(preset_type, []):
                     name = p.get("name")

@@ -38,7 +38,7 @@ class GraphAPI:
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
                                          is_build_require, ref)
             if ref.name:
-                profile_host.options.scope(ref)
+                profile_host.options.conan_scope(ref)
             root_node = Node(ref, conanfile, context=context, recipe=RECIPE_CONSUMER, path=path)
             root_node.should_build = True  # It is a consumer, this is something we are building
         else:
@@ -67,7 +67,7 @@ class GraphAPI:
         # necessary for correct resolution and update of remote python_requires
 
         loader = self._helpers.loader
-        profile_host.options.scope(tested_reference)
+        profile_host.options.conan_scope(tested_reference)
 
         # do not try apply lock_python_requires for test_package/conanfile.py consumer
         conanfile = loader.load_consumer(path, user=tested_reference.user,
@@ -87,8 +87,6 @@ class GraphAPI:
     def _load_root_virtual_conanfile(self, profile_host, profile_build, requires, tool_requires,
                                      lockfile, remotes, update, check_updates=False,
                                      python_requires=None):
-        if not python_requires and not requires and not tool_requires:
-            raise ConanException("Provide requires or tool_requires")
         loader = self._helpers.loader
         conanfile = loader.load_virtual(requires=requires,
                                         tool_requires=tool_requires,
@@ -114,7 +112,7 @@ class GraphAPI:
             if str(ref.version).startswith("["):
                 ref = ref.copy()
                 ref.version = "*"
-            profile.options.scope(ref)
+            profile.options.conan_scope(ref)
 
     def load_graph_requires(self, requires, tool_requires, profile_host, profile_build,
                             lockfile, remotes, update, check_updates=False, python_requires=None):

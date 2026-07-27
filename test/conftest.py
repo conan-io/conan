@@ -24,12 +24,11 @@ tools_locations = {
         "3.15": {},
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
-        "3.19": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-windows-x86_64/bin"}},
         # To explicitly skip one tool for one version, define the path as 'skip-tests'
         # if you don't define the path for one platform it will run the test with the
         # tool in the path. For example here it will skip the test with CMake in Darwin but
         # in Linux it will run with the version found in the path if it's not specified
-        "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-windows-x86_64/bin",
+        "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.23.1-windows-x86_64/bin",
                           "Darwin": "skip-tests"}},
     },
     'ninja': {
@@ -79,11 +78,6 @@ tools_locations = {
                      'Darwin': '/Users/runner/Applications/CMake/3.15.7/bin',
                      'Linux': '/usr/share/cmake-3.15.7/bin'}
         },
-        "3.19": {
-            "path": {'Windows': 'C:/tools/cmake/3.19.7/cmake-3.19.7-win64-x64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/3.19.7/bin',
-                     'Linux': '/usr/share/cmake-3.19.7/bin'}
-        },
         "3.23": {
             "path": {'Windows': 'C:/tools/cmake/3.23.5/cmake-3.23.5-windows-x86_64/bin',
                      'Darwin': '/Users/runner/Applications/CMake/3.23.5/bin',
@@ -94,10 +88,10 @@ tools_locations = {
                      'Darwin': '/Users/runner/Applications/CMake/3.27.9/bin',
                      'Linux': "/usr/share/cmake-3.27.9/bin"}
         },
-        "4.2": {
-            "path": {'Windows': 'C:/tools/cmake/4.2.1/cmake-4.2.1-windows-x86_64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/4.2.1/bin',
-                     'Linux': "/usr/share/cmake-4.2.1/bin"}
+        "4.3": {
+            "path": {'Windows': 'C:/tools/cmake/4.3.4/cmake-4.3.4-windows-x86_64/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/4.3.4/bin',
+                     'Linux': "/usr/share/cmake-4.3.4/bin"}
         }
     },
     'ninja': {
@@ -208,6 +202,10 @@ tools_locations = {
             "path": {"Linux": "/opt/intel/oneapi/compiler/2026.0/bin"},
             "root": {"Linux": "/opt/intel/oneapi"}
         }
+    },
+    'xcode_sdk': {
+        "26.0": {"path": {"Darwin": "/Applications/Xcode_26.0.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk"}},
+        "26.5": {"path": {"Darwin": "/Applications/Xcode_26.5.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk"}},
     }
 }
 

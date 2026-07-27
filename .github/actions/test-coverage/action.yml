@@ -10,6 +10,11 @@ inputs:
     description: 'Test suite name'
     required: true
 
+  runner-type:
+    description: 'Name of the current runner'
+    required: false
+    default: ''
+
   duration:
     description: 'Show N slowest test durations (N=0 for all)'
     required: true
@@ -30,17 +35,25 @@ runs:
         if: ${{ inputs.tests }}
         shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
         run: |
-          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov-context=test --cov=conan --cov=conans --cov=test --cov-report=' || '' }}
+          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov-context=test --cov=conan --cov=conans --cov=test --cov-report=' || '' }} ${{ github.head_ref != '' && '--junitxml=test-results.xml' || '' }}
 
       - name: Rename coverage file
         if: github.ref == 'refs/heads/develop2'
         shell: bash
-        run: mv .coverage .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
+        run: mv .coverage .coverage.${{ runner.os }}${{inputs.runner-type}}-${{ inputs.python-version }}-${{ inputs.test-type }}
 
       - name: Upload coverage artifact
         if: github.ref == 'refs/heads/develop2'
         uses: actions/upload-artifact@v4
         with:
-          name: .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
-          path: .coverage.${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
+          name: .coverage.${{ runner.os }}${{inputs.runner-type}}-${{ inputs.python-version }}-${{ inputs.test-type }}
+          path: .coverage.${{ runner.os }}${{inputs.runner-type}}-${{ inputs.python-version }}-${{ inputs.test-type }}
           include-hidden-files: true
+
+      - name: Upload test results
+        if: ${{ always() && github.head_ref != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ runner.os }}-${{ inputs.python-version }}-${{ inputs.test-type }}
+          path: test-results.xml
+          if-no-files-found: ignore

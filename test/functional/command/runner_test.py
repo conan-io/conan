@@ -687,3 +687,51 @@ def test_create_docker_runner_in_subfolder():
 
     assert "Restore: pkg/1.0" in client.out
     assert "Removing container" in client.out
+
+
+@pytest.mark.docker_runner
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
+def test_create_docker_runner_broken_layout_fails():
+    # https://github.com/conan-io/conan/issues/20143
+    client = TestClient()
+    profile_build = textwrap.dedent(f"""\
+    [settings]
+    arch={{{{ detect_api.detect_arch() }}}}
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    """)
+
+    profile_host = textwrap.dedent(f"""\
+    [settings]
+    arch={{{{ detect_api.detect_arch() }}}}
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=docker
+    dockerfile={dockerfile_path()}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=shared
+    remove=True
+    """)
+
+    client.save({"host": profile_host, "build": profile_build})
+    client.run("new cmake_lib -d name=pkg -d version=0.2")
+    conanfile = client.load("conanfile.py")
+    conanfile = conanfile.replace(
+        "        cmake_layout(self)",
+        '        raise RuntimeError("broken layout")',
+    )
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -pr:h host -pr:b build", assert_error=True)
+
+    assert "Error in layout() method" in client.out
+    assert "broken layout" in client.out
