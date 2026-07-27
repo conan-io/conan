@@ -133,9 +133,12 @@ class PackagePreparator:
             bundle.pop("upload-urls", None)
             if bundle.get("upload") or force:
                 self._prepare_recipe(recipe_layout, ref, bundle, conanfile, enabled_remotes)
-                conan_files = _conan_metadata_files(recipe_layout.metadata())
-                if conan_files:
-                    bundle.setdefault("files", {}).update(conan_files)
+
+            # Conan-internal metadata always uploaded when present, even if revision already exists
+            conan_files = _conan_metadata_files(recipe_layout.metadata())
+            if conan_files:
+                bundle.setdefault("files", {}).update(conan_files)
+                bundle["upload"] = True
 
             # Package metadata files too
             if metadata != [""] and (metadata or bundle.get("upload")):
@@ -381,7 +384,7 @@ def _total_size(cache_files):
 
 
 def _conan_metadata_files(metadata_folder):
-    """Collect files from metadata/.conan subfolder for automatic upload with the recipe."""
+    """Collect files from metadata/conan subfolder for automatic upload with the recipe."""
     conan_subfolder = os.path.join(metadata_folder, CONAN_METADATA_SUBFOLDER)
     result = {}
     if not os.path.isdir(conan_subfolder):
