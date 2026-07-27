@@ -87,8 +87,6 @@ class GraphAPI:
     def _load_root_virtual_conanfile(self, profile_host, profile_build, requires, tool_requires,
                                      lockfile, remotes, update, check_updates=False,
                                      python_requires=None):
-        if not python_requires and not requires and not tool_requires:
-            raise ConanException("Provide requires or tool_requires")
         loader = self._helpers.loader
         conanfile = loader.load_virtual(requires=requires,
                                         tool_requires=tool_requires,

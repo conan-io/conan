@@ -805,6 +805,62 @@ class TestLegacyVariables:
         # mypkg::lib2 is not added to the list of libraries
         assert "set(mypkg_LIBRARIES mypkg::mypkg mypkg::lib2 )" in mypkg_config
 
+    def test_legacy_libraries_requires_and_tool_requires(self):
+        # https://github.com/conan-io/conan/issues/20195
+        # When the same package is both requires and tool_requires, the legacy
+        # global variables (like <pkg>_LIBRARIES) must still be generated in the
+        # host-context <pkg>-config.cmake
+        tc = TestClient()
+        app = textwrap.dedent("""
+             from conan import ConanFile
+             class App(ConanFile):
+                 settings = "os", "arch", "compiler", "build_type"
+                 def requirements(self):
+                     self.requires("mylib/1.0")
+                 def build_requirements(self):
+                     self.tool_requires("mylib/1.0")
+             """)
+        tc.save({"mylib/conanfile.py": GenConanfile("mylib", "1.0")
+                 .with_package_file("lib/mylib.a", "library")
+                 .with_package_info({"libs": ["mylib"]}),
+                 "app/conanfile.py": app})
+        tc.run("create mylib")
+        tc.run("install app -g CMakeConfigDeps")
+        mylib_config = tc.load("app/mylib-config.cmake")
+        print(mylib_config)
+        assert "set(mylib_LIBRARIES mylib::mylib )" in mylib_config
+
+    def test_build_modules_requires_and_tool_requires(self):
+        # https://github.com/conan-io/conan/issues/20195
+        # When the same package is both requires and tool_requires, the shared
+        # <pkg>-config.cmake file is generated once, taking the host-context
+        # cmake_build_modules (the file is included via find_package() in the
+        # host CMakeLists.txt).
+        tc = TestClient()
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeConfigDeps
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                def requirements(self):
+                    self.requires("mylib/1.0")
+                def build_requirements(self):
+                    self.tool_requires("mylib/1.0")
+                def generate(self):
+                    deps = CMakeConfigDeps(self)
+                    deps.set_property("mylib", "cmake_build_modules", ["host_mod.cmake"])
+                    deps.set_property("mylib", "cmake_build_modules", ["build_mod.cmake"],
+                                      build_context=True)
+                    deps.generate()
+            """)
+        tc.save({"mylib/conanfile.py": GenConanfile("mylib", "1.0"),
+                 "app/conanfile.py": app})
+        tc.run("create mylib")
+        tc.run("install app")
+        mylib_config = tc.load("app/mylib-config.cmake")
+        assert 'include("host_mod.cmake")' in mylib_config
+        assert 'include("build_mod.cmake")' not in mylib_config
+
 
 class TestPropertiesBuildContext:
     def test_property_build_context(self):

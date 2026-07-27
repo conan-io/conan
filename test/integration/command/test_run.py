@@ -113,14 +113,13 @@ def test_run_tool_requires_buildenv_var():
     tool_exe = "mytool.bat" if platform.system() == "Windows" else "mytool.sh"
     var_ref = "%MYTOOL%" if platform.system() == "Windows" else "$MYTOOL"
     tool = textwrap.dedent(f"""
+        import os
         from conan import ConanFile
         from conan.tools.files import save
-        import os
 
         class Tool(ConanFile):
             name = "mytool"
             version = "0.1"
-            package_type = "application"
 
             def package(self):
                 exe = os.path.join(self.package_folder, "bin", "{tool_exe}")
@@ -134,3 +133,36 @@ def test_run_tool_requires_buildenv_var():
     tc.run("create mytool")
     tc.run(f'run "{var_ref}" --tool-requires=mytool/0.1')
     assert "Hello from mytool!" in tc.out
+
+
+def test_run_no_conanfile_profile_tool_requires():
+    # https://github.com/conan-io/conan/issues/20206
+    # When no conanfile exists in cwd and no --requires/--tool-requires is
+    # given, a profile [tool_requires] alone should be enough to drive the
+    # graph. Previously this failed with "Conanfile not found".
+    tc = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import save
+        import os
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            package_type = "application"
+
+            def package(self):
+                exe = os.path.join(self.package_folder, "bin", '""" + executable + """')
+                save(self, exe, "echo Hello World!")
+                os.chmod(exe, 0o755)
+        """)
+    tc.save({"pkg/conanfile.py": conanfile})
+    tc.run("create pkg")
+    profile = textwrap.dedent("""
+        include(default)
+        [tool_requires]
+        pkg/0.1
+        """)
+    tc.save({"myprofile": profile}, clean_first=True)
+    tc.run(f"run {executable} -pr:h=myprofile")
+    assert "Hello World!" in tc.out
