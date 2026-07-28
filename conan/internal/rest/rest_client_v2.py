@@ -306,7 +306,7 @@ class RestV2Methods:
                 # metadata files are mutable without a new revision, ConanInternalCacheDownloader
                 # never serves them from the cache either, so don't populate it here
                 if download_cache is not None and not filename.startswith(f"{METADATA}/"):
-                    self._populate_download_cache(download_cache, resource_url, files[filename])
+                    download_cache.cache_file(resource_url, files[filename])
 
         if failed:
             raise ConanException("Execute upload again to retry upload the failed files: %s"
@@ -314,16 +314,11 @@ class RestV2Methods:
 
     def _get_download_cache(self):
         download_cache_folder = self._config.get("core.download:download_cache")
-        if download_cache_folder and os.path.isabs(download_cache_folder):
-            return DownloadCache(download_cache_folder)
-        return None
-
-    @staticmethod
-    def _populate_download_cache(download_cache, url, src_path):
-        try:
-            download_cache.cache_file(url, src_path)
-        except Exception as e:
-            ConanOutput().warning(f"Could not store the uploaded file in the download cache: {e}")
+        if not download_cache_folder:
+            return None
+        if not os.path.isabs(download_cache_folder):
+            raise ConanException("core.download:download_cache must be an absolute path")
+        return DownloadCache(download_cache_folder)
 
     def _download_and_save_files(self, urls, dest_folder, files, parallel=False, scope=None,
                                  metadata=False):

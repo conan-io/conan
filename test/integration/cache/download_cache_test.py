@@ -2,25 +2,27 @@ import os
 import textwrap
 from unittest.mock import patch
 
+from conan.errors import ConanException
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import temp_folder
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, TestRequester
 from conan.internal.util.files import save, set_dirty
 
 
+class NoFileDownloadsRequester(TestRequester):
+    """ Fails any attempt to download the contents of an artifact, while still allowing the
+    endpoints needed to resolve what to install (revision and file listings).
+    An install succeeding with this requester proves every file came from the download cache.
+    """
+    def get(self, url, **kwargs):
+        # ".../revisions/<rev>/files/<path>" downloads contents, ".../files" is only the listing
+        if "/files/" in url:
+            raise ConanException(f"Tried to download {url} instead of using the download cache")
+        return super().get(url, **kwargs)
+
+
 class TestDownloadCache:
-    # a package containing a file > 10MB, the only case that leaves a trace in the output
-    # of whether a file was really downloaded, or served from the download cache instead
-    _big_file_conanfile = textwrap.dedent("""
-        import os
-        from conan import ConanFile
-        class Pkg(ConanFile):
-            def package(self):
-                fileSizeInBytes = 11000000
-                with open(os.path.join(self.package_folder, "data.txt"), 'wb') as fout:
-                    fout.write(os.urandom(fileSizeInBytes))
-        """)
 
     def test_download_skip(self):
         """ basic proof that enabling download_cache avoids downloading things again
@@ -172,12 +174,12 @@ class TestDownloadCache:
         assert 'core.download:download_cache must be an absolute path' in c.out
 
     def test_upload_populates_download_cache(self):
-        """ uploading with a download cache configured leaves the uploaded files in the cache
-        too, so a later download of the same artifacts doesn't hit the network at all
+        """ uploading with a download cache configured leaves the uploaded files in the cache,
+        so a later install can be served entirely from it, without downloading anything
         """
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": self._big_file_conanfile})
-        client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
+        client = TestClient(default_server_user=True, requester_class=NoFileDownloadsRequester)
+        client.save({"conanfile.py": GenConanfile("mypkg", "0.1").with_package_file("f.txt", "c")})
+        client.run("create .")
 
         tmp_folder = temp_folder()
         client.save_home({"global.conf": f"core.download:download_cache={tmp_folder}"})
@@ -186,29 +188,31 @@ class TestDownloadCache:
         # conan_package.tgz (package): nothing was ever downloaded, only uploaded
         assert len(os.listdir(os.path.join(tmp_folder, "c"))) == 5
 
+        # the requester forbids downloading contents, so this can only work from the cache
         client.run("remove * -c")
-        client.run("install --requires=mypkg/0.1@user/testing")
-        assert "mypkg/0.1@user/testing: Downloading" not in client.out
-        assert "conan_package.tgz from download cache, instead of downloading it" in client.out
+        client.run("install --requires=mypkg/0.1")
+        # the install really happened, it did not silently resolve to something already in the cache
+        assert "mypkg/0.1: Package installed" in client.out
 
     def test_upload_without_cache_conf_stores_nothing(self):
         """ the opposite of test_upload_populates_download_cache: without
         core.download:download_cache configured, upload must not write a cache anywhere,
         neither in some default/implicit location nor by ever touching DownloadCache at all
         """
-        client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": self._big_file_conanfile})
-        client.run("create . --name=mypkg --version=0.1 --user=user --channel=testing")
+        client = TestClient(default_server_user=True, requester_class=NoFileDownloadsRequester)
+        client.save({"conanfile.py": GenConanfile("mypkg", "0.1").with_package_file("f.txt", "c")})
+        client.run("create .")
 
         # no core.download:download_cache set at all
         with patch("conan.internal.rest.download_cache.DownloadCache.cache_file") as cache_file:
             client.run("upload * --confirm -r default")
         cache_file.assert_not_called()
 
-        # and a later install must still really download the package over the network
+        # nothing was cached, so the install has nowhere to get the files from but the server
         client.run("remove * -c")
-        client.run("install --requires=mypkg/0.1@user/testing")
-        assert "mypkg/0.1@user/testing: Downloading" in client.out
+        client.save_home({"global.conf": "core.download:retry=0"})
+        client.run("install --requires=mypkg/0.1", assert_error=True)
+        assert "instead of using the download cache" in client.out
 
     def test_upload_download_cache_skips_metadata(self):
         """ metadata files can be overwritten without a new revision, so they are never served
@@ -234,14 +238,13 @@ class TestDownloadCache:
         # metadata/logs/build.log must be excluded, only the 2 recipe + 3 package files are cached
         assert len(os.listdir(os.path.join(tmp_folder, "c"))) == 5
 
-    def test_upload_relative_download_cache_is_ignored(self):
-        """ unlike download, upload must not fail because of a misconfigured (relative) download
-        cache: populating the cache is a best-effort optimization on upload, not a requirement
+    def test_upload_relative_error(self):
+        """ relative paths are not allowed, same as when downloading
         """
         client = TestClient(default_server_user=True)
-        client.save({"conanfile.py": GenConanfile().with_package_file("file.txt", "content")})
-        client.run("create . --name=mypkg --version=0.1")
+        client.save({"conanfile.py": GenConanfile("mypkg", "0.1").with_package_file("f.txt", "c")})
+        client.run("create .")
 
         client.save_home({"global.conf": "core.download:download_cache=mytmp_folder"})
-        client.run("upload * --confirm -r default")
-        assert "ERROR" not in client.out
+        client.run("upload * --confirm -r default", assert_error=True)
+        assert "core.download:download_cache must be an absolute path" in client.out
