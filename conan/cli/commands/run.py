@@ -71,6 +71,6 @@ def run(conan_api, parser, *args):
         else:
             script = os.path.join(tmpdir, "conanrun_cmd.sh")
             save(script, f"{args.command}\n")
-            command = f'"{script}"'
+            command = f'. "{script}"'
         ConanOutput.set_output_level(LEVEL_ERROR)
         deps_graph.root.conanfile.run(command, cwd=cwd, env=envfiles)
