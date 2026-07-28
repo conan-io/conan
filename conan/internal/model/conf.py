@@ -21,12 +21,10 @@ from conan.internal.util.files import load, save
 policies_msg = """\
 A list of opt-in behaviors that can be defined in the configuration to control specific aspects of Conan's behavior,
 such as keeping deprecated behaviours:
-   - deprecated_build_order_args: Allow deprecated skipping of --order-by argument in conan graph build-order - To be removed in Conan 2.32
-   - deprecated_empty_version_range: Allow using deprecated empty version range expressions - To be removed in Conan 2.32
-If the policy 'required_conan_version>=version' is defined, different behaviors can be enabled:
    - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id
    - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19849 for VirtualBuildEnv bindir path propagation based on requirement run trait
-   - If required_conan_version>=2.28, https://github.com/conan-io/conan/pull/19286 defaults the new 'consistent' trait to True for the host context, even when 'visible=False'"""
+   - If required_conan_version>=2.28, https://github.com/conan-io/conan/pull/19286 defaults the new 'consistent' trait to True for the host context, even when 'visible=False'
+   - If required_conan_version>=2.30, bugfix https://github.com/conan-io/conan/pull/20073 for propagation of the 'transitive_header' trait"""
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -45,7 +43,9 @@ BUILT_IN_CONFS = {
     "core.download:parallel": "Number of concurrent threads to download packages",
     "core.download:retry": " (int, default: 2) Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "(int, default: 1s) Seconds to wait between download attempts from Conan server",
-    "core.download:download_cache": "Define path to a file download cache",
+    "core.download:download_cache": "Define path to a file download cache. Files uploaded to a "
+                                    "server are also stored here, so a later download of the same "
+                                    "artifact can be skipped",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
     "core:policies": policies_msg,
@@ -163,6 +163,7 @@ BUILT_IN_CONFS = {
     "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc'}",
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:asmflags": "List of extra ASM flags used by CMakeToolchain",
     "tools.build:defines": "List of extra definition flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:sharedlinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:exelinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",

@@ -4,7 +4,8 @@ from conan.api.output import ConanOutput
 from conan.cli.command import conan_command, OnceArgument, conan_subcommand
 
 from conan.cli import make_abs_path
-from conan.cli.args import common_graph_args, validate_common_graph_args
+from conan.cli.args import common_graph_args, validate_common_graph_args, \
+    add_common_install_arguments, add_lockfile_args
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
 from conan.api.model import RecipeReference
@@ -239,20 +240,39 @@ def lock_upgrade_config(conan_api, parser, subparser, *args):
     """
     (Experimental) Upgrade config requires in a lockfile
     """
-    common_graph_args(subparser)
+    # This is similar to common_graph_args(subparser) but without the name/version args
+    subparser.add_argument("path", nargs="?", default=None,
+                           help="Path to a conanconfig.yml file "
+                                "(defaults to current directory)")
+    add_common_install_arguments(subparser)
+    subparser.add_argument("--requires", action="append",
+                           help='Directly provide requires instead of a conanfile')
+    subparser.add_argument("--tool-requires", action='append',
+                           help='Directly provide tool-requires instead of a conanfile')
+    add_lockfile_args(subparser)
+
     subparser.add_argument('--update-config-requires', action="append",
                            help='Update config-requires from lockfile')
     args = parser.parse_args(*args)
-    validate_common_graph_args(args)
+
+    if args.path and (args.requires or args.tool_requires):
+        raise ConanException("--requires and --tool-requires arguments are incompatible with "
+                             f"[path] '{args.path}' argument")
+
+    if args.path and args.path.endswith(".py"):
+        raise ConanException(f"'{args.path}' looks like a conanfile, but 'conan lock "
+                             "upgrade-config' expects a conanconfig.yml file. Use --requires "
+                             "to specify recipe references instead.")
+
+    if not args.requires and not args.tool_requires and args.path is None:
+        args.path = "."
 
     if not args.update_config_requires:
         raise ConanException("At least one --update-config-requires should be specified")
 
     cwd = os.getcwd()
-    path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
-    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=path,
-                                               cwd=cwd, partial=True)
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, cwd=cwd, partial=True)
     if lockfile is None:
         raise ConanException("No lockfile specified and default conan.lock not found")
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)

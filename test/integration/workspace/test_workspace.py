@@ -15,8 +15,6 @@ from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save_files
 from conan.tools.files import replace_in_file
 
-WorkspaceAPI.TEST_ENABLED = "will_break_next"
-
 
 class TestWorkspaceRoot:
 
@@ -547,6 +545,29 @@ class TestComplete:
         assert "pkgb/0.1" in c.out
         assert "pkgc/0.1" in c.out
         assert "pkgx/0.1" not in c.out
+
+    @pytest.mark.parametrize("flip_order", [True, False])
+    def test_complete_ordering(self, flip_order):
+        """Ordering of packages in the workspace should not affect the complete command.
+
+        See https://github.com/conan-io/conan/issues/20149
+        """
+        c = TestClient(light=True)
+        c.save({"pkgc/conanfile.py": GenConanfile("pkgc", "0.1").with_requires("pkgb/0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1")})
+        c.run("export pkgb")
+        c.run("workspace init")
+        if flip_order:
+            c.run("workspace add pkga")
+            c.run("workspace add pkgc")
+        else:
+            c.run("workspace add pkgc")
+            c.run("workspace add pkga")
+        c.run("workspace complete")
+        c.run("workspace info")
+        # This used not to be included due to the ordering of the packages in the workspace
+        assert "pkgb/0.1" in c.out
 
 
 class TestWorkspaceBuild:
@@ -1911,10 +1932,19 @@ class TestPyRequires:
               - path: pyreq
               - path: pkg
               """)
+        # pyreq and pkg inherit name/version from a python_requires base class, which is not
+        # resolved during workspace packages() discovery. Use get_ref() to supply the refs.
+        ws_py = textwrap.dedent("""\
+            from conan import Workspace
+            class MyWorkspace(Workspace):
+                def get_ref(self, folder):
+                    return {"pyreq": "pyreq/0.1", "pkg": "pkg/0.2"}.get(folder)
+            """)
         c.save({"pyreqbase/conanfile.py": pyreqbase,
                 "pyreq/conanfile.py": pyreq,
                 "pkg/conanfile.py": pkg,
-                "conanws.yml": ws})
+                "conanws.yml": ws,
+                "conanws.py": ws_py})
 
         c.run("workspace info --format=json")
         ws = json.loads(c.stdout)
@@ -1924,11 +1954,184 @@ class TestPyRequires:
         assert "conanfile.py (pkg/0.2)" in c.out
         assert "Python requires\n    pyreq/0.1 - Editable\n    pyreqbase/0.1 - Editable" in c.out
 
+    def test_ws_get_ref_hook(self):
+        # Users can supply get_ref() when the conanfile doesn't declare name/version
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+            class Lib(ConanFile):
+                pass
+            """)
+        ws_py = textwrap.dedent("""\
+            from conan import Workspace
+            from conan.api.model import RecipeReference
+            class MyWorkspace(Workspace):
+                def get_ref(self, folder):
+                    if folder == "a":
+                        return "pkga/1.0"
+                    if folder == "b":
+                        return RecipeReference("pkgb", "2.0")
+                    return None
+            """)
+        c.save({"conanws.yml": "packages:\n  - path: a\n  - path: b\n",
+                "conanws.py": ws_py,
+                "a/conanfile.py": conanfile,
+                "b/conanfile.py": conanfile})
+        c.run("workspace install")
+        assert "pkga/1.0 - Editable" in c.out
+        assert "pkgb/2.0 - Editable" in c.out
+
+    def test_ws_init_runs_during_discovery(self):
+        # init() is still executed during workspace ref discovery when it doesn't fail
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+            class Lib(ConanFile):
+                def init(self):
+                    self.name = "pkg"
+                    self.version = "0.1"
+            """)
+        c.save({"conanws.yml": "packages:\n  - path: pkg\n",
+                "pkg/conanfile.py": conanfile})
+        c.run("workspace install")
+        assert "pkg/0.1 - Editable" in c.out
+
+    def test_ws_init_fails_silently_when_needs_pyreqs(self):
+        # init() that references self.python_requires (unresolved during discovery) must not
+        # abort discovery; set_name/set_version (or static attrs) still supply the ref
+        c = TestClient(light=True, default_server_user=True)
+        c.save({"py/conanfile.py":
+                GenConanfile("pyreq", "0.1").with_package_type("python-require")})
+        c.run("create py")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class Lib(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                python_requires = "pyreq/0.1"
+                def init(self):
+                    # Would throw during discovery since pyreqs are not resolved
+                    _ = self.python_requires["pyreq"].module
+            """)
+        c.save({"conanws.yml": "packages:\n  - path: pkg\n",
+                "pkg/conanfile.py": pkg},
+               clean_first=True)
+        c.run("workspace install")
+        assert "pkg/0.1 - Editable" in c.out
+
+    def test_ws_ref_not_deducible_error(self):
+        # When all ref-resolution paths fail, the error must list all alternatives
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""\
+            from conan import ConanFile
+            class Lib(ConanFile):
+                pass
+            """)
+        c.save({"conanws.yml": "packages:\n  - path: pkg\n",
+                "pkg/conanfile.py": conanfile})
+        c.run("workspace install", assert_error=True)
+        assert "Workspace package reference could not be deduced for 'pkg'" in c.out
+        assert "'ref: name/version[@user/channel]' in conanws.yml" in c.out
+        assert "'name' and 'version' as class attributes in conanfile.py" in c.out
+        assert "'set_name()' / 'set_version()' methods in conanfile.py" in c.out
+        assert "'get_ref(folder)' method in conanws.py" in c.out
+
+    def test_ws_python_requires_only_in_remote(self):
+        # https://github.com/conan-io/conan/issues/20170
+        c = TestClient(light=True, default_server_user=True)
+        pyreq = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class BaseConan:
+                def source(self):
+                    self.output.info("BASE SOURCE!!!")
+                def build(self):
+                    self.output.info("BASE BUILD!!!")
+
+            class TestPackage(ConanFile):
+                name = "pyreq"
+                version = "0.1"
+                package_type = "python-require"
+            """)
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class TestPackage(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                python_requires = "pyreq/0.1"
+                python_requires_extend = "pyreq.BaseConan"
+            """)
+        c.save({"py/conanfile.py": pyreq})
+        c.run("create py")
+        c.run("upload * -r=default -c")
+        c.run("remove * -c")
+        c.save({"conanws.yml": "packages:\n  - path: pkg\n",
+                "pkg/conanfile.py": pkg},
+               clean_first=True)
+        c.run("workspace source")
+        assert "pyreq/0.1: Downloaded" in c.out
+        assert "BASE SOURCE!!!" in c.out
+        c.run("remove * -c")
+        c.run("workspace build")
+        assert "pyreq/0.1: Downloaded" in c.out
+        assert "BASE BUILD!!!" in c.out
+        c.run("remove * -c")
+        c.run("workspace install")
+        assert "pyreq/0.1: Downloaded" in c.out
+        c.run("remove * -c")
+        c.run("workspace super-install")
+        assert "pyreq/0.1: Downloaded" in c.out
+
+    def test_ws_python_requires_editable(self):
+        c = TestClient(light=True)
+        pyreq = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class BaseConan:
+                def source(self):
+                    self.output.info("BASE SOURCE!!!")
+                def build(self):
+                    self.output.info("BASE BUILD!!!")
+
+            class TestPackage(ConanFile):
+                name = "pyreq"
+                version = "0.1"
+                package_type = "python-require"
+            """)
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+            class TestPackage(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                python_requires = "pyreq/0.1"
+                python_requires_extend = "pyreq.BaseConan"
+            """)
+
+        c.save({"py/conanfile.py": pyreq,
+                "conanws.yml": "packages:\n  - path: pkg\n",
+                "pkg/conanfile.py": pkg})
+
+        c.run("editable add py")
+
+        c.run("workspace source")
+        assert "BASE SOURCE!!!" in c.out
+
+        c.run("workspace build")
+        assert "BASE BUILD!!!" in c.out
+
+        c.run("workspace install")
+        c.assert_listed_require({"pyreq/0.1": "Editable"}, python=True)
+
+        c.run("workspace super-install")
+        c.assert_listed_require({"pyreq/0.1": "Editable"}, python=True)
+
     def test_super_install(self):
         c = TestClient()
 
         c.save({"conanws.yml": "",
-                "dep/conanfile.py": GenConanfile("dep","0.1").with_package_type("python-require"),
+                "dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("python-require"),
                 "liba/conanfile.py": GenConanfile("liba", "0.1").with_python_requires("dep/0.1"),
                 "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1")})
 

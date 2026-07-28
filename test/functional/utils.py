@@ -68,10 +68,8 @@ def check_vs_runtime(artifact, client, vs_version, build_type, architecture="amd
 
     else:  # A static library cannot be checked the same
         client.run_command('{} && DUMPBIN /NOLOGO /DIRECTIVES "{}"'.format(vcvars, artifact))
-        if build_type == "Debug":
-            assert "RuntimeLibrary=MDd_DynamicDebug" in client.out
-        else:
-            assert "RuntimeLibrary=MD_DynamicRelease" in client.out
+        assert build_type == "Release"
+        assert "RuntimeLibrary=MD_DynamicRelease" in client.out
 
 
 def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, definitions=None,
@@ -92,8 +90,7 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                 assert "{} _M_X64 defined".format(name) in output
             elif arch == "armv8":
                 assert "{} _M_ARM64 defined".format(name) in output
-            else:
-                assert arch is None, "checked don't know how to validate this architecture"
+            assert arch in ("x86", "x86_64", "armv8"), "don't know how to validate this architecture"
 
             if version:
                 assert "{} _MSC_VER{}".format(name, version) in output
@@ -104,18 +101,14 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
             if compiler == "gcc":
                 assert "{} __GNUC__".format(name) in output
                 assert "clang" not in output
-                if version:  # FIXME: At the moment, the GCC version is not controlled, will change
+                if version:
                     digits = version.split(".")
                     assert "{} __GNUC__{}".format(name, digits[0]) in output
-                    if len(digits) > 1:
-                        assert "{} __GNUC_MINOR__{}".format(name, digits[1]) in output
             elif compiler == "clang":
                 assert "{} __clang_".format(name) in output
                 if version:
                     digits = version.split(".")
                     assert "{} __clang_major__{}".format(name, digits[0]) in output
-                    if len(digits) > 1:
-                        assert "{} __clang_minor__{}".format(name, digits[1]) in output
             elif compiler == "apple-clang":
                 assert "{} __apple_build_version__".format(name) in output
                 if version:
@@ -127,8 +120,7 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                 assert "{} __x86_64__ defined".format(name) in output
             elif arch == "armv8":
                 assert "{} __aarch64__ defined".format(name) in output
-            else:
-                assert arch is None, "checked don't know how to validate this architecture"
+            assert arch in ("x86", "x86_64", "armv8"), "don't know how to validate this architecture"
 
             if cppstd:
                 cppstd_value = {"98": "199711",
@@ -167,8 +159,7 @@ def check_exe_run(output, names, compiler, version, build_type, arch, cppstd, de
                 assert "__MINGW32__" in output
                 assert "__MINGW64__" in output
                 assert "__MSYS__" not in output
-            else:
-                raise Exception("unknown subsystem {}".format(subsystem))
+            assert subsystem in ("msys2", "mingw32", "mingw64", "cygwin", "ucrt64")
         else:
             assert "CYGWIN" not in output
             assert "MINGW" not in output

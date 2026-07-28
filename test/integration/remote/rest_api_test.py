@@ -21,29 +21,28 @@ class TestRestApi:
     """Open a real server (sockets) to test rest_api function."""
 
     @pytest.fixture(scope="class", autouse=True)
-    @classmethod
-    def setup_class(cls):
+    def setup_class(self):
         with environment_update({"CONAN_SERVER_PORT": str(get_free_port())}):
             read_perms = [("*/*@*/*", "private_user")]
             write_perms = [("*/*@*/*", "private_user")]
-            cls.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'],
-                                            read_permissions=read_perms,
-                                            write_permissions=write_perms)
-            cls.server.start()
+            self.server = TestServerLauncher(server_capabilities=['ImCool', 'TooCool'],
+                                             read_permissions=read_perms,
+                                             write_permissions=write_perms)
+            self.server.start()
 
             config = ConfDefinition()
             requester = ConanRequester(config)
 
-            remote = Remote("myremote", f"http://127.0.0.1:{cls.server.port}", True, True)
-            cls.api = RestApiClient(remote, None, requester, config)
-            cls.api._token = cls.api.authenticate(user="private_user", password="private_pass")
+            remote = Remote("myremote", f"http://127.0.0.1:{self.server.port}", True, True)
+            self.api = RestApiClient(remote, None, requester, config)
+            self.api._token = self.api.authenticate(user="private_user", password="private_pass")
             # Necessary for setup_class approach
-            TestRestApi.api = cls.api
-            TestRestApi.server = cls.server
+            TestRestApi.api = self.api
+            TestRestApi.server = self.server
         yield
 
-        cls.server.stop()
-        cls.server.clean()
+        self.server.stop()
+        self.server.clean()
 
     def test_get_conan(self):
         # Upload a conans
