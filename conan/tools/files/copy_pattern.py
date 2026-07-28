@@ -15,8 +15,9 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
     :param conanfile: The current recipe object. Always use ``self``.
     :param pattern: (Required) An fnmatch file pattern, or a list/tuple of fnmatch patterns,
            of the files that should be copied. When a list is given the src folder is walked
-           only once and files matching any of the patterns are copied. Patterns must not
-           start with ``..`` relative path or an exception will be raised.
+           only once, and every file matching any of the patterns is copied exactly once, even
+           if several patterns match it. Patterns must not start with ``..`` relative path or
+           an exception will be raised.
     :param src: (Required) Source folder in which those files will be searched. This folder
            will be stripped from the dst parameter. E.g., lib/Debug/x86.
     :param dst: (Required) Destination local folder. It must be different from src value or an

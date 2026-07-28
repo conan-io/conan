@@ -1,11 +1,30 @@
+from collections import Counter
 from unittest import mock
 import os
 import platform
 import pytest
 
+from conan.errors import ConanException
 from conan.tools.files import copy
 from conan.test.utils.test_files import temp_folder
 from conan.internal.util.files import load, save, mkdir, save_files, chdir
+
+
+def _folders_opened_by_copy(pattern, src, dst):
+    """ The folders of ``src`` (relative names) that copy() opens looking for matches, one entry
+    per open. It counts os.scandir() calls, because that is what scanning a tree costs and
+    because os.walk() opens each folder with exactly one scandir() in every Python version
+    """
+    opened = []
+    real_scandir = os.scandir
+
+    def counting_scandir(path, *args, **kwargs):
+        opened.append(os.path.relpath(path, src))
+        return real_scandir(path, *args, **kwargs)
+
+    with mock.patch("os.scandir", counting_scandir):
+        copy(None, pattern, src, dst)
+    return opened
 
 
 class TestToolCopy:
@@ -277,41 +296,88 @@ class TestToolCopy:
 
     @mock.patch('shutil.copy2')
     def test_multiple_patterns_dedup(self, copy2_mock):
-        # Files matched by more than one pattern must only be copied once
+        """ A file matched by several patterns is still copied (and reported) only once """
         src_folder = temp_folder()
-        save(os.path.join(src_folder, "a.h"), "x")
-        save(os.path.join(src_folder, "b.h"), "x")
+        save(os.path.join(src_folder, "a.h"), "x")   # matches both patterns below
+        save(os.path.join(src_folder, "b.h"), "x")   # matches only "*.h"
         dst_folder = temp_folder()
 
-        copy(None, ["*.h", "a.*"], src_folder, dst_folder)
-        assert copy2_mock.call_count == 2  # a.h counted once, b.h counted once
+        copied = copy(None, ["*.h", "a.*"], src_folder, dst_folder)
+        assert sorted(os.path.basename(f) for f in copied) == ["a.h", "b.h"], \
+            f"copy() reported {len(copied)} files: a.h is handled once per matching pattern"
+        assert copy2_mock.call_count == 2, \
+            f"2 files, {copy2_mock.call_count} copies: a.h is being copied once per pattern"
 
-    def test_multiple_patterns_single_scan(self):
-        # A list of patterns must walk the src tree exactly once, regardless of pattern count.
-        # This is the performance guarantee behind #18981.
+    def test_pattern_list_opens_every_src_folder_once(self):
+        """ Passing the whole pattern list to a single copy() costs one scan of the src tree, the
+        same as a single pattern would, instead of one scan per pattern like a loop of copy()
+        calls did. This is the point of accepting a list of patterns, see #18981
+        """
         src_folder = temp_folder()
         for i in range(5):
             save(os.path.join(src_folder, f"dir{i}/file.h"), "h")
             save(os.path.join(src_folder, f"dir{i}/file.cpp"), "cpp")
-        dst_folder = temp_folder()
-
         patterns = [f"dir{i}/*.h" for i in range(5)] + [f"dir{i}/*.cpp" for i in range(5)]
 
-        with mock.patch("conan.tools.files.copy_pattern.os.walk",
-                        wraps=os.walk) as walk_mock:
-            copy(None, patterns, src_folder, dst_folder)
-            single_scan_calls = walk_mock.call_count
+        opens = Counter(_folders_opened_by_copy(patterns, src_folder, temp_folder()))
+        assert opens == {".": 1, "dir0": 1, "dir1": 1, "dir2": 1, "dir3": 1, "dir4": 1}, \
+            f"copy() with {len(patterns)} patterns must open each folder of src exactly once: " \
+            f"a folder opened more than once means the tree is scanned once per pattern again"
 
-        # Baseline: calling copy() once per pattern would walk once per pattern
-        dst_folder2 = temp_folder()
-        with mock.patch("conan.tools.files.copy_pattern.os.walk",
-                        wraps=os.walk) as walk_mock:
-            for p in patterns:
-                copy(None, p, src_folder, dst_folder2)
-            loop_calls = walk_mock.call_count
+    @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
+    def test_multiple_patterns_symlinked_folder(self):
+        # A symlink to a folder is copied when ANY of the patterns matches it, not just the first
+        src_folder = temp_folder()
+        target_folder = os.path.join(src_folder, "target")
+        mkdir(target_folder)
+        os.symlink(target_folder, os.path.join(src_folder, "alink"))
+        os.symlink(target_folder, os.path.join(src_folder, "blink"))
 
-        assert single_scan_calls == 1
-        assert loop_calls == len(patterns)
+        dst_folder = temp_folder()
+        copied = copy(None, ["a*", "b*"], src_folder, dst_folder)
+
+        # both symlinks are copied: "alink" only matches the 1st pattern, "blink" only the 2nd
+        assert sorted(os.path.relpath(f, dst_folder) for f in copied) == ["alink", "blink"]
+        assert os.path.islink(os.path.join(dst_folder, "alink"))
+        assert os.path.islink(os.path.join(dst_folder, "blink"))
+
+    def test_multiple_patterns_ignore_case(self):
+        # Every pattern of the list is matched, not only the first one, and ignore_case
+        # case-folds all of them. The first pattern never matches, so if any assert below
+        # sees a file it can only be because the *second* pattern was honoured.
+        src_folder = temp_folder()
+        save(os.path.join(src_folder, "FooBar.txt"), "x")
+
+        # ignore_case=True: the trailing pattern is case-folded too (POSIX only: on Windows
+        # fnmatch() normcases the pattern by itself, so the mixed case is already irrelevant)
+        dst_folder = temp_folder()
+        copy(None, ["*.zzz", "FOOBAR.TXT"], src_folder, dst_folder)
+        assert os.listdir(dst_folder) == ["FooBar.txt"]
+
+        # ignore_case=False: the trailing pattern is still matched, but case-sensitively
+        dst_folder = temp_folder()
+        copy(None, ["*.zzz", "FooBar.txt"], src_folder, dst_folder, ignore_case=False)
+        assert os.listdir(dst_folder) == ["FooBar.txt"]
+
+        dst_folder = temp_folder()
+        copy(None, ["*.zzz", "FOOBAR.TXT"], src_folder, dst_folder, ignore_case=False)
+        assert os.listdir(dst_folder) == []
+
+    def test_multiple_patterns_accepts_tuple_and_validates_every_pattern(self):
+        src_folder = temp_folder()
+        save(os.path.join(src_folder, "hello.h"), "h")
+        dst_folder = temp_folder()
+
+        # Any collection works, not only a list: recipes do copy(self, ("*.h", "*.cpp"), ...)
+        copied = copy(None, ("*.h", "*.cpp"), src_folder, dst_folder)
+        assert [os.path.basename(f) for f in copied] == ["hello.h"]
+        # An empty collection copies nothing instead of failing, so callers building the
+        # pattern list dynamically (like the export of conanfile.exports) don't have to guard it
+        assert copy(None, [], src_folder, dst_folder) == []
+        # Every pattern of the collection is validated, not only the first one
+        with pytest.raises(ConanException) as exc:
+            copy(None, ["*.h", "../*.cpp"], src_folder, dst_folder)
+        assert "not possible to use relative patterns" in str(exc.value)
 
     @mock.patch('shutil.copy2')
     def test_avoid_repeat_copies(self, copy2_mock):
