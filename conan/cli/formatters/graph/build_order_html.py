@@ -906,16 +906,15 @@ build_order_html = r"""
     /*
      * Adapt Conan build-order JSON to the UI package-card model.
      *
-     * Raw build-order JSON can be either:
-     *   - configuration: each level is already a list of package entries with pref/depends
-     *   - recipe: each level is a list of recipes, each with nested packages[]
-     *   - legacy: a bare array of levels (no order_by / reduced wrapper)
+     * Build-order JSON is always:
+     *   { order_by, reduced, profiles, order: [ ... ] }
+     * where order_by is "recipe" or "configuration".
      *
-     * "Normalized" data is always:
-     *   { order_by, reduced, profiles, order: [ [packageCard, ...], ... ] }
-     * where each packageCard is a flat dictionary with a unique pref, and depends
-     * list attibute witch points to other prefs (so the UI can index and link packages the same way
-     * for both --order-by modes).
+     * "Normalized" data is the same wrapper with order flattened to
+     *   [ [packageCard, ...], ... ]
+     * where each packageCard has a unique pref, and depends points to other
+     * prefs (so the UI can index and link packages the same way for both
+     * --order-by modes).
      */
 
     /** Build a package preference string (ref:package_id[#prev]). */
@@ -923,11 +922,6 @@ build_order_html = r"""
       let pref = `${ref}:${packageId}`;
       if (prev) pref += `#${prev}`;
       return pref;
-    }
-
-    /** Detect recipe-shaped levels (items with nested packages[]). */
-    function isRecipeOrder(order) {
-      return order.some(level => level.some(item => "packages" in item));
     }
 
     /**
@@ -938,10 +932,6 @@ build_order_html = r"""
     function flattenRecipeLevel(level) {
       const flat = [];
       for (const item of level) {
-        if (!("packages" in item)) {
-          flat.push({ ...item });
-          continue;
-        }
         const ref = item.ref;
         const recipeDepends = item.depends || [];
         for (const packageLevel of item.packages) {
@@ -968,9 +958,8 @@ build_order_html = r"""
     }
 
     /**
-     * Turn recipe-level depends (recipe refs) into package-level depends (prefs),
-     * and ensure every package card has a pref. Mutates the flattened levels
-     * in place.
+     * Turn recipe-level depends (recipe refs) into package-level depends (prefs).
+     * Mutates the flattened levels in place.
      */
     function resolveRecipeDepends(normalizedOrder) {
       const refToPrefs = new Map();
@@ -992,40 +981,27 @@ build_order_html = r"""
             }
             pkg.depends = deps;
             delete pkg._recipe_depends;
-          } else if (!pkg.pref && pkg.package_id) {
-            pkg.pref = makePref(pkg.ref, pkg.package_id, pkg.prev);
           }
         }
       }
     }
 
     /**
-     * Convert raw build-order JSON into the UI package-card model.
+     * Convert build-order JSON into the UI package-card model.
      * Returns { order_by, reduced, profiles, order } with flat package cards
-     * keyed by pref, regardless of whether the input was recipe, configuration,
-     * or legacy list form.
+     * keyed by pref, for both recipe and configuration order_by.
      */
-    function normalizeOrderData(raw) {
-      const data = Array.isArray(raw)
-        ? { order_by: "recipe", reduced: false, order: raw, profiles: {} }
-        : raw;
-      const orderBy = data.order_by || "recipe";
+    function normalizeOrderData(data) {
+      const orderBy = data.order_by;
       const order = data.order || [];
       let normalizedOrder;
 
-      if (orderBy === "recipe" || isRecipeOrder(order)) {
+      if (orderBy === "recipe") {
         normalizedOrder = order.map(flattenRecipeLevel);
         resolveRecipeDepends(normalizedOrder);
       } else {
-        normalizedOrder = order.map(level =>
-          level.map(pkg => {
-            const entry = { ...pkg };
-            if (!entry.pref && entry.package_id) {
-              entry.pref = makePref(entry.ref, entry.package_id, entry.prev);
-            }
-            return entry;
-          })
-        );
+        // configuration: already flat package cards with pref
+        normalizedOrder = order;
       }
 
       return {
