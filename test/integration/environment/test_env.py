@@ -1054,20 +1054,23 @@ def test_virtualenv_fish_additive_with_underlying_shell():
     assert not os.path.isfile(os.path.join(client.current_folder, "conanbuild.fish"))
 
 
-def test_environment_wrap_command_fish_requires_explicit_extension():
-    """ self.run() must never implicitly pick up a ".fish" launcher, only ".bat"/".sh": fish is
-    only used when the ".fish" extension is explicitly requested through the "env" argument,
-    since fish cannot reliably run arbitrary commands written in bat/sh syntax.
+def test_environment_wrap_command_never_wraps_fish():
+    """ Fish launchers are for the final consumer to source manually, Conan never uses them to
+    wrap commands: subprocesses always run in the regular shell. Not even asking for a ".fish"
+    file explicitly opts in, because fish cannot run arbitrary commands written in bat/sh syntax.
     """
     conanfile = ConanFileMock()
     folder = temp_folder()
-    save(os.path.join(folder, "conanrunenv.sh"), "echo sh-launcher")
+    ext = "bat" if platform.system() == "Windows" else "sh"
+    save(os.path.join(folder, f"conanrunenv.{ext}"), "echo regular-launcher")
     save(os.path.join(folder, "conanrunenv.fish"), "echo fish-launcher")
 
+    # The extension-less name that self.run() uses by default resolves to .sh/.bat, never .fish
     cmd = environment_wrap_command(conanfile, "conanrunenv", folder, "mycmd")
-    assert "conanrunenv.sh" in cmd
+    assert f"conanrunenv.{ext}" in cmd
     assert "fish" not in cmd
 
+    # And an explicit ".fish" is simply not a launcher Conan knows how to wrap with: it is
+    # ignored, like any other unrecognized extension, and the command runs unwrapped
     cmd = environment_wrap_command(conanfile, "conanrunenv.fish", folder, "mycmd")
-    assert cmd.startswith("fish -c ")
-    assert "conanrunenv.fish" in cmd
+    assert cmd == "mycmd"

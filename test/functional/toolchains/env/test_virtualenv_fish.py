@@ -103,8 +103,8 @@ def test_runenv_buildenv_together():
 
 
 def test_transitive_tool_requires():
-    """ A tool_requires providing a binary and a custom environment variable must be usable
-    through the explicit fish launcher via ``self.run(..., env=[...".fish"])``.
+    """ A tool_requires providing a binary and a custom environment variable must still work
+    normally through the regular .sh launcher while the fish conf is enabled.
     """
     client = TestClient()
     cmd_line = "echo LADY_IS_${LADY}"
@@ -125,22 +125,92 @@ def test_transitive_tool_requires():
                     .with_generator("VirtualBuildEnv"))
     build = """
     def build(self):
-        # default self.run(): must still work through the regular .sh launcher
         self.run("pkg-echo-tool", env="conanbuild")
-        # explicit opt-in to the fish launcher
-        self.run("pkg-echo-tool", env=["conanbuild.fish"])
     """
     conanfile += build
     client.save({"app/conanfile.py": conanfile})
     client.run("create app -c tools.env.virtualenv:fish=True")
 
-    assert client.out.count("LADY_IS_Dulcinea del Toboso") == 2
+    assert "LADY_IS_Dulcinea del Toboso" in client.out
 
 
-def test_self_run_default_does_not_use_fish():
-    """ The core idea (same as the still-open PR #19649, but for fish): self.run() must keep
-    using the underlying shell (.sh) by default, even with the fish conf globally enabled, since
-    fish cannot run arbitrary sh-syntax commands. Only an explicit ``env=[...".fish"]`` opts in.
+def test_self_run_never_uses_fish():
+    """ The core idea (same as the still-open PR #19649, but for fish): self.run() always runs in
+    the regular shell, even with the fish conf enabled, because fish cannot run arbitrary
+    sh-syntax commands. Asking for the .fish launcher explicitly does not opt in either.
+
+    Uses a command whose *output* differs per shell, so this cannot pass vacuously: ``$version``
+    is a fish-only variable, and ``$$`` is a POSIX-only one, so the printed line identifies which
+    shell really ran it.
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            generators = "VirtualBuildEnv"
+            def build(self):
+                # The launcher really is there, so what follows is a deliberate choice and not
+                # just a fallback because the file was missing
+                assert os.path.exists(os.path.join(self.generators_folder, "conanbuild.fish"))
+                # In fish "$version" holds its version string; in a POSIX shell it is empty. So a
+                # line reading "FISHVER=[]" proves a POSIX shell ran this, not fish.
+                self.run('echo "MARK1 FISHVER=[$version]"')
+                self.run('echo "MARK2 FISHVER=[$version]"', env=["conanbuild.fish"])
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -c tools.env.virtualenv:fish=True")
+    # Both the default and the explicit-.fish call ran in a POSIX shell, where $version is empty
+    assert "MARK1 FISHVER=[]" in client.out
+    assert "MARK2 FISHVER=[]" in client.out
+
+
+HOSTILE_VALUES = {
+    # A "$" not followed by a valid fish variable name is a *parse error*, not just an expansion
+    "MYDOLLARBRACE": "--libdir=${prefix}/lib",
+    "MYTRAILDOLLAR": "price is 5$",
+    # A "$" that does look like a variable would silently expand to nothing
+    "MYRPATH": "-Wl,-rpath,$ORIGIN/../lib",
+    "MYCMDSUB": "$(whoami)",
+    "MYQUOTES": 'say "hi"',
+    "MYBACKSLASH": r"C:\path\to",
+}
+
+
+def test_hostile_values_are_escaped():
+    """ Inside a fish double-quoted string ``\\``, ``"`` and ``$`` are all special. Escaping only
+    ``"`` is not enough: a ``$`` not followed by a valid variable name is a parse error that aborts
+    the *whole* sourced file, so every other variable in it silently goes missing too.
+    """
+    client = TestClient()
+    conanfile = ("from conan import ConanFile\n"
+                 "class Pkg(ConanFile):\n"
+                 "    name = 'pkg'\n"
+                 "    version = '0.1'\n"
+                 "    def package_info(self):\n"
+                 + "".join(f"        self.buildenv_info.define({k!r}, {v!r})\n"
+                           for k, v in HOSTILE_VALUES.items()))
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    client.save_home({"global.conf": "tools.env.virtualenv:fish=True\n"})
+    client.save({"conanfile.py": GenConanfile("app", "0.1").with_tool_requires("pkg/0.1")
+                                                           .with_generator("VirtualBuildEnv")})
+    client.run("install . -s:a os=Linux")
+
+    # Only double quotes are used below, so the whole thing survives the outer sh single quotes
+    dump = "; ".join(f'echo "{k}=[${k}]"' for k in HOSTILE_VALUES)
+    client.run_command(f"fish -c 'source conanbuild.fish; {dump}'")
+    for name, value in HOSTILE_VALUES.items():
+        assert f"{name}=[{value}]" in client.out
+
+
+def test_aggregated_fish_sources_every_launcher():
+    """ ``set -e`` of a non-existing variable returns 4 in fish (POSIX ``unset`` returns 0), so
+    chaining the aggregated launchers with ``&&`` meant that a launcher whose last statement was
+    an unset aborted the chain, silently skipping every later launcher.
     """
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -148,15 +218,72 @@ def test_self_run_default_does_not_use_fish():
         class Pkg(ConanFile):
             name = "pkg"
             version = "0.1"
-            def build(self):
-                # sh-only syntax ($0 expands to "sh"/"bash", not fish); would break under fish
-                self.run("echo SHELL_IS_POSIX:$0")
-                self.run("echo FISH_STATUS_BUILTIN_WORKS", env=["conanbuild.fish"])
+            def package_info(self):
+                self.buildenv_info.define("MYVAR1", "myvalue")
+                self.buildenv_info.unset("SOMEUNSETVAR")
         """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . -c tools.env.virtualenv:fish=True")
-    assert "SHELL_IS_POSIX" in client.out
-    assert "FISH_STATUS_BUILTIN_WORKS" in client.out
+    client.run("create .")
+
+    client.save_home({"global.conf": "tools.env.virtualenv:fish=True\n"})
+    # A second registered launcher, so the aggregated conanbuild.fish sources more than one file
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import save
+        class App(ConanFile):
+            name = "app"
+            version = "0.1"
+            tool_requires = "pkg/0.1"
+            generators = "VirtualBuildEnv"
+            def generate(self):
+                save(self, "myextra.fish", 'set -gx EXTRA_VAR "extravalue"\\n')
+                self.env_scripts.setdefault("build", []).append("myextra.fish")
+        """)
+    client.save({"conanfile.py": consumer})
+    client.run("install . -s:a os=Linux")
+
+    # The unset is guarded, so sourcing the launcher leaves a 0 status
+    assert "if set -q SOMEUNSETVAR" in client.load("conanbuildenv.fish")
+    assert " && " not in client.load("conanbuild.fish")
+
+    client.run_command('fish -c \'source conanbuild.fish; echo "GOT:$MYVAR1,$EXTRA_VAR"\'')
+    assert "GOT:myvalue,extravalue" in client.out
+
+    # The documented "source it, then run something" idiom must not be broken by the unset either
+    client.run_command("fish -c 'source conanbuildenv.fish && echo CHAIN_OK'")
+    assert "CHAIN_OK" in client.out
+
+
+def test_empty_variable_does_not_leave_stray_separator():
+    """ A variable that exists but is empty must be treated like an unset one, otherwise the
+    append/prepend leaves a dangling separator -- and an empty PATH element means "current
+    directory". ``save_sh`` gets this right with ``${VAR:+sep$VAR}``; fish needs ``test -n``,
+    because ``set -q`` is also true for a variable that is set but empty.
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            def package_info(self):
+                self.buildenv_info.append_path("MYFISHPATH", "/newp")
+                self.buildenv_info.append("MYFISHFLAGS", "-added")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    client.save_home({"global.conf": "tools.env.virtualenv:fish=True\n"})
+    client.save({"conanfile.py": GenConanfile("app", "0.1").with_tool_requires("pkg/0.1")
+                                                           .with_generator("VirtualBuildEnv")})
+    client.run("install . -s:a os=Linux")
+
+    for prelude in ("env MYFISHPATH= MYFISHFLAGS=",  # set but empty
+                    "env -u MYFISHPATH -u MYFISHFLAGS"):  # not set at all
+        client.run_command(f'{prelude} fish -c '
+                           '\'source conanbuild.fish; '
+                           'echo "P=[$MYFISHPATH] F=[$MYFISHFLAGS]"\'')
+        assert "P=[/newp] F=[-added]" in client.out
 
 
 def test_no_fish_generated_without_conf():
