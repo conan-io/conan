@@ -68,7 +68,9 @@ class _QbsDepGenerator:
         def _get_package_name(dep):
             # TODO: pkgconfig uses suffix, do we need it? see:
             # https://github.com/conan-io/conan/blob/develop2/conan/tools/gnu/pkgconfigdeps.py#L319
-            return dep.cpp_info.get_property("pkg_config_name") or dep.ref.name
+            return (dep.cpp_info.get_property("qbs_file_name") or
+                    dep.cpp_info.get_property("pkg_config_name") or
+                    dep.ref.name)
 
         def _get_component_name(dep, comp_name):
             if comp_name not in dep.cpp_info.components:
