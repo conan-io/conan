@@ -215,3 +215,41 @@ def _save_providers(providers_path, providers):
     save(providers_path, json.dumps(providers, indent=4))
     # Make readable & writeable only by current user
     os.chmod(providers_path, 0o600)
+
+
+def migrate_audit_providers(cache_folder):
+    """Strip the legacy Vigenere cypher from tokens in audit_providers.json,
+    leaving them base64-encoded only."""
+    providers_path = os.path.join(cache_folder, "audit_providers.json")
+    if not os.path.exists(providers_path):
+        return
+    try:
+        providers = json.loads(load(providers_path))
+    except Exception:  # noqa
+        return
+
+    chars = [chr(i) for i in range(32, 127)]
+    key = "private"
+    changed = False
+    for provider_data in providers.values():
+        token = provider_data.get("token")
+        if not token:
+            continue
+        try:
+            cyphered = base64.standard_b64decode(token).decode()
+        except (binascii.Error, UnicodeDecodeError):
+            continue
+        # Reverse Vigenere with key="private"
+        plain = []
+        for i, c in enumerate(cyphered):
+            if c not in chars:
+                plain.append(c)
+            else:
+                text_index = chars.index(c)
+                key_index = chars.index(key[i % len(key)])
+                plain.append(chars[(text_index - key_index) % len(chars)])
+        provider_data["token"] = base64.standard_b64encode("".join(plain).encode()).decode()
+        changed = True
+
+    if changed:
+        _save_providers(providers_path, providers)
