@@ -34,12 +34,20 @@ app = textwrap.dedent("""\
     from conan import ConanFile
 
     class App(ConanFile):
+        settings = "os"  # Necessary, or the "conanrun" env would be a .sh script in Windows
         requires = "{requires}"
 
         def build(self):
             cmd = "myshared.bat" if platform.system() == "Windows" else "myshared.sh"
             self.run(cmd, env="conanrun")
     """)
+
+
+def _not_found(out):
+    """ the shell couldn't find our script, that is, it was not in the PATH of the run
+    environment: 'not recognized' in cmd, 'not found' in sh (with or without 'command')
+    """
+    return re.search(r"myshared\.(bat|sh).*(not recognized|not found)", out)
 
 
 @pytest.mark.parametrize("runtime_artifacts", [True, False])
@@ -59,6 +67,7 @@ def test_runtime_artifacts(runtime_artifacts):
         # Without "runtime_artifacts" the run trait is False, as it is a static-library, so the
         # "bindirs" of liba are not added to the "conanrun" environment
         assert "MYSHARED RUNTIME!!" not in c.out
+        assert _not_found(c.out)
         assert "Error in build() method" in c.out
 
 
@@ -86,4 +95,5 @@ def test_runtime_artifacts_transitive(runtime_artifacts):
         # linked inside libb, Conan understands its binary is not necessary anymore and skips it
         assert re.search(r"Skipped binaries(\s*)liba/0.1", c.out)
         assert "MYSHARED RUNTIME!!" not in c.out
+        assert _not_found(c.out)
         assert "Error in build() method" in c.out
