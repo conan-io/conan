@@ -178,7 +178,7 @@ def ftp_download(conanfile, host, filename, login='', password='', secure=False)
 
 
 def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
-             auth=None, headers=None, md5=None, sha1=None, sha256=None):
+             auth=None, headers=None, md5=None, sha1=None, sha256=None, identifier=None):
     """
     Retrieves a file from a given URL into a file with a given filename. It uses certificates from
     a list of known verifiers for https downloads, but this can be optionally disabled.
@@ -203,6 +203,10 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
     :param md5: MD5 hash code to check the downloaded file
     :param sha1: SHA-1 hash code to check the downloaded file
     :param sha256: SHA-256 hash code to check the downloaded file
+    :param identifier: Opaque key used in place of sha256 to name the file in the
+           local download cache and in the backup URL (``<backup_url>/<identifier>``).
+           Content is NOT verified. Intended for input-hashed generated blobs whose
+           final sha256 is not known ahead of time.
     """
     config = conanfile.conf
 
@@ -214,7 +218,22 @@ def download(conanfile, url, filename, verify=True, retry=None, retry_wait=None,
 
     filename = os.path.abspath(filename)
     downloader = SourcesCachingDownloader(conanfile)
-    downloader.download(url, filename, retry, retry_wait, verify, auth, headers, md5, sha1, sha256)
+    downloader.download(url, filename, retry, retry_wait, verify, auth, headers, md5, sha1, sha256,
+                        identifier=identifier)
+
+
+def save_backup_source(conanfile, filepath, url, identifier):
+    """
+    Save a locally-produced file into the sources download cache under `identifier`
+    so subsequent ``download(..., identifier=identifier)`` calls hit it from cache,
+    and so that ``conan cache backup-upload`` pushes it to ``core.sources:upload_url``.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :param filepath: Absolute path to the local file to store as a backup source.
+    :param url: URL recorded in the backup-sources JSON metadata for this entry.
+    :param identifier: Opaque key identifying the entry in the cache and on the mirror.
+    """
+    SourcesCachingDownloader(conanfile).save(filepath, url, identifier)
 
 
 def rename(conanfile, src, dst):
