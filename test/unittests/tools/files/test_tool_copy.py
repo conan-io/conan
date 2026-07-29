@@ -1,6 +1,8 @@
 from unittest import mock
 import os
 import platform
+import sys
+
 import pytest
 
 from conan.errors import ConanException
@@ -290,23 +292,29 @@ class TestToolCopy:
         assert copy2_mock.call_count == 2, \
             f"2 files, {copy2_mock.call_count} copies: a.h is being copied once per pattern"
 
+    @pytest.mark.skipif(sys.version_info < (3, 9),
+                        reason="Before 3.9 os.walk() recurses calling the patched os.walk() itself")
     def test_multiple_patterns_single_scan(self):
         # A list of patterns walks the src tree once, not once per pattern like a loop of copy()
-        # calls did, which is the point of accepting a list, see #18981. os.scandir() is what is
-        # counted because os.walk() calls it exactly once per folder in every Python version
+        # calls did, which is the point of accepting a list, see #18981.
+        # Counting os.walk() calls only works from 3.9 on: before that os.walk() is a recursive
+        # generator that descends by calling the module-global os.walk(), the very name patched
+        # here, so the count would be 1 + one per subfolder. Counting os.scandir() instead would
+        # be version independent, but it is called by any directory listing in the process, and
+        # patching it (like patching os.walk) is process wide, so a concurrent one would count too
         src_folder = temp_folder()
         for i in range(5):
             save(os.path.join(src_folder, f"dir{i}/file.h"), "h")
             save(os.path.join(src_folder, f"dir{i}/file.cpp"), "cpp")
+        dst_folder = temp_folder()
         patterns = [f"dir{i}/*.h" for i in range(5)] + [f"dir{i}/*.cpp" for i in range(5)]
 
-        with mock.patch("os.scandir", wraps=os.scandir) as scandir_mock:
-            copy(None, patterns, src_folder, temp_folder())
+        with mock.patch("conan.tools.files.copy_pattern.os.walk", wraps=os.walk) as walk_mock:
+            copy(None, patterns, src_folder, dst_folder)
 
-        # the src folder itself plus its 5 subfolders, opened once each, for all 10 patterns
-        assert scandir_mock.call_count == 6, \
-            f"{len(patterns)} patterns opened {scandir_mock.call_count} folders instead of 6: " \
-            f"the src tree is being scanned once per pattern again"
+        assert walk_mock.call_count == 1, \
+            f"{len(patterns)} patterns walked the src tree {walk_mock.call_count} times " \
+            f"instead of once: it is being scanned once per pattern again"
 
     @pytest.mark.skipif(platform.system() == "Windows", reason="Requires Symlinks")
     def test_multiple_patterns_symlinked_folder(self):
