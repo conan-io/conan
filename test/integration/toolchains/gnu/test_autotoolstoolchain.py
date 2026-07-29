@@ -223,7 +223,8 @@ def test_unknown_compiler():
     assert "Generator 'AutotoolsToolchain' calling 'generate()'" in client.out
 
 
-def test_autotoolstoolchain_compiler_executables_unknown_key_warning():
+@pytest.mark.parametrize("generator", ["AutotoolsToolchain", "GnuToolchain"])
+def test_autotoolstoolchain_compiler_executables_unknown_key_warning(generator):
     """https://github.com/conan-io/conan/issues/19142 -- same guarantee for AutotoolsToolchain."""
     client = TestClient()
     profile = textwrap.dedent("""
@@ -240,7 +241,7 @@ def test_autotoolstoolchain_compiler_executables_unknown_key_warning():
         """)
     client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "compiler",
                                                               "build_type")
-                                              .with_generator("AutotoolsToolchain"),
+                                               .with_generator(generator),
                  "profile": profile})
     client.run("install . --profile:host=profile")
     assert "compiler_executables: ignoring unknown key(s) ['RC', 'bogus']" in client.out
