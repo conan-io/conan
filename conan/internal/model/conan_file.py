@@ -48,6 +48,9 @@ class ConanFile:
     default_options = None
     default_build_options = None
     package_type = None
+    # For packages that ship artifacts needed at runtime (shared libs, plugins, data) even if
+    # their ``package_type`` doesn't imply it, like a static-library also containing a shared one
+    runtime_artifacts = False
     vendor = False
     languages = []
     implements = []

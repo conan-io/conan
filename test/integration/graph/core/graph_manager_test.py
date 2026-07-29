@@ -714,6 +714,32 @@ class TestLinear(GraphManagerTest):
                                 (libb, True, True, False, False),
                                 (liba, True, True, False, False)])
 
+    @pytest.mark.parametrize("runtime_artifacts", [True, False])
+    def test_runtime_artifacts_from_static_lib(self, runtime_artifacts):
+        # app -> libb0.1 (static) -> liba0.1 (static, runtime_artifacts)
+        liba = GenConanfile("liba", "0.1").with_shared_option(False)
+        if runtime_artifacts:
+            liba = liba.with_class_attribute("runtime_artifacts=True")
+        self.recipe_conanfile("liba/0.1", liba)
+        self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=False)
+        consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
+
+        deps_graph = self.build_consumer(consumer)
+
+        assert 3 == len(deps_graph.nodes)
+        app = deps_graph.root
+        libb = app.edges[0].dst
+        liba = libb.edges[0].dst
+
+        self._check_node(app, "app/0.1", deps=[libb])
+        self._check_node(libb, "libb/0.1#123", deps=[liba], dependents=[app])
+        self._check_node(liba, "liba/0.1#123", dependents=[libb])
+
+        # node, headers, lib, build, run
+        _check_transitive(app, [(libb, True, True, False, False),
+                                (liba, False, True, False, runtime_artifacts)])
+        _check_transitive(libb, [(liba, True, True, False, runtime_artifacts)])
+
 
 class TestLinearFourLevels(GraphManagerTest):
     def test_default(self):
