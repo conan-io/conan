@@ -260,6 +260,59 @@ class TestToolCopy:
         copy(None, "*", src_folder2, dst_folder)
         assert ['file1.txt', 'file2.txt'] == sorted(os.listdir(dst_folder))
 
+    def test_multiple_patterns(self):
+        src_folder = temp_folder()
+        save(os.path.join(src_folder, "hello.h"), "h")
+        save(os.path.join(src_folder, "src/lib.cpp"), "cpp")
+        save(os.path.join(src_folder, "src/util.cpp"), "cpp")
+        save(os.path.join(src_folder, "docs/readme.md"), "md")
+        save(os.path.join(src_folder, "docs/private.md"), "secret")
+        save(os.path.join(src_folder, "unmatched.txt"), "nope")
+
+        dst_folder = temp_folder()
+        copied = copy(None, ["*.h", "src/*.cpp", "docs/*.md"], src_folder, dst_folder,
+                      excludes=["*/private.md"])
+        rels = sorted(os.path.relpath(f, dst_folder).replace(os.sep, "/") for f in copied)
+        assert rels == ["docs/readme.md", "hello.h", "src/lib.cpp", "src/util.cpp"]
+
+    @mock.patch('shutil.copy2')
+    def test_multiple_patterns_dedup(self, copy2_mock):
+        # Files matched by more than one pattern must only be copied once
+        src_folder = temp_folder()
+        save(os.path.join(src_folder, "a.h"), "x")
+        save(os.path.join(src_folder, "b.h"), "x")
+        dst_folder = temp_folder()
+
+        copy(None, ["*.h", "a.*"], src_folder, dst_folder)
+        assert copy2_mock.call_count == 2  # a.h counted once, b.h counted once
+
+    def test_multiple_patterns_single_scan(self):
+        # A list of patterns must walk the src tree exactly once, regardless of pattern count.
+        # This is the performance guarantee behind #18981.
+        src_folder = temp_folder()
+        for i in range(5):
+            save(os.path.join(src_folder, f"dir{i}/file.h"), "h")
+            save(os.path.join(src_folder, f"dir{i}/file.cpp"), "cpp")
+        dst_folder = temp_folder()
+
+        patterns = [f"dir{i}/*.h" for i in range(5)] + [f"dir{i}/*.cpp" for i in range(5)]
+
+        with mock.patch("conan.tools.files.copy_pattern.os.walk",
+                        wraps=os.walk) as walk_mock:
+            copy(None, patterns, src_folder, dst_folder)
+            single_scan_calls = walk_mock.call_count
+
+        # Baseline: calling copy() once per pattern would walk once per pattern
+        dst_folder2 = temp_folder()
+        with mock.patch("conan.tools.files.copy_pattern.os.walk",
+                        wraps=os.walk) as walk_mock:
+            for p in patterns:
+                copy(None, p, src_folder, dst_folder2)
+            loop_calls = walk_mock.call_count
+
+        assert single_scan_calls == 1
+        assert loop_calls == len(patterns)
+
     @mock.patch('shutil.copy2')
     def test_avoid_repeat_copies(self, copy2_mock):
         src_folders = [temp_folder() for _ in range(2)]

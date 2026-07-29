@@ -120,6 +120,9 @@ class CMakeConfigDeps:
                 direct_deps.append((require, dep))
             full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
             base_filename = self.get_cmake_filename(dep)
+            # Shared files (config, config-version, targets) have a context-independent
+            # filename. When the same package is both requires and tool_requires, keep the
+            # host-context version so legacy variables (<pkg>_LIBRARIES, ...) are preserved.
             config_version = ConfigVersionTemplate2(
                 base_filename, dep.ref, self._get_config_version_properties(dep))
             ret[config_version.filename] = config_version.content()
@@ -127,7 +130,8 @@ class CMakeConfigDeps:
                 base_filename, dep.ref, self._conanfile, full_cpp_info,
                 self._get_config_properties(dep, full_cpp_info, require.build),
                 is_build_context=require.build)
-            ret[config.filename] = config.content()
+            if config.filename not in ret:
+                ret[config.filename] = config.content()
             targets = TargetsTemplate2(base_filename, dep.ref)
             ret[targets.filename] = targets.content()
             transitive_reqs = self.get_transitive_requires(dep)

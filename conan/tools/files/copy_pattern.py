@@ -13,8 +13,10 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
     Copy the files matching the pattern (fnmatch) at the src folder to a dst folder.
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :param pattern: (Required) An fnmatch file pattern of the files that should be copied.
-           It must not start with ``..`` relative path or an exception will be raised.
+    :param pattern: (Required) An fnmatch file pattern, or a list/tuple of fnmatch patterns,
+           of the files that should be copied. When a list is given the src folder is walked
+           only once and files matching any of the patterns are copied. Patterns must not
+           start with ``..`` relative path or an exception will be raised.
     :param src: (Required) Source folder in which those files will be searched. This folder
            will be stripped from the dst parameter. E.g., lib/Debug/x86.
     :param dst: (Required) Destination local folder. It must be different from src value or an
@@ -31,17 +33,21 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
            different modification time)
     :return: list of copied files
     """
-    if src == dst:
-        raise ConanException("copy() 'src' and 'dst' arguments must have different values")
-    if pattern.startswith(".."):
-        raise ConanException("copy() it is not possible to use relative patterns starting with '..'")
     if src is None:
         raise ConanException("copy() received 'src=None' argument")
+    if src == dst:
+        raise ConanException("copy() 'src' and 'dst' arguments must have different values")
+
+    patterns = [pattern] if isinstance(pattern, str) else list(pattern)
+    for p in patterns:
+        if p.startswith(".."):
+            raise ConanException("copy() it is not possible to use relative "
+                                 "patterns starting with '..'")
 
     # This is necessary to add the trailing / so it is not reported as symlink
     src = os.path.join(src, "")
     excluded_folder = dst
-    files_to_copy, files_symlinked_to_folders = _filter_files(src, pattern, excludes, ignore_case,
+    files_to_copy, files_symlinked_to_folders = _filter_files(src, patterns, excludes, ignore_case,
                                                               excluded_folder)
 
     copied_files = _copy_files(files_to_copy, src, dst, keep_path, overwrite_equal)
@@ -55,14 +61,15 @@ def copy(conanfile, pattern, src, dst, keep_path=True, excludes=None,
     return copied_files
 
 
-def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
-    """ return a list of the files matching the patterns
-    The list will be relative path names wrt to the root src folder
+def _filter_files(src, patterns, excludes, ignore_case, excluded_folder):
+    """Walk src once and return files matched by any of the patterns (minus excludes).
+    The returned paths are relative to src.
     """
     filenames = []
     files_symlinked_to_folders = []
 
-    pattern = pattern.lower() if ignore_case else pattern
+    if ignore_case:
+        patterns = [p.lower() for p in patterns]
     if excludes:
         if not isinstance(excludes, (tuple, list)):
             excludes = (excludes, )
@@ -81,7 +88,8 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
             if os.path.islink(os.path.join(root, subfolder)):
                 relative_path = os.path.relpath(os.path.join(root, subfolder), src)
                 compare_relative_path = relative_path.lower() if ignore_case else relative_path
-                if fnmatch.fnmatch(os.path.normpath(compare_relative_path), pattern):
+                if any(fnmatch.fnmatch(os.path.normpath(compare_relative_path), p)
+                       for p in patterns):
                     files_symlinked_to_folders.append(relative_path)
 
         relative_path = os.path.relpath(root, src)
@@ -98,11 +106,13 @@ def _filter_files(src, pattern, excludes, ignore_case, excluded_folder):
             filenames.append(relative_name)
 
     if ignore_case:
-        files_to_copy = [n for n in filenames if fnmatch.fnmatch(os.path.normpath(n.lower()),
-                                                                 pattern)]
+        files_to_copy = [n for n in filenames
+                         if any(fnmatch.fnmatch(os.path.normpath(n.lower()), p)
+                                for p in patterns)]
     else:
-        files_to_copy = [n for n in filenames if fnmatch.fnmatchcase(os.path.normpath(n),
-                                                                     pattern)]
+        files_to_copy = [n for n in filenames
+                         if any(fnmatch.fnmatchcase(os.path.normpath(n), p)
+                                for p in patterns)]
 
     for exclude in excludes:
         if ignore_case:
