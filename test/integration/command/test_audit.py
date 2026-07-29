@@ -678,7 +678,7 @@ class TestAuditProviderBranchouts:
         tc = TestClient(light=True, inputs=["valid_token"])
         tc.run('audit provider add private --url=foo --type=private')
         providers = json.loads(tc.load_home("audit_providers.json"))
-        assert providers["private"]["token"] == 'Z1RWYEZUWmBeT2U='
+        assert providers["private"]["token"] == 'dmFsaWRfdG9rZW4='
 
     def test_provider_remove_no_name(self):
         tc = TestClient(light=True)
@@ -694,4 +694,4 @@ class TestAuditProviderBranchouts:
         tc = TestClient(light=True, inputs=["valid_token"])
         tc.run('audit provider auth conancenter')
         providers = json.loads(tc.load_home("audit_providers.json"))
-        assert providers["conancenter"]["token"] == 'Z1RWYEZUWmBeT2U='
+        assert providers["conancenter"]["token"] == 'dmFsaWRfdG9rZW4='
