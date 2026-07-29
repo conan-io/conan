@@ -1,17 +1,15 @@
+import base64
 import binascii
 import json
 import os
-import base64
 from typing import List
 
 from conan.internal.api.audit.providers import ConanCenterProvider, PrivateProvider
 from conan.errors import ConanException
-from conan.internal.api.remotes.encrypt import encode, decode
 from conan.internal.model.recipe_ref import RecipeReference
 from conan.internal.util.files import save, load
 
 CONAN_CENTER_AUDIT_PROVIDER_NAME = "conancenter"
-CYPHER_KEY = "private"
 
 
 class AuditAPI:
@@ -122,8 +120,7 @@ class AuditAPI:
             provider_data["token"] = env_token
         elif "token" in provider_data:
             try:
-                enc_token = base64.standard_b64decode(provider_data["token"]).decode()
-                provider_data["token"] = decode(enc_token, CYPHER_KEY)
+                provider_data["token"] = base64.standard_b64decode(provider_data["token"]).decode()
             except binascii.Error:
                 raise ConanException(f"Invalid token format for provider '{provider_name}'. "
                                      f"The token might be corrupt.")
@@ -196,8 +193,7 @@ class AuditAPI:
         providers = _load_providers(self._providers_path)
 
         assert provider.name in providers
-        encode_token = encode(token, CYPHER_KEY).encode()
-        providers[provider.name]["token"] = base64.standard_b64encode(encode_token).decode()
+        providers[provider.name]["token"] = base64.standard_b64encode(token.encode()).decode()
         setattr(provider, "token", token)
         _save_providers(self._providers_path, providers)
 
