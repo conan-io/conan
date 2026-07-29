@@ -267,85 +267,6 @@ def test_apple_own_framework_cross_build(settings):
         assert "Hello World Release!" in client.out
 
 
-@pytest.mark.xfail(reason="run_environment=True no longer works")
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
-@pytest.mark.tool("cmake", "3.19")
-def test_apple_own_framework_cmake_deps():
-    client = TestClient()
-
-    test_cmake = textwrap.dedent("""
-        set(CMAKE_CXX_COMPILER_WORKS 1)
-        set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 3.15)
-        project(Testing CXX)
-        message(STATUS "CMAKE_BINARY_DIR ${CMAKE_BINARY_DIR}")
-        find_package(mylibrary REQUIRED)
-        message(">>> MYLIBRARY_FRAMEWORKS_FOUND_DEBUG: ${MYLIBRARY_FRAMEWORKS_FOUND_DEBUG}")
-        message(">>> MYLIBRARY_FRAMEWORKS_FOUND_RELEASE: ${MYLIBRARY_FRAMEWORKS_FOUND_RELEASE}")
-        add_executable(timer timer.cpp)
-        target_link_libraries(timer mylibrary::mylibrary)
-    """)
-
-    test_conanfile = textwrap.dedent("""
-        import os
-        from conan import ConanFile
-        from conan.tools.cmake import CMake
-
-        class TestPkg(ConanFile):
-            generators = "CMakeToolchain"
-            name = "app"
-            version = "1.0"
-            requires = "mylibrary/1.0"
-            exports_sources = "CMakeLists.txt", "timer.cpp"
-            settings = "os", "arch", "compiler", "build_type"
-
-            def requirements(self):
-                self.tool_requires(self.tested_reference_str)
-
-            def generate(self):
-                cmake = CMakeDeps(self)
-                cmake.build_context_activated = ["mylibrary"]
-                cmake.build_context_suffix = {"mylibrary": "_BUILD"}
-                cmake.generate()
-
-            def layout(self):
-                self.folders.build = str(self.settings.build_type)
-
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
-                cmake.build()
-
-            def test(self):
-                self.run(os.path.join(str(self.settings.build_type), "timer"), env="conanrunenv")
-        """)
-    client.save({'conanfile.py': conanfile,
-                 "src/CMakeLists.txt": cmake,
-                 "src/hello.h": hello_h,
-                 "src/hello.cpp": hello_cpp,
-                 "src/Info.plist": infoplist})
-    client.run("export . --name=mylibrary --version=1.0")
-    client.run("create . --name=mylibrary --version=1.0 -s build_type=Debug")
-    client.run("create . --name=mylibrary --version=1.0 -s build_type=Release")
-
-    profile = textwrap.dedent("""
-        include(default)
-        [conf]
-        tools.cmake.cmaketoolchain:generator=Xcode
-        """)
-    client.save({"conanfile.py": test_conanfile,
-                 'CMakeLists.txt': test_cmake,
-                 "timer.cpp": timer_cpp,
-                 "profile": profile})
-
-    client.run("install . -s build_type=Debug -pr=profile")
-    client.run("install . -s build_type=Release -pr=profile")
-    client.run("test . mylibrary/1.0@  -pr=profile")
-    assert "Hello World Release!" in client.out
-    client.run("test . mylibrary/1.0@ -s:b build_type=Debug  -pr=profile")
-    assert "Hello World Debug!" in client.out
-
-
 @pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_apple_own_framework_cmake_find_package_multi():
@@ -394,7 +315,7 @@ def test_apple_own_framework_cmake_find_package_multi():
     assert "Hello World Release!" in client.out
 
 
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_component_uses_apple_framework():
     conanfile_py = textwrap.dedent("""

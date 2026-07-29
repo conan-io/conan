@@ -66,26 +66,13 @@ def graph_build_order(conan_api, parser, subparser, *args):
     Compute the build order of a dependency graph.
     """
     common_graph_args(subparser)
-    subparser.add_argument("--order-by", choices=['recipe', 'configuration'],
+    subparser.add_argument("--order-by", choices=['recipe', 'configuration'], default='recipe',
                            help='Select how to order the output, "recipe" by default if not set.')
     subparser.add_argument("--reduce", action='store_true', default=False,
                            help='Reduce the build order, output only those to build. Use this '
                                 'only if the result will not be merged later with other build-order')
     args = parser.parse_args(*args)
     validate_common_graph_args(args)
-    deprecated_policies = conan_api.config.get("core:policies", check_type=list, default=list())
-    if args.order_by is None:
-        if "deprecated_build_order_args" in deprecated_policies:
-            ConanOutput().warning("Please specify --order-by argument. "
-                                  "This behaviour is kept enabled because 'deprecated_build_order_args' "
-                                  "is present in the 'core:policies' conf list. "
-                                  "The fallback will be removed in Conan 2.32.",
-                                  warn_tag="deprecated")
-        else:
-            raise ConanException("Please specify --order-by argument. "
-                                 "The old behaviour can be re-enabled by adding 'deprecated_build_order_args' "
-                                 "to the 'core:policies' conf list until Conan 2.32, "
-                                 "where it will be removed.")
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
@@ -121,8 +108,6 @@ def graph_build_order(conan_api, parser, subparser, *args):
     install_graph = conan_api.graph.build_order(deps_graph, args.order_by, args.reduce,
                                                 profile_args=args)
     install_order_serialized = install_graph.install_build_order()
-    if args.order_by is None:  # legacy
-        install_order_serialized = install_order_serialized["order"]
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)

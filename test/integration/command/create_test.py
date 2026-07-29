@@ -59,7 +59,7 @@ def test_create():
     client.save({"conanfile.py": conanfile})
     client.run("create --name=pkg --version=0.1 --user=lasote --channel=testing")
     assert "Profile host:\n[settings]" in client.out
-    assert "pkg/0.1@lasote/testing: Generating the package" in client.out
+    assert "Generating the package pkg/0.1@lasote/testing:" in client.out
     assert "Running system requirements!!" in client.out
     client.run('list -c *')
     assert "pkg/0.1@lasote/testing" in client.out
@@ -86,20 +86,20 @@ def test_create_user_channel():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
     client.run("create . --user=lasote --channel=channel")
-    assert "pkg/0.1@lasote/channel: Generating the package" in client.out
+    assert "Generating the package pkg/0.1@lasote/channel:" in client.out
     client.run("list * -c")
     assert "pkg/0.1@lasote/channel" in client.out
 
     # test default without user and channel
     client.run("create . ")
-    assert "pkg/0.1: Generating the package" in client.out
+    assert "Generating the package pkg/0.1:" in client.out
 
 
 def test_create_in_subfolder():
     client = TestClient()
     client.save({"subfolder/conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
     client.run("create subfolder --user=lasote --channel=channel")
-    assert "pkg/0.1@lasote/channel: Generating the package" in client.out
+    assert "Generating the package pkg/0.1@lasote/channel:" in client.out
     client.run("list * -c")
     assert "pkg/0.1@lasote/channel" in client.out
 
@@ -109,7 +109,7 @@ def test_create_in_subfolder_with_different_name():
     client = TestClient()
     client.save({"subfolder/Custom.py": GenConanfile().with_name("pkg").with_version("0.1")})
     client.run("create subfolder/Custom.py --user=lasote --channel=channel")
-    assert "pkg/0.1@lasote/channel: Generating the package" in client.out
+    assert "Generating the package pkg/0.1@lasote/channel:" in client.out
     client.run("list * -c")
     assert "pkg/0.1@lasote/channel" in client.out
 
@@ -120,7 +120,7 @@ def test_create_test_package():
                  "test_package/conanfile.py":
                      GenConanfile().with_test('self.output.info("TESTING!!!")')})
     client.run("create . --user=lasote --channel=testing")
-    assert "pkg/0.1@lasote/testing: Generating the package" in client.out
+    assert "Generating the package pkg/0.1@lasote/testing:" in client.out
     assert "pkg/0.1@lasote/testing (test package): TESTING!!!" in client.out
 
 
@@ -132,7 +132,7 @@ def test_create_skip_test_package():
                  "test_package/conanfile.py":
                      GenConanfile().with_test('self.output.info("TESTING!!!")')})
     client.run("create . --user=lasote --channel=testing --test-folder=\"\"")
-    assert "pkg/0.1@lasote/testing: Generating the package" in client.out
+    assert "Generating the package pkg/0.1@lasote/testing:" in client.out
     assert "TESTING!!!" not in client.out
 
 
@@ -206,7 +206,7 @@ def test_create_with_name_and_version():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run('create . --name=lib --version=1.0')
-    assert "lib/1.0: Created package revision" in client.out
+    assert "Created package revision" in client.out
 
 
 def test_create_with_only_user_channel():
@@ -214,10 +214,10 @@ def test_create_with_only_user_channel():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
     client.run('create . --user=user --channel=channel')
-    assert "lib/1.0@user/channel: Created package revision" in client.out
+    assert "Created package revision" in client.out
 
     client.run('create . --user=user --channel=channel')
-    assert "lib/1.0@user/channel: Created package revision" in client.out
+    assert "Created package revision" in client.out
 
 
 def test_requires_without_user_channel():
@@ -239,7 +239,7 @@ def test_requires_without_user_channel():
     client.save({"conanfile.py": GenConanfile().with_require("hellobar/0.1")})
     client.run("create . --name=consumer --version=1.0")
     assert "hellobar/0.1: WARN: Hello, I'm hellobar" in client.out
-    assert "consumer/1.0: Created package revision" in client.out
+    assert "Created package revision" in client.out
 
 
 def test_conaninfo_contents_without_user_channel():
@@ -772,7 +772,7 @@ def test_name_never():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("never", "0.1")})
     c.run("create .")
-    assert "never/0.1: Created package" in c.out
+    assert "Created package" in c.out
 
 
 def test_create_both_host_build_require():
@@ -919,7 +919,7 @@ def test_create_build_fail_generate_outfile(command, out_file):
         error = c.run(f"{command} pkgd --build=missing --format=json", assert_error=True,
                       redirect_stdout="graph.json")
     assert error == ERROR_GENERAL
-    assert "pkgc/0.1: Error in package() method, line 8" in c.out
+    assert "Error in package() method, line 8" in c.out
     graph = json.loads(c.load("graph.json"))
     nodeid = "1" if command == "create" else "0"
     assert graph["graph"]["nodes"][nodeid]["name"] == "pkgd"

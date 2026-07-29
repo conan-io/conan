@@ -1,9 +1,11 @@
 import json
 import os
 
+from conan.api.model import RecipeReference
 from conan.api.output import ConanOutput, cli_out_write
 from conan.cli.args import add_reference_args
 from conan.cli.command import conan_command, conan_subcommand
+from conan.errors import ConanException
 
 
 @conan_command(group="Creator")
@@ -22,6 +24,9 @@ def editable_add(conan_api, parser, subparser, *args):
     subparser.add_argument('path', help='Path to the package folder in the user workspace',
                            default=".", nargs='?')
     add_reference_args(subparser)
+    subparser.add_argument("--ref",
+                           help='Full package reference (e.g. pkg/1.0@user/channel), as a '
+                                'shortcut for --name/--version/--user/--channel')
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
     group = subparser.add_mutually_exclusive_group()
@@ -31,9 +36,18 @@ def editable_add(conan_api, parser, subparser, *args):
                        help='Do not use remote, resolve exclusively in the cache')
     args = parser.parse_args(*args)
 
+    name, version, user, channel = args.name, args.version, args.user, args.channel
+    if args.ref:
+        if any((name, version, user, channel)):
+            raise ConanException("--ref is incompatible with --name/--version/--user/--channel")
+        ref = RecipeReference.loads(args.ref)
+        if ref.revision is not None:
+            raise ConanException(f"--ref '{args.ref}' cannot contain a revision")
+        name, version, user, channel = ref.name, str(ref.version), ref.user, ref.channel
+
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     cwd = os.getcwd()
-    ref = conan_api.local.editable_add(args.path, args.name, args.version, args.user, args.channel,
+    ref = conan_api.local.editable_add(args.path, name, version, user, channel,
                                        cwd, args.output_folder, remotes=remotes)
     ConanOutput().success("Reference '{}' in editable mode".format(ref))
 
