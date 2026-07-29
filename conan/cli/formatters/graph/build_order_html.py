@@ -917,7 +917,7 @@ build_order_html = r"""
      * --order-by modes).
      */
 
-    /** Build a package preference string (ref:package_id[#prev]). */
+    /** Build a package reference string (ref:package_id[#prev]). */
     function makePref(ref, packageId, prev) {
       let pref = `${ref}:${packageId}`;
       if (prev) pref += `#${prev}`;
