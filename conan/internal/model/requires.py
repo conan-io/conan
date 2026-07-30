@@ -527,6 +527,13 @@ class Requirements:
         return self._requires.values()
 
     def __call__(self, str_ref, **kwargs):
+        """Add a regular requirement (as in ``self.requires("zlib/1.2.11")``).
+
+        Any keyword accepted by ``Requirement`` may be passed through kwargs, including
+        ``git="org/repo[@ref]"`` to source the recipe from a public GitHub repository —
+        symmetric with ``self.test_requires`` and ``self.tool_requires``, which declare
+        ``git=`` in their own signatures.
+        """
         if str_ref is None:
             return
         assert isinstance(str_ref, str)

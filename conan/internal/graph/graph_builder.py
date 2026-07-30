@@ -242,7 +242,10 @@ class DepsGraphBuilder:
                     self._resolve_alias(node, require, alias, graph)
             self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
             if require.git is not None:
-                self._prefetch_git_remote(require)
+                from conan.internal.graph.git_remotes_resolver import GitRemotesResolver
+                GitRemotesResolver(self._cache).prefetch(node, require, self._update, self._loader,
+                                                         self._proxy._editable_packages, # noqa
+                                                         graph_lock)
             if graph_lock:
                 graph_lock.resolve_overrides(require, node.context)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
@@ -295,48 +298,6 @@ class DepsGraphBuilder:
                                                     remotes=self._remotes, update=self._update,
                                                     check_update=self._check_update)
         return layout, dep_conanfile, recipe_status, remote
-
-    def _prefetch_git_remote(self, require):
-        """If the requirement declares a git= source, clone and export it into the local cache
-        before range resolution and proxy lookup run. This mirrors the _resolve_replace_requires
-        pattern — acting early in _initialize_requires so the rest of graph resolution is
-        transparent (proxy just finds the recipe in cache as usual)."""
-        from conan.api.output import ConanOutput
-        from conan.internal.graph.git_remotes_resolver import GitRemotesResolver
-        from conan.internal.graph.proxy import should_update_reference
-
-        ref = require.ref
-        if ref.revision:
-            raise ConanException(f"Ref {ref.revision} cannot be specified with git")
-        git = require.git  # raw string: "org/repo" or "org/repo@ref"
-        idx = git.rsplit("@", 1)
-        repo, git_ref = idx if len(idx) == 2 else (idx[0], None)
-
-        git_resolver = GitRemotesResolver(self._cache)
-        url = git_resolver.get_url(repo)
-        output = ConanOutput(scope=str(ref))
-        force_clone = should_update_reference(ref, self._update)
-
-        if force_clone:
-            output.info(f"Updating from git remote '{url}'...")
-        else:
-            try:
-                layout = self._cache.recipe_layout_latest(ref)
-                # annotate revision to compare with lockfile one later
-                require.ref.revision = layout.reference.revision
-                output.info(f"Found in cache (configured via git remote '{url}')")
-                return  # Already in cache, nothing to do
-            except ConanException:
-                pass  # Not in cache — proceed with clone+export
-            output.info(f"Not found in local cache, resolving from git remote '{url}'")
-
-        if git_ref:
-            output.info(f"  git ref: {git_ref}")
-
-        exported_ref, _ = git_resolver.clone_and_export(ref, repo, git_ref, self._loader,
-                                                        force_clone=force_clone)
-        # Get the recipe revision from the export, to annotate it and checke later with lockfile
-        require.ref.revision = exported_ref.revision
 
     @staticmethod
     def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
