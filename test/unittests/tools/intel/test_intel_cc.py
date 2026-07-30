@@ -167,7 +167,7 @@ def test_setvars_command_with_custom_arguments(platform_system, os_, call_comman
 
 @pytest.mark.parametrize("os_,mode,expected_c,expected_cpp", [
     ("Linux", "icx", "icx", "icpx"),
-    ("Windows", "icx", "icx-cl", "icx-cl"),
+    ("Windows", "icx", "icx", "icx"),
     ("Linux", "classic", "icc", "icpc"),
     ("Macos", "classic", "icc", "icpc"),
     ("Windows", "classic", "icl", "icl"),
