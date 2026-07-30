@@ -165,13 +165,16 @@ def test_setvars_command_with_custom_arguments(platform_system, os_, call_comman
     assert IntelCC(conanfile).command == expected
 
 
-@pytest.mark.parametrize("mode,expected_c,expected_cpp", [
-    ("icx", "icx", "icpx"),
-    ("classic", "icc", "icpc"),
-    ("dpcpp", "icx", "dpcpp"),
+@pytest.mark.parametrize("os_,mode,expected_c,expected_cpp", [
+    ("Linux", "icx", "icx", "icpx"),
+    ("Windows", "icx", "icx-cl", "icx-cl"),
+    ("Linux", "classic", "icc", "icpc"),
+    ("Macos", "classic", "icc", "icpc"),
+    ("Windows", "classic", "icl", "icl"),
+    ("Linux", "dpcpp", "icx", "dpcpp"),
 ])
-def test_intel_cc_compilers(mode, expected_c, expected_cpp):
-    settings = MockSettings({"compiler": "intel-cc", "compiler.mode": mode})
+def test_intel_cc_compilers(os_, mode, expected_c, expected_cpp):
+    settings = MockSettings({"compiler": "intel-cc", "compiler.mode": mode, "os": os_})
     conanfile = ConanFileMock(settings)
     result = intel_cc_compilers(conanfile)
     assert result["c"] == expected_c

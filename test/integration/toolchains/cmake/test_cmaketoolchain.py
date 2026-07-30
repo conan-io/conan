@@ -1223,6 +1223,36 @@ def test_set_cmake_lang_compilers_and_launchers():
     assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain
 
 
+@pytest.mark.parametrize("os_,mode,expected_c,expected_cxx", [
+    ("Windows", "classic", "icl", "icl"),
+    ("Linux", "classic", "icc", "icpc"),
+    ("Windows", "icx", "icx-cl", "icx-cl"),
+])
+def test_cmaketoolchain_intel_cc_default_compilers(os_, mode, expected_c, expected_cxx):
+    # Regression: intel-cc classic on Windows must default to icl, not icc/icpc
+    # https://github.com/conan-io/conan/issues/20232
+    profile = textwrap.dedent(f"""
+        [settings]
+        os={os_}
+        arch=x86_64
+        compiler=intel-cc
+        compiler.version=2022.2
+        compiler.mode={mode}
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja
+        tools.intel:installation_path=
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert f'set(CMAKE_C_COMPILER "{expected_c}")' in toolchain
+    assert f'set(CMAKE_CXX_COMPILER "{expected_cxx}")' in toolchain
+
+
 def test_cmake_layout_toolchain_folder():
     """ in single-config generators, the toolchain is a different file per configuration
     https://github.com/conan-io/conan/issues/12827

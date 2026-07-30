@@ -177,6 +177,10 @@ def intel_cc_compilers(conanfile):
         return None
     mode = conanfile.settings.get_safe("compiler.mode")
     if mode == "classic":
+        if conanfile.settings.get_safe("os") == "Windows":
+            # On Windows the Intel C++ Compiler Classic driver is icl (icl.exe) for both C
+            # and C++; icc/icpc only exist on Linux/macOS.
+            return {"c": "icl", "cpp": "icl"}
         return {"c": "icc", "cpp": "icpc"}
     elif mode == "dpcpp":
         return {"c": "icx", "cpp": "dpcpp"}
