@@ -560,6 +560,55 @@ def test_cmaketoolchain_rcflags():
     assert 'string(APPEND CMAKE_RC_FLAGS_INIT " ${CONAN_RC_FLAGS}")' in toolchain
 
 
+def test_cmaketoolchain_compiler_executables_unknown_key_warning():
+    """https://github.com/conan-io/conan/issues/19142
+    Keys in tools.build:compiler_executables must be lowercase and match the known languages.
+    Unknown keys (e.g. "RC" uppercase) should produce a risk warning instead of being silently
+    ignored.
+    """
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:compiler_executables = {"RC": "rc", "bogus": "x", "c": "gcc"}
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:host=profile")
+    assert "compiler_executables: ignoring unknown key(s) ['RC', 'bogus']" in client.out
+    # Known lowercase key still works
+    assert 'set(CMAKE_C_COMPILER "gcc")' in client.load("conan_toolchain.cmake")
+
+
+def test_cmaketoolchain_compiler_executables_no_warning_for_known_keys():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:compiler_executables = {"c": "gcc", "cpp": "g++", "rc": "rc"}
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:host=profile")
+    assert "ignoring unknown key" not in client.out
+
+
 def test_cmaketoolchain_asmflags():
     """Test that tools.build:asmflags is applied to CONAN_ASM_FLAGS and CMAKE_ASM_FLAGS_INIT"""
     profile = textwrap.dedent("""
