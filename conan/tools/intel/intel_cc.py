@@ -177,6 +177,13 @@ def intel_cc_compilers(conanfile):
         return None
     mode = conanfile.settings.get_safe("compiler.mode")
     if mode == "classic":
+        # The Intel C++ Compiler Classic (icc/icpc/icl) was removed from Intel oneAPI 2024.0
+        version = conanfile.settings.get_safe("compiler.version")
+        if version is not None and int(version.split(".")[0]) >= 2024:
+            raise ConanException(
+                "The Intel C++ Compiler Classic (compiler.mode=classic) was removed in Intel "
+                f"oneAPI 2024.0, it is not available for compiler.version={version}. Use "
+                "compiler.mode=icx (or compiler.mode=dpcpp) instead.")
         if conanfile.settings.get_safe("os") == "Windows":
             # On Windows the Intel C++ Compiler Classic driver is icl (icl.exe) for both C
             # and C++; icc/icpc only exist on Linux/macOS.

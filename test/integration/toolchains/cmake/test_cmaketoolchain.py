@@ -1284,6 +1284,31 @@ def test_cmaketoolchain_intel_cc_buildenv_overrides_default(os_):
     assert 'set(CMAKE_CXX_COMPILER "icx.exe")' in toolchain
 
 
+@pytest.mark.parametrize("os_", ["Windows", "Linux"])
+def test_cmaketoolchain_intel_cc_classic_removed_since_2024(os_):
+    # classic mode was removed from Intel oneAPI 2024.0, installing must raise
+    # https://github.com/conan-io/conan/issues/20232
+    profile = textwrap.dedent(f"""
+        [settings]
+        os={os_}
+        arch=x86_64
+        compiler=intel-cc
+        compiler.version=2024.0
+        compiler.mode=classic
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja
+        tools.intel:installation_path=
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile", assert_error=True)
+    assert "compiler.mode=classic" in client.out
+    assert "removed in Intel oneAPI 2024.0" in client.out
+
+
 def test_cmake_layout_toolchain_folder():
     """ in single-config generators, the toolchain is a different file per configuration
     https://github.com/conan-io/conan/issues/12827

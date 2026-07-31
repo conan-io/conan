@@ -185,3 +185,32 @@ def test_intel_cc_compilers_not_intel():
     settings = MockSettings({"compiler": "gcc"})
     conanfile = ConanFileMock(settings)
     assert intel_cc_compilers(conanfile) is None
+
+
+@pytest.mark.parametrize("os_", ["Windows", "Linux"])
+@pytest.mark.parametrize("version,expected_c,expected_cpp", [
+    ("2021.1", "icl", "icl"),
+    ("2023.2", "icl", "icl"),
+])
+def test_intel_cc_classic_supported_until_2023(os_, version, expected_c, expected_cpp):
+    # classic mode is available up to Intel oneAPI 2023.2 (included)
+    expected = {"Windows": ("icl", "icl"), "Linux": ("icc", "icpc")}[os_]
+    settings = MockSettings({"compiler": "intel-cc", "compiler.mode": "classic",
+                             "compiler.version": version, "os": os_})
+    conanfile = ConanFileMock(settings)
+    result = intel_cc_compilers(conanfile)
+    assert result["c"] == expected[0]
+    assert result["cpp"] == expected[1]
+
+
+@pytest.mark.parametrize("os_", ["Windows", "Linux"])
+@pytest.mark.parametrize("version", ["2024.0", "2024.1", "2025.2", "2026.0"])
+def test_intel_cc_classic_removed_since_2024(os_, version):
+    # classic mode was removed from Intel oneAPI 2024.0, it must raise on every OS
+    settings = MockSettings({"compiler": "intel-cc", "compiler.mode": "classic",
+                             "compiler.version": version, "os": os_})
+    conanfile = ConanFileMock(settings)
+    with pytest.raises(ConanException) as e:
+        intel_cc_compilers(conanfile)
+    assert "compiler.mode=classic" in str(e.value)
+    assert "2024.0" in str(e.value)
