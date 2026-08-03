@@ -155,16 +155,17 @@ class TestGitRemotesRef:
         assert "myorg/mypkg@" in c.out
         assert "Cloning git repository" not in c.out
 
-    def test_revision_with_git_is_error(self):
-        """git= plus an explicit recipe revision (#hash) is inconsistent — the
-        revision is now the git commit SHA, so pinning both is nonsense. Error
-        message must include the full ref so the user can locate the require."""
+    def test_revision_and_git_ref_together_error(self):
+        """A require may pin a commit either by recipe revision ('pkg/1.0#<sha>')
+        OR by ref in git= ('org/repo@<sha>') — not both. Under revision_mode='scm'
+        those two pins refer to the same identity, so specifying both from the
+        recipe is ambiguous. Missing conflict is reported clearly."""
         c = TestClient(light=True)
         c.save({"conanfile.py": GenConanfile().with_requirement(
-            "zlib/1.2.11#" + "a" * 32, git="conan-io/zlib")})
+            "zlib/1.2.11#" + "a" * 32, git="conan-io/zlib@main")})
         c.run("install . --build=missing", assert_error=True)
         assert "zlib/1.2.11" in c.out
-        assert "'git='" in c.out or "git= source" in c.out.lower()
+        assert "use only one" in c.out
 
 
 @pytest.mark.tool("git")
@@ -403,6 +404,91 @@ class TestGitRemotesPrecedence:
         assert "Ignoring git=" in c.out
         assert "my_zlib/1.0" in c.out
         assert "Cloning git repository" not in c.out
+
+    def test_revision_on_require_pins_git_checkout(self, git_repos):
+        """A require of the form ``pkg/version#<sha>`` combined with a
+        commit-less ``git="org/repo"`` — under revision_mode='scm' the recipe
+        revision IS the git SHA, so the two annotations refer to the same
+        identity and could reasonably drive a git checkout of that commit.
+        NOT supported today: prefetch rejects revision + git= as inconsistent.
+        Companion to test_revision_with_git_is_error (which pins the current
+        rejection behavior).
+        """
+        repo_path, first_sha = git_repos("myorg/mypkg",
+                                         {"conanfile.py": GenConanfile("mypkg", "1.0")})
+        # Branch advances upstream — the require should still resolve to first_sha
+        save(os.path.join(repo_path, "conanfile.py"),
+             str(GenConanfile("mypkg", "1.0").with_class_attribute("marker='v2'")))
+        second_sha = git_add_changes_commit(repo_path)
+        assert second_sha != first_sha
+
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile().with_requirement(
+            f"mypkg/1.0#{first_sha}", git="myorg/mypkg")})
+        c.run("install . --build=missing")
+
+        assert f"mypkg/1.0#{first_sha}" in c.out
+        assert second_sha not in c.out
+
+    def test_replace_requires_pins_commit_over_recipe_branch(self, git_repos):
+        """Same reproducibility pattern as test_replace_requires_pins_commit_from_profile,
+        but the recipe already carries a branch ref: ``git="myorg/mypkg@main"``.
+        The profile [replace_requires] adds a specific revision on top. Intent:
+        the profile-supplied commit should override the recipe's branch pin —
+        replace_requires is an explicit, out-of-recipe knob and its revision
+        should take precedence.
+
+        Currently FAILS: with both @ref (from git=) and #revision (from
+        replace_requires) present, prefetch raises "use only one".
+        """
+        repo_path, first_sha = git_repos("myorg/mypkg",
+                                         {"conanfile.py": GenConanfile("mypkg", "1.0")})
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile().with_requirement(
+            "mypkg/1.0", git="myorg/mypkg@main")})
+
+        # Branch advances upstream
+        save(os.path.join(repo_path, "conanfile.py"),
+             str(GenConanfile("mypkg", "1.0").with_class_attribute("marker='v2'")))
+        second_sha = git_add_changes_commit(repo_path)
+        assert second_sha != first_sha
+
+        profile = f"[replace_requires]\nmypkg/1.0: mypkg/1.0#{first_sha}"
+        c.save({"myprofile": profile})
+        c.run("install . -pr=myprofile --build=missing")
+
+        assert f"mypkg/1.0#{first_sha}" in c.out
+        assert second_sha not in c.out
+
+    def test_replace_requires_pins_commit_from_profile(self, git_repos):
+        """A user tries to pin a specific commit via profile [replace_requires]
+        (name/version unchanged, revision added), so builds reproduce even after
+        the branch tip has moved — analogous to the lockfile-driven flow but
+        on-demand from a profile. Currently NOT supported: [replace_requires]
+        takes precedence and skips the git prefetch entirely, so the resolver
+        looks for the pinned revision in the cache (miss) rather than driving
+        a git checkout of that commit.
+        """
+        repo_path, first_sha = git_repos("myorg/mypkg",
+                                         {"conanfile.py": GenConanfile("mypkg", "1.0")})
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
+                                                                git="myorg/mypkg")})
+
+        # Branch advances upstream after we recorded 'first_sha'
+        save(os.path.join(repo_path, "conanfile.py"),
+             str(GenConanfile("mypkg", "1.0").with_class_attribute("marker='v2'")))
+        second_sha = git_add_changes_commit(repo_path)
+        assert second_sha != first_sha
+
+        # Profile pins the earlier commit as the revision to install
+        profile = f"[replace_requires]\nmypkg/1.0: mypkg/1.0#{first_sha}"
+        c.save({"myprofile": profile})
+        c.run("install . -pr=myprofile --build=missing")
+
+        # Reproducibility win: first commit is checked out, not the new tip
+        assert f"mypkg/1.0#{first_sha}" in c.out
+        assert second_sha not in c.out
 
     def test_editable_wins_over_git(self, git_repos):
         """An editable registration for the same ref short-circuits git=.

@@ -36,25 +36,28 @@ class GitRemotesResolver:
             within the require's range.
         """
         ref = require.ref
-        # replace_requires ran and matched: _resolve_replace_requires sets
-        # _required_ref = ref.copy() BEFORE mutating ref. If they are no longer the same
-        # object, the ref was renamed and the hardcoded git= source cannot apply —
-        # replace_requires wins.
+        # replace_requires ran: _resolve_replace_requires copies the original ref into
+        # _required_ref BEFORE mutating ref. If (name, version, user, channel) changed,
+        # the require was RENAMED and git= (which hardcodes a specific package identity)
+        # cannot follow — replace_requires wins. If only the revision was added, the
+        # replacement is compatible with git= and its revision drives the checkout.
         output = ConanOutput(scope=str(node))
-        if require._required_ref is not ref:  # noqa
-            output.warning(f"Ignoring git={require.git!r}: 'replace_requires' matched "
-                           f"and took precedence over the git= source.")
-            return
+        orig_ref = require._required_ref  # noqa
+        if orig_ref is not ref:
+            if (ref.name != orig_ref.name or ref.version != orig_ref.version
+                    or ref.user != orig_ref.user or ref.channel != orig_ref.channel):
+                output.warning(f"Ignoring git={require.git!r}: 'replace_requires' "
+                               f"renamed the require ({orig_ref} → {ref}) and took precedence "
+                               f"over the git= source.")
+                return
+            # Otherwise: replacement only added a revision — fall through, and the
+            # revision-driven checkout logic below will pick it up.
 
         # Editable takes precedence over git=: a local editable is a stronger
         # override than a hardcoded remote source.
         if editable_packages is not None and editable_packages.get(ref) is not None:
             output.info(f"Ignoring git={require.git!r}: package is in editable mode.")
             return
-
-        if ref.revision:
-            raise ConanException(
-                f"Requirement '{ref}' with an explicit revision cannot use a 'git=' source")
 
         git = require.git  # raw string: "org/repo" or "org/repo@ref"
         # split on the FIRST '@' — org/repo cannot contain '@' (GitHub disallows it),
@@ -65,6 +68,24 @@ class GitRemotesResolver:
                 f"Requirement '{ref}': git={git!r} has a trailing '@' with no ref. "
                 f"Drop the '@' to use the default branch, or specify a branch/tag/commit.")
         repo, git_ref = idx if len(idx) == 2 else (idx[0], None)
+
+        # Reconcile the two ways to pin a commit: an explicit recipe revision on the
+        # require ('pkg/version#<sha>') vs a ref in git= ('org/repo@<sha>'). Under
+        # revision_mode='scm' the recipe revision IS the git commit.
+        #
+        # Rule: only the RECIPE-authored combination (both #revision and @ref written
+        # by the recipe author) is a contradiction. If the revision was added from
+        # outside the recipe (replace_requires, later lockfile peek), it wins over
+        # git=@ref silently — those are explicit out-of-recipe overrides and Conan
+        # cannot tell from ref shape whether @ref is mutable, so it just trusts them.
+        # _required_ref carries the pre-replace state; if it has a revision, the
+        # recipe itself declared one.
+        if orig_ref.revision and git_ref:
+            raise ConanException(
+                f"Requirement '{ref}' pins a revision and git={git!r} also pins "
+                f"a ref — use only one")
+        if ref.revision:
+            git_ref = ref.revision  # recipe-authored (git_ref is None here) or override
 
         # Lockfile-driven checkout: if a matching entry is locked with a revision
         # (git commit SHA under our revision_mode='scm' contract), use it as the
@@ -95,8 +116,13 @@ class GitRemotesResolver:
             # Cache-first shortcut only makes sense for a fully-resolved ref.
             # With a range, we need to re-resolve which concrete version applies.
             try:
-                layout = self._cache.recipe_layout_latest(ref)
-                require.ref.revision = layout.reference.revision
+                if ref.revision:
+                    # Specific revision pinned (recipe / replace_requires / lockfile) —
+                    # only accept an exact match in the cache
+                    _ = self._cache.recipe_layout(ref)
+                else:
+                    layout = self._cache.recipe_layout_latest(ref)
+                    require.ref.revision = layout.reference.revision
                 output.info(f"Found in cache (configured via git remote '{url}')")
                 return
             except ConanException:
