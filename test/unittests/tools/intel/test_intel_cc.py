@@ -213,6 +213,7 @@ def test_intel_cc_classic_removed_since_2024(os_, version):
     settings = MockSettings({"compiler": "intel-cc", "compiler.mode": "classic",
                              "compiler.version": version, "os": os_})
     conanfile = ConanFileMock(settings)
+    conanfile._conan_buildenv = Environment()
     with pytest.raises(ConanException) as e:
         intel_cc_compilers(conanfile)
     assert "compiler.mode=classic" in str(e.value)
