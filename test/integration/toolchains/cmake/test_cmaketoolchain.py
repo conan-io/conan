@@ -1280,8 +1280,8 @@ def test_cmaketoolchain_intel_cc_buildenv_overrides_default(os_):
                  "profile": profile})
     client.run("install . -pr:b profile -pr:h profile")
     toolchain = client.load("conan_toolchain.cmake")
-    assert 'set(CMAKE_C_COMPILER "icx.exe")' in toolchain
-    assert 'set(CMAKE_CXX_COMPILER "icx.exe")' in toolchain
+    assert 'set(CMAKE_C_COMPILER ' not in toolchain
+    assert 'set(CMAKE_CXX_COMPILER ' not in toolchain
 
 
 @pytest.mark.parametrize("os_", ["Windows", "Linux"])

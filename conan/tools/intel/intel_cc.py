@@ -175,6 +175,13 @@ def intel_cc_compilers(conanfile):
     """
     if conanfile.settings.get_safe("compiler") != "intel-cc":
         return None
+
+    # CC/CXX explicitly set in the build environment ([buildenv]) take
+    # precedence over the hard-coded intel-cc defaults
+    build_env = conanfile.buildenv.vars(conanfile, scope="build")
+    if build_env.get("CC") or build_env.get("CXX"):
+        return None
+
     mode = conanfile.settings.get_safe("compiler.mode")
     if mode == "classic":
         # The Intel C++ Compiler Classic (icc/icpc/icl) was removed from Intel oneAPI 2024.0

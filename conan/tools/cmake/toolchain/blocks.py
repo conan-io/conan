@@ -991,11 +991,8 @@ class CompilersBlock(Block):
             else:
                 intel_defaults = intel_cc_compilers(self._conanfile)
                 if intel_defaults:
-                    # CC/CXX explicitly set in the build environment ([buildenv]) take
-                    # precedence over the hard-coded intel-cc defaults
-                    build_env = self._conanfile.buildenv.vars(self._conanfile, scope="build")
-                    compilers["C"] = build_env.get("CC") or intel_defaults["c"]
-                    compilers["CXX"] = build_env.get("CXX") or intel_defaults["cpp"]
+                    compilers["C"] = intel_defaults["c"]
+                    compilers["CXX"] = intel_defaults["cpp"]
         return {"compilers": compilers}
 
 

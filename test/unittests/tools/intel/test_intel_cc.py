@@ -5,6 +5,7 @@ import pytest
 from unittest.mock import patch
 
 from conan.tools.build.flags import architecture_flag, cppstd_flag
+from conan.tools.env import Environment
 from conan.tools.intel import IntelCC
 from conan.tools.intel.intel_cc import intel_cc_compilers
 from conan.errors import ConanException
@@ -176,6 +177,7 @@ def test_setvars_command_with_custom_arguments(platform_system, os_, call_comman
 def test_intel_cc_compilers(os_, mode, expected_c, expected_cpp):
     settings = MockSettings({"compiler": "intel-cc", "compiler.mode": mode, "os": os_})
     conanfile = ConanFileMock(settings)
+    conanfile._conan_buildenv = Environment()
     result = intel_cc_compilers(conanfile)
     assert result["c"] == expected_c
     assert result["cpp"] == expected_cpp
