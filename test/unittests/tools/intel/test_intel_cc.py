@@ -200,6 +200,7 @@ def test_intel_cc_classic_supported_until_2023(os_, version, expected_c, expecte
     settings = MockSettings({"compiler": "intel-cc", "compiler.mode": "classic",
                              "compiler.version": version, "os": os_})
     conanfile = ConanFileMock(settings)
+    conanfile._conan_buildenv = Environment()
     result = intel_cc_compilers(conanfile)
     assert result["c"] == expected[0]
     assert result["cpp"] == expected[1]
