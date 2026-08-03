@@ -10,6 +10,7 @@ from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
+from conan.internal.model.pkg_type import PackageType
 from conan.tools.cmake.cmakeconfigdeps.config import ConfigTemplate2
 from conan.tools.cmake.cmakeconfigdeps.config_version import ConfigVersionTemplate2
 from conan.tools.cmake.cmakeconfigdeps.target_configuration import TargetConfigurationTemplate2
@@ -135,10 +136,13 @@ class CMakeConfigDeps:
             targets = TargetsTemplate2(base_filename, dep.ref)
             ret[targets.filename] = targets.content()
             transitive_reqs = self.get_transitive_requires(dep)
-            cmake_properties = self._get_target_configuration_properties(dep, transitive_reqs, full_cpp_info)
+            dependencies, cpp_info_requires = self._get_dependencies_and_requires(
+                dep, full_cpp_info, transitive_reqs)
+            cmake_properties = self._get_target_configuration_properties(dep, full_cpp_info)
             target_configuration = TargetConfigurationTemplate2(
                 base_filename, dep, self._conanfile, full_cpp_info,
-                require.build, require.headers, cmake_properties, transitive_reqs)
+                require.build, require.headers, cmake_properties,
+                dependencies, cpp_info_requires)
             ret[target_configuration.filename] = target_configuration.content()
 
         self._print_help(direct_deps)
@@ -257,38 +261,119 @@ class CMakeConfigDeps:
             result["cmake_legacy_libraries"] = " ".join(libraries) if libraries else ""
         return result
 
-    def _get_target_configuration_properties(self, dep, transitive_reqs, full_cpp_info):
+    def _get_target_configuration_properties(self, dep, full_cpp_info):
+        """Properties of the current dependency needed by TargetConfigurationTemplate2."""
         cmake_properties = {}
 
-        def add(dep_conanfile, comp_name=None):
-            key = (dep_conanfile.ref.name, comp_name)
+        def add(comp_name=None):
+            key = (dep.ref.name, comp_name)
             cmake_properties[key] = {
-                "cmake_file_name": self.get_property("cmake_file_name", dep_conanfile)
-                                   or dep_conanfile.ref.name,
-                "cmake_target_name": self.get_property("cmake_target_name", dep_conanfile,
-                                                       comp_name),
-                "cmake_link_feature": self.get_property("cmake_link_feature", dep_conanfile,
-                                                        comp_name),
-                "cmake_target_aliases": self.get_property("cmake_target_aliases", dep_conanfile,
-                                                           comp_name, check_type=list) or [],
+                "cmake_target_name": self.get_property("cmake_target_name", dep, comp_name),
+                "cmake_link_feature": self.get_property("cmake_link_feature", dep, comp_name),
+                "cmake_target_aliases": self.get_property("cmake_target_aliases", dep,
+                                                          comp_name, check_type=list) or [],
                 "cmake_extra_interface_libs": self.get_property(
-                    "cmake_extra_interface_libs", dep_conanfile, comp_name, check_type=list) or [],
-                "nosoname": self.get_property("nosoname", dep_conanfile, comp_name,
-                                              check_type=bool),
+                    "cmake_extra_interface_libs", dep, comp_name, check_type=list) or [],
+                "nosoname": self.get_property("nosoname", dep, comp_name, check_type=bool),
             }
 
-        add(dep)
-        cmake_properties[(dep.ref.name, None)]["cmake_extra_dependencies"] = \
-            self.get_property("cmake_extra_dependencies", dep, check_type=list) or []
+        add()
         if full_cpp_info.has_components:
             for name in full_cpp_info.components:
-                add(dep, name)
-        for _, transitive_dep in transitive_reqs.items():
-            add(transitive_dep)
-            for comp_name in transitive_dep.cpp_info.components:
-                add(transitive_dep, comp_name)
-
+                add(name)
         return cmake_properties
+
+    def _get_cmake_target_name(self, dep, comp_name=None):
+        target_name = self.get_property("cmake_target_name", dep, comp_name)
+        default = f"{dep.ref.name}::{comp_name}" if comp_name else f"{dep.ref.name}::{dep.ref.name}"
+        return target_name or default
+
+    def _get_dependencies_and_requires(self, dep, full_cpp_info, transitive_reqs):
+        dependencies = {self.get_cmake_filename(d): "CONFIG" for d in transitive_reqs.values()}
+        extra_mods = self.get_property("cmake_extra_dependencies", dep, check_type=list) or []
+        dependencies.update({extra_mod: "" for extra_mod in extra_mods})
+
+        requires = {}
+        if full_cpp_info.has_components:
+            for name, component in full_cpp_info.components.items():
+                requires[name] = self._get_component_requires(
+                    dep, component, full_cpp_info.components, transitive_reqs)
+        else:
+            requires[None] = self._get_component_requires(dep, full_cpp_info, None, transitive_reqs)
+        return dependencies, requires
+
+    def _get_component_requires(self, dep, info, components, transitive_reqs):
+        result = {}
+        requires = info.parsed_requires()
+        pkg_name = dep.ref.name
+        pkg_type = info.type
+        assert isinstance(pkg_type, PackageType), f"Pkg type {pkg_type} {type(pkg_type)}"
+
+        if not requires and not components:  # global cpp_info without components definition
+            # require the pkgname::pkgname base (user defined) or INTERFACE base target
+            for req, d in transitive_reqs.items():
+                if d.package_type is PackageType.APP:
+                    continue
+                dep_target = self._get_cmake_target_name(d)
+                link_feature = self.get_property("cmake_link_feature", d)
+                result[dep_target] = {
+                    "link": req.libs,
+                    "link_feature": link_feature
+                }
+            return result
+
+        for required_pkg, required_comp in requires:
+            if required_pkg is None:  # Points to a component of same package
+                dep_comp = components.get(required_comp)
+                assert dep_comp, f"Component {required_comp} not found in {dep}"
+                dep_target = self._get_cmake_target_name(dep, required_comp)
+                link_feature = self.get_property("cmake_link_feature", dep, required_comp)
+                result[dep_target] = {
+                    "link": True,  # Components of same package have PUBLIC dependency
+                    "link_feature": link_feature
+                }
+            else:  # Different package
+                try:
+                    req, transitive_dep = transitive_reqs.of(required_pkg)
+                except KeyError:  # The transitive dep might have been skipped
+                    pass
+                else:
+                    # To check if the component exist, it is ok to use the standard cpp_info
+                    # No need to use the cpp_info = deduce_cpp_info(dep)
+                    dep_comp = transitive_dep.cpp_info.components.get(required_comp)
+                    if dep_comp is None:
+                        # It must be the interface pkgname::pkgname target
+                        if required_pkg != required_comp:
+                            msg = (f"{dep} recipe cpp_info did .requires to "
+                                   f"'{required_pkg}::{required_comp}' but component "
+                                   f"'{required_comp}' not found in {required_pkg}")
+                            raise ConanException(msg)
+                        if transitive_dep.package_type is PackageType.APP:
+                            continue  # It doesn't make sense to link a package that is an App
+                        comp = None
+                        # replace_requires
+                        default_target = f"{transitive_dep.ref.name}::{transitive_dep.ref.name}"
+                        link = req.libs  # Do what the requirement to that package says
+                    else:
+                        if dep_comp.type is PackageType.APP or dep_comp.exe:
+                            continue  # It doesn't make sense to link a package that is an App
+                        comp = required_comp
+                        default_target = f"{required_pkg}::{required_comp}"
+                        # if it contains a requirement of a specific component of the other package
+                        # and the other package can be an APP, but containing a LIB component
+                        # the req.libs will not be defined. This is the libtool->automake(app) case
+                        link = not (pkg_type is PackageType.SHARED and
+                                    dep_comp.type is PackageType.SHARED)
+                    link = req.libs or link
+                    dep_target = self.get_property("cmake_target_name", transitive_dep, comp)
+                    dep_target = dep_target or default_target
+                    link_feature = self.get_property("cmake_link_feature", transitive_dep, comp)
+
+                    result[dep_target] = {
+                        "link": link,
+                        "link_feature": link_feature
+                    }
+        return result
 
     def _get_find_mode(self, dep):
         tmp = self.get_property("cmake_find_mode", dep)
