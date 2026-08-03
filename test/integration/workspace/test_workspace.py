@@ -6,7 +6,6 @@ import textwrap
 import pytest
 
 from conan.api.model import RecipeReference
-from conan.api.subapi.workspace import WorkspaceAPI
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.scm import create_local_git_repo
@@ -1516,9 +1515,10 @@ class TestSource:
         c.run("workspace add pkgb")
         c.run("workspace add pkgc")
         c.run("workspace source")
-        assert "conanfile.py (pkga/0.1): Executing SOURCE!!!" in c.out
-        assert "conanfile.py (pkgb/0.1): Executing SOURCE!!!" in c.out
-        assert "conanfile.py (pkgc/0.1): Executing SOURCE!!!" in c.out
+        assert "Getting sources for conanfile.py (pkga/0.1)" in c.out
+        assert "Getting sources for conanfile.py (pkgb/0.1)" in c.out
+        assert "Getting sources for conanfile.py (pkgc/0.1)" in c.out
+        assert c.out.count("Executing SOURCE!!!") == 3
 
 
 class TestInstall:

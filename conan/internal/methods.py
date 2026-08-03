@@ -12,15 +12,20 @@ from conan.internal.util.files import mkdir, chdir, save
 
 
 def run_source_method(conanfile, hook_manager):
+    scoped_output = ConanOutput()
+    old_display = conanfile.display_name
+    conanfile.display_name = ""
+    scoped_output.info(f"Getting sources for {old_display}")
     mkdir(conanfile.source_folder)
     with chdir(conanfile.source_folder):
         hook_manager.execute("pre_source", conanfile=conanfile)
         if hasattr(conanfile, "source"):
-            conanfile.output.highlight("Calling source() in {}".format(conanfile.source_folder))
+            scoped_output.highlight(f"Calling source() in {conanfile.source_folder}")
             with conanfile_exception_formatter(conanfile, "source"):
                 with conanfile_remove_attr(conanfile, ['info', 'settings', "options"], "source"):
                     conanfile.source()
         hook_manager.execute("post_source", conanfile=conanfile)
+    conanfile.display_name = old_display
 
 
 def run_build_method(conanfile, hook_manager):

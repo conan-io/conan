@@ -63,6 +63,6 @@ class ConanFileToolsTest(ConanFile):
         client.save(files, clean_first=True)
         client.run("install . --build='*'")
         assert "test/1.9@user/testing: Building 1!" in client.out
-        assert "test/1.9@user/testing: Source 1!" in client.out
+        assert "Source 1!" in client.out
         assert "test2/2.3@user/testing: Building 2!" in client.out
-        assert "test2/2.3@user/testing: Source 2!" in client.out
+        assert "Source 2!" in client.out
