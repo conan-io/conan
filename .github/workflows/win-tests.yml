@@ -107,17 +107,26 @@ jobs:
         if: matrix.runner == 'windows-2022'
         run: dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
 
-      - name: Install Visual Studio 2017 Build Tools (SDK 8.1 + Windows 10 SDK)
+      - name: Install Visual Studio 2017 Build Tools
         run: |
           Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "vs_buildtools15.exe"
-          Start-Process -FilePath ".\vs_buildtools15.exe" -ArgumentList `
-            "--quiet", "--wait", "--norestart", "--nocache", `
-            "--add", "Microsoft.VisualStudio.Workload.VCTools", `
-            "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
-            "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
-            "--add", "Microsoft.Component.MSBuild", `
-            "--add", "Microsoft.VisualStudio.Component.Windows10SDK.17763", `
-            "--add", "Microsoft.VisualStudio.Component.VC.140" -WindowStyle Hidden -Wait
+
+          # Windows 2025 cannot install Windows 8.1 SDK component
+          if ("${{ matrix.runner }}" -like "*2025*") {
+            $sdkArgs = @("--add", "Microsoft.VisualStudio.Component.Windows10SDK.17763")
+          } else {
+            $sdkArgs = @("--add", "Microsoft.VisualStudio.Component.Windows81SDK", "--add", "Microsoft.VisualStudio.Component.Windows10SDK.17763")
+          }
+
+          $baseArgs = @(
+            "--passive", "--wait", "--norestart", "--nocache",
+            "--add", "Microsoft.VisualStudio.Workload.VCTools",
+            "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core",
+            "--add", "Microsoft.Component.MSBuild",
+            "--add", "Microsoft.VisualStudio.Component.VC.140"
+          )
+
+          Start-Process -FilePath ".\vs_buildtools15.exe" -ArgumentList ($baseArgs + $sdkArgs) -WindowStyle Hidden -Wait
 
       - name: Determine pip cache directory
         id: pip-cache-dir

@@ -35,7 +35,7 @@ runs:
         if: ${{ inputs.tests }}
         shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
         run: |
-          pytest ${{ inputs.tests }} --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov-context=test --cov=conan --cov=conans --cov=test --cov-report=' || '' }} ${{ github.head_ref != '' && '--junitxml=test-results.xml' || '' }}
+          pytest ${{ inputs.tests }} -x --durations=${{ inputs.duration }} -n ${{ inputs.workers }} ${{ github.ref == 'refs/heads/develop2' && '--cov-context=test --cov=conan --cov=conans --cov=test --cov-report=' || '' }} ${{ github.head_ref != '' && '--junitxml=test-results.xml' || '' }}
 
       - name: Rename coverage file
         if: github.ref == 'refs/heads/develop2'
