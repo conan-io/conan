@@ -212,16 +212,17 @@ class _CMakeContextGenerator:
 
     def __init__(self, cmakedeps, require, dep):
         self._cmakedeps = cmakedeps
-        self._conanfile = cmakedeps._conanfile
+        self._consumer_conanfile = cmakedeps._conanfile
         self._require = require
         self._dep = dep
         self._full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
         self._base_filename = cmakedeps.get_cmake_filename(dep)
         self._is_build_context = require.build
         # Prepared to filter transitive tool-requires with visible=True
-        self._transitive_reqs = get_transitive_requires(self._conanfile, dep)
+        self._transitive_reqs = get_transitive_requires(self._consumer_conanfile, dep)
 
-        build_type = dep.settings.get_safe("build_type", str(self._conanfile.settings.build_type))
+        build_type = dep.settings.get_safe(
+            "build_type", str(self._consumer_conanfile.settings.build_type))
         self._build_type = build_type
         self._config = build_type.upper() if build_type else None
         config_folder = f"_{self._config}" if self._config else ""
@@ -288,7 +289,8 @@ class _CMakeContextGenerator:
         # FIXME: Proper escaping of paths for CMake and relativization
         # FIXME: build_module_paths coming from last config only
         build_modules_paths = [p.replace("\\", "/") for p in build_modules_paths]
-        build_modules_paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+        build_modules_paths = [relativize_path(p, self._consumer_conanfile,
+                                               "${CMAKE_CURRENT_LIST_DIR}")
                                for p in build_modules_paths]
 
         context = {"filename": f,
@@ -309,7 +311,7 @@ class _CMakeContextGenerator:
         if not self._is_build_context:  # To add global variables for try_compile and legacy
             aggregated_cppinfo = self._full_cpp_info.aggregated_components()
             # FIXME: Proper escaping of paths for CMake
-            incdirs = [relativize_path(i.replace("\\", "/"), self._conanfile,
+            incdirs = [relativize_path(i.replace("\\", "/"), self._consumer_conanfile,
                                        "${CMAKE_CURRENT_LIST_DIR}")
                        for i in aggregated_cppinfo.includedirs]
             include_dirs = ";".join(incdirs)
@@ -352,7 +354,7 @@ class _CMakeContextGenerator:
         exes = self._get_exes()
         self._validate_lib_aliases(libs)
 
-        pkg_folder_rel = relativize_path(self._pkg_folder, self._conanfile,
+        pkg_folder_rel = relativize_path(self._pkg_folder, self._consumer_conanfile,
                                          "${CMAKE_CURRENT_LIST_DIR}")
         context = {"dependencies": dependencies,
                    "pkg_folder": pkg_folder_rel,
