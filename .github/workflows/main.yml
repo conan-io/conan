@@ -82,7 +82,6 @@ jobs:
           fi
 
   linux_suite:
-    if: false
     needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
     uses: ./.github/workflows/linux-tests.yml
     name: Linux test suite
@@ -92,7 +91,6 @@ jobs:
       run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
   osx_suite:
-    if: false
     needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
     uses: ./.github/workflows/osx-tests.yml
     name: OSX test suite

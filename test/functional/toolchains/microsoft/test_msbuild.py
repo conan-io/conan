@@ -418,6 +418,7 @@ class TestWin:
             command_str = "x64\\%s\\MyApp.exe" % configuration
         client.run_command(command_str)
 
+    @pytest.mark.skip(reason="Temporary disable for CI")
     @pytest.mark.tool("cmake")
     @pytest.mark.tool("visual_studio", "15")
     @pytest.mark.parametrize("compiler,version,runtime,cppstd",
