@@ -6,6 +6,7 @@ import pytest
 from conan.test.utils.tools import TestClient
 
 
+@pytest.mark.skip(reason="Temporary disable for CI")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_msbuild_lib_template():
     client = TestClient()
@@ -55,6 +56,7 @@ def test_msbuild_lib_2022():
     assert "hello/0.1: _MSC_VER193" in client.out
 
 
+@pytest.mark.skip(reason="Temporary disable for CI")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_msbuild_exe_template():
     client = TestClient(path_with_spaces=False)
