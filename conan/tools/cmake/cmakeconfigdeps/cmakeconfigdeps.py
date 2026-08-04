@@ -15,7 +15,7 @@ from conan.tools.cmake.cmakeconfigdeps.config import ConfigTemplate2
 from conan.tools.cmake.cmakeconfigdeps.config_version import ConfigVersionTemplate2
 from conan.tools.cmake.cmakeconfigdeps.target_configuration import TargetConfigurationTemplate2
 from conan.tools.cmake.cmakeconfigdeps.targets import TargetsTemplate2
-from conan.tools.cmake.utils import cmake_escape_value
+from conan.tools.cmake.utils import cmake_escape_value, parse_extra_variable
 from conan.tools.files import save
 from conan.internal.util.files import load
 
@@ -125,16 +125,17 @@ class CMakeConfigDeps:
             # Shared files (config, config-version, targets) have a context-independent
             # filename. When the same package is both requires and tool_requires, keep the
             # host-context version so legacy variables (<pkg>_LIBRARIES, ...) are preserved.
-            config_version = ConfigVersionTemplate2(
-                base_filename, dep.ref, self._get_config_version_properties(dep))
+            config_version_filename, config_version_context = self._get_config_version(
+                base_filename, dep)
+            config_version = ConfigVersionTemplate2(config_version_filename, config_version_context)
             ret[config_version.filename] = config_version.content()
-            config = ConfigTemplate2(
-                base_filename, dep.ref, self._conanfile, full_cpp_info,
-                self._get_config_properties(dep, full_cpp_info, require.build),
-                is_build_context=require.build)
-            if config.filename not in ret:
+            config_filename, config_context = self._get_config(
+                base_filename, dep, full_cpp_info, require.build)
+            if config_filename not in ret:
+                config = ConfigTemplate2(config_filename, config_context)
                 ret[config.filename] = config.content()
-            targets = TargetsTemplate2(base_filename, dep.ref)
+            targets_filename, targets_context = self._get_targets(base_filename, dep)
+            targets = TargetsTemplate2(targets_filename, targets_context)
             ret[targets.filename] = targets.content()
             target_filename, target_context = self._get_target_configuration(
                 base_filename, dep, full_cpp_info, require)
@@ -207,19 +208,34 @@ class CMakeConfigDeps:
         ret = self.get_property("cmake_file_name", dep)
         return ret or dep.ref.name
 
-    def _get_config_version_properties(self, dep):
-        return {
-            "cmake_config_version_compat": self.get_property("cmake_config_version_compat", dep),
-            "system_package_version": self.get_property("system_package_version", dep),
-        }
+    def _get_config_version(self, base_filename, dep):
+        """Build filename + Jinja context for ConfigVersionTemplate2."""
+        filename = (f"{base_filename}-config-version.cmake" if base_filename == base_filename.lower()
+                    else f"{base_filename}ConfigVersion.cmake")
+        policy = self.get_property("cmake_config_version_compat", dep)
+        if policy is None:
+            policy = "SameMajorVersion"
+        if policy not in ("AnyNewerVersion", "SameMajorVersion", "SameMinorVersion", "ExactVersion"):
+            raise ConanException(f"Unknown cmake_config_version_compat={policy} in {dep.ref}")
+        version = self.get_property("system_package_version", dep) or dep.ref.version
+        return filename, {"version": version, "policy": policy}
 
-    def _get_config_properties(self, dep, full_cpp_info, is_build_context):
+    def _get_config(self, base_filename, dep, full_cpp_info, is_build_context):
+        """Build filename + Jinja context for ConfigTemplate2."""
+        filename = (f"{base_filename}-config.cmake" if base_filename == base_filename.lower()
+                    else f"{base_filename}Config.cmake")
+
         conf_extra_variables = dep.conf.get("tools.cmake.cmaketoolchain:extra_variables", default={},
                                             check_type=dict)
         dep_extra_variables = self.get_property("cmake_extra_variables", dep, check_type=dict) or {}
-        # The configuration variables have precedence over the dependency ones (those already appear on the toolchain files)
-        cmake_extra_variables = {dep: value for dep, value in dep_extra_variables.items() if
-                                 dep not in conf_extra_variables}
+        # The configuration variables have precedence over the dependency ones
+        # (those already appear on the toolchain files)
+        cmake_extra_variables = {k: v for k, v in dep_extra_variables.items()
+                                 if k not in conf_extra_variables}
+        parsed_extra_variables = {}
+        for key, value in cmake_extra_variables.items():
+            parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables", key, value)
+
         cmake_components = self.get_property("cmake_components", dep, check_type=list)
         if cmake_components is None:
             cmake_components = []
@@ -235,27 +251,56 @@ class CMakeConfigDeps:
                     if cmakename and "::" in cmakename:  # Remove package namespace
                         cmakename = cmakename.split("::", 1)[1]
                     cmake_components.append(cmakename or name)
-        result = {
-            "cmake_build_modules": self.get_property("cmake_build_modules", dep,
-                                                     check_type=list) or [],
-            "cmake_extra_variables": cmake_extra_variables,
-            "cmake_additional_variables_prefixes": self.get_property(
-                "cmake_additional_variables_prefixes", dep, check_type=list) or [],
-            "cmake_components": cmake_components,
-        }
-        if not is_build_context:
+        components = " ".join(cmake_components) if cmake_components else ""
+
+        build_modules_paths = self.get_property("cmake_build_modules", dep, check_type=list) or []
+        # FIXME: Proper escaping of paths for CMake and relativization
+        # FIXME: build_module_paths coming from last config only
+        build_modules_paths = [p.replace("\\", "/") for p in build_modules_paths]
+        build_modules_paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
+                               for p in build_modules_paths]
+
+        prefixes = self.get_property("cmake_additional_variables_prefixes", dep,
+                                     check_type=list) or []
+        prefixes = [base_filename] + prefixes
+
+        include_dirs = definitions = libraries = None
+        if not is_build_context:  # To add global variables for try_compile and legacy
+            aggregated_cppinfo = full_cpp_info.aggregated_components()
+            # FIXME: Proper escaping of paths for CMake
+            incdirs = [relativize_path(i.replace("\\", "/"), self._conanfile,
+                                       "${CMAKE_CURRENT_LIST_DIR}")
+                       for i in aggregated_cppinfo.includedirs]
+            include_dirs = ";".join(incdirs)
+            definitions = ";".join("-D" + cmake_escape_value(d) for d in aggregated_cppinfo.defines)
             pkg_name = dep.ref.name
-            libraries = []
+            libs = []
             if full_cpp_info.has_components:
                 for component in full_cpp_info.components.keys():
                     root_target_name = self.get_property("cmake_target_name", dep,
-                                                           comp_name=component)
-                    libraries.append(root_target_name or f"{pkg_name}::{component}")
+                                                         comp_name=component)
+                    libs.append(root_target_name or f"{pkg_name}::{component}")
             else:
                 root_target_name = self.get_property("cmake_target_name", dep)
-                libraries.append(root_target_name or f"{pkg_name}::{pkg_name}")
-            result["cmake_legacy_libraries"] = " ".join(libraries) if libraries else ""
-        return result
+                libs.append(root_target_name or f"{pkg_name}::{pkg_name}")
+            libraries = " ".join(libs) if libs else ""
+
+        context = {"filename": base_filename,
+                   "components": components,
+                   "pkg_name": dep.ref.name,
+                   "targets_include_file": f"{base_filename}Targets.cmake",
+                   "build_modules_paths": build_modules_paths,
+                   "extra_variables": parsed_extra_variables,
+                   "additional_variables_prefixes": prefixes,
+                   "version": dep.ref.version,
+                   "include_dirs": include_dirs,
+                   "definitions": definitions,
+                   "libraries": libraries}
+        return filename, context
+
+    def _get_targets(self, base_filename, dep):
+        """Build filename + Jinja context for TargetsTemplate2."""
+        return f"{base_filename}Targets.cmake", {"filename": base_filename, "ref": str(dep.ref)}
 
     def _get_target_configuration(self, base_filename, dep, full_cpp_info, require):
         """Build filename + Jinja context for TargetConfigurationTemplate2."""
