@@ -124,19 +124,19 @@ class CMakeConfigDeps:
             # filename. When the same package is both requires and tool_requires, keep the
             # host-context version so legacy variables (<pkg>_LIBRARIES, ...) are preserved.
             context_gen = _CMakeContextGenerator(self, require, dep)
-            config_version_filename, config_version_context = context_gen.get_config_version()
+            config_version_filename, config_version_context = context_gen.get_config_version_info()
             if config_version_filename not in ret:
                 config_version = ConfigVersionTemplate2(config_version_filename, config_version_context)
                 ret[config_version.filename] = config_version.content()
-            config_filename, config_context = context_gen.get_config()
+            config_filename, config_context = context_gen.get_config_info()
             if config_filename not in ret:
                 config = ConfigTemplate2(config_filename, config_context)
                 ret[config.filename] = config.content()
-            targets_filename, targets_context = context_gen.get_targets()
+            targets_filename, targets_context = context_gen.get_targets_info()
             if targets_filename not in ret:
                 targets = TargetsTemplate2(targets_filename, targets_context)
                 ret[targets.filename] = targets.content()
-            target_filename, target_context = context_gen.get_target_configuration()
+            target_filename, target_context = context_gen.get_target_configuration_info()
             target_configuration = TargetConfigurationTemplate2(target_filename, target_context)
             ret[target_configuration.filename] = target_configuration.content()
 
@@ -238,7 +238,7 @@ class _CMakeContextGenerator:
             return self._base_filename
         return self._cmakedeps.get_cmake_filename(dep)
 
-    def get_config_version(self):
+    def get_config_version_info(self):
         """Build filename + Jinja context for ConfigVersionTemplate2."""
         f = self._base_filename
         filename = f"{f}-config-version.cmake" if f == f.lower() else f"{f}ConfigVersion.cmake"
@@ -250,7 +250,7 @@ class _CMakeContextGenerator:
         version = self.get_property("system_package_version") or self._dep.ref.version
         return filename, {"version": version, "policy": policy}
 
-    def get_config(self):
+    def get_config_info(self):
         """Build filename + Jinja context for ConfigTemplate2."""
         f = self._base_filename
         filename = f"{f}-config.cmake" if f == f.lower() else f"{f}Config.cmake"
@@ -334,12 +334,12 @@ class _CMakeContextGenerator:
                 "definitions": definitions,
                 "libraries": libraries}
 
-    def get_targets(self):
+    def get_targets_info(self):
         """Build filename + Jinja context for TargetsTemplate2."""
         f = self._base_filename
         return f"{f}Targets.cmake", {"filename": f, "ref": str(self._dep.ref)}
 
-    def get_target_configuration(self):
+    def get_target_configuration_info(self):
         """Build filename + Jinja context for TargetConfigurationTemplate2."""
         assert isinstance(self._full_cpp_info.type, PackageType)
 
