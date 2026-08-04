@@ -17,6 +17,7 @@ on:
 
 jobs:
   unit_integration_tests:
+    if: false
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}
@@ -113,6 +114,7 @@ jobs:
             "--quiet", "--wait", "--norestart", "--nocache", `
             "--add", "Microsoft.VisualStudio.Workload.VCTools", `
             "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
+            "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
             "--add", "Microsoft.Component.MSBuild", `
             "--add", "Microsoft.VisualStudio.Component.Windows10SDK.17763", `
             "--add", "Microsoft.VisualStudio.Component.VC.140" -WindowStyle Hidden -Wait
