@@ -972,6 +972,11 @@ class CompilersBlock(Block):
         compilers_mapping = {"c": "C", "cuda": "CUDA", "cpp": "CXX", "objc": "OBJC",
                              "objcpp": "OBJCXX", "rc": "RC", 'fortran': "Fortran", 'asm': "ASM",
                              "hip": "HIP", "ispc": "ISPC"}
+        unknown = [k for k in compilers_by_conf if k not in compilers_mapping]
+        if unknown:
+            self._conanfile.output.warning(
+                f"tools.build:compiler_executables: ignoring unknown key(s) {sorted(unknown)}, "
+                f"expected one of {sorted(compilers_mapping)}", warn_tag="risk")
         for comp, lang in compilers_mapping.items():
             # To set CMAKE_<LANG>_COMPILER
             if comp in compilers_by_conf:

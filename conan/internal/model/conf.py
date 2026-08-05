@@ -43,7 +43,9 @@ BUILT_IN_CONFS = {
     "core.download:parallel": "Number of concurrent threads to download packages",
     "core.download:retry": " (int, default: 2) Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "(int, default: 1s) Seconds to wait between download attempts from Conan server",
-    "core.download:download_cache": "Define path to a file download cache",
+    "core.download:download_cache": "Define path to a file download cache. Files uploaded to a "
+                                    "server are also stored here, so a later download of the same "
+                                    "artifact can be skipped",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
     "core:policies": policies_msg,
