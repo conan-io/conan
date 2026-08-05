@@ -6,6 +6,7 @@ from conan.internal.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIP
                                         RECIPE_NOT_IN_REMOTE, RECIPE_UPDATED, RECIPE_EDITABLE,
                                         RECIPE_INCACHE_DATE_UPDATED, RECIPE_UPDATEABLE)
 from conan.internal.errors import NotFoundException, ConanReferenceAlreadyExistsInDB
+from conan.internal.paths import CONAN_METADATA_SUBFOLDER
 from conan.errors import ConanException
 
 
@@ -95,6 +96,12 @@ class ConanProxy:
                 # If your recipe in cache is newer it does not make sense to return a remote?
                 remote = None
         else:
+            # Same revision on server: conan-private metadata can still change (re-upload
+            # of that subfolder does not bump the server timestamp). Under --update,
+            # re-fetch it so consumers get the latest.
+            if should_update_reference(remote_ref, update):
+                self._remote_manager.get_recipe_metadata(recipe_layout, remote_ref, remote,
+                                                         [f"{CONAN_METADATA_SUBFOLDER}/*"])
             # TODO: cache2.0 we are returning RECIPE_UPDATED just because we are updating
             #  the date
             if cache_time >= remote_ref.timestamp:

@@ -319,11 +319,6 @@ class ConanFile:
         return self.folders.recipe_metadata_folder
 
     @property
-    def recipe_metadata_conan_folder(self):
-        from conan.internal.paths import CONAN_METADATA_SUBFOLDER
-        return os.path.join(self.folders.recipe_metadata_folder, CONAN_METADATA_SUBFOLDER)
-
-    @property
     def package_metadata_folder(self):
         return self.folders.package_metadata_folder
 
