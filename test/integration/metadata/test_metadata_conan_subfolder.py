@@ -108,12 +108,6 @@ class TestConanMetadataSubfolder:
         assert load(os.path.join(metadata_path3, CONAN_METADATA_SUBFOLDER, "generated.h")) == "// v2"
 
     def test_update_refreshes_conan_metadata(self):
-        """install --update refreshes metadata/.conan/ even when the recipe revision is unchanged.
-
-        The client updates the private metadata directly in the cache folder (no recipe
-        hook involved) and re-uploads. A second client that already has the recipe cached
-        must pick up the new content only after ``--update``.
-        """
         c = TestClient(default_server_user=True, light=True)
         c.save({"conanfile.py": GenConanfile("mylib", "0.1")})
         c.run("create .")
@@ -138,4 +132,10 @@ class TestConanMetadataSubfolder:
 
         # With --update: c2 gets the refreshed t2 from the server
         c2.run("install --requires=mylib/0.1 --update")
+        assert load(os.path.join(metadata_path2, CONAN_METADATA_SUBFOLDER, "time.txt")) == "t1"
+
+        # A fresh download will get the new metadata.
+        # If the recipe doesn't update, the metadata doesn't update
+        c2.run("remove * -c")
+        c2.run("install --requires=mylib/0.1")
         assert load(os.path.join(metadata_path2, CONAN_METADATA_SUBFOLDER, "time.txt")) == "t2"

@@ -63,7 +63,7 @@ class RemoteManager:
         export_folder = layout.export()
         local_folder_remote = self._local_folder_remote(remote)
         if local_folder_remote is not None:
-            local_folder_remote.get_recipe(ref, export_folder, None, None)
+            local_folder_remote.get_recipe(ref, export_folder)
         else:
             self._download_recipe(layout, ref, remote, metadata)
         # Make sure that the source dir is deleted, but it seems unnecessary

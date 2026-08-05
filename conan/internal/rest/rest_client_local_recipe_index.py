@@ -72,7 +72,7 @@ class RestApiClientLocalRecipesIndex:
     def call_method(self, method_name, *args, **kwargs):
         return getattr(self, method_name)(*args, **kwargs)
 
-    def get_recipe(self, ref, dest_folder, metadata, only_metadata):  # noqa, unused, align interface
+    def get_recipe(self, ref, dest_folder):
         export_folder = self._app.cache.recipe_layout(ref).export()
         return self._copy_files(export_folder, dest_folder)
 
