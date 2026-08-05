@@ -2,84 +2,26 @@ import textwrap
 
 import jinja2
 from jinja2 import Template
-from conan.tools.cmake.utils import parse_extra_variable, cmake_escape_value
-from conan.internal.api.install.generators import relativize_path
 
 
 class ConfigTemplate2:
     """
-    FooConfig.cmake
-    foo-config.cmake
+    FooConfig.cmake / foo-config.cmake
+
+    Thin Jinja renderer. Filename and context are built by CMakeConfigDeps.
     """
-    def __init__(self, filename, reference, consumer_conanfile, full_cpp_info,
-                 cmake_config_properties, is_build_context=False):
+    def __init__(self, filename, context):
         self._filename = filename
-        self._reference = reference
-        self._consumer_conanfile = consumer_conanfile
-        self._full_cpp_info = full_cpp_info
-        self._cmake_config_properties = cmake_config_properties
-        self._is_build_context = is_build_context
+        self._context = context
+
+    @property
+    def filename(self):
+        return self._filename
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
         return t.render(self._context)
-
-    @property
-    def filename(self):
-        f = self._filename
-        return f"{f}-config.cmake" if f == f.lower() else f"{f}Config.cmake"
-
-    @property
-    def _context(self):
-        f = self._filename
-        targets_include = f"{f}Targets.cmake"
-        build_modules_paths = self._cmake_config_properties.get("cmake_build_modules", [])
-        # FIXME: Proper escaping of paths for CMake and relativization
-        # FIXME: build_module_paths coming from last config only
-        build_modules_paths = [f.replace("\\", "/") for f in build_modules_paths]
-        build_modules_paths = [relativize_path(p, self._consumer_conanfile,
-                                               "${CMAKE_CURRENT_LIST_DIR}")
-                               for p in build_modules_paths]
-        components = self._cmake_config_properties.get("cmake_components", [])
-        components = " ".join(components) if components else ""
-
-        result = {"filename": f,
-                  "components": components,
-                  "pkg_name": self._reference.name,
-                  "targets_include_file": targets_include,
-                  "build_modules_paths": build_modules_paths}
-
-        dep_extra_variables = self._cmake_config_properties.get("cmake_extra_variables", {})
-        parsed_extra_variables = {}
-        for key, value in dep_extra_variables.items():
-            parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",
-                                                               key, value)
-        result["extra_variables"] = parsed_extra_variables
-
-        result.update(self._get_legacy_vars())
-        return result
-
-    def _get_legacy_vars(self):
-        # Auxiliary variables for legacy consumption and try_compile cases
-        prefixes = self._cmake_config_properties.get("cmake_additional_variables_prefixes", [])
-        f = self._filename
-        prefixes = [f] + prefixes
-        include_dirs = definitions = libraries = None
-        if not self._is_build_context:  # To add global variables for try_compile and legacy
-            aggregated_cppinfo = self._full_cpp_info.aggregated_components()
-            # FIXME: Proper escaping of paths for CMake
-            incdirs = [relativize_path(i.replace("\\", "/"), self._consumer_conanfile,
-                                       "${CMAKE_CURRENT_LIST_DIR}")
-                       for i in aggregated_cppinfo.includedirs]
-            include_dirs = ";".join(incdirs)
-            definitions = ";".join("-D" + cmake_escape_value(d) for d in aggregated_cppinfo.defines)
-            libraries = self._cmake_config_properties.get("cmake_legacy_libraries", "")
-        return {"additional_variables_prefixes": prefixes,
-                "version": self._reference.version,
-                "include_dirs": include_dirs,
-                "definitions": definitions,
-                "libraries": libraries}
 
     @property
     def _template(self):
