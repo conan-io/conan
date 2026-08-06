@@ -26,6 +26,8 @@ def client():
     def package_info(self):
         self.buildenv_info.define_path("MYPATH1", "c:/path/to/ar")
         self.runenv_info.define("MYVAR1", 'some nice content\" with quotes')
+
+        self.runenv_info.append("EMPTYLIST", [])
     """
     client.save({"conanfile.py": conanfile})
     client.run("create .")
@@ -251,3 +253,23 @@ def test_powershell_deactivation():
     assert "conanbuild.ps1" not in files
     assert "conanrunenv.ps1" not in files
     assert "conanbuildenv.ps1" not in files
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
+@pytest.mark.parametrize("powershell", ["pwsh", "powershell.exe"])
+def test_pwsh_support_empty_variables(client, powershell):
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        class ConanFileToolsTest(ConanFile):
+            name = "app"
+            version = "0.1"
+            requires = "pkg/0.1"
+            def build(self):
+                self.run("set", env="conanrun")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run(f'create . -c tools.env.virtualenv:powershell={powershell}')
+    print(client.out)
+    assert 'MYVAR1' in client.out
+    # powershell does not define this variable, but pwsh does
+    assert 'EMPTYLIST' in client.out
