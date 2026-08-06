@@ -468,6 +468,13 @@ class AppleSystemBlock(Block):
         # Setting CMAKE_OSX_DEPLOYMENT_TARGET if "os.version" is defined by the used conan profile
         set(CMAKE_OSX_DEPLOYMENT_TARGET "{{ cmake_osx_deployment_target }}" CACHE STRING "")
         {% endif %}
+        {% if swift_target is defined %}
+        # Swift does not derive its target triple from CMAKE_OSX_SYSROOT/CMAKE_OSX_ARCHITECTURES
+        # the way Clang does, so it is set explicitly. Only a default, any user value wins
+        if(NOT DEFINED CMAKE_Swift_COMPILER_TARGET)
+            set(CMAKE_Swift_COMPILER_TARGET "{{ swift_target }}")
+        endif()
+        {% endif %}
         set(BITCODE "")
         set(FOBJC_ARC "")
         set(VISIBILITY "")
@@ -563,19 +570,11 @@ class AppleSystemBlock(Block):
             # macOS like iOS, tvOS, watchOS or visionOS.
             ctxt_toolchain["cmake_osx_deployment_target"] = host_os_version
 
-        return ctxt_toolchain
-
-
-class AppleSwiftBlock(Block):
-    template = textwrap.dedent("""\
-        if(NOT DEFINED CMAKE_Swift_COMPILER_TARGET)
-            set(CMAKE_Swift_COMPILER_TARGET "{{ swift_target }}")
-        endif()
-        """)
-
-    def context(self):
         swift_target = _apple_swift_target_triple(self._conanfile)
-        return {"swift_target": swift_target} if swift_target else None
+        if swift_target:
+            ctxt_toolchain["swift_target"] = swift_target
+
+        return ctxt_toolchain
 
 
 class FindFiles(Block):

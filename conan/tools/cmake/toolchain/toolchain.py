@@ -11,8 +11,7 @@ from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import (ExtraVariablesBlock, ToolchainBlocks,
                                                 UserToolchain, GenericSystemBlock,
-                                                AndroidSystemBlock, AppleSystemBlock,
-                                                AppleSwiftBlock, FPicBlock,
+                                                AndroidSystemBlock, AppleSystemBlock, FPicBlock,
                                                 ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock,
                                                 CppStdBlock, ParallelBlock, CMakeFlagsInitBlock,
                                                 TryCompileBlock, FindFiles, PkgConfigBlock,
@@ -107,7 +106,6 @@ class CMakeToolchain:
                                        ("compilers", CompilersBlock),
                                        ("android_system", AndroidSystemBlock),
                                        ("apple_system", AppleSystemBlock),
-                                       ("apple_swift", AppleSwiftBlock),
                                        ("fpic", FPicBlock),
                                        ("arch_flags", ArchitectureBlock),
                                        ("linker_scripts", LinkerScriptsBlock),
