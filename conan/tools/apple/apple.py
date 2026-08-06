@@ -1,7 +1,7 @@
 import os
 from io import StringIO
 
-from conan.internal.internal_tools import universal_arch_separator, is_universal_arch
+from conan.internal.internal_tools import universal_arch_separator
 from conan.internal.util.runners import check_output_runner
 from conan.tools.build import cmd_args_to_string
 from conan.errors import ConanException
@@ -88,44 +88,30 @@ def apple_min_version_flag(conanfile):
 
 def _apple_swift_target_triple(conanfile):
     """
-    Computes the Swift compiler target triple (``-target``, aka
-    ``CMAKE_Swift_COMPILER_TARGET`` in CMake) for the current settings.
+    Swift compiler target triple, e.g. ``arm64-apple-ios17.0-simulator``.
 
-    Unlike Clang, ``swiftc`` does not derive its target from the combination of
-    ``CMAKE_OSX_SYSROOT``/``CMAKE_OSX_ARCHITECTURES``, so this mirrors
-    ``apple_min_version_flag()`` but produces a target triple
-    (e.g. ``arm64-apple-ios17.0-simulator``, ``x86_64-apple-macosx13.1``,
-    ``arm64-apple-ios17.0-macabi`` for Mac Catalyst).
-
-    Returns None when no single triple can represent the settings, notably for
-    universal binaries: a triple encodes exactly one architecture, while CMake
-    models universal builds as a list in CMAKE_OSX_ARCHITECTURES. Those are left
-    to the Xcode generator, which handles multi-arch Swift natively.
+    Unlike Clang, ``swiftc`` does not derive its target from the SDK and the
+    architecture, so it has to be computed explicitly. Returns None when the
+    settings cannot produce a single triple (non-Apple OS, no version, or
+    universal binaries, which span several architectures).
     """
     if not is_apple_os(conanfile):
         return None
-
-    if is_universal_arch(conanfile.settings.get_safe("arch"),
-                         conanfile.settings.possible_values().get("arch")):
-        return None
-
-    arch = to_apple_arch(conanfile)
+    arch = to_apple_arch(conanfile)  # None for universal binaries
     if not arch:
         return None
 
     if conanfile.settings.get_safe("os.subsystem") == "catalyst":
-        # Mac Catalyst has no relevant "os.version" of its own: the iOS
-        # compatibility version it targets is tracked in os.subsystem.ios_version.
+        # Catalyst tracks the iOS version it is compatible with, not os.version
         ios_version = conanfile.settings.get_safe("os.subsystem.ios_version")
         return f"{arch}-apple-ios{ios_version}-macabi" if ios_version else None
 
     os_version = conanfile.settings.get_safe("os.version")
     if not os_version:
         return None
-
     os_sdk = conanfile.settings.get_safe("os.sdk") or \
         ("macosx" if conanfile.settings.get_safe("os") == "Macos" else None)
-    os_component, is_simulator = {
+    triple_os, simulator = {
         "macosx": ("macosx", False),
         "iphoneos": ("ios", False),
         "iphonesimulator": ("ios", True),
@@ -136,11 +122,9 @@ def _apple_swift_target_triple(conanfile):
         "xros": ("xros", False),
         "xrsimulator": ("xros", True),
     }.get(os_sdk, (None, False))
-    if not os_component:
+    if not triple_os:
         return None
-
-    triple = f"{arch}-apple-{os_component}{os_version}"
-    return f"{triple}-simulator" if is_simulator else triple
+    return f"{arch}-apple-{triple_os}{os_version}" + ("-simulator" if simulator else "")
 
 
 def resolve_apple_flags(conanfile, is_cross_building=False, is_universal=False):

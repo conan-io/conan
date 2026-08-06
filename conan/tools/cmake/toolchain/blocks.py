@@ -567,26 +567,17 @@ class AppleSystemBlock(Block):
 
 
 class AppleSwiftBlock(Block):
-    # swiftc does not derive its target triple from CMAKE_OSX_SYSROOT/CMAKE_OSX_ARCHITECTURES
-    # the way Clang does, so it needs to be set explicitly. This is only a default: it is
-    # guarded by NOT DEFINED so a value coming from the command line, a user_toolchain or an
-    # earlier included toolchain wins, and it is placed before the "extra_variables" block so
-    # a CMAKE_Swift_COMPILER_TARGET set there overrides it too.
     template = textwrap.dedent("""\
-        # Setting CMAKE_Swift_COMPILER_TARGET, as the Swift compiler does not
-        # derive its target triple from CMAKE_OSX_SYSROOT/CMAKE_OSX_ARCHITECTURES
-        {% if swift_target %}
+        # Swift does not derive its target triple from CMAKE_OSX_SYSROOT/CMAKE_OSX_ARCHITECTURES
+        # the way Clang does, so it is set explicitly. Only a default, any user value wins
         if(NOT DEFINED CMAKE_Swift_COMPILER_TARGET)
             set(CMAKE_Swift_COMPILER_TARGET "{{ swift_target }}")
         endif()
-        {% endif %}
         """)
 
     def context(self):
         swift_target = _apple_swift_target_triple(self._conanfile)
-        if not swift_target:
-            return None
-        return {"swift_target": swift_target}
+        return {"swift_target": swift_target} if swift_target else None
 
 
 class FindFiles(Block):
