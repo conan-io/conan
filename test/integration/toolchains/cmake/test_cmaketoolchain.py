@@ -1980,3 +1980,86 @@ def test_thread_flags(threads, flags):
     assert f'string(APPEND CONAN_C_FLAGS " {flags}")' in toolchain
     assert f'string(APPEND CONAN_SHARED_LINKER_FLAGS " {flags}")' in toolchain
     assert f'string(APPEND CONAN_EXE_LINKER_FLAGS " {flags}")' in toolchain
+
+
+@pytest.mark.parametrize("settings, expected", [
+    # macOS
+    ("-s os=Macos -s os.version=13.1 -s arch=armv8", "arm64-apple-macosx13.1"),
+    ("-s os=Macos -s os.version=13.1 -s arch=x86_64", "x86_64-apple-macosx13.1"),
+    # iOS device / simulator
+    ("-s os=iOS -s os.sdk=iphoneos -s os.version=17.0 -s arch=armv8",
+     "arm64-apple-ios17.0"),
+    ("-s os=iOS -s os.sdk=iphonesimulator -s os.version=17.0 -s arch=armv8",
+     "arm64-apple-ios17.0-simulator"),
+    ("-s os=iOS -s os.sdk=iphonesimulator -s os.version=17.0 -s arch=x86_64",
+     "x86_64-apple-ios17.0-simulator"),
+    # Mac Catalyst: the iOS compatibility version lives in os.subsystem.ios_version
+    ("-s os=Macos -s os.version=13.1 -s os.subsystem=catalyst "
+     "-s os.subsystem.ios_version=16.0 -s arch=armv8", "arm64-apple-ios16.0-macabi"),
+    # watchOS / tvOS / visionOS
+    ("-s os=watchOS -s os.sdk=watchos -s os.version=10.0 -s arch=armv8",
+     "arm64-apple-watchos10.0"),
+    ("-s os=watchOS -s os.sdk=watchsimulator -s os.version=10.0 -s arch=armv8",
+     "arm64-apple-watchos10.0-simulator"),
+    ("-s os=tvOS -s os.sdk=appletvos -s os.version=17.0 -s arch=armv8",
+     "arm64-apple-tvos17.0"),
+    ("-s os=tvOS -s os.sdk=appletvsimulator -s os.version=17.0 -s arch=armv8",
+     "arm64-apple-tvos17.0-simulator"),
+    ("-s os=visionOS -s os.sdk=xros -s os.version=1.0 -s arch=armv8",
+     "arm64-apple-xros1.0"),
+    ("-s os=visionOS -s os.sdk=xrsimulator -s os.version=1.0 -s arch=armv8",
+     "arm64-apple-xros1.0-simulator"),
+])
+def test_cmaketoolchain_swift_compiler_target(settings, expected):
+    """
+    The Swift compiler does not derive its target triple from
+    CMAKE_OSX_SYSROOT/CMAKE_OSX_ARCHITECTURES the way Clang does, so CMakeToolchain
+    has to compute CMAKE_Swift_COMPILER_TARGET explicitly.
+    https://github.com/conan-io/conan/issues/18466
+    """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("hello", "1.0")
+                .with_settings("os", "arch", "compiler", "build_type")})
+    client.run(f"install . {settings} -s compiler=apple-clang -s compiler.version=15 "
+               f"-s compiler.libcxx=libc++ -s build_type=Release -g CMakeToolchain")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert f'set(CMAKE_Swift_COMPILER_TARGET "{expected}")' in toolchain
+    # it is only a default: an externally defined value must win
+    assert "if(NOT DEFINED CMAKE_Swift_COMPILER_TARGET)" in toolchain
+
+
+@pytest.mark.parametrize("settings", [
+    # non-Apple OS
+    "-s os=Linux -s arch=x86_64 -s compiler=gcc -s compiler.version=11 "
+    "-s compiler.libcxx=libstdc++11",
+    # Apple, but no os.version to build the triple with
+    "-s os=Macos -s arch=armv8 -s compiler=apple-clang -s compiler.version=15 "
+    "-s compiler.libcxx=libc++",
+    # universal binary: a triple encodes a single arch, CMake models this as a list
+    '-s os=Macos -s os.version=13.1 -s arch="armv8|x86_64" -s compiler=apple-clang '
+    '-s compiler.version=15 -s compiler.libcxx=libc++',
+])
+def test_cmaketoolchain_swift_compiler_target_not_set(settings):
+    """No single target triple can represent these, so the block must stay silent"""
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("hello", "1.0")
+                .with_settings("os", "arch", "compiler", "build_type")})
+    client.run(f"install . {settings} -s build_type=Release -g CMakeToolchain")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "CMAKE_Swift_COMPILER_TARGET" not in toolchain
+
+
+def test_cmaketoolchain_swift_compiler_target_user_override():
+    """extra_variables is rendered after the apple_swift block, so the user value wins"""
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("hello", "1.0")
+                .with_settings("os", "arch", "compiler", "build_type")})
+    client.run('install . -s os=iOS -s os.sdk=iphoneos -s os.version=17.0 -s arch=armv8 '
+               '-s compiler=apple-clang -s compiler.version=15 -s compiler.libcxx=libc++ '
+               '-s build_type=Release -g CMakeToolchain '
+               '-c tools.cmake.cmaketoolchain:extra_variables='
+               '\'{"CMAKE_Swift_COMPILER_TARGET": "arm64-apple-ios99.0"}\'')
+    toolchain = client.load("conan_toolchain.cmake")
+    auto = toolchain.index('set(CMAKE_Swift_COMPILER_TARGET "arm64-apple-ios17.0")')
+    user = toolchain.index('set(CMAKE_Swift_COMPILER_TARGET "arm64-apple-ios99.0")')
+    assert auto < user, "the user-provided value must be rendered last so that it wins"

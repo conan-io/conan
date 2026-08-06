@@ -7,7 +7,7 @@ from jinja2 import Template
 from conan.internal.internal_tools import universal_arch_separator, is_universal_arch
 from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
 from conan.tools.android.utils import android_abi
-from conan.tools.apple.apple import is_apple_os, to_apple_arch
+from conan.tools.apple.apple import is_apple_os, to_apple_arch, _apple_swift_target_triple
 from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
@@ -564,6 +564,29 @@ class AppleSystemBlock(Block):
             ctxt_toolchain["cmake_osx_deployment_target"] = host_os_version
 
         return ctxt_toolchain
+
+
+class AppleSwiftBlock(Block):
+    # swiftc does not derive its target triple from CMAKE_OSX_SYSROOT/CMAKE_OSX_ARCHITECTURES
+    # the way Clang does, so it needs to be set explicitly. This is only a default: it is
+    # guarded by NOT DEFINED so a value coming from the command line, a user_toolchain or an
+    # earlier included toolchain wins, and it is placed before the "extra_variables" block so
+    # a CMAKE_Swift_COMPILER_TARGET set there overrides it too.
+    template = textwrap.dedent("""\
+        # Setting CMAKE_Swift_COMPILER_TARGET, as the Swift compiler does not
+        # derive its target triple from CMAKE_OSX_SYSROOT/CMAKE_OSX_ARCHITECTURES
+        {% if swift_target %}
+        if(NOT DEFINED CMAKE_Swift_COMPILER_TARGET)
+            set(CMAKE_Swift_COMPILER_TARGET "{{ swift_target }}")
+        endif()
+        {% endif %}
+        """)
+
+    def context(self):
+        swift_target = _apple_swift_target_triple(self._conanfile)
+        if not swift_target:
+            return None
+        return {"swift_target": swift_target}
 
 
 class FindFiles(Block):
