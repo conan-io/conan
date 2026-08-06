@@ -125,8 +125,8 @@ jobs:
       - name: Install covtest
         if: github.event_name == 'pull_request'
         run: |
-          git clone https://x-access-token:${{ secrets.COVTEST_READ_TOKEN }}@github.com/conan-io/covtest.git ./covtest_repo || true
-          pip install ./covtest_repo || true
+          git clone https://x-access-token:${{ secrets.COVTEST_READ_TOKEN }}@github.com/conan-io/covtest.git ./covtest_repo || echo "::warning title=Git Clone Failed::Could not clone covtest repo."
+          pip install ./covtest_repo || echo "::warning title=Pip Install Failed::Could not install covtest repo."
           rm -rf ./covtest_repo || true
 
       - name: Run covtest predict
@@ -137,7 +137,7 @@ jobs:
           COVTEST_TOKEN: ${{ secrets.COVTEST_SERVER_TOKEN }}
         run: |
           mkdir -p .covtest
-          covtest predict || true
+          covtest predict || echo "::warning title=covtest predict Failed::Could not run covtest predict."
           touch .covtest/covtests.tests
 
       - uses: actions/upload-artifact@v4
