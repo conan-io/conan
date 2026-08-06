@@ -568,8 +568,6 @@ class AppleSystemBlock(Block):
 
 class AppleSwiftBlock(Block):
     template = textwrap.dedent("""\
-        # Swift does not derive its target triple from CMAKE_OSX_SYSROOT/CMAKE_OSX_ARCHITECTURES
-        # the way Clang does, so it is set explicitly. Only a default, any user value wins
         if(NOT DEFINED CMAKE_Swift_COMPILER_TARGET)
             set(CMAKE_Swift_COMPILER_TARGET "{{ swift_target }}")
         endif()

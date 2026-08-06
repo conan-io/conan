@@ -91,9 +91,7 @@ def _apple_swift_target_triple(conanfile):
     Swift compiler target triple, e.g. ``arm64-apple-ios17.0-simulator``.
 
     Unlike Clang, ``swiftc`` does not derive its target from the SDK and the
-    architecture, so it has to be computed explicitly. Returns None when the
-    settings cannot produce a single triple (non-Apple OS, no version, or
-    universal binaries, which span several architectures).
+    architecture, so it has to be computed explicitly.
     """
     if not is_apple_os(conanfile):
         return None
@@ -102,7 +100,6 @@ def _apple_swift_target_triple(conanfile):
         return None
 
     if conanfile.settings.get_safe("os.subsystem") == "catalyst":
-        # Catalyst tracks the iOS version it is compatible with, not os.version
         ios_version = conanfile.settings.get_safe("os.subsystem.ios_version")
         return f"{arch}-apple-ios{ios_version}-macabi" if ios_version else None
 
