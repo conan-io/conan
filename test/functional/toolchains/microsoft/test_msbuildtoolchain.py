@@ -32,7 +32,7 @@ def test_msbuildtoolchain_props_with_extra_flags():
     #  conantoolchain.props is already imported in the msbuild_exe tempalte
     client.run("create . -pr myprofile -tf=")
     assert "/analyze:quiet /doc src/hello.cpp" in client.out
-    assert r"/VERBOSE:UNUSEDLIBS /PDB:mypdbfile x64\Release\hello.obj" in client.out
+    assert r"/VERBOSE:UNUSEDLIBS /PDB:mypdbfile hello\x64\Release\hello.obj" in client.out
     assert "/D DEF1 /D DEF2" in client.out
     assert "Build succeeded." in client.out
 
