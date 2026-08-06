@@ -1982,66 +1982,52 @@ def test_thread_flags(threads, flags):
     assert f'string(APPEND CONAN_EXE_LINKER_FLAGS " {flags}")' in toolchain
 
 
-def _swift_toolchain(settings):
-    """ conan_toolchain.cmake for an Apple profile, ``settings`` completes os and arch """
-    client = TestClient()
-    client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "compiler",
-                                                              "build_type")})
-    client.run(f"install . {settings} -s compiler=apple-clang -s compiler.version=15 "
-               f"-s compiler.libcxx=libc++ -s build_type=Release -g CMakeToolchain")
-    return client.load("conan_toolchain.cmake")
-
-
-@pytest.mark.parametrize("os_, sdk, expected", [
-    ("Macos", None, "macosx26.0"),
-    ("iOS", "iphoneos", "ios26.0"),
-    ("iOS", "iphonesimulator", "ios26.0-simulator"),
-    ("watchOS", "watchos", "watchos26.0"),
-    ("watchOS", "watchsimulator", "watchos26.0-simulator"),
-    ("tvOS", "appletvos", "tvos26.0"),
-    ("tvOS", "appletvsimulator", "tvos26.0-simulator"),
-    ("visionOS", "xros", "xros26.0"),
-    ("visionOS", "xrsimulator", "xros26.0-simulator"),
+@pytest.mark.parametrize("os_settings, expected", [
+    ("-s os=Macos -s os.version=26.0", "macosx26.0"),
+    ("-s os=iOS -s os.sdk=iphoneos -s os.version=26.0", "ios26.0"),
+    ("-s os=iOS -s os.sdk=iphonesimulator -s os.version=26.0", "ios26.0-simulator"),
+    ("-s os=watchOS -s os.sdk=watchos -s os.version=26.0", "watchos26.0"),
+    ("-s os=watchOS -s os.sdk=watchsimulator -s os.version=26.0", "watchos26.0-simulator"),
+    ("-s os=tvOS -s os.sdk=appletvos -s os.version=26.0", "tvos26.0"),
+    ("-s os=tvOS -s os.sdk=appletvsimulator -s os.version=26.0", "tvos26.0-simulator"),
+    ("-s os=visionOS -s os.sdk=xros -s os.version=26.0", "xros26.0"),
+    ("-s os=visionOS -s os.sdk=xrsimulator -s os.version=26.0", "xros26.0-simulator"),
+    # Catalyst takes its version from os.subsystem.ios_version, not from os.version
+    ("-s os=Macos -s os.version=26.0 -s os.subsystem=catalyst -s os.subsystem.ios_version=16.0",
+     "ios16.0-macabi"),
 ])
-def test_swift_compiler_target(os_, sdk, expected):
+def test_swift_compiler_target(os_settings, expected):
     """ swiftc does not derive its target from the SDK, CMakeToolchain has to set it
         https://github.com/conan-io/conan/issues/18466
     """
-    sdk = f"-s os.sdk={sdk}" if sdk else ""
-    tc = _swift_toolchain(f"-s os={os_} -s os.version=26.0 -s arch=armv8 {sdk}")
-    assert f'set(CMAKE_Swift_COMPILER_TARGET "arm64-apple-{expected}")' in tc
-
-
-def test_swift_compiler_target_catalyst():
-    """ Catalyst takes its version from os.subsystem.ios_version, not from os.version """
-    tc = _swift_toolchain("-s os=Macos -s os.version=26.0 -s os.subsystem=catalyst "
-                          "-s os.subsystem.ios_version=16.0 -s arch=armv8")
-    assert 'set(CMAKE_Swift_COMPILER_TARGET "arm64-apple-ios16.0-macabi")' in tc
-
-
-@pytest.mark.parametrize("settings", [
-    # no os.version to build the triple with
-    "-s os=Macos -s arch=armv8",
-    # universal binary, a triple cannot represent several architectures
-    '-s os=Macos -s os.version=26.0 -s arch="armv8|x86_64"',
-])
-def test_swift_compiler_target_not_set(settings):
-    """ when no single triple represents the settings, the block stays silent """
-    assert "CMAKE_Swift_COMPILER_TARGET" not in _swift_toolchain(settings)
-
-
-def test_swift_compiler_target_not_apple():
-    """ nothing to set when not cross-building for an Apple OS """
     client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "build_type")})
-    client.run("install . -s os=Linux -s arch=x86_64 -s build_type=Release -g CMakeToolchain")
+    client.run(f"install . {os_settings} -s arch=armv8 -s build_type=Release -g CMakeToolchain")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert f'set(CMAKE_Swift_COMPILER_TARGET "arm64-apple-{expected}")' in toolchain
+
+
+@pytest.mark.parametrize("os_settings", [
+    "-s os=Linux -s arch=x86_64",  # not an Apple OS
+    "-s os=Macos -s arch=armv8",  # no os.version to build the triple with
+    '-s os=Macos -s os.version=26.0 -s arch="armv8|x86_64"',  # universal binary
+])
+def test_swift_compiler_target_not_set(os_settings):
+    """ when no single triple represents the settings, the block stays silent """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "build_type")})
+    client.run(f"install . {os_settings} -s build_type=Release -g CMakeToolchain")
     assert "CMAKE_Swift_COMPILER_TARGET" not in client.load("conan_toolchain.cmake")
 
 
 def test_swift_compiler_target_user_override():
     """ it is only a default, extra_variables is rendered later so the user value wins """
-    tc = _swift_toolchain('-s os=iOS -s os.sdk=iphoneos -s os.version=26.0 -s arch=armv8 '
-                          '-c tools.cmake.cmaketoolchain:extra_variables='
-                          '\'{"CMAKE_Swift_COMPILER_TARGET": "arm64-apple-ios99.0"}\'')
-    assert "if(NOT DEFINED CMAKE_Swift_COMPILER_TARGET)" in tc
-    assert tc.index('"arm64-apple-ios26.0"') < tc.index('"arm64-apple-ios99.0"')
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "build_type")})
+    client.run('install . -s os=iOS -s os.sdk=iphoneos -s os.version=26.0 -s arch=armv8 '
+               '-s build_type=Release -g CMakeToolchain '
+               '-c tools.cmake.cmaketoolchain:extra_variables='
+               '\'{"CMAKE_Swift_COMPILER_TARGET": "arm64-apple-ios99.0"}\'')
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "if(NOT DEFINED CMAKE_Swift_COMPILER_TARGET)" in toolchain
+    assert toolchain.index('"arm64-apple-ios26.0"') < toolchain.index('"arm64-apple-ios99.0"')
