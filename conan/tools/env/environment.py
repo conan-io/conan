@@ -4,7 +4,7 @@ from shlex import quote
 from collections import OrderedDict
 from contextlib import contextmanager
 
-from conan.api.output import ConanOutput
+from conan.api.output import ConanOutput, Color
 from conan.internal.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
 from conan.internal.model.recipe_ref import ref_matches
@@ -947,7 +947,8 @@ def generate_aggregated_env(conanfile):
                      ps1_content(deactivates(ps1s)))
     if generated:
         conanfile.output.highlight("Generating aggregated env files")
-        conanfile.output.info(f"Generated aggregated env files: {generated}")
+        conanfile.output.info(f"Generated aggregated env files: ", newline=False)
+        ConanOutput().info(', '.join(generated), fg=Color.CYAN)
 
 
 def _relativize_paths(conanfile, placeholder):

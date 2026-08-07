@@ -185,7 +185,8 @@ class BinaryInstaller:
         if node.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
             return
 
-        ConanOutput().step(f"Source step for {conanfile.ref}")
+        for_ref = f" for {conanfile.ref}" if not conanfile._conan_is_consumer else ""  # noqa
+        ConanOutput().step(f"Source step{for_ref}")
 
         recipe_layout = self._cache.recipe_layout(node.ref)
         export_source_folder = recipe_layout.export_sources()

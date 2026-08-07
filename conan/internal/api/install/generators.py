@@ -80,7 +80,7 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
     _receive_conf(conanfile)
     _receive_generators(conanfile)
 
-    for_ref = f" for {conanfile.ref}" if conanfile.ref else ""
+    for_ref = f" for {conanfile.ref}" if not conanfile._conan_is_consumer else ""  # noqa
     ConanOutput().step(f"Generate step{for_ref}")
     old_display = conanfile.display_name
     conanfile.display_name = ""

@@ -32,5 +32,7 @@ def test_build_output_json():
     client.run("build --format=json", redirect_stdout=_OUTPUT_FILE)
     output = json.loads(client.load(_OUTPUT_FILE))
 
+    assert "Build step" in client.out
+    assert "Build step for" not in client.out
     assert "graph" in output
     assert "nodes" in output["graph"]
