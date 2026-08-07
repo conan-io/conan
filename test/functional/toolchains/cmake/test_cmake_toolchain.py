@@ -2,7 +2,6 @@ import json
 import os
 import platform
 import re
-import shutil
 import textwrap
 
 import pytest
@@ -550,11 +549,8 @@ def test_cmake_layout_not_forbidden_build_type():
     settings_layout = '-c tools.cmake.cmake_layout:build_folder_vars=' \
                       '\'["options.missing", "settings.build_type"]\''
     client.run("install . {}".format(settings_layout))
-    if platform.system() == "Windows":
-        path = os.path.join(client.current_folder, "build/generators/conan_toolchain.cmake")
-    else:
-        path = os.path.join(client.current_folder, "build/release/generators/conan_toolchain.cmake")
-    assert os.path.exists(path)
+    assert os.path.exists(os.path.join(client.current_folder,
+                                       "build/release/generators/conan_toolchain.cmake"))
 
 
 def test_resdirs_cmake_install():

@@ -48,7 +48,7 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
             build_folder = tempfile.mkdtemp()
 
     build_folder = build_folder if not subproject else os.path.join(subproject, build_folder)
-    config_build_folder, user_defined_build = get_build_folder_custom_vars(conanfile, multi=multi)
+    config_build_folder, user_defined_build = get_build_folder_custom_vars(conanfile)
     if config_build_folder:
         build_folder = os.path.join(build_folder, config_build_folder)
     if not multi and not user_defined_build:
@@ -67,7 +67,7 @@ def cmake_layout(conanfile, generator=None, src_folder=".", build_folder="build"
         conanfile.cpp.build.bindirs = ["."]
 
 
-def get_build_folder_custom_vars(conanfile, multi):
+def get_build_folder_custom_vars(conanfile):
     conanfile_vars = conanfile.folders.build_folder_vars
     build_vars = conanfile.conf.get("tools.cmake.cmake_layout:build_folder_vars", check_type=list)
     if conanfile.tested_reference_str:
@@ -82,11 +82,11 @@ def get_build_folder_custom_vars(conanfile, multi):
         else:
             build_vars = conanfile_vars or []
 
-    if multi and "settings.build_type" in build_vars:
-        build_vars.remove("settings.build_type")
-
     ret = []
     for s in build_vars:
+        if s.startswith("!"):  # exclusion markers, e.g. "!settings.build_type"
+            assert s == "!settings.build_type", "Only settings.build_type can be excluded"
+            continue
         group, var = s.split(".", 1)
         tmp = None
         if group == "settings":
@@ -110,5 +110,6 @@ def get_build_folder_custom_vars(conanfile, multi):
         if tmp:
             ret.append(tmp.lower())
 
-    user_defined_build = "settings.build_type" in build_vars
+    user_defined_build = ("settings.build_type" in build_vars
+                          or "!settings.build_type" in build_vars)
     return "-".join(ret), user_defined_build

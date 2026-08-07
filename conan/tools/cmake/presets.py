@@ -200,7 +200,7 @@ class _CMakePresets:
     def _common_preset_fields(conanfile, multiconfig, preset_prefix):
         build_type = conanfile.settings.get_safe("build_type")
         configure_preset_name = _CMakePresets._configure_preset_name(conanfile, multiconfig)
-        build_preset_name = _CMakePresets._build_and_test_preset_name(conanfile, multiconfig)
+        build_preset_name = _CMakePresets._build_and_test_preset_name(conanfile)
         if preset_prefix:
             configure_preset_name = f"{preset_prefix}-{configure_preset_name}"
             build_preset_name = f"{preset_prefix}-{build_preset_name}"
@@ -228,11 +228,11 @@ class _CMakePresets:
         return ret
 
     @staticmethod
-    def _build_and_test_preset_name(conanfile, multiconfig):
+    def _build_and_test_preset_name(conanfile):
         build_type = conanfile.settings.get_safe("build_type")
-        custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile, multiconfig)
+        custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
         if user_defined_build:
-            return custom_conf
+            return custom_conf or "default"
 
         if custom_conf:
             if build_type:
@@ -244,10 +244,10 @@ class _CMakePresets:
     @staticmethod
     def _configure_preset_name(conanfile, multiconfig):
         build_type = conanfile.settings.get_safe("build_type")
-        custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile, multiconfig)
+        custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
 
         if user_defined_build:
-            return custom_conf
+            return custom_conf or "default"
 
         if multiconfig or not build_type:
             return "default" if not custom_conf else custom_conf
