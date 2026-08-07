@@ -1,5 +1,4 @@
 import textwrap
-import unittest
 
 import pytest
 
@@ -11,6 +10,7 @@ class TestPackageIDRequirementsModes:
     @pytest.mark.parametrize("mode, accepted_version, rejected_version, pattern",
                              [("unrelated_mode", "2.0", "", ""),
                               ("patch_mode", "1.0.0.1", "1.0.1", "1.0.1"),
+                              ("micro_mode", "1.0.0.0", "1.0.0.1", "1.0.0.1"),
                               ("minor_mode", "1.0.1", "1.2", "1.2.Z"),
                               ("major_mode", "1.5", "2.0", "2.Y.Z"),
                               ("semver_mode", "1.5", "2.0", "2.Y.Z"),
@@ -34,7 +34,33 @@ class TestPackageIDRequirementsModes:
             assert f"dep/{pattern}" in c.out
 
 
-class PackageIDErrorTest(unittest.TestCase):
+@pytest.mark.parametrize("mode, pkg_id",
+                         [("unrelated_mode", "da39a3ee5e6b4b0d3255bfef95601890afd80709"),
+                          ("semver_mode", "13b9e753af3958dd1b2d4b3f935b04b8fb6b6760"),
+                          ("patch_mode", "38d7a3ec6a09165ab3e5306f81c539a2e0a784bd"),
+                          # micro_mode with 0.1.1.1 → "0.1.1.1", same repr as full_version_mode
+                          ("micro_mode", "13b9e753af3958dd1b2d4b3f935b04b8fb6b6760"),
+                          ("minor_mode", "a5e7ad26ccf4a5049090976846da1c6ed165cced"),
+                          ("major_mode", "6ac597ffb99c3747ed78699f206dc1041537a8df"),
+                          # This is equal to semver_mode for 0.X.Y.Z..
+                          ("full_version_mode", "13b9e753af3958dd1b2d4b3f935b04b8fb6b6760"),
+                          ("full_recipe_mode", "13b9e753af3958dd1b2d4b3f935b04b8fb6b6760"),
+                          ("full_package_mode", "19906d8a245d9f466d7d7f697c666222a9854a1a"),
+                          ("revision_mode", "ae5b9eeb74880aeb1cfa3db7f84c007a05ce3a76"),
+                          ("full_mode", "d1b2a9538cd69363b4bae7e66c9f900b8f4c58bb")])
+def test_modes(mode, pkg_id):
+    c = TestClient(light=True)
+    package_id_text = f'self.info.requires.{mode}()'
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1.1.1").with_settings("os"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")
+                                                          .with_package_id(package_id_text)})
+    c.run("create dep -s os=Linux")
+    c.run("create pkg -s os=Linux")
+    pkgid = c.created_package_id("pkg/0.1")
+    assert pkgid == pkg_id
+
+
+class TestPackageIDError:
 
     def test_transitive_multi_mode_package_id(self):
         # https://github.com/conan-io/conan/issues/6942
@@ -52,7 +78,7 @@ class PackageIDErrorTest(unittest.TestCase):
         client.save({"conanfile.py": GenConanfile().with_require("dep2/1.0@user/testing")
                                                    .with_require("dep3/1.0@user/testing")})
         client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
-        self.assertIn("consumer/1.0@user/testing: Created", client.out)
+        assert "Created package" in client.out
 
     def test_transitive_multi_mode2_package_id(self):
         # https://github.com/conan-io/conan/issues/6942
@@ -77,9 +103,9 @@ class PackageIDErrorTest(unittest.TestCase):
                 """)
         client.save({"conanfile.py": consumer})
         client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
-        self.assertIn("dep2/1.0@user/testing: PkgNames: ['dep1']", client.out)
-        self.assertIn("consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']", client.out)
-        self.assertIn("consumer/1.0@user/testing: Created", client.out)
+        assert "dep2/1.0@user/testing: PkgNames: ['dep1']" in client.out
+        assert "consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']" in client.out
+        assert "Created package" in client.out
 
     def test_transitive_multi_mode_build_requires(self):
         # https://github.com/conan-io/conan/issues/6942
@@ -106,9 +132,9 @@ class PackageIDErrorTest(unittest.TestCase):
                 """)
         client.save({"conanfile.py": consumer})
         client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
-        self.assertIn("dep2/1.0@user/testing: PkgNames: ['dep1']", client.out)
-        self.assertIn("consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']", client.out)
-        self.assertIn("consumer/1.0@user/testing: Created", client.out)
+        assert "dep2/1.0@user/testing: PkgNames: ['dep1']" in client.out
+        assert "consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']" in client.out
+        assert "Full package reference: consumer/1.0@user/testing" in client.out
 
 
 class TestRequirementPackageId:
@@ -129,6 +155,17 @@ class TestRequirementPackageId:
         c.run("list pkg:*")
         assert f"dep/{pattern}" in c.out
 
+    def test_micro_mode(self):
+        c = TestClient(light=True)
+        pkg = GenConanfile("pkg", "0.1").with_requirement("dep/1.2.3.4",
+                                                          package_id_mode="micro_mode")
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.2.3.4"),
+                "pkg/conanfile.py": pkg})
+        c.run("create dep")
+        c.run("create pkg")
+        c.run("list pkg:*")
+        assert "dep/1.2.3.4" in c.out
+
     def test_wrong_mode(self):
         c = TestClient(light=True)
         pkg = GenConanfile("pkg", "0.1").with_requirement("dep/1.2.3", package_id_mode="nothing")
@@ -141,6 +178,7 @@ class TestRequirementPackageId:
 
     @pytest.mark.parametrize("mode, pattern",
                              [("patch_mode", "1.2.3"),
+                              ("micro_mode", "1.2.3.0"),
                               ("minor_mode", "1.2.Z"),
                               ("major_mode", "1.Y.Z")])
     def test_half_diamond(self, mode, pattern):
@@ -167,6 +205,7 @@ class TestRequirementPackageId:
 
     @pytest.mark.parametrize("mode, pattern",
                              [("patch_mode", "1.2.3"),
+                              ("micro_mode", "1.2.3.0"),
                               ("minor_mode", "1.2.Z"),
                               ("major_mode", "1.Y.Z")])
     def test_half_diamond_conflict(self, mode, pattern):
@@ -193,3 +232,72 @@ class TestRequirementPackageId:
         c.run("create pkg")
         c.run("list pkg:*")
         assert f"liba/{pattern}" in c.out
+
+
+class TestTransitiveStatic:
+    @pytest.mark.parametrize("recipe_approach, conf_approach, apply_fix",
+                             [(None, None, False),
+                              ("2.28", None, True),
+                              ("2.27", None, False),
+                              (None, "2.28", True),
+                              (None, "2.27", False),
+                              ("2.28", "2.27", True),  # OR, both work
+                              ("2.27", "2.28", True),  # OR, both work
+                              ("2.27", "2.27", False)  # Does not apply if both say no
+                              ])
+    def test_transitive_statics(self, recipe_approach, conf_approach, apply_fix):
+        # https://github.com/conan-io/conan/issues/19664
+        c = TestClient(light=True)
+        required_conan_version = ''
+        if recipe_approach is not None:
+            required_conan_version = f'required_conan_version = ">={recipe_approach}"'
+        if conf_approach is not None:
+            c.save_home({"global.conf":
+                             f'core:policies=["required_conan_version>={conf_approach}"]'})
+        libc = textwrap.dedent(f"""\
+            from conan import ConanFile
+
+            {required_conan_version}
+            class LibcConan(ConanFile):
+                name = "libc"
+                version = "1.0"
+                package_type = "static-library"
+                requires = "libb/1.0"
+            """)
+        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type("static-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
+                                                                .with_requires("liba/1.0"),
+                "libc/conanfile.py": libc
+                })
+        c.run("create liba")
+        c.run("create libb")
+        c.run(f"create libc")
+        if not apply_fix:
+            assert ("libc/1.0: WARN: risk: Transitive dependencies with "
+                    "'headers=False' effect in 'package_id'") in c.out
+        c.run("list libc:*")
+        assert "libb/1.0.Z" in c.out
+        if apply_fix:
+            assert "liba/" not in c.out
+        else:
+            assert "liba/" in c.out
+
+    def test_transitive_shared(self):
+        # https://github.com/conan-io/conan/issues/19664
+        # This doesn't happen by default because the transitive shared do not propagate .libs
+        # linkage requirement trait
+        c = TestClient(light=True)
+        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type("shared-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("shared-library")
+               .with_requires("liba/1.0"),
+                "libc/conanfile.py": GenConanfile("libc", "1.0").with_package_type("shared-library")
+               .with_requires("libb/1.0"),
+                })
+        c.run("create liba")
+        c.run("create libb")
+        c.run("create libc")
+
+        assert "libc/1.0: WARN" not in c.out
+        c.run("list libc:*")
+        assert "libb/1.0.Z" in c.out
+        assert "liba/" not in c.out

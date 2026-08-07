@@ -6,7 +6,7 @@ from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, zipdir
-from conans.util.files import save_files, sha256sum
+from conan.internal.util.files import save_files, sha256sum
 
 
 class TestLocalRecipeIndexNew:
@@ -113,7 +113,7 @@ class TestInRepo:
         # Of course the recipe can also be created locally
         path = os.path.join(repo_folder, "recipes/pkg/all")
         c.run(f'create "{path}" --version=0.1')
-        assert "pkg/0.1: Created package" in c.out
+        assert "Created package" in c.out
 
         # Finally lets remove the remote, check that the clone is cleared
         c.run('remote remove local')

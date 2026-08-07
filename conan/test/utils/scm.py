@@ -1,8 +1,8 @@
 import os
 
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save_files, chdir
-from conans.util.runners import detect_runner
+from conan.internal.util.files import save_files, chdir
+from conan.internal.util.runners import detect_runner
 
 
 def git_create_bare_repo(folder=None, reponame="repo.git"):
@@ -20,7 +20,7 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
                           tags=None, origin_url=None, main_branch="master"):
     tmp = folder or temp_folder()
     if files:
-        save_files(tmp, files)
+        save_files(tmp, {k: str(v) for k, v in files.items()})
 
     def _run(cmd, p):
         with chdir(p):

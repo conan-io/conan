@@ -1,7 +1,7 @@
 from conan.api.model import RecipeReference
 
 
-class GenConanfile(object):
+class GenConanfile:
     """
     USAGE:
 
@@ -28,9 +28,9 @@ class GenConanfile(object):
         self._deprecated = None
         self._package_lines = None
         self._finalize_lines = None
+        self._source_lines = None
         self._package_files = None
         self._package_files_env = None
-        self._package_files_link = None
         self._build_messages = None
         self._requires = None
         self._requirements = None
@@ -39,6 +39,7 @@ class GenConanfile(object):
         self._build_requirements = None
         self._tool_requires = None
         self._tool_requirements = None
+        self._test_requirements = None
         self._test_requires = None
         self._revision_mode = None
         self._package_info = None
@@ -162,6 +163,12 @@ class GenConanfile(object):
         self._tool_requirements.append((ref_str, kwargs))
         return self
 
+    def with_test_requirement(self, ref, **kwargs):
+        self._test_requirements = self._test_requirements or []
+        ref_str = self._get_full_ref_str(ref)
+        self._test_requirements.append((ref_str, kwargs))
+        return self
+
     def with_import(self, *imports):
         for i in imports:
             if i not in self._imports:
@@ -193,18 +200,15 @@ class GenConanfile(object):
     def with_shared_option(self, default=False):
         return self.with_option("shared", [True, False]).with_default_option("shared", default)
 
-    def with_package_file(self, file_name, contents=None, env_var=None, link=None):
-        if not contents and not env_var:
-            raise Exception("Specify contents or env_var")
+    def with_package_file(self, file_name, contents=None, env_var=None):
+        assert contents is not None or env_var
         self._package_files = self._package_files or {}
-        self._package_files_link = self._package_files_link or {}
+
         self._package_files_env = self._package_files_env or {}
         self.with_import("import os")
         self.with_import("from conan.tools.files import save, chdir")
         if contents:
             self._package_files[file_name] = contents
-        if link:
-            self._package_files_link[file_name] = link
         if env_var:
             self._package_files_env[file_name] = env_var
         return self
@@ -221,19 +225,21 @@ class GenConanfile(object):
             self._finalize_lines.append(line)
         return self
 
+    def with_source(self, *lines):
+        self._source_lines = self._source_lines or []
+        self._source_lines.extend(lines)
+        return self
+
     def with_build_msg(self, msg):
         self._build_messages = self._build_messages or []
         self._build_messages.append(msg)
         return self
 
-    def with_package_info(self, cpp_info=None, env_info=None):
-        assert cpp_info is None or isinstance(cpp_info, dict), "cpp_info ({}) expects dict".format(type(cpp_info))
-        assert env_info is None or isinstance(env_info, dict), "env_info ({}) expects dict".format(type(env_info))
+    def with_package_info(self, cpp_info=None):
+        assert cpp_info is None or isinstance(cpp_info, dict)
         self._package_info = self._package_info or {}
         if cpp_info:
             self._package_info["cpp_info"] = cpp_info
-        if env_info:
-            self._package_info["env_info"] = env_info
         return self
 
     def with_package_id(self, *lines):
@@ -312,15 +318,6 @@ class GenConanfile(object):
         return tmp
 
     @property
-    def _build_requirements_render(self):
-        lines = []
-        for ref, kwargs in self._build_requirements:
-            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
-                             for k, v in kwargs.items())
-            lines.append('        self.build_requires("{}", {})'.format(ref, args))
-        return "def build_requirements(self):\n{}\n".format("\n".join(lines))
-
-    @property
     def _build_requires_render(self):
         line = ", ".join(['"{}"'.format(r) for r in self._build_requires])
         tmp = "build_requires = %s" % line
@@ -369,12 +366,16 @@ class GenConanfile(object):
                              for k, v in kwargs.items())
             lines.append('        self.tool_requires("{}", {})'.format(ref, args))
 
+        for ref, kwargs in self._test_requirements or []:
+            args = ", ".join("{}={}".format(k, f'"{v}"' if not isinstance(v, (bool, dict)) else v)
+                             for k, v in kwargs.items())
+            lines.append('        self.test_requires("{}", {})'.format(ref, args))
+
         return "\n".join(lines)
 
     @property
     def _package_method(self):
-        return (self._package_lines or self._package_files or self._package_files_env or
-                self._package_files_link)
+        return self._package_lines or self._package_files or self._package_files_env
 
     @property
     def _finalize_method(self):
@@ -394,15 +395,6 @@ class GenConanfile(object):
             lines.extend(['        save(self, os.path.join(self.package_folder, "{}"), '
                           'os.getenv("{}"))'.format(key, value)
                           for key, value in self._package_files_env.items()])
-        if self._package_files_link:
-            lines.extend(['        with chdir(self, os.path.dirname('
-                          'os.path.join(self.package_folder, "{}"))):\n'
-                          '            os.symlink(os.path.basename("{}"), '
-                          'os.path.join(self.package_folder, "{}"))'.format(key, key, value)
-                          for key, value in self._package_files_link.items()])
-
-        if not lines:
-            return ""
         return """
     def package(self):
 {}
@@ -414,12 +406,24 @@ class GenConanfile(object):
         if self._finalize_lines:
             lines.extend("        {}".format(line) for line in self._finalize_lines)
 
-        if not lines:
-            return ""
         return """
     def finalize(self):
 {}
         """.format("\n".join(lines))
+
+    @property
+    def _source(self):
+        return self._source_lines or None
+
+    @property
+    def _source_render(self):
+        if not self._source_lines:
+            return None
+        lines = ["        {}".format(line) for line in self._source_lines]
+        return """
+    def source(self):
+{}
+    """.format("\n".join(lines))
 
     @property
     def _build_render(self):
@@ -504,13 +508,14 @@ class GenConanfile(object):
         for member in ("name", "version", "package_type", "provides", "deprecated",
                        "exports_sources", "exports", "generators", "requires", "build_requires",
                        "tool_requires", "test_requires", "requirements", "python_requires",
-                       "revision_mode", "settings", "options", "default_options", "build",
+                       "revision_mode", "settings", "options", "default_options", "source", "build",
                        "package_method", "package_info", "package_id_lines", "test_lines",
                        "finalize_method"
                        ):
             if member == "requirements":
                 # FIXME: This seems exclusive, but we could mix them?
-                v = self._requirements or self._tool_requirements or self._build_requirements
+                v = (self._requirements or self._tool_requirements
+                     or self._build_requirements or self._test_requirements)
             else:
                 v = getattr(self, "_{}".format(member), None)
             if v is not None:

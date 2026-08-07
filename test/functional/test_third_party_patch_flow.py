@@ -4,7 +4,7 @@ import textwrap
 from conan.test.utils.scm import create_local_git_repo
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conans.util.files import mkdir
+from conan.internal.util.files import mkdir
 
 
 def test_third_party_patch_flow():
@@ -106,7 +106,7 @@ def test_third_party_patch_flow():
 
     # of course create should work too
     client.run("create .")
-    assert "mypkg/1.0: Created package" in client.out
+    assert "Created package" in client.out
 
 
 def test_third_party_overwrite_build_file():
@@ -152,7 +152,7 @@ def test_third_party_overwrite_build_file():
 
     # of course create should work too
     client.run("create .")
-    assert "mypkg/1.0: Created package" in client.out
+    assert "Created package" in client.out
 
 
 def test_third_party_git_overwrite_build_file():
@@ -201,4 +201,4 @@ def test_third_party_git_overwrite_build_file():
 
     # of course create should work too
     client.run("create .")
-    assert "mypkg/1.0: Created package" in client.out
+    assert "Created package" in client.out

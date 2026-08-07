@@ -5,7 +5,7 @@ import os
 from os.path import join, normpath
 
 from conan.api.model import RecipeReference
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 
 EDITABLE_PACKAGES_FILE = 'editable_packages.json'
@@ -48,11 +48,6 @@ class EditablePackages:
         _tmp = copy.copy(ref)
         _tmp.revision = None
         return self._edited_refs.get(_tmp)
-
-    def get_path(self, ref):
-        editable = self.get(ref)
-        if editable is not None:
-            return editable["path"]
 
     def add(self, ref, path, output_folder=None):
         assert isinstance(ref, RecipeReference)

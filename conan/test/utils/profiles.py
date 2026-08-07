@@ -2,7 +2,7 @@ import os
 
 from conan.internal.model.options import Options
 from conan.internal.model.profile import Profile
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def create_profile(folder, name, settings=None, package_settings=None, options=None):

@@ -1,4 +1,5 @@
 from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE, LEVEL_DEBUG
+from conan.errors import ConanException
 
 
 def print_graph_basic(graph):
@@ -61,15 +62,11 @@ def print_graph_basic(graph):
 
     _format_resolved("Resolved alias", graph.aliased)
     if graph.aliased:
-        output.warning("'alias' is a Conan 1.X legacy feature, no longer recommended and "
-                       "it might be removed in 3.0.")
+        output.warning("'alias' is a Conan 1.X legacy, unsupported and undocumented feature, "
+                       "completely discouraged. "
+                       "It might be removed in future Conan versions", warn_tag="deprecated")
         output.warning("Consider using version-ranges instead.")
     _format_resolved("Resolved version ranges", graph.resolved_ranges)
-    for req in graph.resolved_ranges:
-        if str(req.version) == "[]":
-            output.warning("Empty version range usage is discouraged. Use [*] instead",
-                           warn_tag="deprecated")
-            break
 
     overrides = graph.overrides()
     if overrides:
@@ -97,6 +94,12 @@ def print_graph_basic(graph):
 
     if deprecated:
         output.warning("There are deprecated packages in the graph", warn_tag="risk")
+
+    if graph.visibility_conflicts:
+        msg = ["Packages required both with visible=True and visible=False"]
+        for ref, consumers in graph.visibility_conflicts.items():
+            msg.append(f"    {ref}: Required by {', '.join(str(c) for c in consumers)}")
+        output.warning("\n".join(msg), warn_tag="risk")
 
 
 def print_graph_packages(graph):

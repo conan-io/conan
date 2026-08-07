@@ -10,7 +10,7 @@ from conan.tools.env import VirtualBuildEnv
 from conan.tools.microsoft import msvs_toolset
 from conan.tools.microsoft.visual import vs_installation_path, _vcvars_path, _vcvars_versions
 from conan.tools.qbs import common
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def _find_msvc(conanfile):
@@ -184,7 +184,8 @@ class QbsProfile:
         # todo: other compilers?
         return compiler
 
-    def _default_compiler_names(self, toolchain):
+    @staticmethod
+    def _default_compiler_names(toolchain):
         if toolchain == 'msvc':
             return 'cl', 'cl'
         if toolchain == 'clang-cl':
@@ -287,6 +288,7 @@ class QbsProfile:
 
         map_list_property("tools.build:cflags", "cpp.cFlags", self.extra_cflags)
         map_list_property("tools.build:cxxflags", "cpp.cxxFlags", self.extra_cxxflags)
+        map_list_property("tools.build:rcflags", "cpp.rcFlags", [])
         map_list_property("tools.build:defines", "cpp.defines", self.extra_defines)
 
         def ldflags():

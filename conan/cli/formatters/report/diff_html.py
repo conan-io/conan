@@ -1,0 +1,1147 @@
+diff_html = r"""
+{% macro render_sidebar_folder(folder, folder_info) %}
+    {%- for name, sub_folder_info in folder_info["folders"].items() %}
+        {% set folder_name = folder + "/" + name %}
+        <li>
+            <details open class="folder">
+                <summary>{{ name }}</summary>
+                <ul>
+                    {{ render_sidebar_folder(folder_name, sub_folder_info) }}
+                </ul>
+            </details>
+        </li>
+    {%- endfor %}
+    {%- for name, file_info in folder_info["files"].items() %}
+        {% set file_type = "renamed" if file_info["renamed_to"] else (
+                           "deleted" if file_info["is_deleted"] else (
+                           "new" if file_info["is_new"] else "old")) %}
+        <li class="file file-{{ file_type }}"
+            data-path="{{ file_info["relative_path"] }}"
+            data-type="{{ file_type }}">
+            <a href="#diff_{{- safe_filename(file_info["filename"]) -}}"
+                onclick="setDataIsLinked(event)" draggable="false"
+                class="side-link"
+                title="{{ replace_cache_paths(file_info["relative_path"]) | replace("(old)/", "") | replace("(new)/", "") }}">
+                {% if file_info["renamed_to"] %}
+                    {{ file_info["renamed_to"].split("/")[1:][-1] }}
+                {% else %}
+                    {{ name }}
+                {% endif %}
+            </a>
+        </li>
+    {%- endfor %}
+{% endmacro %}
+
+{% macro render_diff_folder(folder_info) %}
+    {%- for name, sub_folder_info in folder_info["folders"].items() %}
+        {{ render_diff_folder(sub_folder_info) }}
+    {%- endfor %}
+    {%- for name, file_info in folder_info["files"].items() %}
+        {% set filename = file_info["filename"] %}
+
+        <div id="diff_{{ safe_filename(filename) }}" data-path="{{ filename }}" class="diff-container">
+            <div class="diff-content">
+                <details open class="diff-details">
+                    <summary class="diff-summary">
+                        <b id="diff_{{ safe_filename(filename) }}_filename" class="filename" data-replaced-paths="">
+                            <span>{{ replace_cache_paths(filename) | replace("(old)/", "") | replace("(new)/", "") }}</span>
+                            {% if file_info["renamed_to"] %}
+                                &nbsp;&#x2192&nbsp;
+                                <span>{{ replace_cache_paths(file_info["renamed_to"]) | replace("(old)/", "") | replace("(new)/", "") }}</span>
+                            {% endif %}
+                        </b>
+                        <div class="changes-count-container"></div>
+                    </summary>
+                    <div class="diff-lines">
+                    </div>
+                </details>
+            </div>
+        </div>
+    {%- endfor %}
+{% endmacro %}
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <script>
+            // Applied as early as possible (before first paint) to avoid a flash of the wrong theme.
+            (function() {
+                var isDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+            })();
+        </script>
+        <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABCFBMVEUAAAA+uf4Ah/2p3PxyvPqNzPkSmP6b0/qTz/mIyPeGx/eIyPeZ0vonpv1qu/ii2fx1wviGx/cFjP0erf+p3PyAxfeAxPcWof6q3PyHyPeKyfgJi/2HzfxCuv4Lk/6p3Pyd2PyGx/cBh/0cqP+Hx/ep3PyGx/dTrvmp3PyGx/cRm/6p3Pya1vyGx/eJyPcGjf0brf+Y0vqp3PwXov6ExvcMlf6p3Pyi2vwap/+FzP2IyPeHyPcPmf4Jkv4Di/16w/gerf8VoP6Ex/hErftft/o8t/4vrv4Ljv2h2Pwsn/xStvtZuvpZtPpNsPpvwvlVsfl0wPh/xPcdrP8Un/40pfwjnPw8qfuLyvgsmPXHAAAANnRSTlMA/sR/BxT+/v7CpjQr/v729fX06ufn59nZ2c/HxMDAp6Wcj46Eg4B8cG9tW1JRUE1FRTYkHRKiySDqAAAAsklEQVQY003P1RqCQBQE4KNid3d3N+quugrYUub7v4ko8sFczfx3A2o8xZoV9FibSYScPeo/qa4TS9czF3C5f9vtCsrs88Wz+3O0MgGoxxASD1eM8GUv4NQQ0icf4g48kRlCsONoAfPaxkri6cExmLHT9BdWS++FEOZtX8w0uM93gmNG67Cd30zKMMJGgyqUQkaItIHq52wa+PMjUDJtxVXIdLQ343J4d0w0jH8H2YJHbR8fvSVyLKSviQAAAABJRU5ErkJggg==">
+        <title>Diff report for {{ old_reference }} - {{ new_reference }}</title>
+        <style>
+            /* --- Colors --- */
+            :root {
+                color-scheme: light;
+                --body-bgColor: #ffffff;
+                --sidebar-bgColor: #f4f6fbcc;
+                --sidebar-borderColor: #d0d7de;
+                --sidebar-contents-bgColor: #f4f6fb;
+                --content-bgColor: #ffffff;
+                --search-area-borderColor: #d0d7de;
+                --search-field-borderColor: #d0d7de;
+                --file-list-borderColor: #eaecef;
+                --folder-summary-hover-bgColor: #e5eaf3cc;
+                --folder-ul-hover-borderColor: #b6b6b6cc;
+                --sidebar-li-a-hover-bgColor: #e5eaf3;
+                --sidebar-button-hover-bgColor: var(--sidebar-li-a-hover-bgColor);
+                --sidebar-link-color: #22272e;
+                --sidebar-link-hover-color: var(--sidebar-link-color);
+                --sidebar-link-visited-color: var(--sidebar-link-color);
+                --sidebar-file-new-color: #1a7f37;
+                --sidebar-file-old-color: #6e7781;
+                --sidebar-file-deleted-color: #d1242f;
+                --diff-content-borderColor: #d0d7de;
+                --diff-content-bgColor: #fff;
+                --diff-container-linked-borderColor: #0969da;
+                --diff-summary-borderColor: #d0d7de;
+                --diff-summary-bgColor: #f6f8fa;
+                --diff-summary-hover-bgColor: #eaeef2;
+                --new-lines-count-color: #1a7f37;
+                --old-lines-count-color: #6e7781;
+                --context-line-color: #6e7781;
+                --context-chunk-header-bgColor: #e7f6ff;
+                --context-chunk-header-color: var(--context-line-color);
+                --added-line-bgColor: #dafbe1;
+                --added-line-color: black;
+                --deleted-line-bgColor: #ffebe9;
+                --deleted-line-color: black;
+                --line-number-added-bgColor: #b6f4bb;
+                --line-number-deleted-bgColor: #ffd6d5;
+                --shadow: 0 2px 8px 0 #0001;
+                --hover-shadow: 0 1px 4px 0 #0001;
+                --empty-result-color: black;
+                --radius: 10px;
+                --transition: 0.15s cubic-bezier(.4,0,.2,1);
+            }
+
+            /* Dark mode palette, activated via the theme switch (see .theme-toggle-container) */
+            html[data-theme="dark"] {
+                color-scheme: dark;
+                --body-bgColor: #0d1117;
+                --sidebar-bgColor: #161b22cc;
+                --sidebar-borderColor: #30363d;
+                --sidebar-contents-bgColor: #161b22;
+                --content-bgColor: #0d1117;
+                --search-area-borderColor: #30363d;
+                --search-field-borderColor: #30363d;
+                --file-list-borderColor: #21262d;
+                --folder-summary-hover-bgColor: #1f2937cc;
+                --folder-ul-hover-borderColor: #6e768166;
+                --sidebar-li-a-hover-bgColor: #21262d;
+                --sidebar-link-color: #c9d1d9;
+                --sidebar-file-new-color: #3fb950;
+                --sidebar-file-old-color: #8b949e;
+                --sidebar-file-deleted-color: #f85149;
+                --diff-content-borderColor: #30363d;
+                --diff-content-bgColor: #0d1117;
+                --diff-container-linked-borderColor: #58a6ff;
+                --diff-summary-borderColor: #30363d;
+                --diff-summary-bgColor: #161b22;
+                --diff-summary-hover-bgColor: #1c2129;
+                --new-lines-count-color: #3fb950;
+                --old-lines-count-color: #8b949e;
+                --context-line-color: #8b949e;
+                --context-chunk-header-bgColor: #0d2538;
+                --added-line-bgColor: #033a16;
+                --added-line-color: #c9d1d9;
+                --deleted-line-bgColor: #67060c;
+                --deleted-line-color: #c9d1d9;
+                --line-number-added-bgColor: #196c2e;
+                --line-number-deleted-bgColor: #8e1519;
+                --shadow: 0 2px 8px 0 #0008;
+                --hover-shadow: 0 1px 4px 0 #0008;
+                --empty-result-color: #c9d1d9;
+            }
+
+            /* --- Global Styles --- */
+
+            body {
+                font-family: monospace;
+                margin: 0px;
+                background-color: var(--body-bgColor);
+                transition: background-color var(--transition), color var(--transition);
+            }
+
+            html[data-theme="dark"] body {
+                color: var(--sidebar-link-color);
+            }
+
+            /* --- Main Layout --- */
+
+            .container {
+                display: flex;
+                height: 100%;
+                overflow: scroll;
+                background: var(--body-bgColor);
+            }
+
+            .sidebar {
+                width: 17%;
+                min-width: 10%;
+                max-width: 33%;
+                padding: 10px;
+                overflow: scroll;
+                background: var(--sidebar-bgColor);
+                border-right: 1px solid var(--sidebar-borderColor);
+                resize: horizontal;
+                position: sticky;
+                top: 0;
+                box-shadow: var(--shadow);
+                border-radius: 0 var(--radius) var(--radius) 0;
+                transition: box-shadow var(--transition);
+            }
+
+            .content {
+                padding: 20px;
+                background: var(--content-bgColor);
+                width: 100%;
+                border-radius: var(--radius);
+            }
+
+            /* --- Sidebar & File Tree --- */
+
+            #sidebar-contents {
+                background: var(--sidebar-contents-bgColor);
+                border-radius: var(--radius);
+                overflow-y: hidden;
+                padding-top: 5px;
+            }
+
+            .sidebar-reveal {
+                display: none;
+                position: sticky;
+                top: 10px;
+            }
+
+            .theme-toggle-container {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                z-index: 1000;
+            }
+
+            .theme-toggle-container button {
+                cursor: pointer;
+                border: 1px solid var(--search-field-borderColor);
+                border-radius: var(--radius);
+                background-color: var(--sidebar-contents-bgColor);
+                box-shadow: var(--shadow);
+                padding: 6px 10px;
+                font-size: 1.1em;
+                line-height: 1;
+                transition: background-color var(--transition), box-shadow var(--transition);
+            }
+
+            .theme-toggle-container button:hover {
+                background-color: var(--sidebar-li-a-hover-bgColor);
+            }
+
+            .search-area {
+                border-bottom: 1px solid var(--search-area-borderColor);
+            }
+
+            .search-header {
+                display: flex;
+                justify-content: space-between;
+            }
+
+            .search-field {
+                border: 1px solid var(--search-field-borderColor);
+                border-radius: var(--radius);
+                padding: 5px;
+                margin: 5px;
+                width: 80%;
+            }
+
+            .file-tree-controls {
+                border-bottom: 1px solid var(--search-area-borderColor);
+                padding: 5px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .file-tree-controls .folder-collapse button {
+                display: inline-block;
+                line-height: 0.7;
+            }
+
+            .file-tree-controls button,
+            .sidebar-reveal button,
+            .search-header button,
+            .file-tree-more button {
+                cursor: pointer;
+                border: 0px solid var(--search-field-borderColor);
+                border-radius: var(--radius);
+                background: none;
+                padding: 5px;
+                min-width: 3ch;
+            }
+
+            .file-tree-controls button:hover,
+            .sidebar-reveal button:hover,
+            .search-header button:hover,
+            .file-tree-more button:hover {
+                background-color: var(--sidebar-li-a-hover-bgColor);
+            }
+
+            .file-tree-more {
+                display: none;
+                padding: 5px;
+                border-bottom: 1px solid var(--search-area-borderColor);
+            }
+
+            .file-tree-more-option {
+                display: block;
+            }
+
+            #file-tree-more-extensions {
+                max-height: 200px;
+                overflow-y: scroll;
+                border: 1px solid var(--file-list-borderColor);
+                border-radius: var(--radius);
+            }
+
+            .file-list {
+                padding-left: 10px;
+                width: 100%;
+                overflow-x: clip;
+            }
+
+            .file-list ul li {
+                width: 100%;
+            }
+
+            .file-list li ul {
+                border-left: 1px solid var(--file-list-borderColor);
+                margin-left: 3px;
+            }
+
+            li ul {
+                padding-left: 1ch;
+            }
+
+            details.folder {
+                text-wrap: nowrap;
+            }
+
+            .folder > summary {
+                cursor: pointer;
+                list-style: none;
+            }
+
+            .folder > summary:hover {
+                background-color: var(--folder-summary-hover-bgColor);
+            }
+
+            .folder:not(:open) > summary:before {
+                content: "\1F4C1";
+                display: inline-block;
+                margin-right: 3px;
+            }
+
+            .folder:open > summary:before {
+                content: "\1F4C2";
+                display: inline-block;
+                margin-right: 3px;
+            }
+
+            details.folder ul:hover {
+                border-left: 1px solid var(--folder-ul-hover-borderColor);
+            }
+
+            .sidebar li {
+                line-height: 1.8;
+                list-style: none;
+                list-style-position: inside;
+                user-select: none;
+            }
+
+            .sidebar li a {
+                text-decoration: none;
+                padding: 5px;
+                color: var(--sidebar-link-color);
+                border-radius: var(--radius);
+                transition: background-color var(--transition), color var(--transition);
+            }
+
+            .sidebar li a:hover {
+                text-decoration: none;
+                border-radius: var(--radius);
+                background-color: var(--sidebar-li-a-hover-bgColor);
+                padding: 5px;
+                color: var(--sidebar-link-hover-color);
+                box-shadow: var(--hover-shadow);
+            }
+
+            .sidebar li a:visited {
+                color: var(--sidebar-link-visited-color);
+            }
+
+            .side-link {
+                text-wrap: nowrap;
+            }
+
+            /* File Status Indicators */
+            .sidebar li.file-new,
+            .sidebar li.file-old,
+            .sidebar li.file-deleted,
+            .sidebar li.file-renamed {
+                list-style: none;
+                padding-left: 0;
+            }
+
+            .sidebar li.file-new:before {
+                content: "+";
+                color: var(--sidebar-file-new-color);
+                font-weight: bold;
+            }
+
+            .sidebar li.file-old:before {
+                content: "\00B1";
+                color: var(--sidebar-file-old-color);
+            }
+
+            .sidebar li.file-deleted:before {
+                content: "-";
+                color: var(--sidebar-file-deleted-color);
+                font-weight: bold;
+            }
+
+            .sidebar li.file-renamed:before {
+                content: "\2192";
+                color: var(--sidebar-file-old-color);
+                font-weight: bold;
+            }
+
+            /* --- Diff View Components --- */
+
+            .diff-container {
+                scroll-margin-top: 10px;
+            }
+
+            .diff-content {
+                padding-bottom: 7px;
+                border: 1px solid var(--diff-content-borderColor);
+                border-radius: var(--radius);
+                margin-bottom: 10px;
+                background-color: var(--diff-content-bgColor);
+                box-shadow: var(--shadow);
+                transition: box-shadow var(--transition);
+            }
+
+            .diff-container[data-is-linked="true"] .diff-content {
+                border: 2px solid var(--diff-container-linked-borderColor);
+            }
+
+            details.diff-details summary.diff-summary {
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid var(--diff-summary-borderColor);
+                padding: 5px 0px;
+                position: sticky;
+                top: 0;
+                background-color: var(--diff-summary-bgColor);
+                border-radius: var(--radius) var(--radius) 0px 0px;
+            }
+
+            details.diff-details summary.diff-summary:hover {
+                background-color: var(--diff-summary-hover-bgColor);
+            }
+
+            details:open .diff-summary .filename:before {
+                content: "\25BC";
+                display: inline-block;
+            }
+
+            details:not(:open) .diff-summary .filename:before {
+                content: "\25B6";
+                display: inline-block;
+            }
+
+            .diff-header {
+                padding: 0px 5px 5px 5px;
+            }
+
+            .filename {
+                font-size: 1.2em;
+                padding-left: 10px;
+            }
+
+            .changes-count-container {
+                font-size: 0.9em;
+                padding-right: 10px;
+            }
+
+            .new-lines-count {
+                color: var(--new-lines-count-color);
+                font-weight: bold;
+            }
+
+            .old-lines-count {
+                color: var(--old-lines-count-color);
+                font-weight: bold;
+            }
+
+            /* --- Diff Line Styles --- */
+
+            .content span {
+                white-space: pre-wrap;
+            }
+
+            .context-chunk-header {
+                list-style: none;
+                background-color: var(--context-chunk-header-bgColor);
+                color: var(--context-chunk-header-color);
+                line-height: 2;
+                cursor: pointer;
+            }
+
+            details:open .context-chunk-header .line-number:before {
+                content: "\25BC";
+                display: inline-block;
+            }
+
+            details:not(:open) .context-chunk-header .line-number:before {
+                content: "\25B6";
+                display: inline-block;
+            }
+
+            .diff-lines {
+                line-break: anywhere;
+            }
+
+            .line-number {
+                width: 4ch;
+                min-width: 4ch;
+                display: inline-block;
+                text-align: center;
+                user-select: none;
+            }
+
+            .context-line {
+                color: var(--context-line-color);
+            }
+
+            .add {
+                background-color: var(--added-line-bgColor);
+                color: var(--added-line-color);
+            }
+
+            .del {
+                background-color: var(--deleted-line-bgColor);
+                color: var(--deleted-line-color);
+            }
+
+            .add,
+            .del,
+            .context-line {
+                height: 100%;
+            }
+
+            .diff-line {
+                display: flex;
+                box-sizing: border-box;
+                line-height: 1.5em;
+            }
+
+            .line-number.add {
+                background-color: var(--line-number-added-bgColor);
+            }
+
+            .line-number.del {
+                background-color: var(--line-number-deleted-bgColor);
+            }
+
+            .line-number.add,
+            .line-number.del {
+                height: auto;
+            }
+
+            .diff-symbol {
+                display: inline-block;
+                width: 1ch;
+                user-select: none;
+            }
+
+            /* --- Utility & Page States --- */
+
+            #empty_result {
+                justify-content: center;
+                align-items: center;
+                color: var(--empty-result-color);
+                font-weight: bold;
+                font-size: 4em;
+                text-align: center;
+            }
+        </style>
+        <script>
+
+            function syncThemeToggleUI() {
+                const theme = document.documentElement.getAttribute("data-theme") || "light";
+                const icon = document.getElementById("theme-toggle-icon");
+                const button = document.getElementById("theme-toggle-button");
+                if (icon) {
+                    // Sun / crescent moon, escaped to keep this template ASCII-only: the
+                    // report is written with the locale default encoding, which cannot
+                    // represent them on non-UTF-8 Windows codepages
+                    icon.textContent = theme === "dark" ? "\u2600\uFE0F" : "\uD83C\uDF19";
+                }
+                if (button) {
+                    button.title = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+                }
+            }
+
+            function toggleTheme() {
+                const current = document.documentElement.getAttribute("data-theme") || "light";
+                const next = current === "dark" ? "light" : "dark";
+                document.documentElement.setAttribute("data-theme", next);
+                syncThemeToggleUI();
+            }
+
+            const data = {{ content | tojson | safe }};
+
+            const oldPattern = "{{ src_prefix[:-1] }}{{ old_cache_path }}";
+            const newPattern = "{{ dst_prefix[:-1] }}{{ new_cache_path }}";
+
+            function extractLineNumbers(hunkHeader) {
+                const regex = /@@ -(\d+),\d+ \+(\d+),\d+ @@/;
+                const match = hunkHeader.match(regex);
+                if (!match) {
+                    return [0, 0];
+                }
+                return [parseInt(match[1]), parseInt(match[2])];
+            }
+
+            let extensions = {}
+
+            function initializeExtensionsFilter() {
+                const exts = [];
+                let addNoExtension = false;
+                for (let path in data) {
+                    const bits = path.split("/");
+                    const file = bits.pop();
+                    if (file.includes(".")) {
+                        const ext = file.split('.').pop();
+                        if (extensions[ext] === undefined) {
+                            exts.push(ext);
+                            extensions[ext] = true;
+                        }
+                    } else {
+                        addNoExtension = true;
+                    }
+                }
+                exts.sort();
+                if (addNoExtension) {
+                    exts.unshift(null);
+                    extensions[null] = true;
+                }
+
+                /* example: <div class="file-tree-more-option">
+                                <input type="checkbox" id="show-moved-files" checked
+                                    onclick="debouncedOnSearchInput(event)"/>
+                                <label for="show-moved-files">Moved files</label>
+                            </div> */
+                const container = document.getElementById("file-tree-more-extensions");
+                for (let ext of exts) {
+                    const optionDiv = document.createElement("div");
+                    const checkbox = document.createElement("input")
+                    const label = document.createElement("label")
+
+                    const id = "show-ext-" + ext;
+
+                    optionDiv.classList.add("file-tree-more-option");
+
+                    checkbox.id = id;
+                    checkbox.type = "checkbox"
+                    checkbox.checked = true;
+                    checkbox.dataset.extension = ext;
+                    checkbox.onchange = (event) => {
+                        onExtensionsChange(event);
+                    }
+
+                    label.for = id;
+                    if (ext != null) {
+                        label.innerText = "." + ext;
+                    } else {
+                        label.innerText = "No extension";
+                    }
+
+                    optionDiv.appendChild(checkbox);
+                    optionDiv.appendChild(label);
+
+                    container.appendChild(optionDiv);
+                }
+
+            }
+
+            function makeDiffLines(lines) {
+                const element = document.createElement("div");
+                let seen_header = false;
+                let new_line_index = 0;
+                let old_line_index = 0;
+                let new_line_count = 0;
+                let old_line_count = 0;
+                const headerDiv = document.createElement("div");
+                let currentDetails = null;
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    let spanLine = document.createElement("span");
+                    const lineDiv = document.createElement("div");
+                    lineDiv.className = "diff-line";
+                    let shouldAddLine = true;
+                    if (line.startsWith("+++")) {
+                        seen_header = true;
+                        spanLine.className = "add";
+                        spanLine.textContent = line.replace(newPattern, "(new)");
+                        headerDiv.appendChild(spanLine);
+                        continue;
+                    } else if (line.startsWith("---")) {
+                        spanLine.className = "del";
+                        spanLine.textContent = line.replace(oldPattern, "(old)");
+                        headerDiv.appendChild(spanLine);
+                        continue;
+                    } else if (line.startsWith("@@")) {
+                        currentDetails = document.createElement("details");
+                        currentDetails.open = true;
+
+                        const summary = document.createElement("summary");
+                        summary.className = "context-chunk-header";
+                        const summaryArrow = document.createElement("span");
+                        summaryArrow.className = "line-number";
+                        const summaryText = document.createElement("span");
+                        summaryText.textContent = line;
+
+                        summary.appendChild(summaryArrow);
+                        summary.appendChild(summaryText);
+
+                        currentDetails.appendChild(summary);
+                        element.appendChild(currentDetails);
+                        shouldAddLine = false;
+
+                        const lineNumbers = extractLineNumbers(line);
+                        old_line_index = lineNumbers[0];
+                        new_line_index = lineNumbers[1];
+                    } else if (line.startsWith("+")) {
+                        const spanSymbol = document.createElement("span");
+                        spanSymbol.textContent = "+";
+                        spanSymbol.className = "diff-symbol";
+                        spanLine.className = "add";
+                        spanLine.textContent = line.substring(1);
+                        spanLine.prepend(spanSymbol);
+
+                        const lineNumberSpan = document.createElement("span");
+                        lineNumberSpan.className = "line-number add";
+                        lineNumberSpan.textContent = new_line_index;
+                        lineDiv.appendChild(lineNumberSpan);
+
+                        new_line_index += 1;
+                        new_line_count += 1;
+                    } else if (line.startsWith("-")) {
+                        const spanSymbol = document.createElement("span");
+                        spanSymbol.textContent = "-";
+                        spanSymbol.className = "diff-symbol";
+                        spanLine.className = "del";
+                        spanLine.textContent = line.substring(1);
+                        spanLine.prepend(spanSymbol);
+
+                        const lineNumberSpan = document.createElement("span");
+                        lineNumberSpan.className = "line-number del";
+                        lineNumberSpan.textContent = old_line_index;
+                        lineDiv.appendChild(lineNumberSpan);
+
+                        old_line_index += 1;
+                        old_line_count += 1;
+                    } else {
+                        spanLine.className = "context-line";
+                        if (!seen_header) {
+                            spanLine.textContent = line.replace(oldPattern, "(old)").replace(newPattern, "(new)");
+                            headerDiv.appendChild(spanLine);
+                            headerDiv.appendChild(document.createElement("br"));
+                            continue;
+                        } else {
+                            const spanSymbol = document.createElement("span");
+                            spanSymbol.className = "diff-symbol";
+                            // Removes the empty space from the beginning of the line,
+                            // to match layout of removed char for diff lines
+                            spanLine.textContent = line.substring(1);
+                            spanLine.prepend(spanSymbol);
+                        }
+
+                        const lineNumberSpan = document.createElement("span");
+                        lineNumberSpan.className = "line-number context-line";
+                        lineNumberSpan.textContent = new_line_index;
+                        lineDiv.appendChild(lineNumberSpan);
+
+                        new_line_index += 1;
+                        old_line_index += 1;
+                    }
+                    if (shouldAddLine) {
+                        lineDiv.appendChild(spanLine);
+
+                        currentDetails.appendChild(lineDiv);
+                        //currentDetails.appendChild(document.createElement("br"));
+                    }
+                }
+                if (!seen_header) {
+                    element.appendChild(headerDiv);
+                }
+                return [element, new_line_count, old_line_count];
+            }
+
+            function createChangesCountElement(new_count, old_count) {
+                const changes = document.createElement("span");
+                changes.className = "changes-count";
+                changes.innerHTML = `<span class="new-lines-count">+${new_count}</span> <span class="old-lines-count">-${old_count}</span>`;
+                return changes;
+            }
+
+
+            function intersectionCallback(entries) {
+              entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    let elem = entry.target;
+                    const path = elem.dataset.path;
+                    const [lines, new_count, old_count] = makeDiffLines(data[path]);
+                    const diffLines = elem.querySelector(".diff-lines")
+
+                    // If we're scrolling up, new lines are added to the top, so we need to
+                    // preserve the scroll position relative to the bottom of the new content
+                    const prevRect = elem.getBoundingClientRect();
+
+
+                    diffLines.appendChild(lines);
+
+                    if (new_count !== 0 || old_count !== 0) {
+                        elem.querySelector(".changes-count-container").appendChild(createChangesCountElement(new_count, old_count));
+                    }
+
+                    if (elem.getAttribute("data-is-linked") === "true") {
+                        // We need to scroll to the element again now that its height has changed
+                        elem.scrollIntoView({block: "start", inline: "nearest", behavior: "instant"});
+                    } else {
+                        if (prevRect.top < 0) {
+                            const prevBottom = prevRect.bottom;
+                            const newBottom = elem.getBoundingClientRect().bottom;
+                            const container = document.querySelector('.container');
+                            container.scroll(0, container.scrollTop + (newBottom - prevBottom));
+                        }
+                    }
+
+                    observer.unobserve(elem);
+                }
+              });
+            }
+
+            const options = {
+                root: document.querySelector('.content'),
+                rootMargin: "0px",
+                scrollMargin: "0px",
+                threshold: 0.05,
+            };
+
+            const observer = new IntersectionObserver(intersectionCallback, options);
+
+            document.addEventListener("DOMContentLoaded", (e) => {
+                syncThemeToggleUI();
+                setDataIsLinked(null);
+                document.querySelectorAll('.diff-container').forEach((section) => {
+                    observer.observe(section);
+                });
+                initializeExtensionsFilter();
+            });
+
+            function debounce(func, delay) {
+                let timeout;
+                return function(...args) {
+                    const context = this;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(() => {
+                        func.apply(context, args);
+                    }, delay);
+                };
+            }
+            let includeSearchQuery = "";
+            let excludeSearchQuery = "";
+
+            async function onSearchInput() {
+                const sidebar = document.querySelectorAll(".sidebar li");
+                const fileList = document.querySelector(".file-list");
+                const content = document.querySelectorAll(".content .diff-container .diff-content");
+                const searchingIcon = document.getElementById("searching_icon");
+
+                searchingIcon.style.display = "inline-block";
+
+                let emptySearch = true;
+                let includedFiles = 0;
+
+                const typeVisibility = {
+                    "renamed": document.getElementById("show-moved-files").checked,
+                    "deleted": document.getElementById("show-deleted-files").checked,
+                    "new": document.getElementById("show-new-files").checked,
+                    "old": document.getElementById("show-old-files").checked,
+                };
+                sidebar.forEach(async function(item) {
+                    if (item.dataset.path === undefined) {
+                        // A folder, those are handled later
+                        return;
+                    }
+                    const text = item.dataset.path.toLowerCase();
+                    const bits = text.split("/");
+                    const filenameParts = bits.pop().split(".")
+                    let extension = null;
+                    if (filenameParts.length > 1) {
+                        extension = filenameParts.pop();
+                    }
+                    const shouldInclude = (includeSearchQuery === "" || text.includes(includeSearchQuery)) && extensions[extension] === true;
+                    let shouldExclude = (excludeSearchQuery !== "" && text.includes(excludeSearchQuery)) && extensions[extension] === false;
+                    const associatedId = item.querySelector("a").getAttribute("href").substring(1)
+                    const contentItem = document.getElementById(associatedId);
+
+                    const fileType = item.dataset.type;
+                    const isTypeVisible = typeVisibility[fileType] !== false;
+
+                    shouldExclude = shouldExclude || !isTypeVisible;
+
+                    if (shouldInclude) {
+                        if (shouldExclude) {
+                            item.style.display = "none";
+                            contentItem.style.display = "none";
+                        } else {
+                            includedFiles += 1;
+                            item.style.display = "list-item";
+                            contentItem.style.display = "block";
+                            emptySearch = false;
+                        }
+                    } else {
+                        item.style.display = "none";
+                        contentItem.style.display = "none";
+                    }
+
+                });
+
+                searchingIcon.style.display = "none";
+                const emptySearchTag = document.getElementById("empty_search");
+                const emptyResultTag = document.getElementById("empty_result");
+                if (emptySearch) {
+                    emptySearchTag.style.display = "block";
+                    emptyResultTag.style.display = "block";
+                    fileList.style.display = "none";
+                } else {
+                    emptySearchTag.style.display = "none";
+                    emptyResultTag.style.display = "none";
+                    fileList.style.display = "block";
+                }
+
+                const fileCountTag = document.getElementById("file-count");
+                fileCountTag.textContent = includedFiles;
+
+                const allDetails = document.querySelectorAll(".sidebar details.folder");
+                allDetails.forEach(function(details) {
+                    details.style.display = "none";
+                    details.querySelectorAll("li.file").forEach(function(li) {
+                        if (li.style.display !== "none") {
+                            details.style.display = "block";
+                            return;
+                        }
+                    });
+                });
+
+            }
+
+            const debouncedOnSearchInput = debounce(onSearchInput, 300);
+
+            async function onExcludeSearchInput(event) {
+                excludeSearchQuery = event.currentTarget.value.toLowerCase();
+                debouncedOnSearchInput();
+            }
+
+            async function onIncludeSearchInput(event) {
+                includeSearchQuery = event.currentTarget.value.toLowerCase();
+                debouncedOnSearchInput();
+            }
+
+            function onExtensionsChange(event) {
+                const ext = event.currentTarget.dataset.extension;
+                const value = event.currentTarget.checked;
+                extensions[ext] = value;
+                debouncedOnSearchInput();
+            }
+
+            function onExtensionsToggle(value) {
+                const container = document.getElementById("file-tree-more-extensions");
+                const checkboxes = container.getElementsByTagName("input");
+                for (let checkbox of checkboxes) {
+                    checkbox.checked = value;
+                    extensions[checkbox.dataset.extension] = value;
+                }
+                debouncedOnSearchInput();
+            }
+
+            function onExtensionsSearch(event) {
+                const filter = event.currentTarget.value.toLowerCase();
+                const container = document.getElementById("file-tree-more-extensions");
+                const checkboxes = container.getElementsByTagName("input");
+                for (let checkbox of checkboxes) {
+                    const ext = checkbox.dataset.extension;
+                    const display = filter == "" || ext.includes(filter) ? "block" : "none";
+                    checkbox.parentElement.style.display = display;
+                }
+            }
+
+            function setDataIsLinked(event) {
+                const hash = event ? event.currentTarget.getAttribute("href").substring(1) : window.location.hash.substring(1);
+                document.querySelectorAll('.diff-container').forEach((section) => {
+                    if (section.id === hash) {
+                        section.setAttribute("data-is-linked", "true");
+                        if (!event) {
+                            // Scroll to the linked element on page load
+                            section.scrollIntoView({block: "start", inline: "nearest", behavior: "instant"});
+                        }
+                    } else {
+                        section.setAttribute("data-is-linked", "false");
+                    }
+                });
+            }
+
+            function toggleFolders(open) {
+                if (open) {
+                    const toOpen = document.querySelectorAll('details.folder:open > ul > li > details.folder:not(:open)');
+                    if (toOpen.length === 0) {
+                        // We might need to open the root folders
+                        document.querySelectorAll('.file-list > li > details.folder:not(:open)').forEach(d => d.open = true);
+                    } else {
+                        toOpen.forEach(d => d.open = true);
+                    }
+                } else {
+                    document.querySelectorAll('details.folder:open').forEach(d => d.open = false);
+                }
+            }
+
+            function toggleSidebar(show) {
+                const sidebar = document.querySelector('.sidebar');
+                const sidebarReveal = document.querySelector('.sidebar-reveal');
+                const content = document.querySelector('.content');
+                if (show) {
+                    sidebar.style.display = 'block';
+                    sidebarReveal.style.display = 'none';
+                    content.style.padding = '20px';
+                } else {
+                    sidebar.style.display = 'none';
+                    sidebarReveal.style.display = 'block';
+                    content.style.padding = '20px 20px 20px 5px';
+                }
+            }
+
+            function toggleMoreFileTree() {
+                const moreOptions = document.querySelector('.file-tree-more');
+                const show = moreOptions.style.display !== 'block';
+                if (show) {
+                    moreOptions.style.display = 'block';
+                } else {
+                    moreOptions.style.display = 'none';
+                }
+            }
+        </script>
+    </head>
+    <body>
+        <div class="theme-toggle-container">
+            <button id="theme-toggle-button" onclick="toggleTheme()" title="Toggle dark mode">
+                <span id="theme-toggle-icon" aria-hidden="true">&#x1F319;</span>
+            </button>
+        </div>
+        <div class='container'>
+            <div class='sidebar'>
+                <div id="sidebar-contents">
+                    <div class="search-area">
+                        <div class="search-header">
+                            <div>
+                                <input type="search" class="search-field" id="search-include" placeholder="Include search..." oninput="onIncludeSearchInput(event)" />
+                                <input type="search" class="search-field" id="search-exclude" placeholder="Exclude search..." oninput="onExcludeSearchInput(event)" />
+                                <span id="searching_icon" style="display:none">...</span>
+                            </div>
+
+                            <button onclick="toggleSidebar(false)" title="Hide">
+                                &#x2190;
+                            </button>
+                        </div>
+                        <p>Showing <b id="file-count">{{ content|length }}</b> out of <b>{{ content|length }}</b> files</p>
+                    </div>
+                    <div class="file-tree">
+                        <div class="file-tree-controls">
+                            <div class="folder-collapse">
+                                <button onclick="toggleFolders(true)" title="Expand current level">
+                                    &#x02C4;
+                                    <br/>
+                                    &#x02C5;
+                                </button>
+                                <button onclick="toggleFolders(false)" title="Collapse all">
+                                    &#x02C5;
+                                    <br/>
+                                    &#x02C4
+                                </button>
+                            </div>
+                            <button onclick="toggleMoreFileTree()" title="Show more options"
+                                class="file-tree-reveal-more">
+                                    &#x22EE;
+                            </button>
+                        </div>
+                        <div class="file-tree-more">
+                            <h4>Show...</h4>
+                            <div class="file-tree-more-option">
+                                <input type="checkbox" id="show-old-files" checked
+                                    onclick="debouncedOnSearchInput(event)"/>
+                                <label for="show-old-files">Old files</label>
+                            </div>
+
+                            <div class="file-tree-more-option">
+                                <input type="checkbox" id="show-new-files" checked
+                                    onclick="debouncedOnSearchInput(event)"/>
+                                <label for="show-new-files">New files</label>
+                            </div>
+
+                            <div class="file-tree-more-option">
+                                <input type="checkbox" id="show-deleted-files" checked
+                                    onclick="debouncedOnSearchInput(event)"/>
+                                <label for="show-deleted-files">Deleted files</label>
+                            </div>
+
+                            <div class="file-tree-more-option">
+                                <input type="checkbox" id="show-moved-files" checked
+                                    onclick="debouncedOnSearchInput(event)"/>
+                                <label for="show-moved-files">Moved files</label>
+                            </div>
+                            <h4>Extensions</h4>
+                            <input type="search" class="search-field" oninput="onExtensionsSearch(event);" placeholder="Search extension"></input>
+                            <button onclick="onExtensionsToggle(true);">Check all</button>
+                            <button onclick="onExtensionsToggle(false);">Uncheck all</button>
+                            <div id="file-tree-more-extensions"></div>
+                        </div>
+                        <ul class="file-list">
+                            {{ render_sidebar_folder("", per_folder) }}
+                        </ul>
+                    </div>
+                </div>
+                <span id="empty_search" style="display:none">No results found</span>
+            </div>
+            <div class='sidebar-reveal'>
+                <button onclick="toggleSidebar(true)" title="Show">
+                    &#x2192;
+                </button>
+            </div>
+            <div class='content'>
+                <div class="diff-header">
+                    <h2>Diff Report Between <b class="del">{{ old_reference.repr_notime() }}</b> And <b class="add">{{ new_reference.repr_notime() }}</b></h2>
+                </div>
+                <span id="empty_result" style="display:none">No matches</span>
+                {{ render_diff_folder(per_folder) }}
+            </div>
+        </div>
+    </body>
+</html>
+"""

@@ -8,7 +8,9 @@ from conan.cli.args import add_reference_args
 
 
 def common_args_export(parser):
-    parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py)")
+    parser.add_argument("path", help="Path to a folder containing a recipe (conanfile.py). "
+                                     "Defaults to current directory",
+                        default=".", nargs="?")
     add_reference_args(parser)
 
 
@@ -41,6 +43,8 @@ def export(conan_api, parser, *args):
                         help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
 
+    # Only enable scoped output if None. If it is False, it means that
+    # we have explicitly disabled (e.g. tests), so we should not enable it
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=True)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
@@ -58,7 +62,7 @@ def export(conan_api, parser, *args):
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out, cwd)
 
     exported_list = PackagesList()
-    exported_list.add_refs([ref])
+    exported_list.add_ref(ref)
 
     pkglist = MultiPackagesList()
     pkglist.add("Local Cache", exported_list)

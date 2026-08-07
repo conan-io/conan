@@ -9,7 +9,7 @@ from conan.internal.api.detect.detect_vs import vs_installation_path
 from conan.test.assets.sources import gen_function_cpp
 from test.functional.utils import check_vs_runtime, check_exe_run
 from conan.test.utils.tools import TestClient
-from conans.util.files import rmdir
+from conan.internal.util.files import rmdir
 
 
 sln_file = r"""
@@ -418,15 +418,6 @@ class TestWin:
             command_str = "x64\\%s\\MyApp.exe" % configuration
         client.run_command(command_str)
 
-    @pytest.mark.tool("cmake")
-    @pytest.mark.tool("visual_studio", "15")
-    @pytest.mark.parametrize("compiler,version,runtime,cppstd",
-                             [("msvc", "191", "static", "17"),
-                              # ("msvc", "190", "static", "14")
-                              ])
-    def test_toolchain_win_vs2017(self, compiler, version, runtime, cppstd):
-        self.check_toolchain_win(compiler, version, runtime, cppstd, ide_version=15)
-
     @pytest.mark.tool("cmake", "3.23")
     @pytest.mark.tool("visual_studio", "17")
     @pytest.mark.parametrize("compiler,version,runtime,cppstd",
@@ -471,7 +462,7 @@ class TestWin:
 
         # Run the configure corresponding to this test case
         client.run("build . %s %s -pr:h=myprofile " % (settings_h, settings_b))
-        assert "conanfile.py: MSBuildToolchain created conantoolchain_release_win32.props" in client.out
+        assert "MSBuildToolchain created conantoolchain_release_win32.props" in client.out
         assert f"conanvcvars.bat: Activating environment Visual Studio {ide_version}" in client.out
         assert "[vcvarsall.bat] Environment initialized for: 'x86'" in client.out
 
@@ -513,7 +504,7 @@ class TestWin:
 
         # Run the configure corresponding to this test case
         client.run("build . %s" % (settings, ))
-        assert "conanfile.py: MSBuildToolchain created conantoolchain_debug_x64.props" in client.out
+        assert "MSBuildToolchain created conantoolchain_debug_x64.props" in client.out
         assert f"conanvcvars.bat: Activating environment Visual Studio 17" in client.out
         assert "[vcvarsall.bat] Environment initialized for: 'x64'" in client.out
         self._run_app(client, "x64", "Debug")

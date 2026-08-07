@@ -2,7 +2,7 @@ import textwrap
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import NO_SETTINGS_PACKAGE_ID, TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 def test_double_package_id_call():
@@ -41,10 +41,10 @@ def test_remove_option_setting():
     client.save({"conanfile.py": conanfile})
     client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Windows")
     assert "pkg/0.1@user/testing: OPTION OPT=False" in client.out
-    assert "pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
+    assert "Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
     client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux -o pkg/*:opt=True")
     assert "pkg/0.1@user/testing: OPTION OPT=True" in client.out
-    assert "pkg/0.1@user/testing: Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
+    assert "Package '%s' created" % NO_SETTINGS_PACKAGE_ID in client.out
 
 
 def test_value_parse():

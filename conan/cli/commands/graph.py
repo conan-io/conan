@@ -66,19 +66,13 @@ def graph_build_order(conan_api, parser, subparser, *args):
     Compute the build order of a dependency graph.
     """
     common_graph_args(subparser)
-    subparser.add_argument("--order-by", choices=['recipe', 'configuration'],
+    subparser.add_argument("--order-by", choices=['recipe', 'configuration'], default='recipe',
                            help='Select how to order the output, "recipe" by default if not set.')
     subparser.add_argument("--reduce", action='store_true', default=False,
                            help='Reduce the build order, output only those to build. Use this '
                                 'only if the result will not be merged later with other build-order')
     args = parser.parse_args(*args)
-
-    # parameter validation
-    if args.requires and (args.name or args.version or args.user or args.channel):
-        raise ConanException("Can't use --name, --version, --user or --channel arguments with "
-                             "--requires")
-    if args.order_by is None:
-        ConanOutput().warning("Please specify --order-by argument", warn_tag="deprecated")
+    validate_common_graph_args(args)
 
     cwd = os.getcwd()
     path = conan_api.local.get_conanfile_path(args.path, cwd, py=None) if args.path else None
@@ -91,6 +85,7 @@ def graph_build_order(conan_api, parser, subparser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -113,8 +108,6 @@ def graph_build_order(conan_api, parser, subparser, *args):
     install_graph = conan_api.graph.build_order(deps_graph, args.order_by, args.reduce,
                                                 profile_args=args)
     install_order_serialized = install_graph.install_build_order()
-    if args.order_by is None:  # legacy
-        install_order_serialized = install_order_serialized["order"]
 
     lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
                                                   clean=args.lockfile_clean)
@@ -173,7 +166,6 @@ def graph_info(conan_api, parser, subparser, *args):
     subparser.add_argument("--build-require", action='store_true', default=False,
                            help='Whether the provided reference is a build-require')
     args = parser.parse_args(*args)
-
     # parameter validation
     validate_common_graph_args(args)
     if args.format in ("html", "dot") and args.filter:
@@ -190,6 +182,7 @@ def graph_info(conan_api, parser, subparser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
@@ -271,6 +264,7 @@ def graph_explain(conan_api, parser,  subparser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:
@@ -321,9 +315,9 @@ def outdated_text_formatter(result):
 def outdated_json_formatter(result):
     output = {key: {"current_versions": list({str(v) for v in value["cache_refs"]}),
                     "version_ranges": [str(r) for r in value["version_ranges"]],
-                    "latest_remote": [] if value["latest_remote"] is None
-                                        else {"ref": str(value["latest_remote"]["ref"]),
-                                              "remote": str(value["latest_remote"]["remote"])}}
+                    "latest_remote": [] if value["latest_remote"] is None else {
+                        "ref": str(value["latest_remote"]["ref"]),
+                        "remote": str(value["latest_remote"]["remote"])}}
               for key, value in result.items()}
     cli_out_write(json.dumps(output))
 
@@ -352,6 +346,7 @@ def graph_outdated(conan_api, parser, subparser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 
     if path:

@@ -4,12 +4,12 @@ import textwrap
 
 import pytest
 
-from test.functional.toolchains.meson._base import TestMesonBase
 from conan.test.utils.tools import TestClient
 
 
-class TestMesonToolchainAndGnuFlags(TestMesonBase):
+class TestMesonToolchainAndGnuFlags:
 
+    @pytest.mark.tool("ninja")
     @pytest.mark.tool("meson")
     @pytest.mark.tool("pkg_config")
     def test_mesondeps_flags_are_being_appended_and_not_replacing_toolchain_ones(self):
@@ -108,6 +108,8 @@ class TestMesonToolchainAndGnuFlags(TestMesonBase):
                     clean_first=True)
 
         client.run("build . -c 'tools.build:cxxflags=[%s]'" % flags)
+        assert "WARN: deprecated: Use 'extra_defines' attribute for compiler preprocessor " \
+               "definitions instead of 'preprocessor_definitions'" in client.out
 
         app_name = "demo.exe" if platform.system() == "Windows" else "demo"
         client.run_command(os.path.join("build", app_name))

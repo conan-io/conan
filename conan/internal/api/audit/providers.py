@@ -16,7 +16,7 @@ class ConanCenterProvider:
         self.url = provider_data["url"]
         self.type = provider_data["type"]
         self._token = provider_data.get("token")
-        self._session = conan_api.remotes.requester
+        self._session = conan_api._api_helpers.requester  # noqa
         self._query_url = urljoin(self.url, "api/v1/query")
 
     def get_cves(self, refs):
@@ -30,7 +30,7 @@ class ConanCenterProvider:
                 output.write(f"'{self.name}'\n", fg=Color.BRIGHT_WHITE)
                 output.write("\nTo resolve, please:\n")
                 output.write("  1. Visit: ", fg=Color.BRIGHT_WHITE, newline=False)
-                output.write("https://audit.conan.io/register\n", fg=Color.BRIGHT_BLUE)
+                output.write("https://conan.io/audit/register\n", fg=Color.BRIGHT_BLUE)
                 output.write("  2. Register to obtain the access token and activate it.\n",
                              fg=Color.BRIGHT_WHITE)
                 output.write("  3. Use the command below to authenticate:\n", fg=Color.BRIGHT_WHITE)
@@ -40,7 +40,7 @@ class ConanCenterProvider:
 
             raise ConanException("Missing authentication token. Please authenticate and retry.")
 
-        result = {"data": {}, "error": None}
+        result = {"data": {}, "error": None, "provider_url": None}
 
         for ref in refs:
             ConanOutput().info(f"Requesting vulnerability info for: {ref}")
@@ -60,7 +60,7 @@ class ConanCenterProvider:
                 ConanOutput().error(f"Authentication error ({response.status_code}).\n"
                                     f"Your token may be invalid or not yet validated. If you recently registered, please check your email to validate your token.\n"
                                     f" - Set a valid token using: 'conan audit provider auth {self.name} --token=<your_token>'\n"
-                                    f" - If you don’t have a token, register at: https://audit.conan.io/register")
+                                    f" - If you don’t have a token, register at: https://conan.io/audit/register")
 
                 result["conan_error"] = f"Authentication error ({response.status_code})."
                 break
@@ -87,10 +87,9 @@ class ConanCenterProvider:
                         f"minute{'s'if reset_in_minutes > 1 else ''}.\n",
                         fg=Color.BRIGHT_WHITE,
                     )
-                # Now link them to where we try to sell them the product
                 output.write("Visit our website to learn more about JFrog's DevSecOps solution: ",
                              fg=Color.BRIGHT_WHITE, newline=False)
-                output.write("https://jfrog.com/devops-native-security/", newline=True,
+                output.write("https://conan.io/audit/limit", newline=True,
                              fg=Color.BRIGHT_BLUE)
                 output.write("\n")
 
@@ -112,7 +111,7 @@ class PrivateProvider:
         self.url = provider_data["url"]
         self.type = provider_data["type"]
         self._token = provider_data.get("token")
-        self._session = conan_api.remotes.requester
+        self._session = conan_api._api_helpers.requester  # noqa
         self._query_url = urljoin(self.url, "catalog/api/v0/public/graphql")
 
     def get_cves(self, refs):
@@ -120,7 +119,7 @@ class PrivateProvider:
             raise ConanException(f"Missing authentication token for '{self.name}' provider.\n"
                                  f"Please authenticate using 'conan audit provider auth' and retry.")
 
-        result = {"data": {}, "error": None}
+        result = {"data": {}, "error": None, "provider_url": self.url}
 
         for ref in refs:
             try:
@@ -128,7 +127,7 @@ class PrivateProvider:
                 if "error" in response:
                     result["data"][str(ref)] = {"error": {"details": response["error"]}}
                 else:
-                    result["data"][str(ref)] = response.get("data",{}).get("query",{})
+                    result["data"][str(ref)] = response.get("data", {}).get("query", {})
             except Exception as e:
                 result["conan_error"] = str(e)
                 break
@@ -149,19 +148,39 @@ class PrivateProvider:
                             severity
                             cvss {{
                                 preferredBaseScore
+                                v3 {{
+                                  baseScore
+                                }}
+                                v4 {{
+                                  baseScore
+                                }}
                             }}
                             aliases
+                            withdrawn
+                            publishedAt
                             advisories {{
                                 name
                                 ...on JfrogAdvisory {{
                                           name
                                           shortDescription
-                                          fullDescription
-                                          url
                                           severity
-                                     }}
+                                          impactReasons {{
+                                                name
+                                                isPositive
+                                          }}
                                 }}
+                            }}
                             references
+                            vulnerablePackages(first: 100) {{
+                                totalCount
+                                edges {{
+                                     node {{
+                                        fixVersions {{
+                                            version
+                                        }}
+                                    }}
+                                }}
+                            }}
                         }}
                     }}
                 }}
@@ -199,7 +218,7 @@ class PrivateProvider:
                 ConanOutput().warning(
                     f"An error occurred while connecting to the '{self.name}' provider.\n"
                     "This is likely because your JFrog Platform instance does not have JFrog Curation.\n"
-                    "For more information, visit: https://audit.conan.io/missing-curation\n"
+                    "For more information, visit: https://conan.io/audit/missing-curation\n"
                 )
 
             # Raises if some HTTP error was found

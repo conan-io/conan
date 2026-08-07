@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 from conan.internal.model.manifest import FileTreeManifest
 from conan.internal.paths import CONANFILE, DATA_YML
-from conans.util.files import set_dirty, clean_dirty, is_dirty, rmdir
+from conan.internal.util.files import set_dirty, clean_dirty, is_dirty, rmdir
 
 
 # To be able to change them later to something shorter
@@ -32,6 +32,11 @@ class LayoutBase:
 
 class BasicLayout(LayoutBase):
     # For editables and platform_requires
+
+    def __init__(self, ref, base_folder, editable_output_folder=None):
+        super().__init__(ref, base_folder)
+        self.editable_output_folder = editable_output_folder
+
     def conanfile(self):
         # the full conanfile path (including other other.py names) for editables
         # None for platform_requires

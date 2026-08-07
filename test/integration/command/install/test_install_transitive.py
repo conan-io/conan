@@ -6,7 +6,7 @@ from conan.internal.model.info import load_binary_info
 from conan.api.model import RecipeReference
 from conan.internal.paths import CONANFILE_TXT, CONANINFO
 from conan.test.utils.tools import TestClient,  GenConanfile
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 @pytest.fixture()
@@ -37,9 +37,9 @@ def test_install_combined(client):
 
 def test_install_transitive_cache(client):
     client.run("install --requires=hello2/0.1@lasote/stable --build=missing")
-    assert "hello0/0.1@lasote/stable: Generating the package" in client.out
-    assert "hello1/0.1@lasote/stable: Generating the package" in client.out
-    assert "hello2/0.1@lasote/stable: Generating the package" in client.out
+    assert "Generating the package hello0/0.1@lasote/stable:" in client.out
+    assert "Generating the package hello1/0.1@lasote/stable:" in client.out
+    assert "Generating the package hello2/0.1@lasote/stable:" in client.out
 
 
 def test_upper_option(client):

@@ -1,18 +1,33 @@
 import os
+import shlex
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
 
 
 class CommandAPI:
+    """ This CommandAPI is useful to be able to launch full commands from the ConanAPI
+
+    Sometimes some commands are built using several calls to the ConanAPI. If we want
+    to reuse the same functionality, then we would have to copy all that code into our
+    own commands.
+    Instead of doing that, it is possible to call Conan commands using this API, via
+    the ``run()`` method.
+    """
 
     def __init__(self, conan_api):
-        self.conan_api = conan_api
+        self._conan_api = conan_api
         self.cli = None
 
     def run(self, cmd):
+        """ Runs another Conan command via API
+
+        :param cmd: Conan command to run. It can be either a string, or a list of strings.
+        :return: It will return what that command returns. Note that different commands can
+           return different things, so the caller needs to process it accordingly.
+        """
         if isinstance(cmd, str):
-            cmd = cmd.split()
+            cmd = shlex.split(cmd)
         if isinstance(cmd, list):
             current_cmd = cmd[0]
             args = cmd[1:]
@@ -32,7 +47,7 @@ class CommandAPI:
         _warnings_as_errors = ConanOutput._warnings_as_errors  # noqa
 
         try:
-            result = command.run_cli(self.conan_api, args)
+            result = command.run_cli(self._conan_api, args)
         finally:
             ConanOutput._conan_output_level = _conan_output_level
             ConanOutput._silent_warn_tags = _silent_warn_tags

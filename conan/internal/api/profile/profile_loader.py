@@ -1,5 +1,6 @@
 import os
 import platform
+import subprocess
 from collections import OrderedDict, defaultdict
 
 from jinja2 import Environment, FileSystemLoader
@@ -14,8 +15,8 @@ from conan.internal.model.conf import ConfDefinition, CORE_CONF_PATTERN
 from conan.internal.model.options import Options
 from conan.internal.model.profile import Profile
 from conan.api.model import RecipeReference
-from conans.util.config_parser import ConfigParser
-from conans.util.files import mkdir, load_user_encoded
+from conan.internal.util.config_parser import TextINIParse
+from conan.internal.util.files import mkdir, load_user_encoded
 
 
 def _unquote(text):
@@ -79,7 +80,7 @@ class ProfileLoader:
     def __init__(self, cache_folder):
         self._home_paths = HomePaths(cache_folder)
 
-    def from_cli_args(self, profiles, settings, options, conf, cwd):
+    def from_cli_args(self, profiles, settings, options, conf, cwd, context=None):
         """ Return a Profile object, as the result of merging a potentially existing Profile
         file and the args command-line arguments
         """
@@ -88,20 +89,20 @@ class ProfileLoader:
 
         result = Profile()
         for p in profiles:
-            tmp = self.load_profile(p, cwd)
+            tmp = self.load_profile(p, cwd, context)
             result.compose_profile(tmp)
 
         args_profile = _profile_parse_args(settings, options, conf)
         result.compose_profile(args_profile)
         return result
 
-    def load_profile(self, profile_name, cwd=None):
+    def load_profile(self, profile_name, cwd=None, context=None):
         # TODO: This can be made private, only used in testing now
         cwd = cwd or os.getcwd()
-        profile = self._load_profile(profile_name, cwd)
+        profile = self._load_profile(profile_name, cwd, context, root_profile_name=profile_name)
         return profile
 
-    def _load_profile(self, profile_name, cwd):
+    def _load_profile(self, profile_name, cwd, context, root_profile_name):
         """ Will look for "profile_name" in disk if profile_name is absolute path,
         in current folder if path is relative or in the default folder otherwise.
         return: a Profile object
@@ -116,12 +117,15 @@ class ProfileLoader:
         # All profiles will be now rendered with jinja2 as first pass
         base_path = os.path.dirname(profile_path)
         file_path = os.path.basename(profile_path)
-        context = {"platform": platform,
+        renderc = {"platform": platform,
                    "os": os,
+                   "subprocess": subprocess,
                    "profile_dir": base_path,
                    "profile_name": file_path,
+                   "root_profile_name": root_profile_name,
                    "conan_version": conan_version,
-                   "detect_api": detect_api}
+                   "detect_api": detect_api,
+                   "context": context}
 
         # Always include the root Conan home "profiles" folder as secondary route for loading
         # imports and includes from jinja2 templates.
@@ -129,17 +133,17 @@ class ProfileLoader:
 
         try:
             rtemplate = Environment(loader=FileSystemLoader(loader_paths)).from_string(text)
-            text = rtemplate.render(context)
+            text = rtemplate.render(renderc)
         except Exception as e:
             raise ConanException(f"Error while rendering the profile template file '{profile_path}'. "
                                  f"Check your Jinja2 syntax: {str(e)}")
 
         try:
-            return self._recurse_load_profile(text, profile_path)
+            return self._recurse_load_profile(text, profile_path, context, profile_name)
         except ConanException as exc:
             raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
-    def _recurse_load_profile(self, text, profile_path):
+    def _recurse_load_profile(self, text, profile_path, context, root_profile_name):
         """ Parse and return a Profile object from a text config like representation.
             cwd is needed to be able to load the includes
         """
@@ -151,7 +155,7 @@ class ProfileLoader:
             # from parent profiles
             for include in profile_parser.includes:
                 # Recursion !!
-                profile = self._load_profile(include, cwd)
+                profile = self._load_profile(include, cwd, context, root_profile_name)
                 inherited_profile.compose_profile(profile)
 
             # Current profile before update with parents (but parent variables already applied)
@@ -217,15 +221,14 @@ class _ProfileParser:
                 raise ConanException("Error while parsing line %i: '%s'" % (counter, line))
 
 
-class _ProfileValueParser(object):
+class _ProfileValueParser:
     """ parses a "pure" or "effective" profile, with no includes, no variables,
     as the one in the lockfiles, or once these things have been processed by ProfileParser
     """
     @staticmethod
     def get_profile(profile_text, base_profile=None):
         # Trying to strip comments might be problematic if things contain #
-        doc = ConfigParser(profile_text, allowed_fields=["tool_requires",
-                                                         "system_tools",  # DEPRECATED: platform_tool_requires
+        doc = TextINIParse(profile_text, allowed_fields=["tool_requires",
                                                          "platform_requires",
                                                          "platform_tool_requires", "settings",
                                                          "options", "conf", "buildenv", "runenv",
@@ -237,12 +240,17 @@ class _ProfileValueParser(object):
         tool_requires = _ProfileValueParser._parse_tool_requires(doc)
 
         doc_platform_requires = doc.platform_requires or ""
-        doc_platform_tool_requires = doc.platform_tool_requires or doc.system_tools or ""
-        if doc.system_tools:
-            ConanOutput().warning("Profile [system_tools] is deprecated,"
-                                  " please use [platform_tool_requires]")
-        platform_tool_requires = [RecipeReference.loads(r) for r in doc_platform_tool_requires.splitlines()]
-        platform_requires = [RecipeReference.loads(r) for r in doc_platform_requires.splitlines()]
+        doc_platform_tool_requires = doc.platform_tool_requires or ""
+
+        def parse_replaces(replaces):
+            result = [RecipeReference.loads(r) for r in replaces.splitlines()]
+            errors = [r for r in result if str(r.version).startswith("[")]
+            if errors:
+                raise ConanException("Profile [platform_requires]/[platform_tool_requires] must "
+                                     f"be exact versions, not version ranges: {errors}")
+            return result
+        platform_tool_requires = parse_replaces(doc_platform_tool_requires)
+        platform_requires = parse_replaces(doc_platform_requires)
 
         def load_replace(doc_replace_requires):
             result = {}
@@ -252,8 +260,12 @@ class _ProfileValueParser(object):
                     continue
                 try:
                     src, target = r.split(":")
-                    target = RecipeReference.loads(target.strip())
-                    src = RecipeReference.loads(src.strip())
+                    target = target.strip()
+                    src = src.strip()
+                    if src == "*" and target != "!":
+                        raise ConanException("'*' pattern can only be used only with '!'")
+                    target = RecipeReference.loads(target) if target != "!" else "!"
+                    src = RecipeReference.loads(src) if src != "*" else "*"
                 except Exception as e:
                     raise ConanException(f"Error in [replace_xxx] '{r}'.\nIt should be in the form"
                                          f" 'pattern: replacement', without package-ids.\n"
@@ -329,6 +341,11 @@ class _ProfileValueParser(object):
                     pattern, req_list = "*", br_line
                 else:
                     pattern, req_list = tokens
+                if "[" in pattern:
+                    ConanOutput().warning(
+                        f"Tool requires pattern {pattern} contains a version range, which has no effect. "
+                        f"Only '&' for consumer and '*' as wildcard are supported in this context.",
+                        warn_tag="risk")
                 refs = [RecipeReference.loads(r.strip()) for r in req_list.split(",")]
                 result.setdefault(pattern, []).extend(refs)
         return result
@@ -341,10 +358,16 @@ class _ProfileValueParser(object):
             if ":" in item:
                 tmp = item.split(":", 1)
                 packagename, item = tmp
+                if "[" in packagename:
+                    ConanOutput().warning(f"Settings pattern {packagename} contains a version range, which has no effect. "
+                                          f"Only '&' for consumer and '*' as wildcard are supported in this context.",
+                                          warn_tag="risk")
 
             result_name, result_value = item.split("=", 1)
             result_name = result_name.strip()
             result_value = _unquote(result_value)
+            if result_value == "~":  # Can be used to undefine an already defined setting
+                result_value = None
             return packagename, result_name, result_value
 
         package_settings = OrderedDict()
@@ -385,10 +408,17 @@ def _profile_parse_args(settings, options, conf):
         package_items = defaultdict(list)
         tuples = _get_tuples_list_from_extender_arg(items)
         for name, value in tuples:
+            if value == "~":  # Can be used to undefine an already defined setting
+                value = None
             if ":" in name:  # Scoped items
                 tmp = name.split(":", 1)
                 ref_name = tmp[0]
                 name = tmp[1]
+                if "[" in ref_name:
+                    ConanOutput().warning(
+                        f"Pattern {ref_name} contains a version range, which has no effect. "
+                        f"Only '&' for consumer and '*' as wildcard are supported in this context.",
+                        warn_tag="risk")
                 package_items[ref_name].append((name, value))
             else:
                 simple_items.append((name, value))
@@ -410,7 +440,7 @@ def _profile_parse_args(settings, options, conf):
 
 
 def migrate_profile_plugin(cache_folder):
-    from conans.client.migrations import update_file
+    from conan.internal.api.migrations import update_file
 
     profile_plugin_file = HomePaths(cache_folder).profile_plugin_path
     update_file(profile_plugin_file, _default_profile_plugin)

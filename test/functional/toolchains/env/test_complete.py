@@ -44,6 +44,8 @@ def test_cmake_virtualenv(matrix_client):
         """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(MyApp CXX)
 
@@ -62,7 +64,7 @@ def test_cmake_virtualenv(matrix_client):
     client.run("create cmakewrapper --name=cmakewrapper --version=0.1")
     client.run("create consumer --name=consumer --version=0.1")
     assert "MYCMAKE WRAPPER!!" in client.out
-    assert "consumer/0.1: Created package" in client.out
+    assert "Created package" in client.out
 
 
 @pytest.mark.tool("cmake")

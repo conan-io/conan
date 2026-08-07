@@ -1,6 +1,7 @@
 import copy
 from collections import OrderedDict, defaultdict
 
+from conan.errors import ConanException
 from conan.tools.env.environment import ProfileEnvironment
 from conan.internal.model.conf import ConfDefinition
 from conan.internal.model.options import Options
@@ -147,8 +148,23 @@ class Profile:
                 existing[r.name] = req
             self.tool_requires[pattern] = list(existing.values())
 
-        self.replace_requires.update(other.replace_requires)
-        self.replace_tool_requires.update(other.replace_tool_requires)
+        def _update_replace(current, other_):
+            for k, v in other_.items():
+                if isinstance(k, str) and k == "*":
+                    assert v == "!"
+                    current.clear()
+                elif isinstance(v, str) and v == "!":
+                    current.pop(k, None)
+                else:
+                    current[k] = v
+        _update_replace(self.replace_requires, other.replace_requires)
+        _update_replace(self.replace_tool_requires, other.replace_tool_requires)
+
+        runner_type = self.runner.get("type")
+        other_runner_type = other.runner.get("type")
+        if runner_type and other_runner_type and runner_type != other_runner_type:
+            raise ConanException(f"Found different runner types in profile composition "
+                                 f"({runner_type} and {other_runner_type})")
         self.runner.update(other.runner)
 
         current_platform_tool_requires = {r.name: r for r in self.platform_tool_requires}
@@ -166,7 +182,7 @@ class Profile:
         """Mix the specified settings with the current profile.
         Specified settings are prioritized to profile"""
 
-        assert(isinstance(new_settings, OrderedDict))
+        assert isinstance(new_settings, (OrderedDict, dict))
 
         # apply the current profile
         res = copy.copy(self.settings)
@@ -189,3 +205,8 @@ class Profile:
         Specified package settings are prioritized to profile"""
         for package_name, settings in package_settings.items():
             self.package_settings[package_name].update(settings)
+            # Sort so parent settings (e.g. compiler) precede sub-settings (compiler.version)
+            # regardless of include order, mirroring what profile_loader does per-file
+            self.package_settings[package_name] = OrderedDict(
+                sorted(self.package_settings[package_name].items())
+            )

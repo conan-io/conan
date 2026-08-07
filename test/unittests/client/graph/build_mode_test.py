@@ -1,6 +1,6 @@
 import pytest
 
-from conans.client.graph.build_mode import BuildMode
+from conan.internal.graph.build_mode import BuildMode
 from conan.errors import ConanException
 from conan.api.model import RecipeReference
 from conan.test.utils.mocks import ConanFileMock, RedirectedTestOutput
@@ -24,23 +24,6 @@ def test_skip_package(conanfile):
     build_mode = BuildMode(["!zlib/*"])
     assert not build_mode.forced(conanfile, RecipeReference.loads("zlib/1.2.11#23423423"))
     assert not build_mode.forced(conanfile, RecipeReference.loads("other/1.2"))
-
-
-def test_valid_params():
-    build_mode = BuildMode(["missing"])
-    assert build_mode.missing is True
-    assert build_mode.never is False
-    assert build_mode.cascade is False
-
-    build_mode = BuildMode(["never"])
-    assert build_mode.missing is False
-    assert build_mode.never is True
-    assert build_mode.cascade is False
-
-    build_mode = BuildMode(["cascade"])
-    assert build_mode.missing is False
-    assert build_mode.never is False
-    assert build_mode.cascade is True
 
 
 def test_invalid_configuration():

@@ -31,7 +31,7 @@ class TestRemoveEditablePackageTest:
         assert "lib" not in client.out
 
     def test_remove_path(self, client):
-        client.run("editable remove .")
+        client.run("editable remove")
         assert "Removed editable 'lib/version@user/name':" in client.out
         client.run("editable list")
         assert "lib" not in client.out

@@ -8,7 +8,7 @@ from conan.internal.model.conf import ConfDefinition, Conf
 from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import MockSettings, ConanFileMock, MockOptions
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def test_msbuild_targets():
@@ -25,7 +25,7 @@ def test_msbuild_targets():
     msbuild = MSBuild(conanfile)
     cmd = msbuild.command('project.sln', targets=["static", "shared"])
 
-    assert '-target:static;shared' in cmd
+    assert '-target:"static;shared"' in cmd
 
 
 def test_msbuild_cpu_count():
@@ -40,12 +40,12 @@ def test_msbuild_cpu_count():
 
     msbuild = MSBuild(conanfile)
     cmd = msbuild.command('project.sln')
-    assert 'msbuild.exe "project.sln" -p:Configuration="Release" -p:Platform=x64 -m:23' == cmd
+    assert 'msbuild.exe "project.sln" -p:Configuration="Release" -p:Platform="x64" -m:"23"' == cmd
 
     c.loads("tools.microsoft.msbuild:max_cpu_count=0")
     conanfile.conf = c.get_conanfile_conf(None)
     cmd = msbuild.command('project.sln')
-    assert 'msbuild.exe "project.sln" -p:Configuration="Release" -p:Platform=x64 -m' == cmd
+    assert 'msbuild.exe "project.sln" -p:Configuration="Release" -p:Platform="x64" -m' == cmd
 
 
 def test_msbuild_toolset():
@@ -54,6 +54,7 @@ def test_msbuild_toolset():
                          "os": ["Windows"],
                          "arch": ["x86_64"]})
     conanfile = ConanFile(None)
+    conanfile.conf = Conf()
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings = settings
     conanfile.settings.build_type = "Release"
@@ -77,6 +78,7 @@ def test_msbuild_toolset():
 ])
 def test_msbuild_toolset_for_intel_cc(mode, expected_toolset):
     conanfile = ConanFile()
+    conanfile.conf = Conf()
     conanfile.settings = "os", "compiler", "build_type", "arch"
     conanfile.settings = Settings({"build_type": ["Release"],
                                    "compiler": {"intel-cc": {"version": ["2021.3"], "mode": [mode]},

@@ -1,11 +1,11 @@
 import os
 import textwrap
-from collections import OrderedDict
+
 from unittest import mock
 
 from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID, GenConanfile
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def test_download_with_sources():
@@ -35,12 +35,14 @@ def test_no_user_channel():
     client.run("remove * -c")
 
     client.run("download pkg/1.0:{} -r default".format(NO_SETTINGS_PACKAGE_ID))
-    assert f"Downloading package 'pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:{NO_SETTINGS_PACKAGE_ID}" in client.out
+    assert (f"Downloading package "
+            f"'pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:{NO_SETTINGS_PACKAGE_ID}") in client.out
 
     # All
     client.run("remove * -c")
     client.run("download pkg/1.0#*:* -r default")
-    assert f"Downloading package 'pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:{NO_SETTINGS_PACKAGE_ID}" in client.out
+    assert (f"Downloading package "
+            f"'pkg/1.0#4d670581ccb765839f2239cc8dff8fbd:{NO_SETTINGS_PACKAGE_ID}") in client.out
 
 
 def test_download_with_python_requires():
@@ -52,8 +54,7 @@ def test_download_with_python_requires():
     really need to load conanfile, so it doesn't fail because of this.
     """
     # https://github.com/conan-io/conan/issues/9548
-    servers = OrderedDict([("tools", TestServer()),
-                           ("pkgs", TestServer())])
+    servers = {"tools": TestServer(), "pkgs": TestServer()}
     c = TestClient(servers=servers, inputs=["admin", "password", "admin", "password"])
 
     c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
@@ -90,10 +91,10 @@ def test_download_verify_ssl_conf():
 
     did_verify = {}
 
-    def custom_download(this, url, filepath, *args, **kwargs):
+    def custom_download(this, url, filepath, *args, **kwargs):  # noqa
         did_verify[url] = args[2]
 
-    with mock.patch("conans.client.downloaders.file_downloader.FileDownloader.download",
+    with mock.patch("conan.internal.rest.file_downloader.FileDownloader.download",
                     custom_download):
         client.run("create . -c tools.files.download:verify=True")
         assert did_verify["http://verify.true"]

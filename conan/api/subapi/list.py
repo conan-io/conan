@@ -1,12 +1,10 @@
-import copy
 import os
 from collections import OrderedDict
 from typing import Dict
 
-from conan.api.model import PackagesList, MultiPackagesList, ListPattern
+from conan.api.model import PackagesList, MultiPackagesList, ListPattern, Remote
 from conan.api.output import ConanOutput, TimedOutput
 from conan.internal.api.list.query_parse import filter_package_configs
-from conan.internal.conan_app import ConanBasicApp
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.paths import CONANINFO
 from conan.internal.errors import NotFoundException
@@ -14,35 +12,63 @@ from conan.errors import ConanException
 from conan.internal.model.info import load_binary_info
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conans.util.dates import timelimit
-from conans.util.files import load
+from conan.internal.util.dates import timestamp_now
+from conan.internal.util.files import load
+
+
+def _timelimit(expression):
+    """ convert an expression like "2d" (2 days) or "3h" (3 hours) to a timestamp in the past
+    with respect to current time
+    """
+    time_value = expression[:-1]
+    try:
+        time_value = int(time_value)
+    except TypeError:
+        raise ConanException(f"Time value '{time_value}' must be an integer")
+    time_units = expression[-1]
+    units = {"y": 365 * 24 * 60 * 60,
+             "M": 30 * 24 * 60 * 60,
+             "w": 7 * 24 * 60 * 60,
+             "d": 24 * 60 * 60,
+             "h": 60 * 60,
+             "m": 60,
+             "s": 1}
+    try:
+        lru_value = time_value * units[time_units]
+    except KeyError:
+        raise ConanException(f"Unrecognized time unit: '{time_units}'. Use: {list(units)}")
+
+    limit = timestamp_now() - lru_value
+    return limit
 
 
 class ListAPI:
-    """
-    Get references from the recipes and packages in the cache or a remote
+    """ Get references from the recipes and packages in the cache or a remote
     """
 
-    def __init__(self, conan_api):
-        self.conan_api = conan_api
+    def __init__(self, conan_api, api_helpers):
+        self._conan_api = conan_api
+        self._api_helpers = api_helpers
 
-    def latest_recipe_revision(self, ref: RecipeReference, remote=None):
+    def latest_recipe_revision(self, ref: RecipeReference, remote: Remote = None):
+        """ For a given recipe reference, return the latest revision of the recipe in the remote,
+        or in the local cache if no remote is specified, or ``None`` if the recipe does not exist."""
         assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
-        app = ConanBasicApp(self.conan_api)
         if remote:
-            ret = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
+            ret = self._api_helpers.remote_manager.get_latest_recipe_revision(ref, remote=remote)
         else:
-            ret = app.cache.get_latest_recipe_reference(ref)
+            ret = self._api_helpers.cache.get_latest_recipe_revision(ref)
 
         return ret
 
-    def recipe_revisions(self, ref: RecipeReference, remote=None):
+    def recipe_revisions(self, ref: RecipeReference, remote: Remote = None):
+        """ For a given recipe reference, return all the revisions of the recipe in the remote,
+        or in the local cache if no remote is specified"""
         assert ref.revision is None, "recipe_revisions: ref already have a revision"
-        app = ConanBasicApp(self.conan_api)
         if remote:
-            results = app.remote_manager.get_recipe_revisions_references(ref, remote=remote)
+            results = self._api_helpers.remote_manager.get_recipe_revisions(ref, remote=remote)
         else:
-            results = app.cache.get_recipe_revisions_references(ref)
+            results = self._api_helpers.cache.get_recipe_revisions(ref)
 
         return results
 
@@ -52,47 +78,39 @@ class ListAPI:
         #  is used as an "exists" check too in other places, lets respect the None return
         assert pref.revision is None, "latest_package_revision: ref already have a revision"
         assert pref.package_id is not None, "package_id must be defined"
-        app = ConanBasicApp(self.conan_api)
         if remote:
-            ret = app.remote_manager.get_latest_package_reference(pref, remote=remote)
+            ret = self._api_helpers.remote_manager.get_latest_package_revision(pref, remote=remote)
         else:
-            ret = app.cache.get_latest_package_reference(pref)
+            ret = self._api_helpers.cache.get_latest_package_revision(pref)
         return ret
 
     def package_revisions(self, pref: PkgReference, remote=None):
         assert pref.ref.revision is not None, "package_revisions requires a recipe revision, " \
                                               "check latest first if needed"
-        app = ConanBasicApp(self.conan_api)
         if remote:
-            results = app.remote_manager.get_package_revisions_references(pref, remote=remote)
+            results = self._api_helpers.remote_manager.get_package_revisions(pref, remote=remote)
         else:
-            results = app.cache.get_package_revisions_references(pref, only_latest_prev=False)
+            results = self._api_helpers.cache.get_package_revisions(pref)
         return results
 
-    def packages_configurations(self, ref: RecipeReference,
-                                remote=None) -> Dict[PkgReference, dict]:
-        assert ref.revision is not None, "packages: ref should have a revision. " \
-                                         "Check latest if needed."
-        app = ConanBasicApp(self.conan_api)
+    def _packages_configurations(self, ref: RecipeReference,
+                                 remote=None) -> Dict[PkgReference, dict]:
+        assert ref.revision is not None and ref.revision != "latest", \
+            "packages: ref should have a revision. Check latest if needed."
         if not remote:
-            prefs = app.cache.get_package_references(ref)
-            packages = _get_cache_packages_binary_info(app.cache, prefs)
+            prefs = self._api_helpers.cache.get_package_references(ref)
+            packages = _get_cache_packages_binary_info(self._api_helpers.cache, prefs)
         else:
-            if ref.revision == "latest":
-                ref.revision = None
-                ref = app.remote_manager.get_latest_recipe_reference(ref, remote=remote)
-            packages = app.remote_manager.search_packages(remote, ref)
+            packages = self._api_helpers.remote_manager.search_packages(remote, ref)
         return packages
 
     @staticmethod
-    def filter_packages_configurations(pkg_configurations, query):
+    def _filter_packages_configurations(pkg_configurations, query):
         """
         :param pkg_configurations: Dict[PkgReference, PkgConfiguration]
         :param query: str like "os=Windows AND (arch=x86 OR compiler=gcc)"
         :return: Dict[PkgReference, PkgConfiguration]
         """
-        if query is None:
-            return pkg_configurations
         try:
             if "!" in query:
                 raise ConanException("'!' character is not allowed")
@@ -105,7 +123,7 @@ class ListAPI:
             raise ConanException("Invalid package query: %s. %s" % (query, exc))
 
     @staticmethod
-    def filter_packages_profile(packages, profile, ref):
+    def _filter_packages_profile(packages, profile, ref):
         result = {}
         profile_settings = profile.processed_settings.serialize()
         # Options are those for dependencies, like *:shared=True
@@ -134,7 +152,22 @@ class ListAPI:
 
         return result
 
-    def select(self, pattern, package_query=None, remote=None, lru=None, profile=None):
+    def select(self, pattern: ListPattern, package_query=None, remote: Remote = None, lru=None,
+               profile=None) -> PackagesList:
+        """For a given pattern, return a list of recipes and packages matching the provided filters.
+
+        :parameter ListPattern pattern: Search criteria
+        :parameter str package_query: When returning packages, expression of the form
+            ``"os=Windows AND (arch=x86 OR compiler=gcc)"`` to filter packages by.
+            If ``None``, all packages will be returned if requested.
+        :parameter Remote remote: Remote to search in,
+            if ``None``, it will search in the local cache.
+        :parameter str lru: If set, it will filter the results to only include
+            packages/binaries that have been used in the last 'lru' time.
+            It can be a string like ``"2d"`` (2 days) or ``"3h"`` (3 hours).
+        :parameter Profile profile: Profile to filter the packages by settings and options.
+        """
+        # TODO: Implement better error forwarding for "list" command that captures Exceptions
         if package_query and pattern.package_id and "*" not in pattern.package_id:
             raise ConanException("Cannot specify '-p' package queries, "
                                  "if 'package_id' is not a pattern")
@@ -144,13 +177,15 @@ class ListAPI:
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
         search_ref = pattern.search_ref
-        app = ConanBasicApp(self.conan_api)
-        limit_time = timelimit(lru) if lru else None
+        cache = self._api_helpers.cache
+        limit_time = _timelimit(lru) if lru else None
         out = ConanOutput()
         remote_name = "local cache" if not remote else remote.name
         if search_ref:
-            refs = self.conan_api.search.recipes(search_ref, remote=remote)
-            refs = pattern.filter_versions(refs)
+            refs = _search_recipes(self._api_helpers, search_ref, remote=remote)
+            global_conf = self._api_helpers.global_conf  # noqa
+            resolve_prereleases = global_conf.get("core.version_ranges:resolve_prereleases")
+            refs = pattern.filter_versions(refs, resolve_prereleases)
             pattern.check_refs(refs)
             out.info(f"Found {len(refs)} pkg/version recipes matching {search_ref} in {remote_name}")
         else:
@@ -158,7 +193,8 @@ class ListAPI:
 
         # Show only the recipe references
         if pattern.package_id is None and pattern.rrev is None:
-            select_bundle.add_refs(refs)
+            for r in refs:
+                select_bundle.add_ref(r)
             return select_bundle
 
         def msg_format(msg, item, total):
@@ -178,9 +214,10 @@ class ListAPI:
                 rrevs = list(reversed(rrevs))  # Order older revisions first
 
             if lru and pattern.package_id is None:  # Filter LRUs
-                rrevs = [r for r in rrevs if app.cache.get_recipe_lru(r) < limit_time]
+                rrevs = [r for r in rrevs if cache.get_recipe_lru(r) < limit_time]
 
-            select_bundle.add_refs(rrevs)
+            for rr in rrevs:
+                select_bundle.add_ref(rr)
 
             if pattern.package_id is None:  # Stop if not displaying binaries
                 continue
@@ -193,11 +230,11 @@ class ListAPI:
                     prefs.append(PkgReference(rrev, package_id=pattern.package_id))
                     packages = {}
                 else:
-                    packages = self.packages_configurations(rrev, remote)
+                    packages = self._packages_configurations(rrev, remote)
                     if package_query is not None:
-                        packages = self.filter_packages_configurations(packages, package_query)
+                        packages = self._filter_packages_configurations(packages, package_query)
                     if profile is not None:
-                        packages = self.filter_packages_profile(packages, profile, rrev)
+                        packages = self._filter_packages_profile(packages, profile, rrev)
                     prefs = packages.keys()
                     prefs = pattern.filter_prefs(prefs)
                     packages = {pref: conf for pref, conf in packages.items() if pref in prefs}
@@ -219,10 +256,14 @@ class ListAPI:
                     prefs = new_prefs
 
                 if lru:  # Filter LRUs
-                    prefs = [r for r in prefs if app.cache.get_package_lru(r) < limit_time]
+                    prefs = [r for r in prefs if cache.get_package_lru(r) < limit_time]
 
-                select_bundle.add_prefs(rrev, prefs)
-                select_bundle.add_configurations(packages)
+                # Packages dict has been listed, even if empty
+                select_bundle.recipe_dict(rrev)["packages"] = {}
+                for p in prefs:
+                    # the "packages" dict is not using the package-revision
+                    pkg_info = packages.get(PkgReference(p.ref, p.package_id))
+                    select_bundle.add_pref(p, pkg_info)
         return select_bundle
 
     def explain_missing_binaries(self, ref, conaninfo, remotes):
@@ -234,14 +275,14 @@ class ListAPI:
         # Collect all configurations
         candidates = []
         ConanOutput().info(f"Finding binaries in the cache")
-        pkg_configurations = self.packages_configurations(ref)
+        pkg_configurations = self._packages_configurations(ref)
         candidates.extend(_BinaryDistance(pref, data, conaninfo)
                           for pref, data in pkg_configurations.items())
 
         for remote in remotes:
             try:
                 ConanOutput().info(f"Finding binaries in remote {remote.name}")
-                pkg_configurations = self.packages_configurations(ref, remote=remote)
+                pkg_configurations = self._packages_configurations(ref, remote=remote)
             except Exception as e:
                 ConanOutput().error(f"Error in remote '{remote.name}': {e}")
             else:
@@ -250,7 +291,7 @@ class ListAPI:
 
         candidates.sort()
         pkglist = PackagesList()
-        pkglist.add_refs([ref])
+        pkglist.add_ref(ref)
         # Return the closest matches, stop adding when distance is increased
         candidate_distance = None
         for candidate in candidates:
@@ -258,10 +299,9 @@ class ListAPI:
                 break
             candidate_distance = candidate.distance
             pref = candidate.pref
-            pkglist.add_prefs(ref, [pref])
-            pkglist.add_configurations({pref: candidate.binary_config})
+            pkglist.add_pref(pref, candidate.binary_config)
             # Add the diff data
-            rev_dict = pkglist.recipes[str(pref.ref)]["revisions"][pref.ref.revision]
+            rev_dict = pkglist.recipe_dict(ref)
             rev_dict["packages"][pref.package_id]["diff"] = candidate.serialize()
             remote = candidate.remote.name if candidate.remote else "Local Cache"
             rev_dict["packages"][pref.package_id]["remote"] = remote
@@ -272,30 +312,51 @@ class ListAPI:
         (Experimental) Find the remotes where the current package lists can be found
         """
         result = MultiPackagesList()
+        remote_manager = self._api_helpers.remote_manager
         for r in remotes:
             result_pkg_list = PackagesList()
-            for ref, recipe_bundle in package_list.refs().items():
-                ref_no_rev = copy.copy(ref)  # TODO: Improve ugly API
-                ref_no_rev.revision = None
+            for ref, ref_contents in package_list.serialize().items():
+                ref = RecipeReference.loads(ref)
                 try:
-                    revs = self.recipe_revisions(ref_no_rev, remote=r)
+                    remote_rrevs = remote_manager.get_recipe_revisions(ref, remote=r)
                 except NotFoundException:
                     continue
-                if ref not in revs:  # not found
+                revisions = ref_contents.get("revisions")
+                if revisions is None:  # This is a package list just with name/version
+                    if remote_rrevs:
+                        result_pkg_list.add_ref(ref)
                     continue
-                result_pkg_list.add_refs([ref])
-                for pref, pref_bundle in package_list.prefs(ref, recipe_bundle).items():
-                    pref_no_rev = copy.copy(pref)  # TODO: Improve ugly API
-                    pref_no_rev.revision = None
-                    try:
-                        prevs = self.package_revisions(pref_no_rev, remote=r)
-                    except NotFoundException:
+
+                for revision, rev_content in revisions.items():
+                    ref.revision = revision
+                    # We look for the value of revision in server, to return timestamp too
+                    found = next((r for r in remote_rrevs if r == ref), None)
+                    if not found:
                         continue
-                    if pref in prevs:
-                        result_pkg_list.add_prefs(ref, [pref])
-                        info = recipe_bundle["packages"][pref.package_id]["info"]
-                        result_pkg_list.add_configurations({pref: info})
-            if result_pkg_list.recipes:
+                    result_pkg_list.add_ref(found)
+                    packages = rev_content.get("packages")
+                    if packages is None:
+                        continue
+                    for pkgid, pkgcontent in packages.items():
+                        pref = PkgReference(ref, pkgid)
+                        try:
+                            remote_prefs = remote_manager.get_package_revisions(pref, remote=r)
+                        except NotFoundException:
+                            continue
+                        pkg_revisions = pkgcontent.get("revisions")
+                        if pkg_revisions is None:  # This is a package_id, no prevs
+                            if remote_prefs:
+                                result_pkg_list.add_pref(pref, pkgcontent.get("info"))
+                            continue
+                        for pkg_revision, prev_content in pkg_revisions.items():
+                            pref.revision = pkg_revision
+                            # We look for the value of revision in server, to return timestamp too
+                            pfound = next((r for r in remote_prefs if r == pref), None)
+                            if not pfound:
+                                continue
+                            result_pkg_list.add_pref(pfound, pkgcontent.get("info"))
+
+            if result_pkg_list:
                 result.add(r.name, result_pkg_list)
         return result
 
@@ -326,9 +387,9 @@ class ListAPI:
                     remote_ref_list = self.select(ref_pattern, package_query=None, remote=remote)
                 except NotFoundException:
                     continue
-                if not remote_ref_list.recipes:
+                if not remote_ref_list:
                     continue
-                str_latest_ref = list(remote_ref_list.recipes.keys())[-1]
+                str_latest_ref = list(remote_ref_list.serialize().keys())[-1]
                 recipe_ref = RecipeReference.loads(str_latest_ref)
                 if (node_info["latest_remote"] is None
                         or node_info["latest_remote"]["ref"] < recipe_ref):
@@ -465,7 +526,7 @@ def _get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
     result = OrderedDict()
 
     for pref in prefs:
-        latest_prev = cache.get_latest_package_reference(pref)
+        latest_prev = cache.get_latest_package_revision(pref)
         pkg_layout = cache.pkg_layout(latest_prev)
 
         # Read conaninfo
@@ -483,3 +544,20 @@ def _get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
         result[pkg_layout.reference] = info
 
     return result
+
+
+def _search_recipes(api_helpers, query: str, remote=None):
+    only_none_user_channel = False
+    if query and query.endswith("@"):
+        only_none_user_channel = True
+        query = query[:-1]
+
+    if remote:
+        refs = api_helpers.remote_manager.search_recipes(remote, query)
+    else:
+        refs = api_helpers.cache.search_recipes(query)
+    ret = []
+    for r in refs:
+        if not only_none_user_channel or (r.user is None and r.channel is None):
+            ret.append(r)
+    return sorted(ret)

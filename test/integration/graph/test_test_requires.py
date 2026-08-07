@@ -35,6 +35,9 @@ class TestTestRequiresDiamond:
             from conan import ConanFile
             class Pkg(ConanFile):
                 def requirements(self):
+                    # Best practice is to declare test_requires in the build_requirements() method,
+                    # but this ensures it is also possible to declare them in requirements(),
+                    # as has historically been allowed.
                     self.test_requires("gtest/1.0")
                     self.requires("zlib/1.0")
             """)
@@ -70,8 +73,9 @@ class TestTestRequiresDiamond:
         game = textwrap.dedent("""
            from conan import ConanFile
            class Pkg(ConanFile):
-               def requirements(self):
+               def build_requirements(self):
                    self.test_requires("gtest/1.0")
+               def requirements(self):
                    self.requires("engine/1.0")
            """)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
@@ -92,7 +96,7 @@ class TestTestRequiresDiamond:
         game = textwrap.dedent("""
            from conan import ConanFile
            class Pkg(ConanFile):
-               def requirements(self):
+               def build_requirements(self):
                    self.test_requires("gtest/1.0", force=True)
                    self.test_requires("rapidcheck/1.0")
            """)
@@ -195,7 +199,7 @@ def test_requires_transitive_diamond_components():
     c.run("create libb")
     c.run("create libc")
     # This used to crash due to component not defined to liba
-    assert "libc/0.1: Created package" in c.out
+    assert "Created package" in c.out
 
 
 def test_requires_transitive_diamond_components_order():
@@ -214,8 +218,9 @@ def test_requires_transitive_diamond_components_order():
             name = "libc"
             version = "0.1"
 
-            def requirements(self):
+            def build_requirements(self):
                 self.test_requires("liba/1.0")
+            def requirements(self):
                 self.requires("libb/1.0")
 
             def package_info(self):
@@ -229,7 +234,7 @@ def test_requires_transitive_diamond_components_order():
     c.run("create libb")
     c.run("create libc")
     # This used to crash due to component not defined to liba
-    assert "libc/0.1: Created package" in c.out
+    assert "Created package" in c.out
 
 
 def test_wrong_requirement_test_requires():

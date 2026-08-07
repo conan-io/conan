@@ -9,16 +9,16 @@ from conan.errors import ConanException
 from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import RecipeReference
 from conan.internal.paths import DATA_YML
-from conans.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
+from conan.internal.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_dirty, chdir
 
 
-def cmd_export(app, hook_manager, global_conf, conanfile_path, name, version, user, channel,
+def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
+               name, version, user, channel,
                graph_lock=None, remotes=None):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     """
-    loader, cache = app.loader, app.cache
     conanfile = loader.load_export(conanfile_path, name, version, user, channel, graph_lock,
                                    remotes=remotes)
 
@@ -28,8 +28,26 @@ def cmd_export(app, hook_manager, global_conf, conanfile_path, name, version, us
 
     conanfile.conf = global_conf.get_conanfile_conf(ref, is_consumer=True)
     conanfile.display_name = str(ref)
-    conanfile.output.scope = conanfile.display_name
-    scoped_output = conanfile.output
+    ConanOutput().info(f"{str(ref)} export")
+    scoped_output = ConanOutput()
+    # Even though the package_id_non_embed_mode is minor_mode by default,
+    # and package_id_unknown_mode is semver_mode by default,
+    # recipes with buggy versions that do not define the attribute will have
+    # the same problem regardless
+    if not isinstance(ref.version.major.value, int) and ref.version.minor is not None:
+        modes = [getattr(conanfile, f"package_id_{m}_mode", None)
+                 for m in ("embed", "non_embed", "unknown")]
+        if (any(m in ("semver", "major", "minor", "patch") for m in modes) or
+                all(m is None for m in modes)):
+            msg = (f"Version '{ref.version}' contains an alphanumeric major alongside a minor "
+                   f"version, without correct 'package_id_xxx_mode' attributes.\n"
+                   f"This is highly discouraged due to unexpected package ID calculation "
+                   f"risks. Either a different version scheme should be used "
+                   f"(e.g., semantic versioning), or the 'package_id_xxx_mode' attributes "
+                   f"should be set (to something other than major, minor, patch or semver modes).\n"
+                   f"Refer to the documentation for more details: "
+                   f"https://docs.conan.io/2/knowledge/guidelines.html#guidelines-bad-alphanumeric-majors")
+            scoped_output.warning(msg, warn_tag="risk")
 
     recipe_layout = cache.create_export_recipe_layout(ref)
 
@@ -97,20 +115,23 @@ def _calc_revision(scoped_output, path, manifest, revision_mode, conanfile):
     if revision_mode == "hash":
         revision = manifest.summary_hash
     else:
+        repository = (revision_mode == "scm")
         # Exception to the rule that tools should only be used in recipes, this Git helper is ok
         excluded = getattr(conanfile, "revision_mode_excluded", None)
         git = Git(conanfile, folder=path, excluded=excluded)
         try:
-            revision = git.get_commit(repository=(revision_mode == "scm"))
+            revision = git.get_commit(repository=repository)
         except Exception as exc:
             error_msg = "Cannot detect revision using '{}' mode from repository at " \
                         "'{}'".format(revision_mode, path)
             raise ConanException("{}: {}".format(error_msg, exc))
 
-        if git.is_dirty():
-            raise ConanException("Can't have a dirty repository using revision_mode='scm' and doing"
-                                 " 'conan export', please commit the changes and run again, or "
-                                 "use 'git_excluded = []' attribute")
+        if git.is_dirty(repository):
+            raise ConanException("Can't have a dirty repository using revision_mode='scm'/"
+                                 "'scm_folder' and doing 'conan export', please commit the changes "
+                                 "and run again, or use 'revision_mode_excluded' recipe attribute "
+                                 "or 'core.scm:excluded' global configuration to define the list of "
+                                 "excluded file patterns")
 
         scoped_output.info("Using git commit as the recipe revision: %s" % revision)
 
@@ -138,8 +159,8 @@ def _export_source(conanfile, destination_source_folder):
         conanfile.exports_sources = (conanfile.exports_sources,)
 
     included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
-    for pattern in included_sources:
-        copy(conanfile, pattern, src=conanfile.recipe_folder,
+    if included_sources:
+        copy(conanfile, included_sources, src=conanfile.recipe_folder,
              dst=destination_source_folder, excludes=excluded_sources)
 
     conanfile.folders.set_base_export_sources(destination_source_folder)
@@ -163,9 +184,9 @@ def _export_recipe(conanfile, destination_folder):
 
     included_exports, excluded_exports = _classify_patterns(conanfile.exports)
 
-    for pattern in included_exports:
-        copy(conanfile, pattern, conanfile.recipe_folder, destination_folder,
-             excludes=excluded_exports)
+    if included_exports:
+        copy(conanfile, included_exports, conanfile.recipe_folder,
+             destination_folder, excludes=excluded_exports)
 
     conanfile.folders.set_base_export(destination_folder)
     _run_method(conanfile, "export")

@@ -7,7 +7,7 @@ import yaml
 
 from conan.errors import ConanException
 from conan.internal.paths import DATA_YML
-from conans.util.files import mkdir, load, save
+from conan.internal.util.files import mkdir, load, save
 
 
 class PatchLogHandler(logging.Handler):

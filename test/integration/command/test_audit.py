@@ -5,26 +5,68 @@ import sys
 from contextlib import contextmanager
 
 import pytest
-from mock.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.env import environment_update
 from conan.test.utils.tools import TestClient
 
+_sbom_zlib_1_2_11 = """
+{
+  "components" : [ {
+    "author" : "<Put your name here> <And your email here>",
+    "bom-ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4",
+    "description" : "<Description of zlib package here>",
+    "licenses" : [ {
+      "license" : {
+        "name" : "<Put the package license here>"
+      }
+    } ],
+    "name" : "zlib",
+    "purl" : "pkg:conan/zlib@1.2.11",
+    "type" : "library",
+    "version" : "1.2.11"
+  } ],
+  "dependencies" : [ {
+    "ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4"
+  } ],
+  "metadata" : {
+    "component" : {
+      "author" : "<Put your name here> <And your email here>",
+      "bom-ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4",
+      "name" : "zlib/1.2.11",
+      "type" : "library"
+    },
+    "timestamp" : "2025-06-10T08:13:11Z",
+    "tools" : [ {
+      "externalReferences" : [ {
+        "type" : "website",
+        "url" : "https://github.com/conan-io/conan"
+      } ],
+      "name" : "Conan-io"
+    } ]
+  },
+  "serialNumber" : "urn:uuid:4f7ce240-4c6d-4a87-bfb6-78d0fbc839e3",
+  "bomFormat" : "CycloneDX",
+  "specVersion" : "1.4",
+  "version" : 1
+}
+"""
+
 
 @contextmanager
-def proxy_response(status, data):
-    with patch("conan.api.conan_api.RemotesAPI.requester") as conanRequesterMock:
+def proxy_response(status, data, retry_after=60):
+    with patch("conan.api.conan_api.ConanAPI._ApiHelpers.requester") as conanRequesterMock:
         return_status = MagicMock()
         return_status.status_code = status
         return_status.json = MagicMock(return_value=data)
-        return_status.headers = {"retry-after": 60}
+        return_status.headers = {"retry-after": retry_after}
         conanRequesterMock.post = MagicMock(return_value=return_status)
 
         yield conanRequesterMock, return_status
 
 
-def test_conan_audit_paths():
+def test_conan_audit_proxy():
     successful_response = {
         "data": {
             "query": {
@@ -34,7 +76,7 @@ def test_conan_audit_paths():
                         {
                             "node": {
                                 "name": "CVE-2023-45853",
-                                "description": "Zip vulnerability",
+                                "description": "Zip vulnerability" + "a" * 90,  # Force wrapping
                                 "severity": "Critical",
                                 "cvss": {
                                     "preferredBaseScore": 8.9
@@ -63,10 +105,14 @@ def test_conan_audit_paths():
         "error": None
     }
 
-    tc = TestClient(light=True)
+    tc = TestClient(light=True, default_server_user=True)
 
-    tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11")})
-    tc.run("export .")
+    tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11"),
+             "sbom.cdx.json": _sbom_zlib_1_2_11})
+    tc.run("create . --lockfile-out=conan.lock")
+    tc.run("upload * -c -r=default")
+
+    tc.run("list * -r=default -f=json", redirect_stdout="pkglist_remote.json")
 
     tc.run("list '*' -f=json", redirect_stdout="pkglist.json")
 
@@ -82,8 +128,27 @@ def test_conan_audit_paths():
         tc.run("audit list -l=pkglist.json")
         assert "zlib/1.2.11 1 vulnerability found" in tc.out
 
+        tc.run("audit list -l=pkglist_remote.json -r=default")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list --lockfile=conan.lock")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list --sbom=sbom.cdx.json")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
         tc.run("audit scan --requires=zlib/1.2.11")
         assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.save({"conanfile.txt": "[requires]\nzlib/1.2.11\n"}, clean_first=True)
+        tc.run("audit scan")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit scan . --requires=zlib/1.2.11", assert_error=True)
+        assert "--requires and --tool-requires arguments are incompatible with [path] '.' argument" in tc.out
+
+        tc.run("audit list zlib/1.2.11 -f=html")
+        assert "CVE-2023-45853" in tc.out
 
     # Now some common errors, like rate limited or missing lib, but it should not fail!
     with proxy_response(429, {"error": "Rate limit exceeded"}):
@@ -91,9 +156,28 @@ def test_conan_audit_paths():
         assert "You have exceeded the number of allowed requests" in tc.out
         assert "The limit will reset in 1 minute" in tc.out
 
+    with proxy_response(429, {"error": "Rate limit exceeded"}, retry_after=2 * 3600):
+        tc.run("audit list zlib/1.2.11", assert_error=True)
+        assert "You have exceeded the number of allowed requests" in tc.out
+        assert "The limit will reset in 2 hours and 0 minute" in tc.out
+
     with proxy_response(400, {"error": "Not found"}):
+        # Not finding a package should not be an error
         tc.run("audit list zlib/1.2.11")
         assert "Package 'zlib/1.2.11' not scanned: Not found." in tc.stdout
+
+    with proxy_response(403, {"error": "Error not shown"}):
+        tc.run("audit list zlib/1.2.11", assert_error=True)
+        assert "ERROR: Authentication error (403)" in tc.out
+        assert "Error not shown" not in tc.out
+
+    with proxy_response(500, {"error": "Internal error"}):
+        tc.run("audit list zlib/1.2.11", assert_error=True)
+        assert "Internal server error (500)" in tc.out
+
+    with proxy_response(405, {"error": "Method not allowed"}):
+        tc.run("audit list zlib/1.2.11", assert_error=True)
+        assert "Error in zlib/1.2.11 (405)" in tc.out
 
     tc.run("audit provider add myprivate --url=foo --type=private --token=valid_token")
 
@@ -106,7 +190,7 @@ def test_conan_audit_paths():
     assert ("ERROR: Provider 'conancenter' not found. Please specify a valid provider name or add "
             "it using: 'conan audit provider add conancenter --url=https://audit.conan.io/ "
             "--type=conan-center-proxy --token=<token>'") in tc.out
-    assert "If you don't have a valid token, register at: https://audit.conan.io/register." in tc.out
+    assert "If you don't have a valid token, register at: https://conan.io/audit/register." in tc.out
 
     if platform.system() != "Windows":
         providers_stat = os.stat(os.path.join(tc.cache_folder, "audit_providers.json"))
@@ -114,6 +198,129 @@ def test_conan_audit_paths():
         assert providers_stat.st_uid == os.getuid()
         assert providers_stat.st_gid == os.getgid()
         assert providers_stat.st_mode & 0o777 == 0o600
+
+
+def test_conan_audit_private():
+    successful_response = {
+        "data": {
+            "query": {
+                "vulnerabilities": {
+                    "totalCount": 1,
+                    "edges": [
+                        {
+                            "node": {
+                                "name": "CVE-2023-45853",
+                                "description": "Zip vulnerability",
+                                "severity": "Critical",
+                                "cvss": {
+                                    "preferredBaseScore": 8.9
+                                },
+                                "aliases": [
+                                    "CVE-2023-45853",
+                                    "JFSA-2023-000272529"
+                                ],
+                                "withdrawn": True,
+                                "publishedAt": "Yesterday",
+                                "advisories": [
+                                    {
+                                        "name": "CVE-2023-45853",
+                                        "shortDescription": "Zip vulnerability (CVE)",
+                                        "severity": "Critical"
+                                    },
+                                    {
+                                        "name": "JFSA-2023-000272529",
+                                        "shortDescription": "Zip vulnerability (JFSA)",
+                                        "severity": "Moderate",
+                                        "impactReasons": [
+                                            {"name": "Reason 1", "isPositive": True},
+                                            {"name": "Reason 2", "isPositive": False}
+                                        ]
+                                    }
+                                ],
+                                "references": [
+                                    "https://pypi.org/project/pyminizip/#history",
+                                ],
+                                "vulnerablePackages": {
+                                    "totalCount": 1,
+                                    "edges": [{
+                                        "node": {"fixVersions": [{"version": "1.2.12"}]}
+                                    }]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    tc = TestClient(light=True)
+
+    tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11"),
+             "sbom.cdx.json": _sbom_zlib_1_2_11})
+    tc.run("create . --lockfile-out=conan.lock")
+
+    tc.run("list '*' -f=json", redirect_stdout="pkglist.json")
+
+    # TODO: If the CLI does not allow tokenless provider, should this case not be handled?
+    tc.run("audit provider add myprivate --url=foo --type=private --token=f")
+    # Now, remove the token as if the user didn't set it manually in the json
+    providers = json.loads(tc.load_home("audit_providers.json"))
+    providers["myprivate"].pop("token", None)
+    tc.save_home({"audit_providers.json": json.dumps(providers)})
+
+    tc.run("audit list zlib/1.2.11 -p=myprivate", assert_error=True)
+    assert "Missing authentication token for 'myprivate' provider" in tc.out
+
+    tc.run("audit provider auth myprivate --token=valid_token")
+
+    with proxy_response(200, successful_response):
+        tc.run("audit list zlib/1.2.11 -p=myprivate")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list -l=pkglist.json -p=myprivate")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list --lockfile=conan.lock -p=myprivate")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list --sbom=sbom.cdx.json -p=myprivate")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit scan --requires=zlib/1.2.11  -p=myprivate")
+        assert "zlib/1.2.11 1 vulnerability found" in tc.out
+
+        tc.run("audit list zlib/1.2.11 -p=myprivate -f=html")
+        assert "CVE-2023-45853" in tc.out
+        assert "Yesterday" in tc.out
+        assert "[WITHDRAWN]" in tc.out
+        # Fixed version
+        assert "1.2.12" in tc.out
+        assert "Zip vulnerability (JFSA)" in tc.out
+        assert 'inherit;">Reason 1</li>' in tc.out  # Positive impact
+        assert 'red;">Reason 2</li>' in tc.out  # Negative impact
+
+    # Now some common errors, like rate limited or missing lib, but it should not fail!
+    with proxy_response(400, {"errors": [{"message": "Ref not found"}]}):
+        # Not finding a package should not be an error
+        tc.run("audit list zlib/1.2.11 -p=myprivate")
+        assert "Package 'zlib/1.2.11' not scanned: Not found." in tc.stdout
+
+    with proxy_response(403, {"errors": [{"message": "Authentication error"}]}):
+        tc.run("audit list zlib/1.2.11 -p=myprivate")
+        assert "Unknown error" in tc.out
+
+    with proxy_response(500, {"errors": [{"message": "Internal error"}]}):
+        tc.run("audit list zlib/1.2.11 -p=myprivate")
+        assert "Unknown error" in tc.out
+
+    with proxy_response(405, {"errors": [{"message": "Method not allowed"}]}):
+        tc.run("audit list zlib/1.2.11 -p=myprivate")
+        assert "Unknown error" in tc.out
+
+    with proxy_response(404, {"errors": [{"message": "Not found"}]}):
+        tc.run("audit list zlib/1.2.11 -p=myprivate")
+        assert "An error occurred while connecting to the 'myprivate' provider" in tc.out
 
 
 @pytest.mark.skipif(sys.version_info < (3, 10),
@@ -138,7 +345,7 @@ def test_audit_list_conflicting_args():
     tc = TestClient(light=True)
     tc.save({"pkglist.json": '{"Local Cache": {"zlib/1.2.11": {}}}'})
     tc.run("audit list zlib/1.2.11 -l=pkglist.json", assert_error=True)
-    assert "Please specify a reference or a pkglist file, not both" in tc.out
+    assert "argument -l/--list: not allowed with argument reference" in tc.out
 
 
 def test_audit_provider_add_missing_url():
@@ -156,7 +363,7 @@ def test_audit_provider_remove_nonexistent():
 def test_audit_list_missing_arguments():
     tc = TestClient(light=True)
     tc.run("audit list", assert_error=True)
-    assert "Please specify a reference or a pkglist file" in tc.out
+    assert "one of the arguments reference" in tc.out
 
 
 def test_audit_provider_env_credentials_with_proxy(monkeypatch):
@@ -178,7 +385,7 @@ def test_audit_provider_env_credentials_with_proxy(monkeypatch):
         return response
 
     with environment_update({"CONAN_AUDIT_PROVIDER_TOKEN_CONANCENTER": "env_token_value"}):
-        with patch("conan.api.conan_api.RemotesAPI.requester",
+        with patch("conan.api.conan_api.ConanAPI._ApiHelpers.requester",
                    new_callable=MagicMock) as requester_mock:
             requester_mock.post = fake_post
             tc.run("audit list zlib/1.2.11")
@@ -272,8 +479,219 @@ def test_audit_scan_threshold_error(severity_level, threshold, should_fail):
         severity_param = "" if threshold is None else f"-sl {threshold}"
         tc.run(f"audit scan --requires=foobar/0.1.0 {severity_param}", assert_error=should_fail)
         assert "foobar/0.1.0 1 vulnerability found" in tc.out
-        assert f"CVSS: {severity_level}" in tc.out
+        assert f"Critical - {severity_level}" in tc.out
         if should_fail:
             if threshold is None:
                 threshold = "9.0"
             assert f"ERROR: The package foobar/0.1.0 has a CVSS score {severity_level} and exceeded the threshold severity level {threshold}" in tc.out
+
+
+def test_parse_error_crash_when_no_edges():
+    from conan.cli.commands.audit import _parse_error_threshold
+
+    scan_result = {
+        "data": {
+            # this used to crash because dav1d not having vulnerabilities field
+            "dav1d/1.4.3": {"error": {"details": "Package 'dav1d/1.4.3' not scanned: Not found."}},
+            "zlib/1.2.11": {
+                "vulnerabilities": {
+                    "totalCount": 1,
+                    "edges": [
+                        {"node": {"cvss": {"preferredBaseScore": 7.0}}}
+                    ]
+                }
+            }
+        }
+    }
+
+    _parse_error_threshold(scan_result, error_level=5.0)
+    assert "conan_error" in scan_result
+    assert "zlib/1.2.11" in scan_result["conan_error"]
+    assert "7.0" in scan_result["conan_error"]
+
+
+@pytest.mark.parametrize("package_context", ["build", "host"])
+@pytest.mark.parametrize("filter_context", ["build", "host", None])
+def test_audit_scan_context_filter(package_context, filter_context):
+    tc = TestClient(light=True)
+
+    tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11")})
+    tc.run("export .")
+    tc.run("audit provider auth conancenter --token=valid_token")
+
+    requires = "requires" if package_context == "host" else "tool-requires"
+    context = "" if filter_context is None else f"--context={filter_context}"
+
+    with proxy_response(200, {}):
+        tc.run(f"audit scan --{requires}=zlib/1.2.11 {context}")
+        if filter_context is None or filter_context == package_context:
+            assert "Requesting vulnerability info for: zlib/1.2.11" in tc.out
+        else:
+            assert "Requesting vulnerability info for: zlib/1.2.11" not in tc.out
+
+
+@pytest.mark.parametrize("score", [
+    {
+        "preferredBaseScore": 8.9,
+    },
+    {
+        "preferredBaseScore": 8.9,
+        "v3": {
+            "baseScore": 8.9
+        }
+    },
+    {
+        "preferredBaseScore": 8.9,
+        "v3": {
+            "baseScore": 8.9
+        },
+        "v4": {
+            "baseScore": 5.6
+        }
+    },
+])
+@pytest.mark.parametrize("out", ["html", "text"])
+def test_audit_cvss_versions(score, out):
+    """In case the severity level is equal or higher than the found for a CVE,
+           the command should output the information as usual, and exit with non-success code error.
+        """
+    successful_response = {
+        "data": {
+            "query": {
+                "vulnerabilities": {
+                    "totalCount": 1,
+                    "edges": [
+                        {
+                            "node": {
+                                "name": "CVE-2023-45853",
+                                "description": "Zip vulnerability",
+                                "severity": "Critical",
+                                "cvss": score,
+                                "aliases": [
+                                    "CVE-2023-45853",
+                                    "JFSA-2023-000272529"
+                                ],
+                                "advisories": [
+                                    {
+                                        "name": "CVE-2023-45853"
+                                    },
+                                    {
+                                        "name": "JFSA-2023-000272529"
+                                    }
+                                ],
+                                "references": [
+                                    "https://pypi.org/project/pyminizip/#history",
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    }
+
+    tc = TestClient(light=True)
+
+    tc.save({"conanfile.py": GenConanfile("foobar", "0.1.0")})
+    tc.run("export .")
+    tc.run("audit provider auth conancenter --token=valid_token")
+
+    with proxy_response(200, successful_response):
+        tc.run(f"audit scan --requires=foobar/0.1.0 -f={out}")
+        if out == "text":
+            assert "foobar/0.1.0 1 vulnerability found" in tc.out
+            assert f"Critical - {score['preferredBaseScore']}" in tc.out
+            if "v4" in score:
+                assert f'CVSS v4: {score["v4"]["baseScore"]}' in tc.out
+            if "v3" in score:
+                assert f'CVSS v3: {score["v3"]["baseScore"]}' in tc.out
+        else:
+            assert "CVE-2023-45853" in tc.out
+            assert f"Critical ({score['preferredBaseScore']})" in tc.out
+            if "v4" in score:
+                assert f'CVSS <i>v4</i>: {score["v4"]["baseScore"]}' in tc.out
+            if "v3" in score:
+                assert f'CVSS <i>v3</i>: {score["v3"]["baseScore"]}' in tc.out
+
+
+class TestAuditApiBranchouts:
+    def test_audit_load_provider_default(self):
+        tc = TestClient(light=True)
+        tc.run("audit provider list -f=json", redirect_stdout="before.json")
+        os.unlink(os.path.join(tc.cache_folder, "audit_providers.json"))
+        tc.run("audit provider list -f=json", redirect_stdout="after.json")
+        before = json.loads(tc.load("before.json"))
+        after = json.loads(tc.load("after.json"))
+        assert after[0]["url"] == "https://audit.conan.io/"
+        after[0]["url"] = before[0]["url"]
+        # And the rest is the same
+        assert before == after
+
+    def test_audit_provider_add_duplicate(self):
+        tc = TestClient(light=True)
+        tc.run("audit provider add conancenter --url=foo --type=conan-center-proxy --token=valid_token",
+               assert_error=True)
+        assert "Provider 'conancenter' already exists" in tc.out
+
+
+class TestAuditScanBranchouts:
+    def test_audit_scan_graph_error(self):
+        tc = TestClient(light=True)
+        tc.save({"bar/conanfile.py": GenConanfile("bar", "1.0"),
+                 "foo/conanfile.py": GenConanfile("foo", "1.0").with_provides("bar")})
+        tc.run("export bar")
+        tc.run("export foo")
+        tc.run("audit scan --requires=foo/1.0 --requires=bar/1.0", assert_error=True)
+        assert "Provide Conflict" in tc.out
+
+
+class TestAuditListBranchouts:
+    def test_audit_list_pkglist_empty(self):
+        tc = TestClient(light=True)
+        tc.save({"pkglist.json": '{"Local Cache": {}}'})
+        tc.run("audit provider auth conancenter --token=valid_token")
+        tc.run("audit list -l=pkglist.json")
+        assert "Nothing to list" in tc.out
+        assert "Total vulnerabilities found: 0" in tc.out
+
+    def test_audit_list_sbom_non_cyclone(self):
+        tc = TestClient(light=True)
+        tc.save({"sbom.json": '{"bomFormat": "SPDX"}'})
+        tc.run("audit list --sbom=sbom.json", assert_error=True)
+        assert "Unsupported SBOM format, only CycloneDX is supported" in tc.out
+
+
+class TestAuditProviderBranchouts:
+    def test_provider_json_format(self):
+        tc = TestClient(light=True)
+        tc.run("audit provider list -f=json", redirect_stdout="out.json")
+        out = json.loads(tc.load("out.json"))
+        assert len(out) == 1
+
+    def test_provider_add_spaces_in_name(self):
+        tc = TestClient(light=True)
+        tc.run('audit provider add "my private" --url=foo --type=private --token=valid_token',
+               assert_error=True)
+        assert "Name cannot contain spaces" in tc.out
+
+    def test_provider_add_user_input_token(self):
+        tc = TestClient(light=True, inputs=["valid_token"])
+        tc.run('audit provider add private --url=foo --type=private')
+        providers = json.loads(tc.load_home("audit_providers.json"))
+        assert providers["private"]["token"] == 'dmFsaWRfdG9rZW4='
+
+    def test_provider_remove_no_name(self):
+        tc = TestClient(light=True)
+        tc.run('audit provider remove ""', assert_error=True)
+        assert "Name required to remove a provider" in tc.out
+
+    def test_provider_auth_no_name(self):
+        tc = TestClient(light=True)
+        tc.run('audit provider auth ""', assert_error=True)
+        assert "Name is required to authenticate on a provider" in tc.out
+
+    def test_provider_auth_user_input_token(self):
+        tc = TestClient(light=True, inputs=["valid_token"])
+        tc.run('audit provider auth conancenter')
+        providers = json.loads(tc.load_home("audit_providers.json"))
+        assert providers["conancenter"]["token"] == 'dmFsaWRfdG9rZW4='

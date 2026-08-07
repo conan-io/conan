@@ -11,7 +11,7 @@ from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.mocks import ConanFileMock, RedirectedTestOutput
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import redirect_output, TestRequester
-from conans.util.files import save, load, chdir, mkdir
+from conan.internal.util.files import save, load, chdir, mkdir
 
 
 @mock.patch('ftplib.FTP', autospec=True)
@@ -156,6 +156,7 @@ class TestDownload:
         file_location = os.path.join(temp_folder(), "file.txt")
         save(file_location, "this is some content")
 
+        file_location = file_location.lstrip("/")
         file_url = f"file:///{file_location}"
         file_md5 = "736db904ad222bf88ee6b8d103fceb8e"
 

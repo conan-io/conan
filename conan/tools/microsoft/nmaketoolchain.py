@@ -2,10 +2,11 @@
 from conan.internal import check_duplicated_generator
 from conan.tools.build.flags import build_type_flags, cppstd_flag, build_type_link_flags
 from conan.tools.env import Environment
+from conan.tools.microsoft.nmakedeps import format_defines
 from conan.tools.microsoft.visual import msvc_runtime_flag, VCVars
 
 
-class NMakeToolchain(object):
+class NMakeToolchain:
     """
     https://learn.microsoft.com/en-us/cpp/build/reference/running-nmake?view=msvc-170#toolsini-and-nmake
     We have also explored the usage of Tools.ini:
@@ -25,21 +26,9 @@ class NMakeToolchain(object):
         self.extra_ldflags = []
         self.extra_defines = []
 
-    def _format_options(self, options):
+    @staticmethod
+    def _format_options(options):
         return [f"{opt[0].replace('-', '/')}{opt[1:]}" for opt in options if len(opt) > 1]
-
-    def _format_defines(self, defines):
-        formated_defines = []
-        for define in defines:
-            if "=" in define:
-                # CL env-var can't accept '=' sign in /D option, it can be replaced by '#' sign:
-                # https://learn.microsoft.com/en-us/cpp/build/reference/cl-environment-variables
-                macro, value = define.split("=", 1)
-                if value and not value.isnumeric():
-                    value = f'\\"{value}\\"'
-                define = f"{macro}#{value}"
-            formated_defines.append(f"/D\"{define}\"")
-        return formated_defines
 
     @property
     def _cl(self):
@@ -57,7 +46,8 @@ class NMakeToolchain(object):
         cppstd = cppstd_flag(self._conanfile)
         if cppstd:
             cxxflags.append(cppstd)
-        cxxflags.extend(self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list))
+        cxxflags.extend(self._conanfile.conf.get("tools.build:cxxflags", default=[],
+                                                 check_type=list))
         cxxflags.extend(self.extra_cxxflags)
 
         defines = []
@@ -67,9 +57,8 @@ class NMakeToolchain(object):
         defines.extend(self._conanfile.conf.get("tools.build:defines", default=[], check_type=list))
         defines.extend(self.extra_defines)
 
-        return ["/nologo"] + \
-               self._format_options(bt_flags + rt_flags + cflags + cxxflags) + \
-               self._format_defines(defines)
+        return (["/nologo"] + self._format_options(bt_flags + rt_flags + cflags + cxxflags) +
+                format_defines(defines, toolchain=True))
 
     @property
     def _link(self):
@@ -78,11 +67,18 @@ class NMakeToolchain(object):
 
         ldflags = []
         ldflags.extend(bt_ldflags)
-        ldflags.extend(self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list))
-        ldflags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list))
+        ldflags.extend(self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
+                                                check_type=list))
+        ldflags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],
+                                                check_type=list))
         ldflags.extend(self.extra_ldflags)
 
         return ["/nologo"] + self._format_options(ldflags)
+
+    @property
+    def _rcflags(self):
+        rcflags = self._conanfile.conf.get("tools.build:rcflags", default=[], check_type=list)
+        return self._format_options(rcflags) if rcflags else []
 
     def environment(self):
         env = Environment()
@@ -92,9 +88,12 @@ class NMakeToolchain(object):
         # Injection of link flags in _LINK_ env-var:
         # https://learn.microsoft.com/en-us/cpp/build/reference/linking
         env.append("_LINK_", self._link)
+        if self._rcflags:
+            env.append("RCFLAGS", self._rcflags)
         # Also define some special env-vars which can override special NMake macros:
         # https://learn.microsoft.com/en-us/cpp/build/reference/special-nmake-macros
-        conf_compilers = self._conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+        conf_compilers = self._conanfile.conf.get("tools.build:compiler_executables", default={},
+                                                  check_type=dict)
         if conf_compilers:
             compilers_mapping = {
                 "AS": "asm",

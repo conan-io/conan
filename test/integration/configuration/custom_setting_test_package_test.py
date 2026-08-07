@@ -1,6 +1,6 @@
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 class TestConditionalReqsTest:
@@ -26,4 +26,4 @@ class TestConanLib(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . -s os=Windows -s product=onion -s build_type=Release")
-        assert"hello/0.1 (test package): TestSettings: Windows, Release, onion", client.out
+        assert "hello/0.1 (test package): TestSettings: Windows, Release, onion" in client.out

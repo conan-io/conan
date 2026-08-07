@@ -8,7 +8,7 @@ class TestEditablePackageTest:
         ref = "--name=lib --version=version  --user=user --channel=name"
         t = TestClient()
         t.save({'conanfile.py': GenConanfile()})
-        t.run('editable add . {}'.format(ref))
+        t.run('editable add {}'.format(ref))
         assert "Reference 'lib/version@user/name' in editable mode" in t.out
 
     def test_editable_list_search(self):
@@ -33,6 +33,32 @@ class TestEditablePackageTest:
         t.run('install --requires=lib/version@user/name')
         t.assert_listed_require({"lib/version@user/name": "Editable"})
 
+    def test_ref_shortcut(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --ref=lib/1.0@user/channel')
+        assert "Reference 'lib/1.0@user/channel' in editable mode" in t.out
+        t.run("editable list")
+        assert "lib/1.0@user/channel" in t.out
+
+    def test_ref_shortcut_no_user_channel(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --ref=lib/1.0')
+        assert "Reference 'lib/1.0' in editable mode" in t.out
+
+    def test_ref_incompatible_with_name(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --ref=lib/1.0 --name=other', assert_error=True)
+        assert "--ref is incompatible with --name/--version/--user/--channel" in t.out
+
+    def test_ref_rejects_revision(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --ref=lib/1.0#abc123', assert_error=True)
+        assert "cannot contain a revision" in t.out
+
     def test_pyrequires_remote(self):
         t = TestClient(default_server_user=True)
         t.save({"conanfile.py": GenConanfile("pyreq", "1.0")})
@@ -50,7 +76,6 @@ def test_editable_no_name_version_test_package():
     tc = TestClient()
     tc.save({"conanfile.py": GenConanfile(),
              "test_package/conanfile.py": GenConanfile("test_package")
-             .with_class_attribute("test_type = 'explicit'")
             .with_test("self.output.info('Testing the package')")})
     tc.run("editable add . --name=foo", assert_error=True)
     assert "ERROR: Editable package recipe should declare its name and version" in tc.out

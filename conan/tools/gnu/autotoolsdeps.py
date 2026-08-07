@@ -1,7 +1,9 @@
 from conan.internal import check_duplicated_generator
+from conan.internal.model.pkg_type import PackageType
 from conan.tools import CppInfo
 from conan.tools.env import Environment
 from conan.tools.gnu.gnudeps_flags import GnuDepsFlags
+from conan.tools.microsoft import is_msvc
 
 
 class AutotoolsDeps:
@@ -29,8 +31,9 @@ class AutotoolsDeps:
     def _rpaths_flags(self):
         flags = []
         for dep in self.ordered_deps:
-            flags.extend(["-Wl,-rpath -Wl,{}".format(libdir) for libdir in dep.cpp_info.libdirs
-                          if dep.options.get_safe("shared", False)])
+            if dep.package_type is PackageType.SHARED:
+                flags.extend(["-Wl,-rpath,{}".format(libdir) for libdir in
+                              dep.cpp_info.aggregated_components().libdirs])
         return flags
 
     @property
@@ -70,7 +73,10 @@ class AutotoolsDeps:
             env = Environment()
             env.append("CPPFLAGS", cpp_flags)
             env.append("LIBS", libs)
-            env.append("LDFLAGS", ldflags)
+            if is_msvc(self._conanfile):
+                env.append("_LINK_", ldflags)
+            else:
+                env.append("LDFLAGS", ldflags)
             env.append("CXXFLAGS", cxxflags)
             env.append("CFLAGS", cflags)
             self._environment = env
@@ -79,6 +85,6 @@ class AutotoolsDeps:
     def vars(self, scope="build"):
         return self.environment.vars(self._conanfile, scope=scope)
 
-    def generate(self,  scope="build"):
+    def generate(self, scope="build"):
         check_duplicated_generator(self, self._conanfile)
         self.vars(scope).save_script("conanautotoolsdeps")

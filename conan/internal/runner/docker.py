@@ -7,7 +7,7 @@ import shutil
 from typing import Optional, NamedTuple, Dict, List
 import yaml
 from conan.api.conan_api import ConanAPI
-from conan.api.model import ListPattern
+from conan.api.model import ListPattern, RecipeReference
 from conan.api.output import Color, ConanOutput
 from conan.cli import make_abs_path
 from conan.internal.runner import RunnerException
@@ -15,8 +15,11 @@ from conan.errors import ConanException
 from pathlib import Path
 from conan.internal.model.profile import Profile
 from conan.internal.model.version import Version
+from conan.internal.errors import conanfile_exception_formatter
+from conan.internal.graph.graph import CONTEXT_HOST
+from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.runner.output import RunnerOutput
-from conan.internal.conan_app import ConanApp
+
 
 class _ContainerConfig(NamedTuple):
     class Build(NamedTuple):
@@ -74,12 +77,14 @@ class _ContainerConfig(NamedTuple):
             )
         )
 
+
 class DockerRunner:
     def __init__(self, conan_api: ConanAPI, command: str, host_profile: Profile, build_profile: Profile, args: Namespace, raw_args: list[str]):
         self.logger = ConanOutput()
         self.docker_client = self._initialize_docker_client()
         self.docker_api = self.docker_client.api
         self.conan_api = conan_api
+        self.host_profile = host_profile
         self.build_profile = build_profile
         self.abs_host_path = self._get_abs_host_path(args.path)
         self.args = args
@@ -118,7 +123,7 @@ class DockerRunner:
             raise ConanException(f'"{e.command}" inside docker fail')
         finally:
             if self.container:
-                error = sys.exc_info()[0] is not None # Check if error has been raised
+                error = sys.exc_info()[0] is not None  # Check if error has been raised
                 log = self.logger.error if error else self.logger.status
                 log('Stopping container')
                 self.container.stop()
@@ -242,26 +247,29 @@ class DockerRunner:
             raise RunnerException(command=command, stdout_log=stdout_log, stderr_log=stderr_log)
         return stdout_log, stderr_log
 
-    def _get_volumes_and_docker_path(self) -> tuple[dict,str]:
-        app = ConanApp(self.conan_api)
+    def _get_volumes_and_docker_path(self) -> tuple[dict, str]:
+        loader = self.conan_api._api_helpers.loader  # noqa
         remotes = self.conan_api.remotes.list(self.args.remote) if not self.args.no_remote else []
-        conanfile = app.loader.load_consumer(self.abs_host_path / "conanfile.py", remotes=remotes)
+        conanfile = loader.load_consumer(self.abs_host_path / "conanfile.py", remotes=remotes)
+        ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
+        initialize_conanfile_profile(conanfile, self.build_profile, self.host_profile,
+                                     CONTEXT_HOST, False, ref)
+        if ref.name:
+            self.host_profile.options.conan_scope(ref)
         abs_docker_base_path = Path('/') / self.docker_user_name / 'conanrunner'
         # Check if recipe has defined a root folder
         # In this case, mount the root folder as the base path and update the abs_docker_path to the
         # new relative path
         if hasattr(conanfile, "layout"):
-            try:
+            with conanfile_exception_formatter(conanfile, "layout"):
                 conanfile.layout()
-                if conanfile.folders.root:
-                    abs_path = self._get_abs_host_path(conanfile.folders.root)
-                    if self.abs_host_path.is_relative_to(abs_path):
-                        abs_docker_base_path /= abs_path.name
-                        volumes = {abs_path: {'bind': abs_docker_base_path.as_posix(), 'mode': 'rw'}}
-                        abs_docker_path = abs_docker_base_path / self.abs_host_path.relative_to(abs_path)
-                        return volumes, abs_docker_path.as_posix()
-            except:
-                pass
+            if conanfile.folders.root:
+                abs_path = self._get_abs_host_path(conanfile.folders.root)
+                if self.abs_host_path.is_relative_to(abs_path):
+                    abs_docker_base_path /= abs_path.name
+                    volumes = {abs_path: {'bind': abs_docker_base_path.as_posix(), 'mode': 'rw'}}
+                    abs_docker_path = abs_docker_base_path / self.abs_host_path.relative_to(abs_path)
+                    return volumes, abs_docker_path.as_posix()
         abs_docker_path = (abs_docker_base_path / self.abs_host_path.name).as_posix()
         volumes = {self.abs_host_path: {'bind': abs_docker_path, 'mode': 'rw'}}
         return volumes, abs_docker_path

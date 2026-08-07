@@ -1,6 +1,4 @@
-from collections import OrderedDict
-
-from conan.test.utils.tools import TestServer, GenConanfile, TestClient
+from conan.test.utils.tools import GenConanfile, TestClient
 
 
 def test_cascade():
@@ -8,9 +6,7 @@ def test_cascade():
     app -> E -> D -> B -> A
       \\-> F -> C -------/
     """
-    server = TestServer()
-    servers = OrderedDict([("default", server)])
-    c = TestClient(servers=servers)
+    c = TestClient(default_server_user=True)
     c.save({"a/conanfile.py": GenConanfile("liba", "1.0"),
             "b/conanfile.py": GenConanfile("libb", "1.0").with_requires("liba/1.0"),
             "c/conanfile.py": GenConanfile("libc", "1.0").with_requires("liba/1.0"),
@@ -24,13 +20,14 @@ def test_cascade():
 
     def _assert_built(refs):
         for ref in refs:
-            assert "{}: Copying sources to build folder".format(ref) in c.out
+            assert f"Building from source {ref}" in c.out
         for ref in ["liba/1.0", "libb/1.0", "libc/1.0", "libd/1.0", "libe/1.0", "libf/1.0"]:
             if ref not in refs:
-                assert "{}: Copying sources to build folder".format(ref) not in c.out
+                assert f"Building from source {ref}" not in c.out
 
     # Building A everything is built
     c.run("install app --build=liba* --build cascade")
+    assert "Using build-mode 'cascade' is generally inefficient" in c.out
     _assert_built(["liba/1.0", "libb/1.0", "libc/1.0", "libd/1.0", "libe/1.0", "libf/1.0"])
 
     c.run("install app --build=libd* --build cascade")

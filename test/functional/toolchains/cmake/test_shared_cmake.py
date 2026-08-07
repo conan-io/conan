@@ -7,7 +7,7 @@ import pytest
 from conan.test.utils.mocks import ConanFileMock
 from conan.tools.env.environment import environment_wrap_command
 from conan.test.utils.tools import TestClient
-from conans.util.files import rmdir
+from conan.internal.util.files import rmdir
 
 
 @pytest.fixture(scope="module")
@@ -64,6 +64,7 @@ def test_other_client_can_link_cmake(transitive_shared_client):
 
 # FIXME: Move to the correct Meson space
 @pytest.mark.tool("meson")
+@pytest.mark.tool("ninja")
 @pytest.mark.tool("pkg_config")
 def test_other_client_can_link_meson(transitive_shared_client):
     client = transitive_shared_client
@@ -88,6 +89,38 @@ def test_other_client_can_link_autotools(transitive_shared_client):
     client.run("create . -o chat/*:shared=True -o hello/*:shared=True")
     # TODO Check that static builds too
     # client.run("create . --build=missing")
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="win_copy_folder is Windows-only")
+def test_virtualrunenv_win_copy_folder(transitive_shared_client):
+    client = TestClient(servers=transitive_shared_client.servers)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.env import VirtualRunEnv
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+
+            def requirements(self):
+                self.requires("app/0.1")
+
+            def generate(self):
+                # Copy to "imported-bin" inside generators folder
+                runenv = VirtualRunEnv(self, win_copy_folder="imported-bin")
+                runenv.generate()
+
+            def build(self):
+                self.run("app", env="conanrun")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("build . -o *:shared=True")
+    assert "app/0.1: Hello World Release!" in client.out
+    assert "chat/0.1: Hello World Release!" in client.out
+    assert "hello/0.1: Hello World Release!" in client.out
+    client.run_command(r".\imported-bin\app")
+    assert "app/0.1: Hello World Release!" in client.out
+    assert "chat/0.1: Hello World Release!" in client.out
+    assert "hello/0.1: Hello World Release!" in client.out
 
 
 @pytest.mark.tool("cmake")

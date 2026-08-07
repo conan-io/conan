@@ -12,7 +12,7 @@ from conan.errors import ConanException
 from conans.server.conf.default_server_conf import default_server_conf
 from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.server_store import ServerStore
-from conans.util.files import mkdir, save, load
+from conan.internal.util.files import mkdir, save, load
 
 MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
 
@@ -79,8 +79,8 @@ class ConanServerConfigParser(ConfigParser):
         """
         try:
             if not os.path.exists(self.config_filename):
-                jwt_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(24))
-                updown_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(24))
+                jwt_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(32))
+                updown_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(32))
                 server_conf = default_server_conf.format(jwt_secret=jwt_random_secret,
                                                          updown_secret=updown_random_secret)
                 save(self.config_filename, server_conf)

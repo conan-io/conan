@@ -1,6 +1,5 @@
 import os.path
 import textwrap
-from collections import OrderedDict
 
 import pytest
 
@@ -35,7 +34,7 @@ class TestMetadataDeploy:
             def deploy(graph, output_folder, **kwargs):
                 conanfile = graph.root.conanfile
                 for r, d in conanfile.dependencies.items():
-                    if not os.path.exists(d.package_metadata_folder):
+                    if not os.listdir(d.package_metadata_folder):
                         continue
                     shutil.copytree(d.package_metadata_folder, os.path.join(output_folder, "pkgs",
                                                                             d.ref.name))
@@ -43,7 +42,7 @@ class TestMetadataDeploy:
                                                                              d.ref.name))
            """)
 
-        servers = OrderedDict([("default", TestServer()), ("remote2", TestServer())])
+        servers = {"default": TestServer(), "remote2": TestServer()}
         c = TestClient(servers=servers, inputs=2 * ["admin", "password"], light=True)
         c.save({"conanfile.py": conanfile,
                 "deploy.py": deploy})

@@ -3,24 +3,23 @@ import os
 import platform
 import textwrap
 
-from conan.api.output import ConanOutput, Color
-from conan.tools.cmake.layout import get_build_folder_custom_vars
+from conan.api.output import Color
+from conan.tools.cmake.layout import get_build_folder_custom_vars, is_consumer
 from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.build import build_jobs
 from conan.tools.microsoft import is_msvc
-from conans.client.graph.graph import RECIPE_CONSUMER
 from conan.errors import ConanException
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 
 def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
                         user_presets_path=None, preset_prefix=None, buildenv=None, runenv=None,
                         cmake_executable=None, absolute_paths=None):
-    preset_path, preset_data = _CMakePresets.generate(conanfile, toolchain_file, generator,
-                                                      cache_variables, preset_prefix, buildenv, runenv,
-                                                      cmake_executable, absolute_paths)
-    _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data,
+    preset_path = _CMakePresets.generate(conanfile, toolchain_file, generator, cache_variables,
+                                         preset_prefix, buildenv, runenv, cmake_executable,
+                                         absolute_paths)
+    _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix,
                                absolute_paths)
 
 
@@ -28,8 +27,8 @@ class _CMakePresets:
     """ Conan generated main CMakePresets.json inside the generators_folder
     """
     @staticmethod
-    def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix, buildenv, runenv,
-                 cmake_executable, absolute_paths):
+    def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix, buildenv,
+                 runenv, cmake_executable, absolute_paths):
         toolchain_file = os.path.abspath(os.path.join(conanfile.generators_folder, toolchain_file))
         if not absolute_paths:
             try:  # Make it relative to the build dir if possible
@@ -82,8 +81,8 @@ class _CMakePresets:
 
         preset_content = json.dumps(data, indent=4)
         save(preset_path, preset_content)
-        ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {preset_path}")
-        return preset_path, data
+        conanfile.output.info(f"CMakeToolchain generated: {preset_path}")
+        return preset_path
 
     @staticmethod
     def _insert_preset(data, preset_type, preset):
@@ -104,7 +103,8 @@ class _CMakePresets:
         """
         multiconfig = is_multi_configuration(generator)
         conf = _CMakePresets._configure_preset(conanfile, generator, cache_variables, toolchain_file,
-                                               multiconfig, preset_prefix, buildenv, cmake_executable)
+                                               multiconfig, preset_prefix, buildenv,
+                                               cmake_executable)
         build = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix)
         test = _CMakePresets._test_preset_fields(conanfile, multiconfig, preset_prefix, runenv)
         ret = {"version": 3,
@@ -158,32 +158,41 @@ class _CMakePresets:
                     "strategy": "external"
                 }
 
+        # Second attempt at https://github.com/conan-io/conan/issues/13136
+        # for cmake-tools to activate environment. Similar to CompilersBlock
+        # Only for cl/clang-cl, other compilers such clang can be breaking (Android)
+        compilers_by_conf = conanfile.conf.get("tools.build:compiler_executables", default={})
+        compiler = conanfile.settings.get_safe("compiler")
+        default_cl = "cl" if compiler == "msvc" and "Ninja" in str(generator) else None
+        for lang in ("c", "cpp"):
+            comp = compilers_by_conf.get(lang, default_cl)
+            if comp and os.path.basename(comp) in ("cl", "cl.exe", "clang-cl", "clang-cl.exe"):
+                lang = {"c": "C", "cpp": "CXX"}[lang]
+                ret["cacheVariables"][f"CMAKE_{lang}_COMPILER"] = comp.replace("\\", "/")
+
         ret["toolchainFile"] = toolchain_file
         if conanfile.build_folder:
             # If we are installing a ref: "conan install <ref>", we don't have build_folder, because
             # we don't even have a conanfile with a `layout()` to determine the build folder.
-            # If we install a local conanfile: "conan install ." with a layout(), it will be available.
+            # If we install a local conanfile "conan install ." with a layout(), it will be available
             ret["binaryDir"] = conanfile.build_folder
 
         def _format_val(val):
-            return f'"{val}"' if type(val) == str and " " in val else f"{val}"
+            return f'"{val}"' if type(val) is str and " " in val else f"{val}"
 
-        # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
-        cache_variables_info = " ".join(
-            [f"-D{var}={_format_val(value)}" for var, value in cache_variables.items()])
-        add_toolchain_cache = f"-DCMAKE_TOOLCHAIN_FILE={toolchain_file} " \
-            if "CMAKE_TOOLCHAIN_FILE" not in cache_variables_info else ""
+        # only for consumer that is not a "test_package"
+        if is_consumer(conanfile) and conanfile.tested_reference_str is None:
+            # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
+            vars_tip = " ".join([f"-D{k}={_format_val(v)}" for k, v in cache_variables.items()])
+            tc_tip = f"-DCMAKE_TOOLCHAIN_FILE=<output_folder>/{toolchain_file} " \
+                if "CMAKE_TOOLCHAIN_FILE" not in vars_tip else ""
 
-        try:
-            is_consumer = conanfile._conan_node.recipe == RECIPE_CONSUMER and \
-                          conanfile.tested_reference_str is None
-        except:
-            is_consumer = False
-        if is_consumer:
             msg = textwrap.dedent(f"""\
                 CMakeToolchain: Preset '{name}' added to CMakePresets.json.
                     (cmake>=3.23) cmake --preset {name}
-                    (cmake<3.23) cmake <path> -G {_format_val(generator)} {add_toolchain_cache} {cache_variables_info}""")
+                    (cmake<3.23) cmake <path> -G {_format_val(generator)}
+                                 {tc_tip}
+                                 {vars_tip}""")
             conanfile.output.info(msg, fg=Color.CYAN)
         return ret
 
@@ -204,12 +213,16 @@ class _CMakePresets:
     def _build_preset_fields(conanfile, multiconfig, preset_prefix):
         ret = _CMakePresets._common_preset_fields(conanfile, multiconfig, preset_prefix)
         build_preset_jobs = build_jobs(conanfile)
-        ret["jobs"] = build_preset_jobs
+        if build_preset_jobs:
+            ret["jobs"] = build_preset_jobs
         return ret
 
     @staticmethod
     def _test_preset_fields(conanfile, multiconfig, preset_prefix, runenv):
         ret = _CMakePresets._common_preset_fields(conanfile, multiconfig, preset_prefix)
+        build_preset_jobs = build_jobs(conanfile)
+        if build_preset_jobs:
+            ret.setdefault("execution", {})["jobs"] = build_preset_jobs
         if runenv:
             ret["environment"] = runenv
         return ret
@@ -251,8 +264,7 @@ class _IncludingPresets:
     """
 
     @staticmethod
-    def generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data,
-                 absolute_paths):
+    def generate(conanfile, preset_path, user_presets_path, preset_prefix, absolute_paths):
         if not user_presets_path:
             return
 
@@ -280,28 +292,62 @@ class _IncludingPresets:
         if not os.path.exists(user_presets_path):
             data = {"version": 4,
                     "vendor": {"conan": dict()}}
-            for preset, inherits in inherited_user.items():
-                for i in inherits:
-                    data.setdefault(preset, []).append({"name": i})
         else:
             data = json.loads(load(user_presets_path))
             if "conan" not in data.get("vendor", {}):
                 # The file is not ours, we cannot overwrite it
                 return
 
-        if inherited_user:
-            _IncludingPresets._clean_user_inherits(data, preset_data)
-
         if not absolute_paths:
             try:  # Make it relative to the CMakeUserPresets.json if possible
                 preset_path = os.path.relpath(preset_path, output_dir)
+                # If we don't normalize, path will be removed in Linux shared folders
+                # https://github.com/conan-io/conan/issues/18434
+                preset_path = preset_path.replace("\\", "/")
             except ValueError:
                 pass
         data = _IncludingPresets._append_user_preset_path(data, preset_path, output_dir)
 
+        if inherited_user:
+            data = _IncludingPresets._update_stubs(data, inherited_user, output_dir, absolute_paths)
+
         data = json.dumps(data, indent=4)
-        ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {user_presets_path}")
+        conanfile.output.info(f"CMakeToolchain generated: {user_presets_path}")
         save(user_presets_path, data)
+
+    @staticmethod
+    def _update_stubs(data, inherited_user, output_dir, absolute_paths):
+        """
+        Set configurePresets/buildPresets/testPresets to stubs for conan-* presets
+        that the user inherits but that don't have a real preset of the same type in the includes.
+        """
+        real_preset_names_by_type = {
+            "configurePresets": set(),
+            "buildPresets": set(),
+            "testPresets": set(),
+        }
+        for inc in data.get("include", []):
+            inc_path = os.path.join(output_dir, inc) if not absolute_paths else inc
+            assert os.path.exists(inc_path), f"Presets include file not found: '{inc_path}'"
+            inc_json = json.loads(load(inc_path))
+            for preset_type in ("configurePresets", "buildPresets", "testPresets"):
+                for p in inc_json.get(preset_type, []):
+                    name = p.get("name")
+                    if name:
+                        real_preset_names_by_type[preset_type].add(name)
+
+        for preset_type in ("configurePresets", "buildPresets", "testPresets"):
+            real_names = real_preset_names_by_type[preset_type]
+            stubs = []
+            for name in inherited_user.get(preset_type, []):
+                if name not in real_names:
+                    stub = {"name": name}
+                    if preset_type in ("buildPresets", "testPresets"):
+                        stub["configurePreset"] = name
+                    stubs.append(stub)
+            data[preset_type] = stubs
+
+        return data
 
     @staticmethod
     def _collect_user_inherits(output_dir, preset_prefix):
@@ -326,14 +372,6 @@ class _IncludingPresets:
                                     existing.append(i)
 
         return collected_targets
-
-    @staticmethod
-    def _clean_user_inherits(data, preset_data):
-        for preset_type in "configurePresets", "buildPresets", "testPresets":
-            presets = preset_data.get(preset_type, [])
-            presets_names = [p["name"] for p in presets]
-            other = data.get(preset_type, [])
-            other[:] = [p for p in other if p["name"] not in presets_names]
 
     @staticmethod
     def _append_user_preset_path(data, preset_path, output_dir):

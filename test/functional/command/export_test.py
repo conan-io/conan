@@ -5,7 +5,7 @@ import pytest
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.scm import git_add_changes_commit
 from conan.test.utils.tools import TestClient
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 @pytest.mark.tool("git")
@@ -22,7 +22,7 @@ class TestRevisionModeSCM:
         # Now it will fail if dirty
         t.save({"conanfile.py": conanfile + "\n#comment"})
         t.run(f"export . --name=pkg --version=0.1", assert_error=True)
-        assert "Can't have a dirty repository using revision_mode='scm' and doing" in t.out
+        assert "Can't have a dirty repository using revision_mode='scm'" in t.out
         # Commit to fix
         commit2 = git_add_changes_commit(t.current_folder, msg="fix")
         t.run(f"export . --name=pkg --version=0.1")

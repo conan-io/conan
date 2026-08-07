@@ -1,8 +1,6 @@
 from conan.api.output import ConanOutput
-from conan.tools.build.flags import cppstd_msvc_flag
+from conan.tools.build.flags import cppstd_msvc_flag, disable_flag
 from conan.internal.model.options import _PackageOption
-
-__all__ = ["to_meson_machine", "to_meson_value", "to_cppstd_flag", "to_cstd_flag"]
 
 # https://mesonbuild.com/Reference-tables.html#operating-system-names
 _meson_system_map = {
@@ -49,22 +47,11 @@ _meson_cpu_family_map = {
     'sparc': ('sparc', 'sparc', 'big'),
     'sparcv9': ('sparc64', 'sparc64', 'big'),
     'wasm': ('wasm32', 'wasm32', 'little'),
+    'wasm64': ('wasm64', 'wasm64', 'little'),
     'x86': ('x86', 'x86', 'little'),
     'x86_64': ('x86_64', 'x86_64', 'little'),
     'riscv32': ('riscv32', 'riscv32', 'little'),
-    'riscv64': ('riscv64', 'riscv32', 'little')
-}
-
-
-# Meson valid values
-# "none", "c++98", "c++03", "c++11", "c++14", "c++17", "c++1z", "c++2a", "c++20",
-# "gnu++11", "gnu++14", "gnu++17", "gnu++1z", "gnu++2a", "gnu++20"
-_cppstd_map = {
-    '98': "c++98", 'gnu98': "c++98",
-    '11': "c++11", 'gnu11': "gnu++11",
-    '14': "c++14", 'gnu14': "gnu++14",
-    '17': "c++17", 'gnu17': "gnu++17",
-    '20': "c++20", 'gnu20': "gnu++20"
+    'riscv64': ('riscv64', 'riscv64', 'little')
 }
 
 
@@ -120,15 +107,18 @@ def to_meson_value(value):
     return value
 
 
-# FIXME: Move to another more common module
-def to_cppstd_flag(compiler, compiler_version, cppstd):
+def to_cppstd_flag(conanfile, compiler, compiler_version, cppstd):
     """Gets a valid cppstd flag.
-
+    :param conanfile: ``ConanFile`` instance.
     :param compiler: ``str`` compiler name.
     :param compiler_version: ``str`` compiler version.
     :param cppstd: ``str`` cppstd version.
     :return: ``str`` cppstd flag.
     """
+    if cppstd is None:
+        return None
+    if disable_flag(conanfile, "cppstd"):
+        return None
     if compiler == "msvc":
         # Meson's logic with 'vc++X' vs 'c++X' is possibly a little outdated.
         # Presumably the intent is 'vc++X' is permissive and 'c++X' is not,
@@ -136,17 +126,14 @@ def to_cppstd_flag(compiler, compiler_version, cppstd):
         flag = cppstd_msvc_flag(compiler_version, cppstd)
         return 'v%s' % flag if flag else None
     else:
-        return _cppstd_map.get(cppstd)
+        return f"gnu++{cppstd[3:]}" if cppstd.startswith("gnu") else f"c++{cppstd}"
 
 
-def to_cstd_flag(cstd):
-    """ possible values
-    none, c89, c99, c11, c17, c18, c2x, c23, gnu89, gnu99, gnu11, gnu17, gnu18, gnu2x, gnu23
+def to_cstd_flag(conanfile, cstd):
+    """Gets a valid cstd flag.
     """
-    _cstd_map = {
-        '99': "c99",
-        '11': "c11",
-        '17': "c17",
-        '23': "c23",
-    }
-    return _cstd_map.get(cstd, cstd)
+    if cstd is None:
+        return None
+    if disable_flag(conanfile, "cppstd"):
+        return None
+    return cstd if cstd.startswith("gnu") else f"c{cstd}"

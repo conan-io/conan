@@ -1,8 +1,8 @@
 import textwrap
 
-from parameterized import parameterized
+import pytest
 
-from conans.client.graph.graph_error import GraphProvidesError
+from conan.internal.graph.graph_error import GraphProvidesError
 from test.integration.graph.core.graph_manager_base import GraphManagerTest
 from test.integration.graph.core.graph_manager_test import _check_transitive
 from conan.test.utils.tools import GenConanfile, TestClient
@@ -17,11 +17,11 @@ class TestProvidesTest(GraphManagerTest):
                                            with_requires("libb/0.1"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
-        self.assertEqual(2, len(deps_graph.nodes))
+        assert 2 == len(deps_graph.nodes)
         app = deps_graph.root
-        libb = app.dependencies[0].dst
+        libb = app.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[], dependents=[app])
@@ -34,18 +34,18 @@ class TestProvidesTest(GraphManagerTest):
                                            with_requires("libb/0.1"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = libb.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libb])
         self._check_node(libb, "libb/0.1#123", deps=[libc], dependents=[app])
         self._check_node(libc, "libc/0.1#123", deps=[], dependents=[libb])
 
-    @parameterized.expand([(True,), (False,)])
+    @pytest.mark.parametrize("private", [True, False])
     def test_branches_conflict(self, private):
         # app -> libb/0.1 (provides feature)
         #  \  -> libc/0.1 (provides feature)
@@ -60,12 +60,12 @@ class TestProvidesTest(GraphManagerTest):
                                                with_requires("libb/0.1", "libc/0.1"))
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
 
         self._check_node(app, "app/0.1", deps=[libb, libc])
         self._check_node(libb, "libb/0.1#123", deps=[], dependents=[app])
@@ -80,11 +80,11 @@ class TestProvidesTest(GraphManagerTest):
                                        with_provides("libjpeg"))
 
         deps_graph = self.build_consumer(path)
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
 
         app = deps_graph.root
-        br = app.dependencies[0].dst
-        br_lib = br.dependencies[0].dst
+        br = app.edges[0].dst
+        br_lib = br.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[br])
         self._check_node(br, "br/0.1#123", deps=[br_lib], dependents=[app])
@@ -105,14 +105,14 @@ class TestProvidesTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1", "libc/0.1"])
         deps_graph = self.build_consumer(consumer, install=False)
 
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
-        self.assertEqual(5, len(deps_graph.nodes))
+        assert 5 == len(deps_graph.nodes)
         app = deps_graph.root
-        libb = app.dependencies[0].dst
-        libc = app.dependencies[1].dst
-        liba1 = libb.dependencies[0].dst
-        libd2 = libc.dependencies[0].dst
+        libb = app.edges[0].dst
+        libc = app.edges[1].dst
+        liba1 = libb.edges[0].dst
+        libd2 = libc.edges[0].dst
         self._check_node(app, "app/0.1", deps=[libb, libc])
         self._check_node(libb, "libb/0.1#123", deps=[liba1], dependents=[app])
         self._check_node(libc, "libc/0.1#123", deps=[libd2], dependents=[app])
@@ -131,14 +131,14 @@ class TestProvidesTest(GraphManagerTest):
         consumer = self.recipe_consumer("app/0.1", ["libc/0.1"])
 
         deps_graph = self.build_consumer(consumer, install=False)
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
-        self.assertEqual(4, len(deps_graph.nodes))
+        assert 4 == len(deps_graph.nodes)
 
         app = deps_graph.root
-        libc = app.dependencies[0].dst
-        libb = libc.dependencies[0].dst
-        liba = libb.dependencies[0].dst
+        libc = app.edges[0].dst
+        libb = libc.edges[0].dst
+        liba = libb.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[libc])
         self._check_node(libc, "libc/0.1#123", deps=[libb], dependents=[app])
@@ -146,7 +146,7 @@ class TestProvidesTest(GraphManagerTest):
         self._check_node(liba, "liba/0.1#123", dependents=[libb])
 
 
-class ProvidesBuildRequireTest(GraphManagerTest):
+class TestProvidesBuildRequire(GraphManagerTest):
     def test_build_require_no_conflict(self):
         # app (provides libjpeg) -(build)-> br/v1 -> br_lib/v1(provides libjpeg)
         self.recipe_conanfile("br_lib/0.1", GenConanfile().with_provides("libjpeg"))
@@ -155,11 +155,11 @@ class ProvidesBuildRequireTest(GraphManagerTest):
                                        with_provides("libjpeg"))
 
         deps_graph = self.build_consumer(path)
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
 
         app = deps_graph.root
-        br = app.dependencies[0].dst
-        br_lib = br.dependencies[0].dst
+        br = app.edges[0].dst
+        br_lib = br.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[br])
         self._check_node(br, "br/0.1#123", deps=[br_lib], dependents=[app])
@@ -177,11 +177,11 @@ class ProvidesBuildRequireTest(GraphManagerTest):
                                        with_provides("libjpeg"))
 
         deps_graph = self.build_consumer(path)
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
 
         app = deps_graph.root
-        lib = app.dependencies[0].dst
-        br = lib.dependencies[0].dst
+        lib = app.edges[0].dst
+        br = lib.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[lib])
         self._check_node(lib, "lib/0.1#123", deps=[br], dependents=[app])
@@ -200,13 +200,13 @@ class ProvidesBuildRequireTest(GraphManagerTest):
 
         deps_graph = self.build_consumer(path, install=False)
 
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
 
         app = deps_graph.root
-        br = app.dependencies[0].dst
-        br_lib = br.dependencies[0].dst
+        br = app.edges[0].dst
+        br_lib = br.edges[0].dst
 
         self._check_node(app, "app/0.1", deps=[br])
         self._check_node(br, "br/0.1#123", deps=[br_lib], dependents=[app])
@@ -221,13 +221,13 @@ class ProvidesBuildRequireTest(GraphManagerTest):
                                        .with_tool_requires("br1/0.1", "br2/0.1"))
         deps_graph = self.build_consumer(path, install=False)
 
-        assert type(deps_graph.error) == GraphProvidesError
+        assert type(deps_graph.error) is GraphProvidesError
 
-        self.assertEqual(3, len(deps_graph.nodes))
+        assert 3 == len(deps_graph.nodes)
 
         app = deps_graph.root
-        br1 = app.dependencies[0].dst
-        br2 = app.dependencies[1].dst
+        br1 = app.edges[0].dst
+        br2 = app.edges[1].dst
 
         self._check_node(app, "app/0.1", deps=[br1, br2])
         self._check_node(br1, "br1/0.1#123", deps=[], dependents=[app])
@@ -292,4 +292,5 @@ def test_name_provide_error_message():
 
     tc.run("graph info --requires=mozjpeg/0.1 --requires=libjpeg/0.1", assert_error=True)
     # This used to report that None was provided, but now it reports the name of the provides
-    assert "ERROR: Provide Conflict: Both 'libjpeg/0.1' and 'mozjpeg/0.1' provide '['libjpeg']'" in tc.out
+    assert ("ERROR: Provide Conflict: Both 'libjpeg/0.1' and "
+            "'mozjpeg/0.1' provide '['libjpeg']'") in tc.out

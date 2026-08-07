@@ -134,9 +134,10 @@ def test_get_gnu_triplet_for_cross_building_raise_error():
 
 
 def test_compilers_mapping():
-    autotools_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC"}
-    compilers = {"c": "path_to_c", "cpp": "path_to_cpp", "cuda": "path_to_cuda",
-                 "fortran": "path_to_fortran"}
+    autotools_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
+                         "rc": "RC", "objc": "OBJC", "objcpp": "OBJCXX", "asm": "AS",
+                         "nm": "NM", "ranlib": "RANLIB", "objdump": "OBJDUMP", "strip": "STRIP"}
+    compilers = {k: f"path_to_{k}" for k in autotools_mapping}
     settings = MockSettings({"build_type": "Release",
                              "os": "Windows",
                              "arch": "x86_64",
@@ -164,6 +165,21 @@ def test_linker_scripts():
     env = at._environment.vars(conanfile)
     assert "-T'path_to_first_linker_script'" in env["LDFLAGS"]
     assert "-T'path_to_second_linker_script'" in env["LDFLAGS"]
+
+
+def test_sysrootflag_qnx():
+    """Even when no cross building it is adjusted because it could target a Mac version"""
+    conanfile = ConanFileMock()
+    conanfile.conf.define("tools.build:sysroot", "/path/to/sysroot")
+    conanfile.settings = MockSettings(
+        {"compiler": "qcc",
+         "build_type": "Debug",
+         "os": "Linux",
+         "arch": "x86_64"})
+    conanfile.settings_build = conanfile.settings
+    be = GnuToolchain(conanfile)
+    expected = "-Wc,-isysroot,/path/to/sysroot"
+    assert be.sysroot_flag == expected
 
 
 def test_update_or_prune_any_args(cross_building_conanfile):
@@ -207,10 +223,10 @@ def test_crossbuild_to_android(build_env_mock):
     """
     Issue related: https://github.com/conan-io/conan/issues/17441
     """
-    vars = MagicMock()
+    buildvars = MagicMock()
     # VirtualBuildEnv defines these variables
-    vars.vars.return_value = {"CC": "my-clang", "CXX": "my-clang++"}
-    build_env_mock.return_value = vars
+    buildvars.vars.return_value = {"CC": "my-clang", "CXX": "my-clang++"}
+    build_env_mock.return_value = buildvars
 
     conanfile = ConanFileMock()
     conanfile.settings = MockSettings({"os": "Android", "arch": "armv8", "os.api_level": "26r"})
@@ -235,3 +251,18 @@ def test_crossbuild_to_android(build_env_mock):
     assert gnutc.triplets_info["host"]["triplet"] == "aarch64-linux-android"
     assert env_vars["LD"] == os.path.join(ndk_bin, "ld")  # exists
     assert env_vars["STRIP"] == os.path.join(ndk_bin, "llvm-strip")  # does not exist but appears
+
+
+def test_gnu_toolchain_conf_extra_configure_args():
+    """ Validate that tools.gnu:extra_configure_args are passed to the configure_args when
+        building with GnuToolchain.
+        The configure args should be passed as a list-like object.
+    """
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    conanfile.conf = Conf()
+    conanfile.conf.define("tools.gnu:extra_configure_args", ["--foo", "--bar"])
+
+    tc = GnuToolchain(conanfile)
+    assert tc.configure_args["--foo"] is None
+    assert tc.configure_args["--bar"] is None

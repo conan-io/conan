@@ -11,7 +11,7 @@ from conan.tools.files import save
 from conan.internal.model.cpp_info import CppInfo
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
-from conans.util.files import save
+from conan.internal.util.files import save
 
 
 @pytest.fixture
@@ -97,7 +97,9 @@ def test_complex_deduce_locations_shared(lib_name, libs, conanfile):
     ("libcurl_imp.lib", "libcurl.dll", ["libcurl_imp"], "libcurl"),
     ("libcrypto.lib", "libcrypto-3-x64.dll", ["libcrypto"], "crypto"),
     ("libssl.lib", "libssl-3-x64.dll", ["libssl"], "ssl"),
-    ("zdll.lib", "zlib1.dll", ["zdll"], "zlib")
+    ("zdll.lib", "zlib1.dll", ["zdll"], "zlib"),
+    ("mimalloc.dll.lib", "mimalloc.dll", ["mimalloc"], "mimalloc"),
+    ("mimalloc.dll.lib", "mimalloc.dll", ["mimalloc.dll"], "mimalloc"),
 ])
 def test_windows_shared_link_locations(lib_name, dll_name, libs, pkg_name, conanfile):
     """
@@ -266,7 +268,6 @@ def test_multiple_matches_exact_match(prefix, conanfile):
     assert result.type == "static-library"
 
 
-
 @pytest.mark.parametrize("lib_name, libs", [
     ("harfbuzz", ["harfbuzz-icu.lib", "harfbuzz.lib"]),
 ])
@@ -288,3 +289,14 @@ def test_several_libs_and_exact_match(lib_name, libs, conanfile):
     result = cppinfo.deduce_full_cpp_info(conanfile)
     assert result.location == f"{folder}/libdir/{lib_name}.lib"
     assert result.type == "static-library"
+
+
+def test_sources(conanfile):
+    folder = temp_folder()
+    save(os.path.join(folder, "src", "mylib.cpp"), "")
+    cppinfo = CppInfo()
+    cppinfo.sources = ["src/mylib.cpp"]
+    cppinfo.set_relative_base_folder(folder)
+    result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert result.location is None
+    assert result.type == "header-library"

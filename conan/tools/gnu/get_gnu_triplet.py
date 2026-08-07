@@ -10,6 +10,7 @@ def _get_gnu_arch(os_, arch):
                "armv8.3": "aarch64",
                "asm.js": "asmjs",
                "wasm": "wasm32",
+               "wasm64": "wasm64",
                }.get(arch, None)
 
     if not machine:

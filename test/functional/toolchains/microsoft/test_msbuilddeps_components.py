@@ -4,13 +4,16 @@ import textwrap
 import pytest
 
 from conan.test.assets.sources import gen_function_cpp
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, vs2022_profile
 
 
+@pytest.mark.tool("visual_studio", "17")
+@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_msbuild_deps_components():
     # TODO: Duplicated from xcodedeps_components
     client = TestClient()
+    client.save_home({"profiles/default": vs2022_profile})
 
     client.run("new cmake_lib -d name=tcp -d version=1.0")
     client.run("create . -tf=\"\"")
@@ -36,6 +39,8 @@ def test_msbuild_deps_components():
         """)
 
     cmakelists = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(myproject CXX)
 
@@ -128,6 +133,8 @@ def test_msbuild_deps_components():
     """
 
     cmakelists_chat = textwrap.dedent("""
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
         cmake_minimum_required(VERSION 3.15)
         project(chat CXX)
         find_package(network REQUIRED CONFIG)

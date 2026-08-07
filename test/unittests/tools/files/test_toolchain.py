@@ -7,7 +7,7 @@ from conan.tools.build import load_toolchain_args, save_toolchain_args, CONAN_TO
     CONAN_TOOLCHAIN_ARGS_SECTION
 from conan.errors import ConanException
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save, load
+from conan.internal.util.files import save, load
 
 
 def test_load_empty_toolchain_args_in_default_dir():

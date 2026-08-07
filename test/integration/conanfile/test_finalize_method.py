@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 import textwrap
 
 import pytest
@@ -7,7 +8,7 @@ import pytest
 from conan.test.assets.genconanfile import GenConanfile
 
 from conan.test.utils.tools import TestClient
-from conans.util.files import load, save
+from conan.internal.util.files import load, save
 
 conanfile_dep = textwrap.dedent("""
     import os
@@ -127,8 +128,12 @@ class TestBasicLocalFlows:
     def test_save_restore_cache(self, client):
         # Not created in the cache, just exported, nothing breaks because there is not even a package there
         client.run("cache save *:*")
+        # Check pkglist.json has not been created inside conan cache folder
+        assert not any(Path(client.cache_folder).rglob("pgklist.json"))
         client.run("remove * -c")
         client.run("cache restore conan_cache_save.tgz")
+        # Check the extracted pkglist does not persist in the cache after restore
+        assert not any(Path(client.cache_folder).rglob("pgklist.json"))
 
         # Now create the package and then save/restore
         client.run("create dep")
@@ -213,12 +218,12 @@ class TestBasicLocalFlows:
         client.run("create dep")
         dep_layout = client.created_layout()
         client.run("create app")
-        assert f"app/1.0: Immutable package: {dep_layout.package()}" in client.out
+        assert f"Immutable package: {dep_layout.package()}" in client.out
         # assert f"app/1.0: finalize: {dep_layout.finalize()}" in client.out
         if with_finalize_method:
-            assert f"app/1.0: Package: {dep_layout.finalize()}" in client.out
+            assert f"Package: {dep_layout.finalize()}" in client.out
         else:
-            assert f"app/1.0: Package: {dep_layout.package()}" in client.out
+            assert f"Package: {dep_layout.package()}" in client.out
 
     def test_cache_modification_of_custom_conf_based_on_settings(self):
         tc = TestClient(light=True)
@@ -298,7 +303,7 @@ class TestToolRequiresFlows:
                 .with_import("from conan.tools.files import save")
                 .with_package_type("application")
                 .with_package("save(self, 'file.txt', 'Hello World!')")
-                .with_package_info({"bindirs": ["bin"]}, {})
+                .with_package_info({"bindirs": ["bin"]})
                 .with_finalize("save(self, 'finalized.txt', 'finalized file')"),
                  "test_package/conanfile.py": GenConanfile()
                 .with_import("from conan.tools.files import save",
@@ -312,6 +317,27 @@ class TestToolRequiresFlows:
         assert f"Bindir: {os.path.join(app_layout.finalize(), 'bin')}" in tc.out
         tc.run(f"cache check-integrity {app_layout.reference}")
         assert "There are corrupted artifacts" not in tc.out
+
+    def test_multiple_instances_of_finalized_package(self):
+        tc = TestClient(light=True)
+        tc.save({"tool/conanfile.py": GenConanfile("tool", "1.0")
+                    .with_package_type("application")
+                    .with_finalize("self.output.info('RUNNING MY FINALIZE')"),
+                "liba/conanfile.py": GenConanfile("liba", "1.0").with_tool_requires("tool/1.0"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_tool_requires("tool/1.0"),
+                "consumer/conanfile.py": GenConanfile("consummer", "1.0")
+                    .with_requires("liba/1.0")
+                    .with_requires("libb/1.0")})
+
+        tc.run("export tool")
+        tc.run("export liba")
+        tc.run("export libb")
+        tc.run("install consumer -c:a tools.graph:skip_binaries=False -b missing")
+
+        # The finalize() method of the tool should only be called once, even if multiple packages depend on it
+        assert tc.out.count("RUNNING MY FINALIZE") == 1
+        # Finalize folder conan output should be printed only once
+        assert tc.out.count("Finalized folder ") == 1
 
 
 class TestRemoteFlows:
@@ -359,5 +385,6 @@ class TestRemoteFlows:
         client.run("create dep")
         dep_layout = client.created_layout()
         client.run("upload * -r=default -c --check")
-        assert f"dep/1.0:{dep_layout.reference.package_id}: Integrity checked: ok" in client.out
+        assert f"dep/1.0#{dep_layout.reference.ref.revision}:{dep_layout.reference.package_id}" \
+               f"#{dep_layout.reference.revision}: Integrity check: ok" in client.out
         assert "There are corrupted artifacts" not in client.out

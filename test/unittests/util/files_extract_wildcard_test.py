@@ -6,7 +6,7 @@ from unittest import TestCase
 from conan.tools.files import unzip
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
-from conans.util.files import save_files
+from conan.internal.util.files import save_files
 
 
 def create_archive(archive, root, relative_file_paths):

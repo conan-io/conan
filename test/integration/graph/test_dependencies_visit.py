@@ -45,20 +45,20 @@ def test_dependencies_visit():
     client.save({"conanfile.py": conanfile})
 
     client.run("install .")
-    refs = client.cache.get_latest_recipe_reference(RecipeReference.loads("openssl/0.1"))
+    refs = client.cache.get_latest_recipe_revision(RecipeReference.loads("openssl/0.1"))
     pkgs = client.cache.get_package_references(refs)
-    prev1 = client.cache.get_latest_package_reference(pkgs[0])
+    prev1 = client.cache.get_latest_package_revision(pkgs[0])
     assert f"DefRef: {repr(prev1.ref)}!!!" in client.out
     assert f"DefPRef: {prev1.repr_notime()}!!!" in client.out
 
-    refs = client.cache.get_latest_recipe_reference(RecipeReference.loads("openssl/0.2"))
+    refs = client.cache.get_latest_recipe_revision(RecipeReference.loads("openssl/0.2"))
     pkgs = client.cache.get_package_references(refs)
-    prev2 = client.cache.get_latest_package_reference(pkgs[0])
+    prev2 = client.cache.get_latest_package_revision(pkgs[0])
     assert f"DefRefBuild: {repr(prev2.ref)}!!!" in client.out
     assert f"DefPRefBuild: {prev2.repr_notime()}!!!" in client.out
 
-    assert "conanfile.py: DIRECTBUILD True: cmake/0.1" in client.out
-    assert "conanfile.py: DIRECTBUILD False: openssl/0.2" in client.out
+    assert "DIRECTBUILD True: cmake/0.1" in client.out
+    assert "DIRECTBUILD False: openssl/0.2" in client.out
 
     assert "OpenSSL found in deps" in client.out
     assert "badlib found in deps" not in client.out
@@ -86,8 +86,8 @@ def test_dependencies_visit_settings_options():
         """)
     client.save({"conanfile.py": conanfile})
     client.run("install . -s os=Linux")
-    assert "conanfile.py: SETTINGS: Linux!" in client.out
-    assert "conanfile.py: OPTIONS: shared=False!" in client.out
+    assert "SETTINGS: Linux!" in client.out
+    assert "OPTIONS: shared=False!" in client.out
 
 
 asserts = [
@@ -211,8 +211,8 @@ def test_dependencies_visit_build_requires_profile():
     # Validate time, build-requires available
     assert "conanfile.py: VALIDATE DEPS: 1!!!" in client.out
     # generate time, build-requires already available
-    assert "conanfile.py: GENERATE REQUIRE: cmake/0.1!!!" in client.out
-    assert "conanfile.py: GENERATE CMAKE: cmake/0.1!!!" in client.out
+    assert "GENERATE REQUIRE: cmake/0.1!!!" in client.out
+    assert "GENERATE CMAKE: cmake/0.1!!!" in client.out
 
 
 def test_dependencies_package_type():
@@ -232,7 +232,7 @@ def test_dependencies_package_type():
     c.save({"conanfile.py": conanfile})
     c.run("install .", assert_error=True)
     assert "APP: True!!" in c.out
-    assert "conanfile.py: Error in generate() method, line 9" in c.out
+    assert "Error in generate() method, line 9" in c.out
     assert "ValueError: 'not-exist-type' is not a valid PackageType" in c.out
 
 
@@ -255,11 +255,13 @@ def test_dependency_interface():
         class User(ConanFile):
             requires = "dep/1.0"
             def generate(self):
-                self.output.info("HOME: {}".format(self.dependencies["dep"].homepage))
-                self.output.info("URL: {}".format(self.dependencies["dep"].url))
-                self.output.info("LICENSE: {}".format(self.dependencies["dep"].license))
-                self.output.info("RECIPE: {}".format(self.dependencies["dep"].recipe_folder))
-                self.output.info("CONANDATA: {}".format(self.dependencies["dep"].conan_data))
+                dep = self.dependencies["dep"]
+                self.output.info("HOME: {}".format(dep.homepage))
+                self.output.info("URL: {}".format(dep.url))
+                self.output.info("LICENSE: {}".format(dep.license))
+                self.output.info("RECIPE FOLDER: {}".format(dep.recipe_folder))
+                self.output.info("CONANDATA: {}".format(dep.conan_data))
+                self.output.info("RECIPE: {}".format(dep.recipe))
 
             """)
     c.save({"dep/conanfile.py": conanfile,
@@ -267,11 +269,12 @@ def test_dependency_interface():
             "user/conanfile.py": user})
     c.run("create dep")
     c.run("install user")
-    assert "conanfile.py: HOME: myhome" in c.out
-    assert "conanfile.py: URL: myurl" in c.out
-    assert "conanfile.py: LICENSE: MIT" in c.out
-    assert "conanfile.py: RECIPE:" in c.out
-    assert "conanfile.py: CONANDATA: {}" in c.out
+    assert "HOME: myhome" in c.out
+    assert "URL: myurl" in c.out
+    assert "LICENSE: MIT" in c.out
+    assert "RECIPE FOLDER:" in c.out
+    assert "CONANDATA: {}" in c.out
+    assert "RECIPE: Cache" in c.out
 
 
 def test_dependency_interface_validate():
@@ -357,11 +360,11 @@ def test_validate_visibility():
     assert "t2/0.1: VALID: t1/0.1" in c.out
     assert "conanfile.py (t3/0.1): VALID: t1/0.1" in c.out
     assert "conanfile.py (t3/0.1): VALID: t2/0.1" in c.out
-    assert "conanfile.py (t3/0.1): GENERATE: t1/0.1" in c.out
-    assert "conanfile.py (t3/0.1): GENERATE: t2/0.1" in c.out
+    assert "GENERATE: t1/0.1" in c.out
+    assert "GENERATE: t2/0.1" in c.out
     c.run("create t3")
     assert "t2/0.1: VALID: t1/0.1" in c.out
     assert "t3/0.1: VALID: t1/0.1" in c.out
     assert "t3/0.1: VALID: t2/0.1" in c.out
-    assert "t3/0.1: GENERATE: t1/0.1" in c.out
-    assert "t3/0.1: GENERATE: t2/0.1" in c.out
+    assert "GENERATE: t1/0.1" in c.out
+    assert "GENERATE: t2/0.1" in c.out

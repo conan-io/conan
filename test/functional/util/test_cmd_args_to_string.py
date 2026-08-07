@@ -6,8 +6,8 @@ import pytest
 
 from conan.tools.build import cmd_args_to_string
 from conan.test.utils.tools import TestClient
-from conans.util.files import chdir
-from conans.util.runners import detect_runner
+from conan.internal.util.files import chdir
+from conan.internal.util.runners import detect_runner
 
 
 @pytest.fixture(scope="module")
@@ -30,6 +30,8 @@ def application_folder():
     )
 
     cmake = textwrap.dedent("""
+    set(CMAKE_C_COMPILER_WORKS 1)
+    set(CMAKE_C_ABI_COMPILED 1)
     cmake_minimum_required(VERSION 3.15)
     project(arg_printer C)
 

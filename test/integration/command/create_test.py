@@ -3,9 +3,12 @@ import os
 import re
 import textwrap
 
+import pytest
+
 from conan.api.model import RecipeReference
+from conan.cli.exit_codes import ERROR_GENERAL
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
-from conans.util.files import load
+from conan.internal.util.files import load
 
 
 def test_dependencies_order_matches_requires():
@@ -54,9 +57,9 @@ def test_create():
             self.output.info("Running system requirements!!")
     """)
     client.save({"conanfile.py": conanfile})
-    client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing")
+    client.run("create --name=pkg --version=0.1 --user=lasote --channel=testing")
     assert "Profile host:\n[settings]" in client.out
-    assert "pkg/0.1@lasote/testing: Generating the package" in client.out
+    assert "Generating the package pkg/0.1@lasote/testing:" in client.out
     assert "Running system requirements!!" in client.out
     client.run('list -c *')
     assert "pkg/0.1@lasote/testing" in client.out
@@ -83,20 +86,20 @@ def test_create_user_channel():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
     client.run("create . --user=lasote --channel=channel")
-    assert "pkg/0.1@lasote/channel: Generating the package" in client.out
+    assert "Generating the package pkg/0.1@lasote/channel:" in client.out
     client.run("list * -c")
     assert "pkg/0.1@lasote/channel" in client.out
 
     # test default without user and channel
     client.run("create . ")
-    assert "pkg/0.1: Generating the package" in client.out
+    assert "Generating the package pkg/0.1:" in client.out
 
 
 def test_create_in_subfolder():
     client = TestClient()
     client.save({"subfolder/conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
     client.run("create subfolder --user=lasote --channel=channel")
-    assert "pkg/0.1@lasote/channel: Generating the package" in client.out
+    assert "Generating the package pkg/0.1@lasote/channel:" in client.out
     client.run("list * -c")
     assert "pkg/0.1@lasote/channel" in client.out
 
@@ -106,7 +109,7 @@ def test_create_in_subfolder_with_different_name():
     client = TestClient()
     client.save({"subfolder/Custom.py": GenConanfile().with_name("pkg").with_version("0.1")})
     client.run("create subfolder/Custom.py --user=lasote --channel=channel")
-    assert "pkg/0.1@lasote/channel: Generating the package" in client.out
+    assert "Generating the package pkg/0.1@lasote/channel:" in client.out
     client.run("list * -c")
     assert "pkg/0.1@lasote/channel" in client.out
 
@@ -117,7 +120,7 @@ def test_create_test_package():
                  "test_package/conanfile.py":
                      GenConanfile().with_test('self.output.info("TESTING!!!")')})
     client.run("create . --user=lasote --channel=testing")
-    assert "pkg/0.1@lasote/testing: Generating the package" in client.out
+    assert "Generating the package pkg/0.1@lasote/testing:" in client.out
     assert "pkg/0.1@lasote/testing (test package): TESTING!!!" in client.out
 
 
@@ -129,7 +132,7 @@ def test_create_skip_test_package():
                  "test_package/conanfile.py":
                      GenConanfile().with_test('self.output.info("TESTING!!!")')})
     client.run("create . --user=lasote --channel=testing --test-folder=\"\"")
-    assert "pkg/0.1@lasote/testing: Generating the package" in client.out
+    assert "Generating the package pkg/0.1@lasote/testing:" in client.out
     assert "TESTING!!!" not in client.out
 
 
@@ -203,7 +206,7 @@ def test_create_with_name_and_version():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run('create . --name=lib --version=1.0')
-    assert "lib/1.0: Created package revision" in client.out
+    assert "Created package revision" in client.out
 
 
 def test_create_with_only_user_channel():
@@ -211,10 +214,10 @@ def test_create_with_only_user_channel():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_name("lib").with_version("1.0")})
     client.run('create . --user=user --channel=channel')
-    assert "lib/1.0@user/channel: Created package revision" in client.out
+    assert "Created package revision" in client.out
 
     client.run('create . --user=user --channel=channel')
-    assert "lib/1.0@user/channel: Created package revision" in client.out
+    assert "Created package revision" in client.out
 
 
 def test_requires_without_user_channel():
@@ -236,7 +239,7 @@ def test_requires_without_user_channel():
     client.save({"conanfile.py": GenConanfile().with_require("hellobar/0.1")})
     client.run("create . --name=consumer --version=1.0")
     assert "hellobar/0.1: WARN: Hello, I'm hellobar" in client.out
-    assert "consumer/1.0: Created package revision" in client.out
+    assert "Created package revision" in client.out
 
 
 def test_conaninfo_contents_without_user_channel():
@@ -769,7 +772,7 @@ def test_name_never():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("never", "0.1")})
     c.run("create .")
-    assert "never/0.1: Created package" in c.out
+    assert "Created package" in c.out
 
 
 def test_create_both_host_build_require():
@@ -891,3 +894,44 @@ def test_create_test_package_only_build_python_require():
     c.run("create . -tm --build=missing")
     assert "Testing the package" in c.out
     assert "pkg/0.1 (test package): TEST!!!" in c.out
+
+
+@pytest.mark.parametrize("command", ["create", "install"])
+@pytest.mark.parametrize("out_file", [False, True])
+def test_create_build_fail_generate_outfile(command, out_file):
+    c = TestClient()
+    c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
+            "pkgc/conanfile.py": GenConanfile("pkgc", "0.1")
+           .with_requires("pkgb/0.1")
+           .with_package("raise Exception('myerror')"),
+            "pkgd/conanfile.py": GenConanfile("pkgd", "0.1").with_requires("pkgc/0.1")
+                                                            .with_settings("build_type")
+                                                            .with_generator("CMakeDeps"),
+            })
+    c.run("export pkga")
+    c.run("export pkgb")
+    c.run("export pkgc")
+    if out_file:
+        error = c.run(f"{command} pkgd --build=missing --format=json --out-file=graph.json",
+                      assert_error=True)
+    else:
+        error = c.run(f"{command} pkgd --build=missing --format=json", assert_error=True,
+                      redirect_stdout="graph.json")
+    assert error == ERROR_GENERAL
+    assert "Error in package() method, line 8" in c.out
+    graph = json.loads(c.load("graph.json"))
+    nodeid = "1" if command == "create" else "0"
+    assert graph["graph"]["nodes"][nodeid]["name"] == "pkgd"
+
+    # We can construct a package list from it
+    c.run("list -g=graph.json --graph-binaries=Build --format=json")
+    pkglist = json.loads(c.stdout)
+    # not built packages don't have revisions
+    rrev = pkglist["Local Cache"]["pkgc/0.1"]["revisions"]["b7f74fa20b19f1daac67db49318b7197"]
+    assert "revisions" not in rrev["packages"]["4a8d7d78a454700be1ab74b4a77fd7f36a44d122"]
+    # built packages do have package revisions
+    rrev = pkglist["Local Cache"]["pkgb/0.1"]["revisions"]["5b1ae5e3c1f718c0fd90d4dd8d9b57fb"]
+    assert "revisions" in rrev["packages"]["47a5f20ec8fb480e1c5794462089b01a3548fdc5"]
+    rrev = pkglist["Local Cache"]["pkga/0.1"]["revisions"]["57ece23aeb368b634896004ad579767a"]
+    assert "revisions" in rrev["packages"]["da39a3ee5e6b4b0d3255bfef95601890afd80709"]

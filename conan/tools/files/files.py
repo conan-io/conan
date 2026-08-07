@@ -1,19 +1,21 @@
 import gzip
 import os
+import re
 import stat
 import platform
 import shutil
 import subprocess
+import sys
 from typing import Optional
 from contextlib import contextmanager
 from fnmatch import fnmatch
 from shutil import which
 
 
-from conans.client.downloaders.caching_file_downloader import SourcesCachingDownloader
+from conan.internal.rest.caching_file_downloader import SourcesCachingDownloader
 from conan.errors import ConanException
-from conans.client.rest.file_uploader import FileProgress
-from conans.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
+from conan.internal.rest.file_uploader import FileProgress
+from conan.internal.util.files import rmdir as _internal_rmdir, human_size, check_with_algorithm_sum
 
 
 def load(conanfile, path, encoding="utf-8"):
@@ -94,7 +96,7 @@ def rm(conanfile, pattern, folder, recursive=False, excludes=None):
 
 def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filename="",
         keep_permissions=False, pattern=None, verify=True, retry=None, retry_wait=None,
-        auth=None, headers=None, strip_root=False, extract_filter=None):
+        auth=None, headers=None, strip_root=False, extract_filter=None, excludes=None):
     """
     High level download and decompressing of a tgz, zip or other compressed format file.
     Just a high level wrapper for download, unzip, and remove the temporary zip file once unzipped.
@@ -118,6 +120,7 @@ def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filen
     :param headers:  forwarded to ``tools.file.download()``.
     :param strip_root: forwarded to ``tools.file.unzip()``.
     :param extract_filter: forwarded to ``tools.file.unzip()``.
+    :param excludes: forwarded to ``tools.file.unzip()``.
     """
 
     if not filename:  # deduce filename from the URL
@@ -131,7 +134,8 @@ def get(conanfile, url, md5=None, sha1=None, sha256=None, destination=".", filen
              retry=retry, retry_wait=retry_wait, auth=auth, headers=headers,
              md5=md5, sha1=sha1, sha256=sha256)
     unzip(conanfile, filename, destination=destination, keep_permissions=keep_permissions,
-          pattern=pattern, strip_root=strip_root, extract_filter=extract_filter)
+          pattern=pattern, strip_root=strip_root, extract_filter=extract_filter,
+          excludes=excludes)
     os.unlink(filename)
 
 
@@ -147,7 +151,7 @@ def ftp_download(conanfile, host, filename, login='', password='', secure=False)
     :param secure: Set to True to use FTP over TLS/SSL (FTPS). Defaults to False for regular FTP.
     """
     # TODO: Check if we want to join this method with download() one, based on ftp:// protocol
-    # this has been requested by some users, but the signature is a bit divergent
+    # this has been requested by some users, but the hash is a bit divergent
     import ftplib
     ftp = None
     try:
@@ -265,7 +269,8 @@ def chdir(conanfile, newdir):
         os.chdir(old_path)
 
 
-def chmod(conanfile, path:str, read:Optional[bool]=None, write:Optional[bool]=None, execute:Optional[bool]=None, recursive:bool=False):
+def chmod(conanfile, path: str, read: Optional[bool] = None, write: Optional[bool] = None,
+          execute: Optional[bool] = None, recursive: bool = False):
     """Change file or directory permissions cross-platform.
 
     .. versionadded:: 2.15
@@ -319,7 +324,7 @@ def chmod(conanfile, path:str, read:Optional[bool]=None, write:Optional[bool]=No
     if not os.path.exists(path):
         raise ConanException(f"Could not change permission: Path \"{path}\" does not exist.")
 
-    def _change_permission(it_path:str):
+    def _change_permission(it_path: str):
         mode = os.stat(it_path).st_mode
         permissions = [
             (read, stat.S_IRUSR),
@@ -344,7 +349,7 @@ def chmod(conanfile, path:str, read:Optional[bool]=None, write:Optional[bool]=No
 
 
 def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=None,
-          strip_root=False, extract_filter=None):
+          strip_root=False, extract_filter=None, excludes=None):
     """
     Extract different compressed formats
 
@@ -362,15 +367,20 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     :param extract_filter: (Optional, defaulted to None). When extracting a tar file,
            use the tar extracting filters define by Python in
            https://docs.python.org/3/library/tarfile.html
+    :param excludes: (Optional, defaulted to None). When extracting a file,
+           exclude paths matching any of the patterns. This should be a Unix shell-style wildcard,
+           see fnmatch documentation for more details.
     """
 
     output = conanfile.output
     extract_filter = conanfile.conf.get("tools.files.unzip:filter") or extract_filter
-    output.info(f"Unzipping {filename} to {destination}")
-    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
-            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
-            filename.endswith(".tar")):
-        return untargz(filename, destination, pattern, strip_root, extract_filter)
+    output.info(f"Uncompressing {filename} to {destination}")
+    if (filename.endswith((".tar.gz", ".tgz", ".tbz2", ".tar.bz2", ".tar", ".tar.xz", ".txz", ".tar.zst", ".tzst"))):
+        if filename.endswith((".tar.zst", ".tzst")) and sys.version_info.minor < 14:
+            raise ConanException(f"File {os.path.basename(filename)} compressed with 'zst', "
+                                 f"unsupported for Python<3.14 ")
+        return untargz(filename, destination, pattern, strip_root, extract_filter,
+                       excludes=excludes)
     if filename.endswith(".gz"):
         target_name = filename[:-3] if destination == "." else destination
         target_dir = os.path.dirname(target_name)
@@ -380,8 +390,6 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
             with open(target_name, "wb") as fout:
                 shutil.copyfileobj(fin, fout)
         return
-    if filename.endswith(".tar.xz") or filename.endswith(".txz"):
-        return untargz(filename, destination, pattern, strip_root, extract_filter)
 
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
@@ -390,6 +398,9 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
         zip_info = z.infolist()
         if pattern:
             zip_info = [zi for zi in zip_info if fnmatch(zi.filename, pattern)]
+        if excludes:
+            zip_info = [zi for zi in zip_info
+                        if not any(fnmatch(zi.filename, pat) for pat in excludes)]
         if strip_root:
             names = [zi.filename.replace("\\", "/") for zi in zip_info]
             common_folder = os.path.commonprefix(names).split("/", 1)[0]
@@ -433,13 +444,18 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
         output.writeln("")
 
 
-def untargz(filename, destination=".", pattern=None, strip_root=False, extract_filter=None):
+def untargz(filename, destination=".", pattern=None, strip_root=False, extract_filter=None,
+            excludes=None):
     # NOT EXPOSED at `conan.tools.files` but used in tests
     import tarfile
     with tarfile.TarFile.open(filename, mode='r:*') as tarredgzippedFile:
         f = getattr(tarfile, f"{extract_filter}_filter", None) if extract_filter else None
         tarredgzippedFile.extraction_filter = f or (lambda member_, _: member_)
-        if not pattern and not strip_root:
+        # https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=registry
+        # File I/O functions in the Windows API convert "/" to "\" as part of converting
+        # the name to an NT-style name, except when using the "\\?\" prefix
+        using_long_path_prefix = destination.startswith("\\\\?\\")
+        if not pattern and not excludes and not strip_root and not using_long_path_prefix:
             tarredgzippedFile.extractall(destination)
         else:
             common_folder = None
@@ -447,6 +463,8 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
             for member in tarredgzippedFile:
                 if pattern and not fnmatch(member.name, pattern):
                     continue  # Skip files that don’t match the pattern
+                if excludes and any(fnmatch(member.name, pat) for pat in excludes):
+                    continue  # Skip files that match the excludes
 
                 if strip_root:
                     name = member.name.replace("\\", "/")
@@ -466,6 +484,8 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
                         # https://github.com/conan-io/conan/issues/11065
                         member.linkpath = member.linkpath[len(common_folder) + 1:].replace("\\", "/")
                         member.linkname = member.linkpath
+                if using_long_path_prefix:
+                    member.name = member.name.replace("/", "\\")
                 # Let's gather each member
                 members.append(member)
             tarredgzippedFile.extractall(destination, members=members)
@@ -473,65 +493,80 @@ def untargz(filename, destination=".", pattern=None, strip_root=False, extract_f
 
 def check_sha1(conanfile, file_path, signature):
     """
-    Check that the specified ``sha1`` of the ``file_path`` matches with signature.
+    Check that the specified ``SHA-1`` hash of the ``file_path`` matches the actual hash.
     If doesn’t match it will raise a ``ConanException``.
 
     :param conanfile: Conanfile object.
     :param file_path: Path of the file to check.
-    :param signature: Expected sha1sum
+    :param signature: Expected SHA-1 hash.
     """
     check_with_algorithm_sum("sha1", file_path, signature)
 
 
 def check_md5(conanfile, file_path, signature):
     """
-    Check that the specified ``md5sum`` of the ``file_path`` matches with ``signature``.
+    Check that the specified ``MD5`` hash of the ``file_path`` matches the actual hash.
     If doesn’t match it will raise a ``ConanException``.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param file_path: Path of the file to check.
-    :param signature: Expected md5sum.
+    :param signature: Expected MD5 hash.
     """
     check_with_algorithm_sum("md5", file_path, signature)
 
 
 def check_sha256(conanfile, file_path, signature):
     """
-    Check that the specified ``sha256`` of the ``file_path`` matches with signature.
+    Check that the specified ``SHA-256`` hash of the ``file_path`` matches the actual hash.
     If doesn’t match it will raise a ``ConanException``.
 
     :param conanfile: Conanfile object.
     :param file_path: Path of the file to check.
-    :param signature: Expected sha256sum
+    :param signature: Expected SHA-256 hash.
     """
     check_with_algorithm_sum("sha256", file_path, signature)
 
 
-def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding="utf-8"):
+def replace_in_file(conanfile, file_path, search, replace, strict=True, encoding="utf-8",
+                    regex=False, flags=re.MULTILINE):
     """
     Replace a string ``search`` in the contents of the file ``file_path`` with the string replace.
 
     :param conanfile: The current recipe object. Always use ``self``.
     :param file_path: File path of the file to perform the replacing.
-    :param search: String you want to be replaced.
-    :param replace: String to replace the searched string.
+    :param search: String you want to be replaced. With ``regex=True``, treated as a regular
+           expression.
+    :param replace: String to replace the searched string. With regex mode, backreferences
+           (``\\1``, ``\\g<name>``) are supported.
     :param strict: (Optional, Defaulted to ``True``) If ``True``, it raises an error if the searched
            string is not found, so nothing is actually replaced.
     :param encoding: (Optional, Defaulted to utf-8): Specifies the input and output files text
            encoding.
+    :param regex: (Optional, Defaulted to ``False``) If ``True``, ``search`` is treated as a
+           regular expression and applied with ``re.sub``.
+    :param flags: (Optional, Defaulted to ``re.MULTILINE``) Flags passed to ``re.sub`` when
+           ``regex=True``.
     :return: ``True`` if the pattern was found, ``False`` otherwise if `strict` is ``False``.
     """
     output = conanfile.output
     content = load(conanfile, file_path, encoding=encoding)
-    if -1 == content.find(search):
+    if regex:
+        try:
+            new_content, count = re.subn(search, replace, content, flags=flags)
+        except re.error as e:
+            raise ConanException("replace_in_file invalid regex '%s': %s" % (search, e))
+        found = count > 0
+    else:
+        found = search in content
+        new_content = content.replace(search, replace)
+    if not found:
         message = "replace_in_file didn't find pattern '%s' in '%s' file." % (search, file_path)
         if strict:
             raise ConanException(message)
         else:
             output.warning(message)
             return False
-    content = content.replace(search, replace)
-    save(conanfile, file_path, content, encoding=encoding)
+    save(conanfile, file_path, new_content, encoding=encoding)
     return True
 
 

@@ -1,9 +1,11 @@
 import platform
+import re
 import textwrap
 
 import pytest
 
 from conan.test.utils.tools import TestClient
+from test.conftest import tools_locations
 
 xcode_project = textwrap.dedent("""
     name: app
@@ -17,6 +19,17 @@ xcode_project = textwrap.dedent("""
           Debug: conan_config.xcconfig
           Release: conan_config.xcconfig
     """)
+
+xcode_project_bare = textwrap.dedent("""
+    name: app
+    targets:
+      app:
+        type: tool
+        platform: macOS
+        sources:
+          - app
+    """)
+
 
 main = textwrap.dedent("""
     #include <iostream>
@@ -91,11 +104,12 @@ def test_project_xcodebuild(client):
     client.run("install . --build=missing")
     client.run("install . -s build_type=Debug --build=missing")
     client.run_command("xcodegen generate")
-    client.run("create . --build=missing -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
+    client.run("create . --build=missing -s os.version=15.0 -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
+    assert "MACOSX_DEPLOYMENT_TARGET=15.0" in client.out
     assert "xcodebuild: error: invalid option" not in client.out
     assert "hello/0.1: Hello World Release!" in client.out
     assert "App Release!" in client.out
-    client.run("create . -s build_type=Debug --build=missing")
+    client.run("create . -s build_type=Debug -s os.version=15.0 --build=missing")
     assert "hello/0.1: Hello World Debug!" in client.out
     assert "App Debug!" in client.out
 
@@ -103,7 +117,6 @@ def test_project_xcodebuild(client):
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool("xcodebuild")
 @pytest.mark.tool("xcodegen")
-@pytest.mark.skip(reason="Different sdks not installed in CI")
 def test_xcodebuild_test_different_sdk(client):
 
     conanfile = textwrap.dedent("""
@@ -118,7 +131,8 @@ def test_xcodebuild_test_different_sdk(client):
             exports_sources = "app.xcodeproj/*", "app/*"
             def build(self):
                 xcode = XcodeBuild(self)
-                xcode.build("app.xcodeproj")
+                # macOS 26 SDK requires signing/entitlements for a Command-line Tool, not needed for this test
+                xcode.build("app.xcodeproj", cli_args=["CODE_SIGNING_ALLOWED=NO"])
                 self.run("otool -l build/Release/app")
         """)
 
@@ -128,12 +142,12 @@ def test_xcodebuild_test_different_sdk(client):
     client.run("install . --build=missing")
     client.run("install . -s build_type=Debug --build=missing")
     client.run_command("xcodegen generate")
-    client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=10.15 "
-               "-c tools.apple:sdk_path='/Applications/Xcode11.7.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk'")
-    assert "sdk 10.15.6" in client.out
-    client.run("create . --build=missing -s os.sdk_version=11.3 "
-               "-c tools.apple:sdk_path='/Applications/Xcode12.5.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.3.sdk'")
-    assert "sdk 11.3" in client.out
+    client.run("create . --build=missing -s os.sdk_version=26.0 "
+               f"-c tools.apple:sdk_path='{tools_locations['xcode_sdk']['26.0']['path']['Darwin']}'")
+    assert "sdk 26.0" in client.out
+    client.run("create . --build=missing -s os.sdk_version=26.5 "
+               f"-c tools.apple:sdk_path='{tools_locations['xcode_sdk']['26.5']['path']['Darwin']}'")
+    assert "sdk 26.5" in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
@@ -164,3 +178,57 @@ def test_missing_sdk(client):
     client.run_command("xcodegen generate")
     client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=12.0 "
                "-c tools.apple:sdk_path=notexistingsdk", assert_error=True)
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+@pytest.mark.tool("xcodebuild")
+@pytest.mark.tool("xcodegen")
+@pytest.mark.parametrize("no_copy_source", [True, False])
+def test_project_xcodebuild_cli_args(client, no_copy_source):
+
+    conanfile = textwrap.dedent(f"""
+        import os
+        from conan import ConanFile
+        from conan.tools.apple import XcodeBuild
+        from conan.tools.files import copy
+        class MyApplicationConan(ConanFile):
+            name = "myapplication"
+            version = "1.0"
+            requires = "hello/0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "XcodeDeps"
+            exports_sources = "app.xcodeproj/*", "app/*"
+            package_type = "application"
+            no_copy_source = {str(no_copy_source)}
+            def build(self):
+                xb = XcodeBuild(self)
+                proj = os.path.join(self.source_folder, "app.xcodeproj")
+                xc = os.path.join(self.build_folder, "conan_config.xcconfig")
+                xb.build(proj, cli_args=["-xcconfig", xc,
+                                        f"SYMROOT={{self.build_folder}}",
+                                        f"OBJROOT={{self.build_folder}}"])
+
+            def package(self):
+                copy(self, "{{}}/app".format(self.settings.build_type), self.build_folder,
+                     os.path.join(self.package_folder, "bin"), keep_path=False)
+
+            def package_info(self):
+                self.cpp_info.bindirs = ["bin"]
+        """)
+
+    client.save({"conanfile.py": conanfile,
+                      "test_package/conanfile.py": test,
+                      "app/main.cpp": main,
+                      "project.yml": xcode_project_bare}, clean_first=True)
+
+    client.run_command("xcodegen generate")
+
+    for build_type in ["Release", "Debug"]:
+        client.run(f"create . --build=missing -s build_type={build_type} -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
+
+        build_folder = re.search(r"Building your package in (/.+)", client.out).group(1)
+
+        assert f"OBJROOT = {build_folder}"
+        assert f"SYMROOT = {build_folder}"
+        assert "-xcconfig" in client.out
+        assert f"App {build_type}!" in client.out
