@@ -175,18 +175,16 @@ class WorkspaceAPI:
                                          f"missing 'ref' in workspace definition")
                 reference = RecipeReference.loads(ref)
                 parent = os.path.dirname(abs_path) or self._folder
-                if os.path.basename(abs_path) != reference.name:
-                    raise ConanException(f"Workspace package folder '{rel_path}' basename "
-                                         f"does not match reference name '{reference.name}'")
                 os.makedirs(parent, exist_ok=True)
                 ConanOutput().info(f"Opening package '{ref}' into: {abs_path}")
-                self.open(reference, remotes, cwd=parent)
+                self.open(reference, remotes, cwd=parent,
+                          folder=os.path.basename(abs_path))
                 opened.append(reference)
         finally:
             self.enable(True)
         return opened
 
-    def open(self, ref, remotes, cwd=None):
+    def open(self, ref, remotes, cwd=None, folder=None):
         # Default target is the workspace root when inside a workspace, so running
         # from a subfolder doesn't clone into that subfolder
         cwd = cwd or self._folder or os.getcwd()
@@ -202,7 +200,8 @@ class WorkspaceAPI:
         conanfile, module = loader.load_basic_module(conanfile_path, remotes=remotes)
 
         scm = conanfile.conan_data.get("scm") if conanfile.conan_data else None
-        dst_path = os.path.join(cwd, ref.name)
+        target = folder or ref.name
+        dst_path = os.path.join(cwd, target)
         if scm is None:
             conanfile.output.warning("conandata doesn't contain 'scm' information\n"
                                      "doing a local copy!!!")
@@ -216,8 +215,8 @@ class WorkspaceAPI:
                 merge_directories(export_sources, dst_path)
         else:
             git = Git(conanfile, folder=cwd)
-            git.clone(url=scm["url"], target=ref.name)
-            git.folder = ref.name  # change to the cloned folder
+            git.clone(url=scm["url"], target=target)
+            git.folder = target  # change to the cloned folder
             git.checkout(commit=scm["commit"])
         return dst_path
 

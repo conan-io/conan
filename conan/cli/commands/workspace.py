@@ -15,6 +15,24 @@ from conan.errors import ConanException
 from conan.internal.graph.install_graph import ProfileArgs
 
 
+def _resolve_ws_relative_folder(conan_api, folder):
+    """Split a workspace-root-relative path into (parent_cwd, leaf_folder_name).
+    Returns (None, None) when folder is not set, letting the API pick defaults.
+    Creates any missing intermediate directories.
+    """
+    if not folder:
+        return None, None
+    if os.path.isabs(folder):
+        raise ConanException(f"'--folder' must be relative to the workspace root: {folder}")
+    ws_folder = conan_api.workspace.folder()
+    abs_target = os.path.normpath(os.path.join(ws_folder, folder))
+    if os.path.commonpath([abs_target, ws_folder]) != os.path.normpath(ws_folder):
+        raise ConanException(f"'--folder' escapes the workspace root: {folder}")
+    parent = os.path.dirname(abs_target)
+    os.makedirs(parent, exist_ok=True)
+    return parent, os.path.basename(abs_target)
+
+
 @conan_subcommand(formatters={"text": cli_out_write})
 def workspace_root(conan_api: ConanAPI, parser, subparser, *args):  # noqa
     """
@@ -34,6 +52,10 @@ def workspace_open(conan_api: ConanAPI, parser, subparser, *args):
     subparser.add_argument("reference", nargs="?",
                            help="Open this package source repository. If omitted, "
                                 "open all packages in the current workspace definition")
+    subparser.add_argument("--folder",
+                           help="Target folder for the opened package, relative to the "
+                                "workspace root. Subfolders are allowed (e.g. libs/mypkg). "
+                                "Only valid together with a 'reference' argument")
     group = subparser.add_mutually_exclusive_group()
     group.add_argument("-r", "--remote", action="append", default=None,
                        help='Look in the specified remote or remotes server')
@@ -41,8 +63,11 @@ def workspace_open(conan_api: ConanAPI, parser, subparser, *args):
                        help='Do not use remote, resolve exclusively in the cache')
     args = parser.parse_args(*args)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
+    if args.folder and not args.reference:
+        raise ConanException("'--folder' requires a 'reference' argument")
     if args.reference:
-        conan_api.workspace.open(args.reference, remotes=remotes)
+        cwd, folder = _resolve_ws_relative_folder(conan_api, args.folder)
+        conan_api.workspace.open(args.reference, remotes=remotes, cwd=cwd, folder=folder)
     else:
         conan_api.workspace.open_missing(remotes=remotes)
 
@@ -56,6 +81,10 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
                            help='Path to the package folder in the user workspace')
     add_reference_args(subparser)
     subparser.add_argument("--ref", help="Open and add this reference")
+    subparser.add_argument("--folder",
+                           help="Target folder for the opened package, relative to the "
+                                "workspace root. Subfolders are allowed (e.g. libs/mypkg). "
+                                "Only valid together with '--ref'")
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
     group = subparser.add_mutually_exclusive_group()
@@ -66,11 +95,13 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
     args = parser.parse_args(*args)
     if args.path and args.ref:
         raise ConanException("Do not use both 'path' and '--ref' argument")
+    if args.folder and not args.ref:
+        raise ConanException("'--folder' requires '--ref'")
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     path = args.path
     if args.ref:
-        # TODO: Use path here to open in this path
-        path = conan_api.workspace.open(args.ref, remotes)
+        cwd, folder = _resolve_ws_relative_folder(conan_api, args.folder)
+        path = conan_api.workspace.open(args.ref, remotes, cwd=cwd, folder=folder)
     ref = conan_api.workspace.add(path,
                                   args.name, args.version, args.user, args.channel,
                                   args.output_folder, remotes=remotes)
