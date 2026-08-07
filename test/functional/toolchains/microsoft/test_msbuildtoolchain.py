@@ -3,9 +3,10 @@ import textwrap
 
 import pytest
 
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, vs2022_profile
 
 
+@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_msbuildtoolchain_props_with_extra_flags():
     """
@@ -25,12 +26,13 @@ def test_msbuildtoolchain_props_with_extra_flags():
     tools.build:defines+=["DEF1", "DEF2"]
     """)
     client = TestClient(path_with_spaces=False)
+    client.save_home({"profiles/default": vs2022_profile})
     client.run("new msbuild_exe -d name=hello -d version=0.1")
     client.save({"myprofile": profile})
     #  conantoolchain.props is already imported in the msbuild_exe tempalte
     client.run("create . -pr myprofile -tf=")
     assert "/analyze:quiet /doc src/hello.cpp" in client.out
-    assert r"/VERBOSE:UNUSEDLIBS /PDB:mypdbfile x64\Release\hello.obj" in client.out
+    assert r"/VERBOSE:UNUSEDLIBS /PDB:mypdbfile hello\x64\Release\hello.obj" in client.out
     assert "/D DEF1 /D DEF2" in client.out
     assert "Build succeeded." in client.out
 

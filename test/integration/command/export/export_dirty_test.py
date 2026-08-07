@@ -19,19 +19,19 @@ class TestSourceDirty:
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=1.0", assert_error=True)
-        assert "ERROR: pkg/1.0: Error in source() method, line 6" in client.out
+        assert "ERROR: Error in source() method, line 6" in client.out
         # Check that we can debug and see the folder
         source_file = os.path.join(client.exported_layout().source(), "somefile.txt")
         assert load(source_file) == "hello world!!!"
         # Without any change, the export will generate same recipe revision, reuse source folder
         client.run("create . --name=pkg --version=1.0", assert_error=True)
         assert "Source folder is corrupted, forcing removal" in client.out
-        assert "ERROR: pkg/1.0: Error in source() method, line 6" in client.out
+        assert "ERROR: Error in source() method, line 6" in client.out
 
         # The install also removes corrupted source folder before proceeding, then call source
         client.run("install --requires=pkg/1.0 --build=missing", assert_error=True)
         assert "pkg/1.0: WARN: Trying to remove corrupted source folder" in client.out
-        assert "ERROR: pkg/1.0: Error in source() method, line 6" in client.out
+        assert "ERROR: Error in source() method, line 6" in client.out
 
         # This creates a new revision that doesn't need removal, different source folder
         client.save({"conanfile.py": conanfile.replace("source(", "source2(")})

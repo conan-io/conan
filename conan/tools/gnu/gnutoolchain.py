@@ -209,12 +209,19 @@ class GnuToolchain:
         ret = {}
         # Configuration map
         compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
-                             "rc": "RC", "nm": "NM", "ranlib": "RANLIB",
+                             "rc": "RC", "objc": "OBJC", "objcpp": "OBJCXX", "asm": "AS",
+                             "nm": "NM", "ranlib": "RANLIB",
                              "objdump": "OBJDUMP", "strip": "STRIP"}
         # Compiler definitions by conf
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables",
                                                      default={}, check_type=dict)
         if compilers_by_conf:
+            unknown = [k for k in compilers_by_conf if k not in compilers_mapping]
+            if unknown:
+                self._conanfile.output.warning(
+                    f"tools.build:compiler_executables: ignoring unknown key(s) "
+                    f"{sorted(unknown)}, expected one of {sorted(compilers_mapping)}",
+                    warn_tag="risk")
             for comp, env_var in compilers_mapping.items():
                 if comp in compilers_by_conf:
                     compiler = compilers_by_conf[comp]

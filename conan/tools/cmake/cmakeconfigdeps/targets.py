@@ -7,25 +7,21 @@ from jinja2 import Template
 class TargetsTemplate2:
     """
     FooTargets.cmake
+
+    Thin Jinja renderer. Filename and context are built by CMakeConfigDeps.
     """
-    def __init__(self, filename, reference):
+    def __init__(self, filename, context):
         self._filename = filename
-        self._reference = reference
+        self._context = context
+
+    @property
+    def filename(self):
+        return self._filename
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
         return t.render(self._context)
-
-    @property
-    def filename(self):
-        return f"{self._filename}Targets.cmake"
-
-    @property
-    def _context(self):
-        ret = {"filename": self._filename,
-               "ref": str(self._reference)}
-        return ret
 
     @property
     def _template(self):

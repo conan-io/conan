@@ -4,12 +4,9 @@ import shutil
 
 import pytest
 
-from conan.api.subapi.workspace import WorkspaceAPI
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.tools import TestClient
 from conan.tools.files import replace_in_file
-
-WorkspaceAPI.TEST_ENABLED = "will_break_next"
 
 
 @pytest.mark.tool("cmake")

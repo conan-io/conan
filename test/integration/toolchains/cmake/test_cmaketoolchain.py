@@ -560,6 +560,55 @@ def test_cmaketoolchain_rcflags():
     assert 'string(APPEND CMAKE_RC_FLAGS_INIT " ${CONAN_RC_FLAGS}")' in toolchain
 
 
+def test_cmaketoolchain_compiler_executables_unknown_key_warning():
+    """https://github.com/conan-io/conan/issues/19142
+    Keys in tools.build:compiler_executables must be lowercase and match the known languages.
+    Unknown keys (e.g. "RC" uppercase) should produce a risk warning instead of being silently
+    ignored.
+    """
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:compiler_executables = {"RC": "rc", "bogus": "x", "c": "gcc"}
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:host=profile")
+    assert "compiler_executables: ignoring unknown key(s) ['RC', 'bogus']" in client.out
+    # Known lowercase key still works
+    assert 'set(CMAKE_C_COMPILER "gcc")' in client.load("conan_toolchain.cmake")
+
+
+def test_cmaketoolchain_compiler_executables_no_warning_for_known_keys():
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:compiler_executables = {"c": "gcc", "cpp": "g++", "rc": "rc"}
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:host=profile")
+    assert "ignoring unknown key" not in client.out
+
+
 def test_cmaketoolchain_asmflags():
     """Test that tools.build:asmflags is applied to CONAN_ASM_FLAGS and CMAKE_ASM_FLAGS_INIT"""
     profile = textwrap.dedent("""
@@ -1968,3 +2017,54 @@ def test_thread_flags(threads, flags):
     assert f'string(APPEND CONAN_C_FLAGS " {flags}")' in toolchain
     assert f'string(APPEND CONAN_SHARED_LINKER_FLAGS " {flags}")' in toolchain
     assert f'string(APPEND CONAN_EXE_LINKER_FLAGS " {flags}")' in toolchain
+
+
+@pytest.mark.parametrize("os_settings, expected", [
+    ("-s os=Macos -s os.version=26.0", "macosx26.0"),
+    ("-s os=iOS -s os.sdk=iphoneos -s os.version=26.0", "ios26.0"),
+    ("-s os=iOS -s os.sdk=iphonesimulator -s os.version=26.0", "ios26.0-simulator"),
+    ("-s os=watchOS -s os.sdk=watchos -s os.version=26.0", "watchos26.0"),
+    ("-s os=watchOS -s os.sdk=watchsimulator -s os.version=26.0", "watchos26.0-simulator"),
+    ("-s os=tvOS -s os.sdk=appletvos -s os.version=26.0", "tvos26.0"),
+    ("-s os=tvOS -s os.sdk=appletvsimulator -s os.version=26.0", "tvos26.0-simulator"),
+    ("-s os=visionOS -s os.sdk=xros -s os.version=26.0", "xros26.0"),
+    ("-s os=visionOS -s os.sdk=xrsimulator -s os.version=26.0", "xros26.0-simulator"),
+    # Catalyst takes its version from os.subsystem.ios_version, not from os.version
+    ("-s os=Macos -s os.version=26.0 -s os.subsystem=catalyst -s os.subsystem.ios_version=16.0",
+     "ios16.0-macabi"),
+])
+def test_swift_compiler_target(os_settings, expected):
+    """ swiftc does not derive its target from the SDK, CMakeToolchain has to set it
+        https://github.com/conan-io/conan/issues/18466
+    """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "build_type")})
+    client.run(f"install . {os_settings} -s arch=armv8 -s build_type=Release -g CMakeToolchain")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert f'set(CMAKE_Swift_COMPILER_TARGET "arm64-apple-{expected}")' in toolchain
+
+
+@pytest.mark.parametrize("os_settings", [
+    "-s os=Linux -s arch=x86_64",  # not an Apple OS
+    "-s os=Macos -s arch=armv8",  # no os.version to build the triple with
+    '-s os=Macos -s os.version=26.0 -s arch="armv8|x86_64"',  # universal binary
+])
+def test_swift_compiler_target_not_set(os_settings):
+    """ when no single triple represents the settings, the block stays silent """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "build_type")})
+    client.run(f"install . {os_settings} -s build_type=Release -g CMakeToolchain")
+    assert "CMAKE_Swift_COMPILER_TARGET" not in client.load("conan_toolchain.cmake")
+
+
+def test_swift_compiler_target_user_override():
+    """ it is only a default, extra_variables is rendered later so the user value wins """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "build_type")})
+    client.run('install . -s os=iOS -s os.sdk=iphoneos -s os.version=26.0 -s arch=armv8 '
+               '-s build_type=Release -g CMakeToolchain '
+               '-c tools.cmake.cmaketoolchain:extra_variables='
+               '\'{"CMAKE_Swift_COMPILER_TARGET": "arm64-apple-ios99.0"}\'')
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "if(NOT DEFINED CMAKE_Swift_COMPILER_TARGET)" in toolchain
+    assert toolchain.index('"arm64-apple-ios26.0"') < toolchain.index('"arm64-apple-ios99.0"')

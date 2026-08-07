@@ -10,6 +10,10 @@ on:
         required: false
         default: 'false'
         type: string
+      run-covtest:
+        required: false
+        default: 'false'
+        type: string
 
 jobs:
   unit_integration_tests:
@@ -57,12 +61,19 @@ jobs:
           pip install -r conans/requirements_server.txt
           git config --global core.autocrlf false
 
+      - name: Determine tests to run
+        id: determine_tests
+        uses: ./.github/actions/determine-tests
+        with:
+          test-types: unittests integration
+          run-covtest: ${{ inputs.run-covtest }}
+
       - name: Run Unit & Integration Tests
         uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
           test-type: unit-integration
-          tests: test/unittests test/integration
+          tests: ${{ steps.determine_tests.outputs.tests }}
 
   functional_tests:
     strategy:
@@ -95,17 +106,18 @@ jobs:
         if: matrix.runner == 'windows-2022'
         run: dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
 
-      - name: Install Visual Studio Build Tools
+      - name: Install Visual Studio 2017 Build Tools
         run: |
           Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "vs_buildtools15.exe"
           Start-Process -FilePath ".\vs_buildtools15.exe" -ArgumentList `
-            "--quiet",  "--wait", "--norestart", "--nocache", `
-            "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
-            "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
-            "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
-            "--add", "Microsoft.Component.MSBuild", `
-            "--add", "Microsoft.VisualStudio.Component.VC.140" -WindowStyle Hidden -Wait
-
+              "--quiet",  "--wait", "--norestart", "--nocache", `
+              "--add", "Microsoft.VisualStudio.Component.VCTools", `
+              "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
+              "--add", "Microsoft.VisualStudio.Component.Windows81SDK", `
+              "--add", "Microsoft.VisualStudio.Component.Windows10SDK", `
+              "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
+              "--add", "Microsoft.Component.MSBuild", `
+              "--add", "Microsoft.VisualStudio.Component.VC.140" -WindowStyle Hidden -Wait
       - name: Determine pip cache directory
         id: pip-cache-dir
         shell: pwsh
@@ -259,10 +271,18 @@ jobs:
           echo "CONAN_TEST_FOLDER=$env:CONAN_TEST_FOLDER" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "MSYS2_PATH=$msys2Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
+      - name: Determine tests to run
+        id: determine_tests
+        uses: ./.github/actions/determine-tests
+        with:
+          test-types: functional
+          run-slow-tests: ${{ inputs.run-slow-tests }}
+          run-covtest: ${{ inputs.run-covtest }}
+
       - name: Run Functional Tests
         uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
           test-type: functional
           runner-type: ${{ matrix.runner }}
-          tests: ${{ inputs.run-slow-tests == 'true' && 'test/functional' || 'test/functional -m "not slow"' }}
+          tests: ${{ steps.determine_tests.outputs.tests }}
