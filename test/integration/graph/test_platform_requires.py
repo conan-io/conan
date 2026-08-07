@@ -324,7 +324,7 @@ class TestPackageID:
         assert "pkg/1.0#7ed9bbd2a7c3c4381438c163c93a9f21:" \
                "f2cfe57716d0a3320019f058edcd728d3379ab32 - Build" in client.out
         # The default revision is not taken into account at all
-        assert "requires: dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709" in client.out
+        assert f"pkg/1.0: requires: dep/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709" in client.out
 
         client.run("create . -pr=profile -s os=Windows")
         # pkg gets exactly same package_id, changing the settings, do not affect plaform package-id
@@ -350,7 +350,7 @@ class TestPackageID:
                f"{package_id} - Build" in client.out
         # The default revision is not taken into account for package id calculation,
         # but if the user defines it, it is
-        assert f"requires: dep/1.0{revision or ''}:da39a3ee5e6b4b0d3255bfef95601890afd80709" in client.out
+        assert f"pkg/1.0: requires: dep/1.0{revision or ''}:da39a3ee5e6b4b0d3255bfef95601890afd80709" in client.out
 
         client.run("create . -pr=profile -s os=Windows")
         # pkg gets exactly same package_id, changing the settings, do not affect plaform package-id

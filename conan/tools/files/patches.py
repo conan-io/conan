@@ -5,7 +5,6 @@ import shutil
 import patch_ng
 import yaml
 
-from conan.api.output import Color, ConanOutput
 from conan.errors import ConanException
 from conan.internal.paths import DATA_YML
 from conan.internal.util.files import mkdir, load, save
@@ -48,8 +47,7 @@ def patch(conanfile, base_path=None, patch_file=None, patch_string=None, strip=0
     if patch_type or patch_description:
         patch_type_str = ' ({})'.format(patch_type) if patch_type else ''
         patch_description_str = ': {}'.format(patch_description) if patch_description else ''
-        ConanOutput().info(f'Apply patch{patch_type_str}', newline=False)
-        ConanOutput().info(patch_description_str, fg=Color.CYAN)
+        conanfile.output.info('Apply patch{}{}'.format(patch_type_str, patch_description_str))
 
     patchlog = logging.getLogger("patch_ng")
     patchlog.handlers = []

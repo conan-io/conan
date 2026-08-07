@@ -810,7 +810,7 @@ class TestClient:
         return build_folder.replace("\\", "/")
 
     def created_package_id(self, ref):
-        package_id = re.search(r"Package step for {}:(\S+)".format(re.escape(str(ref))),
+        package_id = re.search(r"Generating the package {}:(\S+)".format(re.escape(str(ref))),
                                str(self.out)).group(1)
         return package_id
 
