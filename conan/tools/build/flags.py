@@ -93,21 +93,21 @@ def architecture_flag(conanfile):
     return ""
 
 
-def is_64_bit_architecture(conanfile):
+def architecture_bits(conanfile):
     """
-    returns True if the target architecture is 64 bits, False if it is 32 bits, None if unknown
+    returns 64 or 32 depending on the target architecture
     """
     arch = conanfile.settings.get_safe("arch")
     if arch in ["x86_64", "ppc64le", "ppc64", "armv8", "armv8.3", "arm64ec", "sparcv9",
                 "mips64", "s390x", "wasm64", "e2k-v2", "e2k-v3", "e2k-v4", "e2k-v5",
                 "e2k-v6", "e2k-v7", "riscv64"]:
-        return True
+        return "64"
     elif arch in ["x86", "ppc32be", "ppc32", "armv4", "armv4i", "armv5el", "armv5hf",
                   "armv6", "armv7", "armv7hf", "armv7s", "armv7k", "armv8_32",
                   "sparc", "mips", "avr", "s390", "asm.js", "riscv32", "wasm",
                   "sh4le", "xtensalx6", "xtensalx106", "xtensalx7",
                   "tc131", "tc16", "tc161", "tc162", "tc18"]:
-        return False
+        return "32"
     return None
 
 
