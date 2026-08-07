@@ -148,8 +148,48 @@ class WorkspaceAPI:
                 )
         return packages
 
+    def open_missing(self, remotes):
+        """
+        For each package in the current workspace definition, if its folder does not
+        exist, open the package into it. If the folder exists, ensure it contains a
+        conanfile.py, raising otherwise.
+        """
+        self._check_ws()
+        opened = []
+        # Disable the workspace while opening: packages() validation would fail on
+        # the very folders we are about to create
+        self.enable(False)
+        try:
+            for package_info in self._ws.packages():
+                rel_path = package_info["path"]
+                ref = package_info.get("ref")
+                abs_path = os.path.normpath(os.path.join(self._folder, rel_path))
+                if os.path.exists(abs_path):
+                    if not os.path.isfile(os.path.join(abs_path, "conanfile.py")):
+                        raise ConanException(f"Folder '{abs_path}' exists but does not "
+                                             f"contain a conanfile.py")
+                    ConanOutput().info(f"Package folder already exists, skipping: {abs_path}")
+                    continue
+                if not ref:
+                    raise ConanException(f"Cannot open workspace package at '{rel_path}': "
+                                         f"missing 'ref' in workspace definition")
+                reference = RecipeReference.loads(ref)
+                parent = os.path.dirname(abs_path) or self._folder
+                if os.path.basename(abs_path) != reference.name:
+                    raise ConanException(f"Workspace package folder '{rel_path}' basename "
+                                         f"does not match reference name '{reference.name}'")
+                os.makedirs(parent, exist_ok=True)
+                ConanOutput().info(f"Opening package '{ref}' into: {abs_path}")
+                self.open(reference, remotes, cwd=parent)
+                opened.append(reference)
+        finally:
+            self.enable(True)
+        return opened
+
     def open(self, ref, remotes, cwd=None):
-        cwd = cwd or os.getcwd()
+        # Default target is the workspace root when inside a workspace, so running
+        # from a subfolder doesn't clone into that subfolder
+        cwd = cwd or self._folder or os.getcwd()
         proxy, _, loader, _ = self._conan_api._api_helpers.get_loader()  # noqa
         ref = RecipeReference.loads(ref) if isinstance(ref, str) else ref
         recipe = proxy.get_recipe(ref, remotes, update=False, check_update=False)
@@ -186,7 +226,7 @@ class WorkspaceAPI:
             raise ConanException(f"Workspace not defined, please create a "
                                  f"'{WORKSPACE_PY}' or '{WORKSPACE_YML}' file")
 
-    def add(self, path, name=None, version=None, user=None, channel=None, cwd=None,
+    def add(self, path, name=None, version=None, user=None, channel=None,
             output_folder=None, remotes=None):
         """
         Add a new editable package to the current workspace (the current workspace must exist)
@@ -201,7 +241,7 @@ class WorkspaceAPI:
         @return: The reference of the added package
         """
         self._check_ws()
-        full_path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
+        full_path = self._conan_api.local.get_conanfile_path(path, cwd=None, py=True)
         loader = self._conan_api._api_helpers.loader  # noqa
         conanfile = loader.load_named(full_path, name, version, user, channel, remotes=remotes)
         if conanfile.name is None or conanfile.version is None:

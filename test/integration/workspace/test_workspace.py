@@ -456,6 +456,70 @@ class TestOpenAdd:
         c2.run("workspace info")
         assert "pkg/0.1" in c2.out
 
+    def test_open_missing_all_from_workspace_def(self):
+        # Upload pkga and pkgb so they can be opened from remote
+        t = TestClient(default_server_user=True, light=True)
+        t.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1")})
+        t.run("create pkga")
+        t.run("create pkgb")
+        t.run("upload * -r=default -c")
+
+        # Workspace defines both packages but only pkga folder exists locally
+        c = TestClient(servers=t.servers, light=True)
+        c.save({"conanws.yml": textwrap.dedent("""\
+                    packages:
+                      - path: pkga
+                        ref: pkga/0.1
+                      - path: pkgb
+                        ref: pkgb/0.1
+                    """),
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1")})
+        c.run("workspace open")
+        assert "already exists, skipping" in c.out
+        assert "Opening package 'pkgb/0.1'" in c.out
+        assert "name = 'pkgb'" in c.load("pkgb/conanfile.py")
+
+        # Re-running is a no-op: both folders are present now
+        c.run("workspace open")
+        assert "Opening package" not in c.out
+
+    def test_open_from_subfolder_clones_into_workspace_root(self):
+        # A workspace exists and the user runs 'open'/'add --ref' from a package subfolder.
+        # The clone must land in the workspace root, not inside the subfolder.
+        t = TestClient(default_server_user=True, light=True)
+        t.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        t.run("create .")
+        t.run("upload * -r=default -c")
+
+        c = TestClient(servers=t.servers, light=True)
+        c.save({"conanws.yml": "",
+                "sub/placeholder.txt": ""})
+        with c.chdir("sub"):
+            c.run("workspace open pkg/0.1")
+        assert "name = 'pkg'" in c.load("pkg/conanfile.py")
+        assert not os.path.exists(os.path.join(c.current_folder, "sub", "pkg"))
+
+        # Same for 'workspace add --ref'
+        c2 = TestClient(servers=t.servers, light=True)
+        c2.save({"conanws.yml": "",
+                 "sub/placeholder.txt": ""})
+        with c2.chdir("sub"):
+            c2.run("workspace add --ref=pkg/0.1")
+        assert "name = 'pkg'" in c2.load("pkg/conanfile.py")
+        assert not os.path.exists(os.path.join(c2.current_folder, "sub", "pkg"))
+
+    def test_open_missing_folder_without_conanfile_raises(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": textwrap.dedent("""\
+                    packages:
+                      - path: pkga
+                        ref: pkga/0.1
+                    """),
+                "pkga/README.md": "not a conanfile"})
+        c.run("workspace open", assert_error=True)
+        assert "exists but does not contain a conanfile.py" in c.out
+
     def test_workspace_build_editables(self):
         c = TestClient(light=True)
         c.save({"conanws.yml": ""})

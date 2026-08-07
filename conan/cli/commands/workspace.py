@@ -4,7 +4,6 @@ import os
 from conan.api.conan_api import ConanAPI
 from conan.api.model import RecipeReference
 from conan.api.output import ConanOutput, cli_out_write
-from conan.api.subapi.workspace import WorkspaceAPI
 from conan.cli import make_abs_path
 from conan.cli.args import add_reference_args, add_common_install_arguments, add_lockfile_args
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
@@ -29,10 +28,12 @@ def workspace_root(conan_api: ConanAPI, parser, subparser, *args):  # noqa
 @conan_subcommand()
 def workspace_open(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Open specific references
+    Open specific references. If no reference is provided, open every package
+    in the current workspace definition whose folder does not yet exist.
     """
-    subparser.add_argument("reference",
-                           help="Open this package source repository")
+    subparser.add_argument("reference", nargs="?",
+                           help="Open this package source repository. If omitted, "
+                                "open all packages in the current workspace definition")
     group = subparser.add_mutually_exclusive_group()
     group.add_argument("-r", "--remote", action="append", default=None,
                        help='Look in the specified remote or remotes server')
@@ -40,8 +41,10 @@ def workspace_open(conan_api: ConanAPI, parser, subparser, *args):
                        help='Do not use remote, resolve exclusively in the cache')
     args = parser.parse_args(*args)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
-    cwd = os.getcwd()
-    conan_api.workspace.open(args.reference, remotes=remotes, cwd=cwd)
+    if args.reference:
+        conan_api.workspace.open(args.reference, remotes=remotes)
+    else:
+        conan_api.workspace.open_missing(remotes=remotes)
 
 
 @conan_subcommand()
@@ -64,14 +67,13 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
     if args.path and args.ref:
         raise ConanException("Do not use both 'path' and '--ref' argument")
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
-    cwd = os.getcwd()
     path = args.path
     if args.ref:
         # TODO: Use path here to open in this path
-        path = conan_api.workspace.open(args.ref, remotes, cwd=cwd)
+        path = conan_api.workspace.open(args.ref, remotes)
     ref = conan_api.workspace.add(path,
                                   args.name, args.version, args.user, args.channel,
-                                  cwd, args.output_folder, remotes=remotes)
+                                  args.output_folder, remotes=remotes)
     ConanOutput().success("Reference '{}' added to workspace".format(ref))
 
 
