@@ -28,8 +28,7 @@ def run_source_method(conanfile, hook_manager):
 
 
 def run_build_method(conanfile, hook_manager):
-    for_ref = f" for {conanfile.ref}" if not conanfile._conan_is_consumer else ""  # noqa
-    ConanOutput().step(f"Build step{for_ref}")
+    ConanOutput().step(f"Build step for {conanfile.ref}")
     if os.path.isfile(conanfile.build_folder):
         raise ConanException(f"{conanfile}: Failed to create build folder, there is already a file "
                              f"named: {conanfile.build_folder}")

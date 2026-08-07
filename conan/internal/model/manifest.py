@@ -1,7 +1,6 @@
 import os
 from collections import defaultdict
 
-from conan.api.output import ConanOutput, Color
 from conan.internal.paths import CONAN_MANIFEST, COMPRESSIONS, PACKAGE_FILE_NAME, EXPORT_FILE_NAME, \
     EXPORT_SOURCES_FILE_NAME
 from conan.internal.util.dates import timestamp_now, timestamp_to_str
@@ -82,11 +81,9 @@ class FileTreeManifest:
             files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
             file_or_files = "file" if len(files) == 1 else "files"
             if not ext:
-                output.info(f"{suffix} {len(files):d} {file_or_files}", newline=not bool(files_str))
+                output.info("%s %d %s%s" % (suffix, len(files), file_or_files, files_str))
             else:
-                output.info(f"{suffix} {len(files):d} '{ext}' {file_or_files}", newline=not bool(files_str))
-            if files_str:
-                ConanOutput().info(files_str, fg=Color.CYAN)
+                output.info("%s %d '%s' %s%s" % (suffix, len(files), ext, file_or_files, files_str))
 
     @classmethod
     def create(cls, folder, exports_sources_folder=None):
