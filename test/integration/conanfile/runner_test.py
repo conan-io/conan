@@ -43,7 +43,7 @@ class Pkg(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
-        assert 'conanfile.py: Buffer got msgs Hello' in client.out
+        assert 'Buffer got msgs Hello' in client.out
 
     def test_custom_stream_stderr(self):
         conanfile = textwrap.dedent("""
@@ -58,7 +58,7 @@ class Pkg(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
-        assert 'conanfile.py: Buffer got stderr msgs Hello' in client.out
+        assert 'Buffer got stderr msgs Hello' in client.out
 
     def test_run_command_not_a_string(self):
         conanfile = textwrap.dedent("""

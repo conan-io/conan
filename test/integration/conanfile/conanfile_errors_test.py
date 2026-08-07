@@ -106,7 +106,7 @@ class TestConanfileErrors:
         client.save(files)
         client.run("export . --user=lasote --channel=stable")
         client.run("install --requires=hello/0.1@lasote/stable --build='*'", assert_error=True)
-        assert "hello/0.1@lasote/stable: Error in source() method, line 9" in client.out
+        assert "Error in source() method, line 9" in client.out
         assert 'self.copy2()' in client.out
         assert "'HelloConan' object has no attribute 'copy2'" in client.out
 

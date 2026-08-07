@@ -135,7 +135,7 @@ def test_cache_clean_custom_storage():
     save(c.paths.global_conf_path, f"core.cache:storage_path={t}")
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_cmake_build()})
     c.run("create .", assert_error=True)
-    build_folder = re.search(r"pkg/0.1: Building your package in (\S+)", str(c.out)).group(1)
+    build_folder = re.search(r"Building your package in (\S+)", str(c.out)).group(1)
     assert os.listdir(build_folder)
     # now clean
     c.run("cache clean")

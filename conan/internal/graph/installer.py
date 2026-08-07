@@ -82,7 +82,7 @@ class _PackageBuilder:
         # Copies the sources to the build-folder, unless no_copy_source is defined
         rmdir(build_folder)
         if not getattr(conanfile, 'no_copy_source', False):
-            conanfile.output.info('Copying sources to build folder')
+            ConanOutput().info('Copying sources to build folder')
             try:
                 shutil.copytree(source_folder, build_folder, symlinks=True)
             except Exception as e:
@@ -91,6 +91,7 @@ class _PackageBuilder:
     def _build(self, conanfile, pref):
         write_generators(conanfile, self._hook_manager, self._home_folder)
 
+        ConanOutput().info(f'Building your package in {conanfile.folders.base_build}')
         try:
             run_build_method(conanfile, self._hook_manager)
             conanfile.output.success("Package '%s' built" % pref.package_id)
@@ -119,7 +120,6 @@ class _PackageBuilder:
         conanfile = node.conanfile
         pref = node.pref
 
-        ConanOutput().step("Source step")
         base_source = recipe_layout.source()
         base_package = package_layout.package()
 
@@ -146,8 +146,9 @@ class _PackageBuilder:
                 conanfile.folders.set_base_generators(base_build)
                 conanfile.folders.set_base_pkg_metadata(package_layout.metadata())
 
+                ConanOutput().info(f'Sources in {conanfile.source_folder}')
+
                 if not skip_build:
-                    conanfile.output.info('Building your package in %s' % base_build)
                     # In local cache, install folder always is build_folder
                     self._build(conanfile, pref)
                     clean_dirty(base_build)
@@ -265,6 +266,15 @@ class BinaryInstaller:
         for level in install_order:
             for install_reference in level:
                 for package in install_reference.packages.values():
+                    pref = PkgReference(install_reference.ref, package.package_id, package.prev)
+                    if package.binary == BINARY_BUILD:
+                        ConanOutput().subtitle(f"Installing package {pref.ref} "
+                                               f"({handled_count} of {package_count})")
+                        ConanOutput().highlight(f"Building from source {pref}")
+                        compact_dumps = package.nodes[0].conanfile.info.summarize_compact()
+                        for line in compact_dumps:
+                            ConanOutput(scope=str(pref.ref)).info(line, fg=Color.BRIGHT_GREEN)
+                    ConanOutput().step("Source step")
                     recipe_layout = self._install_source(package.nodes[0], remotes)
                     self._handle_package(recipe_layout, package, install_reference, handled_count,
                                          package_count)
@@ -318,14 +328,6 @@ class BinaryInstaller:
 
         if package.binary == BINARY_BUILD:
             assert pref.revision is None
-            ConanOutput()\
-                .subtitle(f"Installing package {pref.ref} ({handled_count} of {total_count})")
-            ConanOutput(scope=str(pref.ref))\
-                .highlight("Building from source")\
-                .info(f"Package {pref}")
-            compact_dumps = package.nodes[0].conanfile.info.summarize_compact()
-            for line in compact_dumps:
-                ConanOutput(scope=str(pref.ref)).info(line, fg=Color.BRIGHT_GREEN)
             package_layout = self._cache.create_build_pkg_layout(pref)
             self._handle_node_build(package, recipe_layout, package_layout)
             # Just in case it was recomputed
