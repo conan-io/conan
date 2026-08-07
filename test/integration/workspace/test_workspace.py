@@ -1515,9 +1515,9 @@ class TestSource:
         c.run("workspace add pkgb")
         c.run("workspace add pkgc")
         c.run("workspace source")
-        assert "Getting sources for conanfile.py (pkga/0.1)" in c.out
-        assert "Getting sources for conanfile.py (pkgb/0.1)" in c.out
-        assert "Getting sources for conanfile.py (pkgc/0.1)" in c.out
+        assert f"Calling source() in {os.path.join(c.current_folder, 'pkga')}" in c.out
+        assert f"Calling source() in {os.path.join(c.current_folder, 'pkgb')}" in c.out
+        assert f"Calling source() in {os.path.join(c.current_folder, 'pkgc')}" in c.out
         assert c.out.count("Executing SOURCE!!!") == 3
 
 

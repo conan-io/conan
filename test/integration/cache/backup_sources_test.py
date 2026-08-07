@@ -278,8 +278,7 @@ class TestDownloadCacheBackupSources:
         assert (f"Sources correctly downloaded from "
                 f"{self.file_server.fake_url}/internet/myfile.txt") in self.client.out
         self.client.run("source .")
-        assert (f"Source {self.file_server.fake_url}/internet/myfile.txt retrieved from "
-                f"local download cache") in self.client.out
+        assert "Source myfile.txt retrieved from local download cache" in self.client.out
 
     def test_download_origin_last(self):
         http_server_base_folder_internet = os.path.join(self.file_server.store, "internet")
@@ -317,8 +316,7 @@ class TestDownloadCacheBackupSources:
         assert (f"Sources for {self.file_server.fake_url}/internet/myfile.txt found in "
                 f"remote backup") in self.client.out
         self.client.run("source .")
-        assert (f"Source {self.file_server.fake_url}/internet/myfile.txt retrieved from local "
-                f"download cache") in self.client.out
+        assert "Source myfile.txt retrieved from local download cache" in self.client.out
 
     def test_sources_backup_server_error_500(self):
         conanfile = textwrap.dedent(f"""
@@ -467,7 +465,7 @@ class TestDownloadCacheBackupSources:
         assert f"Sources for {http_server.fake_url}/internet/myfile.txt found in remote backup" in client.out
         assert "CONTENT: Hello, world!" in client.out
         client.run("source .")
-        assert f"Source {http_server.fake_url}/internet/myfile.txt retrieved from local download cache" in client.out
+        assert "Source myfile.txt retrieved from local download cache" in client.out
         assert "CONTENT: Hello, world!" in client.out
 
     def test_download_sources_multiurl(self):

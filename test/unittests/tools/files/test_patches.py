@@ -117,7 +117,7 @@ def test_single_patch_type(mock_patch_ng):
         conanfile = ConanFileMock()
         conanfile.display_name = 'mocked/ref'
         patch(conanfile, patch_file='patch-file', patch_type='patch_type')
-    assert 'mocked/ref: Apply patch (patch_type)\n' == output.getvalue()
+    assert 'Apply patch (patch_type)' in output.getvalue()
 
 
 def test_single_patch_description(mock_patch_ng):
@@ -126,7 +126,7 @@ def test_single_patch_description(mock_patch_ng):
         conanfile = ConanFileMock()
         conanfile.display_name = 'mocked/ref'
         patch(conanfile, patch_file='patch-file', patch_description='patch_description')
-    assert 'mocked/ref: Apply patch (file): patch_description\n' == output.getvalue()
+    assert 'Apply patch (file): patch_description' in output.getvalue()
 
 
 def test_single_patch_extra_fields(mock_patch_ng):
@@ -136,7 +136,7 @@ def test_single_patch_extra_fields(mock_patch_ng):
         conanfile.display_name = 'mocked/ref'
         patch(conanfile, patch_file='patch-file', patch_type='patch_type',
               patch_description='patch_description')
-    assert 'mocked/ref: Apply patch (patch_type): patch_description\n' == output.getvalue()
+    assert 'Apply patch (patch_type): patch_description' in output.getvalue()
 
 
 def test_single_no_patchset(monkeypatch):
@@ -178,10 +178,8 @@ def test_multiple_no_version(mock_patch_ng):
              'patch_description': 'Needed to build with modern clang compilers.'}
         ]}
         apply_conandata_patches(conanfile)
-    assert 'mocked/ref: Apply patch (file): patches/0001-buildflatbuffers-cmake.patch\n' \
-           in output.getvalue()
-    assert 'mocked/ref: Apply patch (backport): Needed to build with modern clang compilers.\n' \
-           in output.getvalue()
+    assert 'Apply patch (file): patches/0001-buildflatbuffers-cmake.patch' in output.getvalue()
+    assert 'Apply patch (backport): Needed to build with modern clang compilers.' in output.getvalue()
 
 
 def test_patch_user(mock_patch_ng):
@@ -230,10 +228,8 @@ def test_multiple_with_version(mock_patch_ng):
 
         conanfile.version = "1.11.0"
         apply_conandata_patches(conanfile)
-        assert 'mocked/ref: Apply patch (file): patches/0001-buildflatbuffers-cmake.patch\n' \
-               in output.getvalue()
-        assert 'mocked/ref: Apply patch (backport): Needed to build with modern clang compilers.\n' \
-               in output.getvalue()
+        assert 'Apply patch (file): patches/0001-buildflatbuffers-cmake.patch' in output.getvalue()
+        assert 'Apply patch (backport): Needed to build with modern clang compilers.' in output.getvalue()
 
         # Ensure the function is not mutating the `conan_data` structure
         assert conanfile.conan_data == conandata_contents

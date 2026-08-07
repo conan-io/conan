@@ -182,9 +182,10 @@ class BinaryInstaller:
         if not download_source and (need_conf or node.binary != BINARY_BUILD):
             return
 
-        conanfile = node.conanfile
         if node.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
             return
+
+        ConanOutput().step(f"Source step for {conanfile.ref}")
 
         recipe_layout = self._cache.recipe_layout(node.ref)
         export_source_folder = recipe_layout.export_sources()
@@ -273,8 +274,7 @@ class BinaryInstaller:
                         ConanOutput().highlight(f"Building from source {pref}")
                         compact_dumps = package.nodes[0].conanfile.info.summarize_compact()
                         for line in compact_dumps:
-                            ConanOutput(scope=str(pref.ref)).info(line, fg=Color.BRIGHT_GREEN)
-                    ConanOutput().step("Source step")
+                            ConanOutput().info(line, fg=Color.BRIGHT_GREEN)
                     recipe_layout = self._install_source(package.nodes[0], remotes)
                     self._handle_package(recipe_layout, package, install_reference, handled_count,
                                          package_count)

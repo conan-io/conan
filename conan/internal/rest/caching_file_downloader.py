@@ -68,7 +68,7 @@ class SourcesCachingDownloader:
                         )
                         need_download = True
                     else:
-                        self._output.info(f"Source {urls} retrieved from local download cache")
+                        self._output.info(f"Source {os.path.basename(file_path)} retrieved from local download cache")
 
                 if need_download:
                     with set_dirty_context_manager(download_path):
