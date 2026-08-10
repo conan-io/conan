@@ -80,6 +80,10 @@ BUILT_IN_CONFS = {
     "core.scm:local_url": "By default allows to store local folders as remote url, but not upload them. Use 'allow' for allowing upload and 'block' to completely forbid it",
     # Compatibility opt-in, to be removed in future versions as optimized behavior becomes default
     "core.graph:compatibility_mode": "(Experimental) Set this to 'optimized' to enable the improved compatibility behaviour when querying multiple compatible binaries in remotes",
+    # Command console log
+    "core.log:enabled": "(bool, default: False) Log all console output of every command (including subprocess output) to a file under <cache>/.log",
+    "core.log:max_age_days": "(int, default: 30) Maximum age in days of files under <cache>/.log before they are automatically deleted",
+    "core.log:max_files": "(int, default: 200) Maximum number of files kept under <cache>/.log; oldest are deleted first",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",

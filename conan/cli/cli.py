@@ -13,6 +13,7 @@ from inspect import getmembers
 from conan.api.conan_api import ConanAPI
 from conan.api.output import ConanOutput, Color, cli_out_write, LEVEL_TRACE
 from conan.cli.command import ConanSubCommand
+from conan.cli.command_log import command_log_context
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
 from conan import __version__
@@ -293,11 +294,13 @@ def main(args):
 
     cli = Cli(conan_api)
     error = SUCCESS
-    try:
-        cli.run(args)
-        _warn_python_version()
-    except BaseException as e:
-        error = cli.exception_exit_error(e)
+    with command_log_context(conan_api, args) as log_ctx:
+        try:
+            cli.run(args)
+            _warn_python_version()
+        except BaseException as e:
+            error = cli.exception_exit_error(e)
+        log_ctx.set_exit_code(error)
     sys.exit(error)
 
 
