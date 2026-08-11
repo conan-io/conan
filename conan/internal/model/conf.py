@@ -84,6 +84,8 @@ BUILT_IN_CONFS = {
     "core.log:enabled": "(bool, default: False) Log all console output of every command (including subprocess output) to a file under <cache>/.log",
     "core.log:max_age_days": "(int, default: 30) Maximum age in days of files under <cache>/.log before they are automatically deleted",
     "core.log:max_files": "(int, default: 200) Maximum number of files kept under <cache>/.log; oldest are deleted first",
+    "core.log:timestamps": "(bool, default: False) Prefix each captured line in <cache>/.log files with a timestamp",
+    "core.log:env_vars": "(list, default: CC, CXX, CFLAGS, CXXFLAGS, LDFLAGS, PATH) Environment variable names to record in the <cache>/.log header, if set",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",

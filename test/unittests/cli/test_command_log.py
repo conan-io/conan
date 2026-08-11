@@ -1,4 +1,5 @@
 import os
+import re
 import time
 
 from conan.api.conan_api import ConanAPI
@@ -45,7 +46,64 @@ def test_enabled_writes_header_output_and_footer():
     assert "hello stdout" in content
     assert "hello stderr" in content
     assert "\x1b" not in content  # ANSI color codes stripped
-    assert "# Exit code: 0" in content
+    assert re.search(r"# Duration: \d+\.\d+s\n", content)
+    assert "# Exit code: 0 (SUCCESS)" in content
+
+
+def test_exit_code_name_for_known_error_code():
+    conan_api = _make_conan_api("core.log:enabled=True")
+    with command_log_context(conan_api, ["install", "."]) as log_ctx:
+        log_ctx.set_exit_code(1)
+    log_dir = HomePaths(conan_api.home_folder).command_logs_path
+    content = open(os.path.join(log_dir, os.listdir(log_dir)[0])).read()
+    assert "# Exit code: 1 (ERROR_GENERAL)" in content
+
+
+def test_timestamps_disabled_by_default():
+    conan_api = _make_conan_api("core.log:enabled=True")
+    with command_log_context(conan_api, ["install", "."]) as log_ctx:
+        os.write(1, b"hello\n")
+        log_ctx.set_exit_code(0)
+    log_dir = HomePaths(conan_api.home_folder).command_logs_path
+    content = open(os.path.join(log_dir, os.listdir(log_dir)[0])).read()
+    assert not re.search(r"^\[\d\d:\d\d:\d\d\.\d+\]", content, re.MULTILINE)
+
+
+def test_timestamps_enabled_prefixes_each_line_and_merges_split_writes():
+    conan_api = _make_conan_api("core.log:enabled=True\ncore.log:timestamps=True")
+    with command_log_context(conan_api, ["install", "."]) as log_ctx:
+        os.write(1, b"partial")  # no trailing newline: same line continues below
+        os.write(1, b" line\n")
+        os.write(1, b"no newline at the end")
+        log_ctx.set_exit_code(0)
+    log_dir = HomePaths(conan_api.home_folder).command_logs_path
+    content = open(os.path.join(log_dir, os.listdir(log_dir)[0])).read()
+    assert re.search(r"^\[\d\d:\d\d:\d\d\.\d\d\d\] partial line$", content, re.MULTILINE)
+    assert re.search(r"^\[\d\d:\d\d:\d\d\.\d\d\d\] no newline at the end$", content, re.MULTILINE)
+
+
+def test_env_vars_default_list_records_set_vars_only(monkeypatch):
+    monkeypatch.setenv("CC", "/usr/bin/gcc")
+    monkeypatch.delenv("CXX", raising=False)
+    conan_api = _make_conan_api("core.log:enabled=True")
+    with command_log_context(conan_api, ["install", "."]) as log_ctx:
+        log_ctx.set_exit_code(0)
+    log_dir = HomePaths(conan_api.home_folder).command_logs_path
+    content = open(os.path.join(log_dir, os.listdir(log_dir)[0])).read()
+    assert "# Env CC: /usr/bin/gcc\n" in content
+    assert "# Env CXX:" not in content
+
+
+def test_env_vars_custom_list_replaces_default(monkeypatch):
+    monkeypatch.setenv("CC", "/usr/bin/gcc")
+    monkeypatch.setenv("MY_VAR", "hello")
+    conan_api = _make_conan_api('core.log:enabled=True\ncore.log:env_vars=["MY_VAR"]')
+    with command_log_context(conan_api, ["install", "."]) as log_ctx:
+        log_ctx.set_exit_code(0)
+    log_dir = HomePaths(conan_api.home_folder).command_logs_path
+    content = open(os.path.join(log_dir, os.listdir(log_dir)[0])).read()
+    assert "# Env MY_VAR: hello\n" in content
+    assert "# Env CC:" not in content
 
 
 def test_log_file_name_defaults_to_conan_when_no_args():

@@ -52,7 +52,16 @@ def test_command_log_captures_subprocess_output():
     content = open(log_path).read()
     assert "# Command: conan create" in content
     assert "hello-from-subprocess-build" in content
-    assert "# Exit code: 0" in content
+    assert "# Exit code: 0 (SUCCESS)" in content
+
+    # These exact phrases are what the analyze-conan-log skill greps to locate
+    # the recipe/source/build/package folders for its bundle feature. If any
+    # of them changes, update the skill (.claude/skills/analyze-conan-log).
+    assert "Exported to cache folder:" in content
+    assert "Sources in" in content
+    assert "Building your package in" in content
+    assert "Build folder" in content
+    assert "Package folder" in content
 
 
 def test_command_log_records_error_exit_code():
@@ -65,4 +74,4 @@ def test_command_log_records_error_exit_code():
 
     log_path = _latest_log(conan_home)
     content = open(log_path).read()
-    assert f"# Exit code: {result.returncode}" in content
+    assert f"# Exit code: {result.returncode} (ERROR_GENERAL)" in content
