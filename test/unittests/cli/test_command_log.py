@@ -94,18 +94,6 @@ def test_env_vars_default_list_records_set_vars_only(monkeypatch):
     assert "# Env CXX:" not in content
 
 
-def test_env_vars_custom_list_replaces_default(monkeypatch):
-    monkeypatch.setenv("CC", "/usr/bin/gcc")
-    monkeypatch.setenv("MY_VAR", "hello")
-    conan_api = _make_conan_api('core.log:enabled=True\ncore.log:env_vars=["MY_VAR"]')
-    with command_log_context(conan_api, ["install", "."]) as log_ctx:
-        log_ctx.set_exit_code(0)
-    log_dir = HomePaths(conan_api.home_folder).command_logs_path
-    content = open(os.path.join(log_dir, os.listdir(log_dir)[0])).read()
-    assert "# Env MY_VAR: hello\n" in content
-    assert "# Env CC:" not in content
-
-
 def test_log_file_name_defaults_to_conan_when_no_args():
     conan_api = _make_conan_api("core.log:enabled=True")
     with command_log_context(conan_api, []) as log_ctx:
@@ -114,6 +102,47 @@ def test_log_file_name_defaults_to_conan_when_no_args():
     log_files = os.listdir(log_dir)
     assert len(log_files) == 1
     assert log_files[0].endswith("_conan.log")
+
+
+def test_log_file_name_includes_pid_to_avoid_collisions():
+    conan_api = _make_conan_api("core.log:enabled=True")
+    with command_log_context(conan_api, ["install", "."]) as log_ctx:
+        log_ctx.set_exit_code(0)
+    log_dir = HomePaths(conan_api.home_folder).command_logs_path
+    log_files = os.listdir(log_dir)
+    assert len(log_files) == 1
+    assert f"_{os.getpid()}_install.log" in log_files[0]
+
+
+def test_remote_login_password_is_redacted_from_command_line():
+    conan_api = _make_conan_api("core.log:enabled=True")
+    with command_log_context(conan_api, ["remote", "login", "myremote", "user", "-p",
+                                          "supersecret"]) as log_ctx:
+        log_ctx.set_exit_code(0)
+    log_dir = HomePaths(conan_api.home_folder).command_logs_path
+    content = open(os.path.join(log_dir, os.listdir(log_dir)[0])).read()
+    assert "supersecret" not in content
+    assert "# Command: conan remote login myremote user -p ********\n" in content
+
+
+def test_audit_provider_token_is_redacted_from_command_line():
+    conan_api = _make_conan_api("core.log:enabled=True")
+    with command_log_context(conan_api, ["audit", "provider", "auth", "myprovider",
+                                          "--token=supersecret"]) as log_ctx:
+        log_ctx.set_exit_code(0)
+    log_dir = HomePaths(conan_api.home_folder).command_logs_path
+    content = open(os.path.join(log_dir, os.listdir(log_dir)[0])).read()
+    assert "supersecret" not in content
+    assert "--token=********" in content
+
+
+def test_unrelated_package_query_short_flag_is_not_redacted():
+    conan_api = _make_conan_api("core.log:enabled=True")
+    with command_log_context(conan_api, ["list", "-p", "os=Windows"]) as log_ctx:
+        log_ctx.set_exit_code(0)
+    log_dir = HomePaths(conan_api.home_folder).command_logs_path
+    content = open(os.path.join(log_dir, os.listdir(log_dir)[0])).read()
+    assert "# Command: conan list -p os=Windows\n" in content
 
 
 def test_cleanup_by_max_files(tmp_path):

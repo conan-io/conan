@@ -20,6 +20,26 @@ def _timestamp():
     return datetime.now().strftime("%H:%M:%S.%f")[:-3]
 
 
+def _redact_command_line(args):
+    # "-p" only carries a secret for "conan remote login"
+    secret_flags = {"--password", "--token"}
+    if args[:2] == ["remote", "login"]:
+        secret_flags.add("-p")
+
+    redacted = list(args)
+    for i, arg in enumerate(args):
+        key, sep, _ = arg.partition("=")
+        if key not in secret_flags:
+            continue
+        if sep:
+            redacted[i] = f"{key}=********"
+        # nargs='?' flags may have no value: a following "-..." token is the next
+        # flag, not the secret, so only redact a following token that isn't one.
+        elif i + 1 < len(args) and not args[i + 1].startswith("-"):
+            redacted[i + 1] = "********"
+    return redacted
+
+
 class _NullCommandLogger:
     def set_exit_code(self, exit_code):
         pass
@@ -47,14 +67,12 @@ class _TeeCommandLogger:
         self._file.flush()
 
         self._saved_fds = {}
-        self._read_fds = []
         self._threads = []
         for fd in (1, 2):
             self._saved_fds[fd] = os.dup(fd)
             read_fd, write_fd = os.pipe()
             os.dup2(write_fd, fd)
             os.close(write_fd)
-            self._read_fds.append(read_fd)
             thread = threading.Thread(target=self._pump, args=(read_fd, self._saved_fds[fd]),
                                        daemon=True)
             thread.start()
@@ -148,13 +166,14 @@ def command_log_context(conan_api, args):
     command_name = args[0] if args else "conan"
     safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", command_name)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_path = os.path.join(log_dir, f"{timestamp}_{safe_name}.log")
-    command_line = "conan " + " ".join(args)
+    # pid disambiguates commands started within the same second (e.g. parallel CI jobs)
+    log_path = os.path.join(log_dir, f"{timestamp}_{os.getpid()}_{safe_name}.log")
+    command_line = "conan " + " ".join(_redact_command_line(args))
 
     timestamps = conan_api.config.get("core.log:timestamps", default=False, check_type=bool)
-    env_vars = conan_api.config.get("core.log:env_vars", default=_DEFAULT_ENV_VARS, check_type=list)
 
-    logger = _TeeCommandLogger(log_path, command_line, conan_api.home_folder, timestamps, env_vars)
+    logger = _TeeCommandLogger(log_path, command_line, conan_api.home_folder, timestamps,
+                                _DEFAULT_ENV_VARS)
     try:
         yield logger
     finally:
