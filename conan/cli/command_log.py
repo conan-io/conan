@@ -145,7 +145,6 @@ def command_log_context(conan_api, args):
     command_name = args[0] if args else "conan"
     safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", command_name)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    # pid disambiguates commands started within the same second (e.g. parallel CI jobs)
     log_path = os.path.join(log_dir, f"{timestamp}_{os.getpid()}_{safe_name}.log")
     command_line = "conan " + " ".join(_redact_command_line(args))
 
