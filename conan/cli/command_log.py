@@ -132,24 +132,6 @@ class _TeeCommandLogger:
             self._file.close()
 
 
-def _cleanup_old_logs(log_dir, max_age_days, max_files):
-    entries = [os.path.join(log_dir, name) for name in os.listdir(log_dir)
-               if name.endswith(".log")]
-    if max_age_days:
-        threshold = datetime.now().timestamp() - max_age_days * 86400
-        kept = []
-        for path in entries:
-            if os.path.getmtime(path) < threshold:
-                os.remove(path)
-            else:
-                kept.append(path)
-        entries = kept
-    if max_files and len(entries) > max_files:
-        entries.sort(key=os.path.getmtime)
-        for path in entries[:len(entries) - max_files]:
-            os.remove(path)
-
-
 @contextlib.contextmanager
 def command_log_context(conan_api, args):
     enabled = conan_api.config.get("core.log:enabled", default=False, check_type=bool)
@@ -159,9 +141,6 @@ def command_log_context(conan_api, args):
 
     log_dir = HomePaths(conan_api.home_folder).command_logs_path
     os.makedirs(log_dir, exist_ok=True)
-    max_age_days = conan_api.config.get("core.log:max_age_days", default=30, check_type=int)
-    max_files = conan_api.config.get("core.log:max_files", default=200, check_type=int)
-    _cleanup_old_logs(log_dir, max_age_days, max_files - 1 if max_files else max_files)
 
     command_name = args[0] if args else "conan"
     safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", command_name)

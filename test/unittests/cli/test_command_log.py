@@ -1,9 +1,8 @@
 import os
 import re
-import time
 
 from conan.api.conan_api import ConanAPI
-from conan.cli.command_log import _cleanup_old_logs, command_log_context
+from conan.cli.command_log import command_log_context
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.util.files import save
 from conan.test.utils.test_files import temp_folder
@@ -143,25 +142,3 @@ def test_unrelated_package_query_short_flag_is_not_redacted():
     log_dir = HomePaths(conan_api.home_folder).command_logs_path
     content = open(os.path.join(log_dir, os.listdir(log_dir)[0])).read()
     assert "# Command: conan list -p os=Windows\n" in content
-
-
-def test_cleanup_by_max_files(tmp_path):
-    for i in range(5):
-        (tmp_path / f"file{i}.log").write_text("x")
-    _cleanup_old_logs(str(tmp_path), max_age_days=0, max_files=3)
-    remaining = os.listdir(tmp_path)
-    assert len(remaining) == 3
-
-
-def test_cleanup_by_max_age(tmp_path):
-    old_file = tmp_path / "old.log"
-    old_file.write_text("x")
-    old_timestamp = time.time() - 40 * 86400
-    os.utime(old_file, (old_timestamp, old_timestamp))
-
-    new_file = tmp_path / "new.log"
-    new_file.write_text("x")
-
-    _cleanup_old_logs(str(tmp_path), max_age_days=30, max_files=0)
-    remaining = os.listdir(tmp_path)
-    assert remaining == ["new.log"]

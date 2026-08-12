@@ -82,8 +82,6 @@ BUILT_IN_CONFS = {
     "core.graph:compatibility_mode": "(Experimental) Set this to 'optimized' to enable the improved compatibility behaviour when querying multiple compatible binaries in remotes",
     # Command console log
     "core.log:enabled": "(bool, default: False) Log all console output of every command (including subprocess output) to a file under <cache>/.log",
-    "core.log:max_age_days": "(int, default: 30) Maximum age in days of files under <cache>/.log before they are automatically deleted",
-    "core.log:max_files": "(int, default: 200) Maximum number of files kept under <cache>/.log; oldest are deleted first",
     "core.log:timestamps": "(bool, default: False) Prefix each captured line in <cache>/.log files with a timestamp",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
