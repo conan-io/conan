@@ -34,6 +34,7 @@ def test_command_log_captures_subprocess_output():
     save(HomePaths(conan_home).global_conf_path, "core.log:enabled=True\n")
 
     pkg_folder = temp_folder()
+    python_exe = sys.executable.replace("\\", "/")
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
         class Pkg(ConanFile):
@@ -41,7 +42,7 @@ def test_command_log_captures_subprocess_output():
             version = "1.0"
             settings = "os", "arch", "compiler", "build_type"
             def build(self):
-                self.run("{sys.executable} -c \\"print('hello-from-subprocess-build')\\"")
+                self.run("{python_exe} -c \\"print('hello-from-subprocess-build')\\"")
         """)
     save(os.path.join(pkg_folder, "conanfile.py"), conanfile)
 
