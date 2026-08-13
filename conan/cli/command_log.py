@@ -24,6 +24,7 @@ _ANSI_ESCAPE_RE = re.compile(rb"\x1b\[[0-9;]*[a-zA-Z]")
 _EXIT_CODE_NAMES = {value: name for name, value in vars(exit_codes).items()
                     if name.isupper() and isinstance(value, int)}
 _DEFAULT_ENV_VARS = ["CC", "CXX", "CFLAGS", "CXXFLAGS", "LDFLAGS", "PATH"]
+_SEPARATOR = "#" + "-" * 60 + "\n"
 
 
 def _redact_command_line(args):
@@ -54,21 +55,22 @@ class _NullCommandLogger:
 class _TeeCommandLogger:
     # fd-level duplication (not just sys.stdout/stderr) so subprocess output
     # (cmake, make, git...) is captured too, since it bypasses ConanOutput.
-    def __init__(self, log_path, command_line, home_folder, env_vars):
+    def __init__(self, log_path, command_line, home_folder):
         self._file = open(log_path, "w", encoding="utf-8", errors="replace")
         self._lock = threading.Lock()
         self._exit_code = None
         self._start = datetime.now()
-        self._file.write(f"# Date: {self._start:%Y-%m-%d %H:%M:%S}\n")
-        self._file.write(f"# Command: {command_line}\n")
-        self._file.write(f"# Conan version: {__version__}\n")
-        self._file.write(f"# Conan home: {home_folder}\n")
-        self._file.write(f"# Working directory: {os.getcwd()}\n")
-        self._file.write(f"# Platform: {platform.platform()}\n")
-        for name in env_vars:
-            if name in os.environ:
-                self._file.write(f"# Env {name}: {os.environ[name]}\n")
-        self._file.write("#" + "-" * 60 + "\n")
+        env_lines = "".join(f"# Env {name}: {os.environ[name]}\n" for name in _DEFAULT_ENV_VARS
+                            if name in os.environ)
+        self._file.write(
+            f"# Date: {self._start:%Y-%m-%d %H:%M:%S}\n"
+            f"# Command: {command_line}\n"
+            f"# Conan version: {__version__}\n"
+            f"# Conan home: {home_folder}\n"
+            f"# Working directory: {os.getcwd()}\n"
+            f"# Platform: {platform.platform()}\n"
+            f"{env_lines}{_SEPARATOR}"
+        )
         self._file.flush()
 
         self._saved_fds = {}
@@ -120,11 +122,13 @@ class _TeeCommandLogger:
         for saved_fd in self._saved_fds.values():
             os.close(saved_fd)
         with self._lock:
-            self._file.write("#" + "-" * 60 + "\n")
-            self._file.write(f"# Duration: {(datetime.now() - self._start).total_seconds():.1f}s\n")
             exit_code_name = _EXIT_CODE_NAMES.get(self._exit_code)
             suffix = f" ({exit_code_name})" if exit_code_name else ""
-            self._file.write(f"# Exit code: {self._exit_code}{suffix}\n")
+            self._file.write(
+                f"{_SEPARATOR}"
+                f"# Duration: {(datetime.now() - self._start).total_seconds():.1f}s\n"
+                f"# Exit code: {self._exit_code}{suffix}\n"
+            )
             self._file.close()
 
 
@@ -144,7 +148,7 @@ def command_log_context(conan_api, args):
     log_path = os.path.join(log_dir, f"{timestamp}_{os.getpid()}_{safe_name}.log")
     command_line = "conan " + " ".join(_redact_command_line(args))
 
-    logger = _TeeCommandLogger(log_path, command_line, conan_api.home_folder, _DEFAULT_ENV_VARS)
+    logger = _TeeCommandLogger(log_path, command_line, conan_api.home_folder)
     try:
         yield logger
     finally:
