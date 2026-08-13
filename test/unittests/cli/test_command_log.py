@@ -1,5 +1,8 @@
 import os
+import platform
 import re
+
+import pytest
 
 from conan.api.conan_api import ConanAPI
 from conan.cli.command_log import command_log_context
@@ -47,6 +50,42 @@ def test_enabled_writes_header_output_and_footer():
     assert "\x1b" not in content  # ANSI color codes stripped
     assert re.search(r"# Duration: \d+\.\d+s\n", content)
     assert "# Exit code: 0 (SUCCESS)" in content
+
+
+@pytest.mark.skipif(platform.system() == "Windows", reason="pty is POSIX-only")
+def test_isatty_preserved_when_original_stream_is_a_real_terminal():
+    import pty
+    conan_api = _make_conan_api("core.log:enabled=True")
+    saved_fd = os.dup(1)
+    master_fd, slave_fd = pty.openpty()
+    os.dup2(slave_fd, 1)
+    os.close(slave_fd)
+    try:
+        with command_log_context(conan_api, ["install", "."]) as log_ctx:
+            still_a_tty = os.isatty(1)
+            log_ctx.set_exit_code(0)
+    finally:
+        os.dup2(saved_fd, 1)
+        os.close(saved_fd)
+        os.close(master_fd)
+    assert still_a_tty
+
+
+def test_no_color_forced_when_original_stream_is_not_a_terminal():
+    conan_api = _make_conan_api("core.log:enabled=True")
+    saved_fd = os.dup(1)
+    read_fd, write_fd = os.pipe()  # a pipe is never a tty
+    os.dup2(write_fd, 1)
+    os.close(write_fd)
+    try:
+        with command_log_context(conan_api, ["install", "."]) as log_ctx:
+            still_not_a_tty = os.isatty(1)
+            log_ctx.set_exit_code(0)
+    finally:
+        os.dup2(saved_fd, 1)
+        os.close(saved_fd)
+        os.close(read_fd)
+    assert not still_not_a_tty
 
 
 def test_exit_code_name_for_known_error_code():

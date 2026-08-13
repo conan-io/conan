@@ -10,6 +10,16 @@ from conan import __version__
 from conan.cli import exit_codes
 from conan.internal.cache.home_paths import HomePaths
 
+try:
+    # POSIX only. A pty makes the duplicated fds report isatty()=True, same as the real
+    # terminal, so Conan's and every subprocess' own ANSI colors keep working while logging.
+    # A plain pipe (the Windows fallback) always reports isatty()=False, so colors are lost
+    # there while logging is enabled, same as before this was attempted with a pty.
+    import pty
+    import tty
+except ImportError:
+    pty = None
+
 _ANSI_ESCAPE_RE = re.compile(rb"\x1b\[[0-9;]*[a-zA-Z]")
 _EXIT_CODE_NAMES = {value: name for name, value in vars(exit_codes).items()
                     if name.isupper() and isinstance(value, int)}
@@ -65,7 +75,14 @@ class _TeeCommandLogger:
         self._threads = []
         for fd in (1, 2):
             self._saved_fds[fd] = os.dup(fd)
-            read_fd, write_fd = os.pipe()
+            # Only use a pty if the original stream already was a real terminal: a pty always
+            # reports isatty()=True, so using one when the original was redirected/piped would
+            # start emitting ANSI colors where there weren't any before.
+            if pty is not None and os.isatty(fd):
+                read_fd, write_fd = pty.openpty()
+                tty.setraw(write_fd)  # disable line buffering/echo/CRLF translation
+            else:
+                read_fd, write_fd = os.pipe()
             os.dup2(write_fd, fd)
             os.close(write_fd)
             thread = threading.Thread(target=self._pump, args=(read_fd, self._saved_fds[fd]),
