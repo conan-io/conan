@@ -289,5 +289,9 @@ def test_linker_script():
             "mylinkscript.ld": "",
             "profile": profile})
     c.run('build . -pr=profile', assert_error=True)
-    # This error means the linker script was fonud and loaded, it failed because empty
-    assert "PHDR segment not covered by LOAD segment" in c.out
+    # This error means the linker script was found and loaded by the linker, it failed
+    # because it is empty. The exact ld diagnostic text is not asserted because it depends
+    # on the linker/meson version (e.g. meson >=1.12 duplicates the -T flag in its sanity
+    # check, which makes ld fail with a different message: "appears multiple times")
+    assert "mylinkscript.ld" in c.out
+    assert "Error 1 while executing" in c.out
