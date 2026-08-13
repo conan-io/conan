@@ -63,7 +63,7 @@ def test_toolchain_flags():
     client = TestClient()
     client.save({"conanfile.txt": "[generators]\nXcodeToolchain\n"})
     cmd = "install . -s build_type=Release -s arch=x86_64 " \
-          "-c 'tools.build:cxxflags=[\"flag1\"]' " \
+          "-c 'tools.build:cxxflags=[\"releaseflag\"]' " \
           "-c 'tools.build:defines=[\"MYDEFINITION\"]' " \
           "-c 'tools.build:cflags=[\"flag2\"]' " \
           "-c 'tools.build:sharedlinkflags=[\"flag3\"]' " \
@@ -75,7 +75,7 @@ def test_toolchain_flags():
     conan_global_flags_props = client.load("conan_global_flags{}.xcconfig".format(filename))
     assert "GCC_PREPROCESSOR_DEFINITIONS{} = $(inherited) MYDEFINITION".format(condition) in conan_global_flags_props
     assert "OTHER_CFLAGS{} = $(inherited) flag2".format(condition) in conan_global_flags_props
-    assert "OTHER_CPLUSPLUSFLAGS{} = $(inherited) flag1".format(condition) in conan_global_flags_props
+    assert "OTHER_CPLUSPLUSFLAGS{} = $(inherited) releaseflag".format(condition) in conan_global_flags_props
     assert "OTHER_LDFLAGS{} = $(inherited) flag3 flag4".format(condition) in conan_global_flags_props
 
     # A second install, for a different configuration, must not overwrite the
@@ -84,7 +84,7 @@ def test_toolchain_flags():
     debug_filename = _get_filename("Debug", "x86_64", None)
     debug_flags = client.load("conan_global_flags{}.xcconfig".format(debug_filename))
     assert "debugflag" in debug_flags
-    assert "flag1" not in debug_flags
+    assert "releaseflag" not in debug_flags
 
     conan_global_flags = client.load("conan_global_flags.xcconfig")
     assert '#include "conan_global_flags{}.xcconfig"'.format(filename) in conan_global_flags
