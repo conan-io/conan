@@ -82,7 +82,6 @@ BUILT_IN_CONFS = {
     "core.graph:compatibility_mode": "(Experimental) Set this to 'optimized' to enable the improved compatibility behaviour when querying multiple compatible binaries in remotes",
     # Command console log
     "core.log:enabled": "(bool, default: False) Log all console output of every command (including subprocess output) to a file under <cache>/.log",
-    "core.log:timestamps": "(bool, default: False) Prefix each captured line in <cache>/.log files with a timestamp",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",

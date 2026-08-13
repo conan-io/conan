@@ -16,10 +16,6 @@ _EXIT_CODE_NAMES = {value: name for name, value in vars(exit_codes).items()
 _DEFAULT_ENV_VARS = ["CC", "CXX", "CFLAGS", "CXXFLAGS", "LDFLAGS", "PATH"]
 
 
-def _timestamp():
-    return datetime.now().strftime("%H:%M:%S.%f")[:-3]
-
-
 def _redact_command_line(args):
     # "-p" only carries a secret for "conan remote login"
     secret_flags = {"--password", "--token"}
@@ -48,11 +44,10 @@ class _NullCommandLogger:
 class _TeeCommandLogger:
     # fd-level duplication (not just sys.stdout/stderr) so subprocess output
     # (cmake, make, git...) is captured too, since it bypasses ConanOutput.
-    def __init__(self, log_path, command_line, home_folder, timestamps, env_vars):
+    def __init__(self, log_path, command_line, home_folder, env_vars):
         self._file = open(log_path, "w", encoding="utf-8", errors="replace")
         self._lock = threading.Lock()
         self._exit_code = None
-        self._timestamps = timestamps
         self._start = datetime.now()
         self._file.write(f"# Date: {self._start:%Y-%m-%d %H:%M:%S}\n")
         self._file.write(f"# Command: {command_line}\n")
@@ -79,7 +74,6 @@ class _TeeCommandLogger:
             self._threads.append(thread)
 
     def _pump(self, read_fd, terminal_fd):
-        buffer = b""
         while True:
             try:
                 chunk = os.read(read_fd, 4096)
@@ -89,23 +83,8 @@ class _TeeCommandLogger:
                 break
             os.write(terminal_fd, chunk)
             clean = _ANSI_ESCAPE_RE.sub(b"", chunk)
-            if not self._timestamps:
-                with self._lock:
-                    self._file.write(clean.decode("utf-8", errors="replace"))
-                    self._file.flush()
-                continue
-            # Timestamps are per-line, but chunks don't align with line
-            # boundaries, so buffer whatever's left until the next '\n'.
-            buffer += clean
-            *lines, buffer = buffer.split(b"\n")
-            if lines:
-                with self._lock:
-                    for line in lines:
-                        self._file.write(f"[{_timestamp()}] {line.decode('utf-8', errors='replace')}\n")
-                    self._file.flush()
-        if self._timestamps and buffer:
             with self._lock:
-                self._file.write(f"[{_timestamp()}] {buffer.decode('utf-8', errors='replace')}\n")
+                self._file.write(clean.decode("utf-8", errors="replace"))
                 self._file.flush()
         os.close(read_fd)
 
@@ -148,10 +127,7 @@ def command_log_context(conan_api, args):
     log_path = os.path.join(log_dir, f"{timestamp}_{os.getpid()}_{safe_name}.log")
     command_line = "conan " + " ".join(_redact_command_line(args))
 
-    timestamps = conan_api.config.get("core.log:timestamps", default=False, check_type=bool)
-
-    logger = _TeeCommandLogger(log_path, command_line, conan_api.home_folder, timestamps,
-                                _DEFAULT_ENV_VARS)
+    logger = _TeeCommandLogger(log_path, command_line, conan_api.home_folder, _DEFAULT_ENV_VARS)
     try:
         yield logger
     finally:
