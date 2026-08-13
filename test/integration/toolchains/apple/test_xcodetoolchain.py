@@ -87,6 +87,26 @@ def test_flags_generated_if_only_defines():
     assert '#include "conan_global_flags.xcconfig"' in conan_global_file
 
 
+def test_toolchain_flags_lost_across_configurations():
+    # conan_global_flags.xcconfig has a fixed name and is fully overwritten on
+    # every install, unlike conantoolchain_<config>_<arch>.xcconfig, which is
+    # named per [config][arch][sdk] and accumulated. Installing Debug and then
+    # Release for the same project silently drops the Debug flags: the file on
+    # disk, and therefore what Xcode sees regardless of the active
+    # configuration, only ever reflects the *last* install.
+    client = TestClient()
+    client.save({"conanfile.txt": "[generators]\nXcodeToolchain\n"})
+    client.run("install . -s build_type=Debug -c 'tools.build:cxxflags=[\"-DDEBUG_FLAG\"]'")
+    client.run("install . -s build_type=Release -c 'tools.build:cxxflags=[\"-DRELEASE_FLAG\"]'")
+
+    conan_global_flags = client.load("conan_global_flags.xcconfig")
+    # Both configurations were installed, so both flags should still be
+    # reachable, each scoped to its own configuration -- the same guarantee
+    # the vars file already gives CLANG_CXX_LANGUAGE_STANDARD/CLANG_CXX_LIBRARY.
+    assert "-DDEBUG_FLAG" in conan_global_flags
+    assert "-DRELEASE_FLAG" in conan_global_flags
+
+
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.parametrize("os_name, sdk, min_version, deployment_target_flag", [
     ("Macos", None, "11.0", "MACOSX_DEPLOYMENT_TARGET"),
