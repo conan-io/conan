@@ -63,28 +63,28 @@ def test_toolchain_flags():
     client = TestClient()
     client.save({"conanfile.txt": "[generators]\nXcodeToolchain\n"})
     cmd = "install . -s build_type=Release -s arch=x86_64 " \
-          "-c 'tools.build:cxxflags=[\"releaseflag\"]' " \
-          "-c 'tools.build:defines=[\"MYDEFINITION\"]' " \
-          "-c 'tools.build:cflags=[\"flag2\"]' " \
-          "-c 'tools.build:sharedlinkflags=[\"flag3\"]' " \
-          "-c 'tools.build:exelinkflags=[\"flag4\"]'"
+          "-c 'tools.build:cxxflags=[\"cxxflags_release\"]' " \
+          "-c 'tools.build:defines=[\"defines_release\"]' " \
+          "-c 'tools.build:cflags=[\"cflags_release\"]' " \
+          "-c 'tools.build:sharedlinkflags=[\"sharedlinkflags_release\"]' " \
+          "-c 'tools.build:exelinkflags=[\"exelinkflags_release\"]'"
     client.run(cmd)
     filename = _get_filename("Release", "x86_64", None)
     condition = _condition("Release", "x86_64", None)
 
     conan_global_flags_props = client.load("conan_global_flags{}.xcconfig".format(filename))
-    assert "GCC_PREPROCESSOR_DEFINITIONS{} = $(inherited) MYDEFINITION".format(condition) in conan_global_flags_props
-    assert "OTHER_CFLAGS{} = $(inherited) flag2".format(condition) in conan_global_flags_props
-    assert "OTHER_CPLUSPLUSFLAGS{} = $(inherited) releaseflag".format(condition) in conan_global_flags_props
-    assert "OTHER_LDFLAGS{} = $(inherited) flag3 flag4".format(condition) in conan_global_flags_props
+    assert "GCC_PREPROCESSOR_DEFINITIONS{} = $(inherited) defines_release".format(condition) in conan_global_flags_props
+    assert "OTHER_CFLAGS{} = $(inherited) cflags_release".format(condition) in conan_global_flags_props
+    assert "OTHER_CPLUSPLUSFLAGS{} = $(inherited) cxxflags_release".format(condition) in conan_global_flags_props
+    assert "OTHER_LDFLAGS{} = $(inherited) sharedlinkflags_release exelinkflags_release".format(condition) in conan_global_flags_props
 
     # A second install, for a different configuration, must not overwrite the
     # first one's flags -- each stays reachable under its own condition.
-    client.run("install . -s build_type=Debug -s arch=x86_64 -c 'tools.build:cxxflags=[\"debugflag\"]'")
+    client.run("install . -s build_type=Debug -s arch=x86_64 -c 'tools.build:cxxflags=[\"cxxflags_debug\"]'")
     debug_filename = _get_filename("Debug", "x86_64", None)
     debug_flags = client.load("conan_global_flags{}.xcconfig".format(debug_filename))
-    assert "debugflag" in debug_flags
-    assert "releaseflag" not in debug_flags
+    assert "cxxflags_debug" in debug_flags
+    assert "cxxflags_release" not in debug_flags
 
     conan_global_flags = client.load("conan_global_flags.xcconfig")
     assert '#include "conan_global_flags{}.xcconfig"'.format(filename) in conan_global_flags
