@@ -24,6 +24,7 @@ class XcodeToolchain:
         {cflags}
         {cppflags}
         {ldflags}
+        {extra}
         """)
 
     _agreggated_xconfig = textwrap.dedent("""\
@@ -45,6 +46,10 @@ class XcodeToolchain:
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         self._global_ldflags = sharedlinkflags + exelinkflags
+        # Escape hatch for settings XcodeToolchain has no conf for, e.g. Swift's
+        # OTHER_SWIFT_FLAGS. The recipe sets the full value, no $(inherited) is
+        # assumed, since not every setting is additive.
+        self.extra_xcconfig = {}
 
     def generate(self):
         check_duplicated_generator(self, self._conanfile)
@@ -115,7 +120,8 @@ class XcodeToolchain:
 
     @property
     def _check_if_extra_flags(self):
-        return self._global_cflags or self._global_cxxflags or self._global_ldflags or self._global_defines
+        return (self._global_cflags or self._global_cxxflags or self._global_ldflags
+                or self._global_defines or self.extra_xcconfig)
 
     @property
     def _flags_xcconfig_content(self):
@@ -126,7 +132,9 @@ class XcodeToolchain:
         cflags = "OTHER_CFLAGS{} = $(inherited) {}".format(condition, " ".join(self._global_cflags)) if self._global_cflags else ""
         cppflags = "OTHER_CPLUSPLUSFLAGS{} = $(inherited) {}".format(condition, " ".join(self._global_cxxflags)) if self._global_cxxflags else ""
         ldflags = "OTHER_LDFLAGS{} = $(inherited) {}".format(condition, " ".join(self._global_ldflags)) if self._global_ldflags else ""
-        ret = self._flags_xconfig.format(defines=defines, cflags=cflags, cppflags=cppflags, ldflags=ldflags)
+        extra = "\n".join("{}{} = {}".format(k, condition, v) for k, v in self.extra_xcconfig.items())
+        ret = self._flags_xconfig.format(defines=defines, cflags=cflags, cppflags=cppflags, ldflags=ldflags,
+                                         extra=extra)
         return ret
 
     @property
