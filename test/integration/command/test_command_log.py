@@ -16,7 +16,7 @@ def _run_conan_subprocess(args, conan_home):
     env = dict(os.environ)
     env["CONAN_HOME"] = conan_home
     code = "from conans.conan import run; run()"
-    _cwd = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    _cwd = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
     result = subprocess.run([sys.executable, "-c", code] + args, env=env, cwd=_cwd,
                              capture_output=True, text=True)
     return result
