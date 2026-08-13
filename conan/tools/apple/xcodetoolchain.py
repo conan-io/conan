@@ -46,9 +46,6 @@ class XcodeToolchain:
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         self._global_ldflags = sharedlinkflags + exelinkflags
-        # Escape hatch for settings XcodeToolchain has no conf for, e.g. Swift's
-        # OTHER_SWIFT_FLAGS. The recipe sets the full value, no $(inherited) is
-        # assumed, since not every setting is additive.
         self.extra_xcconfig = {}
 
     def generate(self):
