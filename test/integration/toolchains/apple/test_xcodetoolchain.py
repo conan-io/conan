@@ -58,53 +58,54 @@ def test_toolchain_files(configuration, os_version, cppstd, libcxx, arch, sdk_ve
         assert 'CLANG_CXX_LANGUAGE_STANDARD{}={}'.format(condition, clang_cppstd) in toolchain_vars
 
 
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 def test_toolchain_flags():
     client = TestClient()
     client.save({"conanfile.txt": "[generators]\nXcodeToolchain\n"})
-    cmd = "install . -c 'tools.build:cxxflags=[\"flag1\"]' " \
+    cmd = "install . -s build_type=Release -s arch=x86_64 " \
+          "-c 'tools.build:cxxflags=[\"flag1\"]' " \
           "-c 'tools.build:defines=[\"MYDEFINITION\"]' " \
           "-c 'tools.build:cflags=[\"flag2\"]' " \
           "-c 'tools.build:sharedlinkflags=[\"flag3\"]' " \
           "-c 'tools.build:exelinkflags=[\"flag4\"]'"
     client.run(cmd)
+    filename = _get_filename("Release", "x86_64", None)
+    condition = _condition("Release", "x86_64", None)
+
+    conan_global_flags_props = client.load("conan_global_flags{}.xcconfig".format(filename))
+    assert "GCC_PREPROCESSOR_DEFINITIONS{} = $(inherited) MYDEFINITION".format(condition) in conan_global_flags_props
+    assert "OTHER_CFLAGS{} = $(inherited) flag2".format(condition) in conan_global_flags_props
+    assert "OTHER_CPLUSPLUSFLAGS{} = $(inherited) flag1".format(condition) in conan_global_flags_props
+    assert "OTHER_LDFLAGS{} = $(inherited) flag3 flag4".format(condition) in conan_global_flags_props
+
+    # A second install, for a different configuration, must not overwrite the
+    # first one's flags -- each stays reachable under its own condition.
+    client.run("install . -s build_type=Debug -s arch=x86_64 -c 'tools.build:cxxflags=[\"debugflag\"]'")
+    debug_filename = _get_filename("Debug", "x86_64", None)
+    debug_flags = client.load("conan_global_flags{}.xcconfig".format(debug_filename))
+    assert "debugflag" in debug_flags
+    assert "flag1" not in debug_flags
+
     conan_global_flags = client.load("conan_global_flags.xcconfig")
-    assert "GCC_PREPROCESSOR_DEFINITIONS = $(inherited) MYDEFINITION" in conan_global_flags
-    assert "OTHER_CFLAGS = $(inherited) flag2" in conan_global_flags
-    assert "OTHER_CPLUSPLUSFLAGS = $(inherited) flag1" in conan_global_flags
-    assert "OTHER_LDFLAGS = $(inherited) flag3 flag4" in conan_global_flags
+    assert '#include "conan_global_flags{}.xcconfig"'.format(filename) in conan_global_flags
+    assert '#include "conan_global_flags{}.xcconfig"'.format(debug_filename) in conan_global_flags
     conan_global_file = client.load("conan_config.xcconfig")
     assert '#include "conan_global_flags.xcconfig"' in conan_global_file
 
 
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 def test_flags_generated_if_only_defines():
     # https://github.com/conan-io/conan/issues/16422
     client = TestClient()
     client.save({"conanfile.txt": "[generators]\nXcodeToolchain\n"})
-    client.run("install . -c 'tools.build:defines=[\"MYDEFINITION\"]'")
-    conan_global_flags = client.load("conan_global_flags.xcconfig")
-    assert "GCC_PREPROCESSOR_DEFINITIONS = $(inherited) MYDEFINITION" in conan_global_flags
+    client.run("install . -s build_type=Release -s arch=x86_64 -c 'tools.build:defines=[\"MYDEFINITION\"]'")
+    filename = _get_filename("Release", "x86_64", None)
+    condition = _condition("Release", "x86_64", None)
+
+    conan_global_flags_props = client.load("conan_global_flags{}.xcconfig".format(filename))
+    assert "GCC_PREPROCESSOR_DEFINITIONS{} = $(inherited) MYDEFINITION".format(condition) in conan_global_flags_props
     conan_global_file = client.load("conan_config.xcconfig")
     assert '#include "conan_global_flags.xcconfig"' in conan_global_file
-
-
-def test_toolchain_flags_lost_across_configurations():
-    # conan_global_flags.xcconfig has a fixed name and is fully overwritten on
-    # every install, unlike conantoolchain_<config>_<arch>.xcconfig, which is
-    # named per [config][arch][sdk] and accumulated. Installing Debug and then
-    # Release for the same project silently drops the Debug flags: the file on
-    # disk, and therefore what Xcode sees regardless of the active
-    # configuration, only ever reflects the *last* install.
-    client = TestClient()
-    client.save({"conanfile.txt": "[generators]\nXcodeToolchain\n"})
-    client.run("install . -s build_type=Debug -c 'tools.build:cxxflags=[\"-DDEBUG_FLAG\"]'")
-    client.run("install . -s build_type=Release -c 'tools.build:cxxflags=[\"-DRELEASE_FLAG\"]'")
-
-    conan_global_flags = client.load("conan_global_flags.xcconfig")
-    # Both configurations were installed, so both flags should still be
-    # reachable, each scoped to its own configuration -- the same guarantee
-    # the vars file already gives CLANG_CXX_LANGUAGE_STANDARD/CLANG_CXX_LIBRARY.
-    assert "-DDEBUG_FLAG" in conan_global_flags
-    assert "-DRELEASE_FLAG" in conan_global_flags
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
