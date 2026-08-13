@@ -597,6 +597,7 @@ class _Component:
         libname, ext = os.path.splitext(libname)
         lib_sanitized = re.escape(libname)
         component_sanitized = re.escape(library_name)
+        # At first, exact matc
         regex_static = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:a|lib|dll\.a)")
         regex_shared = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:so|dylib)")
         regex_dll = re.compile(rf".*(?:{lib_sanitized}|{component_sanitized}).*\.dll")
