@@ -1,10 +1,12 @@
 import os
+import platform
 import subprocess
 import sys
 import textwrap
 
 from conan.internal.cache.home_paths import HomePaths
 from conan.test.utils.test_files import temp_folder
+from conan.test.utils.tools import default_profiles
 from conan.internal.util.files import save
 
 
@@ -27,10 +29,7 @@ def _latest_log(conan_home):
 
 def test_command_log_captures_subprocess_output():
     conan_home = temp_folder()
-    save(os.path.join(HomePaths(conan_home).profiles_path, "default"), "[settings]\nos=Linux\narch=x86_64\n"
-                                                                        "compiler=gcc\ncompiler.version=11\n"
-                                                                        "compiler.libcxx=libstdc++11\n"
-                                                                        "build_type=Release\n")
+    save(os.path.join(HomePaths(conan_home).profiles_path, "default"), default_profiles[platform.system()])
     save(HomePaths(conan_home).global_conf_path, "core.log:enabled=True\n")
 
     pkg_folder = temp_folder()
@@ -58,7 +57,7 @@ def test_command_log_captures_subprocess_output():
 
 def test_command_log_records_error_exit_code():
     conan_home = temp_folder()
-    save(os.path.join(HomePaths(conan_home).profiles_path, "default"), "[settings]\nos=Linux\narch=x86_64\n")
+    save(os.path.join(HomePaths(conan_home).profiles_path, "default"), default_profiles[platform.system()])
     save(HomePaths(conan_home).global_conf_path, "core.log:enabled=True\n")
 
     result = _run_conan_subprocess(["install", "/this/path/does/not/exist"], conan_home)
