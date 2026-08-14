@@ -313,6 +313,7 @@ class TestCyclonedx:
         cyclone_path = os.path.join(create_layout.metadata(), "sbom.cdx.json")
         content = tc.load(cyclone_path)
         content_json = json.loads(content)
+        assert "description" not in content_json["components"][0]
         if cyclone_version == 'cyclonedx_1_4':
             assert content_json["metadata"]["component"]["author"] == 'conan-dev'
             assert content_json["metadata"]["component"]["type"] == 'application'
