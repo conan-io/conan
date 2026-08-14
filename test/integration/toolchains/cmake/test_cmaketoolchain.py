@@ -1736,6 +1736,43 @@ def test_customize_cmakeuserpresets():
     assert not os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
 
 
+def test_preset_file_mode_hint():
+    # https://github.com/conan-io/conan/issues/20153
+    # When user_presets_path has directory components, hint shows cmake --preset-file (CMake 4.4+)
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type"),
+            "CMakeLists.txt": ""})
+
+    # A plain filename: regular --preset hint
+    c.run("install . -g CMakeToolchain -of=build "
+          "-c tools.cmake.cmaketoolchain:user_presets=my.json")
+    assert "cmake --preset conan-" in c.out
+    assert "--preset-file" not in c.out
+
+    # A relative filepath: --preset-file hint
+    c.run("install . -g CMakeToolchain -of=build "
+          "-c tools.cmake.cmaketoolchain:user_presets=presets/my.json")
+    assert "cmake --preset-file presets/my.json --preset conan-" in c.out
+    assert "cmake>=4.4" in c.out
+    assert os.path.exists(os.path.join(c.current_folder, "presets", "my.json"))
+
+    # Also works via user_presets_path attribute
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+        class Pkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.user_presets_path = "custom/ConanPresets.json"
+                tc.generate()
+    """)
+    c.save({"conanfile.py": conanfile})
+    c.run("install . -of=build")
+    assert "cmake --preset-file custom/ConanPresets.json --preset conan-" in c.out
+    assert os.path.exists(os.path.join(c.current_folder, "custom", "ConanPresets.json"))
+
+
 def test_output_dirs_gnudirs_local_default():
     # https://github.com/conan-io/conan/issues/14733
     c = TestClient()
