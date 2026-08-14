@@ -935,3 +935,32 @@ def test_create_build_fail_generate_outfile(command, out_file):
     assert "revisions" in rrev["packages"]["47a5f20ec8fb480e1c5794462089b01a3548fdc5"]
     rrev = pkglist["Local Cache"]["pkga/0.1"]["revisions"]["57ece23aeb368b634896004ad579767a"]
     assert "revisions" in rrev["packages"]["da39a3ee5e6b4b0d3255bfef95601890afd80709"]
+
+
+@pytest.mark.parametrize("command", ["create", "install"])
+def test_create_build_fail_via_command_api(command):
+    """ Same build failure as ``test_create_build_fail_generate_outfile`` above, but invoked
+    through ``conan_api.command.run()`` (the mechanism "workspace create"/"workspace install"
+    use to chain commands) instead of directly via the CLI. Unlike the direct CLI invocation,
+    this does NOT raise by itself: the error is deferred into a "conan_error" entry of the
+    result, and it is the caller's responsibility to check for it (as documented in
+    ``CommandAPI.run()``'s docstring, and as "workspace create"/"workspace install" now do).
+    https://github.com/conan-io/conan/issues/20258
+    """
+    c = TestClient()
+    c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1"),
+            "pkgc/conanfile.py": GenConanfile("pkgc", "0.1")
+           .with_requires("pkgb/0.1")
+           .with_package("raise Exception('myerror')"),
+            "pkgd/conanfile.py": GenConanfile("pkgd", "0.1").with_requires("pkgc/0.1")
+                                                            .with_settings("build_type")
+                                                            .with_generator("CMakeDeps"),
+            })
+    c.run("export pkga")
+    c.run("export pkgb")
+    c.run("export pkgc")
+    # api.command.run() does not manage the cwd like TestClient.run() does, needs an abs path
+    pkgd_path = os.path.join(c.current_folder, "pkgd")
+    result = c.api.command.run([command, pkgd_path, "--build=missing"])
+    assert "Error in package() method, line 8" in str(result["conan_error"])

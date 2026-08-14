@@ -25,6 +25,18 @@ class CommandAPI:
         :param cmd: Conan command to run. It can be either a string, or a list of strings.
         :return: It will return what that command returns. Note that different commands can
            return different things, so the caller needs to process it accordingly.
+
+        .. warning::
+
+            Some commands (e.g. "create", "install") do not raise directly on a build/install
+            error, but defer it, returning it instead as a ``"conan_error"`` entry in their
+            result, so formatters can still run (e.g. to write "graph.json" even after a
+            failure). Unlike the regular CLI entry point, this method does **not**
+            automatically re-raise that deferred error: it is the caller's responsibility to
+            check the result for a ``"conan_error"`` entry (and optionally a
+            ``"conan_warning"`` one) and to raise/report it if the same behavior as running
+            that command directly from the command line is desired, especially when chaining
+            several commands where a failure in one should stop the rest.
         """
         if isinstance(cmd, str):
             cmd = shlex.split(cmd)

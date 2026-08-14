@@ -156,6 +156,23 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
     _install_build(conan_api, parser, subparser, False, *args)
 
 
+def _run_command(conan_api, cmd):
+    """ Run a command via ``conan_api.command.run()``, raising if it returned a deferred error.
+
+    ``conan_api.command.run()`` does not automatically raise on a build/install error (see its
+    docstring): some commands (e.g. "create", "install") defer it, returning it instead as a
+    "conan_error" entry in their result. This wrapper does that check, so a failure in one
+    workspace package stops the whole command immediately, instead of continuing to
+    build/install further packages that depend on the one that failed.
+    https://github.com/conan-io/conan/issues/20258
+    """
+    result = conan_api.command.run(cmd)
+    if isinstance(result, dict) and result.get("conan_error"):
+        e = result["conan_error"]
+        raise e if isinstance(e, Exception) else ConanException(e)
+    return result
+
+
 def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
     subparser.add_argument("--pkg", action="append", help='Define specific packages')
     add_common_install_arguments(subparser)
@@ -214,7 +231,7 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                                    f'{lockfile_args} {verbose_args}')
                             ConanOutput().box(f"Workspace building external {ref}")
                             ConanOutput().info(f"Command: {cmd}\n")
-                            conan_api.command.run(cmd)
+                            _run_command(conan_api, cmd)
                     else:
                         path = ws_pkg["path"]
                         output_folder = ws_pkg.get("output_folder")
@@ -229,7 +246,7 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                                f'{lockfile_args} {verbose_args}')
                         ConanOutput().box(f"Workspace {command}: {ref}")
                         ConanOutput().info(f"Command: {cmd}\n")
-                        conan_api.command.run(cmd)
+                        _run_command(conan_api, cmd)
 
 
 @conan_subcommand(formatters={"json": format_graph_json})
@@ -384,7 +401,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                         cmd = f'install {package["build_args"]} {profile_args}'
                         ConanOutput().box(f"Workspace building external {ref}")
                         ConanOutput().info(f"Build command: {cmd}\n")
-                        conan_api.command.run(cmd)
+                        _run_command(conan_api, cmd)
                     else:  # Package in workspace
                         path = packages[ref]["path"]
                         # TODO: Missing --lockfile-overrides arg here
@@ -395,7 +412,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                         cmd = f'create "{path}" {profile_args} {build} {ref_args}'
                         ConanOutput().box(f"Workspace create {ref}")
                         ConanOutput().info(f"Conan create command: {cmd}\n")
-                        conan_api.command.run(cmd)
+                        _run_command(conan_api, cmd)
 
 
 @conan_subcommand()

@@ -1476,6 +1476,40 @@ class TestCreate:
         assert "protobuf/0.1: Building for: Windows!!!" in c.out
         assert "protobuf/0.1: Building for: Linux!!!" in c.out
 
+    def test_create_stops_on_build_error(self):
+        # https://github.com/conan-io/conan/issues/20258
+        c = TestClient(light=True)
+        pkga = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkga(ConanFile):
+                name = "pkga"
+                version = "0.1"
+                def build(self):
+                    raise Exception("boom")
+            """)
+        pkgb = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkgb(ConanFile):
+                name = "pkgb"
+                version = "0.1"
+                def requirements(self):
+                    self.requires("pkga/0.1")
+                def build(self):
+                    self.output.warning("BUILD PKGB SHOULD NOT HAPPEN")
+            """)
+        c.save({"conanws.yml": "",
+                "pkga/conanfile.py": pkga,
+                "pkgb/conanfile.py": pkgb})
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb")
+        c.run("workspace create", assert_error=True)
+        assert "Error in build() method" in c.out
+        assert "boom" in c.out
+        # It must stop right after pkga's build fails, never attempting pkgb
+        assert "Workspace create pkgb/0.1" not in c.out
+        assert "BUILD PKGB SHOULD NOT HAPPEN" not in c.out
+        assert "Missing binary" not in c.out
+
 
 class TestSource:
     def test_source(self):
@@ -1617,6 +1651,32 @@ class TestInstall:
         assert "Using lockfile" in c.out
         assert f"hello/0.1#{rev1}" in c.out
         assert rev2 not in c.out
+
+    def test_install_stops_on_external_build_error(self):
+        # https://github.com/conan-io/conan/issues/20258
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+        hello = textwrap.dedent("""\
+            from conan import ConanFile
+            class Hello(ConanFile):
+                name = "hello"
+                version = "0.1"
+                def build(self):
+                    raise Exception("boom")
+            """)
+        app = GenConanfile("app", "0.1").with_requires("hello/0.1").with_build_msg("APP BUILT!")
+        c.save({"hello_src/conanfile.py": hello,
+                "app/conanfile.py": app})
+        c.run("export hello_src")
+        c.run("workspace add app")
+        c.run("workspace install --build=missing", assert_error=True)
+        assert "Error in build() method" in c.out
+        assert "boom" in c.out
+        # It must stop right after hello's build fails, never attempting to install app
+        # (which depends on it)
+        assert "Workspace install: app/0.1" not in c.out
+        assert "APP BUILT!" not in c.out
+        assert "Missing binary" not in c.out
 
 
 def test_keep_core_conf():
