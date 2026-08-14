@@ -40,6 +40,44 @@ def test_transitive_py_requires():
     assert "dep/0.1" not in client.out
 
 
+def test_source_should_respect_lockfile_pyrequires():
+    # "conan source" should resolve python_requires against a lockfile the same way
+    # "install"/"create"/"export"/"build" do, honoring even an auto-discovered "conan.lock"
+    # sitting right next to the conanfile.
+    #
+    # THIS TEST CURRENTLY FAILS: "conan source" never loads/forwards a lockfile at all (there
+    # isn't even a --lockfile argument for it), so python_requires are always resolved to the
+    # latest match instead. See the "Missing lockfile for python_requires" TODO in
+    # conan/cli/commands/source.py, and LocalAPI.source() hardcoding graph_lock=None.
+    client = TestClient(light=True)
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            python_requires = "dep/[>0.0]@user/channel"
+            def source(self):
+                v = self.python_requires["dep"].ref.version
+                self.output.info("SOURCE DEP VERSION: {}".format(v))
+        """)
+    client.save({"dep/conanfile.py": GenConanfile(),
+                 "consumer/conanfile.py": consumer})
+
+    client.run("export dep --name=dep --version=0.1 --user=user --channel=channel")
+    client.run("lock create consumer/conanfile.py")  # writes consumer/conan.lock, locks dep/0.1
+
+    client.run("export dep --name=dep --version=0.2 --user=user --channel=channel")
+    lockfile = os.path.join(client.current_folder, "consumer", "conan.lock")
+    assert os.path.isfile(lockfile)  # the lock is indeed present when "source" runs below
+
+    # "install" auto-discovers "consumer/conan.lock" and correctly keeps resolving dep/0.1
+    client.run("install consumer/conanfile.py")
+    assert "dep/0.1@user/channel" in client.out
+    assert "dep/0.2" not in client.out
+
+    # "source" should behave the same way and also resolve the locked dep/0.1
+    client.run("source consumer/conanfile.py")
+    assert "SOURCE DEP VERSION: 0.1" in client.out
+
+
 def test_transitive_matching_ranges():
     client = TestClient(light=True)
     tool = textwrap.dedent("""
