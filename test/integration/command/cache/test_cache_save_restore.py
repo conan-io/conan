@@ -2,6 +2,7 @@ import json
 import os
 import platform
 import shutil
+import stat
 import sys
 import tarfile
 import textwrap
@@ -84,13 +85,16 @@ _READ_ONLY_CONANFILE = textwrap.dedent("""
     """)
 
 
-def _check_restored_read_only(client):
-    client.run("list *:*#*")
-    assert "pkg/1.0" in client.out
+def _assert_read_only_file(client):
+    """ Check the packaged file and return its permission mode. """
     ref_layout = client.get_latest_ref_layout(RecipeReference.loads("pkg/1.0"))
     pkg_layout = client.get_latest_pkg_layout(PkgReference(ref_layout.reference,
                                                            NO_SETTINGS_PACKAGE_ID))
-    assert load(os.path.join(pkg_layout.package(), "bin", "readonly.txt")) == "content!!"
+    f = os.path.join(pkg_layout.package(), "bin", "readonly.txt")
+    assert load(f) == "content!!"
+    mode = stat.S_IMODE(os.stat(f).st_mode)
+    assert (mode & stat.S_IWRITE) == 0
+    return mode
 
 
 def test_cache_restore_read_only_files_in_place():
@@ -101,9 +105,11 @@ def test_cache_restore_read_only_files_in_place():
     c = TestClient()
     c.save({"conanfile.py": _READ_ONLY_CONANFILE})
     c.run("create .")
+    mode = _assert_read_only_file(c)
     c.run("cache save *:*")
     c.run("cache restore conan_cache_save.tgz")
-    _check_restored_read_only(c)
+    # Files are made writable just to overwrite them, extraction restores the archived mode
+    assert _assert_read_only_file(c) == mode
 
 
 def test_cache_save_restore_read_only_files():
@@ -114,6 +120,7 @@ def test_cache_save_restore_read_only_files():
     c = TestClient()
     c.save({"conanfile.py": _READ_ONLY_CONANFILE})
     c.run("create .")
+    mode = _assert_read_only_file(c)
     c.run("cache save *:*")
     cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
 
@@ -121,7 +128,7 @@ def test_cache_save_restore_read_only_files():
     c2.run(f'cache restore "{cache_path}"')
     # The restored files are read-only, restoring again over them must still work
     c2.run(f'cache restore "{cache_path}"')
-    _check_restored_read_only(c2)
+    assert _assert_read_only_file(c2) == mode
 
 
 def test_cache_save_downloaded_restore():
