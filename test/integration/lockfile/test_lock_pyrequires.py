@@ -57,10 +57,10 @@ def test_source_should_respect_lockfile_pyrequires():
 
     client.run("export dep --name=dep --version=0.1 --user=user --channel=channel")
     client.run("lock create conanfile.py")  # writes conan.lock, locks dep/0.1
-
-    client.run("export dep --name=dep --version=0.2 --user=user --channel=channel")
     lockfile = os.path.join(client.current_folder, "conan.lock")
     assert os.path.isfile(lockfile)  # the lock is indeed present when "source" runs below
+
+    client.run("export dep --name=dep --version=0.2 --user=user --channel=channel")
 
     # "install" auto-discovers "conan.lock" and correctly keeps resolving dep/0.1
     client.run("install conanfile.py")
