@@ -2040,6 +2040,7 @@ class TestPyRequires:
 
     def test_ws_python_requires_only_in_remote(self):
         # https://github.com/conan-io/conan/issues/20170
+        # "workspace create" case: https://github.com/conan-io/conan/issues/20260
         c = TestClient(light=True, default_server_user=True)
         pyreq = textwrap.dedent("""\
             from conan import ConanFile
@@ -2083,6 +2084,10 @@ class TestPyRequires:
         c.run("remove * -c")
         c.run("workspace super-install")
         assert "pyreq/0.1: Downloaded" in c.out
+        c.run("remove * -c")
+        c.run("workspace create")
+        assert "pyreq/0.1: Downloaded" in c.out
+        assert "Exported: pkg/0.1" in c.out
 
     def test_ws_python_requires_editable(self):
         c = TestClient(light=True)
