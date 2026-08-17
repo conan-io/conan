@@ -5,9 +5,11 @@ import re
 import sys
 import threading
 from datetime import datetime
+from io import StringIO
 
 from conan import __version__
 from conan.cli import exit_codes
+from conan.errors import ConanException
 from conan.internal.cache.home_paths import HomePaths
 
 _ANSI_ESCAPE_RE = re.compile(rb"\x1b\[[0-9;]*[a-zA-Z]")
@@ -16,17 +18,33 @@ _EXIT_CODE_NAMES = {value: name for name, value in vars(exit_codes).items()
 _DEFAULT_ENV_VARS = ["CC", "CXX", "CFLAGS", "CXXFLAGS", "LDFLAGS", "PATH"]
 _SEPARATOR = "#" + "-" * 60 + "\n"
 
+def win_log_run(command, stdout, stderr, cwd):
+    """On Windows, while neither stream is an explicit StringIO, runs `command` via ConPTY
+    instead of Popen so it keeps its native colors while still being capturable. Called by
+    conan_run() only when its caller says core.log:enabled is set.
 
-def _open_duplicated_fd():
-    if platform.system() == "Windows":
-        # Windows has no pty equivalent in the standard library, so the duplicated fd is a
-        # plain pipe: it always reports isatty()=False, so colors are lost while logging
-        # is enabled here, unlike on POSIX where a pty preserves them.
+    EXPERIMENTAL, see win_conpty.py.
+
+    :return: the subprocess return code, or None if this doesn't apply (wrong platform, or
+        an explicit StringIO capture in play). The caller falls back to Popen.
+    """
+    if platform.system() != "Windows" or isinstance(stdout, StringIO) \
+            or isinstance(stderr, StringIO):
+        return None
+
+    from conan.internal.conan_log.win_conpty import run_in_pseudo_console
+    try:
+        _, returncode = run_in_pseudo_console(command, cwd=cwd)
+    except Exception as e:
+        raise ConanException("Error while running cmd\nError: %s" % (str(e)))
+    return returncode
+
+
+def _open_duplicated_fd(fd):
+    if platform.system() == "Windows" or not os.isatty(fd):
+        # No pty on Windows; also the right fallback when fd isn't a real terminal.
         return os.pipe()
-    # A pty makes the duplicated fd report isatty()=True, same as the real terminal, so
-    # Conan's and every subprocess' own ANSI colors keep working while logging. Only called
-    # when the original fd already was a real terminal (see caller): using one when the
-    # original was redirected/piped would start emitting colors where there weren't any.
+    # A pty makes the duplicate report isatty()=True too, so colors keep working.
     import pty
     import tty
     read_fd, write_fd = pty.openpty()
@@ -47,8 +65,7 @@ def _redact_command_line(args):
             continue
         if sep:
             redacted[i] = f"{key}=********"
-        # nargs='?' flags may have no value: a following "-..." token is the next
-        # flag, not the secret, so only redact a following token that isn't one.
+        # A following "-..." token is the next flag, not the value, so leave it.
         elif i + 1 < len(args) and not args[i + 1].startswith("-"):
             redacted[i + 1] = "********"
     return redacted
@@ -84,10 +101,7 @@ class _TeeCommandLogger:
         self._threads = []
         for fd in (1, 2):
             self._saved_fds[fd] = os.dup(fd)
-            # Only duplicate via the terminal-preserving trick if the original stream
-            # already was a real terminal - using it when the original was redirected/piped
-            # would start emitting ANSI colors where there weren't any before.
-            read_fd, write_fd = _open_duplicated_fd() if os.isatty(fd) else os.pipe()
+            read_fd, write_fd = _open_duplicated_fd(fd)
             os.dup2(write_fd, fd)
             os.close(write_fd)
             thread = threading.Thread(target=self._pump, args=(read_fd, self._saved_fds[fd]),

@@ -1,13 +1,16 @@
 import os
 import platform
 import re
+import sys
+from io import StringIO
 
 import pytest
 
 from conan.api.conan_api import ConanAPI
-from conan.internal.conan_log import command_log_context
+from conan.internal.conan_log import command_log_context, win_log_run
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.util.files import save
+from conan.internal.util.runners import conan_run
 from conan.test.utils.test_files import temp_folder
 
 
@@ -158,3 +161,20 @@ def test_unrelated_package_query_short_flag_is_not_redacted():
     log_dir = HomePaths(conan_api.home_folder).command_logs_path
     content = open(os.path.join(log_dir, os.listdir(log_dir)[0])).read()
     assert "# Command: conan list -p os=Windows\n" in content
+
+
+def test_win_log_run_noop_on_non_windows(monkeypatch):
+    monkeypatch.setattr(platform, "system", lambda: "Linux")
+    assert win_log_run(["echo", "hi"], None, None, None) is None
+
+
+def test_win_log_run_noop_when_stdout_is_stringio(monkeypatch):
+    monkeypatch.setattr(platform, "system", lambda: "Windows")
+    assert win_log_run(["echo", "hi"], StringIO(), None, None) is None
+
+
+def test_conan_run_skips_win_log_run_when_log_false(monkeypatch):
+    monkeypatch.setattr(platform, "system", lambda: "Windows")
+    # log=False (the default): must not even try to import win_conpty - it isn't
+    # installed here, so that would raise. Falls through to a normal Popen instead.
+    assert conan_run(f'{sys.executable} -c "print(1)"') == 0

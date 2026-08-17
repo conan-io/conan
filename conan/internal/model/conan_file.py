@@ -411,7 +411,10 @@ class ConanFile:
         if quiet or ConanOutput.get_output_level() == LEVEL_QUIET:
             stdout = subprocess.DEVNULL if stdout is None else stdout
             stderr = subprocess.DEVNULL if stderr is None else stderr
-        retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, stderr=stderr, shell=shell)
+        log = self._conan_helpers.global_conf.get("core.log:enabled", default=False,
+                                                  check_type=bool)
+        retcode = conan_run(wrapped_cmd, cwd=cwd, stdout=stdout, stderr=stderr, shell=shell,
+                            log=log)
         if not quiet:
             self.output.writeln("")
 

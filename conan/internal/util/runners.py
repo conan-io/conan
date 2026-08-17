@@ -32,16 +32,26 @@ else:
         yield
 
 
-def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
+def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True, log=False):
     """
     @param shell:
     @param stderr:
     @param command: Command to execute
     @param stdout: Instead of print to sys.stdout print to that stream. Could be None
     @param cwd: Move to directory to execute
+    @param log: Whether core.log:enabled is set. Callers that don't know (or don't care)
+        can leave this False.
     """
     stdout = stdout or sys.stderr
     stderr = stderr or sys.stderr
+
+    # See conan_log.win_log_run()'s docstring: EXPERIMENTAL Windows-only path that keeps
+    # subprocess colors while a command log is capturing this call.
+    if log:
+        from conan.internal import conan_log
+        returncode = conan_log.win_log_run(command, stdout, stderr, cwd)
+        if returncode is not None:
+            return returncode
 
     out = subprocess.PIPE if isinstance(stdout, StringIO) else stdout
     err = subprocess.PIPE if isinstance(stderr, StringIO) else stderr
