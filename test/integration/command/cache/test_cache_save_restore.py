@@ -7,10 +7,12 @@ import sys
 import tarfile
 import textwrap
 import time
+from unittest.mock import patch
 
 import pytest
 
 from conan.api.model import PkgReference, RecipeReference
+from conan.errors import ConanException
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
@@ -199,6 +201,35 @@ def test_cache_restore_dirty_folders():
     assert load(os.path.join(src_folder, "mysrc.c")) == "source!!"
     assert not is_dirty(pkg_folder)
     assert not is_dirty(src_folder)
+
+
+@pytest.mark.parametrize("extractions", [0, 2])
+def test_cache_restore_failure_removes_new_entries(extractions):
+    """ if the restore fails, the new DB entries whose contents were not restored are removed,
+    so the cache is never left with references to recipes or packages that are not there """
+    _, cache_path = _save_built_package()
+    extract_all = tarfile.TarFile.extractall
+    done = []
+
+    def failing_extractall(self, *args, **kwargs):
+        if len(done) == extractions:
+            raise ConanException("Interrupted!")
+        done.append(1)
+        return extract_all(self, *args, **kwargs)
+
+    c2 = TestClient()
+    with patch.object(tarfile.TarFile, "extractall", failing_extractall):
+        c2.run(f'cache restore "{cache_path}"', assert_error=True)
+    assert "Interrupted!" in c2.out
+    c2.run("list *:*#*")
+    assert "pkg/1.0" not in c2.out
+    assert os.listdir(os.path.join(c2.cache_folder, "p")) == ["cache.sqlite3"]
+
+    # The restore can be done again, and it works
+    c2.run(f'cache restore "{cache_path}"')
+    c2.run("list *:*#*")
+    assert "pkg/1.0" in c2.out
+    assert load(os.path.join(_pkg_folder(c2), "bin", "f.txt")) == "content!!"
 
 
 def test_cache_restore_missing_folders():

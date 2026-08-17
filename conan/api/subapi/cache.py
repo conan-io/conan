@@ -397,7 +397,7 @@ class CacheAPI:
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
         out = ConanOutput()
         plan = _RestorePlan(cache_folder)
-        dirty_folders = []
+        new_recipes, new_packages = [], []  # New DB entries, removed if they are not restored
 
         with open(path, mode='rb') as file_handler:
             the_tar = tarfile.open(fileobj=file_handler)
@@ -410,25 +410,26 @@ class CacheAPI:
                 ref_bundle = package_list.recipe_dict(ref)
                 ref.timestamp = revision_timestamp_now()
                 ref_bundle["timestamp"] = ref.timestamp
+                recipe_folder = ref_bundle["recipe_folder"]  # The folder in the archive
+                export_folder = f"{recipe_folder}/{EXPORT_FOLDER}"
                 try:
                     recipe_layout = cache.recipe_layout(ref)
                     replace = False
                 except ConanException:
                     recipe_layout = cache.create_ref_layout(ref)  # new DB folder entry
                     replace = True  # not in the DB, whatever is in the folder is a leftover
-                recipe_folder = ref_bundle["recipe_folder"]  # The folder in the archive
+                    new_recipes.append((recipe_layout, export_folder))
                 dest_folder = _cache_path(recipe_layout.base_folder, cache_folder)
                 ref_bundle["recipe_folder"] = dest_folder
                 out.info(f"Restore: {ref} in {dest_folder}")
-                for folder, dest in ((EXPORT_FOLDER, recipe_layout.export()),
-                                     (EXPORT_SRC_FOLDER, recipe_layout.export_sources())):
-                    plan.add_contents(f"{recipe_folder}/{folder}", dest, replace)
+                plan.add_contents(export_folder, recipe_layout.export(), replace)
+                plan.add_contents(f"{recipe_folder}/{EXPORT_SRC_FOLDER}",
+                                  recipe_layout.export_sources(), replace)
                 # The sources get the same dirty protection they have when they are obtained
                 # by "conan source", incomplete ones are discarded, not used as valid sources
-                source_folder = recipe_layout.source()
-                remove_if_dirty(source_folder)
-                if plan.add_contents(f"{recipe_folder}/{SRC_FOLDER}", source_folder, replace):
-                    dirty_folders.append(source_folder)
+                remove_if_dirty(recipe_layout.source())
+                plan.add_contents(f"{recipe_folder}/{SRC_FOLDER}", recipe_layout.source(),
+                                  replace, dirty=True)
                 plan.add_metadata(f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}",
                                   recipe_layout.metadata())
 
@@ -436,6 +437,7 @@ class CacheAPI:
                     pref.timestamp = revision_timestamp_now()
                     pref_bundle = package_list.package_dict(pref)
                     pref_bundle["timestamp"] = pref.timestamp
+                    pkg_folder = pref_bundle["package_folder"]  # The folder in the archive
                     try:
                         pkg_layout = cache.pkg_layout(pref)
                         # A dirty package is incomplete, the leftover of an interrupted restore
@@ -445,14 +447,11 @@ class CacheAPI:
                     except ConanException:
                         pkg_layout = cache.create_pkg_layout(pref)  # new DB folder entry
                         replace = True
-                    pkg_folder = pref_bundle["package_folder"]  # The folder in the archive
+                        new_packages.append((pkg_layout, pkg_folder))
                     dest_folder = _cache_path(pkg_layout.package(), cache_folder)
                     pref_bundle["package_folder"] = dest_folder
                     out.info(f"Restore: {pref} in {dest_folder}")
-                    if plan.add_contents(pkg_folder, pkg_layout.package(), replace):
-                        # If the extraction is interrupted, the package folder is incomplete,
-                        # the dirty mark makes it be discarded instead of used as a valid one
-                        dirty_folders.append(pkg_layout.package())
+                    plan.add_contents(pkg_folder, pkg_layout.package(), replace, dirty=True)
                     metadata_folder = pref_bundle.get("metadata_folder")
                     if metadata_folder:
                         dest_folder = _cache_path(pkg_layout.metadata(), cache_folder)
@@ -460,20 +459,14 @@ class CacheAPI:
                         out.info(f"Restore: {pref} metadata in {dest_folder}")
                         plan.add_metadata(metadata_folder, pkg_layout.metadata())
 
-            for folder in dirty_folders:
-                set_dirty(folder)
-            # One single extraction, in archive order, to not jump back and forth in the stream
-            members = []
-            for member in the_tar.getmembers():
-                dest = plan.dest(member.name)
-                if dest is not None:  # Not restored, like "pkglist.json" or existing contents
-                    member.name = dest
-                    members.append(member)
-            the_tar.extractall(path=cache_folder, members=members)
+            try:
+                plan.extract(the_tar)
+            except BaseException:
+                # A new DB entry without contents would be a broken recipe or package in the
+                # cache, remove the ones that couldn't be restored, leaving the rest usable
+                _remove_not_restored(cache, plan, new_recipes, new_packages)
+                raise
             the_tar.close()
-
-        for folder in dirty_folders:
-            clean_dirty(folder)
 
         return package_list
 
@@ -521,8 +514,10 @@ class _RestorePlan:
     def __init__(self, cache_folder):
         self._cache_folder = cache_folder
         self._folders = {}  # {folder in the archive: folder in the cache, relative to the store}
+        self._dirty = set()  # Folders marked while they are extracted, to detect incomplete ones
+        self._restored = set()  # Folders already extracted
 
-    def add_contents(self, folder, dest, replace):
+    def add_contents(self, folder, dest, replace, dirty=False):
         """ Recipes and packages are immutable, if the revision is already in this cache the
         contents are the same, and they are not extracted again, so their files are never
         overwritten. Returns True if the folder is going to be extracted
@@ -532,24 +527,66 @@ class _RestorePlan:
                 return False
             rmdir(dest)  # Leftovers of an interrupted restore, not valid contents
         self._folders[folder] = _cache_path(dest, self._cache_folder)
+        if dirty:
+            self._dirty.add(folder)
         return True
 
     def add_metadata(self, folder, dest):
         """ Metadata is not immutable, it is always restored, adding to the existing one """
         self._folders[folder] = _cache_path(dest, self._cache_folder)
 
-    def dest(self, name):
-        """ The path, relative to the cache store, where an archive member has to be extracted,
-        or None if that member doesn't belong to any of the folders to restore
+    def restored(self, folder):
+        return folder in self._restored
+
+    def extract(self, the_tar):
+        """ Extract one folder at a time, in the order they are in the archive, so the stream
+        is read forwards, and an interrupted extraction only leaves one incomplete folder
+        """
+        groups = {}  # {folder in the archive: [members]}, in the order of the archive
+        for member in the_tar.getmembers():
+            located = self._locate(member.name)
+            if located is not None:  # Not restored, like "pkglist.json" or existing contents
+                folder, member.name = located
+                groups.setdefault(folder, []).append(member)
+
+        for folder, members in groups.items():
+            dest = os.path.join(self._cache_folder, self._folders[folder])
+            dirty = folder in self._dirty
+            if dirty:
+                remove_if_dirty(dest)  # Stale mark of a previous interrupted restore
+                set_dirty(dest)
+            the_tar.extractall(path=self._cache_folder, members=members)
+            if dirty:
+                clean_dirty(dest)
+            self._restored.add(folder)
+
+    def _locate(self, name):
+        """ The folder to restore this archive member belongs to, and the path, relative to the
+        cache store, where it has to be extracted. None if the member is not restored
         """
         path, tail = name, ""
         while path:
             dest = self._folders.get(path)
             if dest is not None:
-                return dest + tail
+                return path, dest + tail
             path, _, last = path.rpartition("/")
             tail = f"/{last}{tail}"
         return None
+
+
+def _remove_not_restored(cache, plan, recipes, packages):
+    """ Remove the new DB entries whose contents were not restored, so a failed restore doesn't
+    leave the cache with references to recipes or packages that are not there
+    """
+    removed_refs = set()
+    for recipe_layout, folder in recipes:
+        if not plan.restored(folder):
+            # It also removes its packages, all of them new, this recipe revision was not here
+            cache.remove_recipe_layout(recipe_layout)
+            removed_refs.add(repr(recipe_layout.reference))
+    for pkg_layout, folder in packages:
+        if not plan.restored(folder) and repr(pkg_layout.reference.ref) not in removed_refs:
+            cache.remove_package_layout(pkg_layout)
 
 
 def _resolve_latest_ref(cache, ref):
