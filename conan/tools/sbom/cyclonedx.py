@@ -61,7 +61,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
         **({"components": [{
             "author": node.conanfile.author or "Unknown",
             "bom-ref": _calculate_bomref(node),
-            "description": node.conanfile.description,
+            **({"description": node.conanfile.description} if node.conanfile.description else {}),
             **({"externalReferences": [{
                 "type": "website",
                 "url": node.conanfile.homepage
@@ -158,7 +158,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
         **({"components": [{
             **({"authors": [{"name": node.conanfile.author}]} if node.conanfile.author else {}),
             "bom-ref": _calculate_bomref(node),
-            "description": node.conanfile.description,
+            **({"description": node.conanfile.description} if node.conanfile.description else {}),
             **({"externalReferences": [{
                 "type": "website",
                 "url": node.conanfile.homepage
