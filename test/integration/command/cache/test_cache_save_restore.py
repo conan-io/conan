@@ -2,6 +2,7 @@ import json
 import os
 import platform
 import shutil
+import stat
 import sys
 import tarfile
 import textwrap
@@ -132,24 +133,51 @@ def test_cache_restore_existing_contents_not_extracted():
     assert load(f) == "not overwritten"
 
 
-@pytest.mark.parametrize("same_cache", [True, False])
-def test_cache_restore_read_only_files(same_cache):
-    """ read-only files and folders are never overwritten, as their revision is already in the
-    cache and it is not extracted again
+def _assert_read_only_pkg(client):
+    """ Check the packaged read-only contents and return their permission modes """
+    pkg_folder = _pkg_folder(client)
+    f = os.path.join(pkg_folder, "bin", "readonly.txt")
+    d = os.path.join(pkg_folder, "readonlydir")
+    assert load(f) == "content!!"
+    assert load(os.path.join(d, "inside.txt")) == "inside!!"
+    modes = stat.S_IMODE(os.stat(f).st_mode), stat.S_IMODE(os.stat(d).st_mode)
+    assert (modes[0] & stat.S_IWRITE) == 0
+    assert (modes[1] & stat.S_IWRITE) == 0
+    return modes
+
+
+def test_cache_restore_read_only_files_in_place():
+    """ restoring over a cache that already contains those same read-only files
     https://github.com/conan-io/conan/issues/20241
     """
     c = TestClient()
     c.save({"conanfile.py": _READ_ONLY_CONANFILE})
     c.run("create .")
+    modes = _assert_read_only_pkg(c)
+    c.run("cache save *:*")
+    c.run("cache restore conan_cache_save.tgz")
+    # The revision is already in the cache, the read-only contents are not extracted again
+    assert _assert_read_only_pkg(c) == modes
+
+
+def test_cache_save_restore_read_only_files():
+    """ restoring in a different cache, the package folder is relocated, and restoring again
+    happens over the read-only files of the previous restore
+    https://github.com/conan-io/conan/issues/20241
+    """
+    c = TestClient()
+    c.save({"conanfile.py": _READ_ONLY_CONANFILE})
+    c.run("create .")
+    modes = _assert_read_only_pkg(c)
     c.run("cache save *:*")
     cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
 
-    c2 = c if same_cache else TestClient()
+    c2 = TestClient()
     c2.run(f'cache restore "{cache_path}"')
-    c2.run(f'cache restore "{cache_path}"')  # over the read-only files of the previous restore
-    pkg_folder = _pkg_folder(c2)
-    assert load(os.path.join(pkg_folder, "bin", "readonly.txt")) == "content!!"
-    assert load(os.path.join(pkg_folder, "readonlydir", "inside.txt")) == "inside!!"
+    # The extraction restores the modes stored in the archive, they are still read-only
+    assert _assert_read_only_pkg(c2) == modes
+    c2.run(f'cache restore "{cache_path}"')
+    assert _assert_read_only_pkg(c2) == modes
 
 
 def test_cache_restore_dirty_folders():
