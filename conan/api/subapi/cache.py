@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 import tarfile
 import tempfile
 
@@ -21,7 +20,8 @@ from conan.api.model import RecipeReference
 from conan.internal.api.uploader import PackagePreparator
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, mkdir, remove, save
+from conan.internal.util.files import (clean_dirty, mkdir, remove, remove_if_dirty, rmdir, save,
+                                       set_dirty)
 
 
 class CacheAPI:
@@ -381,6 +381,11 @@ class CacheAPI:
         """Restore a compressed archive with recipes and packages previously saved from another
         Conan cache into the currently active Conan cache.
 
+        The folders of the origin cache are not necessarily the folders of this cache, so the
+        destination is resolved in the cache DB before extracting, and every folder is extracted
+        directly to its final location. Recipes and packages are immutable, so the revisions
+        already in this cache are not extracted again, only the missing ones.
+
         :param path: The archive file to restore. Based on the extension of the file, different
            compression formats can be used (.tgz, .txz and .tzst, the latter only for Python>=3.14).
         :return: a PackageLists with the recipes and packages that have been restored to the cache
@@ -390,67 +395,85 @@ class CacheAPI:
 
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
+        out = ConanOutput()
+        plan = _RestorePlan(cache_folder)
+        dirty_folders = []
 
         with open(path, mode='rb') as file_handler:
             the_tar = tarfile.open(fileobj=file_handler)
-            fileobj = the_tar.extractfile("pkglist.json")
-            pkglist = fileobj.read()
             the_tar.extraction_filter = (lambda member, _: member)  # fully_trusted (Py 3.14)
-            the_tar.extractall(path=cache_folder)
+            pkglist = the_tar.extractfile("pkglist.json").read()
+            package_list = PackagesList.deserialize(json.loads(pkglist))
+
+            # First the DB, to know the final cache folder for every folder in the archive
+            for ref, packages in package_list.items():
+                ref_bundle = package_list.recipe_dict(ref)
+                ref.timestamp = revision_timestamp_now()
+                ref_bundle["timestamp"] = ref.timestamp
+                try:
+                    recipe_layout = cache.recipe_layout(ref)
+                    replace = False
+                except ConanException:
+                    recipe_layout = cache.create_ref_layout(ref)  # new DB folder entry
+                    replace = True  # not in the DB, whatever is in the folder is a leftover
+                recipe_folder = ref_bundle["recipe_folder"]  # The folder in the archive
+                dest_folder = _cache_path(recipe_layout.base_folder, cache_folder)
+                ref_bundle["recipe_folder"] = dest_folder
+                out.info(f"Restore: {ref} in {dest_folder}")
+                for folder, dest in ((EXPORT_FOLDER, recipe_layout.export()),
+                                     (EXPORT_SRC_FOLDER, recipe_layout.export_sources())):
+                    plan.add_contents(f"{recipe_folder}/{folder}", dest, replace)
+                # The sources get the same dirty protection they have when they are obtained
+                # by "conan source", incomplete ones are discarded, not used as valid sources
+                source_folder = recipe_layout.source()
+                remove_if_dirty(source_folder)
+                if plan.add_contents(f"{recipe_folder}/{SRC_FOLDER}", source_folder, replace):
+                    dirty_folders.append(source_folder)
+                plan.add_metadata(f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}",
+                                  recipe_layout.metadata())
+
+                for pref in packages:
+                    pref.timestamp = revision_timestamp_now()
+                    pref_bundle = package_list.package_dict(pref)
+                    pref_bundle["timestamp"] = pref.timestamp
+                    try:
+                        pkg_layout = cache.pkg_layout(pref)
+                        # A dirty package is incomplete, the leftover of an interrupted restore
+                        # or download, it is removed to restore it again
+                        remove_if_dirty(pkg_layout.package())
+                        replace = False
+                    except ConanException:
+                        pkg_layout = cache.create_pkg_layout(pref)  # new DB folder entry
+                        replace = True
+                    pkg_folder = pref_bundle["package_folder"]  # The folder in the archive
+                    dest_folder = _cache_path(pkg_layout.package(), cache_folder)
+                    pref_bundle["package_folder"] = dest_folder
+                    out.info(f"Restore: {pref} in {dest_folder}")
+                    if plan.add_contents(pkg_folder, pkg_layout.package(), replace):
+                        # If the extraction is interrupted, the package folder is incomplete,
+                        # the dirty mark makes it be discarded instead of used as a valid one
+                        dirty_folders.append(pkg_layout.package())
+                    metadata_folder = pref_bundle.get("metadata_folder")
+                    if metadata_folder:
+                        dest_folder = _cache_path(pkg_layout.metadata(), cache_folder)
+                        pref_bundle["metadata_folder"] = dest_folder
+                        out.info(f"Restore: {pref} metadata in {dest_folder}")
+                        plan.add_metadata(metadata_folder, pkg_layout.metadata())
+
+            for folder in dirty_folders:
+                set_dirty(folder)
+            # One single extraction, in archive order, to not jump back and forth in the stream
+            members = []
+            for member in the_tar.getmembers():
+                dest = plan.dest(member.name)
+                if dest is not None:  # Not restored, like "pkglist.json" or existing contents
+                    member.name = dest
+                    members.append(member)
+            the_tar.extractall(path=cache_folder, members=members)
             the_tar.close()
 
-        # After unzipping the files, we need to update the DB that references these files
-        out = ConanOutput()
-        package_list = PackagesList.deserialize(json.loads(pkglist))
-        for ref, packages in package_list.items():
-            ref_bundle = package_list.recipe_dict(ref)
-            ref.timestamp = revision_timestamp_now()
-            ref_bundle["timestamp"] = ref.timestamp
-            try:
-                recipe_layout = cache.recipe_layout(ref)
-            except ConanException:
-                recipe_layout = cache.create_ref_layout(ref)  # new DB folder entry
-            recipe_folder = ref_bundle["recipe_folder"]
-            rel_path = os.path.relpath(recipe_layout.base_folder, cache_folder)
-            rel_path = rel_path.replace("\\", "/")
-            # In the case of recipes, they are always "in place", so just checking it
-            assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
-            out.info(f"Restore: {ref} in {recipe_folder}")
-            for pref in packages:
-                pref.timestamp = revision_timestamp_now()
-                pref_bundle = package_list.package_dict(pref)
-                pref_bundle["timestamp"] = pref.timestamp
-                try:
-                    pkg_layout = cache.pkg_layout(pref)
-                except ConanException:
-                    pkg_layout = cache.create_pkg_layout(pref)  # DB Folder entry
-                # FIXME: This is not taking into account the existence of previous package
-                unzipped_pkg_folder = pref_bundle["package_folder"]
-                out.info(f"Restore: {pref} in {unzipped_pkg_folder}")
-                # If the DB folder entry is different to the disk unzipped one, we need to move it
-                # This happens for built (not downloaded) packages in the source "conan cache save"
-                db_pkg_folder = os.path.relpath(pkg_layout.package(), cache_folder)
-                db_pkg_folder = db_pkg_folder.replace("\\", "/")
-                if db_pkg_folder != unzipped_pkg_folder:
-                    # If a previous package exists, like a previous restore, then remove it
-                    if os.path.exists(pkg_layout.package()):
-                        shutil.rmtree(pkg_layout.package())
-                    shutil.move(os.path.join(cache_folder, unzipped_pkg_folder),
-                                pkg_layout.package())
-                    pref_bundle["package_folder"] = db_pkg_folder
-                unzipped_metadata_folder = pref_bundle.get("metadata_folder")
-                if unzipped_metadata_folder:
-                    # FIXME: Restore metadata is not incremental, but destructive
-                    out.info(f"Restore: {pref} metadata in {unzipped_metadata_folder}")
-                    db_metadata_folder = os.path.relpath(pkg_layout.metadata(), cache_folder)
-                    db_metadata_folder = db_metadata_folder.replace("\\", "/")
-                    if db_metadata_folder != unzipped_metadata_folder:
-                        # We need to put the package in the final location in the cache
-                        if os.path.exists(pkg_layout.metadata()):
-                            shutil.rmtree(pkg_layout.metadata())
-                        shutil.move(os.path.join(cache_folder, unzipped_metadata_folder),
-                                    pkg_layout.metadata())
-                        pref_bundle["metadata_folder"] = db_metadata_folder
+        for folder in dirty_folders:
+            clean_dirty(folder)
 
         return package_list
 
@@ -484,6 +507,49 @@ class CacheAPI:
             base, folder = os.path.split(path)
             result = cache.path_to_ref(base)
         return result
+
+
+def _cache_path(folder, cache_folder):
+    return os.path.relpath(folder, cache_folder).replace("\\", "/")  # make win paths portable
+
+
+class _RestorePlan:
+    """ Where every folder of a "conan cache save" archive has to be extracted in this cache,
+    which is not necessarily the folder it had in the cache that created the archive
+    """
+
+    def __init__(self, cache_folder):
+        self._cache_folder = cache_folder
+        self._folders = {}  # {folder in the archive: folder in the cache, relative to the store}
+
+    def add_contents(self, folder, dest, replace):
+        """ Recipes and packages are immutable, if the revision is already in this cache the
+        contents are the same, and they are not extracted again, so their files are never
+        overwritten. Returns True if the folder is going to be extracted
+        """
+        if os.path.exists(dest):
+            if not replace:
+                return False
+            rmdir(dest)  # Leftovers of an interrupted restore, not valid contents
+        self._folders[folder] = _cache_path(dest, self._cache_folder)
+        return True
+
+    def add_metadata(self, folder, dest):
+        """ Metadata is not immutable, it is always restored, adding to the existing one """
+        self._folders[folder] = _cache_path(dest, self._cache_folder)
+
+    def dest(self, name):
+        """ The path, relative to the cache store, where an archive member has to be extracted,
+        or None if that member doesn't belong to any of the folders to restore
+        """
+        path, tail = name, ""
+        while path:
+            dest = self._folders.get(path)
+            if dest is not None:
+                return dest + tail
+            path, _, last = path.rpartition("/")
+            tail = f"/{last}{tail}"
+        return None
 
 
 def _resolve_latest_ref(cache, ref):
