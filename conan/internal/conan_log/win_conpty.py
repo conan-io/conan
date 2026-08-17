@@ -6,12 +6,39 @@ so it keeps its native colors while still being capturable. Windows attaches a p
 pseudo-console per spawn, unlike the POSIX pty in __init__.py, which is set up once and
 inherited by every subprocess for free. That's why conan_run() (runners.py) calls this
 directly per subprocess instead of once per command.
+
+Builds the cmdline by hand and calls the low-level PTY class instead of the public
+PtyProcess.spawn(): that one always runs every argument after the first through
+subprocess.list2cmdline(), which backslash-escapes embedded quotes the way a normal Win32
+program expects. cmd.exe's own "/c" parsing doesn't understand that escaping, so a command
+that already contains quotes (a quoted path, for example) gets cut off. Building the
+cmdline ourselves the same way subprocess.Popen(shell=True) does avoids that mismatch.
 """
 
 import os
 import subprocess
+from shutil import which
 
-from winpty import PtyProcess
+from winpty import PTY, PtyProcess
+
+
+def _spawn(exe, cmdline, cwd):
+    """Replicates PtyProcess.spawn(), minus the subprocess.list2cmdline() call it makes on
+    every argument after the first (see module docstring for why that breaks a cmdline
+    that already contains quotes). Takes the already-built exe/cmdline instead of an argv."""
+    exe_path = which(exe)
+    if exe_path is None:
+        raise FileNotFoundError(f"The command was not found or was not executable: {exe}.")
+
+    env = "\0".join(f"{k}={v}" for k, v in os.environ.items()) + "\0"
+    cwd = cwd or os.getcwd()
+    # Low-level PTY, not PtyProcess.spawn(): lets us pass our own pre-built cmdline untouched.
+    pty = PTY(80, 24)
+    if cmdline is not None:
+        pty.spawn(exe_path, cwd=cwd, env=env, cmdline=cmdline)
+    else:
+        pty.spawn(exe_path, cwd=cwd, env=env)
+    return PtyProcess(pty)
 
 
 def run_in_pseudo_console(command, cwd=None, shell=True):
@@ -22,16 +49,15 @@ def run_in_pseudo_console(command, cwd=None, shell=True):
     :return: (captured_text, returncode)
     """
     if shell:
-        # A .bat like conanbuild.bat needs cmd.exe /c to be executable at all, same as
-        # subprocess.Popen does internally on Windows. Pass argv as a list, not a string:
-        # PtyProcess.spawn() would shlex.split() a string itself before re-quoting it,
-        # which corrupts any quotes already inside the command.
-        inner = command if isinstance(command, str) else subprocess.list2cmdline(command)
         comspec = os.environ.get("COMSPEC", "cmd.exe")
-        argv = [comspec, "/c", inner]
+        inner = command if isinstance(command, str) else subprocess.list2cmdline(command)
+        exe, cmdline = comspec, f' /c "{inner}"'
     else:
-        argv = command
-    proc = PtyProcess.spawn(argv, cwd=cwd)
+        argv = [command] if isinstance(command, str) else list(command)
+        exe = argv[0]
+        cmdline = f" {subprocess.list2cmdline(argv[1:])}" if len(argv) > 1 else None
+
+    proc = _spawn(exe, cmdline, cwd)
 
     chunks = []
     while proc.isalive():
