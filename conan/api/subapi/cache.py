@@ -2,6 +2,7 @@ import json
 import os
 import tarfile
 import tempfile
+from contextlib import nullcontext
 
 from conan.api.model import PackagesList
 from conan.api.output import ConanOutput
@@ -20,8 +21,8 @@ from conan.api.model import RecipeReference
 from conan.internal.api.uploader import PackagePreparator
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import (clean_dirty, mkdir, remove, remove_if_dirty, rmdir, save,
-                                       set_dirty)
+from conan.internal.util.files import (mkdir, remove, remove_if_dirty, rmdir, save,
+                                       set_dirty_context_manager)
 
 
 class CacheAPI:
@@ -551,13 +552,10 @@ class _RestorePlan:
 
         for folder, members in groups.items():
             dest = os.path.join(self._cache_folder, self._folders[folder])
-            dirty = folder in self._dirty
-            if dirty:
-                remove_if_dirty(dest)  # Stale mark of a previous interrupted restore
-                set_dirty(dest)
-            the_tar.extractall(path=self._cache_folder, members=members)
-            if dirty:
-                clean_dirty(dest)
+            # The mark stays if the extraction is interrupted, so the contents are not used
+            mark = set_dirty_context_manager(dest) if folder in self._dirty else nullcontext()
+            with mark:
+                the_tar.extractall(path=self._cache_folder, members=members)
             self._restored.add(folder)
 
     def _locate(self, name):
