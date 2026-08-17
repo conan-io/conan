@@ -18,7 +18,8 @@ _EXIT_CODE_NAMES = {value: name for name, value in vars(exit_codes).items()
 _DEFAULT_ENV_VARS = ["CC", "CXX", "CFLAGS", "CXXFLAGS", "LDFLAGS", "PATH"]
 _SEPARATOR = "#" + "-" * 60 + "\n"
 
-def win_log_run(command, stdout, stderr, cwd):
+
+def win_log_run(command, stdout, stderr, cwd, shell=True):
     """On Windows, while neither stream is an explicit StringIO, runs `command` via ConPTY
     instead of Popen so it keeps its native colors while still being capturable. Called by
     conan_run() only when its caller says core.log:enabled is set.
@@ -34,7 +35,7 @@ def win_log_run(command, stdout, stderr, cwd):
 
     from conan.internal.conan_log.win_conpty import run_in_pseudo_console
     try:
-        _, returncode = run_in_pseudo_console(command, cwd=cwd)
+        _, returncode = run_in_pseudo_console(command, cwd=cwd, shell=shell)
     except Exception as e:
         raise ConanException("Error while running cmd\nError: %s" % (str(e)))
     return returncode

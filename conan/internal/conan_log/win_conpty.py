@@ -9,18 +9,25 @@ directly per subprocess instead of once per command.
 """
 
 import os
+import subprocess
 
 from winpty import PtyProcess
 
 
-def run_in_pseudo_console(command, cwd=None):
+def run_in_pseudo_console(command, cwd=None, shell=True):
     """Spawns `command` attached to a pseudo-console, so it keeps its native ANSI colors.
     Combines stdout+stderr into one stream (like a real console), echoes it live to fd 1,
     and also returns it so conan_run() can feed it to the command log.
 
     :return: (captured_text, returncode)
     """
-    cmdline = command if isinstance(command, str) else " ".join(command)
+    cmdline = command if isinstance(command, str) else subprocess.list2cmdline(command)
+    if shell:
+        # PtyProcess.spawn() runs CreateProcess directly, so a .bat like conanbuild.bat
+        # needs cmd.exe /c to be executable at all. Same wrapping subprocess.Popen does
+        # internally on Windows.
+        comspec = os.environ.get("COMSPEC", "cmd.exe")
+        cmdline = f'{comspec} /c "{cmdline}"'
     proc = PtyProcess.spawn(cmdline, cwd=cwd)
 
     chunks = []

@@ -49,7 +49,7 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True, log=False
     # subprocess colors while a command log is capturing this call.
     if log:
         from conan.internal import conan_log
-        returncode = conan_log.win_log_run(command, stdout, stderr, cwd)
+        returncode = conan_log.win_log_run(command, stdout, stderr, cwd, shell)
         if returncode is not None:
             return returncode
 
