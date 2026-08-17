@@ -521,16 +521,16 @@ class _RestorePlan:
     def add_contents(self, folder, dest, replace, dirty=False):
         """ Recipes and packages are immutable, if the revision is already in this cache the
         contents are the same, and they are not extracted again, so their files are never
-        overwritten. Returns True if the folder is going to be extracted
+        overwritten. The contents of a revision that is not in the DB are leftovers, not valid
+        contents, and they are replaced
         """
         if os.path.exists(dest):
             if not replace:
-                return False
-            rmdir(dest)  # Leftovers of an interrupted restore, not valid contents
+                return
+            rmdir(dest)
         self._folders[folder] = _cache_path(dest, self._cache_folder)
         if dirty:
             self._dirty.add(folder)
-        return True
 
     def add_metadata(self, folder, dest):
         """ Metadata is not immutable, it is always restored, adding to the existing one """

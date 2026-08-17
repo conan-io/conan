@@ -135,6 +135,22 @@ def test_cache_restore_existing_contents_not_extracted():
     assert load(f) == "not overwritten"
 
 
+def test_cache_restore_stale_contents():
+    """ contents in the cache store that the DB doesn't know about are not valid contents, they
+    are leftovers, so they are replaced by the ones in the archive """
+    _, cache_path = _save_built_package()
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{cache_path}"')
+    pkg_folder = _pkg_folder(c2)
+    save(os.path.join(pkg_folder, "stale.txt"), "stale!!")
+    os.remove(os.path.join(c2.cache_folder, "p", "cache.sqlite3"))  # The folders are orphans now
+
+    c2.run(f'cache restore "{cache_path}"')
+    assert not os.path.exists(os.path.join(pkg_folder, "stale.txt"))
+    assert load(os.path.join(pkg_folder, "bin", "f.txt")) == "content!!"
+
+
 def _assert_read_only_pkg(client):
     """ Check the packaged read-only contents and return their permission modes """
     pkg_folder = _pkg_folder(client)
