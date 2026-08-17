@@ -21,14 +21,17 @@ def run_in_pseudo_console(command, cwd=None, shell=True):
 
     :return: (captured_text, returncode)
     """
-    cmdline = command if isinstance(command, str) else subprocess.list2cmdline(command)
     if shell:
-        # PtyProcess.spawn() runs CreateProcess directly, so a .bat like conanbuild.bat
-        # needs cmd.exe /c to be executable at all. Same wrapping subprocess.Popen does
-        # internally on Windows.
+        # A .bat like conanbuild.bat needs cmd.exe /c to be executable at all, same as
+        # subprocess.Popen does internally on Windows. Pass argv as a list, not a string:
+        # PtyProcess.spawn() would shlex.split() a string itself before re-quoting it,
+        # which corrupts any quotes already inside the command.
+        inner = command if isinstance(command, str) else subprocess.list2cmdline(command)
         comspec = os.environ.get("COMSPEC", "cmd.exe")
-        cmdline = f'{comspec} /c "{cmdline}"'
-    proc = PtyProcess.spawn(cmdline, cwd=cwd)
+        argv = [comspec, "/c", inner]
+    else:
+        argv = command
+    proc = PtyProcess.spawn(argv, cwd=cwd)
 
     chunks = []
     while proc.isalive():
