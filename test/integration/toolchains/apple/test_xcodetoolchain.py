@@ -94,6 +94,28 @@ def test_toolchain_flags():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
+def test_toolchain_build_settings():
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.apple import XcodeToolchain
+        class Demo(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def generate(self):
+                tc = XcodeToolchain(self)
+                tc.build_settings["OTHER_SWIFT_FLAGS"] = "$(inherited) -cxx-interoperability-mode=default"
+                tc.generate()
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s build_type=Release -s arch=x86_64")
+    filename = _get_filename("Release", "x86_64", None)
+    condition = _condition("Release", "x86_64", None)
+
+    conan_global_flags_props = client.load("conan_global_flags{}.xcconfig".format(filename))
+    assert "OTHER_SWIFT_FLAGS{} = $(inherited) -cxx-interoperability-mode=default".format(condition) in conan_global_flags_props
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 def test_flags_generated_if_only_defines():
     # https://github.com/conan-io/conan/issues/16422
     client = TestClient()
