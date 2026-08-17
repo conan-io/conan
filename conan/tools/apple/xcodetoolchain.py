@@ -46,7 +46,7 @@ class XcodeToolchain:
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         self._global_ldflags = sharedlinkflags + exelinkflags
-        self.extra_xcconfig = {}
+        self.build_settings = {}
 
     def generate(self):
         check_duplicated_generator(self, self._conanfile)
@@ -118,7 +118,7 @@ class XcodeToolchain:
     @property
     def _check_if_extra_flags(self):
         return (self._global_cflags or self._global_cxxflags or self._global_ldflags
-                or self._global_defines or self.extra_xcconfig)
+                or self._global_defines or self.build_settings)
 
     @property
     def _flags_xcconfig_content(self):
@@ -129,7 +129,7 @@ class XcodeToolchain:
         cflags = "OTHER_CFLAGS{} = $(inherited) {}".format(condition, " ".join(self._global_cflags)) if self._global_cflags else ""
         cppflags = "OTHER_CPLUSPLUSFLAGS{} = $(inherited) {}".format(condition, " ".join(self._global_cxxflags)) if self._global_cxxflags else ""
         ldflags = "OTHER_LDFLAGS{} = $(inherited) {}".format(condition, " ".join(self._global_ldflags)) if self._global_ldflags else ""
-        extra = "\n".join("{}{} = {}".format(k, condition, v) for k, v in self.extra_xcconfig.items())
+        extra = "\n".join("{}{} = {}".format(k, condition, v) for k, v in self.build_settings.items())
         ret = self._flags_xconfig.format(defines=defines, cflags=cflags, cppflags=cppflags, ldflags=ldflags,
                                          extra=extra)
         return ret

@@ -94,9 +94,7 @@ def test_toolchain_flags():
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
-def test_toolchain_extra_xcconfig():
-    # Escape hatch for settings with no dedicated conf, e.g. Swift's
-    # OTHER_SWIFT_FLAGS: the recipe sets it directly on the toolchain.
+def test_toolchain_build_settings():
     client = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
@@ -105,7 +103,7 @@ def test_toolchain_extra_xcconfig():
             settings = "os", "arch", "compiler", "build_type"
             def generate(self):
                 tc = XcodeToolchain(self)
-                tc.extra_xcconfig["OTHER_SWIFT_FLAGS"] = "$(inherited) -cxx-interoperability-mode=default"
+                tc.build_settings["OTHER_SWIFT_FLAGS"] = "$(inherited) -cxx-interoperability-mode=default"
                 tc.generate()
         """)
     client.save({"conanfile.py": conanfile})
