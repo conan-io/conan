@@ -10,21 +10,28 @@ from conan import __version__
 from conan.cli import exit_codes
 from conan.internal.cache.home_paths import HomePaths
 
-try:
-    # POSIX only. A pty makes the duplicated fds report isatty()=True, same as the real
-    # terminal, so Conan's and every subprocess' own ANSI colors keep working while logging.
-    # A plain pipe (the Windows fallback) always reports isatty()=False, so colors are lost
-    # there while logging is enabled, same as before this was attempted with a pty.
-    import pty
-    import tty
-except ImportError:
-    pty = None
-
 _ANSI_ESCAPE_RE = re.compile(rb"\x1b\[[0-9;]*[a-zA-Z]")
 _EXIT_CODE_NAMES = {value: name for name, value in vars(exit_codes).items()
                     if name.isupper() and isinstance(value, int)}
 _DEFAULT_ENV_VARS = ["CC", "CXX", "CFLAGS", "CXXFLAGS", "LDFLAGS", "PATH"]
 _SEPARATOR = "#" + "-" * 60 + "\n"
+
+
+def _open_duplicated_fd():
+    if platform.system() == "Windows":
+        # Windows has no pty equivalent in the standard library, so the duplicated fd is a
+        # plain pipe: it always reports isatty()=False, so colors are lost while logging
+        # is enabled here, unlike on POSIX where a pty preserves them.
+        return os.pipe()
+    # A pty makes the duplicated fd report isatty()=True, same as the real terminal, so
+    # Conan's and every subprocess' own ANSI colors keep working while logging. Only called
+    # when the original fd already was a real terminal (see caller): using one when the
+    # original was redirected/piped would start emitting colors where there weren't any.
+    import pty
+    import tty
+    read_fd, write_fd = pty.openpty()
+    tty.setraw(write_fd)  # disable line buffering/echo/CRLF translation
+    return read_fd, write_fd
 
 
 def _redact_command_line(args):
@@ -77,14 +84,10 @@ class _TeeCommandLogger:
         self._threads = []
         for fd in (1, 2):
             self._saved_fds[fd] = os.dup(fd)
-            # Only use a pty if the original stream already was a real terminal: a pty always
-            # reports isatty()=True, so using one when the original was redirected/piped would
-            # start emitting ANSI colors where there weren't any before.
-            if pty is not None and os.isatty(fd):
-                read_fd, write_fd = pty.openpty()
-                tty.setraw(write_fd)  # disable line buffering/echo/CRLF translation
-            else:
-                read_fd, write_fd = os.pipe()
+            # Only duplicate via the terminal-preserving trick if the original stream
+            # already was a real terminal - using it when the original was redirected/piped
+            # would start emitting ANSI colors where there weren't any before.
+            read_fd, write_fd = _open_duplicated_fd() if os.isatty(fd) else os.pipe()
             os.dup2(write_fd, fd)
             os.close(write_fd)
             thread = threading.Thread(target=self._pump, args=(read_fd, self._saved_fds[fd]),

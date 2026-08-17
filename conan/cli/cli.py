@@ -13,7 +13,7 @@ from inspect import getmembers
 from conan.api.conan_api import ConanAPI
 from conan.api.output import ConanOutput, Color, cli_out_write, LEVEL_TRACE
 from conan.cli.command import ConanSubCommand
-from conan.cli.command_log import command_log_context
+from conan.internal.conan_log import command_log_context
 from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_CTRL_C, \
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
 from conan import __version__
