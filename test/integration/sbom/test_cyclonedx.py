@@ -86,7 +86,7 @@ class TestCyclonedx:
         cyclone_path = os.path.join(create_layout.metadata(), "sbom.cdx.json")
         content = tc.load(cyclone_path)
         # A skipped dependency also shows up in the sbom
-        assert "pkg:conan/dep@1.0?rref=6a99f55e933fb6feeb96df134c33af44" in content
+        assert "pkg:conan/dep@1.0?rrev=6a99f55e933fb6feeb96df134c33af44" in content
 
     @pytest.mark.parametrize("lic, n", [('"simple"', 1), ('"multi1", "multi2"', 2),
                                         ('("tuple1", "tuple2")', 2)])
