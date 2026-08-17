@@ -19,24 +19,15 @@ class CommandAPI:
         self._conan_api = conan_api
         self.cli = None
 
-    def run(self, cmd):
+    def run(self, cmd, raise_on_errors=False):
         """ Runs another Conan command via API
 
         :param cmd: Conan command to run. It can be either a string, or a list of strings.
+        :param raise_on_errors: If True, it will raise an exception on errors.
+           By default, some command will return errors as ``conan_error`` entries in the result,
+           and it will be the caller's responsibility to check for them and raise/report them if desired.
         :return: It will return what that command returns. Note that different commands can
            return different things, so the caller needs to process it accordingly.
-
-        .. warning::
-
-            Some commands (e.g. "create", "install") do not raise directly on a build/install
-            error, but defer it, returning it instead as a ``"conan_error"`` entry in their
-            result, so formatters can still run (e.g. to write "graph.json" even after a
-            failure). Unlike the regular CLI entry point, this method does **not**
-            automatically re-raise that deferred error: it is the caller's responsibility to
-            check the result for a ``"conan_error"`` entry (and optionally a
-            ``"conan_warning"`` one) and to raise/report it if the same behavior as running
-            that command directly from the command line is desired, especially when chaining
-            several commands where a failure in one should stop the rest.
         """
         if isinstance(cmd, str):
             cmd = shlex.split(cmd)
@@ -64,6 +55,14 @@ class CommandAPI:
             ConanOutput._conan_output_level = _conan_output_level
             ConanOutput._silent_warn_tags = _silent_warn_tags
             ConanOutput._warnings_as_errors = _warnings_as_errors
+        if raise_on_errors and result and isinstance(result, dict):
+            if result.get("conan_error"):
+                e = result["conan_error"]
+                if isinstance(e, Exception):
+                    raise e
+                raise ConanException(e)
+            if result.get("conan_warning"):
+                ConanOutput().warning(result["conan_warning"])
         return result
 
     @staticmethod
