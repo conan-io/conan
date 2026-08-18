@@ -586,3 +586,96 @@ class TestConsistentTrait:
         assert len(graph["graph"]["nodes"]) == 7
         # c.run("graph info plugin --format=html", redirect_stdout="graph.html")
         # c.open("graph.html")
+
+    @pytest.mark.parametrize("policy", [False, True])
+    @pytest.mark.parametrize("use_platform_requires", [False, True])
+    def test_platform_requires_consistent(self, policy, use_platform_requires):
+        """ https://github.com/conan-io/conan/issues/20276
+
+        consumer ------------------------------------> libb/1.0
+             \\--> liba/1.0 -(visible=False,consistent=True)--> libb/1.0
+
+        The real issue is that liba's libb requirement is invisible *and* points directly
+        at the node that consumer also (visibly) requires: there is no intermediate node
+        between the invisible edge and the shared dependency. Requirement.transform_downstream()
+        (conan/internal/model/requires.py) bails out early with
+        "if require.visible is False: return" for that direct edge, before 'consistent' is
+        ever consulted, so check_downstream_exists() never walks up to notice consumer
+        already has a direct libb requirement. Two separate nodes for libb/1.0 get created.
+
+        Contrast with TestConsistentTrait.test_visible_order_issue() above, which has the
+        invisible edge one hop *above* the shared dependency (libc->libb(invisible)->liba,
+        and libc->liba direct): that shape closes into a single node just fine, because at
+        the point transform_downstream() checks visibility, it is looking at libb's own
+        (visible) requirement to liba, not at the invisible libc->libb edge itself.
+        """
+        c = TestClient(light=True)
+        if policy:
+            c.save_home({"global.conf": 'core:policies=["required_conan_version>=2.28"]'})
+        profile_lines = ["include(default)"]
+        if use_platform_requires:
+            profile_lines += ["[platform_requires]", "libb/1.0"]
+        c.save({"liba/conanfile.py": GenConanfile("liba", "1.0")
+                    .with_requirement("libb/1.0", visible=False, consistent=True)
+                    .with_package_type("shared-library"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0")
+                    .with_package_type("static-library"),
+                "conanfile.py": GenConanfile("consumer")
+                    .with_requirement("liba/1.0")
+                    .with_requirement("libb/1.0")
+                    .with_package_type("static-library"),
+                "profile": "\n".join(profile_lines) + "\n",
+                })
+        c.run("export libb")
+        c.run("export liba")
+
+        c.run("graph info -f=json -pr=profile", redirect_stdout="graph.json")
+        graph = json.loads(c.load("graph.json"))
+        nodes = graph["graph"]["nodes"]
+        libb_nodes = [n for n in nodes.values() if n["ref"].startswith("libb/1.0")]
+        if use_platform_requires:
+            assert all(n["recipe"] == "Platform" for n in libb_nodes)
+        assert len(libb_nodes) == 1
+        assert len(nodes) == 3
+
+    def test_test_requires_consistency(self):
+        c = TestClient(light=True)
+        c.save_home({"global.conf": 'core:policies=["required_conan_version>=2.28"]'})
+        c.save({"test/conanfile.py": GenConanfile("test"),
+                "liba/conanfile.py": GenConanfile("liba", "1.0").with_test_requirement("test/1.0"),
+                "libb/conanfile.py": GenConanfile("libb", "1.0").with_test_requirement("test/1.0"),
+                "conanfile.py": GenConanfile().with_requirement("liba/1.0").with_requirement("libb/1.0"),
+                })
+        c.run("create test --version=1.0")
+        c.run("create liba")
+        c.run("create libb")
+        c.run("graph info -f=json", redirect_stdout="graph.json")
+        graph = json.loads(c.load("graph.json"))
+        nodes = graph["graph"]["nodes"]
+        assert len(nodes) == 5
+        test_nodes = [n for n in nodes.values() if n["ref"].startswith("test/1.0")]
+        assert len(test_nodes) == 2
+
+    def test_visible_downstream_propagation(self):
+        c = TestClient(light=True)
+        c.save_home({"global.conf": 'core:policies=["required_conan_version>=2.28"]'})
+        consumer = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Consumer(ConanFile):
+            name = "consumer"
+            version = "1.0"
+            requires = "source/1.0"
+            def generate(self):
+                self.output.info(f"Bar visible: {'bar' in self.dependencies}")
+        """)
+        c.save({"bar/conanfile.py": GenConanfile("bar", "1.0"),
+                "source/conanfile.py": GenConanfile("source", "1.0")
+                    .with_requirement("bar/1.0", visible=False, consistent=True),
+                "conanfile.py": consumer,
+                })
+        c.run("create bar")
+        c.run("create source")
+        c.run("create")
+        assert "consumer/1.0: requires: source/1.Y.Z bar/1.Y.Z" not in c.out
+        assert "Bar visible: False" in c.out
