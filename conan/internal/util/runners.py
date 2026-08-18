@@ -7,7 +7,7 @@ from io import StringIO
 
 from conan.errors import ConanException
 from conan.internal.util.files import load
-
+from conan.internal.conan_log import conan_log
 
 if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
 
@@ -43,8 +43,10 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
     stdout = stdout or sys.stderr
     stderr = stderr or sys.stderr
 
-    out = subprocess.PIPE if isinstance(stdout, StringIO) else stdout
-    err = subprocess.PIPE if isinstance(stderr, StringIO) else stderr
+    log_path = conan_log.log_path
+
+    out = subprocess.PIPE if (isinstance(stdout, StringIO) or log_path) else stdout
+    err = subprocess.PIPE if (isinstance(stderr, StringIO) or log_path) else stderr
 
     with pyinstaller_bundle_env_cleaned():
         try:
@@ -59,6 +61,8 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
             stdout.write(proc_stdout.decode("utf-8", errors="ignore"))
         if proc_stderr:
             stderr.write(proc_stderr.decode("utf-8", errors="ignore"))
+        if log_path:
+            conan_log.log_subprocess_call(proc_stdout, proc_stderr)
         return proc.returncode
 
 
