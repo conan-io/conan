@@ -93,6 +93,27 @@ def architecture_flag(conanfile):
     return ""
 
 
+def architecture_bits(conanfile):
+    """
+    Detect the architecture bits based on the ``conanfile.settings.arch`` and those known architectures in Conan.
+
+    :param conanfile: The current recipe object. Always use ``self``.
+    :return: "64" for 64-bit architectures, "32" for 32-bit architectures, or None if the architecture is unknown.
+    """
+    arch = conanfile.settings.get_safe("arch")
+    if arch in ["x86_64", "ppc64le", "ppc64", "armv8", "armv8.3", "arm64ec", "sparcv9",
+                "mips64", "s390x", "wasm64", "e2k-v2", "e2k-v3", "e2k-v4", "e2k-v5",
+                "e2k-v6", "e2k-v7", "riscv64"]:
+        return "64"
+    elif arch in ["x86", "ppc32be", "ppc32", "armv4", "armv4i", "armv5el", "armv5hf",
+                  "armv6", "armv7", "armv7hf", "armv7s", "armv7k", "armv8_32",
+                  "sparc", "mips", "avr", "s390", "asm.js", "riscv32", "wasm",
+                  "sh4le", "xtensalx6", "xtensalx106", "xtensalx7",
+                  "tc131", "tc16", "tc161", "tc162", "tc18"]:
+        return "32"
+    return None
+
+
 def architecture_link_flag(conanfile):
     """
     returns exclusively linker flags specific to the target architecture and compiler

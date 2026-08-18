@@ -352,7 +352,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
 
     build_mode = args.build if args.build else []
     ConanOutput().box("Exporting workspace recipes to Conan cache")
-    exported_refs = conan_api.workspace.export()
+    exported_refs = conan_api.workspace.export(lockfile=lockfile, remotes=remotes)
     build_mode.extend(f"missing:{r}" for r in exported_refs)
 
     all_packages = conan_api.workspace.packages()
