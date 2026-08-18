@@ -8,7 +8,7 @@ import colorama
 from colorama import Fore, Style
 
 from conan.errors import ConanException
-from conan.internal.conan_log import conan_log
+from conan.internal.conan_log import ConanLog
 
 LEVEL_QUIET = 80  # -q
 LEVEL_ERROR = 70  # Errors
@@ -197,7 +197,7 @@ class ConanOutput:
         with self.lock:
             self.stream.write(data)
             self.stream.flush()
-        conan_log.log_message(data)
+        ConanLog().log_message(data)
 
         return self
 
@@ -240,7 +240,7 @@ class ConanOutput:
         with self.lock:
             self.stream.write(ret)
             self.stream.flush()
-        conan_log.log_message(ret)
+        ConanLog().log_message(ret)
 
     def trace(self, msg: str):
         """ This is the most extreme level of detail.
@@ -395,7 +395,7 @@ def cli_out_write(data, fg=None, bg=None, endline="\n", indentation=0):
             colorama.reinit()
         else:
             sys.stdout.write(data)
-    conan_log.log_message(data)
+    ConanLog().log_message(data)
 
 
 class TimedOutput:

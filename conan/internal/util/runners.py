@@ -7,7 +7,7 @@ from io import StringIO
 
 from conan.errors import ConanException
 from conan.internal.util.files import load
-from conan.internal.conan_log import conan_log
+from conan.internal.conan_log import ConanLog
 
 if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
 
@@ -43,6 +43,7 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
     stdout = stdout or sys.stderr
     stderr = stderr or sys.stderr
 
+    conan_log = ConanLog()
     log_path = conan_log.log_path
     # A single pipe keeps stdout/stderr in the order the subprocess produced them,
     # instead of one thread per pipe racing to write to the same destination

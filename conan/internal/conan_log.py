@@ -10,6 +10,7 @@ import re
 import sys
 import threading
 from datetime import datetime
+from conan.internal.cache.home_paths import HomePaths
 
 _SEPARATOR = "#" + "-" * 60 + "\n"
 _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
@@ -46,46 +47,40 @@ def _redact(text):
 
 
 class ConanLog:
-    """conan_log is created when this module is imported. Resolving core.log:enabled and
-    creating the log file is deferred to the first access to log_path, since this module
-    loads as part of conan/api/output.py, before conan.internal.model.conf can be
-    imported."""
+    """config() must be called once per command, normally from
+    ConanArgumentParser.parse_args(), with core.log:enabled read through conan_api.config.
+    log_path is set right away; the file and its header are only created on first use."""
 
-    def __init__(self):
-        self._resolved = False
-        self._log_path = None
+    log_path = None
+    _date = None
+    _command = None
 
-    @property
-    def log_path(self):
-        if self._resolved:
-            return self._log_path
-        self._resolved = True
+    @classmethod
+    def config(cls, enabled, home):
+        cls.log_path = None
+        if not enabled:
+            return
+        log_dir = HomePaths(home).command_logs_path
+        command_name = sys.argv[1] if len(sys.argv) > 1 else "conan"
+        safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", command_name)
+        cls._date = datetime.now()
+        cls._command = " ".join(sys.argv[1:])
+        cls.log_path = os.path.join(
+            log_dir, f"{cls._date:%Y%m%d_%H%M%S}_{os.getpid()}_{safe_name}.log")
+
+    @classmethod
+    def _log_file(cls):
+        if not cls.log_path or os.path.exists(cls.log_path):
+            return cls.log_path
         try:
-            from conan.internal.model.conf import load_global_conf
-            from conan.internal.paths import get_conan_user_home
-
-            home = get_conan_user_home()
-            enabled = load_global_conf(home).get("core.log:enabled", default=False,
-                                                  check_type=bool)
-            if not enabled:
-                return None
-
-            log_dir = os.path.join(home, ".log")
-            os.makedirs(log_dir, exist_ok=True)
-            command_name = sys.argv[1] if len(sys.argv) > 1 else "conan"
-            safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", command_name)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            path = os.path.join(log_dir, f"{timestamp}_{os.getpid()}_{safe_name}.log")
-            with open(path, "w", encoding="utf-8", errors="replace") as f:
-                f.write(
-                    f"# Date: {datetime.now():%Y-%m-%d %H:%M:%S}\n"
-                    f"# Command: conan {_redact(' '.join(sys.argv[1:]))}\n"
-                    f"{_SEPARATOR}"
-                )
-            self._log_path = path
+            os.makedirs(os.path.dirname(cls.log_path), exist_ok=True)
+            with open(cls.log_path, "w", encoding="utf-8", errors="replace") as f:
+                f.write(f"# Date: {cls._date:%Y-%m-%d %H:%M:%S}\n"
+                       f"# Command: conan {_redact(cls._command)}\n"
+                       f"{_SEPARATOR}")
         except Exception:
-            self._log_path = None
-        return self._log_path
+            cls.log_path = None
+        return cls.log_path
 
     def stream_subprocess(self, proc, stdout, stderr):
         """Forwards proc's stdout/stderr live, then logs them once it finishes.
@@ -113,10 +108,10 @@ class ConanLog:
         self.log_subprocess_call(b"".join(out_chunks), b"".join(err_chunks))
 
     def log_subprocess_call(self, proc_stdout, proc_stderr):
-        if not self._log_path:
+        if not self._log_file():
             return
         try:
-            with open(self._log_path, "a", encoding="utf-8", errors="replace") as f:
+            with open(self.log_path, "a", encoding="utf-8", errors="replace") as f:
                 if proc_stdout:
                     f.write(_redact(proc_stdout.decode("utf-8", errors="replace")))
                 if proc_stderr:
@@ -128,13 +123,10 @@ class ConanLog:
         """Called for every line written to the terminal, both ConanOutput's own
         messages and formatter output through cli_out_write, with the same ANSI
         stripping and redaction as everything else in this module."""
-        if self.log_path is None:
+        if not self._log_file():
             return
         try:
-            with open(self._log_path, "a", encoding="utf-8", errors="replace") as f:
+            with open(self.log_path, "a", encoding="utf-8", errors="replace") as f:
                 f.write(_redact(_ANSI_ESCAPE_RE.sub("", text)))
         except Exception:
             pass
-
-
-conan_log = ConanLog()
