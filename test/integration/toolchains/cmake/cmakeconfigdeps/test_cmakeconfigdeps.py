@@ -1313,3 +1313,39 @@ def test_find_mode_none():
     target_dependency = tc.load("liba-Targets-release.cmake")
     # The dependency should not have CONFIG requirement
     assert "find_dependency(dep REQUIRED )" in target_dependency
+
+
+def test_cmakeconfigdeps_message_mode_respects_quiet():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def package(self):
+                save(self, os.path.join(self.package_folder, "lib", "lib1.a"), "")
+
+            def package_info(self):
+                self.cpp_info.libs = ["lib1"]
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+    c.run("install --requires=pkg/0.1 -g CMakeConfigDeps")
+
+    config = c.load("pkg-config.cmake")
+    assert "if(pkg_FIND_QUIETLY)" in config
+    assert "set(pkg_MESSAGE_MODE VERBOSE)" in config
+    assert "set(pkg_MESSAGE_MODE STATUS)" in config
+    assert "message(STATUS" not in config
+
+    targets = c.load("pkgTargets.cmake")
+    assert 'message(${pkg_MESSAGE_MODE} "Conan: Configuring Targets for pkg/0.1")' in targets
+    assert "message(STATUS" not in targets
+
+    target_config = c.load("pkg-Targets-release.cmake")
+    assert "message(${pkg_MESSAGE_MODE}" in target_config
+    assert "message(STATUS" not in target_config

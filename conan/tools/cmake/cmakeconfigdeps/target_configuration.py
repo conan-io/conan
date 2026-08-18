@@ -50,12 +50,12 @@ class TargetConfigurationTemplate2:
         {% for lib, lib_info in libs.items() %}
         #################### {{lib}} ####################
         if(NOT TARGET {{ lib }})
-            message(STATUS "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
+            message({%raw%}${{%endraw%}{{filename}}_MESSAGE_MODE} "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
             add_library({{lib}} {{lib_info["type"]}} IMPORTED)
         endif()
         {% for alias in lib_info.get("cmake_target_aliases", []) %}
         if(NOT TARGET {{alias}})
-            message(STATUS "Conan: Target declared alias '{{alias}}' for '{{lib}}'")
+            message({%raw%}${{%endraw%}{{filename}}_MESSAGE_MODE} "Conan: Target declared alias '{{alias}}' for '{{lib}}'")
             add_library({{alias}} ALIAS {{lib}})
         endif()
         {% endfor %}
@@ -182,14 +182,14 @@ class TargetConfigurationTemplate2:
         {% for exe, location in exes.items() %}
         #################### {{exe}} ####################
         if(NOT TARGET {{ exe }})
-            message(STATUS "Conan: Target declared imported executable '{{exe}}' {{context}}")
+            message({%raw%}${{%endraw%}{{filename}}_MESSAGE_MODE} "Conan: Target declared imported executable '{{exe}}' {{context}}")
             add_executable({{exe}} IMPORTED)
         else()
             get_property(_context TARGET {{exe}} PROPERTY CONAN_CONTEXT)
             if(NOT $${_context} STREQUAL "{{context}}")
-                message(STATUS "Conan: Exe {{exe}} was already defined in ${_context}")
+                message({%raw%}${{%endraw%}{{filename}}_MESSAGE_MODE} "Conan: Exe {{exe}} was already defined in ${_context}")
                 get_property(_configurations TARGET {{exe}} PROPERTY IMPORTED_CONFIGURATIONS)
-                message(STATUS "Conan: Exe {{exe}} defined configurations: ${_configurations}")
+                message({%raw%}${{%endraw%}{{filename}}_MESSAGE_MODE} "Conan: Exe {{exe}} defined configurations: ${_configurations}")
                 foreach(_config ${_configurations})
                     set_property(TARGET {{exe}} PROPERTY IMPORTED_LOCATION_${_config})
                 endforeach()
