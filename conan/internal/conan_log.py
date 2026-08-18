@@ -4,9 +4,11 @@ Implements core.log:enabled: appends everything a command prints to a file under
 (conan/api/output.py) and subprocess output (conan/internal/util/runners.py).
 """
 
+import codecs
 import os
 import re
 import sys
+import threading
 from datetime import datetime
 
 _SEPARATOR = "#" + "-" * 60 + "\n"
@@ -78,13 +80,37 @@ class ConanLog:
                 f.write(
                     f"# Date: {datetime.now():%Y-%m-%d %H:%M:%S}\n"
                     f"# Command: conan {_redact(' '.join(sys.argv[1:]))}\n"
-                    f"# PID: {os.getpid()}\n"
                     f"{_SEPARATOR}"
                 )
             self._log_path = path
         except Exception:
             self._log_path = None
         return self._log_path
+
+    def stream_subprocess(self, proc, stdout, stderr):
+        """Forwards proc's stdout/stderr live, then logs them once it finishes.
+        proc.stderr is None when merged into stdout, read as a single stream to
+        preserve their real order."""
+        out_chunks, err_chunks = [], []
+
+        def pump(pipe, sink, chunks):
+            decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+            with pipe:
+                for data in iter(lambda: pipe.read1(4096), b""):
+                    chunks.append(data)
+                    sink.write(decoder.decode(data))
+            pending = decoder.decode(b"", final=True)
+            if pending:
+                sink.write(pending)
+
+        if proc.stderr is None:
+            pump(proc.stdout, stdout, out_chunks)
+        else:
+            t_err = threading.Thread(target=pump, args=(proc.stderr, stderr, err_chunks))
+            t_err.start()
+            pump(proc.stdout, stdout, out_chunks)
+            t_err.join()
+        self.log_subprocess_call(b"".join(out_chunks), b"".join(err_chunks))
 
     def log_subprocess_call(self, proc_stdout, proc_stderr):
         if not self._log_path:

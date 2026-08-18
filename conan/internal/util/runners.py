@@ -44,9 +44,15 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
     stderr = stderr or sys.stderr
 
     log_path = conan_log.log_path
+    # A single pipe keeps stdout/stderr in the order the subprocess produced them,
+    # instead of one thread per pipe racing to write to the same destination
+    merge_out_err = log_path and stdout is stderr
 
     out = subprocess.PIPE if (isinstance(stdout, StringIO) or log_path) else stdout
-    err = subprocess.PIPE if (isinstance(stderr, StringIO) or log_path) else stderr
+    if merge_out_err:
+        err = subprocess.STDOUT
+    else:
+        err = subprocess.PIPE if (isinstance(stderr, StringIO) or log_path) else stderr
 
     with pyinstaller_bundle_env_cleaned():
         try:
@@ -54,15 +60,18 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
         except Exception as e:
             raise ConanException("Error while running cmd\nError: %s" % (str(e)))
 
-        proc_stdout, proc_stderr = proc.communicate()
-        # If the output is piped, like user provided a StringIO or testing, the communicate
-        # will capture and return something when thing finished
-        if proc_stdout:
-            stdout.write(proc_stdout.decode("utf-8", errors="ignore"))
-        if proc_stderr:
-            stderr.write(proc_stderr.decode("utf-8", errors="ignore"))
         if log_path:
-            conan_log.log_subprocess_call(proc_stdout, proc_stderr)
+            # Read stdout/stderr as they arrive so the caller still sees them live
+            conan_log.stream_subprocess(proc, stdout, stderr)
+            proc.wait()
+        else:
+            proc_stdout, proc_stderr = proc.communicate()
+            # If the output is piped, like user provided a StringIO or testing, the
+            # communicate will capture and return something when thing finished
+            if proc_stdout:
+                stdout.write(proc_stdout.decode("utf-8", errors="ignore"))
+            if proc_stderr:
+                stderr.write(proc_stderr.decode("utf-8", errors="ignore"))
         return proc.returncode
 
 
