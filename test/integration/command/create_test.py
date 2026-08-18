@@ -59,7 +59,7 @@ def test_create():
     client.save({"conanfile.py": conanfile})
     client.run("create --name=pkg --version=0.1 --user=lasote --channel=testing")
     assert "Profile host:\n[settings]" in client.out
-    assert "Generating the package pkg/0.1@lasote/testing:" in client.out
+    assert "Package step for pkg/0.1@lasote/testing:" in client.out
     assert "Running system requirements!!" in client.out
     client.run('list -c *')
     assert "pkg/0.1@lasote/testing" in client.out
@@ -86,20 +86,20 @@ def test_create_user_channel():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
     client.run("create . --user=lasote --channel=channel")
-    assert "Generating the package pkg/0.1@lasote/channel:" in client.out
+    assert "Package step for pkg/0.1@lasote/channel:" in client.out
     client.run("list * -c")
     assert "pkg/0.1@lasote/channel" in client.out
 
     # test default without user and channel
     client.run("create . ")
-    assert "Generating the package pkg/0.1:" in client.out
+    assert "Package step for pkg/0.1:" in client.out
 
 
 def test_create_in_subfolder():
     client = TestClient()
     client.save({"subfolder/conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
     client.run("create subfolder --user=lasote --channel=channel")
-    assert "Generating the package pkg/0.1@lasote/channel:" in client.out
+    assert "Package step for pkg/0.1@lasote/channel:" in client.out
     client.run("list * -c")
     assert "pkg/0.1@lasote/channel" in client.out
 
@@ -109,7 +109,7 @@ def test_create_in_subfolder_with_different_name():
     client = TestClient()
     client.save({"subfolder/Custom.py": GenConanfile().with_name("pkg").with_version("0.1")})
     client.run("create subfolder/Custom.py --user=lasote --channel=channel")
-    assert "Generating the package pkg/0.1@lasote/channel:" in client.out
+    assert "Package step for pkg/0.1@lasote/channel:" in client.out
     client.run("list * -c")
     assert "pkg/0.1@lasote/channel" in client.out
 
@@ -120,7 +120,7 @@ def test_create_test_package():
                  "test_package/conanfile.py":
                      GenConanfile().with_test('self.output.info("TESTING!!!")')})
     client.run("create . --user=lasote --channel=testing")
-    assert "Generating the package pkg/0.1@lasote/testing:" in client.out
+    assert "Package step for pkg/0.1@lasote/testing:" in client.out
     assert "pkg/0.1@lasote/testing (test package): TESTING!!!" in client.out
 
 
@@ -132,7 +132,7 @@ def test_create_skip_test_package():
                  "test_package/conanfile.py":
                      GenConanfile().with_test('self.output.info("TESTING!!!")')})
     client.run("create . --user=lasote --channel=testing --test-folder=\"\"")
-    assert "Generating the package pkg/0.1@lasote/testing:" in client.out
+    assert "Package step for pkg/0.1@lasote/testing:" in client.out
     assert "TESTING!!!" not in client.out
 
 
