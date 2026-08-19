@@ -1,6 +1,8 @@
 import os
 import textwrap
 
+import pytest
+
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -19,23 +21,21 @@ class TestCommandLog:
         c.run("create .")
         assert not _log_files(c)
 
-    def test_enabled_via_core_conf(self):
+    @pytest.mark.parametrize("enable_via", ["core_conf", "global_conf"])
+    def test_enabled(self, enable_via):
         c = TestClient()
         c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
-        c.run("create . -cc core.log:enabled=True")
+        if enable_via == "global_conf":
+            c.save_home({"global.conf": "core.log:enabled=True"})
+            c.run("create .")
+        else:
+            c.run("create . -cc core.log:enabled=True")
 
         logs = _log_files(c)
         assert len(logs) == 1
         content = open(logs[0], encoding="utf-8").read()
         assert "# Command: conan create ." in content
-        assert "pkg/1.0: Created package" in content or "pkg/1.0" in content
-
-    def test_enabled_via_global_conf(self):
-        c = TestClient()
-        c.save_home({"global.conf": "core.log:enabled=True"})
-        c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
-        c.run("create .")
-        assert len(_log_files(c)) == 1
+        assert "pkg/1.0" in content
 
     def test_independent_log_per_command_same_process(self):
         # Regression test: several commands sharing one TestClient (one process) must
@@ -57,13 +57,12 @@ class TestCommandLog:
         assert "list pkg" not in create_content
         assert "Created package" not in list_content
 
-    def test_redacts_password_short_and_long_flags(self):
+    def test_redacts_password_end_to_end(self):
         c = TestClient(default_server_user=True)
         c.save_home({"global.conf": "core.log:enabled=True"})
         c.run("remote login default admin -p password")
 
-        logs = _log_files(c)
-        content = open(logs[0], encoding="utf-8").read()
+        content = open(_log_files(c)[0], encoding="utf-8").read()
         assert "password" not in content
         assert "-p ********" in content
 
