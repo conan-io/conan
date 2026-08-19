@@ -45,14 +45,17 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
 
     conan_log = ConanLog()
     log_path = conan_log.log_path
+    # Something like subprocess.DEVNULL (quiet=True) has nothing to capture or forward to
+    log_stdout = bool(log_path) and hasattr(stdout, "write")
+    log_stderr = bool(log_path) and hasattr(stderr, "write")
     # A single pipe keeps stdout/stderr in the order the subprocess produced them
-    merge_out_err = log_path and stdout is stderr
+    merge_out_err = log_stdout and log_stderr and stdout is stderr
 
-    out = subprocess.PIPE if (isinstance(stdout, StringIO) or log_path) else stdout
+    out = subprocess.PIPE if (isinstance(stdout, StringIO) or log_stdout) else stdout
     if merge_out_err:
         err = subprocess.STDOUT
     else:
-        err = subprocess.PIPE if (isinstance(stderr, StringIO) or log_path) else stderr
+        err = subprocess.PIPE if (isinstance(stderr, StringIO) or log_stderr) else stderr
 
     with pyinstaller_bundle_env_cleaned():
         try:
@@ -60,7 +63,7 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
         except Exception as e:
             raise ConanException("Error while running cmd\nError: %s" % (str(e)))
 
-        if log_path:
+        if log_stdout or log_stderr:
             # Read stdout/stderr as they arrive so the caller still sees them live
             conan_log.stream_subprocess(proc, stdout, stderr)
             proc.wait()

@@ -3,6 +3,7 @@ import shlex
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
+from conan.internal.conan_log import ConanLog
 
 
 class CommandAPI:
@@ -47,7 +48,8 @@ class CommandAPI:
         _warnings_as_errors = ConanOutput._warnings_as_errors  # noqa
 
         try:
-            result = command.run_cli(self._conan_api, args)
+            with ConanLog.nested():
+                result = command.run_cli(self._conan_api, args)
         finally:
             ConanOutput._conan_output_level = _conan_output_level
             ConanOutput._silent_warn_tags = _silent_warn_tags

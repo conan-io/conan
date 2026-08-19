@@ -8,6 +8,7 @@ import codecs
 import os
 import re
 import threading
+from contextlib import contextmanager
 from datetime import datetime
 from conan.internal.cache.home_paths import HomePaths
 
@@ -24,12 +25,16 @@ class ConanLog:
     _command = None
     _file = None
     _secrets = []
+    _nesting = 0
     _lock = threading.RLock()
 
     @classmethod
     def config(cls, enabled, home, command_name, raw_args, secrets=None):
         """command_name and raw_args rebuild the command line. secrets are exact
-        values redacted wherever they show up."""
+        values redacted wherever they show up. A no-op while nested(): a command
+        calling another one in the same process shares the outer command's log."""
+        if cls._nesting > 0:
+            return
         if cls._file is not None:
             try:
                 cls._file.close()
@@ -46,6 +51,17 @@ class ConanLog:
         cls._command = " ".join([command_name] + raw_args)
         cls.log_path = os.path.join(
             log_dir, f"{cls._date:%Y%m%d_%H%M%S}_{os.getpid()}_{safe_name}.log")
+
+    @classmethod
+    @contextmanager
+    def nested(cls):
+        """Used by CommandAPI.run() when a command calls another one in the same
+        process, so the nested command's own config() call is a no-op."""
+        cls._nesting += 1
+        try:
+            yield
+        finally:
+            cls._nesting -= 1
 
     @classmethod
     def _redact(cls, text):
@@ -78,9 +94,9 @@ class ConanLog:
             return False
 
     def stream_subprocess(self, proc, stdout, stderr):
-        """Forwards proc's stdout/stderr live, then logs them once it finishes.
-        proc.stderr is None when merged into stdout, read as a single stream to
-        preserve their real order."""
+        """Forwards proc's stdout/stderr live, then logs them once it finishes. Either
+        pipe can be None: merged into the other, or never captured to begin with (e.g.
+        stdout/stderr was subprocess.DEVNULL)."""
         out_chunks, err_chunks = [], []
 
         def pump(pipe, sink, chunks):
@@ -93,13 +109,15 @@ class ConanLog:
             if pending:
                 sink.write(pending)
 
-        if proc.stderr is None:
-            pump(proc.stdout, stdout, out_chunks)
-        else:
+        if proc.stdout is not None and proc.stderr is not None:
             t_err = threading.Thread(target=pump, args=(proc.stderr, stderr, err_chunks))
             t_err.start()
             pump(proc.stdout, stdout, out_chunks)
             t_err.join()
+        elif proc.stdout is not None:
+            pump(proc.stdout, stdout, out_chunks)
+        elif proc.stderr is not None:
+            pump(proc.stderr, stderr, err_chunks)
         self.log_subprocess_call(b"".join(out_chunks), b"".join(err_chunks))
 
     def log_subprocess_call(self, proc_stdout, proc_stderr):

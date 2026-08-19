@@ -57,6 +57,37 @@ class TestCommandLog:
         assert "list pkg" not in create_content
         assert "Created package" not in list_content
 
+    def test_nested_command_shares_the_outer_log(self):
+        # Regression test: a command calling conan_api.command.run() internally used to
+        # reconfigure the process-wide log context, so anything the outer command logged
+        # after the nested call ended up in the nested command's own log file instead.
+        # Everything happening in the same process, nested or not, belongs in one file
+        c = TestClient()
+        c.save_home({
+            "global.conf": "core.log:enabled=True",
+            "extensions/commands/cmd_mybuild.py": textwrap.dedent("""
+                from conan.api.output import ConanOutput
+                from conan.cli.command import conan_command
+
+                @conan_command(group="Custom commands")
+                def mybuild(conan_api, parser, *args):
+                    \"\"\"mybuild\"\"\"
+                    parser.parse_args(args[0])
+                    ConanOutput().info("mybuild: before nested command")
+                    conan_api.command.run(["profile", "detect", "--force"])
+                    ConanOutput().info("mybuild: after nested command")
+                """),
+        })
+        c.run("mybuild")
+
+        logs = _log_files(c)
+        assert len(logs) == 1
+        content = open(logs[0], encoding="utf-8").read()
+        assert "# Command: conan mybuild" in content
+        assert "mybuild: before nested command" in content
+        assert "Detected profile" in content
+        assert "mybuild: after nested command" in content
+
     def test_redacts_password_by_value_end_to_end(self):
         c = TestClient(default_server_user=True)
         c.save_home({"global.conf": "core.log:enabled=True"})
@@ -78,6 +109,26 @@ class TestCommandLog:
         list_log = next(f for f in _log_files(c) if "list" in f)
         content = open(list_log, encoding="utf-8").read()
         assert "# Command: conan list pkg/1.0:* -p os=Windows" in content
+
+    def test_run_quiet_does_not_crash(self):
+        # Regression test: self.run(cmd, quiet=True) maps stdout/stderr to
+        # subprocess.DEVNULL, which used to crash trying to write() to it
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                def build(self):
+                    self.run("echo quiet-output", quiet=True)
+                    self.run("echo loud-output")
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create . -cc core.log:enabled=True")
+
+        content = open(_log_files(c)[0], encoding="utf-8").read()
+        assert "loud-output" in content
+        assert "quiet-output" not in content
 
     def test_subprocess_output_captured(self):
         c = TestClient()
