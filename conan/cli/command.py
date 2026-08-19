@@ -134,6 +134,8 @@ class ConanArgumentParser(argparse.ArgumentParser):
         super().__init__(*args, **kwargs)
 
     def parse_args(self, args=None, namespace=None):
+        raw_args = list(args) if args is not None else []
+
         args = super().parse_args(args)
         ConanOutput.define_log_level(args.v)
         if getattr(args, "lockfile_packages", None):
@@ -145,7 +147,9 @@ class ConanArgumentParser(argparse.ArgumentParser):
         global_conf = self._conan_api._api_helpers.global_conf  # noqa
         ConanLog.config(
             self._conan_api.config.get("core.log:enabled", default=False, check_type=bool),
-            self._conan_api.home_folder
+            self._conan_api.home_folder,
+            self.prog,
+            raw_args
         )
         # TODO: This might be even better moved to the ConanAPI so users without doing custom
         #  commands can benefit from it

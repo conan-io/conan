@@ -7,14 +7,13 @@ Implements core.log:enabled: appends everything a command prints to a file under
 import codecs
 import os
 import re
-import sys
 import threading
 from datetime import datetime
 from conan.internal.cache.home_paths import HomePaths
 
 _SEPARATOR = "#" + "-" * 60 + "\n"
 _ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
-_SECRET_FLAGS = {"--password", "--token"}
+_SECRET_FLAGS = {"--password", "--token", "-p"}
 
 
 def _redact(text):
@@ -49,38 +48,58 @@ def _redact(text):
 class ConanLog:
     """config() must be called once per command, normally from
     ConanArgumentParser.parse_args(), with core.log:enabled read through conan_api.config.
-    log_path is set right away; the file and its header are only created on first use."""
+    log_path is set right away; the file itself, kept open for the whole command once
+    created, is only opened on first use. All writes go through _lock, since Conan prints
+    from several threads at once (parallel downloads, uploads, installs)."""
 
     log_path = None
     _date = None
     _command = None
+    _file = None
+    _lock = threading.RLock()
 
     @classmethod
-    def config(cls, enabled, home):
+    def config(cls, enabled, home, command_name, raw_args):
+        """command_name plus raw_args (the args the parser received, before parsing)
+        rebuild the actual command line."""
+        if cls._file is not None:
+            try:
+                cls._file.close()
+            except Exception:
+                pass
         cls.log_path = None
+        cls._file = None
         if not enabled:
             return
         log_dir = HomePaths(home).command_logs_path
-        command_name = sys.argv[1] if len(sys.argv) > 1 else "conan"
         safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", command_name)
         cls._date = datetime.now()
-        cls._command = " ".join(sys.argv[1:])
+        cls._command = " ".join([command_name] + raw_args)
         cls.log_path = os.path.join(
             log_dir, f"{cls._date:%Y%m%d_%H%M%S}_{os.getpid()}_{safe_name}.log")
 
     @classmethod
-    def _log_file(cls):
-        if not cls.log_path or os.path.exists(cls.log_path):
-            return cls.log_path
+    def _check_log_file(cls):
+        """Must be called with _lock already held. Opens the file once, the first time
+        something needs to log, and keeps it open for the rest of the command. Returns
+        whether cls._file is available to write to."""
+        if cls._file is not None:
+            return True
+        if not cls.log_path:
+            return False
         try:
             os.makedirs(os.path.dirname(cls.log_path), exist_ok=True)
-            with open(cls.log_path, "w", encoding="utf-8", errors="replace") as f:
-                f.write(f"# Date: {cls._date:%Y-%m-%d %H:%M:%S}\n"
-                       f"# Command: conan {_redact(cls._command)}\n"
-                       f"{_SEPARATOR}")
-        except Exception:
+            cls._file = open(cls.log_path, "a", encoding="utf-8", errors="replace")
+            cls._file.write(f"# Date: {cls._date:%Y-%m-%d %H:%M:%S}\n"
+                            f"# Command: {_redact(cls._command)}\n"
+                            f"{_SEPARATOR}")
+            cls._file.flush()
+            return True
+        except Exception as e:
             cls.log_path = None
-        return cls.log_path
+            from conan.api.output import ConanOutput
+            ConanOutput().warning(f"core.log:enabled couldn't create the log file: {e}")
+            return False
 
     def stream_subprocess(self, proc, stdout, stderr):
         """Forwards proc's stdout/stderr live, then logs them once it finishes.
@@ -108,25 +127,25 @@ class ConanLog:
         self.log_subprocess_call(b"".join(out_chunks), b"".join(err_chunks))
 
     def log_subprocess_call(self, proc_stdout, proc_stderr):
-        if not self._log_file():
-            return
-        try:
-            with open(self.log_path, "a", encoding="utf-8", errors="replace") as f:
-                if proc_stdout:
-                    f.write(_redact(proc_stdout.decode("utf-8", errors="replace")))
-                if proc_stderr:
-                    f.write(_redact(proc_stderr.decode("utf-8", errors="replace")))
-        except Exception:
-            pass
+        with self._lock:
+            if self._check_log_file():
+                try:
+                    if proc_stdout:
+                        self._file.write(_redact(proc_stdout.decode("utf-8", errors="replace")))
+                    if proc_stderr:
+                        self._file.write(_redact(proc_stderr.decode("utf-8", errors="replace")))
+                    self._file.flush()
+                except Exception:
+                    pass
 
     def log_message(self, text):
         """Called for every line written to the terminal, both ConanOutput's own
         messages and formatter output through cli_out_write, with the same ANSI
         stripping and redaction as everything else in this module."""
-        if not self._log_file():
-            return
-        try:
-            with open(self.log_path, "a", encoding="utf-8", errors="replace") as f:
-                f.write(_redact(_ANSI_ESCAPE_RE.sub("", text)))
-        except Exception:
-            pass
+        with self._lock:
+            if self._check_log_file():
+                try:
+                    self._file.write(_redact(_ANSI_ESCAPE_RE.sub("", text)))
+                    self._file.flush()
+                except Exception:
+                    pass

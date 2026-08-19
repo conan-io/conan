@@ -45,8 +45,7 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
 
     conan_log = ConanLog()
     log_path = conan_log.log_path
-    # A single pipe keeps stdout/stderr in the order the subprocess produced them,
-    # instead of one thread per pipe racing to write to the same destination
+    # A single pipe keeps stdout/stderr in the order the subprocess produced them
     merge_out_err = log_path and stdout is stderr
 
     out = subprocess.PIPE if (isinstance(stdout, StringIO) or log_path) else stdout

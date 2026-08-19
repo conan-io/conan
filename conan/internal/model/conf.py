@@ -81,7 +81,7 @@ BUILT_IN_CONFS = {
     # Compatibility opt-in, to be removed in future versions as optimized behavior becomes default
     "core.graph:compatibility_mode": "(Experimental) Set this to 'optimized' to enable the improved compatibility behaviour when querying multiple compatible binaries in remotes",
     # Command logging
-    "core.log:enabled": "(Experimental) If True, logs everything a command prints, including subprocess output, to a file under <conan_home>/.log",
+    "core.log:enabled": "(Experimental) If True, logs everything a command prints, including subprocess output, to a file under <conan_home>/.log. These files are not cleaned up automatically, and they can contain information from the command output",
     # Tools
     "tools.android:ndk_path": "Argument for the CMAKE_ANDROID_NDK",
     "tools.android:cmake_legacy_toolchain": "Define to explicitly pass ANDROID_USE_LEGACY_TOOLCHAIN_FILE in CMake toolchain",
