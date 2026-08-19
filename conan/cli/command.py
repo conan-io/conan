@@ -147,9 +147,8 @@ class ConanArgumentParser(argparse.ArgumentParser):
         global_conf = self._conan_api._api_helpers.global_conf  # noqa
         ConanLog.config(
             self._conan_api.config.get("core.log:enabled", default=False, check_type=bool),
-            self._conan_api.home_folder,
-            self.prog,
-            raw_args
+            self._conan_api.home_folder, self.prog, raw_args,
+            [getattr(args, "password", None), getattr(args, "token", None)]
         )
         # TODO: This might be even better moved to the ConanAPI so users without doing custom
         #  commands can benefit from it

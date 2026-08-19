@@ -1,28 +1,34 @@
 import os
 import threading
 
-import pytest
-
-from conan.internal.conan_log import ConanLog, _redact
+from conan.internal.conan_log import ConanLog
 from conan.test.utils.test_files import temp_folder
 
 
-@pytest.mark.parametrize("text,expected", [
-    ("conan remote login myremote user --password topsecret",
-     "conan remote login myremote user --password ********"),
-    ("conan remote login myremote user -p topsecret",
-     "conan remote login myremote user -p ********"),
-    ("conan remote login myremote user --password=topsecret",
-     "conan remote login myremote user --password=********"),
-    ("conan audit provider auth myprovider --token=abc123",
-     "conan audit provider auth myprovider --token=********"),
-    ("Uploading to https://myuser:mysecret@example.com/repo.git",
-     "Uploading to https://myuser:********@example.com/repo.git"),
-    ("hello/1.0: Building package\nsome/1.0: Nothing to redact here",
-     "hello/1.0: Building package\nsome/1.0: Nothing to redact here"),
-])
-def test_redact(text, expected):
-    assert _redact(text) == expected
+def test_redacts_known_secret_values_everywhere():
+    # Redaction is by exact known value (e.g. the parsed args.password/args.token),
+    # not by flag name: -p means --password in remote login, but --package-query in
+    # list and --provider in audit, so matching by flag name can't tell them apart
+    home = temp_folder()
+    ConanLog.config(True, home, "conan remote login", ["myremote", "user", "-p", "s3cr3t"],
+                    secrets=["s3cr3t"])
+    ConanLog().log_message("connecting with password s3cr3t in this message\n")
+    ConanLog().log_subprocess_call(b"subprocess echoed s3cr3t back\n", b"")
+
+    content = open(ConanLog.log_path, encoding="utf-8").read()
+    assert "s3cr3t" not in content
+    assert "# Command: conan remote login myremote user -p ********" in content
+    assert "connecting with password ******** in this message" in content
+    assert "subprocess echoed ******** back" in content
+
+
+def test_no_secrets_nothing_is_redacted():
+    home = temp_folder()
+    ConanLog.config(True, home, "conan list", ["hello/1.0:*", "-p", "os=Windows"])
+    ConanLog().log_message("hello/1.0: Nothing to redact here\n")
+    content = open(ConanLog.log_path, encoding="utf-8").read()
+    assert "# Command: conan list hello/1.0:* -p os=Windows" in content
+    assert "Nothing to redact here" in content
 
 
 def test_config_disabled_by_default():

@@ -57,14 +57,27 @@ class TestCommandLog:
         assert "list pkg" not in create_content
         assert "Created package" not in list_content
 
-    def test_redacts_password_end_to_end(self):
+    def test_redacts_password_by_value_end_to_end(self):
         c = TestClient(default_server_user=True)
         c.save_home({"global.conf": "core.log:enabled=True"})
         c.run("remote login default admin -p password")
 
         content = open(_log_files(c)[0], encoding="utf-8").read()
-        assert "password" not in content
         assert "-p ********" in content
+        assert content.count("password") == 0
+
+    def test_p_flag_not_confused_with_password_in_other_commands(self):
+        # Regression test: -p means --password in remote login, but --package-query in
+        # list; redacting by flag name used to mask this value as a false positive
+        c = TestClient()
+        c.save_home({"global.conf": "core.log:enabled=True"})
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+        c.run("create .")
+        c.run("list pkg/1.0:* -p os=Windows")
+
+        list_log = next(f for f in _log_files(c) if "list" in f)
+        content = open(list_log, encoding="utf-8").read()
+        assert "# Command: conan list pkg/1.0:* -p os=Windows" in content
 
     def test_subprocess_output_captured(self):
         c = TestClient()
