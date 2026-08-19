@@ -1,12 +1,39 @@
+import codecs
 import os
 import subprocess
 import sys
 import tempfile
+import threading
 from contextlib import contextmanager
-from io import StringIO
 
 from conan.errors import ConanException
 from conan.internal.util.files import load
+
+
+def _needs_pipe(stream):
+    """Streams that are not a file the subprocess can write to on its own, so they need
+    a pipe and the output read from it has to be forwarded with write(): the StringIO a
+    recipe passes to capture output, subprocess.DEVNULL and the like, or the OutputTee
+    that copies the console to the command log when core.log:enabled."""
+    if isinstance(stream, int):  # subprocess.DEVNULL and the like
+        return False
+    try:
+        stream.fileno()
+    except (AttributeError, ValueError, OSError):  # io.UnsupportedOperation is also this
+        return True
+    return False
+
+
+def _forward(pipe, stream):
+    """Copies the subprocess output to a Python stream, in chunks and not lines, so a
+    progress bar that only writes '\\r' is not withheld until it finishes."""
+    decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    with pipe:
+        for chunk in iter(lambda: pipe.read1(4096), b""):
+            stream.write(decoder.decode(chunk))
+    pending = decoder.decode(b"", final=True)
+    if pending:
+        stream.write(pending)
 
 
 if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
@@ -43,8 +70,11 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
     stdout = stdout or sys.stderr
     stderr = stderr or sys.stderr
 
-    out = subprocess.PIPE if isinstance(stdout, StringIO) else stdout
-    err = subprocess.PIPE if isinstance(stderr, StringIO) else stderr
+    piped_stdout, piped_stderr = _needs_pipe(stdout), _needs_pipe(stderr)
+    out = subprocess.PIPE if piped_stdout else stdout
+    # A single pipe keeps stdout/stderr in the order the subprocess produced them
+    merged = stdout is stderr and piped_stdout
+    err = subprocess.STDOUT if merged else (subprocess.PIPE if piped_stderr else stderr)
 
     with pyinstaller_bundle_env_cleaned():
         try:
@@ -52,14 +82,17 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
         except Exception as e:
             raise ConanException("Error while running cmd\nError: %s" % (str(e)))
 
-        proc_stdout, proc_stderr = proc.communicate()
-        # If the output is piped, like user provided a StringIO or testing, the communicate
-        # will capture and return something when thing finished
-        if proc_stdout:
-            stdout.write(proc_stdout.decode("utf-8", errors="ignore"))
-        if proc_stderr:
-            stderr.write(proc_stderr.decode("utf-8", errors="ignore"))
-        return proc.returncode
+        pipes = [(pipe, stream) for pipe, stream in ((proc.stdout, stdout), (proc.stderr, stderr))
+                if pipe is not None]
+        # Both pipes have to be read at once, or the subprocess blocks when one fills up
+        threads = [threading.Thread(target=_forward, args=pipe) for pipe in pipes[1:]]
+        for thread in threads:
+            thread.start()
+        if pipes:
+            _forward(*pipes[0])
+        for thread in threads:
+            thread.join()
+        return proc.wait()
 
 
 def detect_runner(command):
