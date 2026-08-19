@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import platform
@@ -217,6 +218,31 @@ def test_cache_restore_dirty_folders():
     assert load(os.path.join(src_folder, "mysrc.c")) == "source!!"
     assert not is_dirty(pkg_folder)
     assert not is_dirty(src_folder)
+
+
+def test_cache_restore_rejects_outside_paths():
+    """ a parent-directory tar member must not be written outside the package-cache store
+    """
+    _, cache_path = _save_built_package()
+    file_name = "../outside.txt"
+    tar_file = os.path.join(os.path.dirname(cache_path), "cache.tgz")
+
+    with tarfile.open(cache_path, "r:gz") as inn, tarfile.open(crafted, "w:gz") as out:
+        for member in inn.getmembers():
+            out.addfile(member, inn.extractfile(member) if member.isfile() else None)
+        payload = marker.encode()
+        info = tarfile.TarInfo(name=marker_name)
+        info.size = len(payload)
+        out.addfile(info, io.BytesIO("empty"))
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{tar_file}"')
+    store = os.path.join(c2.cache_folder, "p")
+    outside = os.path.normpath(os.path.join(store, file_name))
+    # outside file is not restored
+    assert not os.path.exists(outside)
+    # check the package was restored
+    assert load(os.path.join(_pkg_folder(c2), "bin", "f.txt")) == "content!!"
 
 
 @pytest.mark.parametrize("extractions", [0, 2])

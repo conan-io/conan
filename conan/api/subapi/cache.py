@@ -510,19 +510,35 @@ def _cache_path(folder, cache_folder):
 class _RestorePlan:
     """ Where every folder of a "conan cache save" archive has to be extracted in this cache,
     which is not necessarily the folder it had in the cache that created the archive
+
+    The plan is built first, adding every folder of the archive that has to be restored, and
+    then it is executed with "extract()". Only the folders added to the plan are extracted, and
+    they are extracted directly to the destination the cache DB assigned to them in this cache,
+    so no other contents of the archive are written to the cache store.
     """
 
     def __init__(self, cache_folder):
+        """
+        :param cache_folder: The cache store folder, the root all the extractions are relative to
+        """
         self._cache_folder = cache_folder
         self._folders = {}  # {folder in the archive: folder in the cache, relative to the store}
         self._dirty = set()  # Folders marked while they are extracted, to detect incomplete ones
         self._restored = set()  # Folders already extracted
 
     def add_contents(self, folder, dest, replace, dirty=False):
-        """ Recipes and packages are immutable, if the revision is already in this cache the
+        """ Add a folder of recipe or package contents to the plan, unless it is already in this
+        cache. Recipes and packages are immutable, if the revision is already in this cache the
         contents are the same, and they are not extracted again, so their files are never
         overwritten. The contents of a revision that is not in the DB are leftovers, not valid
         contents, and they are replaced
+
+        :param folder: The folder in the archive, as it was in the cache that created it
+        :param dest: The absolute folder in this cache where those contents have to be extracted
+        :param replace: If True, existing contents in ``dest`` are leftovers and are removed
+           before extracting. If False, ``dest`` contents are valid and nothing is extracted
+        :param dirty: If True, ``dest`` is marked as dirty while it is extracted, so an
+           interrupted extraction leaves incomplete contents that will not be used
         """
         if os.path.exists(dest):
             if not replace:
@@ -533,15 +549,29 @@ class _RestorePlan:
             self._dirty.add(folder)
 
     def add_metadata(self, folder, dest):
-        """ Metadata is not immutable, it is always restored, adding to the existing one """
+        """ Add a metadata folder to the plan. Metadata is not immutable, it is always restored,
+        adding to the existing one
+
+        :param folder: The metadata folder in the archive
+        :param dest: The absolute metadata folder in this cache where it has to be extracted
+        """
         self._folders[folder] = _cache_path(dest, self._cache_folder)
 
     def restored(self, folder):
+        """ If the contents of an archive folder were already extracted, used after a failure to
+        know which new DB entries have contents and which ones have to be removed
+
+        :param folder: The folder in the archive
+        :return: True if that folder was already extracted
+        """
         return folder in self._restored
 
     def extract(self, the_tar):
-        """ Extract one folder at a time, in the order they are in the archive, so the stream
-        is read forwards, and an interrupted extraction only leaves one incomplete folder
+        """ Extract the planned folders, one folder at a time, in the order they are in the
+        archive, so the stream is read forwards, and an interrupted extraction only leaves one
+        incomplete folder. Members that do not belong to any planned folder are not extracted
+
+        :param the_tar: The open tarfile of the "conan cache save" archive to restore
         """
         groups = {}  # {folder in the archive: [members]}, in the order of the archive
         for member in the_tar.getmembers():
@@ -560,15 +590,26 @@ class _RestorePlan:
 
     def _locate(self, name):
         """ The folder to restore this archive member belongs to, and the path, relative to the
-        cache store, where it has to be extracted. None if the member is not restored
+        cache store, where it has to be extracted
+
+        The member is a path in the archive, and only its folders are known, so the member path
+        is checked from the longest to the shortest prefix, until one of them is a folder to
+        restore, and the rest of the member path is appended to that folder destination:
+           "abcde1234/e/conanfile.py" with {"abcde1234/e": "fghij5678/e"} is extracted as
+           "fghij5678/e/conanfile.py"
+
+        :param name: The member path in the archive
+        :return: A tuple (folder in the archive, path relative to the cache store where the
+           member has to be extracted), or None if the member does not belong to any planned
+           folder, so it is not restored, like "pkglist.json" or the contents already in this
+           cache, but also any member trying to escape the folders of the plan
         """
-        path, tail = name, ""
-        while path:
-            dest = self._folders.get(path)
+        parts = name.split("/")
+        for i in range(len(parts), 0, -1):
+            folder = "/".join(parts[:i])
+            dest = self._folders.get(folder)
             if dest is not None:
-                return path, dest + tail
-            path, _, last = path.rpartition("/")
-            tail = f"/{last}{tail}"
+                return folder, "/".join([dest] + parts[i:])
         return None
 
 
