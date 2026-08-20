@@ -230,10 +230,10 @@ def test_cache_restore_rejects_outside_paths():
     with tarfile.open(cache_path, "r:gz") as inn, tarfile.open(tar_file, "w:gz") as out:
         for member in inn.getmembers():
             out.addfile(member, inn.extractfile(member) if member.isfile() else None)
-        payload = marker.encode()
-        info = tarfile.TarInfo(name=marker_name)
+        payload = b"outside!!"
+        info = tarfile.TarInfo(name=file_name)
         info.size = len(payload)
-        out.addfile(info, io.BytesIO("empty"))
+        out.addfile(info, io.BytesIO(payload))
 
     c2 = TestClient()
     c2.run(f'cache restore "{tar_file}"')
