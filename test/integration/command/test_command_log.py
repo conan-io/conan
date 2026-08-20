@@ -1,8 +1,6 @@
 import os
 import textwrap
 
-import pytest
-
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -21,21 +19,27 @@ class TestCommandLog:
         c.run("create .")
         assert not _log_files(c)
 
-    @pytest.mark.parametrize("enable_via", ["core_conf", "global_conf"])
-    def test_enabled(self, enable_via):
+    def test_enabled(self):
+        # core.log:enabled is only honored from global.conf: it is read before any
+        # argument is parsed, so a `-cc core.log:enabled=True` override isn't seen yet
         c = TestClient()
         c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
-        if enable_via == "global_conf":
-            c.save_home({"global.conf": "core.log:enabled=True"})
-            c.run("create .")
-        else:
-            c.run("create . -cc core.log:enabled=True")
+        c.save_home({"global.conf": "core.log:enabled=True"})
+        c.run("create .")
 
         logs = _log_files(c)
         assert len(logs) == 1
         content = open(logs[0], encoding="utf-8").read()
         assert "# Command: conan create ." in content
         assert "pkg/1.0" in content
+
+    def test_core_conf_override_not_honored(self):
+        # Trade-off of activating once, up front, in Cli.run(): core.log:enabled is
+        # read before any argument is parsed, so -cc can't be seen yet at that point
+        c = TestClient()
+        c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+        c.run("create . -cc core.log:enabled=True")
+        assert not _log_files(c)
 
     def test_independent_log_per_command_same_process(self):
         # Regression test: several commands sharing one TestClient (one process) must
@@ -114,6 +118,7 @@ class TestCommandLog:
         # Regression test: self.run(cmd, quiet=True) maps stdout/stderr to
         # subprocess.DEVNULL, which used to crash trying to write() to it
         c = TestClient()
+        c.save_home({"global.conf": "core.log:enabled=True"})
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -124,7 +129,7 @@ class TestCommandLog:
                     self.run("echo loud-output")
             """)
         c.save({"conanfile.py": conanfile})
-        c.run("create . -cc core.log:enabled=True")
+        c.run("create .")
 
         content = open(_log_files(c)[0], encoding="utf-8").read()
         assert "loud-output" in content
@@ -132,6 +137,7 @@ class TestCommandLog:
 
     def test_subprocess_output_captured(self):
         c = TestClient()
+        c.save_home({"global.conf": "core.log:enabled=True"})
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -141,7 +147,7 @@ class TestCommandLog:
                     self.run("echo hello-from-subprocess")
             """)
         c.save({"conanfile.py": conanfile})
-        c.run("create . -cc core.log:enabled=True")
+        c.run("create .")
 
         content = open(_log_files(c)[0], encoding="utf-8").read()
         assert "hello-from-subprocess" in content

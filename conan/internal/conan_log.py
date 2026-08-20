@@ -14,54 +14,53 @@ from conan.internal.cache.home_paths import HomePaths
 
 
 class ConanLog:
-    """config() must be called once per command, normally from
-    ConanArgumentParser.parse_args(), with core.log:enabled read through conan_api.config.
-    log_path is set right away; the file itself, kept open for the whole command once
-    created, is only opened on first use. All writes go through _lock, since Conan prints
-    from several threads at once (parallel downloads, uploads, installs)."""
+    """activate() computes log_path once per top-level Cli.run() call; core.log:enabled
+    is read before any argument is parsed, so only global.conf is honored, not a `-cc
+    core.log:enabled=True` override. set_context() is called later, once the command's
+    arguments (e.g. --password) are known, and commits the header on its own first
+    call so a nested command can't steal it. The file is opened lazily on first use.
+    All writes go through _lock, since Conan prints from several threads at once."""
 
     log_path = None
     _date = None
     _command = None
     _file = None
     _secrets = []
-    _nesting = 0
     _lock = threading.RLock()
 
     @classmethod
-    def config(cls, enabled, home, command_name, raw_args, secrets=None):
-        """command_name and raw_args rebuild the command line. secrets are exact
-        values redacted wherever they show up. A no-op while nested(): a command
-        calling another one in the same process shares the outer command's log."""
-        if cls._nesting > 0:
+    @contextmanager
+    def activate(cls, conan_api, raw_args):
+        if not conan_api.config.get("core.log:enabled", default=False, check_type=bool):
+            yield
             return
-        if cls._file is not None:
-            try:
-                cls._file.close()
-            except Exception:
-                pass
-        cls.log_path = None
-        cls._file = None
-        cls._secrets = [s for s in (secrets or []) if s]
-        if not enabled:
-            return
-        log_dir = HomePaths(home).command_logs_path
-        safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", command_name)
+        log_dir = HomePaths(conan_api.home_folder).command_logs_path
+        safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", raw_args[0]) if raw_args else "conan"
         cls._date = datetime.now()
-        cls._command = " ".join([command_name] + raw_args)
         cls.log_path = os.path.join(
             log_dir, f"{cls._date:%Y%m%d_%H%M%S}_{os.getpid()}_{safe_name}.log")
-
-    @classmethod
-    @contextmanager
-    def nested(cls):
-        """Used by CommandAPI.run() when a command calls another one in the same
-        process, so the nested command's own config() call is a no-op."""
-        cls._nesting += 1
         try:
             yield
         finally:
-            cls._nesting -= 1
+            with cls._lock:
+                if cls._file is not None:
+                    cls._file.close()
+                cls.log_path = None
+                cls._file = None
+                cls._command = None
+                cls._secrets = []
+
+    @classmethod
+    def set_context(cls, command_name, raw_args, secrets):
+        """command_name and raw_args rebuild the command line. secrets are exact
+        values redacted wherever they show up."""
+        if cls.log_path is None:
+            return
+        with cls._lock:
+            cls._secrets.extend(s for s in (secrets or []) if s)
+            if cls._file is None:
+                cls._command = " ".join([command_name] + raw_args)
+                cls._check_log_file()
 
     @classmethod
     def _redact(cls, text):
