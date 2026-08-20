@@ -227,7 +227,7 @@ def test_cache_restore_rejects_outside_paths():
     file_name = "../outside.txt"
     tar_file = os.path.join(os.path.dirname(cache_path), "cache.tgz")
 
-    with tarfile.open(cache_path, "r:gz") as inn, tarfile.open(crafted, "w:gz") as out:
+    with tarfile.open(cache_path, "r:gz") as inn, tarfile.open(tar_file, "w:gz") as out:
         for member in inn.getmembers():
             out.addfile(member, inn.extractfile(member) if member.isfile() else None)
         payload = marker.encode()
