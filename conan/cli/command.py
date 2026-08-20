@@ -145,11 +145,8 @@ class ConanArgumentParser(argparse.ArgumentParser):
             self._conan_api._api_helpers.set_core_confs(args.core_conf)  # noqa
 
         global_conf = self._conan_api._api_helpers.global_conf  # noqa
-        ConanLog.config(
-            self._conan_api.config.get("core.log:enabled", default=False, check_type=bool),
-            self._conan_api.home_folder, self.prog, raw_args,
-            [getattr(args, "password", None), getattr(args, "token", None)]
-        )
+        ConanLog.write_header(self.prog, raw_args,
+                              [getattr(args, "password", None), getattr(args, "token", None)])
         # TODO: This might be even better moved to the ConanAPI so users without doing custom
         #  commands can benefit from it
         ConanOutput.set_warnings_as_errors(global_conf.get("core:warnings_as_errors",

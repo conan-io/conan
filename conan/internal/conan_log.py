@@ -81,58 +81,48 @@ class OutputTee:
 
 
 class ConanLog:
-    """config() is called once per command dispatch, from ConanArgumentParser.parse_args(),
-    with core.log:enabled read through conan_api.config: this way it sees --core-conf
-    overrides and a custom ConanAPI(cache_folder=...). A no-op while nested(): a command
-    calling another one in the same process shares the outer command's log instead of
-    installing its own."""
+    """activate() wraps sys.stdout/sys.stderr for the whole lifetime of a top-level
+    Cli.run() call. core.log:enabled is read before any argument is parsed, so only
+    global.conf is used, not a `-cc core.log:enabled=True` override. write_header()
+    is called later, once the command's own arguments (e.g. --password) are known, to
+    redact them and write the command line as the log header."""
 
     _log_file = None
-    _saved_stdout = None
-    _saved_stderr = None
-    _nesting = 0
 
     @classmethod
-    def config(cls, enabled, home, command_name, raw_args, secrets=None):
-        if cls._nesting > 0:
+    @contextmanager
+    def activate(cls, conan_api, raw_args):
+        if not conan_api.config.get("core.log:enabled", default=False, check_type=bool):
+            yield
             return
-        cls._teardown()
-        if not enabled:
-            return
-        log_dir = HomePaths(home).command_logs_path
-        safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", command_name)
-        now = datetime.now()
-        path = os.path.join(log_dir, f"{now:%Y%m%d_%H%M%S}_{os.getpid()}_{safe_name}.log")
+        log_dir = HomePaths(conan_api.home_folder).command_logs_path
+        safe_name = re.sub(r"[^A-Za-z0-9_.-]", "_", raw_args[0]) if raw_args else "conan"
+        path = os.path.join(log_dir,
+                            f"{datetime.now():%Y%m%d_%H%M%S}_{os.getpid()}_{safe_name}.log")
         try:
             os.makedirs(log_dir, exist_ok=True)
-            log_file = LogFile(path)
+            cls._log_file = LogFile(path)
         except Exception as e:
             from conan.api.output import ConanOutput
             ConanOutput().warning(f"core.log:enabled couldn't create the log file: {e}")
+            yield
             return
-        log_file.secrets = [s for s in (secrets or []) if s]
-        log_file.write(f"# Date: {now:%Y-%m-%d %H:%M:%S}\n"
-                       f"# Command: {log_file.redact(' '.join([command_name] + raw_args))}\n"
-                       f"{'#' + '-' * 60}\n")
-        cls._log_file = log_file
-        cls._saved_stdout, cls._saved_stderr = sys.stdout, sys.stderr
-        sys.stdout = OutputTee(sys.stdout, log_file)
-        sys.stderr = OutputTee(sys.stderr, log_file)
-
-    @classmethod
-    def _teardown(cls):
-        if cls._log_file is not None:
-            sys.stdout, sys.stderr = cls._saved_stdout, cls._saved_stderr
+        saved_stdout, saved_stderr = sys.stdout, sys.stderr
+        sys.stdout = OutputTee(sys.stdout, cls._log_file)
+        sys.stderr = OutputTee(sys.stderr, cls._log_file)
+        try:
+            yield
+        finally:
+            sys.stdout, sys.stderr = saved_stdout, saved_stderr
             cls._log_file.close()
             cls._log_file = None
 
     @classmethod
-    @contextmanager
-    def nested(cls):
-        """Used by CommandAPI.run() when a command calls another one in the same
-        process, so the nested command's own config() call is a no-op."""
-        cls._nesting += 1
-        try:
-            yield
-        finally:
-            cls._nesting -= 1
+    def write_header(cls, command_name, raw_args, secrets):
+        if cls._log_file is None:
+            return
+        cls._log_file.secrets.extend(s for s in (secrets or []) if s)
+        cls._log_file.write(
+            f"# Date: {datetime.now():%Y-%m-%d %H:%M:%S}\n"
+            f"# Command: {cls._log_file.redact(' '.join([command_name] + raw_args))}\n"
+            f"{'#' + '-' * 60}\n")
