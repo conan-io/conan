@@ -106,6 +106,7 @@ arch: [x86, x86_64, ppc32be, ppc32, ppc64le, ppc64,
        mips, mips64, avr, s390, s390x, asm.js, wasm, wasm64, sh4le,
        e2k-v2, e2k-v3, e2k-v4, e2k-v5, e2k-v6, e2k-v7,
        riscv64, riscv32,
+       loongarch64,
        xtensalx6, xtensalx106, xtensalx7,
        tc131, tc16, tc161, tc162, tc18]
 compiler:
