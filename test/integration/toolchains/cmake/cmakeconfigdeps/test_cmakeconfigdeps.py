@@ -1271,16 +1271,21 @@ class TestNoSoname:
 class TestRequireTraitsFiltering:
     """
     The ``headers``/``libs`` require traits control which pieces of a dependency's target
-    are generated: ``headers=False`` drops include dirs/defines, ``libs=False`` drops
-    everything needed to link (location, system_libs, frameworks), and dropping both drops
-    the remaining compile/link flags and sources too. The target itself always keeps
-    existing (as a bare INTERFACE import) so ``target_link_libraries`` doesn't fail to
-    resolve the name, and it stays reachable through ``dep::dep``'s "requires" links.
+    are generated: ``headers=False`` drops include dirs/defines, ``libs=False`` drops the
+    package's own *extra* link inputs (system_libs, frameworks), and dropping both drops
+    the remaining compile/link flags and sources too. The library's own location/type is
+    NOT gated by ``libs`` (see ``test_transitive_private_shared_lib_keeps_location`` below):
+    on Linux, `ld` can need to resolve an indirectly-needed .so at link time even when this
+    particular requirement won't link it itself. The target itself always keeps existing
+    (as a bare INTERFACE import when there is nothing to link) so ``target_link_libraries``
+    doesn't fail to resolve the name, and it stays reachable through ``dep::dep``'s
+    "requires" links.
     """
 
-    def test_libs_false_skips_link_information_keeps_headers(self):
-        """libs=False must not link the library, its system_libs or its frameworks, but
-        headers=True must still expose include dirs and defines."""
+    def test_libs_false_keeps_location_skips_system_libs_and_frameworks(self):
+        """libs=False must not add the package's own extra system_libs/frameworks, but the
+        library's own location/type is unaffected, and headers=True must still expose
+        include dirs and defines."""
         c = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1307,8 +1312,9 @@ class TestRequireTraitsFiltering:
         c.run("create dep")
         c.run("install app -g CMakeConfigDeps")
         cmake = c.load("app/dep-Targets-release.cmake")
-        assert "add_library(dep::dep INTERFACE IMPORTED)" in cmake
-        for absent in ("IMPORTED_LOCATION", "pthread", "CoreFoundation", "IMPORTED_IMPLIB"):
+        assert "add_library(dep::dep SHARED IMPORTED)" in cmake
+        assert "IMPORTED_LOCATION_RELEASE" in cmake
+        for absent in ("pthread", "CoreFoundation", "IMPORTED_IMPLIB"):
             assert absent not in cmake
         assert "INTERFACE_INCLUDE_DIRECTORIES" in cmake
         assert "DEP_DEFINE" in cmake
@@ -1379,14 +1385,18 @@ class TestRequireTraitsFiltering:
         c.run("create dep")
         c.run("install app -g CMakeConfigDeps")
         cmake = c.load("app/dep-Targets-release.cmake")
-        assert "add_library(dep::dep INTERFACE IMPORTED)" in cmake
-        for absent in ("IMPORTED_LOCATION", "INTERFACE_INCLUDE_DIRECTORIES", "DEP_DEFINE",
+        # Location/type are unaffected by libs=False (see class docstring), only the flags/
+        # sources actually gated by the combined headers=False+libs=False are dropped
+        assert "add_library(dep::dep SHARED IMPORTED)" in cmake
+        assert "IMPORTED_LOCATION_RELEASE" in cmake
+        for absent in ("INTERFACE_INCLUDE_DIRECTORIES", "DEP_DEFINE",
                        "-fdep-cxx", "-fdep-c", "-Wl,--dep-shared", "-Wl,--dep-exe",
                        "INTERFACE_SOURCES", "extra.cpp"):
             assert absent not in cmake
 
-    def test_libs_false_on_component_skips_link_information(self):
-        """The same filtering must apply to named components, not just the root cpp_info."""
+    def test_libs_false_on_component_skips_system_libs(self):
+        """The same filtering must apply to named components, not just the root cpp_info:
+        libs=False drops the component's own system_libs, but not its location/type."""
         c = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1411,10 +1421,72 @@ class TestRequireTraitsFiltering:
         c.run("create dep")
         c.run("install app -g CMakeConfigDeps")
         cmake = c.load("app/dep-Targets-release.cmake")
-        assert "add_library(dep::comp INTERFACE IMPORTED)" in cmake
-        assert "IMPORTED_LOCATION" not in cmake
+        assert "add_library(dep::comp SHARED IMPORTED)" in cmake
+        assert "IMPORTED_LOCATION_RELEASE" in cmake
         assert "pthread" not in cmake
         assert "INTERFACE_INCLUDE_DIRECTORIES" in cmake
+
+    def test_transitive_private_shared_lib_keeps_location(self):
+        """
+        Regression test for https://github.com/conan-io/conan/pull/20277: "engine" (SHARED)
+        privately links "matrix" (matrix is not exposed to engine's own consumers, so from
+        "app"'s point of view matrix ends up with headers=False, libs=False). libengine.so
+        still has a real DT_NEEDED entry for libmatrix.so, so on Linux `ld` needs to resolve
+        that transitively at link time (via -rpath-link, which CMake derives from
+        IMPORTED_LOCATION) whenever anything links engine - even though "app" never links
+        matrix directly (from app's point of view matrix ends up headers=False, libs=False;
+        it only stays in the graph at all because "app" is an application and needs matrix's
+        shared lib to be run=True). matrix::matrix must therefore still carry a real location.
+        """
+        c = TestClient()
+        matrix = textwrap.dedent("""
+            from conan import ConanFile
+            class Matrix(ConanFile):
+                name = "matrix"
+                version = "0.1"
+                package_type = "shared-library"
+                def package_info(self):
+                    self.cpp_info.libs = ["matrix"]
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.location = "lib/libmatrix.so"
+            """)
+        engine = textwrap.dedent("""
+            from conan import ConanFile
+            class Engine(ConanFile):
+                name = "engine"
+                version = "0.1"
+                package_type = "shared-library"
+                def requirements(self):
+                    # Privately linked: not part of engine's own public interface
+                    self.requires("matrix/0.1", transitive_headers=False, transitive_libs=False)
+                def package_info(self):
+                    self.cpp_info.libs = ["engine"]
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.location = "lib/libengine.so"
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class App(ConanFile):
+                package_type = "application"
+                settings = "os", "arch", "compiler", "build_type"
+                def requirements(self):
+                    self.requires("engine/0.1")
+            """)
+        c.save({"matrix/conanfile.py": matrix, "engine/conanfile.py": engine,
+                "app/conanfile.py": app})
+        c.run("create matrix")
+        c.run("create engine")
+        c.run("install app -g CMakeConfigDeps")
+        # engine::engine must still actively link its own, private, direct requirement to
+        # matrix::matrix
+        engine_cmake = c.load("app/engine-Targets-release.cmake")
+        assert "matrix::matrix" in engine_cmake
+        # matrix::matrix must still carry a real location, even though "app" itself doesn't
+        # need to link it (libs=False, headers=False as seen from "app")
+        matrix_cmake = c.load("app/matrix-Targets-release.cmake")
+        assert "add_library(matrix::matrix SHARED IMPORTED)" in matrix_cmake
+        assert "IMPORTED_LOCATION_RELEASE" in matrix_cmake
+        assert "INTERFACE_INCLUDE_DIRECTORIES" not in matrix_cmake
 
     def test_libs_and_package_framework_still_validated_when_libs_false(self):
         """The .libs/.package_framework mutual exclusivity check validates the dependency's

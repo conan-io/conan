@@ -596,26 +596,32 @@ class _CMakeContextGenerator:
                 if len(info.libs) != 1:
                     raise ConanException(f"New CMakeDeps only allows 1 lib per component:\n"
                                          f"{self._ctx.dep}: {info.libs}")
-                if self._ctx.require.libs:
-                    # If not depending on libs, don't generate a target with a location
-                    assert info.location, \
-                        "info.location missing for .libs, it should have been deduced"
-                    location = self._cmake_pkg_path(info.location)
-                    link_location = (self._cmake_pkg_path(info.link_location)
-                                     if info.link_location else None)
-                    lib_type = "SHARED" if info.type is PackageType.SHARED else \
-                        "STATIC" if info.type is PackageType.STATIC else None
-                    assert lib_type, f"Unknown package type {info.type}"
-                    target["type"] = lib_type
-                    target["location"] = location
-                    target["link_location"] = link_location
-                    link_languages = info.languages or self._ctx.dep.languages or []
-                    link_languages = ["CXX" if c == "C++" else c for c in link_languages]
-                    target["link_languages"] = link_languages
-                    nosoname = self._ctx.get_property("nosoname", comp_name=comp_name,
-                                                       check_type=bool)
-                    if lib_type == "SHARED" and nosoname:
-                        target["no_soname"] = True
+                # IMPORTANT! LINKERS IN LINUX FOR SHARED MIGHT NEED THE LOCATION EVEN IF NOT
+                # REALLY LINKING THIS LIB: e.g. "engine" privately links "matrix" (matrix is
+                # not required directly by the consumer, so require.libs=False here), but
+                # libengine.so still has a DT_NEEDED entry for libmatrix.so, and on Linux `ld`
+                # must resolve that transitively at link time (via -rpath-link, which CMake
+                # derives from IMPORTED_LOCATION). So do NOT gate this on self._ctx.require.libs.
+                # Whether this target actually gets linked anywhere is a separate, per-edge
+                # decision already made above, in "requires".
+                assert info.location, \
+                    "info.location missing for .libs, it should have been deduced"
+                location = self._cmake_pkg_path(info.location)
+                link_location = (self._cmake_pkg_path(info.link_location)
+                                 if info.link_location else None)
+                lib_type = "SHARED" if info.type is PackageType.SHARED else \
+                    "STATIC" if info.type is PackageType.STATIC else None
+                assert lib_type, f"Unknown package type {info.type}"
+                target["type"] = lib_type
+                target["location"] = location
+                target["link_location"] = link_location
+                link_languages = info.languages or self._ctx.dep.languages or []
+                link_languages = ["CXX" if c == "C++" else c for c in link_languages]
+                target["link_languages"] = link_languages
+                nosoname = self._ctx.get_property("nosoname", comp_name=comp_name,
+                                                   check_type=bool)
+                if lib_type == "SHARED" and nosoname:
+                    target["no_soname"] = True
             return target
 
         def _get_aliases(self, comp_name=None):
