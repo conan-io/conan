@@ -1266,3 +1266,50 @@ class TestNoSoname:
         c.run("install --requires=dep/0.1 -g CMakeConfigDeps")
         cmake = c.load("dep-Targets-release.cmake")
         assert "IMPORTED_NO_SONAME" not in cmake
+
+
+def test_find_mode_none():
+    tc = TestClient()
+
+    dep = textwrap.dedent("""
+    from conan import ConanFile
+    class Dep(ConanFile):
+        name = "dep"
+        version = "0.1"
+        settings = "os", "arch", "compiler", "build_type"
+
+        def package_info(self):
+            self.cpp_info.set_property("cmake_find_mode", "none")
+    """)
+
+    a = textwrap.dedent("""
+    from conan import ConanFile
+    class A(ConanFile):
+        name = "liba"
+        version = "0.1"
+        settings = "os", "arch", "compiler", "build_type"
+        generators = "CMakeConfigDeps", "CMakeToolchain"
+        requires = "dep/0.1"
+    """)
+
+    consumer = textwrap.dedent("""
+    from conan import ConanFile
+    class Consumer(ConanFile):
+        name = "consumer"
+        version = "0.1"
+        requires = "liba/0.1"
+        settings = "os", "arch", "compiler", "build_type"
+        generators = "CMakeConfigDeps", "CMakeToolchain"
+
+    """)
+
+    tc.save({"dep/conanfile.py": dep,
+             "liba/conanfile.py": a,
+             "conanfile.py": consumer})
+
+    tc.run("create dep")
+    tc.run("create liba")
+    tc.run("install .")
+    target_dependency = tc.load("liba-Targets-release.cmake")
+    # The dependency should not have CONFIG requirement
+    assert "find_dependency(dep REQUIRED )" in target_dependency
