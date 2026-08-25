@@ -197,14 +197,52 @@ class CMakeConfigDeps:
             if comp is not None:
                 return comp.get_property(prop, check_type=check_type)
 
-    def get_cmake_filename(self, dep):
-        # Get the name of the file for the find_package(XXX)
-        # This is used by CMakeDeps to determine:
-        # - The filename to generate (XXX-config.cmake or FindXXX.cmake)
-        # - The name of the defined XXX_DIR variables
-        # - The name of transitive dependencies for calls to find_dependency
-        ret = self.get_property("cmake_file_name", dep)
-        return ret or dep.ref.name
+    def get_cmake_filenames_info(self, dep, full_cpp_info=None):
+        """
+        Get the name of the files for the find_package(XXX) for the root and the rest of
+        the components.
+        This is used by CMakeConfigDeps to determine:
+            - The filename to generate (XXX-config.cmake or FindXXX.cmake)
+            - The name of the defined XXX_DIR variables
+            - The name of transitive dependencies for calls to find_dependency
+
+        This method creates a map for the root/components belonging to each XXX-config file.
+        It also reads the properties:
+            - cmake_file_component_names: dict mapping each CMake package file name to a dict with
+              ``components`` (list of component names) and optional ``properties`` (per-file
+              overrides for CMakeConfigDeps global properties).
+            - cmake_file_name: name for the root config file.
+        """
+        ret = {}
+        components = full_cpp_info.components if full_cpp_info else dep.cpp_info.components
+        left_components_in_dep = list(components.keys())
+        default_components = dep.cpp_info.default_components or []
+        components_file_info = self.get_property("cmake_file_component_names", dep) or {}
+        for filename, global_cpp_info in components_file_info.items():
+            cmps_per_file = global_cpp_info.get("components", [])
+            for name in cmps_per_file:
+                if name in default_components:
+                    raise ConanException(f"The default component '{name}' is defined in "
+                                         f"another CMake Config file. Check the "
+                                         f"'cmake_file_component_names' property.")
+                elif name not in left_components_in_dep:
+                    raise ConanException(f"Component '{name}' does not exist. Check the "
+                                         f"'cmake_file_component_names' property definition.")
+                else:
+                    left_components_in_dep.remove(name)  # total of components within the root Config file
+            ret[filename] = {"components": cmps_per_file,
+                             "full_cpp_info": full_cpp_info,
+                             "properties": global_cpp_info.get("properties", {}),
+                             "is_root": False}
+        # Root filename (if needed)
+        if not dep.cpp_info.has_components or left_components_in_dep:
+            # Then let's add the root global cmake_file_name
+            root_filename = self.get_property("cmake_file_name", dep) or dep.ref.name
+            if root_filename not in ret:
+                ret[root_filename] = {"components": left_components_in_dep,
+                                      "full_cpp_info": full_cpp_info,
+                                      "is_root": True}
+        return ret
 
 
 class _CMakeContextGenerator:
