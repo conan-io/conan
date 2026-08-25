@@ -52,7 +52,8 @@ def test_api_command():
     assert result[0].name == "conancenter"
 
 
-def test_api_command_error():
+@pytest.mark.parametrize("raise_on_errors", [True, False])
+def test_api_command_error(raise_on_errors):
     """ ``conan_api.command.run()`` does NOT raise a build/install error by itself: "create"/
     "install" defer it into a "conan_error" entry of their result instead of raising directly
     (so formatters can still run, e.g. to write "graph.json" on failure, see #19204). It is the
@@ -64,9 +65,14 @@ def test_api_command_error():
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_package("raise Exception('boom')")})
     c.run("export .")
-    result = c.api.command.run(["create", c.current_folder])
-    assert isinstance(result["conan_error"], ConanException)
-    assert "boom" in str(result["conan_error"])
+    if raise_on_errors:
+        with pytest.raises(ConanException) as e:
+            c.api.command.run(["create", c.current_folder], raise_on_errors=raise_on_errors)
+        assert "boom" in str(e.value)
+    else:
+        result = c.api.command.run(["create", c.current_folder], raise_on_errors=raise_on_errors)
+        assert isinstance(result["conan_error"], ConanException)
+        assert "boom" in str(result["conan_error"])
 
 
 def test_main():

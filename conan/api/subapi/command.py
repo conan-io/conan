@@ -19,7 +19,7 @@ class CommandAPI:
         self._conan_api = conan_api
         self.cli = None
 
-    def run(self, cmd, raise_on_errors=False):
+    def run(self, cmd, raise_on_errors=True):
         """ Runs another Conan command via API
 
         :param cmd: Conan command to run. It can be either a string, or a list of strings.
