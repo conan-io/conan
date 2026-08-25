@@ -200,8 +200,8 @@ def test_cache_save_restore_read_only_files():
 
 
 def test_cache_restore_dirty_folders():
-    """ the folders left incomplete by an interrupted restore are dirty, so they are replaced
-    by the next restore, not skipped as if they were valid """
+    """ the folders left incomplete by an interrupted download or "conan source" are dirty, so
+    they are replaced by the restore, not skipped as if they were valid """
     _, cache_path = _save_built_package()
 
     c2 = TestClient()
@@ -220,58 +220,49 @@ def test_cache_restore_dirty_folders():
     assert not is_dirty(src_folder)
 
 
-def test_cache_restore_rejects_outside_paths():
-    """ a parent-directory tar member must not be written outside the package-cache store
-    """
-    _, cache_path = _save_built_package()
-    file_name = "../outside.txt"
-    tar_file = os.path.join(os.path.dirname(cache_path), "cache.tgz")
+@pytest.mark.parametrize("member_name", ["../outside.txt",  # at the root of the archive
+                                         "{recipe}/e/../../../outside.txt"])  # inside a folder
+def test_cache_restore_rejects_outside_paths(member_name):
+    """ a tar member going up with ".." is not restored, it must not be written outside the
+    package cache store, neither from the root of the archive nor from a folder being restored"""
+    c, cache_path = _save_built_package()
+    # The recipe folder as it is named in the archive, which is the origin cache one
+    recipe = os.path.relpath(c.get_latest_ref_layout(RecipeReference.loads("pkg/1.0")).base_folder,
+                             os.path.join(c.cache_folder, "p"))
+    member_name = member_name.format(recipe=recipe)
+    tar_file = os.path.join(os.path.dirname(cache_path), "malicious.tgz")
 
     with tarfile.open(cache_path, "r:gz") as inn, tarfile.open(tar_file, "w:gz") as out:
+        assert f"{recipe}/e" in inn.getnames()  # the folder the member tries to escape from
         for member in inn.getmembers():
             out.addfile(member, inn.extractfile(member) if member.isfile() else None)
         payload = b"outside!!"
-        info = tarfile.TarInfo(name=file_name)
+        info = tarfile.TarInfo(name=member_name)
         info.size = len(payload)
         out.addfile(info, io.BytesIO(payload))
 
     c2 = TestClient()
     c2.run(f'cache restore "{tar_file}"')
-    store = os.path.join(c2.cache_folder, "p")
-    outside = os.path.normpath(os.path.join(store, file_name))
-    # outside file is not restored
+    # Both member names resolve to the parent of the cache store, that file is not created
+    outside = os.path.normpath(os.path.join(c2.cache_folder, "p", member_name))
     assert not os.path.exists(outside)
-    # check the package was restored
+    # The rest of the archive is restored as usual
     assert load(os.path.join(_pkg_folder(c2), "bin", "f.txt")) == "content!!"
 
 
-@pytest.mark.parametrize("extractions", [0, 2])
-def test_cache_restore_failure_removes_new_entries(extractions):
-    """ if the restore fails, the new DB entries whose contents were not restored are removed,
-    so the cache is never left with references to recipes or packages that are not there """
+def test_cache_restore_failure():
+    """ the restore is expected to fully succeed, if it fails the cache can contain incomplete
+    recipes or packages, so it is reported as corrupted """
     _, cache_path = _save_built_package()
-    extract_all = tarfile.TarFile.extractall
-    done = []
 
-    def failing_extractall(self, *args, **kwargs):
-        if len(done) == extractions:
-            raise ConanException("Interrupted!")
-        done.append(1)
-        return extract_all(self, *args, **kwargs)
+    def failing_extractall(*args, **kwargs):
+        raise ConanException("Interrupted!")
 
     c2 = TestClient()
     with patch.object(tarfile.TarFile, "extractall", failing_extractall):
         c2.run(f'cache restore "{cache_path}"', assert_error=True)
     assert "Interrupted!" in c2.out
-    c2.run("list *:*#*")
-    assert "pkg/1.0" not in c2.out
-    assert os.listdir(os.path.join(c2.cache_folder, "p")) == ["cache.sqlite3"]
-
-    # The restore can be done again, and it works
-    c2.run(f'cache restore "{cache_path}"')
-    c2.run("list *:*#*")
-    assert "pkg/1.0" in c2.out
-    assert load(os.path.join(_pkg_folder(c2), "bin", "f.txt")) == "content!!"
+    assert "this cache is corrupted, remove it and restore it again" in c2.out
 
 
 def test_cache_restore_missing_folders():
