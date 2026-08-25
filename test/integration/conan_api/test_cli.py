@@ -67,10 +67,10 @@ def test_api_command_error(raise_on_errors):
     c.run("export .")
     if raise_on_errors:
         with pytest.raises(ConanException) as e:
-            c.api.command.run(["create", c.current_folder], raise_on_errors=raise_on_errors)
+            c.api.command.run(["create", c.current_folder])
         assert "boom" in str(e.value)
     else:
-        result = c.api.command.run(["create", c.current_folder], raise_on_errors=raise_on_errors)
+        result = c.api.command.run(["create", c.current_folder], raise_on_errors=False)
         assert isinstance(result["conan_error"], ConanException)
         assert "boom" in str(result["conan_error"])
 
