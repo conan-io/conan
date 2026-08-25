@@ -247,7 +247,7 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                                    f'{lockfile_args} {verbose_args}')
                             ConanOutput().box(f"Workspace building external {ref}")
                             ConanOutput().info(f"Command: {cmd}\n")
-                            conan_api.command.run(cmd)
+                            conan_api.command.run(cmd, raise_on_errors=True)
                     else:
                         path = ws_pkg["path"]
                         output_folder = ws_pkg.get("output_folder")
@@ -262,7 +262,7 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                                f'{lockfile_args} {verbose_args}')
                         ConanOutput().box(f"Workspace {command}: {ref}")
                         ConanOutput().info(f"Command: {cmd}\n")
-                        conan_api.command.run(cmd)
+                        conan_api.command.run(cmd, raise_on_errors=True)
 
 
 @conan_subcommand(formatters={"json": format_graph_json})
@@ -417,7 +417,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                         cmd = f'install {package["build_args"]} {profile_args}'
                         ConanOutput().box(f"Workspace building external {ref}")
                         ConanOutput().info(f"Build command: {cmd}\n")
-                        conan_api.command.run(cmd)
+                        conan_api.command.run(cmd, raise_on_errors=True)
                     else:  # Package in workspace
                         path = packages[ref]["path"]
                         # TODO: Missing --lockfile-overrides arg here
@@ -428,7 +428,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                         cmd = f'create "{path}" {profile_args} {build} {ref_args}'
                         ConanOutput().box(f"Workspace create {ref}")
                         ConanOutput().info(f"Conan create command: {cmd}\n")
-                        conan_api.command.run(cmd)
+                        conan_api.command.run(cmd, raise_on_errors=True)
 
 
 @conan_subcommand()
