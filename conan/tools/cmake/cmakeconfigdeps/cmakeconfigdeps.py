@@ -541,7 +541,7 @@ class _CMakeContextGenerator:
                 includedirs = defines = None
             extra_libs = self._ctx.get_property("cmake_extra_interface_libs", comp_name=comp_name,
                                            check_type=list) or []
-            system_libs = " ".join(info.system_libs + extra_libs) if self._ctx.require.libs else ""
+            system_libs = " ".join(info.system_libs + extra_libs)
             cxxflags = ";".join(cmake_escape_value(f) for f in info.cxxflags)
             cflags = ";".join(cmake_escape_value(f) for f in info.cflags)
             sharedlinkflags = ";".join(cmake_escape_value(v) for v in info.sharedlinkflags)
@@ -564,7 +564,7 @@ class _CMakeContextGenerator:
                       "sources": " ".join(sources)
                       }
             # System frameworks (only Apple OS)
-            if info.frameworks and self._ctx.require.libs:
+            if info.frameworks:
                 target['frameworks'] = " ".join([f"-framework {frw}" for frw in info.frameworks])
             # FIXME: Ignoring this value for now. Relies on cmake_target_name or lib name.
             #        Revisit when cpp.exe value is used too.
@@ -576,7 +576,7 @@ class _CMakeContextGenerator:
                 if info.libs:
                     raise ConanException("Can't define .libs and .package_framework for the same "
                                          "component")
-                if self._ctx.require.libs:
+                if self._ctx.require.libs or self._ctx.require.headers:
                     target["package_framework"] = {}
                     lib_type = "SHARED" if info.type is PackageType.SHARED else \
                         "STATIC" if info.type is PackageType.STATIC else "STATIC"
@@ -618,9 +618,8 @@ class _CMakeContextGenerator:
                 link_languages = info.languages or self._ctx.dep.languages or []
                 link_languages = ["CXX" if c == "C++" else c for c in link_languages]
                 target["link_languages"] = link_languages
-                nosoname = self._ctx.get_property("nosoname", comp_name=comp_name,
-                                                   check_type=bool)
-                if lib_type == "SHARED" and nosoname:
+                if lib_type == "SHARED" and self._ctx.get_property("nosoname", comp_name=comp_name,
+                                                                   check_type=bool):
                     target["no_soname"] = True
             return target
 
