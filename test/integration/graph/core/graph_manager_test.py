@@ -714,12 +714,12 @@ class TestLinear(GraphManagerTest):
                                 (libb, True, True, False, False),
                                 (liba, True, True, False, False)])
 
-    @pytest.mark.parametrize("package_type_inferring", [True, False])
-    def test_package_type_inferring_from_static_lib(self, package_type_inferring):
-        # app -> libb0.1 (static) -> liba0.1 (static, package_type_inferring)
+    @pytest.mark.parametrize("package_type_traits", [True, False])
+    def test_package_type_traits_from_static_lib(self, package_type_traits):
+        # app -> libb0.1 (static) -> liba0.1 (static, package_type_traits)
         liba = GenConanfile("liba", "0.1").with_shared_option(False)
-        if package_type_inferring:
-            liba = liba.with_class_attribute("package_type_inferring={'run': True}")
+        if package_type_traits:
+            liba = liba.with_class_attribute("package_type_traits={'run': True}")
         self.recipe_conanfile("liba/0.1", liba)
         self.recipe_cache("libb/0.1", ["liba/0.1"], option_shared=False)
         consumer = self.recipe_consumer("app/0.1", ["libb/0.1"])
@@ -737,8 +737,8 @@ class TestLinear(GraphManagerTest):
 
         # node, headers, lib, build, run
         _check_transitive(app, [(libb, True, True, False, False),
-                                (liba, False, True, False, package_type_inferring)])
-        _check_transitive(libb, [(liba, True, True, False, package_type_inferring)])
+                                (liba, False, True, False, package_type_traits)])
+        _check_transitive(libb, [(liba, True, True, False, package_type_traits)])
 
 
 class TestLinearFourLevels(GraphManagerTest):

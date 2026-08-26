@@ -49,7 +49,7 @@ class ConanFile:
     default_build_options = None
     package_type = None
     # For packages that need an override of the inferred requirement traits based on package_type
-    package_type_inferring = {}
+    package_type_traits = {}
     vendor = False
     languages = []
     implements = []
