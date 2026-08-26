@@ -175,7 +175,9 @@ def load_user_encoded(path):
 
 
 def _change_permissions(func, path, exc_info):
-    if not os.access(path, os.W_OK):
+    # os.access(path, os.W_OK) is unreliable for directories on Windows: it reports them as
+    # writable even when their read-only attribute is set, which is exactly the case here
+    if not os.access(path, os.W_OK) or (platform.system() == "Windows" and os.path.isdir(path)):
         os.chmod(path, stat.S_IWUSR)
         func(path)
     else:
