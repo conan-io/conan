@@ -185,9 +185,10 @@ class Requirement:
             if getattr(self, field) is None:
                 setattr(self, field, value)
 
-        if node.conanfile.package_type_overrides.get("run"):
+        force_run = node.conanfile.package_type_inferring.get("run")
+        if force_run is not None:
             # The dependency ships artifacts needed at runtime, no matter its package_type
-            set_if_none("_run", True)
+            set_if_none("_run", force_run)
 
         if pkg_type is PackageType.APP:
             # Change the default requires headers&libs to False for APPS
