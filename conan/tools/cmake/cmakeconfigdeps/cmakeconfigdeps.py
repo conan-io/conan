@@ -604,8 +604,7 @@ class _CMakeContextGenerator:
                 # derives from IMPORTED_LOCATION). So do NOT gate this on self._ctx.require.libs.
                 # Whether this target actually gets linked anywhere is a separate, per-edge
                 # decision already made above, in "requires".
-                assert info.location, \
-                    "info.location missing for .libs, it should have been deduced"
+                assert info.location, "info.location missing for .libs, it should have been deduced"
                 location = self._cmake_pkg_path(info.location)
                 link_location = (self._cmake_pkg_path(info.link_location)
                                  if info.link_location else None)
