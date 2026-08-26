@@ -550,7 +550,6 @@ class _CMakeContextGenerator:
             if not self._ctx.require.libs and not self._ctx.require.headers:
                 # Neither compiling against it nor linking it: no compile/link flags or sources
                 cxxflags = cflags = sharedlinkflags = exelinkflags = ""
-                sources = []
             target = {"type": "INTERFACE",
                       "comp_name": comp_name,
                       "includedirs": includedirs,
