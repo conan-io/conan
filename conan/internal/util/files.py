@@ -174,35 +174,48 @@ def load_user_encoded(path):
     raise Exception(f"Unknown encoding of file: {path}\nIt is recommended to use utf-8 encoding")
 
 
-def _change_permissions(func, path, exc_info):
-    # os.access(path, os.W_OK) is unreliable for directories on Windows: it reports them as
-    # writable even when their read-only attribute is set, which is exactly the case here
-    if not os.access(path, os.W_OK) or (platform.system() == "Windows" and os.path.isdir(path)):
-        os.chmod(path, stat.S_IWUSR)
-        func(path)
-    else:
-        raise OSError("Cannot change permissions for {}! Exception info: {}".format(path, exc_info))
-
-
-if platform.system() == "Windows":
-    def rmdir(path):
-        if not os.path.isdir(path):
-            return
-
-        retries = 3
-        delay = 0.5
-        for i in range(retries):
+def _grant_write_permission(path):
+    # Best effort: a permission error can come from the failing entry itself (e.g. a
+    # read-only file, or a directory whose own read-only attribute blocks its removal on
+    # Windows) or from its parent (removing an entry from a directory requires write
+    # permission on that directory, regardless of the entry's own permissions, notably on
+    # POSIX). Instead of reasoning about which one it was, just grant write permission
+    # everywhere in the tree, so the next rmtree() retry is not blocked by either.
+    for root, dirs, files in os.walk(path):
+        for name in dirs + files:
+            entry = os.path.join(root, name)
             try:
-                shutil.rmtree(path, onerror=_change_permissions)
-                break
-            except OSError as err:
-                if i == retries - 1:
-                    raise ConanException(f"Couldn't remove folder: {path}\n{str(err)}\n"
-                                         "Folder might be busy or open. "
-                                         "Close any app using it and retry.")
+                os.chmod(entry, os.stat(entry).st_mode | stat.S_IWUSR)
+            except OSError:
+                pass
+    try:
+        os.chmod(path, os.stat(path).st_mode | stat.S_IWUSR)
+    except OSError:
+        pass
+
+
+def rmdir(path):
+    if not os.path.isdir(path):
+        return
+
+    retries = 4  # one extra attempt reserved for a permission fix, if one is needed
+    delay = 0.5
+    for i in range(retries):
+        try:
+            shutil.rmtree(path)
+            return
+        except OSError as err:
+            if i == retries - 1:
+                raise ConanException(f"Couldn't remove folder: {path}\n{str(err)}\n"
+                                     "Folder might be busy or open. "
+                                     "Close any app using it and retry.")
+            if isinstance(err, PermissionError):
+                _grant_write_permission(path)
+            else:
                 time.sleep(delay)
 
 
+if platform.system() == "Windows":
     def renamedir(old_path, new_path):
         retries = 3
         delay = 0.5
@@ -218,16 +231,6 @@ if platform.system() == "Windows":
                                          "Close any app using it and retry.")
                 time.sleep(delay)
 else:
-    def rmdir(path):
-        if not os.path.isdir(path):
-            return
-        try:
-            shutil.rmtree(path, onerror=_change_permissions)
-        except OSError as err:
-            raise ConanException(f"Couldn't remove folder: {path}\n{str(err)}\n"
-                                 "Folder might be busy or open. "
-                                 "Close any app using it and retry.")
-
     def renamedir(old_path, new_path):
         try:
             shutil.move(old_path, new_path)

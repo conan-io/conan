@@ -69,7 +69,8 @@ class TestRemoveWithoutUserChannel:
 
 def test_remove_package_with_readonly_folder():
     """ removing a package that contains a read-only directory must not fail with a
-    permission error
+    permission error, be it on Windows (the directory's own read-only attribute blocks its
+    removal) or on POSIX (removing an entry needs write permission on its parent directory)
     https://github.com/conan-io/conan/issues/20241
     """
     conanfile = textwrap.dedent("""
