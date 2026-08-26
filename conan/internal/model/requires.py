@@ -185,7 +185,7 @@ class Requirement:
             if getattr(self, field) is None:
                 setattr(self, field, value)
 
-        if node.conanfile.runtime_artifacts:
+        if node.conanfile.package_type_overrides.get("run"):
             # The dependency ships artifacts needed at runtime, no matter its package_type
             set_if_none("_run", True)
 
