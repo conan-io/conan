@@ -6,9 +6,9 @@ from conan.test.utils.tools import TestClient
 
 
 @pytest.mark.tool("cmake")
-def test_cmake_file_component_names_spirv_tools():
+def test_cmake_file_name_spirv_tools():
     """
-    Test a simple example imitating the spirv-tools library (cmake_file_component_names).
+    Test a simple example imitating the spirv-tools library (cmake_file_name).
     """
     c = TestClient()
 
@@ -40,7 +40,7 @@ def test_cmake_file_component_names_spirv_tools():
         }
     """)
 
-    # --- spirv-tools: multiple components split via cmake_file_component_names ---
+    # --- spirv-tools: multiple components split via cmake_file_name ---
     spirv_tools_conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
@@ -71,7 +71,7 @@ def test_cmake_file_component_names_spirv_tools():
 
             def package_info(self):
                 # Split into separate config files per CMake package name
-                self.cpp_info.set_property("cmake_file_component_names", {
+                self.cpp_info.set_property("cmake_file_name", {
                     "SPIRV-Tools": {"components": ["spirv-tools-core"]},
                     "SPIRV-Tools-opt": {"components": ["spirv-tools-opt"]},
                     "SPIRV-Tools-link": {"components": ["spirv-tools-link"]},
