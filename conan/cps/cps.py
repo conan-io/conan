@@ -268,8 +268,8 @@ class CPS:
 
         for comp_name, comp in self.components.items():
             comp_config = None
-            if conanfile:
-                build_type = str(conanfile.settings.get_safe("build_type"))
+            if conanfile and conanfile.settings.get_safe("build_type"):
+                build_type = str(conanfile.settings.build_type)
                 if build_type in comp.configurations:
                     comp_config = comp.configurations[build_type]
                 elif build_type.lower() in comp.configurations:
