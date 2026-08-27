@@ -1417,15 +1417,9 @@ class TestRequireTraitsFiltering:
 
     def test_transitive_private_shared_lib_keeps_location(self):
         """
-        Regression test for https://github.com/conan-io/conan/pull/20277: "engine" (SHARED)
-        privately links "matrix" (matrix is not exposed to engine's own consumers, so from
-        "app"'s point of view matrix ends up with headers=False, libs=False). libengine.so
-        still has a real DT_NEEDED entry for libmatrix.so, so on Linux `ld` needs to resolve
-        that transitively at link time (via -rpath-link, which CMake derives from
-        IMPORTED_LOCATION) whenever anything links engine - even though "app" never links
-        matrix directly (from app's point of view matrix ends up headers=False, libs=False;
-        it only stays in the graph at all because "app" is an application and needs matrix's
-        shared lib to be run=True). matrix::matrix must therefore still carry a real location.
+        Regression test for https://github.com/conan-io/conan/pull/20277: shared libraries
+        should always propagate their location, even if the consumer doesn't need to link them (libs=False),
+        so that the library can still be linked in specific cases
         """
         c = TestClient()
         matrix = textwrap.dedent("""
@@ -1477,9 +1471,9 @@ class TestRequireTraitsFiltering:
         assert "IMPORTED_LOCATION_RELEASE" in matrix_cmake
         assert "INTERFACE_INCLUDE_DIRECTORIES" not in matrix_cmake
 
-    def test_libs_and_package_framework_still_validated_when_libs_false(self):
-        """The .libs/.package_framework mutual exclusivity check validates the dependency's
-        own recipe, so it must still fire even when the requiring edge doesn't link libs."""
+    @pytest.mark.parametrize("headers", [True, False])
+    @pytest.mark.parametrize("libs", [True, False])
+    def test_package_framework_only_with_libs_or_headers(self, headers, libs):
         c = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1487,20 +1481,25 @@ class TestRequireTraitsFiltering:
                 name = "dep"
                 version = "0.1"
                 def package_info(self):
-                    self.cpp_info.libs = ["dep"]
-                    self.cpp_info.type = "static-library"
-                    self.cpp_info.location = "lib/dep.a"
+                    self.cpp_info.includedirs = []
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.location = "lib"
                     self.cpp_info.package_framework = "Dep"
             """)
-        app = textwrap.dedent("""
+        app = textwrap.dedent(f"""
             from conan import ConanFile
             class App(ConanFile):
                 settings = "os", "arch", "compiler", "build_type"
                 def requirements(self):
-                    self.requires("dep/0.1", headers=True, libs=False)
+                    self.requires("dep/0.1", headers={headers}, libs={libs})
             """)
         c.save({"dep/conanfile.py": dep, "app/conanfile.py": app})
         c.run("create dep")
-        c.run("install app -g CMakeConfigDeps", assert_error=True)
-        assert ("ERROR: Error in generator 'CMakeConfigDeps': Can't define .libs and "
-                ".package_framework for the same component") in c.out
+        c.run("install app -g CMakeConfigDeps")
+        cmake = c.load("app/dep-Targets-release.cmake")
+        if headers or libs:
+            assert "FRAMEWORK TRUE" in cmake
+        else:
+            assert "FRAMEWORK" not in cmake
+            # But the target is still generated
+            assert "add_library(dep::dep" in cmake

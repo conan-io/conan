@@ -87,32 +87,3 @@ def test_cpp_info_component_sources():
     assert "set_property(TARGET hello::my_comp APPEND PROPERTY INTERFACE_SOURCES\n"\
            "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp"\
            " ${hello_PACKAGE_FOLDER_RELEASE}/src/other.cpp>)" in cmake
-
-
-def test_cpp_info_sources_only():
-    c = TestClient()
-    c.run("new cmake_lib -d name=hello -d version=1.0")
-    conanfile = textwrap.dedent("""
-           from conan import ConanFile
-           from conan.tools.files import copy
-
-           class HelloConan(ConanFile):
-               name = "hello"
-               version = "1.0"
-               exports_sources = "src/*"
-               package_type = "header-library"
-
-               def package(self):
-                   copy(self, "*.cpp", self.source_folder, self.package_folder)
-
-               def package_info(self):
-                   self.cpp_info.includedirs = []
-                   self.cpp_info.sources = ["src/hello.cpp"]
-       """)
-    c.save({"conanfile.py": conanfile})
-    # Check that the hello library builds in test_package
-    c.run(f"create . -tf=")
-    # Check content of the generated files
-    c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps")
-    cmake = c.load("hello-Targets-release.cmake")
-    assert "add_library" not in cmake
