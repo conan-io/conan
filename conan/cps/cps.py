@@ -36,6 +36,7 @@ class CPSComponent:
     def __init__(self, component_type=None):
         self.includes = []
         self.type = component_type or "unknown"
+        self.configurations = {}
         self.definitions = {}
         self.requires = []
         self.link_requires = []
@@ -65,17 +66,19 @@ class CPSComponent:
         return component
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data, none_default=False):
         comp = CPSComponent()
-        comp.type = CPSComponentType(data.get("type"))
-        comp.requires = data.get("requires", [])
-        comp.link_requires = data.get("link_requires", [])
-        comp.includes = data.get("includes", [])
-        comp.definitions = data.get("definitions", {})
+        comp.type = CPSComponentType(data.get("type")) if "type" in data else None
+        comp.configurations = {k: CPSComponent.deserialize(v, True)
+                               for k, v in data.get("configurations", {}).items()}
+        comp.requires = data.get("requires", None if none_default else [])
+        comp.link_requires = data.get("link_requires", None if none_default else [])
+        comp.includes = data.get("includes", None if none_default else [])
+        comp.definitions = data.get("definitions", None if none_default else {})
         comp.location = data.get("location")
         comp.link_location = data.get("link_location")
-        comp.link_libraries = data.get("link_libraries", [])
-        comp.link_languages = data.get("link_languages", [])
+        comp.link_libraries = data.get("link_libraries", None if none_default else [])
+        comp.link_languages = data.get("link_languages", None if none_default else [])
         return comp
 
     @staticmethod
@@ -235,7 +238,7 @@ class CPS:
 
         return cps
 
-    def to_conan(self):
+    def to_conan(self, conanfile=None):
         def strip_prefix(dirs):
             return [d.replace("@prefix@/", "") for d in dirs]
 
@@ -253,32 +256,50 @@ class CPS:
             # "*" has less priority than specific language
             aggregated = {}
             aggregated.update(defs.get("*", {}))
-            aggregated.update(defs.get("c", {}))
-            aggregated.update(defs.get("cpp", {}))
+            if not conanfile or not conanfile.languages or "C" in conanfile.languages:
+                aggregated.update(defs.get("c", {}))
+            if not conanfile or not conanfile.languages or "C++" in conanfile.languages:
+                aggregated.update(defs.get("cpp", {}))
             result = list(f"{k}={v}" if v is not None else k for k, v in aggregated.items())
             return result
 
         cpp_info = CppInfo()
         cpp_info.default_components = self.default_components
+
         for comp_name, comp in self.components.items():
+            comp_config = None
+            if conanfile:
+                build_type = str(conanfile.settings.get_safe("build_type"))
+                if build_type in comp.configurations:
+                    comp_config = comp.configurations[build_type]
+                elif build_type.lower() in comp.configurations:
+                    comp_config = comp.configurations[build_type.lower()]
+
+            def cps_get(attr):
+                comp_value = getattr(comp, attr)
+                if comp_config:
+                    result = getattr(comp_config, attr)
+                    return result if result is not None else comp_value
+                return comp_value
+
             cpp_comp = cpp_info if len(self.components) == 1 else cpp_info.components[comp_name]
-            cpp_comp.includedirs = strip_prefix(comp.includes)
-            cpp_comp.defines = definitions(comp.definitions)
+            cpp_comp.includedirs = strip_prefix(cps_get("includes"))
+            cpp_comp.defines = definitions(cps_get("definitions"))
             cpp_info.set_property("cmake_file_name", self.name)
             cpp_info.set_property("cmake_target_name", f"{self.name}::{comp_name}")
-            if comp.link_location:
-                link_location = comp.link_location
+            if cps_get("link_location"):
+                link_location = cps_get("link_location")
                 lib_location(link_location, cpp_comp)
-                location = comp.location
+                location = cps_get("location")
                 location = location.replace("@prefix@/", "")
                 cpp_comp.bindirs = [os.path.dirname(location)]
-            elif comp.location:
-                location = comp.location
+            elif cps_get("location"):
+                location = cps_get("location")
                 lib_location(location, cpp_comp)
-            requires = comp.link_requires + comp.requires
+            requires = cps_get("link_requires") + cps_get("requires")
             for r in requires:
                 cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
-            cpp_comp.system_libs = comp.link_libraries
+            cpp_comp.system_libs = cps_get("link_libraries")
 
         return cpp_info
 

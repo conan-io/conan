@@ -81,7 +81,17 @@ def test_cps_in_pkg():
                 "zlib": {
                     "type": "archive",
                     "includes": ["@prefix@/include"],
-                    "location": "@prefix@/lib/zlib.a"
+                    "location": "@prefix@/lib/zlib.a",
+                    "configurations": {
+                        "Release": {
+                            "link_location": "@prefix@/lib/zlib.a",
+                            "definitions": {
+                                "cpp": {
+                                    "FOO": "1"
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -94,6 +104,7 @@ def test_cps_in_pkg():
         class Pkg(ConanFile):
             name = "zlib"
             version = "1.3.1"
+            settings = "build_type"
 
             def package(self):
                 cps = '{cps}'
@@ -102,7 +113,7 @@ def test_cps_in_pkg():
 
             def package_info(self):
                 from conan.cps import CPS
-                self.cpp_info = CPS.load("zlib.cps").to_conan()
+                self.cpp_info = CPS.load("zlib.cps").to_conan(self)
         """)
     c.save({"pkg/conanfile.py": conanfile})
     c.run("create pkg")
@@ -122,6 +133,7 @@ def test_cps_in_pkg():
     assert 'set(zlib_INCLUDE_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/include")' in cmake
     assert 'set(zlib_LIB_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/lib")'
     assert 'set(zlib_LIBS_RELEASE zlib)' in cmake
+    assert 'set(zlib_DEFINITIONS_RELEASE "-DFOO=1")' in cmake
 
 
 def test_cps_shared_in_pkg():
@@ -281,7 +293,7 @@ def test_cps_component_single(as_comp):
                 self.cpp_info{cpp_info_comp}.requires = ["dep::comp1"]
                 from conan.cps import CPS
                 cps = CPS.from_conan(self)
-                self.cpp_info = cps.to_conan()
+                self.cpp_info = cps.to_conan(self)
         """)
     c.save({"conanfile.py": conanfile,
             "dep/conanfile.py": GenConanfile("dep", "0.1")
