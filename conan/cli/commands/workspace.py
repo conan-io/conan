@@ -97,13 +97,27 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
         raise ConanException("Do not use both 'path' and '--ref' argument")
     if args.folder and not args.ref:
         raise ConanException("'--folder' requires '--ref'")
+    if args.ref and any((args.name, args.version, args.user, args.channel)):
+        raise ConanException(
+            "Do not use '--ref' together with '--name', '--version', "
+            "'--user' or '--channel' arguments"
+        )
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     path = args.path
+    name = args.name
+    version = args.version
+    user = args.user
+    channel = args.channel
     if args.ref:
+        ref = RecipeReference.loads(args.ref)
         cwd, folder = _resolve_ws_relative_folder(conan_api, args.folder)
         path = conan_api.workspace.open(args.ref, remotes, cwd=cwd, folder=folder)
+        name = ref.name
+        version = ref.version
+        user = ref.user
+        channel = ref.channel
     ref = conan_api.workspace.add(path,
-                                  args.name, args.version, args.user, args.channel,
+                                  name, version, user, channel,
                                   args.output_folder, remotes=remotes)
     ConanOutput().success("Reference '{}' added to workspace".format(ref))
 
