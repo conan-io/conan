@@ -238,7 +238,7 @@ class CPS:
 
         return cps
 
-    def to_conan(self, conanfile=None):
+    def to_conan(self, conanfile=None, configuration=None):
         def strip_prefix(dirs):
             return [d.replace("@prefix@/", "") for d in dirs]
 
@@ -268,7 +268,9 @@ class CPS:
 
         for comp_name, comp in self.components.items():
             comp_config = None
-            if conanfile and conanfile.settings.get_safe("build_type"):
+            if configuration and configuration in comp.configurations:
+                comp_config = comp.configurations[configuration]
+            elif conanfile and conanfile.settings.get_safe("build_type"):
                 build_type = str(conanfile.settings.build_type)
                 if build_type in comp.configurations:
                     comp_config = comp.configurations[build_type]

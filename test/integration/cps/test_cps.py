@@ -319,8 +319,8 @@ def test_cps_component_single(as_comp):
 @pytest.mark.parametrize("with_conanfile", [True, False])
 def test_cps_conanfile_parsing(settings, languages, with_conanfile):
     c = TestClient()
-    settings = f'settings = "build_type"' if settings else ""
-    languages = f'languages = ["C++"]' if languages else ""
+    settings = 'settings = "build_type"' if settings else ""
+    languages = 'languages = ["C++"]' if languages else ""
     cps = textwrap.dedent("""\
             {
                 "cps_version": "0.12.0",
@@ -402,3 +402,85 @@ def test_cps_conanfile_parsing(settings, languages, with_conanfile):
     else:
         # We have no information to provide more specific configuration
         assert '$<$<CONFIG:RELEASE>:BAR=1;FOO=1>' in cmake
+
+
+@pytest.mark.parametrize("with_conanfile", [True, False])
+def test_cps_explicit_configuration_override(with_conanfile):
+    c = TestClient()
+    cps = textwrap.dedent("""\
+                {
+                    "cps_version": "0.12.0",
+                    "name": "zlib",
+                    "version": "1.3.1",
+                    "configurations": ["release", "custom"],
+                    "default_components": ["zlib"],
+                    "components": {
+                        "zlib": {
+                            "type": "archive",
+                            "includes": ["@prefix@/include"],
+                            "location": "@prefix@/lib/zlib.a",
+                             "definitions": {
+                                "c": {
+                                    "BAR": "1"
+                                },
+                                "cpp": {
+                                    "FOO": "1"
+                                }
+                            },
+                            "configurations": {
+                                "release": {
+                                    "definitions": {
+                                        "c": {
+                                            "BAR": "2"
+                                        },
+                                        "cpp": {
+                                            "FOO": "2"
+                                        }
+                                    }
+                                },
+                                "custom": {
+                                    "definitions": {
+                                        "c": {
+                                            "BAR": "3"
+                                        },
+                                        "cpp": {
+                                            "FOO": "3"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                """)
+    cps = "".join(cps.splitlines())
+    conanfile = textwrap.dedent(f"""
+                import os
+                from conan.tools.files import save
+                from conan import ConanFile
+                class Pkg(ConanFile):
+                    name = "zlib"
+                    version = "1.3.1"
+                    settings = "build_type"
+
+                    def package(self):
+                        cps = '{cps}'
+                        cps_path = os.path.join(self.package_folder, "zlib.cps")
+                        save(self, cps_path, cps)
+                        save(self, os.path.join(self.package_folder, "lib", "zlib.a"), "")
+
+                    def package_info(self):
+                        from conan.cps import CPS
+                        self.cpp_info = CPS.load("zlib.cps").to_conan(conanfile={'self' if with_conanfile else 'None'},
+                                                                      configuration="custom")
+                """)
+    c.save({"pkg/conanfile.py": conanfile})
+    c.run("create pkg")
+
+    install_settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
+
+    c.run(f"install --requires=zlib/1.3.1 {install_settings} -g CMakeConfigDeps")
+    cmake = c.load("zlib-Targets-release.cmake")
+    # It always uses the configuration provided, regardless of whether we have a conanfile or not
+    # with settings
+    assert '$<$<CONFIG:RELEASE>:BAR=3;FOO=3>' in cmake
