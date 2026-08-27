@@ -245,7 +245,7 @@ class _CMakePresets:
         build_type = conanfile.settings.get_safe("build_type")
         custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
         if user_defined_build:
-            return custom_conf
+            return custom_conf or "default"
 
         if custom_conf:
             if build_type:
@@ -260,7 +260,7 @@ class _CMakePresets:
         custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
 
         if user_defined_build:
-            return custom_conf
+            return custom_conf or "default"
 
         if multiconfig or not build_type:
             return "default" if not custom_conf else custom_conf

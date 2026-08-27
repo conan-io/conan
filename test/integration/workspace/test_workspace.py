@@ -456,6 +456,140 @@ class TestOpenAdd:
         c2.run("workspace info")
         assert "pkg/0.1" in c2.out
 
+    def test_open_missing_all_from_workspace_def(self):
+        # Upload pkga and pkgb so they can be opened from remote
+        t = TestClient(default_server_user=True, light=True)
+        t.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1")})
+        t.run("create pkga")
+        t.run("create pkgb")
+        t.run("upload * -r=default -c")
+
+        # Workspace defines both packages but only pkga folder exists locally
+        c = TestClient(servers=t.servers, light=True)
+        c.save({"conanws.yml": textwrap.dedent("""\
+                    packages:
+                      - path: pkga
+                        ref: pkga/0.1
+                      - path: pkgb
+                        ref: pkgb/0.1
+                    """),
+                "pkga/conanfile.py": GenConanfile("pkga", "0.1")})
+        c.run("workspace open")
+        assert "already exists, skipping" in c.out
+        assert "Opening package 'pkgb/0.1'" in c.out
+        assert "name = 'pkgb'" in c.load("pkgb/conanfile.py")
+
+        # Re-running is a no-op: both folders are present now
+        c.run("workspace open")
+        assert "Opening package" not in c.out
+
+    def test_open_from_subfolder_clones_into_workspace_root(self):
+        # A workspace exists and the user runs 'open'/'add --ref' from a package subfolder.
+        # The clone must land in the workspace root, not inside the subfolder.
+        t = TestClient(default_server_user=True, light=True)
+        t.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        t.run("create .")
+        t.run("upload * -r=default -c")
+
+        c = TestClient(servers=t.servers, light=True)
+        c.save({"conanws.yml": "",
+                "sub/placeholder.txt": ""})
+        with c.chdir("sub"):
+            c.run("workspace open pkg/0.1")
+        assert "name = 'pkg'" in c.load("pkg/conanfile.py")
+        assert not os.path.exists(os.path.join(c.current_folder, "sub", "pkg"))
+
+        # Same for 'workspace add --ref'
+        c2 = TestClient(servers=t.servers, light=True)
+        c2.save({"conanws.yml": "",
+                 "sub/placeholder.txt": ""})
+        with c2.chdir("sub"):
+            c2.run("workspace add --ref=pkg/0.1")
+        assert "name = 'pkg'" in c2.load("pkg/conanfile.py")
+        assert not os.path.exists(os.path.join(c2.current_folder, "sub", "pkg"))
+
+    def test_open_missing_respects_workspace_path(self):
+        # The workspace paths use a custom folder name and a nested subfolder;
+        # 'workspace open' with no args must clone into those exact paths.
+        t = TestClient(default_server_user=True, light=True)
+        t.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1")})
+        t.run("create pkga")
+        t.run("create pkgb")
+        t.run("upload * -r=default -c")
+
+        c = TestClient(servers=t.servers, light=True)
+        c.save({"conanws.yml": textwrap.dedent("""\
+                    packages:
+                      - path: custom_a
+                        ref: pkga/0.1
+                      - path: libs/nested_b
+                        ref: pkgb/0.1
+                    """)})
+        c.run("workspace open")
+        assert "name = 'pkga'" in c.load("custom_a/conanfile.py")
+        assert "name = 'pkgb'" in c.load("libs/nested_b/conanfile.py")
+        # No stray default-named folders were created
+        assert not os.path.exists(os.path.join(c.current_folder, "pkga"))
+        assert not os.path.exists(os.path.join(c.current_folder, "pkgb"))
+
+    def test_open_and_add_folder_argument(self):
+        # '--folder' places the clone at a workspace-root-relative path,
+        # including subfolders. Applies to both 'open <ref>' and 'add --ref'.
+        t = TestClient(default_server_user=True, light=True)
+        t.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        t.run("create .")
+        t.run("upload * -r=default -c")
+
+        c = TestClient(servers=t.servers, light=True)
+        c.save({"conanws.yml": ""})
+        c.run("workspace open pkg/0.1 --folder=libs/mypkg")
+        assert "name = 'pkg'" in c.load("libs/mypkg/conanfile.py")
+        assert not os.path.exists(os.path.join(c.current_folder, "pkg"))
+
+        # From a subfolder the target is still workspace-root-relative
+        c.save({"sub/placeholder.txt": ""})
+        with c.chdir("sub"):
+            c.run("workspace open pkg/0.1 --folder=other/here")
+        assert "name = 'pkg'" in c.load("other/here/conanfile.py")
+        assert not os.path.exists(os.path.join(c.current_folder, "sub", "other"))
+
+        # 'workspace add --ref' with --folder
+        c2 = TestClient(servers=t.servers, light=True)
+        c2.save({"conanws.yml": ""})
+        c2.run("workspace add --ref=pkg/0.1 --folder=nested/leaf")
+        assert "name = 'pkg'" in c2.load("nested/leaf/conanfile.py")
+        c2.run("workspace info")
+        assert "pkg/0.1" in c2.out
+        assert "nested/leaf" in c2.out
+
+    def test_folder_argument_validation(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+        c.run("workspace open --folder=libs/mypkg", assert_error=True)
+        assert "'--folder' requires a 'reference' argument" in c.out
+        c.run("workspace add --folder=libs/mypkg", assert_error=True)
+        assert "'--folder' requires '--ref'" in c.out
+        # Absolute path is rejected
+        abs_path = os.path.join(c.current_folder, "abs")
+        c.run(f'workspace open pkg/0.1 --folder="{abs_path}"', assert_error=True)
+        assert "'--folder' must be relative to the workspace root" in c.out
+        # Escaping the workspace root is rejected
+        c.run("workspace open pkg/0.1 --folder=../outside", assert_error=True)
+        assert "'--folder' escapes the workspace root" in c.out
+
+    def test_open_missing_folder_without_conanfile_raises(self):
+        c = TestClient(light=True)
+        c.save({"conanws.yml": textwrap.dedent("""\
+                    packages:
+                      - path: pkga
+                        ref: pkga/0.1
+                    """),
+                "pkga/README.md": "not a conanfile"})
+        c.run("workspace open", assert_error=True)
+        assert "exists but does not contain a conanfile.py" in c.out
+
     def test_workspace_build_editables(self):
         c = TestClient(light=True)
         c.save({"conanws.yml": ""})
@@ -1476,6 +1610,40 @@ class TestCreate:
         assert "protobuf/0.1: Building for: Windows!!!" in c.out
         assert "protobuf/0.1: Building for: Linux!!!" in c.out
 
+    def test_create_stops_on_build_error(self):
+        # https://github.com/conan-io/conan/issues/20258
+        c = TestClient(light=True)
+        pkga = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkga(ConanFile):
+                name = "pkga"
+                version = "0.1"
+                def build(self):
+                    raise Exception("boom")
+            """)
+        pkgb = textwrap.dedent("""\
+            from conan import ConanFile
+            class Pkgb(ConanFile):
+                name = "pkgb"
+                version = "0.1"
+                def requirements(self):
+                    self.requires("pkga/0.1")
+                def build(self):
+                    self.output.warning("BUILD PKGB SHOULD NOT HAPPEN")
+            """)
+        c.save({"conanws.yml": "",
+                "pkga/conanfile.py": pkga,
+                "pkgb/conanfile.py": pkgb})
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb")
+        c.run("workspace create", assert_error=True)
+        assert "Error in build() method" in c.out
+        assert "boom" in c.out
+        # It must stop right after pkga's build fails, never attempting pkgb
+        assert "Workspace create pkgb/0.1" not in c.out
+        assert "BUILD PKGB SHOULD NOT HAPPEN" not in c.out
+        assert "Missing binary" not in c.out
+
 
 class TestSource:
     def test_source(self):
@@ -1617,6 +1785,32 @@ class TestInstall:
         assert "Using lockfile" in c.out
         assert f"hello/0.1#{rev1}" in c.out
         assert rev2 not in c.out
+
+    def test_install_stops_on_external_build_error(self):
+        # https://github.com/conan-io/conan/issues/20258
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+        hello = textwrap.dedent("""\
+            from conan import ConanFile
+            class Hello(ConanFile):
+                name = "hello"
+                version = "0.1"
+                def build(self):
+                    raise Exception("boom")
+            """)
+        app = GenConanfile("app", "0.1").with_requires("hello/0.1").with_build_msg("APP BUILT!")
+        c.save({"hello_src/conanfile.py": hello,
+                "app/conanfile.py": app})
+        c.run("export hello_src")
+        c.run("workspace add app")
+        c.run("workspace install --build=missing", assert_error=True)
+        assert "Error in build() method" in c.out
+        assert "boom" in c.out
+        # It must stop right after hello's build fails, never attempting to install app
+        # (which depends on it)
+        assert "Workspace install: app/0.1" not in c.out
+        assert "APP BUILT!" not in c.out
+        assert "Missing binary" not in c.out
 
 
 def test_keep_core_conf():

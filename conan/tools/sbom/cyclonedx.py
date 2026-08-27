@@ -221,7 +221,7 @@ def _calculate_licenses(component):
 def _calculate_bomref(component):
     user = f"&user={component.ref.user}" if component.ref.user else ""
     channel = f"&channel={component.ref.channel}" if component.ref.channel else ""
-    return f"pkg:conan/{component.name}@{component.ref.version}?rref={component.ref.revision}{user}{channel}"
+    return f"pkg:conan/{component.name}@{component.ref.version}?rrev={component.ref.revision}{user}{channel}"
 
 
 def should_add_node(node, add_build, add_tests):

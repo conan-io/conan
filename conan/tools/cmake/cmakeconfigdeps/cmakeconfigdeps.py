@@ -417,7 +417,14 @@ class _CMakeContextGenerator:
 
         def _get_dependencies_and_requires(self):
             transitive_reqs = self._ctx.transitive_reqs
-            dependencies = {self._ctx.get_cmake_filename(d): "CONFIG"
+            def _get_dep_find_mode(d):
+                find_mode = self._ctx.get_property("cmake_find_mode", d)
+
+                if find_mode is None:
+                    find_mode = FIND_MODE_CONFIG
+
+                return "" if find_mode.lower() in (FIND_MODE_NONE, FIND_MODE_BOTH) else find_mode.upper()
+            dependencies = {self._ctx.get_cmake_filename(d): _get_dep_find_mode(d)
                             for d in transitive_reqs.values()}
             extra_mods = self._ctx.get_property("cmake_extra_dependencies", check_type=list) or []
             dependencies.update({extra_mod: "" for extra_mod in extra_mods})
