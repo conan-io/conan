@@ -1335,7 +1335,6 @@ class TestCmakeConfigProperties:
                     self.cpp_info.set_property("cmake_file_name", {
                         "greetings": {
                             "components": ["hello", "hello-helpers"],
-                            "properties": {},
                         },
                         "adieu": {
                             "components": ["bye", "bye-helpers"],
