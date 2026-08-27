@@ -386,15 +386,19 @@ def test_cps_conanfile_parsing(settings, languages, with_conanfile):
     c.run(f"install --requires=zlib/1.3.1 {install_settings} -g CMakeConfigDeps")
     cmake = c.load("zlib-Targets-release.cmake")
     if with_conanfile:
+        # If we can see the configurations override based on build_type
         if settings:
+            # If we can see the specific language, we only use the one define for it, else all
             if languages:
                 assert '$<$<CONFIG:RELEASE>:FOO=2>' in cmake
             else:
                 assert '$<$<CONFIG:RELEASE>:BAR=2;FOO=2>' in cmake
         else:
+            # No settings to override configuration, but we can still see the specific language
             if languages:
                 assert '$<$<CONFIG:RELEASE>:FOO=1>' in cmake
             else:
                 assert '$<$<CONFIG:RELEASE>:BAR=1;FOO=1>' in cmake
     else:
+        # We have no information to provide more specific configuration
         assert '$<$<CONFIG:RELEASE>:BAR=1;FOO=1>' in cmake
