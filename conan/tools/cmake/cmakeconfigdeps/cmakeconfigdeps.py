@@ -831,39 +831,6 @@ class _PathGenerator:
             paths[req.ref.name] = cppinfo_dirs
         return [d for dirs in paths.values() for d in dirs]
 
-    def _get_cmake_extra_variants(self, dep, cmake_filename, cmake_file_info):
-        custom_props = cmake_file_info.get("properties")
-        extra_variants = self._cmakedeps.get_property("cmake_file_name_variants", dep,
-                                                       custom_props=custom_props,
-                                                       check_type=list) or []
-        lowercase_variants = {variant.lower() for variant in extra_variants}
-        if len(lowercase_variants) > 1:
-            raise ConanException(
-                f"'{dep.ref}' 'cmake_file_name_variants' property contains different words. "
-                "They should be the same with different upper/lower cases only.")
-        if lowercase_variants:
-            if cmake_filename.lower() not in lowercase_variants:
-                cmake_file_name_prop = self._cmakedeps.get_property(
-                    "cmake_file_name", dep, custom_props=custom_props)
-                is_cmake_filename_defined = (
-                    isinstance(cmake_file_name_prop, str)
-                    or (isinstance(cmake_file_name_prop, dict)
-                        and cmake_filename in cmake_file_name_prop)
-                )
-                if is_cmake_filename_defined:
-                    extra_variants = []
-                    msg = (f"'{dep.ref}' 'cmake_file_name_variants' property contains names "
-                           f"with different casings than the defined name '{cmake_filename}'. "
-                           f"The specified 'cmake_file_name'='{cmake_filename}' property "
-                           f"will be used as the only name and the variants will be ignored.")
-                    self._conanfile.output.warning(msg)
-                else:
-                    msg = (f"'{dep.ref}' 'cmake_file_name_variants' property contains entries "
-                           f"that differ from the default 'cmake_file_name'='{cmake_filename}'. "
-                           f"They should be the same with different upper/lower cases only.")
-                    raise ConanException(msg)
-        return extra_variants
-
     def generate(self):
         template = textwrap.dedent("""\
         set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
@@ -926,8 +893,35 @@ class _PathGenerator:
             # A dependency might be split into several CMake config files (root +
             # cmake_file_name dict groups), each one needs its own _DIR entry.
             for cmake_filename, cmake_file_info in self._cmakedeps.get_cmake_filenames_info(dep).items():
-                pkg_names = set([cmake_filename] +
-                                self._get_cmake_extra_variants(dep, cmake_filename, cmake_file_info))
+                extra_variants = self._cmakedeps.get_property("cmake_file_name_variants", dep,
+                                                              custom_props=cmake_file_info.get("properties"),
+                                                              check_type=list) or []
+                lowercase_variants = {variant.lower() for variant in extra_variants}
+                if len(lowercase_variants) > 1:
+                    raise ConanException(f"'{dep.ref}' 'cmake_file_name_variants' property contains different words. "
+                                         "They should be the same with different upper/lower cases only.")
+                if lowercase_variants:
+                    if cmake_filename.lower() not in lowercase_variants:
+                        cmake_file_name_prop = self._cmakedeps.get_property(
+                            "cmake_file_name", dep, custom_props=cmake_file_info.get("properties"))
+                        is_cmake_filename_defined = (
+                            isinstance(cmake_file_name_prop, str)
+                            or (isinstance(cmake_file_name_prop, dict)
+                                and cmake_filename in cmake_file_name_prop)
+                        )
+                        if is_cmake_filename_defined:
+                            extra_variants = []
+                            msg = (f"'{dep.ref}' 'cmake_file_name_variants' property contains names "
+                                   f"with different casings than the defined name '{cmake_filename}'. "
+                                   f"The specified 'cmake_file_name'='{cmake_filename}' property "
+                                   f"will be used as the only name and the variants will be ignored.")
+                            self._conanfile.output.warning(msg)
+                        else:
+                            msg = (f"'{dep.ref}' 'cmake_file_name_variants' property contains entries "
+                                   f"that differ from the default 'cmake_file_name'='{cmake_filename}'. "
+                                   f"They should be the same with different upper/lower cases only.")
+                            raise ConanException(msg)
+                pkg_names = set([cmake_filename] + extra_variants)
                 # https://cmake.org/cmake/help/v3.22/guide/using-dependencies/index.html
                 if cmake_find_mode == FIND_MODE_NONE:
                     cps = glob.glob(os.path.join(dep.package_folder, f"**/{cmake_filename}.cps"),
