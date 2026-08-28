@@ -563,10 +563,8 @@ class _CMakeContextGenerator:
                     dep_target = self._ctx.get_cmake_target_name(comp_name=required_comp)
                     link_feature = self._ctx.get_property("cmake_link_feature",
                                                      comp_name=required_comp)
-                    link = not (pkg_type is PackageType.SHARED and
-                               dep_comp.type is PackageType.SHARED)
                     result[dep_target] = {
-                        "link": link,
+                        "link": True,  # Components of same package have PUBLIC dependency
                         "link_feature": link_feature,
                         "dependency": (dep, required_comp)
                     }

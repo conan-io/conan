@@ -1384,7 +1384,7 @@ class TestCmakeConfigProperties:
         assert "find_dependency(greetings REQUIRED CONFIG)" in adieu_targets
         assert "add_library(pkg::bye SHARED IMPORTED)" in adieu_targets
         assert "add_library(pkg::bye-helpers INTERFACE IMPORTED)" in adieu_targets
-        assert "# Requirement pkg::bye -> greet (Full link: False)" in adieu_targets
+        assert "# Requirement pkg::bye -> greet (Full link: True)" in adieu_targets
         assert "# Requirement pkg::bye -> pkg::bye-helpers (Full link: True)" in adieu_targets
 
         # No root pkg config when all components are listed in cmake_file_name
