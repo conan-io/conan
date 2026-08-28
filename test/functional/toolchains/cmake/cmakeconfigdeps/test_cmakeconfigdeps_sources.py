@@ -87,3 +87,44 @@ def test_cpp_info_component_sources():
     assert "set_property(TARGET hello::my_comp APPEND PROPERTY INTERFACE_SOURCES\n"\
            "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp"\
            " ${hello_PACKAGE_FOLDER_RELEASE}/src/other.cpp>)" in cmake
+
+
+#@pytest.mark.skipif(platform.system() != "Linux", reason="No OS specific test")
+@pytest.mark.tool("cmake")
+def test_cpp_info_sources():
+    c = TestClient()
+    c.run("new cmake_lib -d name=hello -d version=1.0")
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import copy
+
+        class HelloConan(ConanFile):
+            name = "hello"
+            version = "1.0"
+            exports_sources = "src/*", "include/*"
+            package_type = "header-library"
+
+            def package(self):
+                copy(self, "*.cpp", self.source_folder, self.package_folder)
+
+            def package_info(self):
+                self.cpp_info.includedirs = []
+                self.cpp_info.sources = ["src/hello.cpp"]
+    """)
+    hello = c.load("src/hello.cpp")
+    hello = hello.replace('#include "hello.h"', '')
+    example = c.load("test_package/src/example.cpp")
+    example = example.replace('#include "hello.h"', '#include <vector>\n'
+                                                    'void hello();\n'
+                                                    'void hello_print_vector(const std::vector<std::string> &strings);')
+    c.save({"conanfile.py": conanfile,
+            "src/hello.cpp": hello,
+            "test_package/src/example.cpp": example})
+    # Check that the hello library builds in test_package
+    c.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+    # Check content of the generated files
+    c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps")
+    cmake = c.load("hello-Targets-release.cmake")
+    assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
+    assert "set_property(TARGET hello::hello APPEND PROPERTY INTERFACE_SOURCES\n"\
+           "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp>)" in cmake

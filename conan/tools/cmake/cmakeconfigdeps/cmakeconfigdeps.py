@@ -532,7 +532,8 @@ class _CMakeContextGenerator:
 
         def _get_cmake_lib(self, info, cpp_info_requires, comp_name=None):
             if info.exe or not (info.package_framework or info.frameworks or info.includedirs
-                                or info.libs or info.system_libs or info.defines or info.requires):
+                                or info.libs or info.system_libs or info.defines or info.requires
+                                or info.sources):
                 return
 
             includedirs = ";".join(self._cmake_pkg_path(i)
