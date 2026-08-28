@@ -120,13 +120,12 @@ class CMakeConfigDeps:
 
             if require.direct:
                 direct_deps.append((require, dep))
-            full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
             # A dependency might be split into several CMake config files (root +
             # cmake_file_name dict groups). Shared files (config, config-version, targets)
             # have a context-independent filename. When the same package is both requires and
             # tool_requires, keep the host-context version so legacy variables (<pkg>_LIBRARIES,
             # ...) are preserved.
-            for cmake_filename, cmake_file_info in self.get_cmake_filenames_info(dep, full_cpp_info).items():
+            for cmake_filename, cmake_file_info in self.get_cmake_filenames_info(dep).items():
                 context_gen = _CMakeContextGenerator(self, require, dep, cmake_filename, cmake_file_info)
                 config_version_filename, config_version_context = context_gen.get_config_version_info()
                 if config_version_filename not in ret:
@@ -210,7 +209,7 @@ class CMakeConfigDeps:
             if comp is not None:
                 return comp.get_property(prop, check_type=check_type)
 
-    def get_cmake_filenames_info(self, dep, full_cpp_info=None):
+    def get_cmake_filenames_info(self, dep):
         """
         Get the name of the files for the find_package(XXX) for the root and the rest of
         the components.
@@ -228,11 +227,11 @@ class CMakeConfigDeps:
               still generate a root config file named after the recipe.
         """
         ret = {}
-        components = full_cpp_info.components if full_cpp_info else dep.cpp_info.components
-        left_components_in_dep = list(components.keys())
-        default_components = dep.cpp_info.default_components or []
         cmake_file_name = self.get_property("cmake_file_name", dep)
-        if isinstance(cmake_file_name, dict):
+        components = dep.cpp_info.deduce_full_cpp_info(dep).components
+        if isinstance(cmake_file_name, dict):  # multiple CMake config files way
+            left_components_in_dep = list(components.keys())
+            default_components = dep.cpp_info.default_components or []
             for filename, file_info in cmake_file_name.items():
                 cmps_per_file = file_info.get("components", [])
                 for name in cmps_per_file:
@@ -246,18 +245,16 @@ class CMakeConfigDeps:
                     else:
                         left_components_in_dep.remove(name)
                 ret[filename] = {"components": cmps_per_file,
-                                 "full_cpp_info": full_cpp_info,
                                  "properties": file_info.get("properties", {}),
                                  "is_root": False}
             root_filename = dep.ref.name
-        else:
-            root_filename = cmake_file_name or dep.ref.name
-        # Root filename (if needed)
-        if not dep.cpp_info.has_components or left_components_in_dep:
-            if root_filename not in ret:
+            if left_components_in_dep and root_filename not in ret:
                 ret[root_filename] = {"components": left_components_in_dep,
-                                      "full_cpp_info": full_cpp_info,
                                       "is_root": True}
+        else:  # cmake_file_name is a string and behaves as usual
+            root_filename = cmake_file_name or dep.ref.name
+            ret[root_filename] = {"components": list(components.keys()),
+                                  "is_root": True}
         return ret
 
 
@@ -269,14 +266,14 @@ class _CMakeContextGenerator:
         self.consumer_conanfile = cmakedeps._conanfile
         self.require = require
         self.dep = dep
-        self.full_cpp_info = cmake_file_info.get("full_cpp_info") or dep.cpp_info.deduce_full_cpp_info(dep)
+        self.full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
         self.base_filename = cmake_filename
         # Whether this is the "root" config file for the dependency (as opposed to one of the
         # per-group files declared through the ``cmake_file_name`` dict property), and
         # which components (or leftover components, for the root file) it covers.
         self.is_root = cmake_file_info["is_root"]
         self.file_components = cmake_file_info["components"]
-        self.custom_props = cmake_file_info.get("properties")
+        self.custom_props = cmake_file_info.get("properties", {})
         self.is_build_context = require.build
         # Prepared to filter transitive tool-requires with visible=True
         self.transitive_reqs = get_transitive_requires(self.consumer_conanfile, dep)
