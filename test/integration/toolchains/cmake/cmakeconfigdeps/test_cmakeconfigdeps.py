@@ -1315,7 +1315,7 @@ def test_find_mode_none():
     assert "find_dependency(dep REQUIRED )" in target_dependency
 
 
-def test_cmakeconfigdeps_message_mode_respects_quiet():
+def test_cmakeconfigdeps_messages_honor_find_quietly():
     c = TestClient()
     conanfile = textwrap.dedent("""
         import os
@@ -1331,21 +1331,23 @@ def test_cmakeconfigdeps_message_mode_respects_quiet():
 
             def package_info(self):
                 self.cpp_info.libs = ["lib1"]
+                self.cpp_info.set_property("cmake_components", ["comp1"])
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
     c.run("install --requires=pkg/0.1 -g CMakeConfigDeps")
 
+    quiet_guard = "if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)"
+
     config = c.load("pkg-config.cmake")
-    assert "if(pkg_FIND_QUIETLY)" in config
-    assert "set(pkg_MESSAGE_MODE VERBOSE)" in config
-    assert "set(pkg_MESSAGE_MODE STATUS)" in config
+    assert "pkg_NOT_FOUND_MESSAGE" in config
+    assert "Conan: Error: 'pkg' required COMPONENT '${comp}' not found" in config
     assert "message(STATUS" not in config
 
     targets = c.load("pkgTargets.cmake")
-    assert 'message(${pkg_MESSAGE_MODE} "Conan: Configuring Targets for pkg/0.1")' in targets
-    assert "message(STATUS" not in targets
+    assert quiet_guard in targets
+    assert 'message(STATUS "Conan: Configuring Targets for pkg/0.1")' in targets
 
     target_config = c.load("pkg-Targets-release.cmake")
-    assert "message(${pkg_MESSAGE_MODE}" in target_config
-    assert "message(STATUS" not in target_config
+    assert quiet_guard in target_config
+    assert 'message(STATUS "Conan: Target declared imported' in target_config

@@ -31,12 +31,6 @@ class ConfigTemplate2:
             message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")
         endif()
 
-        if({{filename}}_FIND_QUIETLY)
-            set({{filename}}_MESSAGE_MODE VERBOSE)
-        else()
-            set({{filename}}_MESSAGE_MODE STATUS)
-        endif()
-
         include(${CMAKE_CURRENT_LIST_DIR}/{{ targets_include_file }})
 
         get_property(isMultiConfig GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
@@ -50,8 +44,8 @@ class ConfigTemplate2:
         foreach(comp {%raw%}${{%endraw%}{{filename}}_FIND_COMPONENTS})
           if(NOT ${comp} IN_LIST {{filename}}_PACKAGE_PROVIDED_COMPONENTS)
             if({%raw%}${{%endraw%}{{filename}}_FIND_REQUIRED_${comp}})
-              message({%raw%}${{%endraw%}{{filename}}_MESSAGE_MODE} "Conan: Error: '{{pkg_name}}' required COMPONENT '${comp}' not found")
               set({{filename}}_FOUND FALSE)
+              set({{filename}}_NOT_FOUND_MESSAGE "Conan: Error: '{{pkg_name}}' required COMPONENT '${comp}' not found")
             endif()
           endif()
         endforeach()
@@ -76,7 +70,9 @@ class ConfigTemplate2:
         # Some build modules in ConanCenter use try_compile variables and legacy, so this
         # include() needs to happen after the above variables are defined
         {% for build_module in build_modules_paths %}
-        message({%raw%}${{%endraw%}{{filename}}_MESSAGE_MODE} "Conan: Including build module from '{{build_module}}'")
+        if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
+            message(STATUS "Conan: Including build module from '{{build_module}}'")
+        endif()
         include("{{ build_module }}")
         {% endfor %}
 
