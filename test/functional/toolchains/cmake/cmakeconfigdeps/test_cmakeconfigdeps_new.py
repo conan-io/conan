@@ -1783,7 +1783,7 @@ def test_find_package_extra_variants():
 
 
 @pytest.mark.tool("cmake")
-def test_find_package_quiet_mode():
+def test_find_package_quietly():
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
