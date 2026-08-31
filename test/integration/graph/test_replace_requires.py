@@ -454,7 +454,7 @@ class TestReplaceRequiresTransitiveGenerators:
         assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
 
         cmake = c.load("app/openssl-Targets-release.cmake")
-        assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
+        assert "find_dependency(ZLIB REQUIRED)" in cmake
         assert "add_library(openssl::openssl STATIC IMPORTED)" in cmake
         assert "set_property(TARGET openssl::openssl APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
                '             "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake
@@ -534,7 +534,7 @@ class TestReplaceRequiresTransitiveGenerators:
         assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
 
         cmake = c.load("app/openssl-Targets-release.cmake")
-        assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
+        assert "find_dependency(ZLIB REQUIRED)" in cmake
         assert "add_library(openssl::crypto STATIC IMPORTED)" in cmake
         assert "set_property(TARGET openssl::crypto APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
                '             "$<$<CONFIG:RELEASE>:ZLIB::ZLIB>")' in cmake
@@ -620,7 +620,7 @@ class TestReplaceRequiresTransitiveGenerators:
         assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
 
         cmake = c.load("app/openssl-Targets-release.cmake")
-        assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
+        assert "find_dependency(ZLIB REQUIRED)" in cmake
         assert "add_library(openssl::openssl STATIC IMPORTED)" in cmake
         # It should access the generic zlib-ng target
         assert "set_property(TARGET openssl::openssl APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
@@ -710,7 +710,7 @@ class TestReplaceRequiresTransitiveGenerators:
         assert "add_library(ZLIB::ZLIB STATIC IMPORTED)" in cmake
 
         cmake = c.load("app/openssl-Targets-release.cmake")
-        assert "find_dependency(ZLIB REQUIRED CONFIG)" in cmake
+        assert "find_dependency(ZLIB REQUIRED)" in cmake
         assert "add_library(openssl::crypto STATIC IMPORTED)" in cmake
         if package_requires:
             # The generic package requirement uses the package name zlib-ng

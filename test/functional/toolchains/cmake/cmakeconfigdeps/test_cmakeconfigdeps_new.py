@@ -351,7 +351,7 @@ class TestLibsIntegration:
         c.run("create pkg")
         c.run(f"install app -g CMakeConfigDeps")
         targets_cmake = c.load("app/pkg-Targets-release.cmake")
-        assert "find_dependency(MyDep REQUIRED CONFIG)" in targets_cmake
+        assert "find_dependency(MyDep REQUIRED)" in targets_cmake
         assert 'set_property(TARGET pkg::pkg APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n' \
                '             "$<$<CONFIG:RELEASE>:MyTargetDep>")' in targets_cmake
 

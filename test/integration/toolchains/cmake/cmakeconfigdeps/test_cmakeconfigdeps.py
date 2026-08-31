@@ -349,7 +349,7 @@ def test_cmake_find_mode_deprecated():
     tc.save({"conanfile.py": dep})
     tc.run("create .")
     tc.run(f"install --requires=dep/0.1 -g CMakeConfigDeps")
-    assert "CMakeConfigDeps does not support module find mode"
+    assert "CMakeConfigDeps does not support module find mode" in tc.out
 
 
 def test_build_context_deprecated():
@@ -390,7 +390,7 @@ def test_cmake_extra_dependencies():
     tc.run("create .")
     tc.run(f"install --requires=dep/0.1 -g CMakeConfigDeps")
     dep = tc.load("dep-Targets-release.cmake")
-    assert "find_dependency(MyOpenMPI REQUIRED )" in dep
+    assert "find_dependency(MyOpenMPI REQUIRED)" in dep
     assert "set_property(TARGET dep::dep APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
            "             $<$<CONFIG:RELEASE>:MyOpenMPILib>)" in dep
 
@@ -425,7 +425,7 @@ def test_cmake_extra_dependencies_components():
     tc.run("create .")
     tc.run(f"install --requires=dep/0.1 -g CMakeConfigDeps")
     dep = tc.load("dep-Targets-release.cmake")
-    assert "find_dependency(MyOpenMPI REQUIRED )" in dep
+    assert "find_dependency(MyOpenMPI REQUIRED)" in dep
     assert "set_property(TARGET dep::mycomp APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
            "             $<$<CONFIG:RELEASE>:MyOpenMPILib>)" in dep
 
@@ -1312,4 +1312,4 @@ def test_find_mode_none():
     tc.run("install .")
     target_dependency = tc.load("liba-Targets-release.cmake")
     # The dependency should not have CONFIG requirement
-    assert "find_dependency(dep REQUIRED )" in target_dependency
+    assert "find_dependency(dep REQUIRED)" in target_dependency

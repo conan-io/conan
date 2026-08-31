@@ -40,9 +40,9 @@ class TargetConfigurationTemplate2:
         # Dependencies finding
         include(CMakeFindDependencyMacro)
 
-        {% for dep, dep_find_mode in dependencies.items() %}
+        {% for dep in dependencies %}
         if(NOT {{dep}}_FOUND)
-            find_dependency({{dep}} REQUIRED {{dep_find_mode}})
+            find_dependency({{dep}} REQUIRED)
         endif()
         {% endfor %}
 
