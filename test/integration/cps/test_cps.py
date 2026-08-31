@@ -113,7 +113,7 @@ def test_cps_in_pkg():
 
             def package_info(self):
                 from conan.cps import CPS
-                self.cpp_info = CPS.load("zlib.cps").to_conan(self)
+                self.cpp_info = CPS.load("zlib.cps", self).to_conan()
         """)
     c.save({"pkg/conanfile.py": conanfile})
     c.run("create pkg")
@@ -187,7 +187,7 @@ def test_cps_shared_in_pkg():
 
             def package_info(self):
                 from conan.cps import CPS
-                self.cpp_info = CPS.load("mypkg.cps").to_conan()
+                self.cpp_info = CPS.load("mypkg.cps", self).to_conan()
         """)
     c.save({"pkg/conanfile.py": conanfile})
     c.run("create pkg")
@@ -293,7 +293,7 @@ def test_cps_component_single(as_comp):
                 self.cpp_info{cpp_info_comp}.requires = ["dep::comp1"]
                 from conan.cps import CPS
                 cps = CPS.from_conan(self)
-                self.cpp_info = cps.to_conan(self)
+                self.cpp_info = cps.to_conan()
         """)
     c.save({"conanfile.py": conanfile,
             "dep/conanfile.py": GenConanfile("dep", "0.1")
@@ -376,32 +376,34 @@ def test_cps_conanfile_parsing(settings, languages, with_conanfile):
 
                 def package_info(self):
                     from conan.cps import CPS
-                    self.cpp_info = CPS.load("zlib.cps").to_conan({'self' if with_conanfile else ''})
+                    self.cpp_info = CPS.load("zlib.cps", {'self' if with_conanfile else ''}).to_conan()
             """)
     c.save({"pkg/conanfile.py": conanfile})
-    c.run("create pkg")
-
-    install_settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
-
-    c.run(f"install --requires=zlib/1.3.1 {install_settings} -g CMakeConfigDeps")
-    cmake = c.load("zlib-Targets-release.cmake")
-    if with_conanfile:
-        # If we can see the configurations override based on build_type
-        if settings:
-            # If we can see the specific language, we only use the one define for it, else all
-            if languages:
-                assert '$<$<CONFIG:RELEASE>:FOO=2>' in cmake
-            else:
-                assert '$<$<CONFIG:RELEASE>:BAR=2;FOO=2>' in cmake
-        else:
-            # No settings to override configuration, but we can still see the specific language
-            if languages:
-                assert '$<$<CONFIG:RELEASE>:FOO=1>' in cmake
-            else:
-                assert '$<$<CONFIG:RELEASE>:BAR=1;FOO=1>' in cmake
+    c.run("create pkg", assert_error=not with_conanfile)
+    if not with_conanfile:
+        assert "CPS file has configurations but no conanfile" in c.out
     else:
-        # We have no information to provide more specific configuration
-        assert '$<$<CONFIG:RELEASE>:BAR=1;FOO=1>' in cmake
+        install_settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
+
+        c.run(f"install --requires=zlib/1.3.1 {install_settings} -g CMakeConfigDeps")
+        cmake = c.load("zlib-Targets-release.cmake")
+        if with_conanfile:
+            # If we can see the configurations override based on build_type
+            if settings:
+                # If we can see the specific language, we only use the one define for it, else all
+                if languages:
+                    assert '$<$<CONFIG:RELEASE>:FOO=2>' in cmake
+                else:
+                    assert '$<$<CONFIG:RELEASE>:BAR=2;FOO=2>' in cmake
+            else:
+                # No settings to override configuration, but we can still see the specific language
+                if languages:
+                    assert '$<$<CONFIG:RELEASE>:FOO=1>' in cmake
+                else:
+                    assert '$<$<CONFIG:RELEASE>:BAR=1;FOO=1>' in cmake
+        else:
+            # We have no information to provide more specific configuration
+            assert '$<$<CONFIG:RELEASE>:BAR=1;FOO=1>' in cmake
 
 
 @pytest.mark.parametrize("with_conanfile", [True, False])
@@ -471,8 +473,8 @@ def test_cps_explicit_configuration_override(with_conanfile):
 
                     def package_info(self):
                         from conan.cps import CPS
-                        self.cpp_info = CPS.load("zlib.cps").to_conan(conanfile={'self' if with_conanfile else 'None'},
-                                                                      configuration="custom")
+                        self.cpp_info = CPS.load("zlib.cps", {'self' if with_conanfile else 'None'},
+                                                             configuration="custom").to_conan()
                 """)
     c.save({"pkg/conanfile.py": conanfile})
     c.run("create pkg")

@@ -2,6 +2,8 @@ import json
 import os
 from enum import Enum
 
+from conan.api.output import ConanOutput
+from conan.errors import ConanException
 from conan.internal.model.cpp_info import CppInfo
 from conan.internal.util.files import save, load
 
@@ -36,7 +38,6 @@ class CPSComponent:
     def __init__(self, component_type=None):
         self.includes = []
         self.type = component_type or "unknown"
-        self.configurations = {}
         self.definitions = {}
         self.requires = []
         self.link_requires = []
@@ -66,19 +67,46 @@ class CPSComponent:
         return component
 
     @staticmethod
-    def deserialize(data, none_default=False):
+    def deserialize(data, conanfile, selected_conf=None):
         comp = CPSComponent()
-        comp.type = CPSComponentType(data.get("type")) if "type" in data else None
-        comp.configurations = {k: CPSComponent.deserialize(v, True)
-                               for k, v in data.get("configurations", {}).items()}
-        comp.requires = data.get("requires", None if none_default else [])
-        comp.link_requires = data.get("link_requires", None if none_default else [])
-        comp.includes = data.get("includes", None if none_default else [])
-        comp.definitions = data.get("definitions", None if none_default else {})
-        comp.location = data.get("location")
-        comp.link_location = data.get("link_location")
-        comp.link_libraries = data.get("link_libraries", None if none_default else [])
-        comp.link_languages = data.get("link_languages", None if none_default else [])
+        available_confs = data.get("configurations", {})
+        configuration = {}
+        if available_confs:
+            if selected_conf:
+                configuration = available_confs.get(selected_conf)
+                if not configuration:
+                    raise ConanException(f"CPS file has no configuration for '{selected_conf}'")
+            elif conanfile:
+                if conanfile.settings.get_safe("build_type") is not None:
+                    build_type = str(conanfile.settings.build_type)
+                    configuration = available_confs.get(build_type)
+                    if not configuration:
+                        configuration = available_confs.get(build_type.lower())
+                        if not configuration:
+                            raise ConanException(f"CPS file has no configuration for '{build_type}'")
+            else:
+                raise ConanException("CPS file has configurations but no conanfile or specific configuration were provided to select one")
+
+        def get(key, default=None):
+            return configuration.get(key, data.get(key, default))
+
+        comp.type = CPSComponentType(get("type"))
+        comp.requires = get("requires", [])
+        comp.link_requires = get("link_requires", [])
+        comp.includes = get("includes", [])
+        comp.location = get("location")
+        comp.link_location = get("link_location")
+        comp.link_libraries = get("link_libraries", [])
+        comp.link_languages = get("link_languages", [])
+
+        definitions = get("definitions", {})
+        if conanfile and conanfile.languages:
+            if "C++" not in conanfile.languages:
+                definitions.pop("cpp", None)
+            if "C" not in conanfile.languages:
+                definitions.pop("c", None)
+        comp.definitions = definitions
+
         return comp
 
     @staticmethod
@@ -138,7 +166,7 @@ class CPSComponent:
 class CPS:
     """ represents the CPS file for 1 package
     """
-    def __init__(self, name=None, version=None):
+    def __init__(self, name=None, version=None, conanfile=None, configuration=None):
         self.name = name
         self.version = version
         self.default_components = []
@@ -150,6 +178,12 @@ class CPS:
         self.license = None
         self.website = None
         self.prefix = None
+        self.conanfile = conanfile
+        self.configuration = configuration
+        if conanfile is None:
+            ConanOutput().warning("Creating a CPS object without a conanfile is not recommended and will be deprecated in the future."
+                                  " Please provide a conanfile to the CPS constructor.",
+                                  warn_tag="deprecated")
 
     def serialize(self):
         cps = {"cps_version": "0.13.0",
@@ -177,9 +211,8 @@ class CPS:
 
         return cps
 
-    @staticmethod
-    def deserialize(data):
-        cps = CPS()
+    def deserialize(self, data):
+        cps = CPS(conanfile=self.conanfile)
         cps.name = data.get("name")
         cps.prefix = data.get("prefix")
         cps.version = data.get("version")
@@ -189,7 +222,7 @@ class CPS:
         cps.requires = data.get("requires")
         cps.configurations = data.get("configurations")
         cps.default_components = data.get("default_components")
-        cps.components = {k: CPSComponent.deserialize(v)
+        cps.components = {k: CPSComponent.deserialize(v, self.conanfile, self.configuration)
                           for k, v in data.get("components", {}).items()}
         return cps
 
@@ -238,7 +271,7 @@ class CPS:
 
         return cps
 
-    def to_conan(self, conanfile=None, configuration=None):
+    def to_conan(self):
         def strip_prefix(dirs):
             return [d.replace("@prefix@/", "") for d in dirs]
 
@@ -256,10 +289,8 @@ class CPS:
             # "*" has less priority than specific language
             aggregated = {}
             aggregated.update(defs.get("*", {}))
-            if not conanfile or not conanfile.languages or "C" in conanfile.languages:
-                aggregated.update(defs.get("c", {}))
-            if not conanfile or not conanfile.languages or "C++" in conanfile.languages:
-                aggregated.update(defs.get("cpp", {}))
+            aggregated.update(defs.get("c", {}))
+            aggregated.update(defs.get("cpp", {}))
             result = list(f"{k}={v}" if v is not None else k for k, v in aggregated.items())
             return result
 
@@ -267,41 +298,24 @@ class CPS:
         cpp_info.default_components = self.default_components
 
         for comp_name, comp in self.components.items():
-            comp_config = None
-            if configuration and configuration in comp.configurations:
-                comp_config = comp.configurations[configuration]
-            elif conanfile and conanfile.settings.get_safe("build_type"):
-                build_type = str(conanfile.settings.build_type)
-                if build_type in comp.configurations:
-                    comp_config = comp.configurations[build_type]
-                elif build_type.lower() in comp.configurations:
-                    comp_config = comp.configurations[build_type.lower()]
-
-            def cps_get(attr):
-                comp_value = getattr(comp, attr)
-                if comp_config:
-                    result = getattr(comp_config, attr)
-                    return result if result is not None else comp_value
-                return comp_value
-
             cpp_comp = cpp_info if len(self.components) == 1 else cpp_info.components[comp_name]
-            cpp_comp.includedirs = strip_prefix(cps_get("includes"))
-            cpp_comp.defines = definitions(cps_get("definitions"))
+            cpp_comp.includedirs = strip_prefix(comp.includes)
+            cpp_comp.defines = definitions(comp.definitions)
             cpp_info.set_property("cmake_file_name", self.name)
             cpp_info.set_property("cmake_target_name", f"{self.name}::{comp_name}")
-            if cps_get("link_location"):
-                link_location = cps_get("link_location")
+            if comp.link_location:
+                link_location = comp.link_location
                 lib_location(link_location, cpp_comp)
-                location = cps_get("location")
+                location = comp.location
                 location = location.replace("@prefix@/", "")
                 cpp_comp.bindirs = [os.path.dirname(location)]
-            elif cps_get("location"):
-                location = cps_get("location")
+            elif comp.location:
+                location = comp.location
                 lib_location(location, cpp_comp)
-            requires = cps_get("link_requires") + cps_get("requires")
+            requires = comp.link_requires + comp.requires
             for r in requires:
                 cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
-            cpp_comp.system_libs = cps_get("link_libraries")
+            cpp_comp.system_libs = comp.link_libraries
 
         return cpp_info
 
@@ -311,9 +325,9 @@ class CPS:
         return filename
 
     @staticmethod
-    def load(file):
+    def load(file, conanfile=None, configuration=None):
         contents = load(file)
-        base = CPS.deserialize(json.loads(contents))
+        base = CPS(conanfile=conanfile, configuration=configuration).deserialize(json.loads(contents))
 
         path, name = os.path.split(file)
         basename, ext = os.path.splitext(name)
