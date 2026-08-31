@@ -214,7 +214,7 @@ class RestV2Methods:
         result = {}
 
         if not only_metadata:
-            accepted_files = ["conanfile.py", CONAN_MANIFEST,  "metadata/sign"]
+            accepted_files = ["conanfile.py", CONAN_MANIFEST,  "metadata/sign", "metadata/conan"]
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
             export_file = self._find_compressed_file(ref, server_files, EXPORT_FILE_NAME)
             if export_file is not None:

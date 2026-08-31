@@ -317,6 +317,11 @@ class Overrides:
     def __init__(self):
         self._overrides = {}  # {require_ref: {override_ref1, override_ref2}}
 
+    def copy(self):
+        result = Overrides()
+        result._overrides = self._overrides.copy()
+        return result
+
     def __bool__(self):
         return bool(self._overrides)
 

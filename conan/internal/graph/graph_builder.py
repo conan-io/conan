@@ -1,8 +1,10 @@
 import os
+
 from collections import deque
 
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conan.internal.methods import run_configure_method
+from conan.internal.model.lockfile import Lockfile
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
     CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE, RECIPE_CONSUMER
@@ -32,6 +34,7 @@ class DepsGraphBuilder:
         self._update = update
         self._check_update = check_update
         self._resolve_prereleases = global_conf.get('core.version_ranges:resolve_prereleases')
+        self._auto_lock = global_conf.get("core.lockfile:auto", check_type=bool)
 
     def load_graph(self, root_node, profile_host, profile_build, graph_lock=None):
         assert profile_host is not None
@@ -47,22 +50,23 @@ class DepsGraphBuilder:
         rs = self._initialize_requires(root_node, dep_graph, graph_lock, profile_build, profile_host)
         dep_graph.add_node(root_node)
 
-        open_requires = deque((r, root_node) for r in rs)
+        open_requires = deque((r, root_node, graph_lock) for r in rs)
         try:
             while open_requires:
                 # Fetch the first waiting to be expanded (depth-first)
-                (require, node) = open_requires.popleft()
+                (require, node, graph_lock) = open_requires.popleft()
                 if require.override:
                     continue
-                new_node = self._expand_require(require, node, dep_graph, profile_host,
-                                                profile_build, graph_lock)
+
+                new_node, new_lock = self._expand_require(require, node, dep_graph, profile_host,
+                                                          profile_build, graph_lock)
                 if new_node and (not new_node.conanfile.vendor
                                  or new_node.recipe == RECIPE_EDITABLE or
                                  new_node.conanfile.conf.get("tools.graph:vendor",
                                                              choices=("build",))):
-                    newr = self._initialize_requires(new_node, dep_graph, graph_lock, profile_build,
+                    newr = self._initialize_requires(new_node, dep_graph, new_lock, profile_build,
                                                      profile_host)
-                    open_requires.extendleft((r, new_node) for r in reversed(newr))
+                    open_requires.extendleft((r, new_node, new_lock) for r in reversed(newr))
             self._remove_overrides(dep_graph)
             self._remove_orphans(dep_graph)
             check_graph_provides(dep_graph)
@@ -106,9 +110,9 @@ class DepsGraphBuilder:
 
         if prev_node is None:
             # new node, must be added and expanded (node -> new_node)
-            new_node = self._create_new_node(node, require, graph, profile_host, profile_build,
-                                             graph_lock)
-            return new_node
+            new_node, graph_lock = self._create_new_node(node, require, graph, profile_host,
+                                                         profile_build, graph_lock)
+            return new_node, graph_lock
         else:
             # print("Closing a loop from ", node, "=>", prev_node)
             # Keep previous "test" status only if current is also test
@@ -117,6 +121,7 @@ class DepsGraphBuilder:
             require.process_package_type(node, prev_node)
             graph.add_edge(node, prev_node, require)
             node.propagate_closing_loop(require, prev_node, graph.visibility_conflicts)
+            return None, None
 
     def _save_options_conflicts(self, node, require, prev_node, graph):
         """ Store the discrepancies of options when closing a diamond, to later report
@@ -289,10 +294,25 @@ class DepsGraphBuilder:
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
         layout, recipe_status, remote = result
         conanfile_path = layout.conanfile()
+        # Bundle-Lockfile:  check if the recipe exported a "conan.lock", and if it is there, use it
+        if self._auto_lock and (graph_lock is None or graph_lock.export):
+            exported_lock = os.path.join(layout.metadata(), "conan", "conan.lock")
+            if os.path.isfile(exported_lock):
+                exported_lockfile = Lockfile.load(exported_lock)
+                exported_lockfile.partial = True  # to allow consumers to impose their deps
+                from conan.api.output import ConanOutput
+                ConanOutput(scope=str(ref)).info(f"Using lockfile from metadata: {exported_lock}")
+                if graph_lock is not None:  # For the export case only
+                    graph_lock = graph_lock.copy()
+                    graph_lock.merge(exported_lockfile)
+                else:
+                    graph_lock = exported_lockfile
+                graph_lock.export = False
+
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
                                                     remotes=self._remotes, update=self._update,
                                                     check_update=self._check_update)
-        return layout, dep_conanfile, recipe_status, remote
+        return layout, dep_conanfile, recipe_status, remote, graph_lock
 
     @staticmethod
     def _resolved_system(node, require, profile_build, profile_host, resolve_prereleases):
@@ -409,9 +429,9 @@ class DepsGraphBuilder:
                 resolved = self._resolve_recipe(require.ref, graph_lock)
             except ConanException as e:
                 raise GraphMissingError(node, require, str(e))
-
-        layout, dep_conanfile, recipe_status, remote = resolved
-
+            layout, dep_conanfile, recipe_status, remote, graph_lock = resolved
+        else:
+            layout, dep_conanfile, recipe_status, remote = resolved
         new_ref = layout.reference
         dep_conanfile.folders.set_base_recipe_metadata(layout.metadata())  # None for platform_xxx
         if getattr(require, "is_consumer", None):
@@ -444,7 +464,7 @@ class DepsGraphBuilder:
         if ancestor is not None:
             raise GraphLoopError(new_node, require, ancestor)
 
-        return new_node
+        return new_node, graph_lock
 
     @staticmethod
     def _compute_down_options(node, require, new_ref):
