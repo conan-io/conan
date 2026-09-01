@@ -262,7 +262,8 @@ class SSHRunner:
         # ('conan list --graph=create.json --graph-binaries=build --format=json > pkglist.json'
         _Path = pathlib.PureWindowsPath if self.remote_is_windows else pathlib.PurePath
         pkg_list_json = _Path(self.remote_create_dir).joinpath("pkg_list.json").as_posix()
-        pkg_list_command = f"{self.remote_conan} list --graph={json_result} --graph-binaries=build --format=json > {pkg_list_json}"
+        # List every package (built or cached) because local cache could have been deleted
+        pkg_list_command = f"{self.remote_conan} list --graph={json_result} --format=json > {pkg_list_json}"
         _, stdout, _ = self.client.exec_command(pkg_list_command)
         if stdout.channel.recv_exit_status() != 0:
             raise ConanException("Unable to generate remote package list")
