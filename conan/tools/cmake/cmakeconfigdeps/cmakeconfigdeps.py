@@ -521,7 +521,6 @@ class _CMakeContextGenerator:
             components_per_file = self._ctx.file_components
             if full_cpp_info.has_components:
                 for name in components_per_file:
-                    component = full_cpp_info.components[name]
                     requires[name] = self._get_component_requires(
                         full_cpp_info.components[name], full_cpp_info.components)
             else:
@@ -632,7 +631,6 @@ class _CMakeContextGenerator:
             if cpp_info.has_components:
                 # Only the components belonging to this particular CMake config file
                 for name in self._ctx.file_components:
-                    component = cpp_info.components[name]
                     target_name = self._ctx.get_cmake_target_name(comp_name=name)
                     target = self._get_cmake_lib(cpp_info.components[name], cpp_info_requires,
                                                  comp_name=name)
