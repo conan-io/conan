@@ -145,6 +145,7 @@ class _PackageBuilder:
                 # In local cache, generators folder always in build_folder
                 conanfile.folders.set_base_generators(base_build)
                 conanfile.folders.set_base_pkg_metadata(package_layout.metadata())
+                conanfile.recipe_internal_folder = recipe_layout.conan_internal()
 
                 ConanOutput().info(f'Sources in {conanfile.source_folder}')
 
@@ -197,6 +198,7 @@ class BinaryInstaller:
         conanfile.folders.set_base_source(source_folder)
         conanfile.folders.set_base_export_sources(source_folder)
         conanfile.folders.set_base_recipe_metadata(recipe_layout.metadata())
+        conanfile.recipe_internal_folder = recipe_layout.conan_internal()
         config_source(export_source_folder, conanfile, self._hook_manager)
         return recipe_layout
 

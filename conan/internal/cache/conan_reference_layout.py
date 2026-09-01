@@ -15,6 +15,7 @@ EXPORT_FOLDER = "e"
 EXPORT_SRC_FOLDER = "es"
 DOWNLOAD_EXPORT_FOLDER = "d"
 METADATA = "metadata"
+CONAN_INTERNAL_FOLDER = "ci"
 
 
 class LayoutBase:
@@ -65,6 +66,9 @@ class RecipeLayout(LayoutBase):
 
     def download_export(self):
         return os.path.join(self._base_folder, DOWNLOAD_EXPORT_FOLDER)
+
+    def conan_internal(self):
+        return os.path.join(self._base_folder, CONAN_INTERNAL_FOLDER)
 
     def source(self):
         return os.path.join(self._base_folder, SRC_FOLDER)
