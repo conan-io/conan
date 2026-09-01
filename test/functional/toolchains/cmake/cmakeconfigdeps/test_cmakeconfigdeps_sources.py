@@ -89,7 +89,7 @@ def test_cpp_info_component_sources():
            " ${hello_PACKAGE_FOLDER_RELEASE}/src/other.cpp>)" in cmake
 
 
-#@pytest.mark.skipif(platform.system() != "Linux", reason="No OS specific test")
+@pytest.mark.skipif(platform.system() != "Linux", reason="No OS specific test")
 @pytest.mark.tool("cmake")
 def test_cpp_info_sources():
     c = TestClient()
