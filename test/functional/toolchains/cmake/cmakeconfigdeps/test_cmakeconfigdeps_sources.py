@@ -93,7 +93,7 @@ def test_cpp_info_component_sources():
 @pytest.mark.tool("cmake")
 def test_cpp_info_sources():
     c = TestClient()
-    c.run("new cmake_lib -d name=hello -d version=1.0")
+    c.save({"src/hello.cpp": '#include <iostream>\nvoid hello() {std::cout << "Hello, world!";}',})
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.files import copy
@@ -111,17 +111,55 @@ def test_cpp_info_sources():
                 self.cpp_info.includedirs = []
                 self.cpp_info.sources = ["src/hello.cpp"]
     """)
-    hello = c.load("src/hello.cpp")
-    hello = hello.replace('#include "hello.h"', '')
-    example = c.load("test_package/src/example.cpp")
-    example = example.replace('#include "hello.h"', '#include <vector>\n'
-                                                    'void hello();\n'
-                                                    'void hello_print_vector(const std::vector<std::string> &strings);')
-    c.save({"conanfile.py": conanfile,
-            "src/hello.cpp": hello,
-            "test_package/src/example.cpp": example})
-    # Check that the hello library builds in test_package
-    c.run(f"create . -c tools.cmake.cmakedeps:new={new_value}")
+
+    c.save({"conanfile.py": conanfile})
+    c.run("create")
+
+    cml = textwrap.dedent("""
+    set(CMAKE_CXX_COMPILER_WORKS 1)
+    set(CMAKE_CXX_ABI_COMPILED 1)
+    cmake_minimum_required(VERSION 3.15)
+    project(example CXX)
+    add_executable(example main.cpp main.h)
+
+    find_package(hello REQUIRED CONFIG)
+    target_link_libraries(example hello::hello)
+    """)
+    consumer = textwrap.dedent("""
+    import os
+    from conan import ConanFile
+    from conan.tools.cmake import CMake, CMakeToolchain, CMakeConfigDeps, cmake_layout
+    class Consumer(ConanFile):
+        settings = "os", "compiler", "build_type", "arch"
+        generators = "CMakeConfigDeps", "CMakeToolchain"
+        requires = "hello/1.0"
+
+        def layout(self):
+            cmake_layout(self)
+
+        def build(self):
+            cmake = CMake(self)
+            cmake.configure()
+            cmake.build()
+            self.run(os.path.join(self.cpp.build.bindir, "example"), env="conanrun")
+    """)
+    main_cpp = textwrap.dedent("""
+    #include "main.h"
+    int main() {
+        hello();
+        return 0;
+    }
+    """)
+    main_h = textwrap.dedent("""
+        void hello();
+    """)
+    c.save({"consumer/conanfile.py": consumer,
+            "consumer/CMakeLists.txt": cml,
+            "consumer/main.cpp": main_cpp,
+            "consumer/main.h": main_h})
+
+    c.run(f"build consumer")
+    assert "Hello, world!" in c.out
     # Check content of the generated files
     c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps")
     cmake = c.load("hello-Targets-release.cmake")
