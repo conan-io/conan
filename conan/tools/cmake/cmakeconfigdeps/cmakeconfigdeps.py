@@ -244,12 +244,6 @@ class _CMakeContextGenerator:
     def get_property(self, prop, dep=None, comp_name=None, check_type=None):
         return self.cmakedeps.get_property(prop, dep or self.dep, comp_name, check_type)
 
-    def get_cmake_filename(self, dep=None):
-        """Current file name, or the filename->components map for another dependency."""
-        if dep is None:
-            return self.base_filename
-        return self.cmakedeps.get_cmake_filename(dep, dep.cpp_info.deduce_full_cpp_info(dep))
-
     def get_cmake_target_name(self, dep=None, comp_name=None):
         dep = dep or self.dep
         target_name = self.get_property("cmake_target_name", dep, comp_name)
@@ -436,7 +430,7 @@ class _CMakeContextGenerator:
             dependencies = {}
             for d in transitive_reqs.values():
                 find_mode = _get_dep_find_mode(d)
-                for cmake_filename in self._ctx.get_cmake_filename(d):
+                for cmake_filename in self._ctx.cmakedeps.get_cmake_filename(d):
                     dependencies[cmake_filename] = find_mode
             extra_mods = self._ctx.get_property("cmake_extra_dependencies", check_type=list) or []
             dependencies.update({extra_mod: "" for extra_mod in extra_mods})
