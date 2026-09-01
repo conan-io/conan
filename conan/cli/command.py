@@ -5,6 +5,7 @@ from contextlib import redirect_stdout
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
+from conan.internal.conan_log import ConanLog
 
 
 class OnceArgument(argparse.Action):
@@ -133,6 +134,8 @@ class ConanArgumentParser(argparse.ArgumentParser):
         super().__init__(*args, **kwargs)
 
     def parse_args(self, args=None, namespace=None):
+        raw_args = list(args) if args is not None else []
+
         args = super().parse_args(args)
         ConanOutput.define_log_level(args.v)
         if getattr(args, "lockfile_packages", None):
@@ -142,6 +145,8 @@ class ConanArgumentParser(argparse.ArgumentParser):
             self._conan_api._api_helpers.set_core_confs(args.core_conf)  # noqa
 
         global_conf = self._conan_api._api_helpers.global_conf  # noqa
+        ConanLog.set_context(self.prog, raw_args,
+                             [getattr(args, "password", None), getattr(args, "token", None)])
         # TODO: This might be even better moved to the ConanAPI so users without doing custom
         #  commands can benefit from it
         ConanOutput.set_warnings_as_errors(global_conf.get("core:warnings_as_errors",

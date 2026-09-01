@@ -7,7 +7,7 @@ from io import StringIO
 
 from conan.errors import ConanException
 from conan.internal.util.files import load
-
+from conan.internal.conan_log import ConanLog
 
 if getattr(sys, 'frozen', False) and 'LD_LIBRARY_PATH' in os.environ:
 
@@ -43,8 +43,19 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
     stdout = stdout or sys.stderr
     stderr = stderr or sys.stderr
 
-    out = subprocess.PIPE if isinstance(stdout, StringIO) else stdout
-    err = subprocess.PIPE if isinstance(stderr, StringIO) else stderr
+    conan_log = ConanLog()
+    log_path = conan_log.log_path
+    # Something like subprocess.DEVNULL (quiet=True) has nothing to capture or forward to
+    log_stdout = bool(log_path) and hasattr(stdout, "write")
+    log_stderr = bool(log_path) and hasattr(stderr, "write")
+    # A single pipe keeps stdout/stderr in the order the subprocess produced them
+    merge_out_err = log_stdout and log_stderr and stdout is stderr
+
+    out = subprocess.PIPE if (isinstance(stdout, StringIO) or log_stdout) else stdout
+    if merge_out_err:
+        err = subprocess.STDOUT
+    else:
+        err = subprocess.PIPE if (isinstance(stderr, StringIO) or log_stderr) else stderr
 
     with pyinstaller_bundle_env_cleaned():
         try:
@@ -52,13 +63,18 @@ def conan_run(command, stdout=None, stderr=None, cwd=None, shell=True):
         except Exception as e:
             raise ConanException("Error while running cmd\nError: %s" % (str(e)))
 
-        proc_stdout, proc_stderr = proc.communicate()
-        # If the output is piped, like user provided a StringIO or testing, the communicate
-        # will capture and return something when thing finished
-        if proc_stdout:
-            stdout.write(proc_stdout.decode("utf-8", errors="ignore"))
-        if proc_stderr:
-            stderr.write(proc_stderr.decode("utf-8", errors="ignore"))
+        if log_stdout or log_stderr:
+            # Read stdout/stderr as they arrive so the caller still sees them live
+            conan_log.stream_subprocess(proc, stdout, stderr)
+            proc.wait()
+        else:
+            proc_stdout, proc_stderr = proc.communicate()
+            # If the output is piped, like user provided a StringIO or testing, the
+            # communicate will capture and return something when thing finished
+            if proc_stdout:
+                stdout.write(proc_stdout.decode("utf-8", errors="ignore"))
+            if proc_stderr:
+                stderr.write(proc_stderr.decode("utf-8", errors="ignore"))
         return proc.returncode
 
 

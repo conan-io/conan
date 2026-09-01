@@ -17,6 +17,7 @@ from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_C
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
 from conan import __version__
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
+from conan.internal.conan_log import ConanLog
 
 _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH = "_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH"
 
@@ -167,38 +168,40 @@ class Cli:
         """ Entry point for executing commands, dispatcher to class
         methods
         """
-        output = ConanOutput()
-        self.add_commands()
-        try:
-            command_argument = args[0][0]
-        except IndexError:  # No parameters
-            self._output_help_cli()
-            return
-        try:
-            command = self._commands[command_argument]
-        except KeyError as exc:
-            if command_argument in ["-v", "--version"]:
-                cli_out_write("Conan version %s" % __version__)
-                return
-
-            if command_argument in ["-h", "--help"]:
+        raw_args = args[0] if args else []
+        with ConanLog.activate(self._conan_api, raw_args):
+            output = ConanOutput()
+            self.add_commands()
+            try:
+                command_argument = raw_args[0]
+            except IndexError:  # No parameters
                 self._output_help_cli()
                 return
+            try:
+                command = self._commands[command_argument]
+            except KeyError as exc:
+                if command_argument in ["-v", "--version"]:
+                    cli_out_write("Conan version %s" % __version__)
+                    return
 
-            output.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
-            output.info("")
-            self._print_similar(command_argument)
-            raise ConanException("Unknown command %s" % str(exc))
+                if command_argument in ["-h", "--help"]:
+                    self._output_help_cli()
+                    return
 
-        try:
-            command.run(self._conan_api, args[0][1:])
-            _warn_frozen_center(self._conan_api)
-        except Exception as e:
-            # must be a local-import to get updated value
-            if ConanOutput.level_allowed(LEVEL_TRACE):
-                print(traceback.format_exc(), file=sys.stderr)
-            self._conan2_migrate_recipe_msg(e)
-            raise
+                output.info("'%s' is not a Conan command. See 'conan --help'." % command_argument)
+                output.info("")
+                self._print_similar(command_argument)
+                raise ConanException("Unknown command %s" % str(exc))
+
+            try:
+                command.run(self._conan_api, raw_args[1:])
+                _warn_frozen_center(self._conan_api)
+            except Exception as e:
+                # must be a local-import to get updated value
+                if ConanOutput.level_allowed(LEVEL_TRACE):
+                    print(traceback.format_exc(), file=sys.stderr)
+                self._conan2_migrate_recipe_msg(e)
+                raise
 
     @staticmethod
     def _conan2_migrate_recipe_msg(exception):
