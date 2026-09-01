@@ -20,6 +20,9 @@ from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrati
 
 _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH = "_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH"
 
+# Short aliases mapped to their canonical command names
+_COMMAND_ALIASES = {"ws": "workspace"}
+
 
 class Cli:
     """A single command of the conan application, with all the first level commands. Manages the
@@ -174,6 +177,7 @@ class Cli:
         except IndexError:  # No parameters
             self._output_help_cli()
             return
+        command_argument = _COMMAND_ALIASES.get(command_argument, command_argument)
         try:
             command = self._commands[command_argument]
         except KeyError as exc:
