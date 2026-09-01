@@ -42,6 +42,7 @@ class CMakeConfigDeps:
         self._check_components_exist = False
 
         self._properties = {}
+        self._full_cpp_infos = {}
 
     @property
     def build_context_activated(self):
@@ -124,8 +125,8 @@ class CMakeConfigDeps:
             # (config, config-version, targets) have a context-independent filename.
             # When the same package is both requires and tool_requires, keep the
             # host-context version so legacy variables (<pkg>_LIBRARIES, ...) are preserved.
-            full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
-            for cmake_filename, cmake_file_info in self.get_cmake_filename(dep, full_cpp_info).items():
+            full_cpp_info = self._get_full_cpp_info(dep)
+            for cmake_filename, cmake_file_info in self.get_cmake_filename(dep).items():
                 context_gen = _CMakeContextGenerator(self, require, dep, full_cpp_info, 
                                                      cmake_filename, cmake_file_info)
                 config_version_filename, config_version_context = context_gen.get_config_version_info()
@@ -155,7 +156,7 @@ class CMakeConfigDeps:
             for (require, dep) in direct_deps:
                 note = " # Optional. This is a tool-require, can't link its targets" \
                     if require.build else ""
-                for cmake_filename in self.get_cmake_filename(dep, dep.cpp_info.deduce_full_cpp_info(dep)):
+                for cmake_filename in self.get_cmake_filename(dep):
                     msg.append(f"    find_package({cmake_filename}){note}")
                 if not require.build and not dep.cpp_info.exe:
                     target_name = self.get_property("cmake_target_name", dep)
@@ -203,7 +204,14 @@ class CMakeConfigDeps:
             if comp is not None:
                 return comp.get_property(prop, check_type=check_type)
 
-    def get_cmake_filename(self, dep, full_cpp_info=None):
+    def _get_full_cpp_info(self, dep):
+        """
+        The deduced cpp_info of a dependency. Cached because it is computed from several places
+        and it reports deprecation warnings that shouldn't be repeated.
+        """
+        return self._full_cpp_infos.get(dep.ref.name, dep.cpp_info.deduce_full_cpp_info(dep))
+
+    def get_cmake_filename(self, dep):
         """
         Map of CMake config file names to the components that belong to each file.
 
@@ -213,7 +221,7 @@ class CMakeConfigDeps:
         - The name of transitive dependencies for calls to find_dependency
         """
         ret = self.get_property("cmake_file_name", dep)
-        full_cpp_info = full_cpp_info or dep.cpp_info.deduce_full_cpp_info(dep)
+        full_cpp_info = self._get_full_cpp_info(dep)
         return {ret or dep.ref.name: {"components": list(full_cpp_info.components.keys())}}
 
 
