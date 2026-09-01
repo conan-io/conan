@@ -127,7 +127,7 @@ class CMakeConfigDeps:
             # host-context version so legacy variables (<pkg>_LIBRARIES, ...) are preserved.
             full_cpp_info = self._get_full_cpp_info(dep)
             for cmake_filename, cmake_file_info in self.get_cmake_filename(dep).items():
-                context_gen = _CMakeContextGenerator(self, require, dep, full_cpp_info, 
+                context_gen = _CMakeContextGenerator(self, require, dep, full_cpp_info,
                                                      cmake_filename, cmake_file_info)
                 config_version_filename, config_version_context = context_gen.get_config_version_info()
                 if config_version_filename not in ret:
@@ -209,7 +209,9 @@ class CMakeConfigDeps:
         The deduced cpp_info of a dependency. Cached because it is computed from several places
         and it reports deprecation warnings that shouldn't be repeated.
         """
-        return self._full_cpp_infos.get(dep.ref.name, dep.cpp_info.deduce_full_cpp_info(dep))
+        if not dep.ref.name in self._full_cpp_infos:
+            self._full_cpp_infos[dep.ref.name] = dep.cpp_info.deduce_full_cpp_info(dep)
+        return self._full_cpp_infos[dep.ref.name]
 
     def get_cmake_filename(self, dep):
         """
