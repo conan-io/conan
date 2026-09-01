@@ -209,9 +209,10 @@ class CMakeConfigDeps:
         The deduced cpp_info of a dependency. Cached because it is computed from several places
         and it reports deprecation warnings that shouldn't be repeated.
         """
-        if dep.ref.name not in self._full_cpp_infos:
-            self._full_cpp_infos[dep.ref.name] = dep.cpp_info.deduce_full_cpp_info(dep)
-        return self._full_cpp_infos[dep.ref.name]
+        key = dep.ref.name
+        if key not in self._full_cpp_infos:
+            self._full_cpp_infos[key] = dep.cpp_info.deduce_full_cpp_info(dep)
+        return self._full_cpp_infos[key]
 
     def get_cmake_filename(self, dep):
         """
