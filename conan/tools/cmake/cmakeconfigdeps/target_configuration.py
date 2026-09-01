@@ -50,12 +50,16 @@ class TargetConfigurationTemplate2:
         {% for lib, lib_info in libs.items() %}
         #################### {{lib}} ####################
         if(NOT TARGET {{ lib }})
-            message(STATUS "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
+            if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
+                message(STATUS "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
+            endif()
             add_library({{lib}} {{lib_info["type"]}} IMPORTED)
         endif()
         {% for alias in lib_info.get("cmake_target_aliases", []) %}
         if(NOT TARGET {{alias}})
-            message(STATUS "Conan: Target declared alias '{{alias}}' for '{{lib}}'")
+            if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
+                message(STATUS "Conan: Target declared alias '{{alias}}' for '{{lib}}'")
+            endif()
             add_library({{alias}} ALIAS {{lib}})
         endif()
         {% endfor %}
@@ -182,14 +186,18 @@ class TargetConfigurationTemplate2:
         {% for exe, location in exes.items() %}
         #################### {{exe}} ####################
         if(NOT TARGET {{ exe }})
-            message(STATUS "Conan: Target declared imported executable '{{exe}}' {{context}}")
+            if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
+                message(STATUS "Conan: Target declared imported executable '{{exe}}' {{context}}")
+            endif()
             add_executable({{exe}} IMPORTED)
         else()
             get_property(_context TARGET {{exe}} PROPERTY CONAN_CONTEXT)
             if(NOT $${_context} STREQUAL "{{context}}")
-                message(STATUS "Conan: Exe {{exe}} was already defined in ${_context}")
                 get_property(_configurations TARGET {{exe}} PROPERTY IMPORTED_CONFIGURATIONS)
-                message(STATUS "Conan: Exe {{exe}} defined configurations: ${_configurations}")
+                if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
+                    message(STATUS "Conan: Exe {{exe}} was already defined in ${_context}")
+                    message(STATUS "Conan: Exe {{exe}} defined configurations: ${_configurations}")
+                endif()
                 foreach(_config ${_configurations})
                     set_property(TARGET {{exe}} PROPERTY IMPORTED_LOCATION_${_config})
                 endforeach()
