@@ -103,7 +103,7 @@ def architecture_bits(conanfile):
     arch = conanfile.settings.get_safe("arch")
     if arch in ["x86_64", "ppc64le", "ppc64", "armv8", "armv8.3", "arm64ec", "sparcv9",
                 "mips64", "s390x", "wasm64", "e2k-v2", "e2k-v3", "e2k-v4", "e2k-v5",
-                "e2k-v6", "e2k-v7", "riscv64"]:
+                "e2k-v6", "e2k-v7", "riscv64", "loongarch64"]:
         return "64"
     elif arch in ["x86", "ppc32be", "ppc32", "armv4", "armv4i", "armv5el", "armv5hf",
                   "armv6", "armv7", "armv7hf", "armv7s", "armv7k", "armv8_32",

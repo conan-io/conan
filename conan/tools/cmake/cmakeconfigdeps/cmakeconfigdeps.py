@@ -42,6 +42,7 @@ class CMakeConfigDeps:
         self._check_components_exist = False
 
         self._properties = {}
+        self._full_cpp_infos = {}
 
     @property
     def build_context_activated(self):
@@ -120,16 +121,18 @@ class CMakeConfigDeps:
 
             if require.direct:
                 direct_deps.append((require, dep))
-            # A dependency might be split into several CMake config files (root +
-            # cmake_file_name dict groups). Shared files (config, config-version, targets)
-            # have a context-independent filename. When the same package is both requires and
-            # tool_requires, keep the host-context version so legacy variables (<pkg>_LIBRARIES,
-            # ...) are preserved.
-            for cmake_filename, cmake_file_info in self.get_cmake_filenames_info(dep).items():
-                context_gen = _CMakeContextGenerator(self, require, dep, cmake_filename, cmake_file_info)
+            # A dependency might be split into several CMake config files. Shared files
+            # (config, config-version, targets) have a context-independent filename.
+            # When the same package is both requires and tool_requires, keep the
+            # host-context version so legacy variables (<pkg>_LIBRARIES, ...) are preserved.
+            full_cpp_info = self._get_full_cpp_info(dep)
+            for cmake_filename, cmake_file_info in self.get_cmake_filename(dep).items():
+                context_gen = _CMakeContextGenerator(self, require, dep, full_cpp_info,
+                                                     cmake_filename, cmake_file_info)
                 config_version_filename, config_version_context = context_gen.get_config_version_info()
                 if config_version_filename not in ret:
-                    config_version = ConfigVersionTemplate2(config_version_filename, config_version_context)
+                    config_version = ConfigVersionTemplate2(config_version_filename,
+                                                            config_version_context)
                     ret[config_version.filename] = config_version.content()
                 config_filename, config_context = context_gen.get_config_info()
                 if config_filename not in ret:
@@ -153,7 +156,7 @@ class CMakeConfigDeps:
             for (require, dep) in direct_deps:
                 note = " # Optional. This is a tool-require, can't link its targets" \
                     if require.build else ""
-                for cmake_filename in self.get_cmake_filenames_info(dep).keys():
+                for cmake_filename in self.get_cmake_filename(dep):
                     msg.append(f"    find_package({cmake_filename}){note}")
                 if not require.build and not dep.cpp_info.exe:
                     target_name = self.get_property("cmake_target_name", dep)
@@ -209,7 +212,17 @@ class CMakeConfigDeps:
             if comp is not None:
                 return comp.get_property(prop, check_type=check_type)
 
-    def get_cmake_filenames_info(self, dep):
+    def _get_full_cpp_info(self, dep):
+        """
+        The deduced cpp_info of a dependency. Cached because it is computed from several places
+        and it reports deprecation warnings that shouldn't be repeated.
+        """
+        key = dep.ref.name
+        if key not in self._full_cpp_infos:
+            self._full_cpp_infos[key] = dep.cpp_info.deduce_full_cpp_info(dep)
+        return self._full_cpp_infos[key]
+
+    def get_cmake_filename(self, dep):
         """
         Get the name of the files for the find_package(XXX) for the root and the rest of
         the components.
@@ -228,7 +241,7 @@ class CMakeConfigDeps:
         """
         ret = {}
         cmake_file_name = self.get_property("cmake_file_name", dep)
-        components = dep.cpp_info.deduce_full_cpp_info(dep).components
+        components = self._get_full_cpp_info(dep).components
         if isinstance(cmake_file_name, dict):  # multiple CMake config files way
             left_components_in_dep = list(components.keys())
             default_components = dep.cpp_info.default_components or []
@@ -261,12 +274,12 @@ class CMakeConfigDeps:
 class _CMakeContextGenerator:
     """Builds filenames and Jinja contexts for one dependency requirement."""
 
-    def __init__(self, cmakedeps, require, dep, cmake_filename, cmake_file_info):
+    def __init__(self, cmakedeps, require, dep, full_cpp_info, cmake_filename, cmake_file_info):
         self.cmakedeps = cmakedeps
         self.consumer_conanfile = cmakedeps._conanfile
         self.require = require
         self.dep = dep
-        self.full_cpp_info = dep.cpp_info.deduce_full_cpp_info(dep)
+        self.full_cpp_info = full_cpp_info
         self.base_filename = cmake_filename
         # Whether this is the "root" config file for the dependency (as opposed to one of the
         # per-group files declared through the ``cmake_file_name`` dict property), and
@@ -366,7 +379,7 @@ class _CMakeContextGenerator:
             if cmake_components is None:
                 cmake_components = []
                 # This assumes cmake_components is only defined with not multi .libs=[lib1, lib2]
-                for name in dep.cpp_info.components:
+                for name in self._ctx.file_components:
                     if name.startswith("_"):  # Skip private components
                         continue
                     comp_components = self._ctx.get_property("cmake_components", comp_name=name,
@@ -494,7 +507,7 @@ class _CMakeContextGenerator:
             those files is the right one (the root file, for the default interface target).
             """
             filenames = []
-            for cmake_filename, file_info in self._ctx.cmakedeps.get_cmake_filenames_info(dep).items():
+            for cmake_filename, file_info in self._ctx.cmakedeps.get_cmake_filename(dep).items():
                 if comp is None:
                     if file_info["is_root"]:
                         filenames.append(cmake_filename)
@@ -510,7 +523,7 @@ class _CMakeContextGenerator:
                 for name in components_per_file:
                     component = full_cpp_info.components[name]
                     requires[name] = self._get_component_requires(
-                        component, full_cpp_info.components)
+                        full_cpp_info.components[name], full_cpp_info.components)
             else:
                 requires[None] = self._get_component_requires(full_cpp_info, None)
 
@@ -621,7 +634,8 @@ class _CMakeContextGenerator:
                 for name in self._ctx.file_components:
                     component = cpp_info.components[name]
                     target_name = self._ctx.get_cmake_target_name(comp_name=name)
-                    target = self._get_cmake_lib(component, cpp_info_requires, comp_name=name)
+                    target = self._get_cmake_lib(cpp_info.components[name], cpp_info_requires,
+                                                 comp_name=name)
                     if target is not None:
                         target["cmake_target_aliases"] = self._get_aliases(name)
                         libs[target_name] = target
@@ -727,7 +741,10 @@ class _CMakeContextGenerator:
                 # Add a generic interface target for the package depending on the others
                 if cpp_info.default_components is not None:
                     all_requires = {}
+                    file_components = set(self._ctx.file_components)
                     for defaultc in cpp_info.default_components:
+                        if defaultc not in file_components:
+                            continue
                         comp_name = self._ctx.get_cmake_target_name(comp_name=defaultc)
                         link_feature = self._ctx.get_property("cmake_link_feature",
                                                          comp_name=defaultc)
@@ -890,7 +907,7 @@ class _PathGenerator:
 
             # A dependency might be split into several CMake config files (root +
             # cmake_file_name dict groups), each one needs its own _DIR entry.
-            for cmake_filename, cmake_file_info in self._cmakedeps.get_cmake_filenames_info(dep).items():
+            for cmake_filename, cmake_file_info in self._cmakedeps.get_cmake_filename(dep).items():
                 extra_variants = self._cmakedeps.get_property("cmake_file_name_variants", dep,
                                                               custom_props=cmake_file_info.get("properties"),
                                                               check_type=list) or []
