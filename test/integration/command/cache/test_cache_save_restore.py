@@ -2,8 +2,10 @@ import json
 import os
 import platform
 import shutil
+import stat
 import sys
 import tarfile
+import textwrap
 import time
 
 import pytest
@@ -66,6 +68,67 @@ def test_cache_save_restore_with_package_file():
     tree2 = _get_directory_tree(c2.base_folder)
 
     assert tree2 == tree
+
+
+_READ_ONLY_CONANFILE = textwrap.dedent("""
+    import os, stat
+    from conan import ConanFile
+    from conan.tools.files import save
+
+    class Pkg(ConanFile):
+        name = "pkg"
+        version = "1.0"
+        def package(self):
+            f = os.path.join(self.package_folder, "bin", "readonly.txt")
+            save(self, f, "content!!")
+            os.chmod(f, stat.S_IREAD)
+    """)
+
+
+def _assert_read_only_file(client):
+    """ Check the packaged file and return its permission mode. """
+    ref_layout = client.get_latest_ref_layout(RecipeReference.loads("pkg/1.0"))
+    pkg_layout = client.get_latest_pkg_layout(PkgReference(ref_layout.reference,
+                                                           NO_SETTINGS_PACKAGE_ID))
+    f = os.path.join(pkg_layout.package(), "bin", "readonly.txt")
+    assert load(f) == "content!!"
+    mode = stat.S_IMODE(os.stat(f).st_mode)
+    assert (mode & stat.S_IWRITE) == 0
+    return mode
+
+
+def test_cache_restore_read_only_files_in_place():
+    """ restoring over a cache that already contains those same read-only files, the extraction
+    happens in place, over the existing read-only files
+    https://github.com/conan-io/conan/issues/20241
+    """
+    c = TestClient()
+    c.save({"conanfile.py": _READ_ONLY_CONANFILE})
+    c.run("create .")
+    mode = _assert_read_only_file(c)
+    c.run("cache save *:*")
+    c.run("cache restore conan_cache_save.tgz")
+    # Files are made writable just to overwrite them, extraction restores the archived mode
+    assert _assert_read_only_file(c) == mode
+
+
+def test_cache_save_restore_read_only_files():
+    """ restoring in a different cache, the package folder is relocated, so a previously
+    restored package folder with read-only files has to be removed
+    https://github.com/conan-io/conan/issues/20241
+    """
+    c = TestClient()
+    c.save({"conanfile.py": _READ_ONLY_CONANFILE})
+    c.run("create .")
+    mode = _assert_read_only_file(c)
+    c.run("cache save *:*")
+    cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{cache_path}"')
+    # The restored files are read-only, restoring again over them must still work
+    c2.run(f'cache restore "{cache_path}"')
+    assert _assert_read_only_file(c2) == mode
 
 
 def test_cache_save_downloaded_restore():
