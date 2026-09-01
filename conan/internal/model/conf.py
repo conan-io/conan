@@ -157,6 +157,7 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
     "tools.env.virtualenv:powershell": "If specified, it generates PowerShell launchers (.ps1). Use this configuration setting the PowerShell executable you want to use (e.g., 'powershell.exe' or 'pwsh')",
+    "tools.env.virtualenv:fish": "(boolean) If set to True, it additionally generates Fish launchers (.fish), meant to be manually sourced by a final consumer in their own interactive shell. It never affects the shell used internally by `self.run()`",
     "tools.env:dotenv": "(Experimental) Generate dotenv environment files",
     "tools.env:deactivation_mode": "(Experimental) If 'function', generate a deactivate function instead of a script to unset the environment variables",
     # Compilers/Flags configurations

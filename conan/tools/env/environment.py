@@ -568,37 +568,105 @@ class EnvVars:
         content = f'script_folder="{os.path.abspath(filepath)}"\n' + content
         save(file_location, content)
 
+    def save_fish(self, file_location, generate_deactivate=True):
+        """Save a fish script file with the environment variables defined in the Environment object.
+
+        This is only ever meant to be manually ``source``-d by a final user in an interactive fish
+        session, never used internally by ``self.run()`` (fish is not sh/cmd-syntax compatible, so
+        it cannot reliably wrap arbitrary recipe commands). Because of that, and unlike the
+        sh/bat/ps1 counterparts, it always exposes its deactivation as a fish function, regardless
+        of the "tools.env:deactivation_mode" conf.
+
+        :param file_location: The path to the file to save the fish script.
+        :param generate_deactivate: If True, generates a "deactivate_xxx" fish function.
+        """
+        filepath, filename = os.path.split(file_location)
+        result = []
+        if generate_deactivate:
+            result.append(_fish_deactivate_contents(self._values, filename))
+        # The placeholders are marked with a NUL, so _fish_escape() can tell the "$" that must stay
+        # an interpolation apart from any "$" coming from the value itself
+        abs_base_path, new_path = _relativize_paths(self._conanfile, "\0script_folder")
+        for varname, varvalues in self._values.items():
+            value = varvalues.get_str("\0{name}", self._subsystem, pathsep=self._pathsep,
+                                      root_path=abs_base_path, script_path=new_path)
+            no_value = varvalues.get_str("", self._subsystem, pathsep=self._pathsep,
+                                         root_path=abs_base_path, script_path=new_path)
+            if generate_deactivate:
+                # Check environment variable existence before saving value
+                result.append(textwrap.dedent(f"""\
+                    if set -q {varname}
+                        set -gx {_old_env_prefix(filename)}_{varname} "${varname}"
+                    end"""))
+            if varvalues:
+                value = _fish_escape(value)
+                no_value = _fish_escape(no_value)
+                if value != no_value:
+                    # "test -n" and not "set -q": a variable that exists but is empty must not
+                    # leave a dangling separator, same as the "${VAR:+sep$VAR}" trick in save_sh()
+                    set_value = textwrap.dedent(f"""\
+                        if test -n "${varname}"
+                            set -gx {varname} "{value}"
+                        else
+                            set -gx {varname} "{no_value}"
+                        end""")
+                else:
+                    set_value = f'set -gx {varname} "{value}"'
+                result.append(set_value)
+            else:
+                # "set -e" of a non-existing variable returns 4 in fish, which would break the
+                # "source a.fish && cmd" idiom, so only erase it when it is actually there
+                result.append(textwrap.dedent(f"""\
+                    if set -q {varname}
+                        set -e {varname}
+                    end"""))
+
+        content = "\n".join(result)
+        content = f'set -l script_folder "{_fish_escape(os.path.abspath(filepath))}"\n' + content
+        save(file_location, content)
+
     def save_script(self, filename):
         """
-        Saves a script file (bat, sh, ps1) with a launcher to set the environment.
-        If the conf "tools.env.virtualenv:powershell" is not an empty string
-        it will generate powershell
-        launchers if Windows.
+        Saves a script file (bat, sh, ps1, fish) with a launcher to set the environment.
+        If the conf "tools.env.virtualenv:powershell" is not an empty string it will generate a
+        powershell launcher *instead of* the bat one if Windows (this is legacy behavior, kept
+        as-is for now: ``self.run()`` will then wrap commands with that ps1 launcher too).
+
+        If the conf "tools.env.virtualenv:fish" is set to True, it will *additionally* generate a
+        fish launcher, on top of (never replacing) the bat/sh one. Fish launchers are only meant to
+        be sourced manually by the final consumer in their own shell; Conan itself never uses them
+        to wrap commands, so ``self.run()`` always keeps using the bat/sh one.
 
         :param filename: Name of the file to generate. If the extension is provided, it will generate
                          the launcher script for that extension, otherwise the format will be deduced
-                         checking if we are running inside Windows (checking also the subsystem) or not.
+                         checking if we are running inside Windows (checking also the subsystem) or
+                         not, plus any additional fish launcher that might be configured.
         """
         name, ext = os.path.splitext(filename)
         if ext:
-            is_bat = ext == ".bat"
-            is_ps1 = ext == ".ps1"
+            filenames = [filename]
         else:  # Need to deduce it automatically
             is_bat = self._subsystem == WINDOWS
             is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str)
             if is_ps1:
-                filename = filename + ".ps1"
-                is_bat = False
+                filenames = [filename + ".ps1"]
             else:
-                filename = filename + (".bat" if is_bat else ".sh")
+                filenames = [filename + (".bat" if is_bat else ".sh")]
+            if self._conanfile.conf.get("tools.env.virtualenv:fish", check_type=bool):
+                filenames.append(filename + ".fish")
 
-        path = os.path.join(self._conanfile.generators_folder, filename)
-        if is_bat:
-            self.save_bat(path)
-        elif is_ps1:
-            self.save_ps1(path)
-        else:
-            self.save_sh(path)
+        paths = []
+        for f in filenames:
+            path = os.path.join(self._conanfile.generators_folder, f)
+            if f.endswith(".bat"):
+                self.save_bat(path)
+            elif f.endswith(".ps1"):
+                self.save_ps1(path)
+            elif f.endswith(".fish"):
+                self.save_fish(path)
+            else:
+                self.save_sh(path)
+            paths.append(path)
 
         if self._conanfile.conf.get("tools.env:dotenv", check_type=bool):
             bt = self._conanfile.settings.get_safe("build_type")
@@ -612,7 +680,8 @@ class EnvVars:
             self.save_dotenv(f"{name}.env")
 
         if self._scope:
-            register_env_script(self._conanfile, path, self._scope)
+            for path in paths:
+                register_env_script(self._conanfile, path, self._scope)
 
 
 def _deactivate_func_name(filename):
@@ -705,6 +774,44 @@ def _sh_deactivate_contents(deactivation_mode, values, filename):
                echo unset $v >> "{deactivate_file}"
            fi
         done
+    """)
+
+
+def _fish_escape(value):
+    """ Escape a value to be used inside a fish double-quoted string, where only ``\\``, ``"`` and
+    ``$`` keep a special meaning. Note an unescaped ``$`` is not merely expanded: if it is not
+    followed by a valid variable name it is a parse error that aborts the whole sourced file.
+
+    The interpolations that Conan *does* want (the ``{name}`` placeholder and ``script_folder``)
+    are marked by the caller with a NUL, which can never appear in an env-var name or value, and
+    are turned back into a literal ``$`` here.
+    """
+    return (value.replace("\\", "\\\\").replace('"', '\\"').replace("$", "\\$")
+                 .replace("\0", "$"))
+
+
+def _fish_deactivate_contents(values, filename):
+    """ Unlike sh/bat/ps1, fish always deactivates via a function, regardless of the
+    "tools.env:deactivation_mode" conf: these scripts are only meant to be sourced manually by a
+    final consumer in their interactive shell, not consumed as a separate file by anything else.
+    """
+    vars_list = " ".join(quote(v) for v in values.keys())
+    var_prefix = _old_env_prefix(filename)
+    func_name = _deactivate_func_name(filename)
+    return textwrap.dedent(f"""\
+        function deactivate_{func_name}
+            echo "Restoring environment"
+            for v in {vars_list}
+                set -l old_var "{var_prefix}_$v"
+                if set -q $old_var
+                    set -gx $v $$old_var
+                else
+                    set -e $v
+                end
+                set -e $old_var
+            end
+            functions -e deactivate_{func_name}
+        end
     """)
 
 
@@ -861,6 +968,7 @@ def generate_aggregated_env(conanfile):
         bats = []
         shs = []
         ps1s = []
+        fishs = []
         for env_script in env_scripts:
             path = os.path.join(conanfile.generators_folder, env_script)
             # Only the .bat and .ps1 are made relative to current script
@@ -873,6 +981,8 @@ def generate_aggregated_env(conanfile):
                 path = os.path.relpath(path, conanfile.generators_folder)
                 # This $PSScriptRoot uses the current script directory
                 ps1s.append("$PSScriptRoot/"+path)
+            elif env_script.endswith(".fish"):
+                fishs.append(path)
         if shs:
             def sh_content(files):
                 content = ". " + " && . ".join('"{}"'.format(s) for s in files)
@@ -945,6 +1055,21 @@ def generate_aggregated_env(conanfile):
             if not deactivation_mode:
                 save(os.path.join(conanfile.generators_folder, "deactivate_{}".format(filename)),
                      ps1_content(deactivates(ps1s)))
+        if fishs:
+            # Fish always deactivates via a function, regardless of "deactivation_mode", see
+            # the ``_fish_deactivate_contents()`` docstring.
+            def fish_content(files):
+                # Newline-separated and not "&&", like the bat/ps1 ones: fish does not need the
+                # chaining, and a non-zero status from one file must not skip the remaining ones
+                content = "\n".join('source "{}"'.format(f) for f in files)
+                content += f"\n\nfunction deactivate_conan{group}\n"
+                for deactivate_name in deactivate_function_names(fishs):
+                    content += f"    deactivate_{deactivate_name}\n"
+                content += f"    functions -e deactivate_conan{group}\nend\n"
+                return content
+            filename = "conan{}.fish".format(group)
+            generated.append(filename)
+            save(os.path.join(conanfile.generators_folder, filename), fish_content(fishs))
     if generated:
         conanfile.output.highlight("Generating aggregated env files")
         conanfile.output.info(f"Generated aggregated env files: {generated}")
