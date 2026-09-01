@@ -209,7 +209,7 @@ class CMakeConfigDeps:
         The deduced cpp_info of a dependency. Cached because it is computed from several places
         and it reports deprecation warnings that shouldn't be repeated.
         """
-        if not dep.ref.name in self._full_cpp_infos:
+        if dep.ref.name not in self._full_cpp_infos:
             self._full_cpp_infos[dep.ref.name] = dep.cpp_info.deduce_full_cpp_info(dep)
         return self._full_cpp_infos[dep.ref.name]
 
