@@ -160,9 +160,7 @@ def test_cpp_info_sources():
 
     c.run(f"build consumer")
     assert "Hello, world!" in c.out
-    # Check content of the generated files
-    c.run(f"install --requires=hello/1.0 -g=CMakeConfigDeps")
-    cmake = c.load("hello-Targets-release.cmake")
+    cmake = c.load("consumer/build/Release/generators/hello-Targets-release.cmake")
     assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
     assert "set_property(TARGET hello::hello APPEND PROPERTY INTERFACE_SOURCES\n"\
            "             $<$<CONFIG:RELEASE>:${hello_PACKAGE_FOLDER_RELEASE}/src/hello.cpp>)" in cmake
