@@ -1,18 +1,23 @@
+import io
 import json
 import os
 import platform
 import shutil
+import stat
 import sys
 import tarfile
+import textwrap
 import time
+from unittest.mock import patch
 
 import pytest
 
 from conan.api.model import PkgReference, RecipeReference
+from conan.errors import ConanException
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
-from conan.internal.util.files import save, load
+from conan.internal.util.files import is_dirty, load, save, set_dirty
 
 
 def test_cache_save_restore():
@@ -66,6 +71,239 @@ def test_cache_save_restore_with_package_file():
     tree2 = _get_directory_tree(c2.base_folder)
 
     assert tree2 == tree
+
+
+_READ_ONLY_CONANFILE = textwrap.dedent("""
+    import os, stat
+    from conan import ConanFile
+    from conan.tools.files import save
+
+    class Pkg(ConanFile):
+        name = "pkg"
+        version = "1.0"
+        def package(self):
+            f = os.path.join(self.package_folder, "bin", "readonly.txt")
+            save(self, f, "content!!")
+            d = os.path.join(self.package_folder, "readonlydir")
+            save(self, os.path.join(d, "inside.txt"), "inside!!")
+            os.chmod(f, stat.S_IREAD)
+            os.chmod(d, stat.S_IREAD | stat.S_IEXEC)
+    """)
+
+
+def _pkg_folder(client):
+    ref_layout = client.get_latest_ref_layout(RecipeReference.loads("pkg/1.0"))
+    pkg_layout = client.get_latest_pkg_layout(PkgReference(ref_layout.reference,
+                                                           NO_SETTINGS_PACKAGE_ID))
+    return pkg_layout.package()
+
+
+def _save_built_package():
+    """ a package built in this cache, so it lives in the "b" build folder, not in the final
+    package folder that it will have when it is restored in another cache """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_exports_sources("*.c")
+                                                      .with_package_file("bin/f.txt", "content!!"),
+            "mysrc.c": "source!!"})
+    c.run("create .")
+    c.run("cache save *:*")
+    return c, os.path.join(c.current_folder, "conan_cache_save.tgz")
+
+
+def test_cache_restore_no_leftovers():
+    """ every folder is extracted directly in its final location, so the folders of the origin
+    cache are not created, and the "pkglist.json" is not left in the cache either """
+    _, cache_path = _save_built_package()
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{cache_path}"')
+    store = os.path.join(c2.cache_folder, "p")
+    assert not os.path.exists(os.path.join(store, "b"))
+    assert not os.path.exists(os.path.join(store, "pkglist.json"))
+    assert load(os.path.join(_pkg_folder(c2), "bin", "f.txt")) == "content!!"
+
+
+def test_cache_restore_existing_contents_not_extracted():
+    """ recipes and packages are immutable, so a revision already in the cache is not extracted
+    again over the existing files """
+    _, cache_path = _save_built_package()
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{cache_path}"')
+    f = os.path.join(_pkg_folder(c2), "bin", "f.txt")
+    save(f, "not overwritten")
+    c2.run(f'cache restore "{cache_path}"')
+    assert load(f) == "not overwritten"
+
+
+def test_cache_restore_stale_contents():
+    """ contents in the cache store that the DB doesn't know about are not valid contents, they
+    are leftovers, so they are replaced by the ones in the archive """
+    _, cache_path = _save_built_package()
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{cache_path}"')
+    pkg_folder = _pkg_folder(c2)
+    save(os.path.join(pkg_folder, "stale.txt"), "stale!!")
+    os.remove(os.path.join(c2.cache_folder, "p", "cache.sqlite3"))  # The folders are orphans now
+
+    c2.run(f'cache restore "{cache_path}"')
+    assert not os.path.exists(os.path.join(pkg_folder, "stale.txt"))
+    assert load(os.path.join(pkg_folder, "bin", "f.txt")) == "content!!"
+
+
+def _assert_read_only_pkg(client):
+    """ Check the packaged read-only contents and return their permission modes """
+    pkg_folder = _pkg_folder(client)
+    f = os.path.join(pkg_folder, "bin", "readonly.txt")
+    d = os.path.join(pkg_folder, "readonlydir")
+    assert load(f) == "content!!"
+    assert load(os.path.join(d, "inside.txt")) == "inside!!"
+    modes = stat.S_IMODE(os.stat(f).st_mode), stat.S_IMODE(os.stat(d).st_mode)
+    assert (modes[0] & stat.S_IWRITE) == 0
+    assert (modes[1] & stat.S_IWRITE) == 0
+    return modes
+
+
+def test_cache_restore_read_only_files_in_place():
+    """ restoring over a cache that already contains those same read-only files
+    https://github.com/conan-io/conan/issues/20241
+    """
+    c = TestClient()
+    c.save({"conanfile.py": _READ_ONLY_CONANFILE})
+    c.run("create .")
+    modes = _assert_read_only_pkg(c)
+    c.run("cache save *:*")
+    c.run("cache restore conan_cache_save.tgz")
+    # The revision is already in the cache, the read-only contents are not extracted again
+    assert _assert_read_only_pkg(c) == modes
+
+
+def test_cache_save_restore_read_only_files():
+    """ restoring in a different cache, the package folder is relocated, and restoring again
+    happens over the read-only files of the previous restore
+    https://github.com/conan-io/conan/issues/20241
+    """
+    c = TestClient()
+    c.save({"conanfile.py": _READ_ONLY_CONANFILE})
+    c.run("create .")
+    modes = _assert_read_only_pkg(c)
+    c.run("cache save *:*")
+    cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{cache_path}"')
+    # The extraction restores the modes stored in the archive, they are still read-only
+    assert _assert_read_only_pkg(c2) == modes
+    c2.run(f'cache restore "{cache_path}"')
+    assert _assert_read_only_pkg(c2) == modes
+
+
+def test_cache_restore_dirty_folders():
+    """ the folders left incomplete by an interrupted download or "conan source" are dirty, so
+    they are replaced by the restore, not skipped as if they were valid """
+    _, cache_path = _save_built_package()
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{cache_path}"')
+    pkg_folder = _pkg_folder(c2)
+    src_folder = c2.get_latest_ref_layout(RecipeReference.loads("pkg/1.0")).source()
+    save(os.path.join(pkg_folder, "bin", "f.txt"), "incomplete")
+    save(os.path.join(src_folder, "mysrc.c"), "incomplete")
+    set_dirty(pkg_folder)
+    set_dirty(src_folder)
+
+    c2.run(f'cache restore "{cache_path}"')
+    assert load(os.path.join(pkg_folder, "bin", "f.txt")) == "content!!"
+    assert load(os.path.join(src_folder, "mysrc.c")) == "source!!"
+    assert not is_dirty(pkg_folder)
+    assert not is_dirty(src_folder)
+
+
+@pytest.mark.parametrize("member_name", ["../outside.txt",  # at the root of the archive
+                                         "{recipe}/e/../../../outside.txt"])  # inside a folder
+def test_cache_restore_rejects_outside_paths(member_name):
+    """ a tar member going up with ".." is not restored, it must not be written outside the
+    package cache store, neither from the root of the archive nor from a folder being restored"""
+    c, cache_path = _save_built_package()
+    # The recipe folder as it is named in the archive, which is the origin cache one
+    recipe = os.path.relpath(c.get_latest_ref_layout(RecipeReference.loads("pkg/1.0")).base_folder,
+                             os.path.join(c.cache_folder, "p"))
+    member_name = member_name.format(recipe=recipe)
+    tar_file = os.path.join(os.path.dirname(cache_path), "malicious.tgz")
+
+    with tarfile.open(cache_path, "r:gz") as inn, tarfile.open(tar_file, "w:gz") as out:
+        assert f"{recipe}/e" in inn.getnames()  # the folder the member tries to escape from
+        for member in inn.getmembers():
+            out.addfile(member, inn.extractfile(member) if member.isfile() else None)
+        payload = b"outside!!"
+        info = tarfile.TarInfo(name=member_name)
+        info.size = len(payload)
+        out.addfile(info, io.BytesIO(payload))
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{tar_file}"')
+    # Both member names resolve to the parent of the cache store, that file is not created
+    outside = os.path.normpath(os.path.join(c2.cache_folder, "p", member_name))
+    assert not os.path.exists(outside)
+    # The rest of the archive is restored as usual
+    assert load(os.path.join(_pkg_folder(c2), "bin", "f.txt")) == "content!!"
+
+
+def test_cache_restore_failure():
+    """ the restore is expected to fully succeed, if it fails the cache can contain incomplete
+    recipes or packages, so it is reported as corrupted """
+    _, cache_path = _save_built_package()
+
+    def failing_extractall(*args, **kwargs):
+        raise ConanException("Interrupted!")
+
+    c2 = TestClient()
+    with patch.object(tarfile.TarFile, "extractall", failing_extractall):
+        c2.run(f'cache restore "{cache_path}"', assert_error=True)
+    assert "Interrupted!" in c2.out
+    assert "this cache is corrupted, remove it and restore it again" in c2.out
+
+
+def test_cache_restore_missing_folders():
+    """ contents are skipped folder by folder, so an archive can complete a recipe revision
+    already in the cache, like adding the sources that it didn't have """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_exports_sources("*.c"),
+            "mysrc.c": ""})
+    c.run("create .")
+    c.run("cache save *:* --no-source --file=nosource.tgz")
+    c.run("cache save *:* --file=full.tgz")
+    no_source = os.path.join(c.current_folder, "nosource.tgz")
+    full = os.path.join(c.current_folder, "full.tgz")
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{no_source}"')
+    src = c2.get_latest_ref_layout(RecipeReference.loads("pkg/1.0")).source()
+    assert not os.path.exists(os.path.join(src, "mysrc.c"))
+    c2.run(f'cache restore "{full}"')
+    assert os.path.exists(os.path.join(src, "mysrc.c"))
+
+
+def test_cache_restore_metadata_incremental():
+    """ metadata is not immutable, it is restored adding to the existing metadata """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+    c.run("create .")
+    pid = c.created_package_id("pkg/1.0")
+    c.run(f"cache path pkg/1.0:{pid} --folder=metadata")
+    save(os.path.join(str(c.stdout).strip(), "logs", "saved.txt"), "saved!!")
+    c.run("cache save *:*")
+    cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{cache_path}"')
+    c2.run(f"cache path pkg/1.0:{pid} --folder=metadata")
+    metadata = str(c2.stdout).strip()
+    save(os.path.join(metadata, "logs", "mine.txt"), "mine!!")
+    c2.run(f'cache restore "{cache_path}"')
+    assert load(os.path.join(metadata, "logs", "saved.txt")) == "saved!!"
+    assert load(os.path.join(metadata, "logs", "mine.txt")) == "mine!!"
 
 
 def test_cache_save_downloaded_restore():
