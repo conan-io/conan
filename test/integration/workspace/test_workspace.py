@@ -1344,6 +1344,47 @@ class TestMeta:
         # It no longer crashes
         assert "Install finished successfully" in c.out
 
+    def test_link_libraries_diamond_workspace(self):
+        # https://github.com/conan-io/conan/issues/20304
+        # CMakeConfigDeps can silently drop the INTERFACE_LINK_LIBRARIES entry of a
+        # regular (non-editable) package's own dependency ("wrapper" -> "leaf"), when
+        # "leaf" is *also* reachable from an editable workspace member ("core") that
+        # is required in 2 different contexts: as a host requirement (implicit,
+        # because "workspace super-install" requires every editable at the top level)
+        # and as a build requirement (tool_requires from another editable, "app").
+        c = TestClient()
+        workspace = textwrap.dedent("""
+            from conan import ConanFile, Workspace
+            from conan.tools.cmake import CMakeConfigDeps
+
+            class MyWs(ConanFile):
+                settings = "build_type"
+                def generate(self):
+                    CMakeConfigDeps(self).generate()
+
+            class MyWorkspace(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+                def packages(self):
+                    return [{"path": "core", "ref": "core/1.0"},
+                            {"path": "app", "ref": "app/1.0"}]
+            """)
+        c.save({"leaf/conanfile.py": GenConanfile("leaf", "1.0"),
+                "wrapper/conanfile.py": GenConanfile("wrapper", "1.0").with_requires("leaf/1.0"),
+                "core/conanfile.py": GenConanfile("core", "1.0").with_requires("leaf/1.0"),
+                "app/conanfile.py": GenConanfile("app", "1.0")
+                                    .with_requires("wrapper/1.0")
+                                    .with_tool_requires("core/1.0"),
+                "conanws.py": workspace})
+        c.run("create leaf")
+        c.run("create wrapper")
+        c.run("workspace super-install")
+
+        # "wrapper" is a regular (non-editable) package that requires "leaf" directly,
+        # so its generated target file must link against it
+        wrapper_targets = c.load("wrapper-Targets-release.cmake")
+        assert "leaf::leaf" in wrapper_targets
+
 
 def test_workspace_with_local_recipes_index():
     c3i_folder = temp_folder()
