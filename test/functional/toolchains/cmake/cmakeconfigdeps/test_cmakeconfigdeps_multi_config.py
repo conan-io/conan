@@ -71,7 +71,7 @@ def test_cmake_file_name_spirv_tools():
 
             def package_info(self):
                 # Split into separate config files per CMake package name
-                self.cpp_info.set_property("cmake_file_name", {
+                self.cpp_info.set_property("cmake_file_names", {
                     "SPIRV-Tools": {"components": ["spirv-tools-core"]},
                     "SPIRV-Tools-opt": {"components": ["spirv-tools-opt"]},
                     "SPIRV-Tools-link": {"components": ["spirv-tools-link"]},

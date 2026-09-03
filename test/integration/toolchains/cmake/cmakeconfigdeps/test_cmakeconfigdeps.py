@@ -1317,10 +1317,10 @@ def test_find_mode_none():
 
 
 class TestCmakeConfigProperties:
-    """Tests for cmake_file_name — components grouped per CMake config file."""
+    """Tests for cmake_file_names — components grouped per CMake config file."""
 
     def test_generates_multiple_config_files(self):
-        """Package with cmake_file_name generates separate config files per group."""
+        """Package with cmake_file_names generates separate config files per group."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1332,7 +1332,7 @@ class TestCmakeConfigProperties:
 
                 def package_info(self):
                     # CMake File names for components
-                    self.cpp_info.set_property("cmake_file_name", {
+                    self.cpp_info.set_property("cmake_file_names", {
                         "greetings": {
                             "components": ["hello", "hello-helpers"],
                         },
@@ -1387,11 +1387,11 @@ class TestCmakeConfigProperties:
         assert "# Requirement pkg::bye -> greet (Full link: True)" in adieu_targets
         assert "# Requirement pkg::bye -> pkg::bye-helpers (Full link: True)" in adieu_targets
 
-        # No root pkg config when all components are listed in cmake_file_name
+        # No root pkg config when all components are listed in cmake_file_names
         assert not os.path.exists(os.path.join(tc.current_folder, "pkg-config.cmake"))
 
     def test_paths_include_cmake_file_names(self):
-        """conan_cmakedeps_paths.cmake sets DIR for each cmake file from cmake_file_name."""
+        """conan_cmakedeps_paths.cmake sets DIR for each cmake file from cmake_file_names."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1408,7 +1408,7 @@ class TestCmakeConfigProperties:
                     self.cpp_info.components["compB"].libs = ["b"]
                     self.cpp_info.components["compB"].type = "static-library"
                     self.cpp_info.components["compB"].location = "lib/libb.a"
-                    self.cpp_info.set_property("cmake_file_name", {
+                    self.cpp_info.set_property("cmake_file_names", {
                         "MyLib": {"components": ["compA", "compB"]},
                     })
         """)
@@ -1418,11 +1418,11 @@ class TestCmakeConfigProperties:
 
         paths = tc.load("conan_cmakedeps_paths.cmake")
         assert "set(MyLib_DIR" in paths
-        # pkg_DIR should not exist when all components are in cmake_file_name
+        # pkg_DIR should not exist when all components are in cmake_file_names
         assert "set(pkg_DIR" not in paths
 
     def test_error_nonexistent_component(self):
-        """Using a non-existent component in cmake_file_name raises ConanException."""
+        """Using a non-existent component in cmake_file_names raises ConanException."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1436,7 +1436,7 @@ class TestCmakeConfigProperties:
                     self.cpp_info.components["compA"].libs = ["a"]
                     self.cpp_info.components["compA"].type = "static-library"
                     self.cpp_info.components["compA"].location = "lib/liba.a"
-                    self.cpp_info.set_property("cmake_file_name", {
+                    self.cpp_info.set_property("cmake_file_names", {
                         "MyLib": {"components": ["compA", "nonexistent"]},
                     })
         """)
@@ -1445,10 +1445,29 @@ class TestCmakeConfigProperties:
         tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps",
                assert_error=True)
         assert "Component 'nonexistent' does not exist" in tc.out
-        assert "cmake_file_name" in tc.out
+        assert "cmake_file_names" in tc.out
+
+    def test_error_cmake_file_names_not_dict(self):
+        """cmake_file_names that is not a dict raises ConanException."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_file_names", "MyLib")
+        """)
+        tc.save({"conanfile.py": dep})
+        tc.run("create .")
+        tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps", assert_error=True)
+        assert "cmake_file_names property must be a dict" in tc.out
 
     def test_error_default_component_in_another_file(self):
-        """Default component in cmake_file_name raises ConanException."""
+        """Default component in cmake_file_names raises ConanException."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1466,7 +1485,7 @@ class TestCmakeConfigProperties:
                     self.cpp_info.components["compB"].type = "static-library"
                     self.cpp_info.components["compB"].location = "lib/libb.a"
                     self.cpp_info.default_components = ["compA"]
-                    self.cpp_info.set_property("cmake_file_name", {
+                    self.cpp_info.set_property("cmake_file_names", {
                         "MyLib": {"components": ["compA", "compB"]},
                     })
         """)
@@ -1475,10 +1494,10 @@ class TestCmakeConfigProperties:
         tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps",
                assert_error=True)
         assert "default component 'compA' is defined in another CMake Config file" in tc.out
-        assert "cmake_file_name" in tc.out
+        assert "cmake_file_names" in tc.out
 
     def test_mixed_root_and_component_files(self):
-        """Some components in cmake_file_name, rest in root config file."""
+        """Some components in cmake_file_names, rest in root config file."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1495,7 +1514,7 @@ class TestCmakeConfigProperties:
                     self.cpp_info.components["extra"].libs = ["extra"]
                     self.cpp_info.components["extra"].type = "static-library"
                     self.cpp_info.components["extra"].location = "lib/libextra.a"
-                    self.cpp_info.set_property("cmake_file_name", {
+                    self.cpp_info.set_property("cmake_file_names", {
                         "Extra": {"components": ["extra"]},
                     })
         """)
@@ -1517,8 +1536,52 @@ class TestCmakeConfigProperties:
         assert "set(pkg_DIR" in paths
         assert "set(Extra_DIR" in paths
 
+    def test_cmake_file_names_ignores_cmake_file_name(self):
+        """When both properties are set, cmake_file_names wins and cmake_file_name is ignored."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.components["core"].libs = ["core"]
+                    self.cpp_info.components["core"].type = "static-library"
+                    self.cpp_info.components["core"].location = "lib/libcore.a"
+                    self.cpp_info.components["extra"].libs = ["extra"]
+                    self.cpp_info.components["extra"].type = "static-library"
+                    self.cpp_info.components["extra"].location = "lib/libextra.a"
+                    self.cpp_info.set_property("cmake_file_name", "MyPkg")
+                    self.cpp_info.set_property("cmake_file_names", {
+                        "Extra": {"components": ["extra"]},
+                    })
+        """)
+        tc.save({"conanfile.py": dep})
+        tc.run("create .")
+        tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps")
+
+        # cmake_file_name is ignored: leftover components stay in the recipe-named root file
+        assert tc.load("pkg-config.cmake")
+        pkg_targets = tc.load("pkg-Targets-release.cmake")
+        assert "pkg::core" in pkg_targets
+        assert not os.path.exists(os.path.join(tc.current_folder, "MyPkgConfig.cmake"))
+        assert not os.path.exists(os.path.join(tc.current_folder, "MyPkg-config.cmake"))
+
+        # cmake_file_names still generates the Extra config
+        assert tc.load("ExtraConfig.cmake")
+        extra_targets = tc.load("Extra-Targets-release.cmake")
+        assert "pkg::extra" in extra_targets
+
+        paths = tc.load("conan_cmakedeps_paths.cmake")
+        assert "set(pkg_DIR" in paths
+        assert "set(Extra_DIR" in paths
+        assert "set(MyPkg_DIR" not in paths
+
     def test_find_dependency_uses_correct_names(self):
-        """Transitive find_dependency uses cmake file name from cmake_file_name."""
+        """Transitive find_dependency uses cmake file name from cmake_file_names."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1532,7 +1595,7 @@ class TestCmakeConfigProperties:
                     self.cpp_info.components["lib"].libs = ["dep"]
                     self.cpp_info.components["lib"].type = "static-library"
                     self.cpp_info.components["lib"].location = "lib/libdep.a"
-                    self.cpp_info.set_property("cmake_file_name", {
+                    self.cpp_info.set_property("cmake_file_names", {
                         "DepLib": {"components": ["lib"]},
                     })
         """)
@@ -1575,7 +1638,7 @@ class TestCmakeConfigProperties:
                     save(self, os.path.join(self.package_folder, "lib", "libw.a"), "")
 
                 def package_info(self):
-                    self.cpp_info.set_property("cmake_file_name", {
+                    self.cpp_info.set_property("cmake_file_names", {
                         "widgets": {
                             "components": ["widgets"],
                             "properties": {
@@ -1615,7 +1678,7 @@ class TestCmakeConfigProperties:
                          "# hook for tests\n")
 
                 def package_info(self):
-                    self.cpp_info.set_property("cmake_file_name", {
+                    self.cpp_info.set_property("cmake_file_names", {
                         "CoreKit": {
                             "components": ["core"],
                             "properties": {
@@ -1650,7 +1713,7 @@ class TestCmakeConfigProperties:
                 settings = "os", "compiler", "build_type", "arch"
 
                 def package_info(self):
-                    self.cpp_info.set_property("cmake_file_name", {
+                    self.cpp_info.set_property("cmake_file_names", {
                         "PartA": {
                             "components": ["a"],
                             "properties": {"cmake_extra_dependencies": ["Protoc"]},

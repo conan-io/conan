@@ -232,29 +232,33 @@ class CMakeConfigDeps:
             - The name of transitive dependencies for calls to find_dependency
 
         This method creates a map for the root/components belonging to each XXX-config file.
-        It also reads the ``cmake_file_name`` property, which can be:
-            - a string: name for the root config file (default: recipe name).
-            - a dict mapping each CMake package file name to a dict with
+        It reads two properties:
+            - ``cmake_file_names``: a dict mapping each CMake package file name to a dict with
               ``components`` (list of component names) and optional ``properties`` (per-file
               overrides for CMakeConfigDeps global properties). Remaining components (if any)
               still generate a root config file named after the recipe.
+            - ``cmake_file_name``: a string with the name for the root config file
+              (default: recipe name). If both properties are set, ``cmake_file_names``
+              takes precedence and ``cmake_file_name`` is ignored.
         """
         ret = {}
-        cmake_file_name = self.get_property("cmake_file_name", dep)
+        cmake_file_names = self.get_property("cmake_file_names", dep)
         components = self._get_full_cpp_info(dep).components
-        if isinstance(cmake_file_name, dict):  # multiple CMake config files way
+        if cmake_file_names is not None:  # multiple CMake config files way
+            if not isinstance(cmake_file_names, dict):
+                raise ConanException("cmake_file_names property must be a dict")
             left_components_in_dep = list(components.keys())
             default_components = dep.cpp_info.default_components or []
-            for filename, file_info in cmake_file_name.items():
+            for filename, file_info in cmake_file_names.items():
                 cmps_per_file = file_info.get("components", [])
                 for name in cmps_per_file:
                     if name in default_components:
                         raise ConanException(f"The default component '{name}' is defined in "
                                              f"another CMake Config file. Check the "
-                                             f"'cmake_file_name' property.")
+                                             f"'cmake_file_names' property.")
                     elif name not in left_components_in_dep:
                         raise ConanException(f"Component '{name}' does not exist. Check the "
-                                             f"'cmake_file_name' property definition.")
+                                             f"'cmake_file_names' property definition.")
                     else:
                         left_components_in_dep.remove(name)
                 ret[filename] = {"components": cmps_per_file,
@@ -264,7 +268,8 @@ class CMakeConfigDeps:
             if left_components_in_dep and root_filename not in ret:
                 ret[root_filename] = {"components": left_components_in_dep,
                                       "is_root": True}
-        else:  # cmake_file_name is a string and behaves as usual
+        else:  # Read cmake_file_name as usual
+            cmake_file_name = self.get_property("cmake_file_name", dep)
             root_filename = cmake_file_name or dep.ref.name
             ret[root_filename] = {"components": list(components.keys()),
                                   "is_root": True}
@@ -282,7 +287,7 @@ class _CMakeContextGenerator:
         self.full_cpp_info = full_cpp_info
         self.base_filename = cmake_filename
         # Whether this is the "root" config file for the dependency (as opposed to one of the
-        # per-group files declared through the ``cmake_file_name`` dict property), and
+        # per-group files declared through the ``cmake_file_names`` property), and
         # which components (or leftover components, for the root file) it covers.
         self.is_root = cmake_file_info["is_root"]
         self.file_components = cmake_file_info["components"]
@@ -302,7 +307,7 @@ class _CMakeContextGenerator:
 
     def get_property(self, prop, dep=None, comp_name=None, check_type=None):
         target_dep = dep if dep is not None else self.dep
-        # Per-file property overrides (the "properties" entry of the cmake_file_name dict)
+        # Per-file property overrides (the "properties" entry of the cmake_file_names dict)
         # only apply to the dependency's own, package-level properties, not to other deps
         # or to a specific component.
         custom_props = self.custom_props if (target_dep is self.dep and comp_name is None) else None
@@ -372,7 +377,7 @@ class _CMakeContextGenerator:
                 parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",
                                                                    key, value)
 
-            # Component groups declared through cmake_file_name (dict) don't advertise
+            # Component groups declared through cmake_file_names don't advertise
             # find_package(XXX COMPONENTS ...): that mechanism only applies to the root config.
             cmake_components = (self._ctx.get_property("cmake_components", check_type=list)
                                 if self._ctx.is_root else "")
@@ -503,7 +508,7 @@ class _CMakeContextGenerator:
             The cmake filename(s) of ``dep`` that need a find_dependency() call to satisfy a
             requirement pointing to ``comp`` (or to the default/root interface target when
             ``comp`` is ``None``). A dependency might be split into several CMake config files
-            through cmake_file_name (dict), so the specific component determines which of
+            through cmake_file_names, so the specific component determines which of
             those files is the right one (the root file, for the default interface target).
             """
             filenames = []
@@ -734,7 +739,7 @@ class _CMakeContextGenerator:
             cpp_info = self._ctx.full_cpp_info
             # TODO: What if an exe target is called like the pkg_name::pkg_name
             # Only the root config file gets the aggregated pkgname::pkgname interface target;
-            # a component group declared through cmake_file_name (dict) does not.
+            # a component group declared through cmake_file_names does not.
             if self._ctx.is_root and libs and root_target_name not in libs:
                 # Add a generic interface target for the package depending on the others
                 if cpp_info.default_components is not None:
@@ -904,7 +909,7 @@ class _PathGenerator:
             cmake_find_mode = cmake_find_mode.lower()
 
             # A dependency might be split into several CMake config files (root +
-            # cmake_file_name dict groups), each one needs its own _DIR entry.
+            # cmake_file_names groups), each one needs its own _DIR entry.
             for cmake_filename, cmake_file_info in self._cmakedeps.get_cmake_filename(dep).items():
                 extra_variants = self._cmakedeps.get_property("cmake_file_name_variants", dep,
                                                               custom_props=cmake_file_info.get("properties"),
@@ -915,13 +920,13 @@ class _PathGenerator:
                                          "They should be the same with different upper/lower cases only.")
                 if lowercase_variants:
                     if cmake_filename.lower() not in lowercase_variants:
-                        cmake_file_name_prop = self._cmakedeps.get_property(
-                            "cmake_file_name", dep, custom_props=cmake_file_info.get("properties"))
-                        is_cmake_filename_defined = (
-                            isinstance(cmake_file_name_prop, str)
-                            or (isinstance(cmake_file_name_prop, dict)
-                                and cmake_filename in cmake_file_name_prop)
-                        )
+                        cmake_file_names = self._cmakedeps.get_property("cmake_file_names", dep)
+                        if cmake_file_names is not None:
+                            is_cmake_filename_defined = cmake_filename in cmake_file_names
+                        else:
+                            is_cmake_filename_defined = self._cmakedeps.get_property(
+                                "cmake_file_name", dep,
+                                custom_props=cmake_file_info.get("properties")) is not None
                         if is_cmake_filename_defined:
                             extra_variants = []
                             msg = (f"'{dep.ref}' 'cmake_file_name_variants' property contains names "
