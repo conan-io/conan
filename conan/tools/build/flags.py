@@ -98,7 +98,7 @@ def architecture_bits(conanfile):
     Detect the architecture bits based on the ``conanfile.settings.arch`` and those known architectures in Conan.
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :return: ``"64"`` for 64-bit architectures, ``"32"`` for 32-bit architectures, or ``None`` if the architecture is unknown.
+    :return: ``"64"`` string for 64-bit architectures, ``"32"`` string for 32-bit architectures, or ``None`` if the architecture is unknown.
     """
     arch = conanfile.settings.get_safe("arch")
     if arch in ["x86_64", "ppc64le", "ppc64", "armv8", "armv8.3", "arm64ec", "sparcv9",
