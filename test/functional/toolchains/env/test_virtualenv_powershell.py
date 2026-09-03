@@ -251,3 +251,42 @@ def test_powershell_deactivation():
     assert "conanbuild.ps1" not in files
     assert "conanrunenv.ps1" not in files
     assert "conanbuildenv.ps1" not in files
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
+@pytest.mark.parametrize("powershell", ["pwsh", "powershell.exe"])
+def test_pwsh_support_empty_variables(powershell):
+    # Generators may append FOO even when empty, so the .ps1 sets $env:FOO="".
+    # Scripts that only apply defaults when the var is undefined then skip those defaults.
+    client = TestClient()
+    check_py = textwrap.dedent("""\
+        import os
+        user = [os.environ["FOO"]] if "FOO" in os.environ else None
+        config = user or ["-default-flag"]
+        print("DEFAULT_SKIPPED" if config == [""] else "DEFAULT_APPLIED")
+        """)
+    conanfile = textwrap.dedent("""\
+        import os
+        from conan import ConanFile
+        from conan.tools.env import Environment
+
+        class Pkg(ConanFile):
+            name = "app"
+            version = "0.1"
+            exports_sources = "check.py"
+
+            def generate(self):
+                env = Environment()
+                env.append("FOO", [])
+                env.vars(self, scope="build").save_script("conanmytoolchain")
+
+            def build(self):
+                self.run(f'python "{os.path.join(self.source_folder, "check.py")}"')
+        """)
+    client.save({"conanfile.py": conanfile, "check.py": check_py})
+    client.run(f'install . -c tools.env.virtualenv:powershell={powershell}')
+    with open(os.path.join(client.current_folder, "conanmytoolchain.ps1"), "r", encoding="utf-16") as f:
+        assert '$env:FOO=""' in f.read()
+
+    client.run(f'create . -c tools.env.virtualenv:powershell={powershell}')
+    assert ("DEFAULT_SKIPPED" if powershell == "pwsh" else "DEFAULT_APPLIED") in client.out
