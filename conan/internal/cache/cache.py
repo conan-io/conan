@@ -50,6 +50,10 @@ class PkgCache:
     def builds_folder(self):
         return os.path.join(self._base_folder, "b")
 
+    @property
+    def git_clones_folder(self):
+        return os.path.join(self._base_folder, "git_clones")
+
     def _create_path(self, relative_path, remove_contents=True):
         path = self._full_path(relative_path)
         if os.path.exists(path) and remove_contents:

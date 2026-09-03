@@ -241,6 +241,11 @@ class DepsGraphBuilder:
                 if not resolved:
                     self._resolve_alias(node, require, alias, graph)
             self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
+            if require.git is not None:
+                from conan.internal.graph.git_remotes_resolver import GitRemotesResolver
+                GitRemotesResolver(self._cache).prefetch(node, require, self._update, self._loader,
+                                                         self._proxy._editable_packages, # noqa
+                                                         graph_lock)
             if graph_lock:
                 graph_lock.resolve_overrides(require, node.context)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
