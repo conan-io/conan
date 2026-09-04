@@ -2,6 +2,8 @@ import json
 import os
 from enum import Enum
 
+from conan.api.output import ConanOutput
+from conan.errors import ConanException
 from conan.internal.model.cpp_info import CppInfo
 from conan.internal.util.files import save, load
 
@@ -65,17 +67,46 @@ class CPSComponent:
         return component
 
     @staticmethod
-    def deserialize(data):
+    def deserialize(data, conanfile, selected_conf=None):
         comp = CPSComponent()
-        comp.type = CPSComponentType(data.get("type"))
-        comp.requires = data.get("requires", [])
-        comp.link_requires = data.get("link_requires", [])
-        comp.includes = data.get("includes", [])
-        comp.definitions = data.get("definitions", {})
-        comp.location = data.get("location")
-        comp.link_location = data.get("link_location")
-        comp.link_libraries = data.get("link_libraries", [])
-        comp.link_languages = data.get("link_languages", [])
+        available_confs = data.get("configurations", {})
+        configuration = {}
+        if available_confs:
+            if selected_conf:
+                configuration = available_confs.get(selected_conf)
+                if not configuration:
+                    raise ConanException(f"CPS file has no configuration for '{selected_conf}'")
+            elif conanfile:
+                if conanfile.settings.get_safe("build_type") is not None:
+                    build_type = str(conanfile.settings.build_type)
+                    configuration = available_confs.get(build_type)
+                    if not configuration:
+                        configuration = available_confs.get(build_type.lower())
+                        if not configuration:
+                            raise ConanException(f"CPS file has no configuration for '{build_type}'")
+            else:
+                raise ConanException("CPS file has configurations but no conanfile or specific configuration were provided to select one")
+
+        def get(key, default=None):
+            return configuration.get(key, data.get(key, default))
+
+        comp.type = CPSComponentType(get("type"))
+        comp.requires = get("requires", [])
+        comp.link_requires = get("link_requires", [])
+        comp.includes = get("includes", [])
+        comp.location = get("location")
+        comp.link_location = get("link_location")
+        comp.link_libraries = get("link_libraries", [])
+        comp.link_languages = get("link_languages", [])
+
+        definitions = get("definitions", {})
+        if conanfile and conanfile.languages:
+            if "C++" not in conanfile.languages:
+                definitions.pop("cpp", None)
+            if "C" not in conanfile.languages:
+                definitions.pop("c", None)
+        comp.definitions = definitions
+
         return comp
 
     @staticmethod
@@ -135,7 +166,7 @@ class CPSComponent:
 class CPS:
     """ represents the CPS file for 1 package
     """
-    def __init__(self, name=None, version=None):
+    def __init__(self, name=None, version=None, conanfile=None, configuration=None):
         self.name = name
         self.version = version
         self.default_components = []
@@ -147,6 +178,12 @@ class CPS:
         self.license = None
         self.website = None
         self.prefix = None
+        self.conanfile = conanfile
+        self.configuration = configuration
+        if conanfile is None:
+            ConanOutput().warning("Creating a CPS object without a conanfile is not recommended and will be deprecated in the future."
+                                  " Please provide a conanfile to the CPS constructor.",
+                                  warn_tag="deprecated")
 
     def serialize(self):
         cps = {"cps_version": "0.13.0",
@@ -174,9 +211,8 @@ class CPS:
 
         return cps
 
-    @staticmethod
-    def deserialize(data):
-        cps = CPS()
+    def deserialize(self, data):
+        cps = CPS(conanfile=self.conanfile)
         cps.name = data.get("name")
         cps.prefix = data.get("prefix")
         cps.version = data.get("version")
@@ -186,7 +222,7 @@ class CPS:
         cps.requires = data.get("requires")
         cps.configurations = data.get("configurations")
         cps.default_components = data.get("default_components")
-        cps.components = {k: CPSComponent.deserialize(v)
+        cps.components = {k: CPSComponent.deserialize(v, self.conanfile, self.configuration)
                           for k, v in data.get("components", {}).items()}
         return cps
 
@@ -260,6 +296,7 @@ class CPS:
 
         cpp_info = CppInfo()
         cpp_info.default_components = self.default_components
+
         for comp_name, comp in self.components.items():
             cpp_comp = cpp_info if len(self.components) == 1 else cpp_info.components[comp_name]
             cpp_comp.includedirs = strip_prefix(comp.includes)
@@ -288,9 +325,9 @@ class CPS:
         return filename
 
     @staticmethod
-    def load(file):
+    def load(file, conanfile=None, configuration=None):
         contents = load(file)
-        base = CPS.deserialize(json.loads(contents))
+        base = CPS(conanfile=conanfile, configuration=configuration).deserialize(json.loads(contents))
 
         path, name = os.path.split(file)
         basename, ext = os.path.splitext(name)
