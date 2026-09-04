@@ -635,6 +635,44 @@ def test_revision_timestamp():
     assert locked_ref.timestamp and locked_ref.timestamp != server_timestamp
 
 
+def test_partial_lockfile_unrelated_timestamp_change():
+    """
+    https://github.com/conan-io/conan/issues/17402
+
+    Updating a single package via a partial lockfile (removing its line from the
+    lockfile and letting ``--lockfile-partial`` fill it back in) should not touch the
+    locked entry of other, unrelated packages that were not really modified, as this
+    pollutes the lockfile diff with confusing, unrelated changes.
+    """
+    c = TestClient(light=True)
+    c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1")})
+    c.run("create pkga")
+    c.run("create pkgb")
+    c.run("lock create --requires=pkgb/0.1 --lockfile-out=conan.lock")
+    lock1 = json.loads(c.load("conan.lock"))
+    pkga_ref1 = next(RecipeReference.loads(r) for r in lock1["requires"] if r.startswith("pkga/"))
+
+    # Simulate an unrelated rebuild happening elsewhere (e.g. in CI): pkga is re-created
+    # with the exact same content, producing the same revision, but Conan still bumps its
+    # cache timestamp ("already exported before, making it latest again")
+    time.sleep(1)
+    c.run("create pkga")
+
+    # The user updates pkgb: remove its line from the lockfile and let
+    # --lockfile-partial fill it back in, as described in the issue
+    c.run("lock remove --requires=pkgb/0.1 --lockfile=conan.lock --lockfile-out=conan.lock")
+    c.run("install --requires=pkgb/0.1 --lockfile=conan.lock --lockfile-partial "
+          "--lockfile-out=conan.lock")
+
+    lock2 = json.loads(c.load("conan.lock"))
+    pkga_ref2 = next(RecipeReference.loads(r) for r in lock2["requires"] if r.startswith("pkga/"))
+
+    # pkga was never touched by this update, it must keep its exact locked entry
+    assert pkga_ref1.revision == pkga_ref2.revision
+    assert pkga_ref1.timestamp == pkga_ref2.timestamp
+
+
 class TestLockfileUpdate:
     """
     Check that --update works

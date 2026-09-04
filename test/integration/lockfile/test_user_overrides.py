@@ -202,9 +202,32 @@ def test_add_multiple_revisions():
            new_lock["requires"]
 
 
-def test_timestamps_are_updated():
-    """ When ``conan lock add`` adds a revision with a timestamp, or without it, it will be
-    updated in the lockfile-out to the resolved new timestamp
+def test_timestamps_without_value_are_updated():
+    """ When ``conan lock add`` adds a revision without a timestamp, it will be filled in the
+    lockfile-out with the resolved real timestamp, as there was no previous value to keep
+    """
+    c = TestClient(light=True)
+    c.save({"conanfile.txt": "[requires]\nmath/1.0",
+            "math/conanfile.py": GenConanfile("math", "1.0")})
+    c.run("create math")
+    rev = c.exported_recipe_revision()
+    # Create a new lockfile, wipe the previous
+    c.run(f"lock add --lockfile=\"\" --requires=math/1.0#{rev}")
+    lock = json.loads(c.load("conan.lock"))
+    assert lock["requires"] == [f"math/1.0#{rev}"]  # no timestamp yet
+
+    c.run("install . --lockfile=conan.lock --lockfile-out=conan.lock")
+    assert f" math/1.0#{rev} - Cache" in c.out
+    new_lock = json.loads(c.load("conan.lock"))
+    assert new_lock["requires"][0].startswith(f"math/1.0#{rev}%")  # timestamp filled in
+
+
+def test_timestamps_with_value_are_kept():
+    """ https://github.com/conan-io/conan/issues/17402
+    When ``conan lock add`` adds a revision with an explicit timestamp (even an arbitrary one),
+    that timestamp becomes part of the locked identity: resolving that same revision again
+    later (e.g. a plain ``install`` reusing the lockfile) must not silently rewrite it, or it
+    would pollute the lockfile with confusing, content-free diffs.
     """
     c = TestClient(light=True)
     c.save({"conanfile.txt": "[requires]\nmath/1.0",
@@ -216,7 +239,7 @@ def test_timestamps_are_updated():
     c.run("install . --lockfile=conan.lock --lockfile-out=conan.lock")
     assert f" math/1.0#{rev} - Cache" in c.out
     new_lock = c.load("conan.lock")
-    assert "%0.123" not in new_lock
+    assert "%0.123" in new_lock
 
 
 def test_lock_add_error():
