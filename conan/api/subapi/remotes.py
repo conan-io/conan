@@ -10,7 +10,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.rest.remote_credentials import RemoteCredentials
 from conan.internal.rest.rest_client_local_recipe_index import add_local_recipes_index_remote, \
     remove_local_recipes_index_remote
-from conan.internal.api.remotes.localdb import LocalDB
+from conan.internal.api.remotes.localdb import create_token_store
 from conan.errors import ConanException
 from conan.internal.util.files import save, load
 
@@ -148,7 +148,7 @@ class RemotesAPI:
         removed = _filter(remotes, pattern, only_enabled=False)
         remotes = [r for r in remotes if r not in removed]
         _save(self._remotes_file, remotes)
-        localdb = LocalDB(self._home_folder)
+        localdb = create_token_store(self._home_folder)
         for remote in removed:
             remove_local_recipes_index_remote(self._home_folder, remote)
             localdb.clean(remote_url=remote.url)
@@ -211,7 +211,7 @@ class RemotesAPI:
 
     def user_info(self, remote: Remote):
         # TODO: Review
-        localdb = LocalDB(self._home_folder)
+        localdb = create_token_store(self._home_folder)
         user_info = {}
         user, token, _ = localdb.get_login(remote.url)
         user_info["name"] = remote.name
@@ -255,20 +255,20 @@ class RemotesAPI:
 
         :param remote: The :ref:`Remote <conan.api.model.Remote>` object to logout
         """
-        localdb = LocalDB(self._home_folder)
+        localdb = create_token_store(self._home_folder)
         # The localdb only stores url + username + token, not remote name, so use URL as key
         localdb.clean(remote_url=remote.url)
 
     def user_set(self, remote: Remote, username):
         # TODO: Review
-        localdb = LocalDB(self._home_folder)
+        localdb = create_token_store(self._home_folder)
         if username == "":
             username = None
         localdb.store(username, token=None, refresh_token=None, remote_url=remote.url)
 
     def user_auth(self, remote: Remote, with_user=False, force=False):
         # TODO: Review
-        localdb = LocalDB(self._home_folder)
+        localdb = create_token_store(self._home_folder)
         if with_user:
             user, token, _ = localdb.get_login(remote.url)
             if not user:
