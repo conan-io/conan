@@ -1466,38 +1466,8 @@ class TestCmakeConfigProperties:
         tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps", assert_error=True)
         assert "cmake_file_names property must be a dict" in tc.out
 
-    def test_error_default_component_in_another_file(self):
-        """Default component in cmake_file_names raises ConanException."""
-        tc = TestClient()
-        dep = textwrap.dedent("""
-            from conan import ConanFile
-
-            class Pkg(ConanFile):
-                name = "pkg"
-                version = "1.0"
-                settings = "os", "compiler", "build_type", "arch"
-
-                def package_info(self):
-                    self.cpp_info.components["compA"].libs = ["a"]
-                    self.cpp_info.components["compA"].type = "static-library"
-                    self.cpp_info.components["compA"].location = "lib/liba.a"
-                    self.cpp_info.components["compB"].libs = ["b"]
-                    self.cpp_info.components["compB"].type = "static-library"
-                    self.cpp_info.components["compB"].location = "lib/libb.a"
-                    self.cpp_info.default_components = ["compA"]
-                    self.cpp_info.set_property("cmake_file_names", {
-                        "MyLib": {"components": ["compA", "compB"]},
-                    })
-        """)
-        tc.save({"conanfile.py": dep})
-        tc.run("create .")
-        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps",
-               assert_error=True)
-        assert "default component 'compA' is defined in another CMake Config file" in tc.out
-        assert "cmake_file_names" in tc.out
-
-    def test_mixed_root_and_component_files(self):
-        """Some components in cmake_file_names, rest in root config file."""
+    def test_error_components_not_in_any_file(self):
+        """Every component must belong to one of the cmake_file_names files."""
         tc = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1520,21 +1490,54 @@ class TestCmakeConfigProperties:
         """)
         tc.save({"conanfile.py": dep})
         tc.run("create .")
-        tc.run(f"install --requires=pkg/1.0 -g CMakeConfigDeps")
+        tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps", assert_error=True)
+        assert ("pkg/1.0: components 'core' are not defined in any CMake config file. Check the "
+                "'cmake_file_names' property definition." in tc.out)
+        # No root config file is generated for a package split with cmake_file_names
+        assert not os.path.exists(os.path.join(tc.current_folder, "pkg-config.cmake"))
 
-        # Root pkg config with core component
-        assert tc.load("pkg-config.cmake")
-        pkg_targets = tc.load("pkg-Targets-release.cmake")
-        assert "pkg::core" in pkg_targets
+    def test_component_with_several_libs(self):
+        """A component declaring several libs keeps its internal targets in its own file."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import save
 
-        # Extra config with extra component
-        assert tc.load("ExtraConfig.cmake")
-        extra_targets = tc.load("Extra-Targets-release.cmake")
-        assert "pkg::extra" in extra_targets
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
 
-        paths = tc.load("conan_cmakedeps_paths.cmake")
-        assert "set(pkg_DIR" in paths
-        assert "set(Extra_DIR" in paths
+                def package(self):
+                    for lib in ("core1", "core2"):
+                        save(self, os.path.join(self.package_folder, "lib", f"lib{lib}.a"), "")
+
+                def package_info(self):
+                    self.cpp_info.components["core"].libs = ["core1", "core2"]
+                    self.cpp_info.components["core"].type = "static-library"
+                    self.cpp_info.components["extra"].libs = ["extra"]
+                    self.cpp_info.components["extra"].type = "static-library"
+                    self.cpp_info.components["extra"].location = "lib/libextra.a"
+                    self.cpp_info.set_property("cmake_file_names", {
+                        "Core": {"components": ["core"]},
+                        "Extra": {"components": ["extra"]},
+                    })
+        """)
+        tc.save({"conanfile.py": dep})
+        tc.run("create .")
+        tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps")
+
+        # The 2 libs are expanded into internal targets, all of them in the "Core" file
+        core_targets = tc.load("Core-Targets-release.cmake")
+        assert "add_library(pkg::core INTERFACE IMPORTED)" in core_targets
+        assert "add_library(pkg::_core_core1 STATIC IMPORTED)" in core_targets
+        assert "add_library(pkg::_core_core2 STATIC IMPORTED)" in core_targets
+        assert "# Requirement pkg::core -> pkg::_core_core1 (Full link: True)" in core_targets
+        assert "# Requirement pkg::core -> pkg::_core_core2 (Full link: True)" in core_targets
+        # The internal targets don't leak to the other file, no find_dependency needed either
+        assert "_core_" not in tc.load("Extra-Targets-release.cmake")
+        assert "find_dependency" not in core_targets
 
     def test_cmake_file_names_ignores_cmake_file_name(self):
         """When both properties are set, cmake_file_names wins and cmake_file_name is ignored."""
@@ -1556,6 +1559,7 @@ class TestCmakeConfigProperties:
                     self.cpp_info.components["extra"].location = "lib/libextra.a"
                     self.cpp_info.set_property("cmake_file_name", "MyPkg")
                     self.cpp_info.set_property("cmake_file_names", {
+                        "Core": {"components": ["core"]},
                         "Extra": {"components": ["extra"]},
                     })
         """)
@@ -1563,21 +1567,18 @@ class TestCmakeConfigProperties:
         tc.run("create .")
         tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps")
 
-        # cmake_file_name is ignored: leftover components stay in the recipe-named root file
-        assert tc.load("pkg-config.cmake")
-        pkg_targets = tc.load("pkg-Targets-release.cmake")
-        assert "pkg::core" in pkg_targets
+        # cmake_file_name is ignored, and no root config file is generated
         assert not os.path.exists(os.path.join(tc.current_folder, "MyPkgConfig.cmake"))
         assert not os.path.exists(os.path.join(tc.current_folder, "MyPkg-config.cmake"))
+        assert not os.path.exists(os.path.join(tc.current_folder, "pkg-config.cmake"))
 
-        # cmake_file_names still generates the Extra config
-        assert tc.load("ExtraConfig.cmake")
-        extra_targets = tc.load("Extra-Targets-release.cmake")
-        assert "pkg::extra" in extra_targets
+        assert "pkg::core" in tc.load("Core-Targets-release.cmake")
+        assert "pkg::extra" in tc.load("Extra-Targets-release.cmake")
 
         paths = tc.load("conan_cmakedeps_paths.cmake")
-        assert "set(pkg_DIR" in paths
+        assert "set(Core_DIR" in paths
         assert "set(Extra_DIR" in paths
+        assert "set(pkg_DIR" not in paths
         assert "set(MyPkg_DIR" not in paths
 
     def test_find_dependency_uses_correct_names(self):
@@ -1620,6 +1621,105 @@ class TestCmakeConfigProperties:
         consumer_targets = tc.load("consumer-Targets-release.cmake")
         assert "find_dependency(DepLib" in consumer_targets
         assert "find_dependency(dep " not in consumer_targets
+
+    def test_consuming_only_the_required_transitive_components(self):
+        """Requiring one component only links the components it transitively depends on."""
+        c = TestClient()
+        liba = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import save
+
+            class Liba(ConanFile):
+                name = "liba"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package(self):
+                    for lib in ("a1", "a2"):
+                        save(self, os.path.join(self.package_folder, "lib", f"lib{lib}.a"), "")
+
+                def package_info(self):
+                    self.cpp_info.components["acomp1"].libs = ["a1"]
+                    self.cpp_info.components["acomp1"].type = "static-library"
+                    self.cpp_info.components["acomp2"].libs = ["a2"]
+                    self.cpp_info.components["acomp2"].type = "static-library"
+            """)
+        libb = textwrap.dedent("""
+            import os
+            from conan import ConanFile
+            from conan.tools.files import save
+
+            class Libb(ConanFile):
+                name = "libb"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                requires = "liba/1.0"
+
+                def package(self):
+                    for lib in ("b1", "b2"):
+                        save(self, os.path.join(self.package_folder, "lib", f"lib{lib}.a"), "")
+
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_file_names", {
+                        "BLib1": {"components": ["bcomp1"]},
+                        "BLib2": {"components": ["bcomp2"]},
+                    })
+                    self.cpp_info.components["bcomp1"].libs = ["b1"]
+                    self.cpp_info.components["bcomp1"].type = "static-library"
+                    self.cpp_info.components["bcomp1"].requires = ["liba::acomp1"]
+                    self.cpp_info.components["bcomp2"].libs = ["b2"]
+                    self.cpp_info.components["bcomp2"].type = "static-library"
+                    self.cpp_info.components["bcomp2"].requires = ["liba::acomp2"]
+            """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Consumer(ConanFile):
+                name = "consumer"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+                requires = "libb/1.0"
+
+                def package_info(self):
+                    self.cpp_info.requires = ["libb::bcomp1"]
+            """)
+        c.save({"liba/conanfile.py": liba,
+                "libb/conanfile.py": libb,
+                "consumer/conanfile.py": consumer})
+        c.run("create liba")
+        c.run("create libb")
+        c.run("create consumer")
+        c.run("install --requires=consumer/1.0 -g CMakeConfigDeps")
+
+        # The consumer only links the required component, not the whole libb::libb target.
+        # Since libb splits its components with cmake_file_names, find_dependency uses the
+        # cmake file name (BLib1) that owns bcomp1, not the package name (libb).
+        consumer_targets = c.load("consumer-Targets-release.cmake")
+        assert "find_dependency(BLib1 REQUIRED CONFIG)" in consumer_targets
+        assert "find_dependency(libb" not in consumer_targets
+        assert "find_dependency(BLib2" not in consumer_targets
+        assert "# Requirement consumer::consumer -> libb::bcomp1 (Full link: True)" in consumer_targets
+        assert "libb::bcomp2" not in consumer_targets
+        assert "libb::libb" not in consumer_targets
+        # liba is only reached through libb::bcomp1
+        assert "liba::" not in consumer_targets
+
+        # No root libb config file is generated: all components are split across
+        # BLib1/BLib2 by cmake_file_names.
+        assert not os.path.exists(os.path.join(c.current_folder, "libb-Targets-release.cmake"))
+
+        # Each libb component (now split into its own cmake file) links only its own
+        # liba component.
+        blib1_targets = c.load("BLib1-Targets-release.cmake")
+        assert "find_dependency(liba REQUIRED CONFIG)" in blib1_targets
+        assert "# Requirement libb::bcomp1 -> liba::acomp1 (Full link: True)" in blib1_targets
+        assert "# Requirement libb::bcomp1 -> liba::acomp2" not in blib1_targets
+
+        blib2_targets = c.load("BLib2-Targets-release.cmake")
+        assert "find_dependency(liba REQUIRED CONFIG)" in blib2_targets
+        assert "# Requirement libb::bcomp2 -> liba::acomp2 (Full link: True)" in blib2_targets
+        assert "# Requirement libb::bcomp2 -> liba::acomp1" not in blib2_targets
 
     def test_cmake_component_properties_version_and_compat(self):
         """Per-file ``properties`` can override config-version (system_package_version, compat)."""
