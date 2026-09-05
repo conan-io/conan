@@ -121,6 +121,7 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
 
     result = conanfile.options.get_upstream_options(down_options, ref, is_consumer)
     self_options, up_options, private_up_options = result
+    conanfile._conan_down_options = down_options
     # self_options are the minimum to reproduce state, as defined from downstream (not profile)
     conanfile.self_options = self_options
     # up_options are the minimal options that should be propagated to dependencies
