@@ -1,10 +1,12 @@
 import json
 import textwrap
 from datetime import timedelta
-
 from unittest.mock import patch
 
+import pytest
+
 from conan.internal.api.remotes.localdb import LocalDB
+from conan.internal.rest.auth_manager import LOGIN_RETRIES
 from conan.internal.rest.rest_client_v2 import RestV2Methods
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
@@ -412,14 +414,17 @@ class TestRemoteAuth:
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out
 
-    def test_remote_auth_error_with_cached_user(self):
+    @pytest.mark.parametrize("attempted_user, expected_error", [
+        ("other", "ERROR: Wrong user or password"),
+        ("myuser", 'ERROR: Wrong password for user "myuser"')
+    ], ids=["different-user", "same-user"])
+    def test_remote_auth_error_with_cached_user(self, attempted_user, expected_error):
         servers = {"default": TestServer(users={"myuser": "password"})}
         c = TestClient(light=True, servers=servers,
-                       inputs=["other", "pass", "myuser", "pass", "myuser", "pass"])
+                       inputs=[attempted_user, "pass"] * LOGIN_RETRIES)
         c.run("remote set-user default myuser")
         c.run("remote auth *")
-        assert "ERROR: Wrong user or password" in c.out
-        assert 'ERROR: Wrong password for user "myuser"' in c.out
+        assert expected_error in c.out
         assert "error: Too many failed login attempts, bye!" in c.out
 
     def test_remote_auth_server_expire_token_secret(self):
