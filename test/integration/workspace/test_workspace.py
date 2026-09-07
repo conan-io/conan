@@ -1344,14 +1344,9 @@ class TestMeta:
         # It no longer crashes
         assert "Install finished successfully" in c.out
 
-    def test_link_libraries_diamond_workspace(self):
+    def test_link_libraries_workspace_different_context(self):
         # https://github.com/conan-io/conan/issues/20304
-        # CMakeConfigDeps can silently drop the INTERFACE_LINK_LIBRARIES entry of a
-        # regular (non-editable) package's own dependency ("wrapper" -> "leaf"), when
-        # "leaf" is *also* reachable from an editable workspace member ("core") that
-        # is required in 2 different contexts: as a host requirement (implicit,
-        # because "workspace super-install" requires every editable at the top level)
-        # and as a build requirement (tool_requires from another editable, "app").
+        # Ensure that host context is preferred when both host and build context are present in the workspace
         c = TestClient()
         workspace = textwrap.dedent("""
             from conan import ConanFile, Workspace
@@ -1379,11 +1374,46 @@ class TestMeta:
         c.run("create leaf")
         c.run("create wrapper")
         c.run("workspace super-install")
+        assert "Using the host context node" in c.out
 
         # "wrapper" is a regular (non-editable) package that requires "leaf" directly,
         # so its generated target file must link against it
         wrapper_targets = c.load("wrapper-Targets-release.cmake")
         assert "leaf::leaf" in wrapper_targets
+
+    def test_link_libraries_different_visibility(self):
+        c = TestClient()
+        workspace = textwrap.dedent("""
+                    from conan import ConanFile, Workspace
+                    from conan.tools.cmake import CMakeConfigDeps
+
+                    class MyWs(ConanFile):
+                        settings = "build_type"
+                        def generate(self):
+                            CMakeConfigDeps(self).generate()
+
+                    class MyWorkspace(Workspace):
+                        def root_conanfile(self):
+                            return MyWs
+                        def packages(self):
+                            return [{"path": "app", "ref": "app/1.0"},
+                                    {"path": "core", "ref": "core/1.0"}]
+                    """)
+        c.save({"leaf/conanfile.py": GenConanfile("leaf"),
+                "wrapper/conanfile.py": GenConanfile("wrapper", "1.0").with_requirement("leaf/1.0"),
+                "core/conanfile.py": GenConanfile("core", "1.0").with_requirement("leaf/2.0", visible=False),
+                "app/conanfile.py": GenConanfile("app", "1.0")
+               .with_requires("wrapper/1.0")
+               .with_requires("core/1.0"),
+                "conanws.py": workspace})
+        c.run("create leaf --version=1.0")
+        c.run("create leaf --version=2.0")
+        c.run("create wrapper")
+        c.run("workspace super-install")
+        assert "Using the visible node" in c.out
+
+        leaf_config = c.load("leaf-config.cmake")
+        assert 'leaf_VERSION_STRING "1.0"' in leaf_config
 
 
 def test_workspace_with_local_recipes_index():

@@ -423,13 +423,17 @@ class WorkspaceAPI:
                     root.transitive_deps[r] = t
                 else:
                     require = existing.require
-                    require.aggregate(r)
                     # Prefer host node if they are different
                     n = t.node
                     if t.node.context != existing.node.context and existing.node.context == CONTEXT_HOST:
                         n = existing.node
                         ConanOutput().warning(f"Workspace has dependencies to the same package {require} in different contexts, "
                                               f"which can cause problems. Using the host context node")
+                    elif require.visible != r.visible and require.visible:
+                        n = existing.node
+                        ConanOutput().warning(f"Workspace has dependencies to the same package {require} with different visibility, "
+                                              f"which can cause problems. Using the visible node")
+                    require.aggregate(r)
                     root.transitive_deps[require] = TransitiveRequirement(require, n)
 
         # The graph edges must be defined too
