@@ -38,19 +38,22 @@ def test_msbuildtoolchain_props_with_extra_flags():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.tool("visual_studio", "17")
+@pytest.mark.tool("visual_studio", "18")
 def test_msbuildtoolchain_winsdk_version():
     """
     Configure sdk_version
     """
+    # vcvarsall.bat matches winsdk_version against the exact SDK folder name under
+    # "Windows Kits\10\Include" (a bare "10.0" only works with the legacy 10.0.10240.0
+    # layout), so this must be a full version actually installed on the CI runner.
     client = TestClient(path_with_spaces=False)
     client.run("new msbuild_lib -d name=hello -d version=0.1")
     #  conantoolchain.props is already imported in the msbuild_exe tempalte
-    client.run("create . -s arch=x86_64 -s compiler.version=193 "
-               "-c tools.microsoft:winsdk_version=10.0")
+    client.run("create . -s arch=x86_64 -s compiler.version=195 "
+               "-c tools.microsoft:winsdk_version=10.0.26100.0")
     # I have verified also opening VS IDE that the setting is correctly configured
     # because the test always run over vcvars that already activates it
-    assert "amd64 - winsdk_version=10.0 - vcvars_ver=14.3" in client.out
+    assert "amd64 - winsdk_version=10.0.26100.0 - vcvars_ver=14.5" in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
