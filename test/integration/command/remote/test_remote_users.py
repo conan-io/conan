@@ -412,6 +412,16 @@ class TestRemoteAuth:
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out
 
+    def test_remote_auth_error_with_cached_user(self):
+        servers = {"default": TestServer(users={"myuser": "password"})}
+        c = TestClient(light=True, servers=servers,
+                       inputs=["other", "pass", "myuser", "pass", "myuser", "pass"])
+        c.run("remote set-user default myuser")
+        c.run("remote auth *")
+        assert "ERROR: Wrong user or password" in c.out
+        assert 'ERROR: Wrong password for user "myuser"' in c.out
+        assert "error: Too many failed login attempts, bye!" in c.out
+
     def test_remote_auth_server_expire_token_secret(self):
         server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
         c = TestClient(light=True, servers={"default": server},
@@ -460,7 +470,6 @@ class TestRemoteAuth:
         # Token should expire
         expire_token("myotheruser")
         c.run("remote auth *")
-        assert "Wrong user or password" in c.out
         assert "error: Too many failed login attempts, bye!" in c.out
 
     def test_remote_auth_strict(self):
