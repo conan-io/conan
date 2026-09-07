@@ -1,6 +1,5 @@
 import json
 import textwrap
-import time
 from datetime import timedelta
 
 from unittest.mock import patch
@@ -437,24 +436,31 @@ class TestRemoteAuth:
 
     def test_remote_auth_server_expire_token(self):
         server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
-        server.test_server.ra.api_v2.credentials_manager.expire_time = timedelta(seconds=2)
         c = TestClient(light=True, servers={"default": server},
                        inputs=["myuser", "password",
                                "myotheruser", "otherpass",
                                "user", "pass", "user", "pass",
                                "user", "pass"])
+
+        def expire_token(user):
+            manager = server.test_server.ra.api_v2.credentials_manager
+            with patch.object(manager, "expire_time", timedelta(seconds=-1)):
+                token = manager.get_token_for(user)
+            LocalDB(c.cache_folder).store(user, token, None, server.fake_url)
+
         c.run("remote auth *")
         assert "user: myuser" in c.out
         # token not expired yet, should work
         c.run("remote auth *")
         assert "user: myuser" in c.out
         # Token should expire
-        time.sleep(3)
+        expire_token("myuser")
         c.run("remote auth *")
         assert "user: myotheruser" in c.out
         # Token should expire
-        time.sleep(3)
+        expire_token("myotheruser")
         c.run("remote auth *")
+        assert "Wrong user or password" in c.out
         assert "error: Too many failed login attempts, bye!" in c.out
 
     def test_remote_auth_strict(self):
