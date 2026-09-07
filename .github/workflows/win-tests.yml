@@ -108,7 +108,6 @@ jobs:
         if: matrix.runner == 'windows-2022'
         run: |
           dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
-          dir "C:\Program Files (x86)\Windows Kits\10\Include"
 
       - name: Install Visual Studio 2017 Build Tools
         run: |
