@@ -1415,6 +1415,103 @@ class TestMeta:
         leaf_config = c.load("leaf-config.cmake")
         assert 'leaf_VERSION_STRING "1.0"' in leaf_config
 
+    def test_link_libraries_editable_private_version_ambiguous(self):
+        # https://github.com/conan-io/conan/issues/20304
+        # Known, accepted trade-off (not a bug to fix): "core" and "other" are two
+        # unrelated editables, each with its own *private* (visible=False) dependency
+        # on a different version of "leaf". Neither requirement is "the visible one",
+        # so the visible-vs-invisible tie-break does not apply here: there is no rule
+        # at all, whichever happens to be processed last silently wins, and (unlike the
+        # visible-vs-invisible and host-vs-build cases) NO warning is emitted. The
+        # monolithic build still only generates ONE find_package() resolution for
+        # "leaf", so one of "core"/"other" is silently pointed at the wrong version of
+        # its own private dependency. See test_super_build_private_version_ambiguous in
+        # test/functional/workspace/test_workspace.py for this same scenario proven at
+        # the actual CMake/find_package level.
+        c = TestClient()
+        workspace = textwrap.dedent("""
+            from conan import ConanFile, Workspace
+            from conan.tools.cmake import CMakeConfigDeps
+
+            class MyWs(ConanFile):
+                settings = "build_type"
+                def generate(self):
+                    CMakeConfigDeps(self).generate()
+
+            class MyWorkspace(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+                def packages(self):
+                    return [{"path": "core", "ref": "core/1.0"},
+                            {"path": "other", "ref": "other/1.0"}]
+            """)
+        c.save({"leaf/conanfile.py": GenConanfile("leaf"),
+                "core/conanfile.py": GenConanfile("core", "1.0").with_requirement("leaf/1.0", visible=False),
+                "other/conanfile.py": GenConanfile("other", "1.0").with_requirement("leaf/2.0", visible=False),
+                "conanws.py": workspace})
+        c.run("create leaf --version=1.0")
+        c.run("create leaf --version=2.0")
+        c.run("workspace super-install")
+        # Neither tie-break condition applies: no warning at all is emitted, unlike the
+        # visible-vs-invisible and host-vs-build cases above.
+        assert "Using the visible node" not in c.out
+        assert "Using the host context node" not in c.out
+
+        # Only ONE find_package(leaf) resolution exists for the whole monolithic
+        # build. "other" happens to win here (an accident of processing order, not a
+        # deliberate rule): "core"'s own private "leaf/1.0" silently disappears, and if
+        # "core" itself called find_package(leaf), it would get "2.0" instead.
+        leaf_config = c.load("leaf-config.cmake")
+        assert 'leaf_VERSION_STRING "2.0"' in leaf_config
+        assert 'leaf_VERSION_STRING "1.0"' not in leaf_config
+
+    def test_two_editables_same_name_different_version(self):
+        # https://github.com/conan-io/conan/issues/20304
+        # Unlike the ambiguous-private-dependency case above, having TWO editables
+        # share the same name ("leaf", at different versions, required privately by
+        # "core" and "other" respectively) is NOT silently resolved: it is rejected
+        # loudly. "workspace super-install" always requires every editable at the top
+        # level, so "leaf/1.0" and "leaf/2.0" collide as top-level requirements
+        # immediately, before any collapsing or generation even happens.
+        c = TestClient()
+        workspace = textwrap.dedent("""
+            from conan import ConanFile, Workspace
+            from conan.tools.cmake import CMakeConfigDeps
+
+            class MyWs(ConanFile):
+                settings = "build_type"
+                def generate(self):
+                    CMakeConfigDeps(self).generate()
+
+            class MyWorkspace(Workspace):
+                def root_conanfile(self):
+                    return MyWs
+                def packages(self):
+                    return [{"path": "leaf_v1", "ref": "leaf/1.0"},
+                            {"path": "leaf_v2", "ref": "leaf/2.0"},
+                            {"path": "core", "ref": "core/1.0"},
+                            {"path": "other", "ref": "other/1.0"}]
+            """)
+        c.save({"leaf_v1/conanfile.py": GenConanfile("leaf", "1.0"),
+                "leaf_v2/conanfile.py": GenConanfile("leaf", "2.0"),
+                "core/conanfile.py": GenConanfile("core", "1.0").with_requirement("leaf/1.0", visible=False),
+                "other/conanfile.py": GenConanfile("other", "1.0").with_requirement("leaf/2.0", visible=False),
+                "conanws.py": workspace})
+        c.run("workspace super-install", assert_error=True)
+        assert "Duplicated requirement: leaf/2.0" in c.out
+
+        # But that guard is an accident of how the top-level requires happen to be
+        # built, not a deliberate check: filtering which packages become top-level
+        # requirements sidesteps it, since "leaf" is then only reached transitively
+        # (once via "core", once via "other"). Conan accepts this silently: both
+        # editable "leaf" nodes coexist in the graph side by side, with no warning at
+        # all. It is the FetchContent-based monolithic CMakeLists.txt that ultimately
+        # can't cope with it - see test_super_build_two_editables_same_name in
+        # test/functional/workspace/test_workspace.py.
+        c.run("workspace super-install --pkg=core/1.0 --pkg=other/1.0")
+        assert "leaf/1.0 - Editable" in c.out
+        assert "leaf/2.0 - Editable" in c.out
+
 
 def test_workspace_with_local_recipes_index():
     c3i_folder = temp_folder()
