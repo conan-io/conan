@@ -1313,3 +1313,41 @@ def test_find_mode_none():
     target_dependency = tc.load("liba-Targets-release.cmake")
     # The dependency should not have CONFIG requirement
     assert "find_dependency(dep REQUIRED )" in target_dependency
+
+
+def test_source_package_only_if_direct():
+    """ cpp_info.sources should only be propagated as INTERFACE_SOURCES to consumers that have
+    a direct dependency on the package declaring them, not to transitive consumers
+    """
+    c = TestClient()
+    hello = textwrap.dedent("""
+        from conan import ConanFile
+        class Hello(ConanFile):
+            name = "hello"
+            version = "0.1"
+            settings = "build_type"
+            def package_info(self):
+                self.cpp_info.includedirs = []
+                self.cpp_info.sources = ["src/hello.cpp"]
+        """)
+    c.save({"hello/conanfile.py": hello,
+            "middle/conanfile.py": GenConanfile("middle", "0.1")
+                .with_requirement("hello/0.1")
+                .with_settings("build_type"),
+            "consumer/conanfile.py": GenConanfile("consumer", "0.1")
+                .with_requirement("middle/0.1")
+                .with_settings("build_type")
+            })
+    c.run("create hello")
+    c.run("create middle")
+
+    # "hello" is a direct dependency of "middle" => sources are propagated
+    c.run("install middle -g CMakeConfigDeps")
+    direct_targets = c.load("middle/hello-Targets-release.cmake")
+    assert "INTERFACE_SOURCES" in direct_targets
+
+    # "hello" is a transitive dependency of "consumer" (via "middle") => sources are not propagated
+    c.run("install consumer -g CMakeConfigDeps")
+    transitive_targets = c.load("consumer/hello-Targets-release.cmake")
+    assert "INTERFACE_SOURCES" not in transitive_targets
+
