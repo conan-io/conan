@@ -87,6 +87,56 @@ def test_vcvars_platform_x86():
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_vcvars_activation_error_does_not_fail_build():
+    """
+    https://github.com/conan-io/conan/issues/20311
+
+    ``conanbuild.bat`` calls every registered activation script one after another with
+    plain ``call`` statements, without checking the errorlevel in between. So even if
+    ``conanvcvars.bat`` correctly fails with a non-zero exit code (e.g. an invalid
+    toolset), a later script that runs and succeeds (like the auto-generated
+    ``conanbuildenv.bat``) overwrites that errorlevel, and the failure never
+    propagates. This reproduces that behavior with simple custom .bat scripts standing
+    in for ``conanvcvars.bat`` and ``conanbuildenv.bat``, instead of a real MSVC
+    installation.
+    """
+    client = TestClient(path_with_spaces=False)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.files import save
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            settings = "os", "compiler", "arch", "build_type"
+
+            def generate(self):
+                # Emulates a failing vcvarsall.bat: it prints an error message and
+                # does exit with a non-zero errorlevel
+                save(self, "myvcvars.bat",
+                     "@echo off\\necho [ERROR:vcvars.bat] Toolset directory not found\\n"
+                     "exit /b 1")
+                self.env_scripts.setdefault("build", []).append("myvcvars.bat")
+                # Emulates another activation script that runs afterwards, like the
+                # auto-generated conanbuildenv.bat, and succeeds
+                save(self, "mybuildenv.bat", "echo Running mybuildenv.bat!!!")
+                self.env_scripts.setdefault("build", []).append("mybuildenv.bat")
+
+            def build(self):
+                self.run("echo Hello")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -s os=Windows -s compiler=msvc -s compiler.version=193 "
+               "-s compiler.runtime=dynamic", assert_error=True)
+    assert "[ERROR:vcvars.bat] Toolset directory not found" in client.out
+    # This is the bug: myvcvars.bat failed with exit code 1, but mybuildenv.bat ran
+    # afterwards and succeeded, silently overwriting the errorlevel, so the build
+    # still succeeds and "Hello" gets printed instead of the build raising an error
+    assert "Running mybuildenv.bat!!!" not in client.out
+    assert "ERROR: pkg/1.0: Error in build() method, line 23" in client.out
+
+
+@pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
 def test_vcvars_clang_visual2026():
     client = TestClient(path_with_spaces=False)
     client.save({"conanfile.txt": "[generators]\nVCVars"})
