@@ -195,7 +195,7 @@ def test_skip_visible_build():
     c.run("create libb")
     c.run("create libc")
     c.run("install app --format=json")
-    assert re.search(r"Skipped binaries(\s*)libb/0.1, liba/0.1", c.out)
+    assert re.search(r"Skipped binaries(\s*)libb/0.1 \(host\), liba/0.1 \(build\)", c.out)
 
 
 def test_skip_tool_requires_context():
@@ -323,7 +323,7 @@ def test_skip_intermediate_static_complex():
     c.run("remove libd:* -c")  # binary not necessary, can be skipped
     c.run("remove libc:* -c")  # binary not necessary, can be skipped
     c.run("install app")
-    assert re.search(r"Skipped binaries(\s*)libc/0.1, libd/0.1", c.out)
+    assert re.search(r"Skipped binaries(\s*)libc/0.1 \(host\), libd/0.1 \(host\)", c.out)
     assert "libd/0.1: Already installed!" not in c.out
     assert "libc/0.1: Already installed!" not in c.out
     for lib in ("a", "b", "e", "f", "g", "h", "i", "j"):
