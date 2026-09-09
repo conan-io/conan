@@ -817,3 +817,8 @@ def test_lock_error():
     c.run(f"install --requires={ref} {settings} --build={ref} "
           "--lockfile=recipes/consumer/conan.lock ")
 
+
+def test_lock_update_error():
+    c = TestClient(light=True)
+    c.run("lock update --requires=math/1.0#rev1%124.0", assert_error=True)
+    assert "No lockfile to update" in c.out

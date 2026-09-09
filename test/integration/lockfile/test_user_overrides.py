@@ -202,6 +202,23 @@ def test_add_multiple_revisions():
            new_lock["requires"]
 
 
+def test_add_same_revisions_newer_timestamps():
+    c = TestClient(light=True)
+    c.run("lock add --requires=math/1.0#rev1%123.0")
+    new_lock = json.loads(c.load("conan.lock"))
+    assert ["math/1.0#rev1%123.0"] == new_lock["requires"]
+
+    # This addition doesn't change anything, as the requires is already locked
+    c.run("lock add --requires=math/1.0#rev1%124.0")
+    new_lock = json.loads(c.load("conan.lock"))
+    assert ["math/1.0#rev1%123.0"] == new_lock["requires"]
+
+    # The update works
+    c.run("lock update --requires=math/1.0#rev1%124.0")
+    new_lock = json.loads(c.load("conan.lock"))
+    assert ["math/1.0#rev1%124.0"] == new_lock["requires"]
+
+
 def test_timestamps_without_value_are_updated():
     """ When ``conan lock add`` adds a revision without a timestamp, it will be filled in the
     lockfile-out with the resolved real timestamp, as there was no previous value to keep
