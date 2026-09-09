@@ -292,7 +292,7 @@ def test_require_different_versions_transitive():
     c.run("upload consumer/1.0 -r=default -c")
     c.run("remove * -c")
     c.run("install --requires=consumer/1.0")
-    assert re.search(r"Skipped binaries(\s*)myqemu/1.0 \(build\), myqemu/2.0 \(build\), snippy/1.0 \(build\), valgrind/1.0 \(build\)", c.out)
+    assert re.search(r"Skipped build binaries(\s*)myqemu/1.0, myqemu/2.0, snippy/1.0, valgrind/1.0", c.out)
 
 
 class TestTransitiveBuild:
