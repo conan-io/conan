@@ -127,7 +127,7 @@ jobs:
         env:
           ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_COVTEST_PIP_USERNAME }}
           ARTIFACTORY_IDENTITY_TOKEN: ${{ secrets.ARTIFACTORY_COVTEST_PIP_IDENTITY_TOKEN }}
-          ARTIFACTORY_URL: $ {{ secrets.ARTIFACTORY_COVTEST_PIP_URL }}
+          ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_COVTEST_PIP_URL }}
         run: |
           pip install covtest --extra-index-url "https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_IDENTITY_TOKEN}@${ARTIFACTORY_URL}" || true
 
@@ -211,7 +211,7 @@ jobs:
         env:
           ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_COVTEST_PIP_USERNAME }}
           ARTIFACTORY_IDENTITY_TOKEN: ${{ secrets.ARTIFACTORY_COVTEST_PIP_IDENTITY_TOKEN }}
-          ARTIFACTORY_URL: $ {{ secrets.ARTIFACTORY_COVTEST_PIP_URL }}
+          ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_COVTEST_PIP_URL }}
         run: |
           pip install covtest --extra-index-url "https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_IDENTITY_TOKEN}@${ARTIFACTORY_URL}" || true
           covtest process || true
