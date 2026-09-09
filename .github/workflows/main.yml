@@ -129,7 +129,7 @@ jobs:
           ARTIFACTORY_IDENTITY_TOKEN: ${{ secrets.ARTIFACTORY_COVTEST_PIP_IDENTITY_TOKEN }}
           ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_COVTEST_PIP_URL }}
         run: |
-          pip install covtest --extra-index-url "https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_IDENTITY_TOKEN}@${ARTIFACTORY_URL}" || true
+          pip install covtest --extra-index-url "https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_IDENTITY_TOKEN}@${ARTIFACTORY_URL}" -v || true
 
       - name: Run covtest predict
         if: github.event_name == 'pull_request'
