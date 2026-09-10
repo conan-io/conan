@@ -288,7 +288,7 @@ class Requirement:
         if self.build:  # Build-requires
             # If the above is shared or the requirement is explicit run=True
             # visible=self.visible will further propagate it downstream
-            if dep_pkg_type is PackageType.SHARED or require.run:
+            if dep_pkg_type is PackageType.SHARED or require.run or require.consistent:
                 downstream_require = Requirement(require.ref, headers=False, libs=False, build=True,
                                                  run=self.run, visible=self.visible, direct=False,
                                                  # require.visible=True => require.consistent=True
