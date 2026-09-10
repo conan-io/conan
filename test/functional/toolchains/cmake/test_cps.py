@@ -1,5 +1,4 @@
 import os
-import platform
 import shutil
 import textwrap
 
@@ -54,7 +53,7 @@ def test_cps(shared):
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.2)
+        cmake_minimum_required(VERSION 4.3)
         project(mypkg CXX)
 
         add_library(mypkg src/mypkg.cpp)
@@ -82,7 +81,7 @@ def test_cps(shared):
     test_cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.2)
+        cmake_minimum_required(VERSION 4.3)
         project(PackageTest CXX)
 
         find_package(mypkg CONFIG REQUIRED)
@@ -184,10 +183,8 @@ def test_cps_components(shared):
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.2)
+        cmake_minimum_required(VERSION 4.3)
         project(mypkg CXX)
-
-        set(CMAKE_EXPERIMENTAL_EXPORT_PACKAGE_INFO "b80be207-778e-46ba-8080-b23bba22639e")
 
         # First library: core
         add_library(mypkg_core src/mypkg_core.cpp)
@@ -218,7 +215,7 @@ def test_cps_components(shared):
     test_package_cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 3.15)
+        cmake_minimum_required(VERSION 4.3)
         project(PackageTest CXX)
 
         find_package(mypkg CONFIG REQUIRED)
@@ -297,8 +294,6 @@ def test_cps_components(shared):
 @pytest.mark.tool("cmake", "4.3")
 @pytest.mark.parametrize("kind", ["static_public", "static_private", "shared_private"])
 def test_cps_components_requires(kind):
-    if kind == "shared_private" and platform.system() == "Linux":
-        pytest.skip("CPS still doesn't support this case")
     c = TestClient()
     conanfile = textwrap.dedent("""\
         from conan import ConanFile
@@ -346,10 +341,8 @@ def test_cps_components_requires(kind):
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.2)
+        cmake_minimum_required(VERSION 4.3)
         project({name} LANGUAGES CXX VERSION 0.1)
-
-        set(CMAKE_EXPERIMENTAL_EXPORT_PACKAGE_INFO "b80be207-778e-46ba-8080-b23bba22639e")
 
         {find}
         # First library: core
@@ -392,7 +385,7 @@ def test_cps_components_requires(kind):
     test_package_cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 3.15)
+        cmake_minimum_required(VERSION 4.3)
         project(PackageTest CXX)
 
         find_package({name} CONFIG REQUIRED)
@@ -553,10 +546,8 @@ def test_cps_name_mapping():
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.2)
+        cmake_minimum_required(VERSION 4.3)
         project(mypkg CXX)
-
-        set(CMAKE_EXPERIMENTAL_EXPORT_PACKAGE_INFO "b80be207-778e-46ba-8080-b23bba22639e")
 
         add_library(mypkg src/mypkg.cpp)
         target_include_directories(mypkg PUBLIC
@@ -588,7 +579,7 @@ def test_cps_name_mapping():
     test_cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.2)
+        cmake_minimum_required(VERSION 4.3)
         project(PackageTest CXX)
 
         find_package(potato CONFIG REQUIRED)
