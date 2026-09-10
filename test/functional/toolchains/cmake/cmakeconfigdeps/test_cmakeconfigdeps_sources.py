@@ -225,7 +225,7 @@ def test_cpp_info_sources_only_package():
     c.run("create middle")
 
     c.run("build transitive_consumer -c tools.compilation:verbosity=verbose")
-    assert re.search(r"Skipped binaries(\s*)hello/1.0", c.out)
+    assert re.search(r"Skipped host binaries(\s*)hello/1.0", c.out)
     assert "hello.cpp" not in c.out
     generators_folder = os.path.join(c.current_folder, "transitive_consumer", "build", "Release",
                                      "generators")
