@@ -14,7 +14,7 @@ new_value = "will_break_next"
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="No OS specific test")
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.27")
 def test_cpp_info_sources():
     c = TestClient()
     c.run("new cmake_lib -d name=hello -d version=1.0")
@@ -47,7 +47,7 @@ def test_cpp_info_sources():
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="No OS specific test")
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.27")
 def test_cpp_info_component_sources():
     c = TestClient()
     c.run("new cmake_lib -d name=hello -d version=1.0")
@@ -91,7 +91,7 @@ def test_cpp_info_component_sources():
 
 
 @pytest.mark.skipif(platform.system() != "Linux", reason="No OS specific test")
-@pytest.mark.tool("cmake")
+@pytest.mark.tool("cmake", "3.27")
 def test_cpp_info_sources_only_package():
     c = TestClient()
     c.save({"src/hello.cpp": '#include <iostream>\nvoid hello() {std::cout << "Hello, world!";}',})
