@@ -8,7 +8,8 @@ from typing import List
 from requests.exceptions import ConnectionError
 
 from conan.api.model import LOCAL_RECIPES_INDEX
-from conan.internal.paths import CONANINFO, CONAN_MANIFEST, PACKAGE_FILE_NAME, EXPORT_FILE_NAME
+from conan.internal.paths import CONANINFO, CONAN_MANIFEST, PACKAGE_FILE_NAME, EXPORT_FILE_NAME, \
+    CONAN_INTERNAL_FILE_NAME
 from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
 from conan.api.model import Remote
 from conan.api.output import ConanOutput
@@ -97,10 +98,17 @@ class RemoteManager:
         export_folder = layout.export()
         export_file = next((f for f in zipped_files if f.startswith(EXPORT_FILE_NAME)), None)
         tgz_file = zipped_files.pop(export_file, None)
+        internal_file = next((f for f in zipped_files if f.startswith(CONAN_INTERNAL_FILE_NAME)),
+                             None)
+        internal_tgz = zipped_files.pop(internal_file, None)
 
         if tgz_file:
             uncompress_file(tgz_file, export_folder, scope=str(ref))
         mkdir(export_folder)
+        if internal_tgz:
+            internal_folder = layout.conan_internal()
+            mkdir(internal_folder)
+            uncompress_file(internal_tgz, internal_folder, scope=str(ref))
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
 

@@ -11,7 +11,7 @@ from conan.internal.source import retrieve_exports_sources
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
 from conan.internal.paths import CONAN_MANIFEST, CONANFILE, CONANINFO, COMPRESSIONS, \
-    EXPORT_SOURCES_FILE_NAME, EXPORT_FILE_NAME, PACKAGE_FILE_NAME
+    EXPORT_SOURCES_FILE_NAME, EXPORT_FILE_NAME, PACKAGE_FILE_NAME, CONAN_INTERNAL_FILE_NAME
 from conan.internal.util.files import (clean_dirty, is_dirty, gather_files,
                                        set_dirty_context_manager, mkdir, human_size)
 
@@ -133,6 +133,22 @@ class PackagePreparator:
             bundle.pop("upload-urls", None)
             if bundle.get("upload") or force:
                 self._prepare_recipe(recipe_layout, ref, bundle, conanfile, enabled_remotes)
+
+            # Conan-internal files always travel with the recipe — pack and add unconditionally
+            internal_folder = recipe_layout.conan_internal()
+            internal_files, _ = gather_files(internal_folder)
+            if internal_files:
+                download_export_folder = recipe_layout.download_export()
+                mkdir(download_export_folder)
+                # Always recompress — discard any stale archive left by a previous download
+                for ext in COMPRESSIONS:
+                    stale = os.path.join(download_export_folder, CONAN_INTERNAL_FILE_NAME + ext)
+                    if os.path.isfile(stale):
+                        os.remove(stale)
+                comp = self._compressed_file(CONAN_INTERNAL_FILE_NAME, internal_files,
+                                             download_export_folder, ref)
+                bundle.setdefault("files", {})[comp] = os.path.join(download_export_folder, comp)
+                bundle["upload"] = True
 
             # Package metadata files too
             if metadata != [""] and (metadata or bundle.get("upload")):

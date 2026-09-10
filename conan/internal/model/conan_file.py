@@ -72,6 +72,7 @@ class ConanFile:
 
     no_copy_source = False
     recipe_folder = None
+    recipe_internal_folder = None
 
     # Package information
     cpp = None
