@@ -5,3 +5,4 @@ from conan.tools.gnu.autotoolsdeps import AutotoolsDeps
 from conan.tools.gnu.pkgconfig import PkgConfig
 from conan.tools.gnu.pkgconfigdeps import PkgConfigDeps
 from conan.tools.gnu.makedeps import MakeDeps
+from conan.tools.gnu.mingw import is_mingw
