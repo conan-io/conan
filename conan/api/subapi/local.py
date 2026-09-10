@@ -178,6 +178,7 @@ class LocalAPI:
         """
         with conanfile_exception_formatter(conanfile, "test"):
             with chdir(conanfile.build_folder):
+                setattr(conanfile, "_conan_in_test_package_test", True)
                 conanfile.test()
 
     def inspect(self, conanfile_path, remotes, lockfile, name=None, version=None, user=None,
