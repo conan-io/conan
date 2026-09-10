@@ -373,7 +373,7 @@ class TestLibsLinkageTraits:
         c.run("new cmake_exe -d name=game -d version=0.1 -d requires=engine/0.1")
         c.run(f"create . -o engine/*:shared=True -c tools.cmake.cmakedeps:new={new_value} "
               "-c tools.compilation:verbosity=verbose")
-        assert re.search(r"Skipped binaries(\s*)matrix/0.1", c.out)
+        assert re.search(r"Skipped host binaries(\s*)matrix/0.1", c.out)
         assert "matrix/0.1: Hello World Release!"
         assert "engine/0.1: Hello World Release!"
         assert "game/0.1: Hello World Release!"
