@@ -194,9 +194,10 @@ class CacheAPI:
                 "https://docs.conan.io/2/reference/extensions/package_signing.html.")
 
         loader = self._api_helpers.loader
+        compress_plugin = self._api_helpers.compression_plugin
         preparator = PackagePreparator(loader, self._api_helpers.cache,
                                        self._api_helpers.remote_manager,
-                                       self._api_helpers.global_conf)
+                                       self._api_helpers.global_conf, compress_plugin)
         # Some packages can have missing sources/exports_sources
         enabled_remotes = self._conan_api.remotes.list()
         preparator.prepare(package_list, enabled_remotes, None, force=True)
@@ -373,7 +374,11 @@ class CacheAPI:
         pkglist_path = os.path.join(tempfile.gettempdir(), "pkglist.json")
         save(pkglist_path, serialized)
         tar_files["pkglist.json"] = pkglist_path
-        compress_files(tar_files, tgz_name, os.path.dirname(path), compresslevel, recursive=True)
+
+        plugin = self._conan_api._api_helpers.compression_plugin  # noqa
+        compress_plugin = getattr(plugin, "tar_compress", None) if plugin else None
+        compress_files(tar_files, tgz_name, os.path.dirname(path), compresslevel,
+                       recursive=True, compress_plugin=compress_plugin)
         remove(pkglist_path)
         ConanOutput().success(f"Created cache save file: {path}")
 
@@ -391,13 +396,26 @@ class CacheAPI:
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         cache_folder = cache.store  # Note, this is not the home, but the actual package cache
 
-        with open(path, mode='rb') as file_handler:
-            the_tar = tarfile.open(fileobj=file_handler)
-            fileobj = the_tar.extractfile("pkglist.json")
-            pkglist = fileobj.read()
-            the_tar.extraction_filter = (lambda member, _: member)  # fully_trusted (Py 3.14)
-            the_tar.extractall(path=cache_folder)
-            the_tar.close()
+        plugin = self._conan_api._api_helpers.compression_plugin  # noqa
+        extract_plugin = getattr(plugin, "tar_extract", None) if plugin else None
+        extracted = False
+        if extract_plugin:
+            extracted = extract_plugin(path, cache_folder, scope="Restore")
+            # If the plugin returns false, fallback to Conan extraction
+
+        if extracted is False:
+            with open(path, mode='rb') as file_handler:
+                the_tar = tarfile.open(fileobj=file_handler)
+                the_tar.extraction_filter = (lambda member, _: member)  # fully_trusted (Py 3.14)
+                the_tar.extractall(path=cache_folder)
+                the_tar.close()
+
+        # Retrieve the package list from the already extracted archive
+        pkglist_path = os.path.join(cache_folder, "pkglist.json")
+        with open(pkglist_path) as file_handler:
+            pkglist = file_handler.read()
+        # Delete the pkglist.json file to keep cache clean
+        remove(pkglist_path)
 
         # After unzipping the files, we need to update the DB that references these files
         out = ConanOutput()
