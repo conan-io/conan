@@ -999,3 +999,99 @@ def test_build_order_transitive_options(order_by):
     assert leaf["options"]["shared"] == "True"
     assert tool["context"] == "build"
     assert tool["options"]["shared"] == "True"
+
+
+def test_build_order_options_diamond_precedence():
+    # Counter-example: "leaf" is a diamond dependency of both "midb" and "mida".
+    # "midb" is declared first in "app" requires, so it reaches "leaf" first and,
+    # as it doesn't request any option for it, "leaf" keeps its own default
+    # (shared=False) as its real, effective value in the graph.
+    # "mida" is declared second: the diamond is already closed by the time it
+    # reaches "leaf", so its own "default_options" requesting "leaf/*:shared=True"
+    # never gets applied to "leaf" (only recorded as a graph conflict warning).
+    # "_reproducible_options()" computes the options for "mida" purely from what
+    # was passed down to "mida" itself (nothing, in this case), so it doesn't
+    # know it needs to force "leaf" back to "shared=False" to reproduce the
+    # state: rebuilding "mida" alone with its own "build_args" silently uses
+    # "mida"'s own baked-in default_options and produces a "leaf" with a
+    # DIFFERENT (wrong) option value than the one it was actually built with.
+    c = TestClient(light=True)
+    c.save({
+        "leaf/conanfile.py": GenConanfile("leaf", "1.0").with_shared_option(False),
+        "midb/conanfile.py": GenConanfile("midb", "1.0").with_requires("leaf/1.0"),
+        "mida/conanfile.py": GenConanfile("mida", "1.0").with_requires("leaf/1.0")
+                                                        .with_default_option("leaf/*:shared", True),
+        "app/conanfile.py": GenConanfile("app", "1.0").with_requires("midb/1.0",
+                                                                     "mida/1.0"),
+    })
+    for recipe in ("leaf", "midb", "mida"):
+        c.run(f"export {recipe}")
+
+    # The real, effective value of "leaf" in the original full graph is "False",
+    # coming from "midb" (first to reach it), not from "mida"'s own request.
+    c.run("graph info app --format=json")
+    nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+    leaf = next(n for n in nodes if n.get("ref", "").startswith("leaf/"))
+    real_leaf_shared = leaf["options"]["shared"]
+    assert real_leaf_shared == "False"
+
+    c.run("graph build-order app --build=missing --order-by=recipe --format=json")
+    order = json.loads(c.stdout)["order"]
+    mida = next(item for level in order for item in level if item["ref"].startswith("mida/"))
+    package = next(pkg for level in mida["packages"] for pkg in level)
+
+    # Rebuild "mida" in isolation, following build-order's own reconstruction
+    # command: it must reproduce the SAME "leaf" that "mida" was really built
+    # against in the original graph (shared=False), not "mida"'s own wish.
+    c.run(f"graph info {package['build_args']} --format=json")
+    nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+    leaf = next(n for n in nodes if n.get("ref", "").startswith("leaf/"))
+    assert leaf["options"]["shared"] == real_leaf_shared
+
+
+def test_build_order_options_diamond_unaware():
+    # Counter-example: the opposite situation of the previous test. "leaf" is
+    # again a diamond dependency of both "midb" and "mida", but this time it is
+    # "midb" (the first branch reaching "leaf") that forces its own
+    # "default_options" on it, changing "leaf"'s real, effective value away from
+    # its own default (shared=False -> shared=True).
+    # "mida" never expresses any opinion about "leaf" at all, so nothing about
+    # this different value is ever passed down to "mida" through its own
+    # expansion (it is private to "midb"'s branch). "_reproducible_options()"
+    # only looks at what was passed down to "mida" itself, so it has no way to
+    # find out that "leaf" is really at "shared=True": rebuilding "mida" alone
+    # with its own "build_args" silently uses "leaf"'s plain default
+    # (shared=False), which is a DIFFERENT (wrong) value than the one "mida" was
+    # actually built with.
+    c = TestClient(light=True)
+    c.save({
+        "leaf/conanfile.py": GenConanfile("leaf", "1.0").with_shared_option(False),
+        "midb/conanfile.py": GenConanfile("midb", "1.0").with_requires("leaf/1.0")
+                                                        .with_default_option("leaf/*:shared", True),
+        "mida/conanfile.py": GenConanfile("mida", "1.0").with_requires("leaf/1.0"),
+        "app/conanfile.py": GenConanfile("app", "1.0").with_requires("midb/1.0",
+                                                                     "mida/1.0"),
+    })
+    for recipe in ("leaf", "midb", "mida"):
+        c.run(f"export {recipe}")
+
+    # The real, effective value of "leaf" in the original full graph is "True",
+    # coming from "midb" (first to reach it), even though "mida" asked nothing.
+    c.run("graph info app --format=json")
+    nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+    leaf = next(n for n in nodes if n.get("ref", "").startswith("leaf/"))
+    real_leaf_shared = leaf["options"]["shared"]
+    assert real_leaf_shared == "True"
+
+    c.run("graph build-order app --build=missing --order-by=recipe --format=json")
+    order = json.loads(c.stdout)["order"]
+    mida = next(item for level in order for item in level if item["ref"].startswith("mida/"))
+    package = next(pkg for level in mida["packages"] for pkg in level)
+
+    # Rebuild "mida" in isolation, following build-order's own reconstruction
+    # command: it must reproduce the SAME "leaf" that "mida" was really built
+    # against in the original graph (shared=True), not "leaf"'s plain default.
+    c.run(f"graph info {package['build_args']} --format=json")
+    nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+    leaf = next(n for n in nodes if n.get("ref", "").startswith("leaf/"))
+    assert leaf["options"]["shared"] == real_leaf_shared
