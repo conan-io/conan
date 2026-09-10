@@ -27,7 +27,9 @@ class TargetsTemplate2:
     def _template(self):
         return textwrap.dedent("""\
             include_guard()
-            message(STATUS "Conan: Configuring Targets for {{ ref }}")
+            if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
+                message(STATUS "Conan: Configuring Targets for {{ ref }}")
+            endif()
 
             # Load information for each installed configuration.
             file(GLOB _target_files "${CMAKE_CURRENT_LIST_DIR}/{{filename}}-Targets-*.cmake")

@@ -1351,3 +1351,39 @@ def test_source_package_only_if_direct():
     transitive_targets = c.load("consumer/hello-Targets-release.cmake")
     assert "INTERFACE_SOURCES" not in transitive_targets
 
+def test_cmakeconfigdeps_messages_honor_find_quietly():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def package(self):
+                save(self, os.path.join(self.package_folder, "lib", "lib1.a"), "")
+
+            def package_info(self):
+                self.cpp_info.libs = ["lib1"]
+                self.cpp_info.set_property("cmake_components", ["comp1"])
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+    c.run("install --requires=pkg/0.1 -g CMakeConfigDeps")
+
+    quiet_guard = "if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)"
+
+    config = c.load("pkg-config.cmake")
+    assert "pkg_NOT_FOUND_MESSAGE" in config
+    assert "Conan: Error: 'pkg' required COMPONENT '${comp}' not found" in config
+    assert "message(STATUS" not in config
+
+    targets = c.load("pkgTargets.cmake")
+    assert quiet_guard in targets
+    assert 'message(STATUS "Conan: Configuring Targets for pkg/0.1")' in targets
+
+    target_config = c.load("pkg-Targets-release.cmake")
+    assert quiet_guard in target_config
+    assert 'message(STATUS "Conan: Target declared imported' in target_config
