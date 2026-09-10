@@ -135,7 +135,7 @@ def test_package_type_shared_option_unique_possible_option(package_type, shared_
     assert f"'{package_type}' should not have 'shared' option set to {shared_value}. " \
            "Consider removing the 'shared' option" in tc.out
 
-@pytest.mark.parametrize("package_type", [("shared-library"), ("static-library")])
+@pytest.mark.parametrize("package_type", ["shared-library", "static-library"])
 def test_package_type_header_only(package_type):
     """
     Test that no error is raised when only header_only option is defined
