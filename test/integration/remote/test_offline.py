@@ -76,4 +76,4 @@ def test_offline_build_requires():
 
     c.run("graph info --requires=pkg/0.1 -nr")
     assert "tool/0.1: WARN" not in c.out
-    assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
+    assert re.search(r"Skipped build binaries(\s*)tool/0.1", c.out)
