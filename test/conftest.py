@@ -203,6 +203,14 @@ tools_locations = {
             "root": {"Linux": "/opt/intel/oneapi"}
         }
     },
+    "zig": {
+        "default": "0.16.0",
+        "0.16.0": {
+            "path": {'Linux': '/usr/share/zig-0.16.0',
+                     'Windows': 'C:/tools/zig/0.16.0',
+                     'Darwin': '/Users/runner/Applications/zig/0.16.0'}
+        }
+    },
     'xcode_sdk': {
         "26.0": {"path": {"Darwin": "/Applications/Xcode_26.0.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk"}},
         "26.5": {"path": {"Darwin": "/Applications/Xcode_26.5.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk"}},

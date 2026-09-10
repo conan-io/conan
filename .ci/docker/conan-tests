@@ -27,6 +27,7 @@ ENV PY37=3.7.9 \
     BAZEL_7=7.6.2 \
     BAZEL_8=8.4.2 \
     BAZEL_9=9.1.0 \
+    ZIG=0.16.0 \
     EMSDK=4.0.22 \
     INTEL_ONEAPI_VERSION=2026.0
 
@@ -174,6 +175,11 @@ RUN mkdir -p /usr/share/bazel-$BAZEL_6/bin && \
 RUN wget https://github.com/premake/premake-core/releases/download/v5.0.0-beta4/premake-5.0.0-beta4-linux.tar.gz && \
     tar -xvzf premake-5.0.0-beta4-linux.tar.gz && chmod +x premake5 && mkdir /usr/share/premake && \
     mv premake5 /usr/share/premake
+
+RUN wget https://ziglang.org/download/$ZIG/zig-x86_64-linux-$ZIG.tar.xz && \
+    tar -xJf zig-x86_64-linux-$ZIG.tar.xz && \
+    mv zig-x86_64-linux-$ZIG /usr/share/zig-$ZIG && \
+    rm zig-x86_64-linux-$ZIG.tar.xz
 
 RUN cd /tmp && \
     mkdir qbs && \
