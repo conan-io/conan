@@ -174,9 +174,11 @@ def test_create_docker_runner_cache_shared_profile_folder():
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_dockerfile_folder_path():
     """
-    Tests the ``conan create . ``
+    Tests the ``conan create . ``, also checking the ``extra_files`` [runner] setting
+    copies extra home files into the container for both the ``copy`` and ``clean`` cache modes.
     """
     client = TestClient()
+    client.save_home({"extensions/greeting.txt": "hello from host"})
     profile_build = textwrap.dedent(f"""\
     [settings]
     arch={{{{ detect_api.detect_arch() }}}}
@@ -204,6 +206,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     image=conan-runner-default-test
     cache=copy
     remove=True
+    extra_files=extensions/*
     """)
 
     profile_host_clean = textwrap.dedent(f"""\
@@ -222,19 +225,25 @@ def test_create_docker_runner_dockerfile_folder_path():
     image=conan-runner-default-test
     cache=clean
     remove=True
+    extra_files=extensions/*
     """)
 
     client.save({"host_copy": profile_host_copy, "host_clean": profile_host_clean, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    client.run("create . -pr:h host_copy -pr:b build")
+    extra_file_copy = os.path.join(client.current_folder, ".conanrunner", "extra", "extensions", "greeting.txt")
+    client.run("create . -pr:h host_copy -pr:b build -v")
 
+    assert "Copying extra_files patterns" in client.out
+    assert client.load(extra_file_copy) == "hello from host"
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
 
-    client.run("create . -pr:h host_clean -pr:b build")
+    client.run("create . -pr:h host_clean -pr:b build -v")
 
+    assert "Copying extra_files patterns" in client.out
+    assert client.load(extra_file_copy) == "hello from host"
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
