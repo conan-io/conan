@@ -1780,3 +1780,46 @@ def test_find_package_extra_variants():
     # And this follows the expected found variable generation
     assert "Found HellO!" in client.out
     assert "Found hello!" not in client.out
+
+
+@pytest.mark.tool("cmake")
+def test_find_package_quietly():
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+
+        class Test(ConanFile):
+            name = "dep"
+            version = "0.1"
+
+            def package(self):
+                save(self, os.path.join(self.package_folder, "lib", "lib1.a"), "")
+
+            def package_info(self):
+                self.cpp_info.libs = ["lib1"]
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        dep/0.1
+
+        [generators]
+        CMakeConfigDeps
+        CMakeToolchain
+        """)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(consumer NONE)
+        find_package(dep QUIET)
+        """)
+
+    client.save({"conanfile.txt": conanfile, "CMakeLists.txt": cmakelists}, clean_first=True)
+    client.run("install .")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
+    # Because we used QUIET, not in output
+    assert "Target declared imported" not in client.out
+    assert "Configuring Targets for dep" not in client.out
