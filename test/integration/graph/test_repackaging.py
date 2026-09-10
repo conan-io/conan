@@ -35,7 +35,7 @@ def test_repackage():
 
     client.save({"conanfile.py": GenConanfile().with_requires("repackager/1.0")}, clean_first=True)
     client.run("install .")
-    assert re.search(r"Skipped binaries(\s*)liba/1.0, libb/1.0", client.out)
+    assert re.search(r"Skipped host binaries(\s*)liba/1.0, libb/1.0", client.out)
     assert "repackager/1.0: Already installed!" in client.out
 
 
@@ -63,7 +63,7 @@ def test_repackage_library_self():
     c.run("create .")
 
     c.run("install --requires=liba/2.0 --deployer=full_deploy")
-    assert re.search(r"Skipped binaries(\s*)liba/1.0", c.out)
+    assert re.search(r"Skipped host binaries(\s*)liba/1.0", c.out)
     assert "liba/2.0: Already installed!" in c.out
     assert c.load("full_deploy/host/liba/2.0/a.txt") == "A1.0!"
 
@@ -113,7 +113,7 @@ def test_repackage_library_self_multiple():
     c.run("create .")
 
     c.run("install --requires=liba/3.0 --deployer=full_deploy")
-    assert re.search(r"Skipped binaries(\s*)liba/1.0, liba/2.0", c.out)
+    assert re.search(r"Skipped host binaries(\s*)liba/1.0, liba/2.0", c.out)
     assert "liba/3.0: Already installed!" in c.out
     assert c.load("full_deploy/host/liba/3.0/a1.txt") == "A1.0!"
     assert c.load("full_deploy/host/liba/3.0/a2.txt") == "A2.0!"
@@ -146,6 +146,6 @@ def test_repackage_library_self_transitive():
     c.run("create .")
 
     c.run("install --requires=liba/3.0 --deployer=full_deploy")
-    assert re.search(r"Skipped binaries(\s*)liba/1.0, libb/1.0", c.out)
+    assert re.search(r"Skipped host binaries(\s*)liba/1.0, libb/1.0", c.out)
     assert "liba/3.0: Already installed!" in c.out
     assert c.load("full_deploy/host/liba/3.0/a1.txt") == "A1.0!"

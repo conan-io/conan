@@ -124,10 +124,12 @@ jobs:
 
       - name: Install covtest
         if: github.event_name == 'pull_request'
+        env:
+          ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_COVTEST_PIP_USERNAME }}
+          ARTIFACTORY_IDENTITY_TOKEN: ${{ secrets.ARTIFACTORY_COVTEST_PIP_IDENTITY_TOKEN }}
+          ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_COVTEST_PIP_URL }}
         run: |
-          git clone https://x-access-token:${{ secrets.COVTEST_READ_TOKEN }}@github.com/conan-io/covtest.git ./covtest_repo || echo "::warning title=Git Clone Failed::Could not clone covtest repo."
-          pip install ./covtest_repo || echo "::warning title=Pip Install Failed::Could not install covtest repo."
-          rm -rf ./covtest_repo || true
+          pip install covtest --extra-index-url "https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_IDENTITY_TOKEN}@${ARTIFACTORY_URL}" || true
 
       - name: Run covtest predict
         if: github.event_name == 'pull_request'
@@ -205,11 +207,13 @@ jobs:
           coverage report
           coverage xml
 
-      - name: Compute covtest
+      - name: Install and compute covtest
+        env:
+          ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_COVTEST_PIP_USERNAME }}
+          ARTIFACTORY_IDENTITY_TOKEN: ${{ secrets.ARTIFACTORY_COVTEST_PIP_IDENTITY_TOKEN }}
+          ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_COVTEST_PIP_URL }}
         run: |
-          git clone https://x-access-token:${{ secrets.COVTEST_READ_TOKEN }}@github.com/conan-io/covtest.git ./covtest_repo || true
-          pip install ./covtest_repo || true
-          rm -rf ./covtest_repo || true
+          pip install covtest --extra-index-url "https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_IDENTITY_TOKEN}@${ARTIFACTORY_URL}" || true
           covtest process || true
           covtest upload --url=${{ secrets.COVTEST_SERVER_URL }} --user=${{ secrets.COVTEST_SERVER_USER }} --token=${{ secrets.COVTEST_SERVER_TOKEN }} || true
 

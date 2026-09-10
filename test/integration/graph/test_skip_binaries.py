@@ -83,7 +83,7 @@ def test_test_requires():
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
     # Checking list of skipped binaries
     client.run("create . --name=app --version=1.0")
-    assert re.search(r"Skipped binaries(\s*)gtest/1.0", client.out)
+    assert re.search(r"Skipped test binaries(\s*)gtest/1.0", client.out)
     # Showing the complete information about the skipped binary
     client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"gtest/1.0": (package_id, "Skip")}, test=True)
@@ -195,7 +195,8 @@ def test_skip_visible_build():
     c.run("create libb")
     c.run("create libc")
     c.run("install app --format=json")
-    assert re.search(r"Skipped binaries(\s*)libb/0.1, liba/0.1", c.out)
+    assert re.search(r"Skipped host binaries(\s*)libb/0.1", c.out)
+    assert re.search(r"Skipped build binaries(\s*)liba/0.1", c.out)
 
 
 def test_skip_tool_requires_context():
@@ -281,7 +282,7 @@ def test_skip_intermediate_static():
     c.run("create libc")
     c.run("remove libb:* -c")  # binary not necessary, can be skipped
     c.run("install app")
-    assert re.search(r"Skipped binaries(\s*)libb/0.1", c.out)
+    assert re.search(r"Skipped host binaries(\s*)libb/0.1", c.out)
     assert "libb/0.1: Already installed!" not in c.out
     assert "liba/0.1: Already installed!" in c.out
     assert "libc/0.1: Already installed!" in c.out
@@ -323,7 +324,7 @@ def test_skip_intermediate_static_complex():
     c.run("remove libd:* -c")  # binary not necessary, can be skipped
     c.run("remove libc:* -c")  # binary not necessary, can be skipped
     c.run("install app")
-    assert re.search(r"Skipped binaries(\s*)libc/0.1, libd/0.1", c.out)
+    assert re.search(r"Skipped host binaries(\s*)libc/0.1, libd/0.1", c.out)
     assert "libd/0.1: Already installed!" not in c.out
     assert "libc/0.1: Already installed!" not in c.out
     for lib in ("a", "b", "e", "f", "g", "h", "i", "j"):
