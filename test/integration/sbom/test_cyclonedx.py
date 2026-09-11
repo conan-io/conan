@@ -375,11 +375,12 @@ class TestCyclonedx:
                     "bar/1.0": {{"publisher": "by-name-version"}},
                     "bar/1.0@user/channel": {{"copyright": "by-ref"}},
                     "pkg:conan/bar@1.0": {{"group": "by-purl"}},
+                    "dep": {{"cpe": "cpe:2.3:a:from-string:dep:1.0:*:*:*:*:*:*:*"}},
                 }}
                 for node in conanfile.subgraph.nodes:
                     if getattr(node, "name", None) == "bar":
                         extra_info[_calculate_bomref(node)] = {{
-                            "cpe": "cpe:2.3:a:from-bom-ref:bar:1.0:*:*:*:*:*:*:*"
+                            "properties": [{{"name": "match", "value": "by-bom-ref"}}]
                         }}
                 sbom = {cyclone_version}(conanfile, extra_info=extra_info)
                 with open(os.path.join(conanfile.package_metadata_folder, "sbom.cdx.json"), "w") as f:
@@ -388,16 +389,21 @@ class TestCyclonedx:
         tc = TestClient(light=True)
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
         save(hook_path, hook.format(cyclone_version=cyclone_version))
-        tc.save({"conanfile.py": GenConanfile("bar", "1.0")})
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+                 "conanfile.py": GenConanfile("bar", "1.0").with_requires("dep/1.0")})
+        tc.run("create dep")
         tc.run("create . --user=user --channel=channel")
         content = json.loads(tc.load(os.path.join(tc.created_layout().metadata(), "sbom.cdx.json")))
         bar = next(c for c in content["components"] if c["name"] == "bar")
+        dep = next(c for c in content["components"] if c["name"] == "dep")
         assert bar["description"] == "by-name"
         assert bar["publisher"] == "by-name-version"
         assert bar["copyright"] == "by-ref"
         assert bar["group"] == "by-purl"
+        assert bar["properties"] == [{"name": "match", "value": "by-bom-ref"}]
         assert bar["supplier"] == {"name": "Acme"}
-        assert bar["cpe"] == "cpe:2.3:a:from-bom-ref:bar:1.0:*:*:*:*:*:*:*"
+        assert bar["cpe"] == "cpe:2.3:a:acme:bar:1.0:*:*:*:*:*:*:*"
+        assert dep["cpe"] == "cpe:2.3:a:from-string:dep:1.0:*:*:*:*:*:*:*"
 
 
 class TestCyclonedx2:
