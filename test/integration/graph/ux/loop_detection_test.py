@@ -59,24 +59,37 @@ def test_install_order_infinite_loop():
            "['fmt/1.0:da39a3ee5e6b4b0d3255bfef95601890afd80709']" in c.out
 
 
-def test_install_order_recipe_cycle_from_distinct_configurations():
-    c = TestClient(light=True)
+def _compiler_bootstrap_client(host_compiler_version):
+    c = TestClient()
     c.save({
         "clang-bootstrap/conanfile.py": GenConanfile("clang-bootstrap", "1.0")
-        .with_package_type("application").with_settings("os").with_build_msg("BUILD BOOTSTRAP"),
+        .with_package_type("application").with_settings("os", "arch")
+        .with_build_msg("BUILD BOOTSTRAP"),
         "clang-hybrid/conanfile.py": GenConanfile("clang-hybrid", "1.0")
-        .with_package_type("application").with_settings("os").with_requires("z3/1.0")
+        .with_package_type("application").with_settings("os", "arch", "compiler", "build_type")
+        .with_requires("z3/1.0")
         .with_build_msg("BUILD HYBRID"),
         "z3/conanfile.py": GenConanfile("z3", "1.0")
-        .with_package_type("static-library").with_settings("os").with_build_msg("BUILD Z3"),
+        .with_package_type("static-library").with_settings("os", "arch", "compiler", "build_type")
+        .with_build_msg("BUILD Z3"),
         "app/conanfile.txt": "[requires]\nz3/1.0",
-        "profile_build": "[settings]\nos=Linux\n\n[tool_requires]\n"
+        "profile_build": "[settings]\nos=Linux\narch=x86_64\ncompiler=clang\n"
+                         "compiler.version=21\ncompiler.libcxx=libstdc++11\nbuild_type=Release\n\n"
+                         "[tool_requires]\n"
                          "!clang-bootstrap/*: clang-bootstrap/1.0",
-        "profile_host": "[settings]\nos=Windows\n\n[tool_requires]\n*: clang-hybrid/1.0"
+        "profile_host": "[settings]\nos=Linux\narch=x86_64\ncompiler=clang\n"
+                        f"compiler.version={host_compiler_version}\n"
+                        "compiler.libcxx=libstdc++11\nbuild_type=Release\n\n"
+                        "[tool_requires]\n*: clang-hybrid/1.0"
     })
     c.run("export clang-bootstrap")
     c.run("export z3")
     c.run("export clang-hybrid")
+    return c
+
+
+def test_install_order_recipe_cycle_from_distinct_configurations():
+    c = _compiler_bootstrap_client("22")
 
     args = "app -pr:b=profile_build -pr:h=profile_host --build=missing -nr"
     c.run(f"graph info {args}")
@@ -86,6 +99,15 @@ def test_install_order_recipe_cycle_from_distinct_configurations():
     hybrid = c.out.index("BUILD HYBRID")
     second_z3 = c.out.rindex("BUILD Z3")
     assert bootstrap < first_z3 < hybrid < second_z3
+
+
+def test_install_order_cycle_from_same_configuration():
+    c = _compiler_bootstrap_client("21")
+    args = "app -pr:b=profile_build -pr:h=profile_host --build=missing -nr"
+    c.run(f"graph info {args}", assert_error=True)
+    assert "ERROR: There is a loop in the graph" in c.out
+    c.run(f"install {args}", assert_error=True)
+    assert "ERROR: There is a loop in the graph" in c.out
 
 
 def test_build_require_undetected_loop():
