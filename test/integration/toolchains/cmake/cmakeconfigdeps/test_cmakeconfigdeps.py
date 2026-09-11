@@ -1834,3 +1834,105 @@ class TestCmakeConfigProperties:
         part_b = tc.load("PartB-Targets-release.cmake")
         assert "find_dependency(Protoc" in part_a
         assert "find_dependency(Protoc" not in part_b
+
+    def test_cmake_components_per_cmake_file_name(self):
+        """Each cmake_file_names config advertises find_package COMPONENTS, not only the root."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_file_names", {
+                        "CoreKit": {
+                            "components": ["core", "helpers", "_private"],
+                        },
+                        "ExtraKit": {
+                            "components": ["extra"],
+                            "properties": {"cmake_components": ["ExtraFoo", "ExtraBar"]},
+                        },
+                    })
+                    self.cpp_info.components["core"].libs = ["core"]
+                    self.cpp_info.components["core"].type = "static-library"
+                    self.cpp_info.components["core"].location = "lib/libcore.a"
+                    self.cpp_info.components["core"].set_property("cmake_target_name", "pkg::Core")
+                    self.cpp_info.components["helpers"].defines = ["HELPERS"]
+                    self.cpp_info.components["helpers"].set_property("cmake_components",
+                                                                    ["HelpersComp"])
+                    self.cpp_info.components["_private"].defines = ["PRIVATE"]
+                    self.cpp_info.components["extra"].libs = ["extra"]
+                    self.cpp_info.components["extra"].type = "static-library"
+                    self.cpp_info.components["extra"].location = "lib/libextra.a"
+        """)
+        tc.save({"conanfile.py": dep})
+        tc.run("create .")
+        tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps")
+
+        core = tc.load("CoreKitConfig.cmake")
+        extra = tc.load("ExtraKitConfig.cmake")
+        # Declared components of this file: target name / per-component cmake_components.
+        # Private components starting with '_' are not advertised.
+        assert "set(CoreKit_PACKAGE_PROVIDED_COMPONENTS Core HelpersComp)" in core
+        # Per-file cmake_components overrides the default listing
+        assert "set(ExtraKit_PACKAGE_PROVIDED_COMPONENTS ExtraFoo ExtraBar)" in extra
+        assert "Core" not in extra
+
+    def test_implicit_root_of_cmake_file_names_dep(self):
+        """A library that requires a cmake_file_names package without cpp_info.requires
+        must fail at generate time: there is no pkg::pkg root target to link.
+        """
+        tc = TestClient()
+        spirv_tools = textwrap.dedent("""
+            from conan import ConanFile
+
+            class SpirvTools(ConanFile):
+                name = "spirv-tools"
+                version = "1.3.290.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    components = {
+                        "spirv-tools-core": [],
+                        "spirv-tools-opt": ["spirv-tools-core"],
+                        "spirv-tools-link": ["spirv-tools-core", "spirv-tools-opt"],
+                    }
+                    self.cpp_info.set_property("cmake_file_names", {
+                        "SPIRV-Tools": {"components": ["spirv-tools-core"]},
+                        "SPIRV-Tools-opt": {"components": ["spirv-tools-opt"]},
+                        "SPIRV-Tools-link": {"components": ["spirv-tools-link"]},
+                    })
+                    for name, reqs in components.items():
+                        self.cpp_info.components[name].libs = [name]
+                        self.cpp_info.components[name].type = "static-library"
+                        self.cpp_info.components[name].location = f"lib/lib{name}.a"
+                        if reqs:
+                            self.cpp_info.components[name].requires = reqs
+        """)
+        vvl = textwrap.dedent("""
+            from conan import ConanFile
+
+            class VulkanValidationLayers(ConanFile):
+                name = "vulkan-validationlayers"
+                version = "1.3.290.0"
+                settings = "os", "compiler", "build_type", "arch"
+                requires = "spirv-tools/1.3.290.0"
+
+                def package_info(self):
+                    self.cpp_info.libs = ["vulkan_validationlayers"]
+                    self.cpp_info.type = "static-library"
+                    self.cpp_info.location = "lib/libvulkan_validationlayers.a"
+        """)
+        tc.save({"spirv-tools/conanfile.py": spirv_tools,
+                 "vvl/conanfile.py": vvl})
+        tc.run("create spirv-tools")
+        tc.run("create vvl")
+        tc.run("install --requires=vulkan-validationlayers/1.3.290.0 -g CMakeConfigDeps",
+               assert_error=True)
+        assert ("vulkan-validationlayers/1.3.290.0 recipe cpp_info does not declare which "
+                "component of 'spirv-tools' to link") in tc.out
+        assert "self.cpp_info.requires = [\"spirv-tools::<component>\"]" in tc.out
+        assert "Available components: spirv-tools-core, spirv-tools-opt, spirv-tools-link" in tc.out
