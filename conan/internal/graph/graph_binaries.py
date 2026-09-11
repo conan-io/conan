@@ -432,7 +432,6 @@ class GraphBinariesAnalyzer:
                     if self._cache.exists_prev(node.pref):
                         # The server gave us a newer prev, but we already have it in cache
                         # so we don't need to download it. Update its timestamp to match the server's
-                        node.binary = BINARY_CACHE
                         cache_latest_prev = node.pref
                         self._cache.update_package_timestamp(node.pref)
                     else:
