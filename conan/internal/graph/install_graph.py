@@ -14,25 +14,6 @@ from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.util.files import load
 
 
-def _node_reachable(node):
-    """ node itself plus every host-context node reachable from it through visible edges
-    (vendor nodes hide their own dependencies). Computed once per node and cached on it:
-    only used to tell, when a node has several direct dependencies, which of them reaches
-    a given shared package *first* (matching the same precedence the real graph resolution
-    uses).
-    """
-    cached = getattr(node, "_conan_reproducible_reachable", None)
-    if cached is not None:
-        return cached
-    result = {node}
-    if not node.conanfile.vendor:
-        for edge in node.edges:
-            if edge.require.visible and edge.dst.context == CONTEXT_HOST:
-                result |= _node_reachable(edge.dst)
-    node._conan_reproducible_reachable = result
-    return result
-
-
 def _node_deviation(node):
     """ Every host-context option, anywhere in node's dependency subtree, that node needs
     to force explicitly to reproduce it when rebuilt standalone: {dep_node: {option_name:
@@ -45,61 +26,51 @@ def _node_deviation(node):
     "automatic" check possible for it, once rebuilt standalone node has no ancestor left
     to reapply it.
 
-    When node has more than one direct dependency, and a package is reachable through
-    several of them (a diamond internal to node's own subtree), only the first one
-    (matching requires() declaration order, the same order the real graph resolution
-    used) gets to decide that package's value: whatever a later dependency also needed
-    forced for it is discarded, since it never really had a say in the real graph either.
+    The graph is processed bottom-up (dependencies before consumers), so every direct
+    dependency's own ``_conan_reproducible_deviation`` is already computed by the time it
+    is read here (see ``InstallGraph._initialize_deps_graph``, which also computes it for
+    BINARY_SKIP/BINARY_PLATFORM nodes, even though those don't get an install reference).
     """
-    cached = getattr(node, "_conan_reproducible_deviation", None)
-    if cached is not None:
-        return cached
-
     result = {}
     own_dev = node.conanfile.options.deviation_options(node.conanfile.default_options)
     if own_dev:
         result[node] = own_dev
 
-    if not node.conanfile.vendor:
-        own_dep_patterns = Options(options_values=node.conanfile.default_options)._deps_package_options
-        seen = set()
-        for edge in node.edges:
-            child = edge.dst
-            if not edge.require.visible or child.context != CONTEXT_HOST:
-                continue
-            child_deviation = _node_deviation(child)
-            for dep_node in {child, *child_deviation}:
-                if dep_node in seen:
+    own_dep_patterns = Options(options_values=node.conanfile.default_options)._deps_package_options
+    for edge in node.edges:
+        child = edge.dst
+        if node.conanfile.vendor or not edge.require.visible or child.context != CONTEXT_HOST:
+            continue
+        child_deviation = child._conan_reproducible_deviation
+        for dep_node in {child, *child_deviation}:
+            is_consumer = dep_node.conanfile._conan_is_consumer
+            matching = [dict(pkg_options.items())
+                       for pattern, pkg_options in own_dep_patterns.items()
+                       if ref_matches(dep_node.ref, pattern, is_consumer=is_consumer)]
+
+            dep_dev = child_deviation.get(dep_node, {})
+            candidates = set(dep_dev)
+            for values in matching:
+                candidates.update(name for name, value in values.items() if value is not None)
+
+            real_values = dict(dep_node.conanfile.options.items())
+            remaining = {}
+            for name in candidates:
+                real_value = real_values.get(name)
+                if real_value is None:
+                    # e.g. removed by configure(), like "fPIC" once "shared=True": there
+                    # is no value that could be forced for it, its absence is only
+                    # reproducible by correctly forcing whatever condition (another
+                    # option, a setting) removed it
                     continue
-                is_consumer = dep_node.conanfile._conan_is_consumer
-                matching = [dict(pkg_options.items())
-                           for pattern, pkg_options in own_dep_patterns.items()
-                           if ref_matches(dep_node.ref, pattern, is_consumer=is_consumer)]
-
-                dep_dev = child_deviation.get(dep_node, {})
-                candidates = set(dep_dev)
+                expected = None
                 for values in matching:
-                    candidates.update(name for name, value in values.items() if value is not None)
-
-                real_values = dict(dep_node.conanfile.options.items())
-                remaining = {}
-                for name in candidates:
-                    real_value = real_values.get(name)
-                    if real_value is None:
-                        # e.g. removed by configure(), like "fPIC" once "shared=True":
-                        # there is no value that could be forced for it, its absence is
-                        # only reproducible by correctly forcing whatever condition
-                        # (another option, a setting) removed it
-                        continue
-                    expected = None
-                    for values in matching:
-                        if values.get(name) is not None:
-                            expected = values[name]
-                    if expected != real_value:
-                        remaining[name] = real_value
-                if remaining:
-                    result[dep_node] = remaining
-            seen |= _node_reachable(child)
+                    if values.get(name) is not None:
+                        expected = values[name]
+                if expected != real_value:
+                    remaining[name] = real_value
+            if remaining:
+                result[dep_node] = remaining
 
     node._conan_reproducible_deviation = result
     return result
@@ -191,8 +162,7 @@ class _InstallPackageReference:
                 "depends": self.depends,
                 "overrides": self.overrides.serialize(),
                 "build_args": self._build_args(),
-                "info": self.info
-                }
+                "info": self.info}
 
     @staticmethod
     def deserialize(data, filename, ref):
@@ -540,8 +510,13 @@ class InstallGraph:
 
     def _initialize_deps_graph(self, deps_graph):
         for node in deps_graph.ordered_iterate():
-            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) \
-                    or node.binary in (BINARY_SKIP, BINARY_PLATFORM):
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
+                continue
+            if node.binary in (BINARY_SKIP, BINARY_PLATFORM):
+                # No install reference for these, but their own options must still be
+                # computed now (in topological order), as consumers might depend on
+                # them to reproduce the expected package_id, even without a real binary
+                _node_deviation(node)
                 continue
 
             key = node.ref if self._order == "recipe" else node.pref

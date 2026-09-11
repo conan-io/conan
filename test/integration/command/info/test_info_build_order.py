@@ -1106,8 +1106,9 @@ class TestBuildOrderOptions:
     def test_build_order_deep_diamond_precedence(self):
         # pkgf -> pkgd -> pkgb -> pkga (no request, first, wins)
         # pkgf -> pkge -> pkgc -> pkga (wants shared=True, discarded)
-        # "pkgc" and "pkge" must both force "pkga" back to False; "pkgf" needs nothing,
-        # since rebuilding it alone naturally re-expands "pkgd" first too.
+        # "pkgc" and "pkge" must both force "pkga" back to False. "pkgf" doesn't need
+        # to, since rebuilding it alone naturally re-expands "pkgd" first too, but
+        # forcing it there redundantly (inherited from "pkge") is harmless.
         c = TestClient(light=True)
         c.save({
             "pkga/conanfile.py": GenConanfile("pkga", "1.0").with_shared_option(False),
@@ -1140,10 +1141,45 @@ class TestBuildOrderOptions:
         assert package("pkgc")["options"] == ["pkga/1.0:shared=False"]
         assert package("pkgd")["options"] == []
         assert package("pkge")["options"] == ["pkga/1.0:shared=False"]
-        assert package("pkgf")["options"] == []
+        assert package("pkgf")["options"] == ["pkga/1.0:shared=False"]
 
         for name in ("pkgc", "pkge", "pkgf"):
             c.run(f"graph info {package(name)['build_args']} --format=json")
             nodes = json.loads(c.stdout)["graph"]["nodes"].values()
             isolated_pkga = next(n for n in nodes if n.get("ref", "").startswith("pkga/"))
             assert isolated_pkga["options"]["shared"] == "False"
+
+    def test_build_order_skipped_dependency(self):
+        # "openssl" is a private static dependency of shared "libcurl": conan marks its
+        # binary BINARY_SKIP (embedded in libcurl.so, no need to download/build it). It
+        # never gets its own install reference, but its options still need to be forced
+        # correctly on "libcurl"'s build_args, since they determine openssl's package_id.
+        c = TestClient(light=True)
+        c.save({
+            "openssl/conanfile.py": GenConanfile("openssl", "1.0").with_shared_option(False)
+                                                                  .with_option("fPIC",
+                                                                              [True, False],
+                                                                              default=True),
+            "libcurl/conanfile.py": GenConanfile("libcurl", "1.0").with_requires("openssl/1.0")
+                                                                  .with_package_type(
+                                                                      "shared-library"),
+            "app/conanfile.py": GenConanfile("app", "1.0").with_requires("libcurl/1.0"),
+        })
+        c.run("export openssl")
+        c.run("export libcurl")
+
+        # Force openssl's real "fPIC" via the profile/CLI, not via any recipe's
+        # default_options, leaving "shared" untouched so it stays BINARY_SKIP.
+        c.run('graph info app -o="openssl/*:fPIC=False" --format=json')
+        nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+        openssl = next(n for n in nodes if n.get("ref", "").startswith("openssl/"))
+        assert openssl["binary"] == "Skip"
+        assert openssl["options"]["fPIC"] == "False"
+
+        c.run('graph build-order app --build=missing -o="openssl/*:fPIC=False" '
+              '--order-by=recipe --format=json')
+        order = json.loads(c.stdout)["order"]
+        libcurl = next(item for level in order for item in level
+                      if item["ref"].startswith("libcurl/"))
+        package = next(pkg for level in libcurl["packages"] for pkg in level)
+        assert package["options"] == ["openssl/1.0:fPIC=False"]
