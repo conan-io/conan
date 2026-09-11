@@ -328,6 +328,9 @@ class TestCyclonedx:
             assert not content_json["components"][0].get("author")
             assert content_json["components"][0]["authors"][0]["name"] == 'conan-dev'
             assert content_json["components"][0]["type"] == 'application'
+        cpes = {c["name"]: c["cpe"] for c in content_json["components"]}
+        assert cpes["bar"] == "cpe:2.3:a:*:bar:1.0:*:*:*:*:*:*:*"
+        assert cpes["foo"] == "cpe:2.3:a:*:foo:1.0:*:*:*:*:*:*:*"
 
     def test_sbom_test_requires_skipped(self, cyclone_version):
         tc = TestClient(light=True)
@@ -354,6 +357,53 @@ class TestCyclonedx:
         }.get(cyclone_version)
         tc.run(f"install {install} --deployer=cyclone_{method}")
         assert os.path.exists(os.path.join(tc.current_folder, f"sbom-cyclonedx-{method}.json"))
+
+    def test_sbom_extra_info(self, cyclone_version):
+        hook = textwrap.dedent("""\
+            import json
+            import os
+            from conan.tools.sbom import {cyclone_version}
+            from conan.tools.sbom.cyclonedx import _calculate_bomref
+
+            def post_package(conanfile):
+                extra_info = {{
+                    "bar": {{
+                        "description": "by-name",
+                        "supplier": {{"name": "Acme"}},
+                        "cpe": {{"supplier": "acme"}},
+                    }},
+                    "bar/1.0": {{"publisher": "by-name-version"}},
+                    "bar/1.0@user/channel": {{"copyright": "by-ref"}},
+                    "pkg:conan/bar@1.0": {{"group": "by-purl"}},
+                    "dep": {{"cpe": "cpe:2.3:a:from-string:dep:1.0:*:*:*:*:*:*:*"}},
+                }}
+                for node in conanfile.subgraph.nodes:
+                    if getattr(node, "name", None) == "bar":
+                        extra_info[_calculate_bomref(node)] = {{
+                            "properties": [{{"name": "match", "value": "by-bom-ref"}}]
+                        }}
+                sbom = {cyclone_version}(conanfile, extra_info=extra_info)
+                with open(os.path.join(conanfile.package_metadata_folder, "sbom.cdx.json"), "w") as f:
+                    json.dump(sbom, f, indent=4)
+        """)
+        tc = TestClient(light=True)
+        hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
+        save(hook_path, hook.format(cyclone_version=cyclone_version))
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+                 "conanfile.py": GenConanfile("bar", "1.0").with_requires("dep/1.0")})
+        tc.run("create dep")
+        tc.run("create . --user=user --channel=channel")
+        content = json.loads(tc.load(os.path.join(tc.created_layout().metadata(), "sbom.cdx.json")))
+        bar = next(c for c in content["components"] if c["name"] == "bar")
+        dep = next(c for c in content["components"] if c["name"] == "dep")
+        assert bar["description"] == "by-name"
+        assert bar["publisher"] == "by-name-version"
+        assert bar["copyright"] == "by-ref"
+        assert bar["group"] == "by-purl"
+        assert bar["properties"] == [{"name": "match", "value": "by-bom-ref"}]
+        assert bar["supplier"] == {"name": "Acme"}
+        assert bar["cpe"] == "cpe:2.3:a:acme:bar:1.0:*:*:*:*:*:*:*"
+        assert dep["cpe"] == "cpe:2.3:a:from-string:dep:1.0:*:*:*:*:*:*:*"
 
 
 class TestCyclonedx2:
