@@ -1,3 +1,4 @@
+import json
 import textwrap
 
 import pytest
@@ -57,3 +58,26 @@ def test_merge_alias(requires):
     assert "ERROR: Package 'pkg/0.3' not resolved" in c.out
     c.run("install app -s build_type=Debug", assert_error=True)
     assert "ERROR: Package 'pkg/0.4' not resolved" in c.out
+
+
+def test_lock_merge_different_timestamps():
+    # Test that the first lockfile keeps its timestamp in case the same revision exists in the
+    # other ones
+    c = TestClient(light=True)
+    c.run("lock add --requires=math/1.0#rev1%123.0 --lockfile-out=conan1.lock")
+    new_lock = json.loads(c.load("conan1.lock"))
+    assert ["math/1.0#rev1%123.0"] == new_lock["requires"]
+
+    c.run("lock add --requires=math/1.0#rev1%124.0 --lockfile-out=conan2.lock")
+    new_lock = json.loads(c.load("conan2.lock"))
+    assert ["math/1.0#rev1%124.0"] == new_lock["requires"]
+
+    c.run("lock merge --lockfile=conan1.lock --lockfile=conan2.lock")
+    new_lock = json.loads(c.load("conan.lock"))
+    # keeps the conan1.lock one
+    assert ["math/1.0#rev1%123.0"] == new_lock["requires"]
+
+    c.run("lock merge --lockfile=conan2.lock --lockfile=conan1.lock")
+    new_lock = json.loads(c.load("conan.lock"))
+    # keeps the conan2.lock one
+    assert ["math/1.0#rev1%124.0"] == new_lock["requires"]

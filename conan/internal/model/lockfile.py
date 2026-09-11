@@ -49,12 +49,22 @@ class _LockRequires:
 
     def add(self, ref, package_ids=None):
         if ref.revision is not None:
+            # Timestamp doesn't affect equality/hash (see RecipeReference.__eq__), so this
+            # finds the previously locked entry for the exact same revision, if any
+            old_ref = next((r for r in self._requires if r == ref), None)
             old_package_ids = self._requires.pop(ref, None)  # Get existing one
             if old_package_ids is not None:
                 if package_ids is not None:
                     assert isinstance(old_package_ids, dict)
                     old_package_ids.update(package_ids)
                 package_ids = old_package_ids
+            if old_ref is not None and old_ref.timestamp is not None:
+                # Same revision as before: keep the timestamp it already had locked, don't
+                # let it drift to the incoming one. Otherwise, re-exporting or re-downloading
+                # the very same, unchanged revision elsewhere (which still refreshes its
+                # "latest" timestamp) would leak into the lockfile as a confusing diff with
+                # no real content change. https://github.com/conan-io/conan/issues/17402
+                ref = old_ref
             self._requires[ref] = package_ids
         else:  # Manual addition of something without revision
             existing = {r: r for r in self._requires}.get(ref)
