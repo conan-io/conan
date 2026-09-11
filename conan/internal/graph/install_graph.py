@@ -4,36 +4,114 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
-    BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_PLATFORM
+    BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD, \
+    BINARY_PLATFORM, CONTEXT_HOST
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.model.options import Options
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.util.files import load
 
 
-def _reproducible_options(node):
-    """Recipe-defined downstream options needed to rebuild this node, split by context."""
-    options = set()
-    build_options = set()
-    down_options = node.conanfile._conan_down_options
-    for pattern, package_options in down_options._deps_package_options.items():
-        opened = [node]
-        visited = set()
-        while opened:
-            current = opened.pop()
-            if current in visited:
+def _node_reachable(node):
+    """ node itself plus every host-context node reachable from it through visible edges
+    (vendor nodes hide their own dependencies). Computed once per node and cached on it:
+    only used to tell, when a node has several direct dependencies, which of them reaches
+    a given shared package *first* (matching the same precedence the real graph resolution
+    uses).
+    """
+    cached = getattr(node, "_conan_reproducible_reachable", None)
+    if cached is not None:
+        return cached
+    result = {node}
+    if not node.conanfile.vendor:
+        for edge in node.edges:
+            if edge.require.visible and edge.dst.context == CONTEXT_HOST:
+                result |= _node_reachable(edge.dst)
+    node._conan_reproducible_reachable = result
+    return result
+
+
+def _node_deviation(node):
+    """ Every host-context option, anywhere in node's dependency subtree, that node needs
+    to force explicitly to reproduce it when rebuilt standalone: {dep_node: {option_name:
+    value}}.
+
+    Computed bottom-up and cached on the node, accumulating each direct dependency's own
+    (already accumulated) result instead of re-deriving it: a value only needs to be
+    forced here if node's own "default_options" wouldn't produce it by itself. node's own
+    deviation (see ``Options.deviation_options``) is always included: there is no
+    "automatic" check possible for it, once rebuilt standalone node has no ancestor left
+    to reapply it.
+
+    When node has more than one direct dependency, and a package is reachable through
+    several of them (a diamond internal to node's own subtree), only the first one
+    (matching requires() declaration order, the same order the real graph resolution
+    used) gets to decide that package's value: whatever a later dependency also needed
+    forced for it is discarded, since it never really had a say in the real graph either.
+    """
+    cached = getattr(node, "_conan_reproducible_deviation", None)
+    if cached is not None:
+        return cached
+
+    result = {}
+    own_dev = node.conanfile.options.deviation_options(node.conanfile.default_options)
+    if own_dev:
+        result[node] = own_dev
+
+    if not node.conanfile.vendor:
+        own_dep_patterns = Options(options_values=node.conanfile.default_options)._deps_package_options
+        seen = set()
+        for edge in node.edges:
+            child = edge.dst
+            if not edge.require.visible or child.context != CONTEXT_HOST:
                 continue
-            visited.add(current)
-            is_consumer = current.conanfile._conan_is_consumer
-            if ref_matches(current.ref, pattern, is_consumer=is_consumer):
-                target = options if current.context == node.context else build_options
-                target.update(package_options.dumps(scope=pattern).splitlines())
-                if "*" not in pattern.split("/", 1)[0]:
+            child_deviation = _node_deviation(child)
+            for dep_node in {child, *child_deviation}:
+                if dep_node in seen:
                     continue
-            if not current.conanfile.vendor:
-                opened.extend(edge.dst for edge in current.edges if edge.require.visible)
-    return sorted(options), sorted(build_options)
+                is_consumer = dep_node.conanfile._conan_is_consumer
+                matching = [dict(pkg_options.items())
+                           for pattern, pkg_options in own_dep_patterns.items()
+                           if ref_matches(dep_node.ref, pattern, is_consumer=is_consumer)]
+
+                dep_dev = child_deviation.get(dep_node, {})
+                candidates = set(dep_dev)
+                for values in matching:
+                    candidates.update(name for name, value in values.items() if value is not None)
+
+                real_values = dict(dep_node.conanfile.options.items())
+                remaining = {}
+                for name in candidates:
+                    real_value = real_values.get(name)
+                    if real_value is None:
+                        # e.g. removed by configure(), like "fPIC" once "shared=True":
+                        # there is no value that could be forced for it, its absence is
+                        # only reproducible by correctly forcing whatever condition
+                        # (another option, a setting) removed it
+                        continue
+                    expected = None
+                    for values in matching:
+                        if values.get(name) is not None:
+                            expected = values[name]
+                    if expected != real_value:
+                        remaining[name] = real_value
+                if remaining:
+                    result[dep_node] = remaining
+            seen |= _node_reachable(child)
+
+    node._conan_reproducible_deviation = result
+    return result
+
+
+def _reproducible_options(node):
+    """Recipe-defined downstream options needed to rebuild this node."""
+    options = set()
+    for dep_node, dep_dev in _node_deviation(node).items():
+        for name, value in dep_dev.items():
+            options.add(f"{dep_node.ref}:{name}={value}")
+    return sorted(options)
 
 
 class _InstallPackageReference:
@@ -50,7 +128,6 @@ class _InstallPackageReference:
         self.context = None  # Same PREF could be in both contexts, but only 1 context is enough to
         # be able to reproduce, typically host preferrably
         self.options = []  # to be able to fire a build, the options will be necessary
-        self.build_options = []
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         # If some package, like ICU, requires itself, built for the "build" context architecture
         # to cross compile, there will be a dependency from the current "self" (host context)
@@ -77,7 +154,7 @@ class _InstallPackageReference:
         result.binary = node.binary
         result.context = node.context
         # Downstream recipe options are the minimum to reproduce state
-        result.options, result.build_options = _reproducible_options(node)
+        result.options = _reproducible_options(node)
         result.nodes.append(node)
         result.overrides = node.overrides()
         result.info = node.conanfile.info.serialize()  # ConanInfo doesn't have deserialize
@@ -100,26 +177,22 @@ class _InstallPackageReference:
         if self.options:
             scope = "" if self.context == "host" else ":b"
             cmd += " " + " ".join(f'-o{scope}="{o}"' for o in self.options)
-        if self.build_options:
-            cmd += " " + " ".join(f'-o:b="{o}"' for o in self.build_options)
         if self.overrides:
             cmd += f' --lockfile-overrides="{self.overrides}"'
         return cmd
 
     def serialize(self):
-        result = {"package_id": self.package_id,
-                  "prev": self.prev,
-                  "context": self.context,
-                  "binary": self.binary,
-                  "options": self.options,
-                  "filenames": self.filenames,
-                  "depends": self.depends,
-                  "overrides": self.overrides.serialize(),
-                  "build_args": self._build_args(),
-                  "info": self.info}
-        if self.build_options:
-            result["build_options"] = self.build_options
-        return result
+        return {"package_id": self.package_id,
+                "prev": self.prev,
+                "context": self.context,
+                "binary": self.binary,
+                "options": self.options,
+                "filenames": self.filenames,
+                "depends": self.depends,
+                "overrides": self.overrides.serialize(),
+                "build_args": self._build_args(),
+                "info": self.info
+                }
 
     @staticmethod
     def deserialize(data, filename, ref):
@@ -130,7 +203,6 @@ class _InstallPackageReference:
         result.binary = data["binary"]
         result.context = data["context"]
         result.options = data["options"]
-        result.build_options = data.get("build_options", [])
         result.filenames = data["filenames"] or [filename]
         result.depends = data["depends"]
         result.overrides = Overrides.deserialize(data["overrides"])
@@ -265,7 +337,6 @@ class _InstallConfiguration:
         self.context = None  # Same PREF could be in both contexts, but only 1 context is enough to
         # be able to reproduce, typically host preferrably
         self.options = []  # to be able to fire a build, the options will be necessary
-        self.build_options = []
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         self.depends = []  # List of full prefs
         self.overrides = Overrides()
@@ -298,7 +369,7 @@ class _InstallConfiguration:
         result.binary = node.binary
         result.context = node.context
         # Downstream recipe options are the minimum to reproduce state
-        result.options, result.build_options = _reproducible_options(node)
+        result.options = _reproducible_options(node)
         result.overrides = node.overrides()
         result.info = node.conanfile.info.serialize()
 
@@ -331,28 +402,24 @@ class _InstallConfiguration:
         if self.options:
             scope = "" if self.context == "host" else ":b"
             cmd += " " + " ".join(f'-o{scope}="{o}"' for o in self.options)
-        if self.build_options:
-            cmd += " " + " ".join(f'-o:b="{o}"' for o in self.build_options)
         if self.overrides:
             cmd += f' --lockfile-overrides="{self.overrides}"'
         return cmd
 
     def serialize(self):
-        result = {"ref": self.ref.repr_notime(),
-                  "pref": self.pref.repr_notime(),
-                  "package_id": self.pref.package_id,
-                  "prev": self.pref.revision,
-                  "context": self.context,
-                  "binary": self.binary,
-                  "options": self.options,
-                  "filenames": self.filenames,
-                  "depends": [d.repr_notime() for d in self.depends],
-                  "overrides": self.overrides.serialize(),
-                  "build_args": self._build_args(),
-                  "info": self.info}
-        if self.build_options:
-            result["build_options"] = self.build_options
-        return result
+        return {"ref": self.ref.repr_notime(),
+                "pref": self.pref.repr_notime(),
+                "package_id": self.pref.package_id,
+                "prev": self.pref.revision,
+                "context": self.context,
+                "binary": self.binary,
+                "options": self.options,
+                "filenames": self.filenames,
+                "depends": [d.repr_notime() for d in self.depends],
+                "overrides": self.overrides.serialize(),
+                "build_args": self._build_args(),
+                "info": self.info
+                }
 
     @staticmethod
     def deserialize(data, filename):
@@ -363,7 +430,6 @@ class _InstallConfiguration:
         result.binary = data["binary"]
         result.context = data["context"]
         result.options = data["options"]
-        result.build_options = data.get("build_options", [])
         result.filenames = data["filenames"] or [filename]
         result.depends = [PkgReference.loads(p) for p in data["depends"]]
         result.overrides = Overrides.deserialize(data["overrides"])
