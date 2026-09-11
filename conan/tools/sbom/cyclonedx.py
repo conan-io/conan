@@ -1,7 +1,9 @@
 from conan import conan_version
+from conan.errors import ConanException
+from conan.internal.model.recipe_ref import ref_matches
 
 
-def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwargs):
+def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, cpes=None, **kwargs):
     """
     (Experimental) Generate cyclone 1.4 SBOM with JSON format
 
@@ -14,6 +16,10 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
         name (str, optional): Custom name for the metadata field.
         add_build (bool, optional, default=False): Include build dependencies.
         add_tests (bool, optional, default=False): Include test dependencies.
+        cpes (dict, optional): Mapping of reference patterns (as understood by
+            ``RecipeReference.matches()``, e.g. ``"openssl/*"``) to CPE 2.3/2.2 strings, used to
+            override or provide the ``cpe`` field of matching components. A value of ``None``
+            for a matching pattern suppresses any ``cpe`` declared in the recipe.
 
     Returns:
         The generated CycloneDX 1.4 document as a string.
@@ -61,6 +67,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
         **({"components": [{
             "author": node.conanfile.author or "Unknown",
             "bom-ref": _calculate_bomref(node),
+            **_cpe_field(node.ref, node.conanfile, cpes),
             **({"description": node.conanfile.description} if node.conanfile.description else {}),
             **({"externalReferences": [{
                 "type": "website",
@@ -68,7 +75,11 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
             }]} if node.conanfile.homepage else {}),
             **({"licenses": _calculate_licenses(node)} if node.conanfile.license else {}),
             "name": node.name,
+            **({"publisher": node.conanfile.publisher} if getattr(node.conanfile, "publisher",
+                                                                  None) else {}),
             "purl": f"pkg:conan/{node.name}@{node.ref.version}",
+            **({"supplier": {"name": node.conanfile.supplier}}
+               if getattr(node.conanfile, "supplier", None) else {}),
             "type": "application" if node.conanfile.package_type == "application" else "library",
             "version": str(node.ref.version),
         } for node in nodes]} if nodes else {}),
@@ -77,7 +88,12 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
             "component": {
                 "author": conanfile.author or "Unknown",
                 "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile),
+                **(_cpe_field(conanfile.ref, conanfile, cpes) if not has_special_root_node else {}),
                 "name": name if name else name_default,
+                **({"publisher": conanfile.publisher} if getattr(conanfile, "publisher", None)
+                   else {}),
+                **({"supplier": {"name": conanfile.supplier}}
+                   if getattr(conanfile, "supplier", None) else {}),
                 "type": "application" if conanfile.package_type == "application" else "library",
             },
             "timestamp": f"{datetime.fromtimestamp(time.time(), tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}",
@@ -97,7 +113,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
     return sbom_cyclonedx_1_4
 
 
-def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwargs):
+def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, cpes=None, **kwargs):
     """
     (Experimental) Generate cyclone 1.6 SBOM with JSON format
 
@@ -110,6 +126,10 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
         name (str, optional): Custom name for the metadata field.
         add_build (bool, optional, default=False): Include build dependencies.
         add_tests (bool, optional, default=False): Include test dependencies.
+        cpes (dict, optional): Mapping of reference patterns (as understood by
+            ``RecipeReference.matches()``, e.g. ``"openssl/*"``) to CPE 2.3/2.2 strings, used to
+            override or provide the ``cpe`` field of matching components. A value of ``None``
+            for a matching pattern suppresses any ``cpe`` declared in the recipe.
 
     Returns:
         The generated CycloneDX 1.6 document as a string.
@@ -158,6 +178,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
         **({"components": [{
             **({"authors": [{"name": node.conanfile.author}]} if node.conanfile.author else {}),
             "bom-ref": _calculate_bomref(node),
+            **_cpe_field(node.ref, node.conanfile, cpes),
             **({"description": node.conanfile.description} if node.conanfile.description else {}),
             **({"externalReferences": [{
                 "type": "website",
@@ -165,7 +186,11 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
             }]} if node.conanfile.homepage else {}),
             **({"licenses": _calculate_licenses(node)} if node.conanfile.license else {}),
             "name": node.name,
+            **({"publisher": node.conanfile.publisher} if getattr(node.conanfile, "publisher",
+                                                                  None) else {}),
             "purl": f"pkg:conan/{node.name}@{node.ref.version}",
+            **({"supplier": {"name": node.conanfile.supplier}}
+               if getattr(node.conanfile, "supplier", None) else {}),
             "type": "application" if node.conanfile.package_type == "application" else "library",
             "version": str(node.ref.version),
         } for node in nodes]} if nodes else {}),
@@ -174,7 +199,12 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
             "component": {
                 **({"authors": [{"name": conanfile.author}]} if conanfile.author else {}),
                 "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile),
+                **(_cpe_field(conanfile.ref, conanfile, cpes) if not has_special_root_node else {}),
                 "name": name if name else name_default,
+                **({"publisher": conanfile.publisher} if getattr(conanfile, "publisher", None)
+                   else {}),
+                **({"supplier": {"name": conanfile.supplier}}
+                   if getattr(conanfile, "supplier", None) else {}),
                 "type": "application" if conanfile.package_type == "application" else "library"
             },
             "timestamp": f"{datetime.fromtimestamp(time.time(), tz=timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}",
@@ -216,6 +246,51 @@ def _calculate_licenses(component):
             field = "name"
         result.append({"license": {field: lic}})
     return result
+
+
+def _cpe_field(ref, conanfile, cpes):
+    cpe = _calculate_cpe(ref, conanfile, cpes)
+    return {"cpe": cpe} if cpe else {}
+
+
+def _calculate_cpe(ref, conanfile, cpes):
+    matched = False
+    cpe = None
+    if cpes:
+        for pattern, value in cpes.items():
+            if ref_matches(ref, pattern, is_consumer=False):
+                matched = True
+                cpe = value
+                break
+    if not matched:
+        cpe = getattr(conanfile, "cpe", None)
+    if not cpe:
+        return None
+    return _normalize_cpe(cpe, ref.version, ref)
+
+
+def _normalize_cpe(cpe, version, ref):
+    if not isinstance(cpe, str):
+        raise ConanException(f"Invalid 'cpe' for '{ref}': expected a string, "
+                              f"got '{type(cpe).__name__}'")
+    if cpe.startswith("cpe:2.3:"):
+        parts = cpe.split(":")
+        if len(parts) != 13:
+            raise ConanException(f"Invalid CPE 2.3 string for '{ref}': '{cpe}' must have "
+                                  "13 colon-separated components "
+                                  "('cpe:2.3:part:vendor:product:version:update:edition:"
+                                  "language:sw_edition:target_sw:target_hw:other')")
+        if parts[5] == "*":
+            parts[5] = _cpe_escape(str(version))
+        return ":".join(parts)
+    if cpe.startswith("cpe:/"):
+        return cpe
+    raise ConanException(f"Invalid 'cpe' for '{ref}': '{cpe}' must start with "
+                          "'cpe:2.3:' or 'cpe:/'")
+
+
+def _cpe_escape(value):
+    return "".join(c if (c.isalnum() or c in "._-") else f"\\{c}" for c in value)
 
 
 def _calculate_bomref(component):

@@ -32,6 +32,9 @@ class ConanFile:
     description = None
     topics = None
     homepage = None
+    cpe = None  # str: CPE 2.3 formatted string (or CPE 2.2 URI), "*" as version placeholder
+    supplier = None  # str: name of the organization that supplied the component
+    publisher = None  # str: person(s)/organization(s) that published the component
 
     build_policy = None
     upload_policy = None
@@ -141,7 +144,8 @@ class ConanFile:
         result = {}
 
         for a in ("name", "user", "channel", "url", "license",
-                  "author", "description", "homepage", "build_policy", "upload_policy",
+                  "author", "description", "homepage", "cpe", "supplier", "publisher",
+                  "build_policy", "upload_policy",
                   "revision_mode", "provides", "deprecated", "win_bash", "win_bash_run",
                   "default_options", "options_description"):
             v = getattr(self, a, None)
