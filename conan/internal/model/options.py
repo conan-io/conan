@@ -422,3 +422,15 @@ class Options:
         # is the way to access dependencies (in other methods)
         self._deps_package_options = {}
         return self_options, upstream_options, private_deps_options
+
+    def deviation_options(self, default_options):
+        """ compute which of this Options' own (self-scoped) values differ from what they
+        would be with just the given ``default_options`` and nothing else, as a
+        {option_name: value} dict. A non-empty entry means some other input (a downstream
+        consumer, a profile, etc) actually forced that value, it didn't come from
+        ``default_options`` alone.
+        """
+        baseline = Options(options_values=default_options)._package_options
+        real_values = dict(self._package_options.items())
+        return {name: value for name, value in real_values.items()
+               if value is not None and dict(baseline.items()).get(name) != value}

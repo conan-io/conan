@@ -177,6 +177,49 @@ class TestOptionsPropagate:
         assert up_private.dumps() == ""
 
 
+class TestOptionsDeviation:
+    def test_no_deviation(self):
+        # The actual values match exactly what "default_options" alone would produce
+        sut = Options({"shared": [True, False], "fpic": [True, False]},
+                      {"shared": False, "fpic": True})
+        assert sut.deviation_options({"shared": False, "fpic": True}) == {}
+
+    def test_deviation_from_default(self):
+        # "shared" ended up True, but the recipe's own default says False: some consumer
+        # forced it
+        sut = Options({"shared": [True, False], "fpic": [True, False]},
+                      {"shared": True, "fpic": True})
+        assert sut.deviation_options({"shared": False, "fpic": True}) == {"shared": "True"}
+
+    def test_multiple_deviations(self):
+        sut = Options({"shared": [True, False], "fpic": [True, False], "myopt": [1, 2, 3]},
+                      {"shared": True, "fpic": False, "myopt": 2})
+        result = sut.deviation_options({"shared": False, "fpic": False, "myopt": 1})
+        assert result == {"shared": "True", "myopt": "2"}
+
+    def test_no_default_options_at_all(self):
+        # Nothing declared as default: any actual value is a deviation
+        sut = Options({"myopt": [1, 2, 3]}, {"myopt": 2})
+        assert sut.deviation_options(None) == {"myopt": "2"}
+        assert sut.deviation_options({}) == {"myopt": "2"}
+
+    def test_removed_option_is_not_a_deviation(self):
+        # Recipes like "auto_shared_fpic" remove "fPIC" from options entirely once
+        # "shared=True" (via configure()'s "self.options.rm_safe('fPIC')"). Once removed,
+        # there simply is no value left to compare or to report, regardless of what its
+        # own default said
+        sut = Options({"shared": [True, False], "fPIC": [True, False]},
+                      {"shared": True, "fPIC": True})
+        sut.rm_safe("fPIC")
+        assert sut.deviation_options({"shared": False, "fPIC": True}) == {"shared": "True"}
+
+    def test_ignores_dependency_scoped_defaults(self):
+        # A "dep/*:opt"-like pattern in default_options is dependency-scoped: it must not
+        # be mistaken for a self-scoped option, nor affect this computation at all
+        sut = Options({"shared": [True, False]}, {"shared": True})
+        assert sut.deviation_options({"shared": True, "dep/*:opt": "value"}) == {}
+
+
 class TestOptionsNone:
     @pytest.fixture(autouse=True)
     def _setup(self):
