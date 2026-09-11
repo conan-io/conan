@@ -429,9 +429,15 @@ class GraphBinariesAnalyzer:
                 cache_time = cache_latest_prev.timestamp
                 # TODO: cache 2.0 should we update the date if the prev is the same?
                 if cache_time < node.pref_timestamp and cache_latest_prev != node.pref:
-                    node.binary = BINARY_UPDATE
-                    output.info("Current package revision is older than the remote one")
-                    return
+                    if self._cache.exists_prev(node.pref):
+                        # The server gave us a newer prev, but we already have it in cache
+                        # so we don't need to download it. Update its timestamp to match the server's
+                        cache_latest_prev = node.pref
+                        self._cache.update_package_timestamp(node.pref)
+                    else:
+                        node.binary = BINARY_UPDATE
+                        output.info("Current package revision is older than the remote one")
+                        return
                 if cache_time > node.pref_timestamp:
                     output.info("Current package revision is newer than the remote one")
 
