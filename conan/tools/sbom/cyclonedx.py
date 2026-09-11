@@ -15,8 +15,10 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
         name (str, optional): Custom name for the metadata field.
         add_build (bool, optional, default=False): Include build dependencies.
         add_tests (bool, optional, default=False): Include test dependencies.
-        extra_info (dict, optional): Extra fields per component, keyed by name,
-            name/version, name/version@user/channel, purl or bom-ref.
+        extra_info (dict, optional): Extra data per component, keyed by name,
+            name/version, name/version@user/channel, purl or bom-ref. Use "cpe"
+            (string, or dict with "supplier") for the CPE; any other key is a
+            CycloneDX component field.
 
     Returns:
         The generated CycloneDX 1.4 document as a string.
@@ -76,7 +78,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
             "cpe": _calculate_cpe(node, _component_extra_info(extra_info, node)),
             "type": "application" if node.conanfile.package_type == "application" else "library",
             "version": str(node.ref.version),
-            **_component_extra_info(extra_info, node),
+            **_component_extra_fields(_component_extra_info(extra_info, node)),
         } for node in nodes]} if nodes else {}),
         **({"dependencies": dependencies} if dependencies else {}),
         "metadata": {
@@ -117,8 +119,10 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
         name (str, optional): Custom name for the metadata field.
         add_build (bool, optional, default=False): Include build dependencies.
         add_tests (bool, optional, default=False): Include test dependencies.
-        extra_info (dict, optional): Extra fields per component, keyed by name,
-            name/version, name/version@user/channel, purl or bom-ref.
+        extra_info (dict, optional): Extra data per component, keyed by name,
+            name/version, name/version@user/channel, purl or bom-ref. Use "cpe"
+            (string, or dict with "supplier") for the CPE; any other key is a
+            CycloneDX component field.
 
     Returns:
         The generated CycloneDX 1.6 document as a string.
@@ -179,7 +183,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
             "cpe": _calculate_cpe(node, _component_extra_info(extra_info, node)),
             "type": "application" if node.conanfile.package_type == "application" else "library",
             "version": str(node.ref.version),
-            **_component_extra_info(extra_info, node),
+            **_component_extra_fields(_component_extra_info(extra_info, node)),
         } for node in nodes]} if nodes else {}),
         **({"dependencies": dependencies} if dependencies else {}),
         "metadata": {
@@ -232,13 +236,19 @@ def _calculate_licenses(component):
 
 def _calculate_cpe(node, extra=None):
     extra = extra or {}
-    if extra.get("cpe"):
-        return extra["cpe"]
-    supplier = extra.get("supplier")
+    cpe = extra.get("cpe")
+    if isinstance(cpe, str) and cpe:
+        return cpe
+    supplier = cpe.get("supplier") if isinstance(cpe, dict) else None
     vendor = supplier.get("name") if isinstance(supplier, dict) else supplier
     vendor = vendor or "*"
     # CPE 2.3: vendor unknown -> "*", product and version from the Conan ref
     return f"cpe:2.3:a:{vendor}:{node.name}:{node.ref.version}:*:*:*:*:*:*:*"
+
+
+def _component_extra_fields(extra):
+    # "cpe" is only for generating the CPE field, not a CycloneDX extra field
+    return {k: v for k, v in extra.items() if k != "cpe"}
 
 
 def _component_extra_info(extra_info, node):

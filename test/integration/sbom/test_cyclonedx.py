@@ -367,14 +367,20 @@ class TestCyclonedx:
 
             def post_package(conanfile):
                 extra_info = {{
-                    "bar": {{"description": "by-name"}},
+                    "bar": {{
+                        "description": "by-name",
+                        "supplier": {{"name": "Acme"}},
+                        "cpe": {{"supplier": "acme"}},
+                    }},
                     "bar/1.0": {{"publisher": "by-name-version"}},
                     "bar/1.0@user/channel": {{"copyright": "by-ref"}},
                     "pkg:conan/bar@1.0": {{"group": "by-purl"}},
                 }}
                 for node in conanfile.subgraph.nodes:
                     if getattr(node, "name", None) == "bar":
-                        extra_info[_calculate_bomref(node)] = {{"supplier": {{"name": "by-bom-ref"}}}}
+                        extra_info[_calculate_bomref(node)] = {{
+                            "cpe": "cpe:2.3:a:from-bom-ref:bar:1.0:*:*:*:*:*:*:*"
+                        }}
                 sbom = {cyclone_version}(conanfile, extra_info=extra_info)
                 with open(os.path.join(conanfile.package_metadata_folder, "sbom.cdx.json"), "w") as f:
                     json.dump(sbom, f, indent=4)
@@ -390,8 +396,8 @@ class TestCyclonedx:
         assert bar["publisher"] == "by-name-version"
         assert bar["copyright"] == "by-ref"
         assert bar["group"] == "by-purl"
-        assert bar["supplier"] == {"name": "by-bom-ref"}
-        assert bar["cpe"] == "cpe:2.3:a:by-bom-ref:bar:1.0:*:*:*:*:*:*:*"
+        assert bar["supplier"] == {"name": "Acme"}
+        assert bar["cpe"] == "cpe:2.3:a:from-bom-ref:bar:1.0:*:*:*:*:*:*:*"
 
 
 class TestCyclonedx2:
