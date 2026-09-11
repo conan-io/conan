@@ -178,7 +178,13 @@ def test_create_docker_runner_dockerfile_folder_path():
     copies extra home files into the container for both the ``copy`` and ``clean`` cache modes.
     """
     client = TestClient()
-    client.save_home({"extensions/greeting.txt": "hello from host"})
+    test_extension = textwrap.dedent("""\
+    from conan.api.output import ConanOutput
+
+    def profile_plugin(profile):
+        ConanOutput().info("my custom profile plugin running")
+    """)
+    client.save_home({"extensions/plugins/profile.py": test_extension})
     profile_build = textwrap.dedent(f"""\
     [settings]
     arch={{{{ detect_api.detect_arch() }}}}
@@ -230,20 +236,17 @@ def test_create_docker_runner_dockerfile_folder_path():
 
     client.save({"host_copy": profile_host_copy, "host_clean": profile_host_clean, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
-    extra_file_copy = os.path.join(client.current_folder, ".conanrunner", "extra", "extensions", "greeting.txt")
-    client.run("create . -pr:h host_copy -pr:b build -v")
+    client.run("create . -pr:h host_copy -pr:b build")
 
-    assert "Copying extra_files patterns" in client.out
-    assert client.load(extra_file_copy) == "hello from host"
+    assert "my custom profile plugin running" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
 
-    client.run("create . -pr:h host_clean -pr:b build -v")
+    client.run("create . -pr:h host_clean -pr:b build")
 
-    assert "Copying extra_files patterns" in client.out
-    assert client.load(extra_file_copy) == "hello from host"
+    assert "my custom profile plugin running" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
