@@ -8,7 +8,32 @@ from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_S
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.util.files import load
+
+
+def _reproducible_options(node):
+    """Recipe-defined downstream options needed to rebuild this node, split by context."""
+    options = set()
+    build_options = set()
+    down_options = node.conanfile._conan_down_options
+    for pattern, package_options in down_options._deps_package_options.items():
+        opened = [node]
+        visited = set()
+        while opened:
+            current = opened.pop()
+            if current in visited:
+                continue
+            visited.add(current)
+            is_consumer = current.conanfile._conan_is_consumer
+            if ref_matches(current.ref, pattern, is_consumer=is_consumer):
+                target = options if current.context == node.context else build_options
+                target.update(package_options.dumps(scope=pattern).splitlines())
+                if "*" not in pattern.split("/", 1)[0]:
+                    continue
+            if not current.conanfile.vendor:
+                opened.extend(edge.dst for edge in current.edges if edge.require.visible)
+    return sorted(options), sorted(build_options)
 
 
 class _InstallPackageReference:
@@ -25,6 +50,7 @@ class _InstallPackageReference:
         self.context = None  # Same PREF could be in both contexts, but only 1 context is enough to
         # be able to reproduce, typically host preferrably
         self.options = []  # to be able to fire a build, the options will be necessary
+        self.build_options = []
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         # If some package, like ICU, requires itself, built for the "build" context architecture
         # to cross compile, there will be a dependency from the current "self" (host context)
@@ -50,8 +76,8 @@ class _InstallPackageReference:
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
-        # self_options are the minimum to reproduce state
-        result.options = node.conanfile.self_options.dumps().splitlines()
+        # Downstream recipe options are the minimum to reproduce state
+        result.options, result.build_options = _reproducible_options(node)
         result.nodes.append(node)
         result.overrides = node.overrides()
         result.info = node.conanfile.info.serialize()  # ConanInfo doesn't have deserialize
@@ -74,21 +100,26 @@ class _InstallPackageReference:
         if self.options:
             scope = "" if self.context == "host" else ":b"
             cmd += " " + " ".join(f'-o{scope}="{o}"' for o in self.options)
+        if self.build_options:
+            cmd += " " + " ".join(f'-o:b="{o}"' for o in self.build_options)
         if self.overrides:
             cmd += f' --lockfile-overrides="{self.overrides}"'
         return cmd
 
     def serialize(self):
-        return {"package_id": self.package_id,
-                "prev": self.prev,
-                "context": self.context,
-                "binary": self.binary,
-                "options": self.options,
-                "filenames": self.filenames,
-                "depends": self.depends,
-                "overrides": self.overrides.serialize(),
-                "build_args": self._build_args(),
-                "info": self.info}
+        result = {"package_id": self.package_id,
+                  "prev": self.prev,
+                  "context": self.context,
+                  "binary": self.binary,
+                  "options": self.options,
+                  "filenames": self.filenames,
+                  "depends": self.depends,
+                  "overrides": self.overrides.serialize(),
+                  "build_args": self._build_args(),
+                  "info": self.info}
+        if self.build_options:
+            result["build_options"] = self.build_options
+        return result
 
     @staticmethod
     def deserialize(data, filename, ref):
@@ -99,6 +130,7 @@ class _InstallPackageReference:
         result.binary = data["binary"]
         result.context = data["context"]
         result.options = data["options"]
+        result.build_options = data.get("build_options", [])
         result.filenames = data["filenames"] or [filename]
         result.depends = data["depends"]
         result.overrides = Overrides.deserialize(data["overrides"])
@@ -233,6 +265,7 @@ class _InstallConfiguration:
         self.context = None  # Same PREF could be in both contexts, but only 1 context is enough to
         # be able to reproduce, typically host preferrably
         self.options = []  # to be able to fire a build, the options will be necessary
+        self.build_options = []
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         self.depends = []  # List of full prefs
         self.overrides = Overrides()
@@ -264,8 +297,8 @@ class _InstallConfiguration:
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
-        # self_options are the minimum to reproduce state
-        result.options = node.conanfile.self_options.dumps().splitlines()
+        # Downstream recipe options are the minimum to reproduce state
+        result.options, result.build_options = _reproducible_options(node)
         result.overrides = node.overrides()
         result.info = node.conanfile.info.serialize()
 
@@ -298,24 +331,28 @@ class _InstallConfiguration:
         if self.options:
             scope = "" if self.context == "host" else ":b"
             cmd += " " + " ".join(f'-o{scope}="{o}"' for o in self.options)
+        if self.build_options:
+            cmd += " " + " ".join(f'-o:b="{o}"' for o in self.build_options)
         if self.overrides:
             cmd += f' --lockfile-overrides="{self.overrides}"'
         return cmd
 
     def serialize(self):
-        return {"ref": self.ref.repr_notime(),
-                "pref": self.pref.repr_notime(),
-                "package_id": self.pref.package_id,
-                "prev": self.pref.revision,
-                "context": self.context,
-                "binary": self.binary,
-                "options": self.options,
-                "filenames": self.filenames,
-                "depends": [d.repr_notime() for d in self.depends],
-                "overrides": self.overrides.serialize(),
-                "build_args": self._build_args(),
-                "info": self.info
-                }
+        result = {"ref": self.ref.repr_notime(),
+                  "pref": self.pref.repr_notime(),
+                  "package_id": self.pref.package_id,
+                  "prev": self.pref.revision,
+                  "context": self.context,
+                  "binary": self.binary,
+                  "options": self.options,
+                  "filenames": self.filenames,
+                  "depends": [d.repr_notime() for d in self.depends],
+                  "overrides": self.overrides.serialize(),
+                  "build_args": self._build_args(),
+                  "info": self.info}
+        if self.build_options:
+            result["build_options"] = self.build_options
+        return result
 
     @staticmethod
     def deserialize(data, filename):
@@ -326,6 +363,7 @@ class _InstallConfiguration:
         result.binary = data["binary"]
         result.context = data["context"]
         result.options = data["options"]
+        result.build_options = data.get("build_options", [])
         result.filenames = data["filenames"] or [filename]
         result.depends = [PkgReference.loads(p) for p in data["depends"]]
         result.overrides = Overrides.deserialize(data["overrides"])

@@ -947,3 +947,55 @@ def test_build_order_options():
     assert "55c609fe8808aa5308134cb5989d23d3caffccf2" in c.out
     # the built package is the static one, the option is not really propagated
     assert "shared: False" in c.out
+
+
+@pytest.mark.parametrize("order_by", ["recipe", "configuration"])
+def test_build_order_transitive_options(order_by):
+    # Reproduces https://github.com/conan-io/conan/issues/20314
+    c = TestClient(light=True)
+    c.save({
+        "leaf/conanfile.py": GenConanfile("leaf", "1.0").with_shared_option(False),
+        "tool/conanfile.py": GenConanfile("tool", "1.0").with_shared_option(False),
+        "middle/conanfile.py": GenConanfile("middle", "1.0").with_shared_option(False)
+                                                               .with_requires("leaf/1.0")
+                                                               .with_tool_requirement("tool/1.0",
+                                                                                      visible=True),
+        "app/conanfile.py": (
+            GenConanfile("app", "1.0").with_requires("middle/1.0")
+                                          .with_default_option("middle/*:shared", True)
+                                          .with_default_option("leaf/*:shared", True)
+                                          .with_default_option("tool/*:shared", True)),
+    })
+    for recipe in ("leaf", "tool", "middle"):
+        c.run(f"export {recipe}")
+
+    c.run(f"graph build-order app --build=missing --order-by={order_by} --format=json",
+          redirect_stdout="build-order.json")
+    c.run("graph build-order-merge --file=build-order.json --file=build-order.json --format=json")
+    order = json.loads(c.stdout)["order"]
+    middle = next(item for level in order for item in level
+                  if item["ref"].startswith("middle/"))
+    if order_by == "recipe":
+        middle_ref = middle["ref"]
+        middle = next(package for level in middle["packages"] for package in level)
+    else:
+        middle_ref = middle["ref"]
+
+    assert middle["options"] == ["leaf/*:shared=True", "middle/*:shared=True"]
+    assert middle["build_options"] == ["tool/*:shared=True"]
+    assert middle["build_args"] == ("--requires=middle/1.0 --build=middle/1.0 "
+                                    "-o=\"leaf/*:shared=True\" "
+                                    "-o=\"middle/*:shared=True\" "
+                                    "-o:b=\"tool/*:shared=True\"")
+
+    c.run(f"graph info {middle['build_args']} --format=json")
+    nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+    isolated_middle = next(node for node in nodes if node.get("ref") == middle_ref)
+    leaf = next(node for node in nodes if node.get("ref", "").startswith("leaf/"))
+    tool = next(node for node in nodes if node.get("ref", "").startswith("tool/"))
+    assert isolated_middle["package_id"] == middle["package_id"]
+    assert isolated_middle["options"]["shared"] == "True"
+    assert leaf["context"] == "host"
+    assert leaf["options"]["shared"] == "True"
+    assert tool["context"] == "build"
+    assert tool["options"]["shared"] == "True"
