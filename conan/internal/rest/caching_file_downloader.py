@@ -26,17 +26,47 @@ class SourcesCachingDownloader:
         self._output = conanfile.output
         self._conanfile = conanfile
 
+    def save(self, filepath, url, identifier):
+        """Store a locally-produced file into the sources download cache under
+        `identifier`, recording `url` in the backup-sources JSON metadata so a
+        later `conan cache backup-upload` pushes it to `core.sources:upload_url`.
+        Falls back to the default cache folder when `core.sources:download_cache`
+        is not configured — the identifier feature works out of the box.
+        """
+        download_cache_folder = (self._global_conf.get("core.sources:download_cache")
+                                 or HomePaths(self._home_folder).default_sources_backup_folder)
+        if not os.path.isabs(download_cache_folder):
+            raise ConanException("core.sources:download_cache must be an absolute path")
+        download_cache = DownloadCache(download_cache_folder)
+        target = download_cache.source_path(identifier)
+        with download_cache.lock(identifier):
+            remove_if_dirty(target)  # clear any leftover from a prior failed download
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            with set_dirty_context_manager(target):
+                shutil.copy2(filepath, target)
+            download_cache.update_backup_sources_json(target, self._conanfile, url)
+
     def download(self, urls, file_path,
-                 retry, retry_wait, verify_ssl, auth, headers, md5, sha1, sha256):
+                 retry, retry_wait, verify_ssl, auth, headers, md5, sha1, sha256,
+                 identifier=None):
+        # Normalize: `identifier` is the blob name (cache path / mirror URL suffix),
+        # `sha256` (if any) is for content verification. In identifier mode content is
+        # NOT verified; in classic backup-sources mode identifier defaults to sha256.
+        identifier_mode = identifier is not None
+        if identifier:
+            md5 = sha1 = sha256 = None
+        else:
+            identifier = sha256
         download_cache_folder = self._global_conf.get("core.sources:download_cache")
         source_origins = self._global_conf.get("core.sources:download_urls", check_type=list)
-        if source_origins and not download_cache_folder:
-            # If backups are defined, but the download cache is not defined, use a default one
+        # Auto-default the cache folder when a backup URL is defined (classic backup-sources)
+        # OR when the caller uses identifier-mode (so identifier works out of the box).
+        if not download_cache_folder and (source_origins or identifier_mode):
             download_cache_folder = HomePaths(self._home_folder).default_sources_backup_folder
         if download_cache_folder and not os.path.isabs(download_cache_folder):
             raise ConanException("core.sources:download_cache must be an absolute path")
         source_origins = source_origins or ["origin"]
-        if download_cache_folder and not sha256:
+        if download_cache_folder and not identifier:
             self._output.warning("Cannot cache download() without sha256 checksum")
             download_cache_folder = None  # Cannot cache
             source_origins = ["origin"]
@@ -47,9 +77,9 @@ class SourcesCachingDownloader:
         # First, see if it is already in the download cache
         if download_cache_folder:
             download_cache = DownloadCache(download_cache_folder)
-            download_path = download_cache.source_path(sha256)
+            download_path = download_cache.source_path(identifier)
 
-            with download_cache.lock(sha256):
+            with download_cache.lock(identifier):
                 remove_if_dirty(download_path)
 
                 in_cache = os.path.exists(download_path)
@@ -73,7 +103,7 @@ class SourcesCachingDownloader:
                 if need_download:
                     with set_dirty_context_manager(download_path):
                         self._do_download(source_origins, urls, download_path, retry, retry_wait,
-                                          verify_ssl, auth, headers, md5, sha1, sha256)
+                                          verify_ssl, auth, headers, md5, sha1, sha256, identifier)
 
                 # copy it to the package "source" folder
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
@@ -83,11 +113,11 @@ class SourcesCachingDownloader:
             # Not in local cache, check origins from core.sources:download_urls
             # This doesn't need to be dirty-protected, as the full "source" folder is protected
             self._do_download(source_origins, urls, file_path, retry, retry_wait, verify_ssl, auth,
-                              headers, md5, sha1, sha256)
+                              headers, md5, sha1, sha256, identifier)
 
     def _do_download(self, source_origins, urls, download_path, retry, retry_wait, verify_ssl,
-                     auth, headers, md5, sha1, sha256):
-        # iterates the origins until one works
+                     auth, headers, md5, sha1, sha256, identifier):
+        # `identifier`: blob name on the mirror. `sha256`: verify hash (None in identifier mode).
         for backup_url in source_origins:
             if backup_url == "origin":  # download from the internet
                 try:
@@ -103,9 +133,9 @@ class SourcesCachingDownloader:
                     self._output.info(f"Checking backup: {backup_url}")
                     backup_url = backup_url if backup_url.endswith("/") else backup_url + "/"
                     # The download happens to the user download folder, not to the download cache
-                    self._file_downloader.download(backup_url + sha256, download_path,
+                    self._file_downloader.download(backup_url + identifier, download_path,
                                                    sha256=sha256, overwrite=True)
-                    self._file_downloader.download(backup_url + sha256 + ".json",
+                    self._file_downloader.download(backup_url + identifier + ".json",
                                                    download_path + ".json", overwrite=True)
                     self._output.info(f"Sources for {urls} found in remote backup {backup_url}")
                     return
