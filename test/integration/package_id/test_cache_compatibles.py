@@ -411,11 +411,11 @@ class TestDefaultCompat:
         c.run("create app ")
         c.run("remove tool:* -c")
         c.run("install --requires=dep/0.1  --build=missing")
-        assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
+        assert re.search(r"Skipped build binaries(\s*)tool/0.1", c.out)
         c.run("graph info --requires=app/0.1 --build=missing")
-        assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
+        assert re.search(r"Skipped build binaries(\s*)tool/0.1", c.out)
         c.run("install --requires=app/0.1  --build=missing")
-        assert re.search(r"Skipped binaries(\s*)tool/0.1", c.out)
+        assert re.search(r"Skipped build binaries(\s*)tool/0.1", c.out)
 
     def test_msvc_194_fallback(self):
         c = TestClient()

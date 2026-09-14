@@ -93,7 +93,7 @@ def test_package_type_traits_run_transitive(package_type_traits):
     else:
         # Without "package_type_traits" the run trait is False, and as liba is a static-library
         # linked inside libb, Conan understands its binary is not necessary anymore and skips it
-        assert re.search(r"Skipped binaries(\s*)liba/0.1", c.out)
+        assert re.search(r"Skipped host binaries(\s*)liba/0.1", c.out)
         assert "MYSHARED RUNTIME!!" not in c.out
         assert _not_found(c.out)
         assert "Error in build() method" in c.out

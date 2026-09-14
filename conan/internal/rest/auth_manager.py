@@ -87,7 +87,7 @@ class ConanApiAuthManager:
                 self._authenticate(rest_client, remote, input_user, input_password)
             except AuthenticationException:
                 out = ConanOutput()
-                if user is None:
+                if user is None or input_user != user:
                     out.error('Wrong user or password', error_type="exception")
                 else:
                     out.error(f'Wrong password for user "{user}"', error_type="exception")
