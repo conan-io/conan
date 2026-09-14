@@ -152,14 +152,16 @@ class CMakeConfigDeps:
 
     def _print_help(self, direct_deps):
         if direct_deps:
-            msg = ["CMakeDeps necessary find_package() and targets for your CMakeLists.txt"]
+            msg = ["CMakeConfigDeps necessary find_package() and targets for your CMakeLists.txt"]
             link_targets = []
             for (require, dep) in direct_deps:
                 note = " # Optional. This is a tool-require, can't link its targets" \
                     if require.build else ""
-                for cmake_filename in self.get_cmake_filename(dep):
+                print_root_target = []
+                for cmake_filename, info in self.get_cmake_filename(dep).items():
                     msg.append(f"    find_package({cmake_filename}){note}")
-                if not require.build and not dep.cpp_info.exe:
+                    print_root_target.append(info["is_root"])
+                if not require.build and not dep.cpp_info.exe and any(print_root_target):
                     target_name = self.get_property("cmake_target_name", dep)
                     link_targets.append(target_name or f"{dep.ref.name}::{dep.ref.name}")
             if link_targets:
@@ -246,9 +248,9 @@ class CMakeConfigDeps:
               (default: recipe name). If both properties are set, ``cmake_file_names``
               takes precedence and ``cmake_file_name`` is ignored.
         """
-        key = dep.ref.name
-        if key in self._cmake_filenames:
-            return self._cmake_filenames[key]
+        cmake_config_name = dep.ref.name
+        if cmake_config_name in self._cmake_filenames:
+            return self._cmake_filenames[cmake_config_name]
 
         def _get_deduced_components(cmp_name):
             # A component with several libs was expanded by deduce_full_cpp_info() into
@@ -294,7 +296,7 @@ class CMakeConfigDeps:
             ret[root_filename] = {"components": components,
                                   "deduced_components": list(full_cpp_info.components.keys()),
                                   "is_root": True}
-        self._cmake_filenames[key] = ret
+        self._cmake_filenames[cmake_config_name] = ret
         return ret
 
 
