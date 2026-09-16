@@ -1268,6 +1268,243 @@ class TestNoSoname:
         assert "IMPORTED_NO_SONAME" not in cmake
 
 
+class TestRequireTraitsFiltering:
+    def test_libs_false_keeps_location_skips_system_libs_and_frameworks(self):
+        """libs=False must  add the package's own extra system_libs/frameworks, and the
+        library's own location/type is unaffected, and headers=True must still expose
+        include dirs and defines."""
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.libs = ["dep"]
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.location = "lib/dep.so"
+                    self.cpp_info.system_libs = ["pthread"]
+                    self.cpp_info.frameworks = ["CoreFoundation"]
+                    self.cpp_info.includedirs = ["include"]
+                    self.cpp_info.defines = ["DEP_DEFINE"]
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                def requirements(self):
+                    self.requires("dep/0.1", headers=True, libs=False)
+            """)
+        c.save({"dep/conanfile.py": dep, "app/conanfile.py": app})
+        c.run("create dep")
+        c.run("install app -g CMakeConfigDeps")
+        cmake = c.load("app/dep-Targets-release.cmake")
+        assert "add_library(dep::dep SHARED IMPORTED)" in cmake
+        assert "IMPORTED_LOCATION_RELEASE" in cmake
+        assert "INTERFACE_INCLUDE_DIRECTORIES" in cmake
+        assert "pthread" in cmake
+        assert "CoreFoundation" in cmake
+        assert "DEP_DEFINE" in cmake
+
+    def test_headers_false_skips_headers_keeps_link_information(self):
+        """headers=False must not expose include dirs/defines, but libs=True must still
+        link the library and its system_libs."""
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.libs = ["dep"]
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.location = "lib/dep.so"
+                    self.cpp_info.system_libs = ["pthread"]
+                    self.cpp_info.includedirs = ["include"]
+                    self.cpp_info.defines = ["DEP_DEFINE"]
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                def requirements(self):
+                    self.requires("dep/0.1", headers=False, libs=True)
+            """)
+        c.save({"dep/conanfile.py": dep, "app/conanfile.py": app})
+        c.run("create dep")
+        c.run("install app -g CMakeConfigDeps")
+        cmake = c.load("app/dep-Targets-release.cmake")
+        assert "IMPORTED_LOCATION_RELEASE" in cmake
+        assert "pthread" in cmake
+        for absent in ("INTERFACE_INCLUDE_DIRECTORIES", "DEP_DEFINE"):
+            assert absent not in cmake
+
+    def test_headers_and_libs_false_skips_flags_and_sources_too(self):
+        """With neither headers nor libs needed (e.g. a run=True-only dependency), the
+        remaining compile/link flags and injected sources must be dropped as well, while the
+        target is still declared so it can be depended upon."""
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.libs = ["dep"]
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.location = "lib/dep.so"
+                    self.cpp_info.includedirs = ["include"]
+                    self.cpp_info.defines = ["DEP_DEFINE"]
+                    self.cpp_info.cxxflags = ["-fdep-cxx"]
+                    self.cpp_info.cflags = ["-fdep-c"]
+                    self.cpp_info.sharedlinkflags = ["-Wl,--dep-shared"]
+                    self.cpp_info.exelinkflags = ["-Wl,--dep-exe"]
+                    self.cpp_info.sources = ["src/extra.cpp"]
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                def requirements(self):
+                    self.requires("dep/0.1", headers=False, libs=False, run=True)
+            """)
+        c.save({"dep/conanfile.py": dep, "app/conanfile.py": app})
+        c.run("create dep")
+        c.run("install app -g CMakeConfigDeps")
+        cmake = c.load("app/dep-Targets-release.cmake")
+        # Location/type are unaffected by libs=False (see class docstring), only the flags/
+        # sources actually gated by the combined headers=False+libs=False are dropped
+        assert "add_library(dep::dep SHARED IMPORTED)" in cmake
+        assert "IMPORTED_LOCATION_RELEASE" in cmake
+        for absent in ("INTERFACE_INCLUDE_DIRECTORIES", "DEP_DEFINE",
+                       "-fdep-cxx", "-fdep-c", "-Wl,--dep-shared", "-Wl,--dep-exe"):
+            assert absent not in cmake
+        # sources not filtered for now
+        assert "INTERFACE_SOURCES" in cmake
+        assert "extra.cpp" in cmake
+
+    def test_libs_false_on_component_skips_system_libs(self):
+        """The same filtering must apply to named components, not just the root cpp_info:
+        libs=False does not drop the component's own system_libs, nor its location/type."""
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.components["comp"].libs = ["comp"]
+                    self.cpp_info.components["comp"].type = "shared-library"
+                    self.cpp_info.components["comp"].location = "lib/comp.so"
+                    self.cpp_info.components["comp"].system_libs = ["pthread"]
+                    self.cpp_info.components["comp"].includedirs = ["include"]
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                def requirements(self):
+                    self.requires("dep/0.1", headers=True, libs=False)
+            """)
+        c.save({"dep/conanfile.py": dep, "app/conanfile.py": app})
+        c.run("create dep")
+        c.run("install app -g CMakeConfigDeps")
+        cmake = c.load("app/dep-Targets-release.cmake")
+        assert "add_library(dep::comp SHARED IMPORTED)" in cmake
+        assert "IMPORTED_LOCATION_RELEASE" in cmake
+        assert "pthread" in cmake
+        assert "INTERFACE_INCLUDE_DIRECTORIES" in cmake
+
+    def test_transitive_private_shared_lib_keeps_location(self):
+        """
+        Regression test for https://github.com/conan-io/conan/pull/20277: shared libraries
+        should always propagate their location, even if the consumer doesn't need to link them (libs=False),
+        so that the library can still be linked in specific cases
+        """
+        c = TestClient()
+        matrix = textwrap.dedent("""
+            from conan import ConanFile
+            class Matrix(ConanFile):
+                name = "matrix"
+                version = "0.1"
+                package_type = "shared-library"
+                def package_info(self):
+                    self.cpp_info.libs = ["matrix"]
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.location = "lib/libmatrix.so"
+            """)
+        engine = textwrap.dedent("""
+            from conan import ConanFile
+            class Engine(ConanFile):
+                name = "engine"
+                version = "0.1"
+                package_type = "shared-library"
+                def requirements(self):
+                    # Privately linked: not part of engine's own public interface
+                    self.requires("matrix/0.1", transitive_headers=False, transitive_libs=False)
+                def package_info(self):
+                    self.cpp_info.libs = ["engine"]
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.location = "lib/libengine.so"
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class App(ConanFile):
+                package_type = "application"
+                settings = "os", "arch", "compiler", "build_type"
+                def requirements(self):
+                    self.requires("engine/0.1")
+            """)
+        c.save({"matrix/conanfile.py": matrix, "engine/conanfile.py": engine,
+                "app/conanfile.py": app})
+        c.run("create matrix")
+        c.run("create engine")
+        c.run("install app -g CMakeConfigDeps")
+        # engine::engine must still actively link its own, private, direct requirement to
+        # matrix::matrix
+        engine_cmake = c.load("app/engine-Targets-release.cmake")
+        assert "matrix::matrix" in engine_cmake
+        # matrix::matrix must still carry a real location, even though "app" itself doesn't
+        # need to link it (libs=False, headers=False as seen from "app")
+        matrix_cmake = c.load("app/matrix-Targets-release.cmake")
+        assert "add_library(matrix::matrix SHARED IMPORTED)" in matrix_cmake
+        assert "IMPORTED_LOCATION_RELEASE" in matrix_cmake
+        assert "INTERFACE_INCLUDE_DIRECTORIES" not in matrix_cmake
+
+    @pytest.mark.parametrize("headers", [True, False])
+    @pytest.mark.parametrize("libs", [True, False])
+    def test_package_framework_only_with_libs_or_headers(self, headers, libs):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                def package_info(self):
+                    self.cpp_info.includedirs = []
+                    self.cpp_info.type = "shared-library"
+                    self.cpp_info.location = "lib"
+                    self.cpp_info.package_framework = "Dep"
+            """)
+        app = textwrap.dedent(f"""
+            from conan import ConanFile
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+                def requirements(self):
+                    self.requires("dep/0.1", headers={headers}, libs={libs})
+            """)
+        c.save({"dep/conanfile.py": dep, "app/conanfile.py": app})
+        c.run("create dep")
+        c.run("install app -g CMakeConfigDeps")
+        cmake = c.load("app/dep-Targets-release.cmake")
+        if headers or libs:
+            assert "FRAMEWORK TRUE" in cmake
+        else:
+            assert "FRAMEWORK" not in cmake
+            # But the target is still generated
+            assert "add_library(dep::dep" in cmake
+
+
 def test_find_mode_none():
     tc = TestClient()
 
