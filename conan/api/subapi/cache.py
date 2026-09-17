@@ -396,6 +396,16 @@ class CacheAPI:
             fileobj = the_tar.extractfile("pkglist.json")
             pkglist = fileobj.read()
             the_tar.extraction_filter = (lambda member, _: member)  # fully_trusted (Py 3.14)
+            
+            import stat
+            for member in the_tar.getmembers():
+                target_path = os.path.join(cache_folder, member.name)
+                if os.path.exists(target_path):
+                    try:
+                        os.chmod(target_path, stat.S_IWRITE | stat.S_IREAD)
+                    except Exception:
+                        pass
+
             the_tar.extractall(path=cache_folder)
             the_tar.close()
 
