@@ -18,7 +18,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
         extra_info (dict, optional): Extra data per component, keyed by name,
             name/version, name/version@user/channel, purl or bom-ref. Use "cpe"
             (string, or dict with "supplier") for the CPE; any other key is a
-            CycloneDX component field.
+            CycloneDX component field. Merged over each recipe's ``extra_info``.
 
     Returns:
         The generated CycloneDX 1.4 document as a string.
@@ -122,7 +122,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
         extra_info (dict, optional): Extra data per component, keyed by name,
             name/version, name/version@user/channel, purl or bom-ref. Use "cpe"
             (string, or dict with "supplier") for the CPE; any other key is a
-            CycloneDX component field.
+            CycloneDX component field. Merged over each recipe's ``extra_info``.
 
     Returns:
         The generated CycloneDX 1.6 document as a string.
@@ -253,6 +253,9 @@ def _component_extra_fields(extra):
 
 def _component_extra_info(extra_info, node):
     result = {}
+    recipe_extra = getattr(node.conanfile, "extra_info", None) or {}
+    if isinstance(recipe_extra, dict):
+        result.update(recipe_extra)
     purl = f"pkg:conan/{node.name}@{node.ref.version}"
     for key in (node.name, f"{node.name}/{node.ref.version}", str(node.ref),
                 purl, _calculate_bomref(node)):
