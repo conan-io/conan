@@ -36,7 +36,7 @@ class _InstallPackageReference:
 
     @property
     def pref(self):
-        return PkgReference(self.ref, self.package_id, self.prev)
+        return self.nodes[0].pref
 
     @property
     def conanfile(self):
@@ -250,7 +250,7 @@ class _InstallConfiguration:
 
     @property
     def pref(self):
-        return PkgReference(self.ref, self.package_id, self.prev)
+        return self.nodes[0].pref
 
     @property
     def conanfile(self):
