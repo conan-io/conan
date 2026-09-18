@@ -295,7 +295,9 @@ class BinaryInstaller:
                         if self._cache.exists_prev(package.pref):
                             # The server gave us a newer prev, but we already have it in cache
                             # so we don't need to download it. Update its timestamp to the server's
-                            self._cache.update_package_timestamp(package.pref)
+                            # InstallNode doesn't have timestamp
+                            pref_with_timestamp = package.nodes[0].pref
+                            self._cache.update_package_timestamp(pref_with_timestamp)
                         else:
                             downloads.append(package)
                     elif package.binary == BINARY_DOWNLOAD:
