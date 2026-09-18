@@ -147,7 +147,7 @@ def test_unused_requirement_not_propagated():
     t.run('create lib')
     t.run('create pkg')
     t.run("install app")
-    assert re.search(r"Skipped binaries(\s*)header/0.1", t.out)
+    assert re.search(r"Skipped host binaries(\s*)header/0.1", t.out)
 
 
 @pytest.mark.parametrize("component", [True, False])
