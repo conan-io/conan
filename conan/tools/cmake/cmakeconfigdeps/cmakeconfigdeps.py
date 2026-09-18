@@ -416,7 +416,8 @@ class _CMakeContextGenerator:
 
             pkg_folder_rel = relativize_path(self._ctx.pkg_folder, self._ctx.consumer_conanfile,
                                              "${CMAKE_CURRENT_LIST_DIR}")
-            context = {"dependencies": dependencies,
+            context = {"filename": self._ctx.base_filename,
+                       "dependencies": dependencies,
                        "pkg_folder": pkg_folder_rel,
                        "pkg_folder_var": self._ctx.pkg_folder_var,
                        "config": self._ctx.config,

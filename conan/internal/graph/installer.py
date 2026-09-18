@@ -301,9 +301,10 @@ class BinaryInstaller:
         ConanOutput().subtitle(f"Downloading {download_count} package{plural}")
         parallel = self._global_conf.get("core.download:parallel", check_type=int,
                                          default=cpu_count())
-        if parallel:  # User can define core.download:parallel=0 to deactivate parallelism
-            ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
-            thread_pool = ThreadPool(parallel)
+        if parallel and download_count:  # User can define core.download:parallel=0 to deactivate parallelism
+            thread_count = min(parallel, download_count)
+            ConanOutput().info(f"Downloading binary packages in {thread_count} parallel threads")
+            thread_pool = ThreadPool(thread_count)
             thread_pool.map(self._download_pkg, downloads)
             thread_pool.close()
             thread_pool.join()
