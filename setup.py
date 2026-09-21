@@ -46,6 +46,7 @@ def generate_long_description_file():
 project_requirements = get_requires("conans/requirements.txt")
 dev_requirements = get_requires("conans/requirements_dev.txt")
 runners_requirements = get_requires("conans/requirements_runner.txt")
+truststore_requirements = get_requires("conans/requirements_truststore.txt")
 excluded_server_packages = ["conans.server*"]
 exclude = excluded_test_packages + excluded_server_packages
 
@@ -118,7 +119,11 @@ setup(
     extras_require={
         'dev': dev_requirements,
         'test': dev_requirements,
-        'runners': runners_requirements
+        'runners': runners_requirements,
+        # Optional runtime feature (not a dev/CI tool like the groups above): enables
+        # core.net.http:trust_store. Kept out of install_requires so plain installs don't
+        # pull it in - see conan/internal/rest/conan_requester.py.
+        'truststore': truststore_requirements,
     },
 
     # If there are data files included in your packages that need to be

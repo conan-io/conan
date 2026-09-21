@@ -3,6 +3,8 @@ import json
 import logging
 import os
 import platform
+import ssl
+import sys
 
 import requests
 import urllib3
@@ -93,6 +95,26 @@ class _SourceURLCredentials:
                 break
 
 
+class _TrustStoreHTTPAdapter(HTTPAdapter):
+    """ Mounts a pre-built ssl.SSLContext (from the 'truststore' package), scoped to this
+    adapter/session only - never global ssl.SSLContext injection.
+    """
+    def __init__(self, ssl_context, **kwargs):
+        self._ssl_context = ssl_context
+        super().__init__(**kwargs)
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs.setdefault("ssl_context", self._ssl_context)
+        return super().init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, proxy, **proxy_kwargs):
+        # HTTPS-over-proxy requests are built via a ProxyManager instead of the pool manager,
+        # so the context needs to be injected here too, or it silently stops applying once
+        # 'core.net.http:proxies' is also configured.
+        proxy_kwargs.setdefault("ssl_context", self._ssl_context)
+        return super().proxy_manager_for(proxy, **proxy_kwargs)
+
+
 class ConanRequester:
 
     def __init__(self, config, cache_folder=None):
@@ -106,6 +128,24 @@ class ConanRequester:
         self._no_proxy_match = config.get("core.net.http:no_proxy_match", check_type=list)
         self._proxies = config.get("core.net.http:proxies")
         self._cacert_path = config.get("core.net.http:cacert_path", check_type=str)
+        self._trust_store = config.get("core.net.http:trust_store", default=False,
+                                       check_type=bool)
+        if self._trust_store:
+            if sys.version_info < (3, 10):
+                raise ConanException("'core.net.http:trust_store' requires Python >= 3.10")
+            if self._cacert_path is not None:
+                raise ConanException("Cannot set both 'core.net.http:trust_store' and "
+                                      "'core.net.http:cacert_path'")
+            try:
+                import truststore
+            except ImportError:
+                raise ConanException(
+                    "'core.net.http:trust_store' is enabled but the 'truststore' package is "
+                    "not installed. Run 'pip install truststore' (or "
+                    "'pip install conan[truststore]').")
+            ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            _trust_adapter = _TrustStoreHTTPAdapter(ctx, max_retries=self._get_retries(_max_retries))
+            self._http_requester.mount("https://", _trust_adapter)
         self._client_certificates = config.get("core.net.http:client_cert")
         self._clean_system_proxy = config.get("core.net.http:clean_system_proxy", default=False,
                                               check_type=bool)

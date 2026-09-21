@@ -70,6 +70,10 @@ BUILT_IN_CONFS = {
     "core.net.http:cacert_path": "Path containing a custom Cacert file",
     "core.net.http:client_cert": "Path or tuple of files containing a client cert (and key)",
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
+    "core.net.http:trust_store": "(Experimental) If True, additionally verify HTTPS certificates "
+                                  "against the OS-native trust store via the 'truststore' package "
+                                  "(used together with, not instead of, the certifi CA bundle). "
+                                  "Requires Python>=3.10 and 'pip install conan[truststore]'",
     # Compression for `conan upload`
     "core.upload:compression_format": "The compression format used when uploading Conan packages. "
                                       "Possible values: 'zst', 'xz', 'gz' (default=gz)",
