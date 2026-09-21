@@ -435,7 +435,17 @@ def compute_state_options(conanfile):
     ``get_upstream_options()`` merges the downstream defined options into the dependencies ones
     """
     options = conanfile.options
-    defaults = dict(Options(options_values=conanfile.default_options)._package_options.items())
+    # The self-scoped values that the recipe "default_options" define by themselves, parsed the
+    # same way that Options() does, they were already validated when it was built from them
+    defaults = {}
+    for name, value in (conanfile.default_options or {}).items():
+        name = str(name).strip()
+        if value is None or ":" in name:  # None means undefined, ":" is dependency-scoped
+            continue
+        if name.endswith("!"):  # the "important" marker is not part of the option name
+            name = name[:-1]
+        defaults[name] = str(value).strip()
+
     self_options = {name: value for name, value in options._package_options.items()
                     if value is not None and defaults.get(name) != value}
     deps_options = {pattern: {name: value for name, value in pkg_options.items()

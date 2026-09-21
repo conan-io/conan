@@ -226,6 +226,16 @@ class TestOptionsDeviation:
                          {"shared": True, "dep/*:opt": "value"})
         assert compute_state_options(sut)[0] == {}
 
+    def test_default_options_parsing(self):
+        # The self-scoped defaults are parsed in place, it must match how Options() parses
+        # them: skipping None values, stripping spaces and the "important" marker
+        sut = _conanfile({"shared": [True, False], "fpic": [True, False], "myopt": [1, 2]},
+                         {"shared": True, "fpic": False, "myopt": 2},
+                         {" shared! ": " True ", "fpic": None, "dep/*:myopt": 2})
+        # "shared" matches its own default, "fpic" default is None so it is not defined at all,
+        # and the "myopt" default is dependency-scoped, it doesn't apply to this package
+        assert compute_state_options(sut)[0] == {"fpic": "False", "myopt": "2"}
+
     def test_deps_options(self):
         # The dependency-scoped values are returned apart, they are what this recipe would
         # define again by itself for its dependencies, when the graph is expanded again

@@ -83,7 +83,7 @@ class _InstallPackageReference:
         self.binary = None  # The action BINARY_DOWNLOAD, etc must be the same for all nodes
         self.context = None  # Same PREF could be in both contexts, but only 1 context is enough to
         # be able to reproduce, typically host preferrably
-        self.options = []  # to be able to fire a build, the options will be necessary
+        self._options = None  # to be able to fire a build, the options will be necessary
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         # If some package, like ICU, requires itself, built for the "build" context architecture
         # to cross compile, there will be a dependency from the current "self" (host context)
@@ -101,6 +101,13 @@ class _InstallPackageReference:
     def conanfile(self):
         return self.nodes[0].conanfile
 
+    @property
+    def options(self):
+        # Lazy, computing it is not free and only "conan graph build-order" needs it
+        if self._options is None:
+            self._options = _reproducible_options(self.nodes[0])
+        return self._options
+
     @staticmethod
     def create(node):
         result = _InstallPackageReference()
@@ -109,8 +116,6 @@ class _InstallPackageReference:
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
-        # Downstream recipe options are the minimum to reproduce state
-        result.options = _reproducible_options(node)
         result.nodes.append(node)
         result.overrides = node.overrides()
         result.info = node.conanfile.info.serialize()  # ConanInfo doesn't have deserialize
@@ -157,7 +162,7 @@ class _InstallPackageReference:
         result.prev = data["prev"]
         result.binary = data["binary"]
         result.context = data["context"]
-        result.options = data["options"]
+        result._options = data["options"]
         result.filenames = data["filenames"] or [filename]
         result.depends = data["depends"]
         result.overrides = Overrides.deserialize(data["overrides"])
@@ -291,7 +296,7 @@ class _InstallConfiguration:
         self.binary = None  # The action BINARY_DOWNLOAD, etc must be the same for all nodes
         self.context = None  # Same PREF could be in both contexts, but only 1 context is enough to
         # be able to reproduce, typically host preferrably
-        self.options = []  # to be able to fire a build, the options will be necessary
+        self._options = None  # to be able to fire a build, the options will be necessary
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         self.depends = []  # List of full prefs
         self.overrides = Overrides()
@@ -315,6 +320,13 @@ class _InstallConfiguration:
     def conanfile(self):
         return self.nodes[0].conanfile
 
+    @property
+    def options(self):
+        # Lazy, computing it is not free and only "conan graph build-order" needs it
+        if self._options is None:
+            self._options = _reproducible_options(self.nodes[0])
+        return self._options
+
     @staticmethod
     def create(node):
         result = _InstallConfiguration()
@@ -323,8 +335,6 @@ class _InstallConfiguration:
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
-        # Downstream recipe options are the minimum to reproduce state
-        result.options = _reproducible_options(node)
         result.overrides = node.overrides()
         result.info = node.conanfile.info.serialize()
 
@@ -384,7 +394,7 @@ class _InstallConfiguration:
         result.prev = data["prev"]
         result.binary = data["binary"]
         result.context = data["context"]
-        result.options = data["options"]
+        result._options = data["options"]
         result.filenames = data["filenames"] or [filename]
         result.depends = [PkgReference.loads(p) for p in data["depends"]]
         result.overrides = Overrides.deserialize(data["overrides"])
