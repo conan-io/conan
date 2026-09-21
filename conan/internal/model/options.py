@@ -394,22 +394,16 @@ class Options:
     def get_upstream_options(self, down_options, own_ref, is_consumer):
         """ compute which options should be propagated to the dependencies, a combination of the
         downstream defined default_options with the current default_options ones. This happens
-        at "configure()" time, while building the graph. Also compute the minimum "self_options"
-        which is the state that a package should define in order to reproduce
+        at "configure()" time, while building the graph.
         """
         assert isinstance(down_options, Options)
         # We need to store a copy for internal propagation for test_requires and tool_requires
         private_deps_options = Options()
         private_deps_options._deps_package_options = self._deps_package_options.copy()
-        # self_options are the minimal necessary for a build-order
-        # TODO: check this, isn't this just a copy?
-        self_options = Options()
         # compute now the necessary to propagate all down - self + self deps
         upstream_options = Options()
         for pattern, options in down_options._deps_package_options.items():
             if ref_matches(own_ref, pattern, is_consumer=is_consumer):
-                # keep it for reproduction of state
-                self_options._deps_package_options.update({pattern: options})
                 # Remove the exact match-name to this package, don't further propagate up
                 pattern_name = pattern.split("/", 1)[0]
                 if "*" not in pattern_name:
@@ -421,7 +415,15 @@ class Options:
         # not be able to do ``self.options["mydep"]`` because it will be empty. self.dependencies
         # is the way to access dependencies (in other methods)
         self._deps_package_options = {}
-        return self_options, upstream_options, private_deps_options
+        return upstream_options, private_deps_options
+
+    def deps_options(self):
+        """ the options that this recipe defines for its dependencies by itself, as a
+        {pattern: {option_name: value}} dict, like {"zlib/*": {"shared": "True"}}. It must be
+        read before ``get_upstream_options()`` merges the downstream defined ones into it.
+        """
+        return {pattern: {name: value for name, value in options.items() if value is not None}
+                for pattern, options in self._deps_package_options.items()}
 
     def deviation_options(self, default_options):
         """ compute which of this Options' own (self-scoped) values differ from what they
@@ -430,7 +432,6 @@ class Options:
         consumer, a profile, etc) actually forced that value, it didn't come from
         ``default_options`` alone.
         """
-        baseline = Options(options_values=default_options)._package_options
-        real_values = dict(self._package_options.items())
-        return {name: value for name, value in real_values.items()
-               if value is not None and dict(baseline.items()).get(name) != value}
+        defaults = dict(Options(options_values=default_options)._package_options.items())
+        return {name: value for name, value in self._package_options.items()
+                if value is not None and defaults.get(name) != value}

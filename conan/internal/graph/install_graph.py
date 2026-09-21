@@ -5,84 +5,65 @@ import textwrap
 from conan.api.output import ConanOutput
 from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
     BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD, \
-    BINARY_PLATFORM, CONTEXT_HOST
+    BINARY_PLATFORM, RECIPE_PLATFORM
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
-from conan.internal.model.options import Options
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.util.files import load
 
 
-def _node_deviation(node):
-    """ Every host-context option, anywhere in node's dependency subtree, that node needs
-    to force explicitly to reproduce it when rebuilt standalone: {dep_node: {option_name:
-    value}}.
-
-    Computed bottom-up and cached on the node, accumulating each direct dependency's own
-    (already accumulated) result instead of re-deriving it: a value only needs to be
-    forced here if node's own "default_options" wouldn't produce it by itself. node's own
-    deviation (see ``Options.deviation_options``) is always included: there is no
-    "automatic" check possible for it, once rebuilt standalone node has no ancestor left
-    to reapply it.
-
-    The graph is processed bottom-up (dependencies before consumers), so every direct
-    dependency's own ``_conan_reproducible_deviation`` is already computed by the time it
-    is read here (see ``InstallGraph._initialize_deps_graph``, which also computes it for
-    BINARY_SKIP/BINARY_PLATFORM nodes, even though those don't get an install reference).
+def _matching_options(deps_options, ref):
+    """ the values that some recipe ``deps_options`` would define for the given dependency,
+    later patterns win, the same way that ``Options.apply_downstream()`` applies them
     """
     result = {}
-    own_dev = node.conanfile.options.deviation_options(node.conanfile.default_options)
-    if own_dev:
-        result[node] = own_dev
-
-    own_dep_patterns = Options(options_values=node.conanfile.default_options)._deps_package_options
-    for edge in node.edges:
-        child = edge.dst
-        if node.conanfile.vendor or not edge.require.visible or child.context != CONTEXT_HOST:
-            continue
-        child_deviation = child._conan_reproducible_deviation
-        for dep_node in {child, *child_deviation}:
-            is_consumer = dep_node.conanfile._conan_is_consumer
-            matching = [dict(pkg_options.items())
-                       for pattern, pkg_options in own_dep_patterns.items()
-                       if ref_matches(dep_node.ref, pattern, is_consumer=is_consumer)]
-
-            dep_dev = child_deviation.get(dep_node, {})
-            candidates = set(dep_dev)
-            for values in matching:
-                candidates.update(name for name, value in values.items() if value is not None)
-
-            real_values = dict(dep_node.conanfile.options.items())
-            remaining = {}
-            for name in candidates:
-                real_value = real_values.get(name)
-                if real_value is None:
-                    # e.g. removed by configure(), like "fPIC" once "shared=True": there
-                    # is no value that could be forced for it, its absence is only
-                    # reproducible by correctly forcing whatever condition (another
-                    # option, a setting) removed it
-                    continue
-                expected = None
-                for values in matching:
-                    if values.get(name) is not None:
-                        expected = values[name]
-                if expected != real_value:
-                    remaining[name] = real_value
-            if remaining:
-                result[dep_node] = remaining
-
-    node._conan_reproducible_deviation = result
+    for pattern, options in deps_options.items():
+        if ref_matches(ref, pattern, is_consumer=False):
+            result.update(options)
     return result
 
 
 def _reproducible_options(node):
-    """Recipe-defined downstream options needed to rebuild this node."""
-    options = set()
-    for dep_node, dep_dev in _node_deviation(node).items():
-        for name, value in dep_dev.items():
-            options.add(f"{dep_node.ref}:{name}={value}")
-    return sorted(options)
+    """ The options that have to be explicitly defined in the command line to build this node
+    standalone, reproducing the same configuration that it has in the current graph.
+
+    The ``self_options`` computed while expanding the graph (the deviation of the options of a
+    package from the ones its own ``default_options`` define) have to be re-applied, both for
+    this node and for its dependencies, because the downstream consumers that defined them
+    won't be there anymore. They can only be skipped when the recipes that will be expanded
+    again from this node define exactly the same value by themselves.
+    """
+    conanfile = node.conanfile
+    # This node own deviation can never be reproduced automatically, no consumer is left for it
+    result = {f"{node.ref}:{name}={value}" for name, value in conanfile.self_options.items()}
+
+    # Vendoring packages hide their dependencies, they don't propagate any option to them
+    deps = [] if conanfile.vendor else [t.node for r, t in node.transitive_deps.items()
+                                        if t.node is not None and r.visible and not r.build
+                                        and t.node.recipe != RECIPE_PLATFORM]
+    # What the recipes of this subgraph would define again for their dependencies by themselves.
+    # "transitive_deps" follows the graph order, and the first recipe that reaches a dependency
+    # is the one that freezes its options, so they are aggregated in reverse, to let it prevail
+    graph_options = {}
+    for dep in reversed(deps):
+        for pattern, options in dep.conanfile.deps_options.items():
+            graph_options.setdefault(pattern, {}).update(options)
+
+    for dep in deps:
+        values = dict(dep.conanfile.options.items())
+        expected = _matching_options(graph_options, dep.ref)
+        # This node will be the new consumer, so its own options have the highest priority
+        expected.update(_matching_options(conanfile.deps_options, dep.ref))
+        for name in set(dep.conanfile.self_options).union(expected):
+            value = values.get(name)
+            if value is None:
+                # Removed in configure(), like "fPIC" when "shared=True". There is no value to
+                # force, it is only reproducible by forcing whatever condition removed it
+                continue
+            if expected.get(name) != value:
+                result.add(f"{dep.ref}:{name}={value}")
+    return sorted(result)
 
 
 class _InstallPackageReference:
@@ -510,13 +491,8 @@ class InstallGraph:
 
     def _initialize_deps_graph(self, deps_graph):
         for node in deps_graph.ordered_iterate():
-            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL):
-                continue
-            if node.binary in (BINARY_SKIP, BINARY_PLATFORM):
-                # No install reference for these, but their own options must still be
-                # computed now (in topological order), as consumers might depend on
-                # them to reproduce the expected package_id, even without a real binary
-                _node_deviation(node)
+            if node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL) \
+                    or node.binary in (BINARY_SKIP, BINARY_PLATFORM):
                 continue
 
             key = node.ref if self._order == "recipe" else node.pref

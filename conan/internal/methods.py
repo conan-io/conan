@@ -119,10 +119,14 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
                                  "build_requirements() methods, not configure()/config_options(), "
                                  "which might raise errors in the future.", warn_tag="deprecated")
 
-    result = conanfile.options.get_upstream_options(down_options, ref, is_consumer)
-    self_options, up_options, private_up_options = result
-    # self_options are the minimum to reproduce state, as defined from downstream (not profile)
-    conanfile.self_options = self_options
+    # self_options is the deviation of the options of this package from the ones that its own
+    # "default_options" would define, the minimum to reproduce its state when built standalone
+    conanfile.self_options = conanfile.options.deviation_options(conanfile.default_options)
+    # deps_options are the options this recipe defines for its dependencies, before merging the
+    # downstream ones in get_upstream_options(), so it is what it would define again by itself
+    conanfile.deps_options = conanfile.options.deps_options()
+    up_options, private_up_options = conanfile.options.get_upstream_options(down_options, ref,
+                                                                           is_consumer)
     # up_options are the minimal options that should be propagated to dependencies
     conanfile.up_options = up_options
     conanfile.private_up_options = private_up_options
