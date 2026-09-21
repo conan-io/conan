@@ -417,21 +417,28 @@ class Options:
         self._deps_package_options = {}
         return upstream_options, private_deps_options
 
-    def deps_options(self):
-        """ the options that this recipe defines for its dependencies by itself, as a
-        {pattern: {option_name: value}} dict, like {"zlib/*": {"shared": "True"}}. It must be
-        read before ``get_upstream_options()`` merges the downstream defined ones into it.
-        """
-        return {pattern: {name: value for name, value in options.items() if value is not None}
-                for pattern, options in self._deps_package_options.items()}
 
-    def deviation_options(self, default_options):
-        """ compute which of this Options' own (self-scoped) values differ from what they
-        would be with just the given ``default_options`` and nothing else, as a
-        {option_name: value} dict. A non-empty entry means some other input (a downstream
-        consumer, a profile, etc) actually forced that value, it didn't come from
-        ``default_options`` alone.
-        """
-        defaults = dict(Options(options_values=default_options)._package_options.items())
-        return {name: value for name, value in self._package_options.items()
-                if value is not None and defaults.get(name) != value}
+def compute_state_options(conanfile):
+    """ compute the options state of a package that is the minimum necessary to reproduce it
+    when it is later built standalone, like in a "conan graph build-order", returning a
+    (self_options, deps_options) tuple:
+
+    - ``self_options``: which of its own values deviate from what its ``default_options``
+      would define by themselves, as a {option_name: value} dict. A deviation means that some
+      other input (a downstream consumer, the profile, etc) actually forced that value, so
+      nothing would define it again once the downstream consumers are gone.
+    - ``deps_options``: what this recipe defines for its dependencies, as a
+      {pattern: {option_name: value}} dict, like {"zlib/*": {"shared": "True"}}, that is, what
+      it would apply again by itself when the graph is expanded again from it.
+
+    It must be called after ``configure()``, so the values are final, but before
+    ``get_upstream_options()`` merges the downstream defined options into the dependencies ones
+    """
+    options = conanfile.options
+    defaults = dict(Options(options_values=conanfile.default_options)._package_options.items())
+    self_options = {name: value for name, value in options._package_options.items()
+                    if value is not None and defaults.get(name) != value}
+    deps_options = {pattern: {name: value for name, value in pkg_options.items()
+                              if value is not None}
+                    for pattern, pkg_options in options._deps_package_options.items()}
+    return self_options, deps_options

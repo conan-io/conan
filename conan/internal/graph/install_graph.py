@@ -51,17 +51,21 @@ def _reproducible_options(node):
             graph_options.setdefault(pattern, {}).update(options)
 
     for dep in deps:
-        values = dict(dep.conanfile.options.items())
         expected = _matching_options(graph_options, dep.ref)
         # This node will be the new consumer, so its own options have the highest priority
         expected.update(_matching_options(conanfile.deps_options, dep.ref))
-        for name in set(dep.conanfile.self_options).union(expected):
-            value = values.get(name)
+        for name, predicted in expected.items():  # what is defined again, but differently
+            option = dep.conanfile.options.get_safe(name)
+            value = option.value if option is not None else None
             if value is None:
-                # Removed in configure(), like "fPIC" when "shared=True". There is no value to
-                # force, it is only reproducible by forcing whatever condition removed it
+                # Removed in configure(), like "fPIC" when "shared=True", or never defined.
+                # There is no value to force, it is only reproducible by forcing whatever
+                # condition removed it
                 continue
-            if expected.get(name) != value:
+            if value != predicted:
+                result.add(f"{dep.ref}:{name}={value}")
+        for name, value in dep.conanfile.self_options.items():  # what nobody defines again
+            if name not in expected:
                 result.add(f"{dep.ref}:{name}={value}")
     return sorted(result)
 
