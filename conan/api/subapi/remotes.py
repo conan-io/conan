@@ -155,7 +155,7 @@ class RemotesAPI:
         return removed
 
     def update(self, remote_name: str, url=None, secure=None, disabled=None, index=None,
-               allowed_packages=None, recipes_only=None):
+               allowed_packages=None, recipes_only=None, force_auth=None):
         """
         Update an existing remote
 
@@ -167,6 +167,8 @@ class RemotesAPI:
         :param allowed_packages: optional list of packages allowed from this remote
         :param recipes_only: optional boolean to only allow recipe downloads from this remote,
             never package binaries
+        :param force_auth: optional boolean to force Conan to skip anonymous access
+            and go directly for authenticated credentials against this remote
         """
         remotes = _load(self._remotes_file)
         try:
@@ -186,6 +188,8 @@ class RemotesAPI:
             remote.allowed_packages = allowed_packages
         if recipes_only is not None:
             remote.recipes_only = recipes_only
+        if force_auth is not None:
+            remote.force_auth = force_auth
 
         if index is not None:
             remotes = [r for r in remotes if r.name != remote.name]
@@ -305,7 +309,8 @@ def _load(remotes_file):
     for r in data.get("remotes", []):
         remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False),
                         r.get("allowed_packages"), r.get("remote_type"),
-                        r.get("recipes_only", False))
+                        r.get("recipes_only", False),
+                        r.get("force_auth", False))
         result.append(remote)
     return result
 
@@ -322,6 +327,8 @@ def _save(remotes_file, remotes):
             remote["remote_type"] = r.remote_type
         if r.recipes_only:
             remote["recipes_only"] = r.recipes_only
+        if r.force_auth:
+            remote["force_auth"] = True
         remote_list.append(remote)
     # This atomic replace avoids a corrupted remotes.json file if this is killed during the process
     save(remotes_file + ".tmp", json.dumps({"remotes": remote_list}, indent=True))
