@@ -359,35 +359,43 @@ class TestCyclonedx:
         assert os.path.exists(os.path.join(tc.current_folder, f"sbom-cyclonedx-{method}.json"))
 
     def test_sbom_extra_info(self, cyclone_version):
+        cpes_py = textwrap.dedent("""\
+            # Example CPE catalog, as if imported from another project
+            CPES = {
+                "bar": "cpe:2.3:a:acme:bar",
+                "dep": "cpe:2.3:a:from-string:dep",
+            }
+        """)
         hook = textwrap.dedent("""\
             import json
             import os
+            import sys
             from conan.tools.sbom import {cyclone_version}
             from conan.tools.sbom.cyclonedx import _calculate_bomref
 
+            sys.path.insert(0, os.path.dirname(__file__))
+            sys.modules.pop("cpes", None)
+            from cpes import CPES
+
             def post_package(conanfile):
                 extra_info = {{
-                    "bar": {{
-                        "description": "by-name",
-                        "supplier": {{"name": "Acme"}},
-                        "cpe": {{"supplier": "acme"}},
-                    }},
+                    "bar": {{"description": "by-name", "supplier": {{"name": "Acme"}}}},
                     "bar/1.0": {{"publisher": "by-name-version"}},
                     "bar/1.0@user/channel": {{"copyright": "by-ref"}},
                     "pkg:conan/bar@1.0": {{"group": "by-purl"}},
-                    "dep": {{"cpe": "cpe:2.3:a:from-string:dep:1.0:*:*:*:*:*:*:*"}},
                 }}
                 for node in conanfile.subgraph.nodes:
                     if getattr(node, "name", None) == "bar":
                         extra_info[_calculate_bomref(node)] = {{
                             "properties": [{{"name": "match", "value": "by-bom-ref"}}]
                         }}
-                sbom = {cyclone_version}(conanfile, extra_info=extra_info)
+                sbom = {cyclone_version}(conanfile, extra_info=extra_info, cpes=CPES)
                 with open(os.path.join(conanfile.package_metadata_folder, "sbom.cdx.json"), "w") as f:
                     json.dump(sbom, f, indent=4)
         """)
         tc = TestClient(light=True)
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
+        save(os.path.join(tc.paths.hooks_path, "cpes.py"), cpes_py)
         save(hook_path, hook.format(cyclone_version=cyclone_version))
         tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
                  "conanfile.py": GenConanfile("bar", "1.0").with_requires("dep/1.0")})
