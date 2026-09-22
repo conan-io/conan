@@ -20,10 +20,10 @@ class SourcesCachingDownloader:
     def __init__(self, conanfile):
         helpers = getattr(conanfile, "_conan_helpers")
         self._global_conf = helpers.global_conf
-        self._output = conanfile.output
-        self._file_downloader = FileDownloader(helpers.requester, scope=self._output.scope,
+        self._file_downloader = FileDownloader(helpers.requester, scope=conanfile.display_name,
                                                source_credentials=True)
         self._home_folder = helpers.home_folder
+        self._output = conanfile.output
         self._conanfile = conanfile
 
     def download(self, urls, file_path,

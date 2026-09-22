@@ -13,18 +13,19 @@ from conan.internal.util.files import mkdir, chdir, save
 
 def run_source_method(conanfile, hook_manager):
     scoped_output = ConanOutput()
-    conanfile._conan_scope_override = ""  # noqa
-    scoped_output.info(f"Getting sources for {conanfile.display_name}")
+    old_display = conanfile.display_name
+    conanfile.display_name = ""
+    scoped_output.info(f"Getting sources for {old_display}")
     mkdir(conanfile.source_folder)
     with chdir(conanfile.source_folder):
         hook_manager.execute("pre_source", conanfile=conanfile)
         if hasattr(conanfile, "source"):
             scoped_output.highlight(f"Calling source() in {conanfile.source_folder}")
-            with conanfile_exception_formatter(conanfile, "source"):
+            with conanfile_exception_formatter(conanfile, "source", ref=old_display):
                 with conanfile_remove_attr(conanfile, ['info', 'settings', "options"], "source"):
                     conanfile.source()
         hook_manager.execute("post_source", conanfile=conanfile)
-    conanfile._conan_scope_override = None
+    conanfile.display_name = old_display
 
 
 def run_build_method(conanfile, hook_manager):
@@ -61,13 +62,14 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     scoped_output = ConanOutput()
     # Make the copy of all the patterns
     scoped_output.step(f"Package step for {ref}:{package_id}")
-    conanfile._conan_scope_override = ""  # noqa
+    old_display = conanfile.display_name
+    conanfile.display_name = ""
     scoped_output.info("Packaging in folder %s" % conanfile.package_folder)
 
     hook_manager.execute("pre_package", conanfile=conanfile)
     if hasattr(conanfile, "package"):
         scoped_output.highlight("Calling package()")
-        with conanfile_exception_formatter(conanfile, "package"):
+        with conanfile_exception_formatter(conanfile, "package", ref=old_display):
             with chdir(conanfile.build_folder):
                 with conanfile_remove_attr(conanfile, ['info'], "package"):
                     conanfile.package()
@@ -85,7 +87,7 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     pref.revision = prev
     scoped_output.success("Package '%s' created" % package_id)
     scoped_output.success("Full package reference: {}".format(pref.repr_notime()))
-    conanfile._conan_scope_override = None
+    conanfile.display_name = old_display
     return prev
 
 

@@ -82,11 +82,8 @@ class ConanFile:
     generator_info = None
     conan_data = None
 
-    _conan_scope_override = None
-
     def __init__(self, display_name=""):
         self.display_name = display_name
-        self._conan_scope_override = None
         # something that can run commands, as os.sytem
 
         self._conan_helpers = None
@@ -196,8 +193,9 @@ class ConanFile:
     @property
     def output(self):
         # an output stream (writeln, info, warn error)
-        override = self._conan_scope_override
-        scope = self.display_name if override is None else override
+        scope = self.display_name
+        if scope is None:
+            scope = self.ref if self._conan_node else ""
         return ConanOutput(scope=scope)
 
     @property

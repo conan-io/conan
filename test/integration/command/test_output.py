@@ -4,7 +4,6 @@ import textwrap
 
 import pytest
 
-from conan.internal.util.files import save
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
@@ -342,21 +341,3 @@ class TestOutputScope:
         c.save({"conanfile.py": self._conanfile(method, body)})
         c.run("create .", assert_error=True)
         assert "ERROR: pkg/0.1: Invalid configuration: Not valid!" in c.out
-
-    def test_hooks_keep_their_scope(self):
-        hook = textwrap.dedent("""
-            def pre_export(conanfile):
-                conanfile.output.info("Msg from hook")
-
-            def pre_generate(conanfile):
-                conanfile.output.info("Msg from hook")
-            """)
-        c = TestClient(light=True)
-        save(os.path.join(c.paths.hooks_path, "hook_scope.py"), hook)
-        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
-        c.run("create .")
-        # ``export`` is not inside a step block, the hook scope is appended to the reference
-        assert "pkg/0.1: [HOOK - hook_scope.py] pre_export(): Msg from hook" in c.out
-        # the generate step is, so only the hook scope is left
-        assert "[HOOK - hook_scope.py] pre_generate(): Msg from hook" in c.out
-        assert "pkg/0.1: [HOOK - hook_scope.py] pre_generate()" not in c.out
