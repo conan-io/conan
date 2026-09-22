@@ -20,12 +20,15 @@ from conan.internal.graph.graph import CONTEXT_HOST
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.runner.output import RunnerOutput
 from conan.internal.api.remotes.localdb import LOCALDB
+from conan.internal.cache.home_paths import HomePaths
 from conan.tools.files import copy
 
-# Excluded by default from ``copy_config_files``.
+# Excluded by default from ``copy_config_files``. The package storage folder
+# (``core.cache:storage_path``) and the sources backup cache (``core.sources:download_cache``)
+# are excluded too, dynamically, where they are used below, since both are relocatable confs.
 _DEFAULT_EXCLUDED_COPY_PATTERNS = [
     LOCALDB,                      # sqlite db with remote login tokens (plain text)
-    "sources/*",                  # default backup-sources cache (core.sources:download_cache)
+    "version.txt",                # host Conan version, used to trigger cache migrations
     ".local_recipes_index/*",     # local clones of local-recipes-index remotes
 ]
 
@@ -322,10 +325,13 @@ class DockerRunner:
                     shutil.copy(src_file, self.abs_runner_home_path / file_name)
 
             if self.copy_config_files:
-                excludes = list(_DEFAULT_EXCLUDED_COPY_PATTERNS)
-                storage_path = Path(self.conan_api._api_helpers.cache.store)
-                if storage_path.is_relative_to(self.conan_api.home_folder):
-                    excludes.append(f"{storage_path.relative_to(self.conan_api.home_folder).as_posix()}/*")
+                global_conf = self.conan_api._api_helpers.global_conf
+                home = self.conan_api.home_folder
+                cache_paths = [self.conan_api._api_helpers.cache.store,
+                              global_conf.get("core.sources:download_cache")
+                              or HomePaths(home).default_sources_backup_folder]
+                excludes = _DEFAULT_EXCLUDED_COPY_PATTERNS + \
+                    [f"{Path(os.path.relpath(p, home)).as_posix()}/*" for p in cache_paths]
                 self.logger.verbose(f"Copying copy_config_files patterns {self.copy_config_files} to "
                                     f"{self.abs_runner_home_path / 'extra'} (excluding {excludes})")
                 copy(None, self.copy_config_files, self.conan_api.home_folder,
