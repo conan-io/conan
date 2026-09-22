@@ -7,4 +7,3 @@ pluginbase
 docker
 setuptools
 pytest-cov
-truststore>=0.8,<1.0; python_version>="3.10"

@@ -128,21 +128,18 @@ class ConanRequester:
         self._no_proxy_match = config.get("core.net.http:no_proxy_match", check_type=list)
         self._proxies = config.get("core.net.http:proxies")
         self._cacert_path = config.get("core.net.http:cacert_path", check_type=str)
-        self._trust_store = config.get("core.net.http:trust_store", default=False,
-                                       check_type=bool)
-        if self._trust_store:
+        if config.get("core.net.http:trust_store", default=False, check_type=bool):
             if sys.version_info < (3, 10):
                 raise ConanException("'core.net.http:trust_store' requires Python >= 3.10")
             if self._cacert_path is not None:
                 raise ConanException("Cannot set both 'core.net.http:trust_store' and "
-                                      "'core.net.http:cacert_path'")
+                                     "'core.net.http:cacert_path'")
             try:
-                import truststore
+                import truststore  # noqa
             except ImportError:
                 raise ConanException(
                     "'core.net.http:trust_store' is enabled but the 'truststore' package is "
-                    "not installed. Run 'pip install truststore' (or "
-                    "'pip install conan[truststore]').")
+                    "not installed. Run 'pip install truststore' (needs Python>=3.10)")
             ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             _trust_adapter = _TrustStoreHTTPAdapter(ctx, max_retries=self._get_retries(_max_retries))
             self._http_requester.mount("https://", _trust_adapter)
