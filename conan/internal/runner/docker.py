@@ -19,7 +19,15 @@ from conan.internal.errors import conanfile_exception_formatter
 from conan.internal.graph.graph import CONTEXT_HOST
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
 from conan.internal.runner.output import RunnerOutput
+from conan.internal.api.remotes.localdb import LOCALDB
 from conan.tools.files import copy
+
+# Excluded by default from ``copy_config_files``.
+_DEFAULT_EXCLUDED_COPY_PATTERNS = [
+    LOCALDB,                      # sqlite db with remote login tokens (plain text)
+    "sources/*",                  # default backup-sources cache (core.sources:download_cache)
+    ".local_recipes_index/*",     # local clones of local-recipes-index remotes
+]
 
 
 class _ContainerConfig(NamedTuple):
@@ -105,7 +113,8 @@ class DockerRunner:
         self.cache = str(host_profile.runner.get('cache', 'clean'))
         if self.cache not in ['clean', 'copy', 'shared']:
             raise ConanException(f'Invalid cache value: "{self.cache}". Valid values are: clean, copy, shared')
-        self.extra_files = [p.strip() for p in host_profile.runner.get('extra_files', '').split(',') if p.strip()]
+        self.copy_config_files = [p.strip() for p in host_profile.runner.get('copy_config_files', '').split(',')
+                                 if p.strip()]
         self.container = None
         self.raw_args = raw_args
         self.command = command
@@ -312,11 +321,15 @@ class DockerRunner:
                     self.logger.verbose(f"Copying {src_file} -> {self.abs_runner_home_path / file_name}")
                     shutil.copy(src_file, self.abs_runner_home_path / file_name)
 
-            if self.extra_files:
-                self.logger.verbose(f"Copying extra_files patterns {self.extra_files} to "
-                                    f"{self.abs_runner_home_path / 'extra'}")
-                copy(None, self.extra_files, self.conan_api.home_folder,
-                     str(self.abs_runner_home_path / 'extra'))
+            if self.copy_config_files:
+                excludes = list(_DEFAULT_EXCLUDED_COPY_PATTERNS)
+                storage_path = Path(self.conan_api._api_helpers.cache.store)
+                if storage_path.is_relative_to(self.conan_api.home_folder):
+                    excludes.append(f"{storage_path.relative_to(self.conan_api.home_folder).as_posix()}/*")
+                self.logger.verbose(f"Copying copy_config_files patterns {self.copy_config_files} to "
+                                    f"{self.abs_runner_home_path / 'extra'} (excluding {excludes})")
+                copy(None, self.copy_config_files, self.conan_api.home_folder,
+                     str(self.abs_runner_home_path / 'extra'), excludes=excludes)
 
             if self.cache == 'copy':
                 tgz_path = self.abs_runner_home_path / 'local_cache_save.tgz'
@@ -337,7 +350,7 @@ class DockerRunner:
             for file_name in ['global.conf', 'settings.yml', 'remotes.json']:
                 if (self.abs_runner_home_path / file_name).exists():
                     self._run_command('cp "'+self.abs_docker_path+'/.conanrunner/'+file_name+'" ${HOME}/.conan2/'+file_name, verbose=False)
-            if self.extra_files:
+            if self.copy_config_files:
                 self._run_command('cp -r "'+self.abs_docker_path+'/.conanrunner/extra/." ${HOME}/.conan2/.', verbose=False)
             if self.cache in ['copy']:
                 self._run_command('conan cache restore "'+self.abs_docker_path+'/.conanrunner/local_cache_save.tgz"')
