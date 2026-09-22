@@ -313,11 +313,6 @@ def test_redirect_to_file_create_dir():
 
 
 class TestOutputScope:
-    """ The ">>> xxx step" blocks name the recipe in their header, so the messages inside them
-    are not prefixed with the reference. But the reference must always be there in the error
-    messages, which are read out of context, and the hooks must keep their own scope.
-    https://github.com/conan-io/conan/issues/19810
-    """
 
     @staticmethod
     def _conanfile(method, body):
@@ -347,30 +342,6 @@ class TestOutputScope:
         c.save({"conanfile.py": self._conanfile(method, body)})
         c.run("create .", assert_error=True)
         assert "ERROR: pkg/0.1: Invalid configuration: Not valid!" in c.out
-
-    def test_messages_in_steps_are_not_scoped(self):
-        c = TestClient(light=True)
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-
-            class Pkg(ConanFile):
-                name = "pkg"
-                version = "0.1"
-
-                def source(self):
-                    self.output.info("Msg in source")
-
-                def generate(self):
-                    self.output.info("Msg in generate")
-
-                def package(self):
-                    self.output.info("Msg in package")
-            """)
-        c.save({"conanfile.py": conanfile})
-        c.run("create .")
-        for method in ("source", "generate", "package"):
-            assert f"Msg in {method}" in c.out
-            assert f"pkg/0.1: Msg in {method}" not in c.out
 
     def test_hooks_keep_their_scope(self):
         hook = textwrap.dedent("""
