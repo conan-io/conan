@@ -1,6 +1,10 @@
 import json
 import os
+import textwrap
 
+import pytest
+
+from conan.internal.util.files import save
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
@@ -306,3 +310,82 @@ def test_redirect_to_file_create_dir():
     c.run("config home --out-file=../subdir/cmd_out.txt")
     cmd_out = c.load("../subdir/cmd_out.txt")
     assert f"{c.cache_folder}" in cmd_out
+
+
+class TestOutputScope:
+    """ The ">>> xxx step" blocks name the recipe in their header, so the messages inside them
+    are not prefixed with the reference. But the reference must always be there in the error
+    messages, which are read out of context, and the hooks must keep their own scope.
+    https://github.com/conan-io/conan/issues/19810
+    """
+
+    @staticmethod
+    def _conanfile(method, body):
+        return textwrap.dedent(f"""
+            from conan import ConanFile
+            from conan.errors import ConanInvalidConfiguration
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+
+                def {method}(self):
+                    {body}
+            """)
+
+    @pytest.mark.parametrize("method", ["source", "generate", "package"])
+    def test_error_in_step_reports_the_reference(self, method):
+        c = TestClient(light=True)
+        c.save({"conanfile.py": self._conanfile(method, 'raise Exception("Boom!")')})
+        c.run("create .", assert_error=True)
+        assert f"ERROR: pkg/0.1: Error in {method}() method" in c.out
+
+    @pytest.mark.parametrize("method", ["source", "generate", "package"])
+    def test_invalid_configuration_in_step_reports_the_reference(self, method):
+        c = TestClient(light=True)
+        body = 'raise ConanInvalidConfiguration("Not valid!")'
+        c.save({"conanfile.py": self._conanfile(method, body)})
+        c.run("create .", assert_error=True)
+        assert "ERROR: pkg/0.1: Invalid configuration: Not valid!" in c.out
+
+    def test_messages_in_steps_are_not_scoped(self):
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+
+                def source(self):
+                    self.output.info("Msg in source")
+
+                def generate(self):
+                    self.output.info("Msg in generate")
+
+                def package(self):
+                    self.output.info("Msg in package")
+            """)
+        c.save({"conanfile.py": conanfile})
+        c.run("create .")
+        for method in ("source", "generate", "package"):
+            assert f"Msg in {method}" in c.out
+            assert f"pkg/0.1: Msg in {method}" not in c.out
+
+    def test_hooks_keep_their_scope(self):
+        hook = textwrap.dedent("""
+            def pre_export(conanfile):
+                conanfile.output.info("Msg from hook")
+
+            def pre_generate(conanfile):
+                conanfile.output.info("Msg from hook")
+            """)
+        c = TestClient(light=True)
+        save(os.path.join(c.paths.hooks_path, "hook_scope.py"), hook)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        # ``export`` is not inside a step block, the hook scope is appended to the reference
+        assert "pkg/0.1: [HOOK - hook_scope.py] pre_export(): Msg from hook" in c.out
+        # the generate step is, so only the hook scope is left
+        assert "[HOOK - hook_scope.py] pre_generate(): Msg from hook" in c.out
+        assert "pkg/0.1: [HOOK - hook_scope.py] pre_generate()" not in c.out

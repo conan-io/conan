@@ -29,20 +29,18 @@ class HookManager:
         if hooks is None:
             return
         for name, method in hooks:
-            # TODO: This display_name is ugly, improve it
-            display_name = conanfile.display_name
+            previous_scope = conanfile._conan_output_scope  # noqa
+            scope = conanfile.output.scope
+            hook_scope = f"[HOOK - {name}] {method_name}()"
             try:
-                if display_name:
-                    conanfile.display_name = f"{display_name}: [HOOK - {name}] {method_name}()"
-                else:
-                    conanfile.display_name = f"[HOOK - {name}] {method_name}()"
+                conanfile._conan_output_scope = f"{scope}: {hook_scope}" if scope else hook_scope
                 method(conanfile)
             except ConanInvalidConfiguration:
                 raise
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
             finally:
-                conanfile.display_name = display_name
+                conanfile._conan_output_scope = previous_scope
 
     def _load_hooks(self):
         hooks = {}
