@@ -32,7 +32,6 @@ class ConanFile:
     description = None
     topics = None
     homepage = None
-    extra_info = None
 
     build_policy = None
     upload_policy = None

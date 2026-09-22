@@ -405,42 +405,6 @@ class TestCyclonedx:
         assert bar["cpe"] == "cpe:2.3:a:acme:bar:1.0:*:*:*:*:*:*:*"
         assert dep["cpe"] == "cpe:2.3:a:from-string:dep:1.0:*:*:*:*:*:*:*"
 
-    def test_sbom_recipe_extra_info(self, cyclone_version):
-        hook = textwrap.dedent("""\
-            import json
-            import os
-            from conan.tools.sbom import {cyclone_version}
-
-            def post_package(conanfile):
-                extra_info = {{"dep": {{"publisher": "from-call"}}}}
-                sbom = {cyclone_version}(conanfile, extra_info=extra_info)
-                with open(os.path.join(conanfile.package_metadata_folder, "sbom.cdx.json"), "w") as f:
-                    json.dump(sbom, f, indent=4)
-        """)
-        dep = textwrap.dedent("""\
-            from conan import ConanFile
-            class Dep(ConanFile):
-                name = "dep"
-                version = "1.0"
-                extra_info = {
-                    "cpe": {"supplier": "from-recipe"},
-                    "supplier": {"name": "Recipe Inc"},
-                    "publisher": "from-recipe",
-                }
-        """)
-        tc = TestClient(light=True)
-        hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
-        save(hook_path, hook.format(cyclone_version=cyclone_version))
-        tc.save({"dep/conanfile.py": dep,
-                 "conanfile.py": GenConanfile("bar", "1.0").with_requires("dep/1.0")})
-        tc.run("create dep")
-        tc.run("create .")
-        content = json.loads(tc.load(os.path.join(tc.created_layout().metadata(), "sbom.cdx.json")))
-        dep_comp = next(c for c in content["components"] if c["name"] == "dep")
-        assert dep_comp["cpe"] == "cpe:2.3:a:from-recipe:dep:1.0:*:*:*:*:*:*:*"
-        assert dep_comp["supplier"] == {"name": "Recipe Inc"}
-        assert dep_comp["publisher"] == "from-call"
-
 
 class TestCyclonedx2:
     # Using the sbom tool with "conan create"
