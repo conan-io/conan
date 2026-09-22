@@ -28,19 +28,19 @@ class HookManager:
         hooks = self.hooks.get(method_name)
         if hooks is None:
             return
+        previous_scope = conanfile._conan_scope_override  # noqa
+        scope = conanfile.output.scope
         for name, method in hooks:
-            previous_scope = conanfile._conan_output_scope  # noqa
-            scope = conanfile.output.scope
             hook_scope = f"[HOOK - {name}] {method_name}()"
             try:
-                conanfile._conan_output_scope = f"{scope}: {hook_scope}" if scope else hook_scope
+                conanfile._conan_scope_override = f"{scope}: {hook_scope}" if scope else hook_scope
                 method(conanfile)
             except ConanInvalidConfiguration:
                 raise
             except Exception as e:
                 raise ConanException("[HOOK - %s] %s(): %s" % (name, method_name, str(e)))
             finally:
-                conanfile._conan_output_scope = previous_scope
+                conanfile._conan_scope_override = previous_scope
 
     def _load_hooks(self):
         hooks = {}

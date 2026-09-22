@@ -13,7 +13,7 @@ from conan.internal.util.files import mkdir, chdir, save
 
 def run_source_method(conanfile, hook_manager):
     scoped_output = ConanOutput()
-    conanfile._conan_output_scope = ""  # noqa
+    conanfile._conan_scope_override = ""  # noqa
     scoped_output.info(f"Getting sources for {conanfile.display_name}")
     mkdir(conanfile.source_folder)
     with chdir(conanfile.source_folder):
@@ -24,7 +24,7 @@ def run_source_method(conanfile, hook_manager):
                 with conanfile_remove_attr(conanfile, ['info', 'settings', "options"], "source"):
                     conanfile.source()
         hook_manager.execute("post_source", conanfile=conanfile)
-    conanfile._conan_output_scope = None
+    conanfile._conan_scope_override = None
 
 
 def run_build_method(conanfile, hook_manager):
@@ -61,7 +61,7 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     scoped_output = ConanOutput()
     # Make the copy of all the patterns
     scoped_output.step(f"Package step for {ref}:{package_id}")
-    conanfile._conan_output_scope = ""  # noqa
+    conanfile._conan_scope_override = ""  # noqa
     scoped_output.info("Packaging in folder %s" % conanfile.package_folder)
 
     hook_manager.execute("pre_package", conanfile=conanfile)
@@ -85,7 +85,7 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     pref.revision = prev
     scoped_output.success("Package '%s' created" % package_id)
     scoped_output.success("Full package reference: {}".format(pref.repr_notime()))
-    conanfile._conan_output_scope = None
+    conanfile._conan_scope_override = None
     return prev
 
 
