@@ -61,7 +61,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
         **({"components": [{
             "author": node.conanfile.author or "Unknown",
             "bom-ref": _calculate_bomref(node),
-            "description": node.conanfile.description,
+            **({"description": node.conanfile.description} if node.conanfile.description else {}),
             **({"externalReferences": [{
                 "type": "website",
                 "url": node.conanfile.homepage
@@ -158,7 +158,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
         **({"components": [{
             **({"authors": [{"name": node.conanfile.author}]} if node.conanfile.author else {}),
             "bom-ref": _calculate_bomref(node),
-            "description": node.conanfile.description,
+            **({"description": node.conanfile.description} if node.conanfile.description else {}),
             **({"externalReferences": [{
                 "type": "website",
                 "url": node.conanfile.homepage
@@ -221,7 +221,7 @@ def _calculate_licenses(component):
 def _calculate_bomref(component):
     user = f"&user={component.ref.user}" if component.ref.user else ""
     channel = f"&channel={component.ref.channel}" if component.ref.channel else ""
-    return f"pkg:conan/{component.name}@{component.ref.version}?rref={component.ref.revision}{user}{channel}"
+    return f"pkg:conan/{component.name}@{component.ref.version}?rrev={component.ref.revision}{user}{channel}"
 
 
 def should_add_node(node, add_build, add_tests):

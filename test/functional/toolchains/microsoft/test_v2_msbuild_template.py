@@ -3,13 +3,14 @@ import platform
 
 import pytest
 
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, vs2022_profile
 
 
-@pytest.mark.skip(reason="Temporary disable for CI")
+@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_msbuild_lib_template():
     client = TestClient()
+    client.save_home({"profiles/default": vs2022_profile})
     client.run("new msbuild_lib -d name=hello -d version=0.1")
     # Local flow works
     client.run("install .")
@@ -24,7 +25,7 @@ def test_msbuild_lib_template():
     # Create works
     client.run("create .")
     assert "hello/0.1: Hello World Release!" in client.out
-    assert "hello/0.1: _MSC_VER191" in client.out
+    assert "hello/0.1: _MSC_VER193" in client.out
 
     client.run("create . -s build_type=Debug")
     assert "hello/0.1: Hello World Debug!" in client.out
@@ -56,10 +57,11 @@ def test_msbuild_lib_2022():
     assert "hello/0.1: _MSC_VER193" in client.out
 
 
-@pytest.mark.skip(reason="Temporary disable for CI")
+@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_msbuild_exe_template():
     client = TestClient(path_with_spaces=False)
+    client.save_home({"profiles/default": vs2022_profile})
     client.run("new msbuild_exe -d name=greet -d version=0.1")
     # Local flow works
     client.run("install .")

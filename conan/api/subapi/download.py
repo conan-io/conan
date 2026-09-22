@@ -29,8 +29,8 @@ class DownloadAPI:
         else:
             output.info(f"Skip recipe {ref.repr_notime()} download, already in cache")
             if metadata:
-                self._api_helpers.remote_manager.get_recipe_metadata(recipe_layout, ref, remote,
-                                                                     metadata)
+                self._api_helpers.remote_manager.get_recipe_metadata(
+                    ref, remote, metadata, recipe_layout.download_export())
             return False
 
         output.info(f"Downloading recipe '{ref.repr_notime()}'")
@@ -64,7 +64,9 @@ class DownloadAPI:
         if skip_download:
             output.info(f"Skip package {pref.repr_notime()} download, already in cache")
             if metadata:
-                self._api_helpers.remote_manager.get_package_metadata(pref, remote, metadata)
+                pkg_layout = self._api_helpers.cache.pkg_layout(pref)
+                self._api_helpers.remote_manager.get_package_metadata(
+                    pref, remote, metadata, pkg_layout.download_package())
             return False
 
         if pref.timestamp is None:  # we didn't obtain the timestamp before (in general it should be)
@@ -76,6 +78,25 @@ class DownloadAPI:
         output.info(f"Downloading package '{pref.repr_notime()}'")
         self._api_helpers.remote_manager.get_package(pref, remote, metadata)
         return True
+
+    def recipe_metadata(self, ref: RecipeReference, remote: Remote, metadata: List[str],
+                        folder: str):
+        """Download only the recipe metadata files into ``folder``, without using the Conan cache.
+        Files are always fetched from the server and written under ``<folder>/metadata/``.
+        """
+        assert ref.revision, "recipe reference must have revision resolved"
+        assert metadata, "metadata patterns must be provided"
+        self._api_helpers.remote_manager.get_recipe_metadata(ref, remote, metadata, folder)
+
+    def package_metadata(self, pref: PkgReference, remote: Remote, metadata: List[str],
+                         folder: str):
+        """Download only the package metadata files into ``folder``, without using the Conan cache.
+        Files are always fetched from the server and written under ``<folder>/metadata/``.
+        """
+        assert pref.ref.revision and pref.revision, \
+            "package reference must have recipe and package revisions resolved"
+        assert metadata, "metadata patterns must be provided"
+        self._api_helpers.remote_manager.get_package_metadata(pref, remote, metadata, folder)
 
     def download_full(self, package_list: PackagesList, remote: Remote,
                       metadata: Optional[List[str]] = None):

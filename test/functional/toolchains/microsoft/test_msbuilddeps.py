@@ -7,8 +7,7 @@ import pytest
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from conan.test.assets.visual_project_files import get_vs_project_files
-from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
-
+from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, vs2022_profile
 
 sln_file = r"""
 Microsoft Visual Studio Solution File, Format Version 12.00
@@ -75,7 +74,7 @@ myproject_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>15.0</VCProjectVersion>
+    <VCProjectVersion>17.0</VCProjectVersion>
     <ProjectGuid>{6F392A05-B151-490C-9505-B2A49720C4D9}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>MyProject</RootNamespace>
@@ -84,26 +83,26 @@ myproject_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -255,26 +254,26 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -395,12 +394,12 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 """
 
 
-@pytest.mark.skip(reason="Temporary disable for CI")
-@pytest.mark.tool("cmake")
-@pytest.mark.tool("visual_studio")
+@pytest.mark.tool("cmake", "3.23")
+@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_msbuild_generator():
     client = TestClient()
+    client.save_home({"profiles/default": vs2022_profile})
     client.run("new cmake_lib -d name=hello0 -d version=1.0")
     client.run("create . -tf=")
     client.save({}, clean_first=True)
@@ -434,8 +433,8 @@ def test_msbuild_generator():
              "conanfile.py": conanfile}
 
     client.save(files, clean_first=True)
-    client.run("install .")
     client.run("build .")
+    print(client.out)
     assert "warning MSB4011" not in client.out
     client.run_command(r"x64\Release\MyProject.exe")
     assert "MyProject: Release!" in client.out
@@ -538,12 +537,12 @@ def test_custom_configuration_errors():
     assert "MSBuildDeps.platform is None, it should have a value" in client.out
 
 
-@pytest.mark.skip(reason="Temporary disable for CI")
-@pytest.mark.tool("visual_studio")
+@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_install_transitive():
     # https://github.com/conan-io/conan/issues/8065
     client = TestClient()
+    client.save_home({"profiles/default": vs2022_profile})
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=pkga --version=1.0")
     client.save({"conanfile.py": GenConanfile().with_requires("pkga/1.0")})
@@ -647,8 +646,8 @@ def test_install_reference():
     assert "Generator 'MSBuildDeps' calling 'generate()'" in client.out
     # https://github.com/conan-io/conan/issues/8163
     props = client.load("conan_mypkg_vars_release_x64.props")  # default Release/x64
-    folder = props[props.find("<ConanmypkgRootFolder>")+len("<ConanmypkgRootFolder>")
-                   :props.find("</ConanmypkgRootFolder>")]
+    begin, end = props.find("<ConanmypkgRootFolder>"), props.find("</ConanmypkgRootFolder>")
+    folder = props[begin + len("<ConanmypkgRootFolder>"):end]
     assert os.path.isfile(os.path.join(folder, "conaninfo.txt"))
 
 
@@ -709,22 +708,11 @@ def test_exclude_code_analysis(pattern, exclude_a, exclude_b):
         assert "CAExcludePath" not in depb
 
 
-@pytest.mark.skip(reason="Temporary disable for CI")
-@pytest.mark.tool("visual_studio", "15")
-@pytest.mark.tool("cmake")
-@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-def test_build_vs_project_with_a_vs2017():
-    check_build_vs_project_with_a("191")
-
-
 @pytest.mark.tool("visual_studio", "17")
 @pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_a_vs2022():
-    check_build_vs_project_with_a("193")
-
-
-def check_build_vs_project_with_a(vs_version):
+    vs_version = "193"
     client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=updep.pkg.team --version=0.1")
@@ -806,22 +794,11 @@ def check_build_vs_project_with_a(vs_version):
     # assert "main: Release!" in client.out
 
 
-@pytest.mark.skip(reason="Temporary disable for CI")
-@pytest.mark.tool("visual_studio", "15")
-@pytest.mark.tool("cmake")
-@pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
-def test_build_vs_project_with_test_requires_vs2017():
-    check_build_vs_project_with_test_requires("191")
-
-
 @pytest.mark.tool("visual_studio", "17")
 @pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_build_vs_project_with_test_requires_vs2022():
-    check_build_vs_project_with_test_requires("193")
-
-
-def check_build_vs_project_with_test_requires(vs_version):
+    vs_version = "193"
     client = TestClient()
     client.run("new cmake_lib -d name=updep.pkg.team -d version=0.1")
     client.run("create .  -s compiler.version={vs_version} -tf=".format(vs_version=vs_version))

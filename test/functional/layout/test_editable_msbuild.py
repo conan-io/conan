@@ -5,13 +5,15 @@ import textwrap
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, vs2022_profile
 
 
-@pytest.mark.skip(reason="Temporary disable for CI")
+@pytest.mark.tool("visual_studio", "17")
+@pytest.mark.tool("cmake", "3.23")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only windows")
 def test_editable_msbuild():
     c = TestClient()
+    c.save_home({"profiles/default": vs2022_profile})
     c.run("new msbuild_lib -d name=dep -d version=0.1 -o dep")
     c.run("new cmake_exe -d name=pkg -d version=0.1 -d requires=dep/0.1 -o pkg")
 

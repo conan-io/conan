@@ -66,6 +66,7 @@ from conan.errors import ConanException
     ["Linux", "e2k-v7", None, "e2k-unknown-linux-gnu"],
     ["Linux", "riscv32", None, "riscv32-linux-gnu"],
     ["Linux", "riscv64", None, "riscv64-linux-gnu"],
+    ["Linux", "loongarch64", None, "loongarch64-linux-gnu"],
 ])
 def test_get_gnu_triplet(os_, arch, compiler, expected):
     info = _get_gnu_triplet(os_, arch, compiler)

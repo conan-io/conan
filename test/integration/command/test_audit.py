@@ -15,7 +15,7 @@ _sbom_zlib_1_2_11 = """
 {
   "components" : [ {
     "author" : "<Put your name here> <And your email here>",
-    "bom-ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4",
+    "bom-ref" : "pkg:conan/zlib@1.2.11?rrev=6754320047c5dd54830baaaf9fc733c4",
     "description" : "<Description of zlib package here>",
     "licenses" : [ {
       "license" : {
@@ -28,12 +28,12 @@ _sbom_zlib_1_2_11 = """
     "version" : "1.2.11"
   } ],
   "dependencies" : [ {
-    "ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4"
+    "ref" : "pkg:conan/zlib@1.2.11?rrev=6754320047c5dd54830baaaf9fc733c4"
   } ],
   "metadata" : {
     "component" : {
       "author" : "<Put your name here> <And your email here>",
-      "bom-ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4",
+      "bom-ref" : "pkg:conan/zlib@1.2.11?rrev=6754320047c5dd54830baaaf9fc733c4",
       "name" : "zlib/1.2.11",
       "type" : "library"
     },

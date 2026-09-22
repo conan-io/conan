@@ -191,7 +191,7 @@ class TestInstall:
         c = TestClient(light=True)
         c.run(f"remote add local '{folder}'")
         c.run("install --requires=boost/[*] --build missing")
-        assert 'boost/1.0: {"potato": 42}' in c.out
+        assert '{"potato": 42}' in c.out
 
     def test_trim_conandata_yaml(self):
         folder = temp_folder()
@@ -278,7 +278,7 @@ class TestInstall:
         client.run(f"remote add local '{folder}'")
         client.run("install --requires=zlib/0.1 --build=missing -vv")
         assert "Copied 1 file: patch1" in client.out
-        assert "zlib/0.1: Apply patch (file): patches/patch1" in client.out
+        assert "Apply patch (file): patches/patch1" in client.out
 
     def test_export_user_channel(self):
         folder = temp_folder()

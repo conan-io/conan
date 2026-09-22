@@ -303,7 +303,8 @@ class Apt(_SystemPackageManagerTool):
                             "armv7hf": "armhf",
                             "armv8": "arm64",
                             "s390x": "s390x",
-                            "riscv64": "riscv64"} if arch_names is None else arch_names
+                            "riscv64": "riscv64",
+                            "loongarch64": "loong64"} if arch_names is None else arch_names
 
         self._arch_separator = ":"
 
@@ -355,7 +356,8 @@ class Yum(_SystemPackageManagerTool):
                             "armv7hf": "armv7hl",
                             "armv8": "aarch64",
                             "s390x": "s390x",
-                            "riscv64": "riscv64"} if arch_names is None else arch_names
+                            "riscv64": "riscv64",
+                            "loongarch64": "loongarch64"} if arch_names is None else arch_names
         self._arch_separator = "."
 
     def _is_valid_explicit_arch(self, explicit_arch):

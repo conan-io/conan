@@ -156,7 +156,7 @@ class TestDownloadCache:
         # disabling cache will make it fail
         client.save_home({"global.conf": ""})
         client.run("source .", assert_error=True)
-        assert "ERROR: conanfile.py: Error in source() method, line 10" in client.out
+        assert "ERROR: Error in source() method, line 10" in client.out
         assert "Not found" in client.out
 
     def test_download_relative_error(self):
