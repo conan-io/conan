@@ -82,7 +82,6 @@ class ConanFile:
     generator_info = None
     conan_data = None
 
-    # Overrides ``display_name`` as the output scope, without altering it
     _conan_scope_override = None
 
     def __init__(self, display_name=""):
