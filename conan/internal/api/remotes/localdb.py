@@ -5,6 +5,9 @@ from sqlite3 import OperationalError
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
+from conan.internal.cache.home_paths import HomePaths
+from conan.internal.errors import scoped_traceback
+from conan.internal.loader import load_python_file
 
 REMOTES_USER_TABLE = "users_remotes"
 LOCALDB = ".conan.db"
@@ -13,6 +16,58 @@ if os.environ.pop('CONAN_LOGIN_ENCRYPTION_KEY', None) is not None:
     ConanOutput().warning("CONAN_LOGIN_ENCRYPTION_KEY env-var is defined but no longer used: "
                           "credentials in the local DB are stored in plain text",
                           warn_tag="risk")
+
+
+def create_token_store(home_folder):
+    """Return the token store. Plugin-backed if auth_remote plugin defines the
+    token_get/token_store/token_clean trio, else the default LocalDB (SQLite).
+    """
+    plugin_path = HomePaths(home_folder).auth_remote_plugin_path
+    if os.path.exists(plugin_path):
+        mod, _ = load_python_file(plugin_path)
+        get_fn = getattr(mod, "auth_remote_token_get", None)
+        store_fn = getattr(mod, "auth_remote_token_store", None)
+        clean_fn = getattr(mod, "auth_remote_token_clean", None)
+        if any((get_fn, store_fn, clean_fn)):
+            if not all((get_fn, store_fn, clean_fn)):
+                raise ConanException(
+                    "auth_remote plugin must define all of auth_remote_token_get, "
+                    "auth_remote_token_store, auth_remote_token_clean, or none")
+            return PluginTokenStore(get_fn, store_fn, clean_fn)
+    return LocalDB(home_folder)
+
+
+class PluginTokenStore:
+    """Duck-typed replacement for LocalDB. Delegates to auth_remote plugin functions."""
+
+    def __init__(self, get_fn, store_fn, clean_fn):
+        self._get = get_fn
+        self._store = store_fn
+        self._clean = clean_fn
+
+    @staticmethod
+    def _wrap(fn, *args):
+        try:
+            return fn(*args)
+        except Exception as e:
+            msg = scoped_traceback("Error while processing 'auth_remote.py' plugin",
+                                   e, scope="/extensions/plugins")
+            raise ConanException(msg)
+
+    def get_login(self, remote_url):
+        result = self._wrap(self._get, remote_url)
+        if not result:
+            return None, None, None
+        return result
+
+    def get_username(self, remote_url):
+        return self.get_login(remote_url)[0]
+
+    def store(self, user, token, refresh_token, remote_url):
+        self._wrap(self._store, remote_url, user, token, refresh_token)
+
+    def clean(self, remote_url=None):
+        self._wrap(self._clean, remote_url)
 
 
 class LocalDB:
