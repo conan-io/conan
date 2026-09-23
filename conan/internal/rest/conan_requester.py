@@ -112,6 +112,8 @@ class _TrustStoreHTTPAdapter(HTTPAdapter):
         # so the context needs to be injected here too, or it silently stops applying once
         # 'core.net.http:proxies' is also configured.
         proxy_kwargs.setdefault("ssl_context", self._ssl_context)
+        if proxy.lower().startswith("https://"):
+            proxy_kwargs.setdefault("proxy_ssl_context", self._ssl_context)
         return super().proxy_manager_for(proxy, **proxy_kwargs)
 
 
