@@ -487,6 +487,21 @@ class InstallGraph:
             return [r for level in levels for r in level]
         return levels
 
+    def install_order_grouped_by_recipe(self):
+        assert self._order == "configuration"
+        levels = []
+        for configuration_level in self.install_order():
+            recipes = {}
+            for configuration in configuration_level:
+                for node in configuration.nodes:
+                    recipe = recipes.get(node.ref)
+                    if recipe is None:
+                        recipes[node.ref] = _InstallRecipeReference.create(node)
+                    else:
+                        recipe.add(node)
+            levels.append(list(recipes.values()))
+        return levels
+
     @staticmethod
     def _raise_loop_detected(nodes):
         """

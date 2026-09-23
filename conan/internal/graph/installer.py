@@ -203,8 +203,8 @@ class BinaryInstaller:
     @staticmethod
     def install_system_requires(graph, only_info=False, install_order=None):
         if install_order is None:
-            install_graph = InstallGraph(graph)
-            install_order = install_graph.install_order()
+            install_graph = InstallGraph(graph, order_by="configuration")
+            install_order = install_graph.install_order_grouped_by_recipe()
 
         def _install_build(cfile):
             if hasattr(cfile, "build_system_requirements"):
@@ -242,8 +242,8 @@ class BinaryInstaller:
         _install_build(conanfile)
 
     def install_sources(self, graph, remotes):
-        install_graph = InstallGraph(graph)
-        install_order = install_graph.install_order()
+        install_graph = InstallGraph(graph, order_by="configuration")
+        install_order = install_graph.install_order_grouped_by_recipe()
 
         for level in install_order:
             for install_reference in level:
@@ -253,9 +253,9 @@ class BinaryInstaller:
     def install(self, deps_graph, remotes, install_order=None):
         assert not deps_graph.error, "This graph cannot be installed: {}".format(deps_graph)
         if install_order is None:
-            install_graph = InstallGraph(deps_graph)
+            install_graph = InstallGraph(deps_graph, order_by="configuration")
             install_graph.raise_errors()
-            install_order = install_graph.install_order()
+            install_order = install_graph.install_order_grouped_by_recipe()
 
         ConanOutput().title("Installing packages")
 
