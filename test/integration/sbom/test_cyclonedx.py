@@ -329,6 +329,89 @@ class TestCyclonedx:
             assert content_json["components"][0]["authors"][0]["name"] == 'conan-dev'
             assert content_json["components"][0]["type"] == 'application'
 
+    def test_cyclonedx_cpe_from_recipe(self, hook_setup_post_package):
+        tc = hook_setup_post_package
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")
+                .with_class_attribute('cpe = "cpe:2.3:a:dep_vendor:dep:*:*:*:*:*:*:*:*"'),
+                 "conanfile.py": GenConanfile("foo", "1.0").with_requires("dep/1.0")})
+        tc.run("create dep")
+        tc.run("create .")
+        create_layout = tc.created_layout()
+        cyclone_path = os.path.join(create_layout.metadata(), "sbom.cdx.json")
+        content_json = json.loads(tc.load(cyclone_path))
+        dep_component = next(c for c in content_json["components"] if c["name"] == "dep")
+        assert dep_component["cpe"] == "cpe:2.3:a:dep_vendor:dep:1.0:*:*:*:*:*:*:*"
+        foo_component = next((c for c in content_json["components"] if c["name"] == "foo"), None)
+        assert foo_component is None or "cpe" not in foo_component
+
+    def test_cyclonedx_no_cpe_when_not_declared(self, hook_setup_post_package):
+        tc = hook_setup_post_package
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
+                 "conanfile.py": GenConanfile("foo", "1.0").with_requires("dep/1.0")})
+        tc.run("create dep")
+        tc.run("create .")
+        create_layout = tc.created_layout()
+        cyclone_path = os.path.join(create_layout.metadata(), "sbom.cdx.json")
+        content_json = json.loads(tc.load(cyclone_path))
+        assert all("cpe" not in c for c in content_json["components"])
+
+    def test_cyclonedx_supplier_publisher(self, hook_setup_post_package):
+        tc = hook_setup_post_package
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")
+                .with_class_attribute('supplier = "Dep Org"')
+                .with_class_attribute('publisher = "Dep Publisher"'),
+                 "conanfile.py": GenConanfile("foo", "1.0").with_requires("dep/1.0")})
+        tc.run("create dep")
+        tc.run("create .")
+        create_layout = tc.created_layout()
+        cyclone_path = os.path.join(create_layout.metadata(), "sbom.cdx.json")
+        content_json = json.loads(tc.load(cyclone_path))
+        dep_component = next(c for c in content_json["components"] if c["name"] == "dep")
+        assert dep_component["supplier"] == {"name": "Dep Org"}
+        assert dep_component["publisher"] == "Dep Publisher"
+
+    def test_cyclonedx_invalid_cpe_raises(self, hook_setup_post_package):
+        tc = hook_setup_post_package
+        tc.save({"conanfile.py": GenConanfile("foo", "1.0")
+                .with_class_attribute('cpe = "not-a-cpe"')})
+        tc.run("create .", assert_error=True)
+        assert "Invalid 'cpe'" in tc.out
+
+    def test_cyclonedx_cpes_override(self, cyclone_version):
+        tc = TestClient(light=True)
+        hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
+        override_hook = textwrap.dedent(f"""
+            import json
+            import os
+            from conan.api.output import ConanOutput
+            from conan.tools.sbom import {cyclone_version}
+
+            def post_package(conanfile):
+                sbom = {cyclone_version}(conanfile, cpes={{
+                    "dep/*": "cpe:2.3:a:override_vendor:override_product:*:*:*:*:*:*:*:*",
+                    "foo/*": None,
+                }})
+                metadata_folder = conanfile.package_metadata_folder
+                with open(os.path.join(metadata_folder, "sbom.cdx.json"), 'w') as f:
+                    json.dump(sbom, f, indent=4)
+                ConanOutput().success("CYCLONEDX CREATED")
+        """)
+        save(hook_path, override_hook)
+        tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")
+                .with_class_attribute('cpe = "cpe:2.3:a:recipe_vendor:recipe_product:*:*:*:*:*:*:*:*"'),
+                 "conanfile.py": GenConanfile("foo", "1.0")
+                .with_class_attribute('cpe = "cpe:2.3:a:foo_vendor:foo_product:*:*:*:*:*:*:*:*"')
+                .with_requires("dep/1.0")})
+        tc.run("create dep")
+        tc.run("create .")
+        create_layout = tc.created_layout()
+        cyclone_path = os.path.join(create_layout.metadata(), "sbom.cdx.json")
+        content_json = json.loads(tc.load(cyclone_path))
+        dep_component = next(c for c in content_json["components"] if c["name"] == "dep")
+        assert dep_component["cpe"] == "cpe:2.3:a:override_vendor:override_product:1.0:*:*:*:*:*:*:*"
+        foo_component = next((c for c in content_json["components"] if c["name"] == "foo"), None)
+        assert foo_component is None or "cpe" not in foo_component
+
     def test_sbom_test_requires_skipped(self, cyclone_version):
         tc = TestClient(light=True)
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
