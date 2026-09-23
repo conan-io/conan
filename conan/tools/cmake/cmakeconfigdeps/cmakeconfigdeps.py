@@ -555,7 +555,7 @@ class _CMakeContextGenerator:
         def _get_cmake_lib(self, info, cpp_info_requires, comp_name=None):
             if info.exe or not (info.package_framework or info.frameworks or info.includedirs
                                 or info.libs or info.system_libs or info.defines or info.requires
-                                or info.sources):
+                                or info.sources or info.objects):
                 return
 
             includedirs = ";".join(self._cmake_pkg_path(i)
@@ -571,6 +571,7 @@ class _CMakeContextGenerator:
             sources = []
             if self._ctx.require.direct:
                 sources = [self._cmake_pkg_path(source) for source in info.sources]
+            objects = [self._cmake_pkg_path(obj) for obj in info.objects]
             target = {"type": "INTERFACE",
                       "comp_name": comp_name,
                       "includedirs": includedirs,
@@ -584,6 +585,11 @@ class _CMakeContextGenerator:
                       "system_libs": " ".join(info.system_libs + extra_libs),
                       "sources": " ".join(sources)
                       }
+            if objects:
+                # Prebuilt object files need their own IMPORTED OBJECT library, the objects of a
+                # target are only added to the link line of its *direct* consumers, so the target
+                # itself forwards them with $<TARGET_OBJECTS:...> to be transitive too
+                target["objects"] = ";".join(objects)
             # System frameworks (only Apple OS)
             if info.frameworks:
                 target['frameworks'] = " ".join([f"-framework {frw}" for frw in info.frameworks])

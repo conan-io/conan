@@ -122,6 +122,22 @@ class TargetConfigurationTemplate2:
         set_target_properties({{lib}} PROPERTIES IMPORTED_IMPLIB_{{config}}
                               "{{lib_info["link_location"]}}")
         {% endif %}
+        {% if lib_info.get("objects") %}
+        # Prebuilt object files of '{{lib}}'. The objects of a target are only added to the link
+        # line of its direct consumers, so '{{lib}}' forwards them with $<TARGET_OBJECTS:...> to
+        # make them transitive too
+        if(CMAKE_VERSION VERSION_LESS "3.21")
+            message(FATAL_ERROR "The 'CMakeConfigDeps' generator cpp_info.objects only works with CMake >= 3.21")
+        endif()
+        if(NOT TARGET {{lib}}_OBJECTS)
+            add_library({{lib}}_OBJECTS OBJECT IMPORTED)
+        endif()
+        set_property(TARGET {{lib}}_OBJECTS APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
+        set_target_properties({{lib}}_OBJECTS PROPERTIES IMPORTED_OBJECTS_{{config}}
+                              "{{lib_info["objects"]}}")
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+                     "{{config_wrapper(config, '$<TARGET_OBJECTS:' + lib + '_OBJECTS>')}}")
+        {% endif %}
 
         {% if lib_info.get("requires") %}
         # Information of transitive dependencies
