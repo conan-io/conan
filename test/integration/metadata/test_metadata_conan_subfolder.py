@@ -3,6 +3,7 @@ import pytest
 
 from conan.internal.paths import CONAN_METADATA_SUBFOLDER
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 from conan.internal.util.files import save, load
 
@@ -106,6 +107,95 @@ class TestConanMetadataSubfolder:
         c3.run("cache path pkg/0.1 --folder=metadata")
         metadata_path3 = str(c3.stdout).strip()
         assert load(os.path.join(metadata_path3, CONAN_METADATA_SUBFOLDER, "generated.h")) == "// v2"
+
+    def test_conan_metadata_tied_to_recipe_revision(self):
+        """metadata/.conan/ is only fetched when the recipe revision itself is fetched.
+
+        Scenario from the review of https://github.com/conan-io/conan/pull/20114:
+        - client1 uploads mylib/0.1 with metadata/.conan/time.txt == "t1"
+        - client2, with a clean cache, installs it and gets "t1"
+        - client1 updates the file to "t2" and re-uploads, without creating a new revision
+        - client2 does NOT get "t2", not even with ``--update``, because the recipe revision
+          it has cached is already the latest one, so nothing is downloaded for it.
+
+        This is the expected behavior: the private metadata follows the recipe revision.
+        To explicitly re-sync the metadata of an already cached revision, ``conan download``
+        with a ``--metadata`` pattern must be used.
+        """
+        c1 = TestClient(default_server_user=True, light=True)
+        c1.save({"conanfile.py": GenConanfile("mylib", "0.1")})
+        c1.run("create .")
+        c1.run("cache path mylib/0.1 --folder=metadata")
+        metadata_path1 = str(c1.stdout).strip()
+        time_txt1 = os.path.join(metadata_path1, CONAN_METADATA_SUBFOLDER, "time.txt")
+        save(time_txt1, "t1")
+        c1.run("upload * -c -r=default")
+
+        # client2 with a clean cache gets the metadata of that revision
+        c2 = TestClient(servers=c1.servers, inputs=["admin", "password"], light=True)
+        c2.run("install --requires=mylib/0.1")
+        c2.run("cache path mylib/0.1 --folder=metadata")
+        metadata_path2 = str(c2.stdout).strip()
+        time_txt2 = os.path.join(metadata_path2, CONAN_METADATA_SUBFOLDER, "time.txt")
+        assert load(time_txt2) == "t1"
+
+        # client1 updates the metadata and re-uploads it, the recipe revision is the same
+        save(time_txt1, "t2")
+        c1.run("upload * -c -r=default")
+
+        # client2 keeps "t1", the cached revision is unchanged, nothing is re-downloaded
+        c2.run("install --requires=mylib/0.1")
+        assert load(time_txt2) == "t1"
+        # and ``--update`` doesn't change it either, the cached revision is already the latest
+        c2.run("install --requires=mylib/0.1 --update")
+        assert load(time_txt2) == "t1"
+        # same for a plain ``download``, that only completes the missing artifacts
+        c2.run("download mylib/0.1 -r=default")
+        assert load(time_txt2) == "t1"
+
+        # Explicitly asking for the metadata does re-sync it
+        c2.run("download mylib/0.1 -r=default --metadata=*")
+        assert load(time_txt2) == "t2"
+
+        # And a fresh cache also gets the new contents of the same revision
+        c3 = TestClient(servers=c1.servers, inputs=["admin", "password"], light=True)
+        c3.run("install --requires=mylib/0.1")
+        c3.run("cache path mylib/0.1 --folder=metadata")
+        metadata_path3 = str(c3.stdout).strip()
+        assert load(os.path.join(metadata_path3, CONAN_METADATA_SUBFOLDER, "time.txt")) == "t2"
+
+    def test_no_download_cached(self):
+        """metadata/.conan/ is never stored in the "core.download:download_cache".
+
+        Same rationale as the regular metadata: it can be re-uploaded for an existing revision,
+        so the same url can return different contents and it cannot be cached by url.
+        """
+        c1 = TestClient(default_server_user=True, light=True)
+        c1.save({"conanfile.py": GenConanfile("mylib", "0.1")})
+        c1.run("create .")
+        c1.run("cache path mylib/0.1 --folder=metadata")
+        metadata_path1 = str(c1.stdout).strip()
+        time_txt1 = os.path.join(metadata_path1, CONAN_METADATA_SUBFOLDER, "time.txt")
+        save(time_txt1, "t1")
+        c1.run("upload * -c -r=default")
+
+        c2 = TestClient(servers=c1.servers, inputs=["admin", "password"], light=True)
+        # MOST important part: activate the download cache
+        c2.save_home({"global.conf": f"core.download:download_cache={temp_folder()}\n"})
+        c2.run("install --requires=mylib/0.1")
+        c2.run("cache path mylib/0.1 --folder=metadata")
+        metadata_path2 = str(c2.stdout).strip()
+        time_txt2 = os.path.join(metadata_path2, CONAN_METADATA_SUBFOLDER, "time.txt")
+        assert load(time_txt2) == "t1"
+
+        # client1 updates the metadata of the same revision
+        save(time_txt1, "t2")
+        c1.run("upload * -c -r=default")
+
+        # The new contents are downloaded, not served from the download cache
+        c2.run("remove * -c")
+        c2.run("install --requires=mylib/0.1")
+        assert load(time_txt2) == "t2"
 
     def test_update_refreshes_conan_metadata(self):
         c = TestClient(default_server_user=True, light=True)

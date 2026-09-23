@@ -334,17 +334,20 @@ class RestV2Methods:
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
             os.makedirs(os.path.dirname(abs_path), exist_ok=True)  # filename in subfolder must exist
+            # Metadata can be re-uploaded for an existing revision, so the same url can return
+            # different contents, it can never be cached, not even when downloaded along the recipe
+            file_metadata = metadata or filename.startswith(f"{METADATA}/")
             if parallel:
                 kwargs = {"url": resource_url, "file_path": abs_path, "retry": retry,
                           "retry_wait": retry_wait, "verify_ssl": self.verify_ssl,
-                          "auth": self.auth, "metadata": metadata}
+                          "auth": self.auth, "metadata": file_metadata}
                 thread = ExceptionThread(target=downloader.download, kwargs=kwargs)
                 threads.append(thread)
                 thread.start()
             else:
                 downloader.download(url=resource_url, file_path=abs_path, auth=self.auth,
                                     verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait,
-                                    metadata=metadata)
+                                    metadata=file_metadata)
         for t in threads:
             t.join()
         for t in threads:  # Need to join all before raising errors
