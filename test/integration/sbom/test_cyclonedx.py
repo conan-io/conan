@@ -362,8 +362,8 @@ class TestCyclonedx:
         cpes_py = textwrap.dedent("""\
             # Example CPE catalog, as if imported from another project
             CPES = {
-                "bar": "cpe:2.3:a:acme:bar",
-                "dep": "cpe:2.3:a:from-string:dep",
+                "bar": "cpe:2.3:a:acme:bar:*:*:*:*:*:*:*:*",
+                "dep": "cpe:2.3:a:from-string:dep:*:*:*:*:*:*:*:*",
             }
         """)
         hook = textwrap.dedent("""\

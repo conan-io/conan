@@ -17,8 +17,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
         add_tests (bool, optional, default=False): Include test dependencies.
         extra_info (dict, optional): Extra CycloneDX component fields, keyed by name,
             name/version, name/version@user/channel, purl or bom-ref.
-        cpes (dict, optional): CPE 2.3 strings without version, keyed like ``extra_info``.
-            The package version is appended automatically.
+        cpes (dict, optional): Full CPE 2.3 strings, keyed like ``extra_info``.
 
     Returns:
         The generated CycloneDX 1.4 document as a string.
@@ -122,7 +121,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
         add_tests (bool, optional, default=False): Include test dependencies.
         extra_info (dict, optional): Extra CycloneDX component fields, keyed by name,
             name/version, name/version@user/channel, purl or bom-ref.
-        cpes (dict, optional): CPE 2.3 strings without version.
+        cpes (dict, optional): Full CPE 2.3 strings, keyed like ``extra_info``.
 
     Returns:
         The generated CycloneDX 1.6 document as a string.
@@ -248,7 +247,11 @@ def _calculate_cpe(node, cpes):
             cpe = cpes[key]
     version = str(node.ref.version)
     if isinstance(cpe, str) and cpe:
-        return f"{cpe}:{version}:*:*:*:*:*:*:*"
+        parts = cpe.split(":")
+        if len(parts) > 5 and parts[5] == "*":
+            parts[5] = version
+            return ":".join(parts)
+        return cpe
     # CPE 2.3: vendor unknown -> "*", product and version from the Conan ref
     return f"cpe:2.3:a:*:{node.name}:{version}:*:*:*:*:*:*:*"
 
