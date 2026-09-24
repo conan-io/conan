@@ -20,6 +20,7 @@ from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
 from conan.internal.model.requires import Requirement
 from conan.internal.model.version_range import VersionRange, required_conan_version_policy
+from conan.internal.paths import CONAN_METADATA_SUBFOLDER
 
 
 class DepsGraphBuilder:
@@ -296,7 +297,7 @@ class DepsGraphBuilder:
         conanfile_path = layout.conanfile()
         # Bundle-Lockfile:  check if the recipe exported a "conan.lock", and if it is there, use it
         if self._auto_lock and (graph_lock is None or graph_lock.export):
-            exported_lock = os.path.join(layout.metadata(), "conan", "conan.lock")
+            exported_lock = os.path.join(layout.metadata(), CONAN_METADATA_SUBFOLDER, "conan.lock")
             if os.path.isfile(exported_lock):
                 exported_lockfile = Lockfile.load(exported_lock)
                 exported_lockfile.partial = True  # to allow consumers to impose their deps

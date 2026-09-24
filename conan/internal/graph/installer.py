@@ -15,7 +15,7 @@ from conan.internal.errors import conanfile_remove_attr, conanfile_exception_for
 from conan.errors import ConanException
 from conan.internal.model.cpp_info import CppInfo, MockInfoProperty
 from conan.api.model import PkgReference
-from conan.internal.paths import CONANINFO
+from conan.internal.paths import CONANINFO, CONAN_METADATA_SUBFOLDER
 from conan.internal.util import cpu_count
 from conan.internal.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
 
@@ -436,7 +436,8 @@ class BinaryInstaller:
                                                                      check_type=bool):
                 partial_lockfile = Lockfile(node.subgraph())
                 metadata_folder = node.conanfile.recipe_metadata_folder
-                bundled_lockfile = os.path.join(metadata_folder, "conan", "conan.lock")
+                bundled_lockfile = os.path.join(metadata_folder, CONAN_METADATA_SUBFOLDER,
+                                                "conan.lock")
                 if os.path.isfile(bundled_lockfile):
                     node.conanfile.output.info("Updating existing metadata lockfile with current "
                                                "graph information")
