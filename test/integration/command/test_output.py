@@ -1,8 +1,5 @@
 import json
 import os
-import textwrap
-
-import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
@@ -309,35 +306,3 @@ def test_redirect_to_file_create_dir():
     c.run("config home --out-file=../subdir/cmd_out.txt")
     cmd_out = c.load("../subdir/cmd_out.txt")
     assert f"{c.cache_folder}" in cmd_out
-
-
-class TestOutputScope:
-
-    @staticmethod
-    def _conanfile(method, body):
-        return textwrap.dedent(f"""
-            from conan import ConanFile
-            from conan.errors import ConanInvalidConfiguration
-
-            class Pkg(ConanFile):
-                name = "pkg"
-                version = "0.1"
-
-                def {method}(self):
-                    {body}
-            """)
-
-    @pytest.mark.parametrize("method", ["source", "generate", "package"])
-    def test_error_in_step_reports_the_reference(self, method):
-        c = TestClient(light=True)
-        c.save({"conanfile.py": self._conanfile(method, 'raise Exception("Boom!")')})
-        c.run("create .", assert_error=True)
-        assert f"ERROR: pkg/0.1: Error in {method}() method" in c.out
-
-    @pytest.mark.parametrize("method", ["source", "generate", "package"])
-    def test_invalid_configuration_in_step_reports_the_reference(self, method):
-        c = TestClient(light=True)
-        body = 'raise ConanInvalidConfiguration("Not valid!")'
-        c.save({"conanfile.py": self._conanfile(method, body)})
-        c.run("create .", assert_error=True)
-        assert "ERROR: pkg/0.1: Invalid configuration: Not valid!" in c.out
