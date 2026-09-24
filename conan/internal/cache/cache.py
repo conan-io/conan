@@ -26,6 +26,7 @@ class PkgCache:
         # paths
         self._store_folder = global_conf.get("core.cache:storage_path") or \
                              os.path.join(cache_folder, "p")
+        self.path_prefix_format_str = global_conf.get("core.cache:path_prefix_fmt")
 
         try:
             mkdir(self._store_folder)
@@ -73,13 +74,22 @@ class PkgCache:
         # Reduce length in 3 characters 16 - 3 = 13
         return sha_bytes[0:13]
 
-    @staticmethod
-    def _get_path(ref):
-        return ref.name[:5] + PkgCache._short_hash_path(ref.repr_notime())
+    def _get_path_prefix(self, ref):
+        if not self.path_prefix_format_str:
+            return ref.name[:5]
+        else:
+            try:
+                return self.path_prefix_format_str.format(ref=ref)
+            except:
+                raise ConanException(f"Invalid path_prefix: {self.path_prefix_format_str}")
 
-    @staticmethod
-    def _get_path_pref(pref):
-        return pref.ref.name[:5] + PkgCache._short_hash_path(pref.repr_notime())
+    def _get_path(self, ref):
+        prefix = self._get_path_prefix(ref)
+        return prefix + PkgCache._short_hash_path(ref.repr_notime())
+
+    def _get_path_pref(self, pref):
+        prefix = self._get_path_prefix(pref.ref)
+        return prefix + PkgCache._short_hash_path(pref.repr_notime())
 
     def create_export_recipe_layout(self, ref: RecipeReference):
         """  This is a temporary layout while exporting a new recipe, because the revision is not
@@ -90,7 +100,7 @@ class PkgCache:
         """
         assert ref.revision is None, "Recipe revision should be None"
         assert ref.timestamp is None
-        h = ref.name[:5] + PkgCache._short_hash_path(ref.repr_notime())
+        h = self._get_path(ref)
         reference_path = os.path.join("t", h)
         self._create_path(reference_path)
         return RecipeLayout(ref, os.path.join(self._base_folder, reference_path))
@@ -103,7 +113,8 @@ class PkgCache:
         assert pref.timestamp is None
 
         random_id = str(uuid.uuid4())
-        h = pref.ref.name[:5] + PkgCache._short_hash_path(pref.repr_notime() + random_id)
+        prefix = self._get_path_prefix(pref.ref)
+        h = prefix + PkgCache._short_hash_path(pref.repr_notime() + random_id)
         package_path = os.path.join("b", h)
         self._create_path(package_path)
         return PackageLayout(pref, os.path.join(self._base_folder, package_path))
