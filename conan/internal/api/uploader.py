@@ -386,9 +386,9 @@ def _total_size(cache_files):
 def _conan_metadata_files(metadata_folder):
     """Collect files from metadata/conan subfolder for automatic upload with the recipe."""
     conan_subfolder = os.path.join(metadata_folder, CONAN_METADATA_SUBFOLDER)
-    result = {}
     if not os.path.isdir(conan_subfolder):
-        return result
+        return None
+    result = {}
     for root, _, files in os.walk(conan_subfolder):
         for f in files:
             abs_path = os.path.join(root, f)

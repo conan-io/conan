@@ -109,18 +109,19 @@ class TestConanMetadataSubfolder:
         assert load(os.path.join(metadata_path3, CONAN_METADATA_SUBFOLDER, "generated.h")) == "// v2"
 
     def test_conan_metadata_tied_to_recipe_revision(self):
-        """metadata/.conan/ is only fetched when the recipe revision itself is fetched.
+        """metadata/.conan/ is only fetched when the recipe revision itself is fetched, or
+        when explicitly re-synced; a plain ``install``/``download`` never refreshes it.
 
         Scenario from the review of https://github.com/conan-io/conan/pull/20114:
         - client1 uploads mylib/0.1 with metadata/.conan/time.txt == "t1"
         - client2, with a clean cache, installs it and gets "t1"
         - client1 updates the file to "t2" and re-uploads, without creating a new revision
-        - client2 does NOT get "t2", not even with ``--update``, because the recipe revision
-          it has cached is already the latest one, so nothing is downloaded for it.
+        - client2 does NOT get "t2" with a plain ``install`` or ``download``, because the
+          recipe revision it has cached is already the latest one, so nothing is downloaded.
+          (``--update`` does refresh it, see ``test_update_refreshes_conan_metadata``)
 
-        This is the expected behavior: the private metadata follows the recipe revision.
         To explicitly re-sync the metadata of an already cached revision, ``conan download``
-        with a ``--metadata`` pattern must be used.
+        with a ``--metadata`` pattern can also be used.
         """
         c1 = TestClient(default_server_user=True, light=True)
         c1.save({"conanfile.py": GenConanfile("mylib", "0.1")})
@@ -145,9 +146,6 @@ class TestConanMetadataSubfolder:
 
         # client2 keeps "t1", the cached revision is unchanged, nothing is re-downloaded
         c2.run("install --requires=mylib/0.1")
-        assert load(time_txt2) == "t1"
-        # and ``--update`` doesn't change it either, the cached revision is already the latest
-        c2.run("install --requires=mylib/0.1 --update")
         assert load(time_txt2) == "t1"
         # same for a plain ``download``, that only completes the missing artifacts
         c2.run("download mylib/0.1 -r=default")
@@ -198,6 +196,10 @@ class TestConanMetadataSubfolder:
         assert load(time_txt2) == "t2"
 
     def test_update_refreshes_conan_metadata(self):
+        """``--update`` re-fetches metadata/.conan/ for an already cached recipe revision,
+        as long as some of it was already present locally (see
+        ``test_update_skips_refresh_of_never_downloaded_metadata`` for the opposite case).
+        """
         c = TestClient(default_server_user=True, light=True)
         c.save({"conanfile.py": GenConanfile("mylib", "0.1")})
         c.run("create .")
@@ -220,12 +222,58 @@ class TestConanMetadataSubfolder:
         c2.run("install --requires=mylib/0.1")
         assert load(os.path.join(metadata_path2, CONAN_METADATA_SUBFOLDER, "time.txt")) == "t1"
 
-        # With --update: c2 gets the refreshed t2 from the server
+        # With --update: c2 gets the refreshed t2 from the server, because it already had
+        # some metadata/.conan content locally (from the initial install above)
         c2.run("install --requires=mylib/0.1 --update")
-        assert load(os.path.join(metadata_path2, CONAN_METADATA_SUBFOLDER, "time.txt")) == "t1"
+        assert load(os.path.join(metadata_path2, CONAN_METADATA_SUBFOLDER, "time.txt")) == "t2"
 
         # A fresh download will get the new metadata.
         # If the recipe doesn't update, the metadata doesn't update
         c2.run("remove * -c")
         c2.run("install --requires=mylib/0.1")
         assert load(os.path.join(metadata_path2, CONAN_METADATA_SUBFOLDER, "time.txt")) == "t2"
+
+    def test_update_skips_refresh_of_never_downloaded_metadata(self):
+        """``--update`` does NOT trigger an extra remote check for metadata/.conan/ when the
+        local recipe revision never had any of it downloaded in the first place. This avoids
+        paying that extra cost on every ``--update`` for the (common) case of a reference that
+        doesn't use this private metadata at all.
+
+        Scenario:
+        - pkg/0.1 is first uploaded with no metadata/.conan/ content whatsoever
+        - a client installs it: its local metadata/.conan/ folder doesn't even exist
+        - metadata/.conan/info.txt is added on the *same* recipe revision and re-uploaded
+        - ``--update`` still does NOT pick it up, because there was nothing locally to refresh
+        - only a fresh install (clean cache) gets it, same as an explicit ``--metadata`` download
+        """
+        c = TestClient(default_server_user=True, light=True)
+        c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
+        c.run("create .")
+        c.run("upload * -c -r=default")  # no metadata/.conan/ content yet
+
+        c2 = TestClient(servers=c.servers, inputs=["admin", "password"], light=True)
+        c2.run("install --requires=pkg/0.1")
+        c2.run("cache path pkg/0.1 --folder=metadata")
+        metadata_path2 = str(c2.stdout).strip()
+        conan_metadata2 = os.path.join(metadata_path2, CONAN_METADATA_SUBFOLDER)
+        assert not os.path.isdir(conan_metadata2) or not os.listdir(conan_metadata2)
+
+        # metadata/.conan/ content appears on the server for that same revision
+        c.run("cache path pkg/0.1 --folder=metadata")
+        metadata_path = str(c.stdout).strip()
+        save(os.path.join(metadata_path, CONAN_METADATA_SUBFOLDER, "info.txt"),
+             "conan metadata content")
+        c.run("upload * -c -r=default")
+
+        # --update doesn't fetch it: the local folder was empty, no refresh is attempted
+        c2.run("install --requires=pkg/0.1 --update")
+        assert not os.path.isdir(conan_metadata2) or not os.listdir(conan_metadata2)
+
+        # A fresh install (clean cache) does get it
+        # c2.run("download pkg/0.1 --only-recipe -r=default") does NOT work, skips download
+        c2.run("remove * -c")
+        c2.run("install --requires=pkg/0.1")
+        c2.run("cache path pkg/0.1 --folder=metadata")
+        metadata_path2 = str(c2.stdout).strip()
+        assert load(os.path.join(metadata_path2, CONAN_METADATA_SUBFOLDER, "info.txt")) == \
+            "conan metadata content"
