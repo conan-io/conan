@@ -22,6 +22,14 @@ class _LockRequires:
     def __init__(self):
         self._requires = {}  # {require: package_ids}
 
+    def copy(self):
+        result = _LockRequires()
+        result._requires = self._requires.copy()
+        return result
+
+    def __contains__(self, item):
+        return item in self._requires
+
     def refs(self):
         return self._requires.keys()
 
@@ -121,11 +129,24 @@ class Lockfile:
         self._alias = {}
         self._overrides = Overrides()
         self.partial = False
+        self.export = False  # If this is for 'conan create' without user --lockfile
 
         if deps_graph is None:
             return
 
         self.update_lock(deps_graph, lock_packages)
+
+    def copy(self):
+        result = Lockfile()
+        result._requires = self._requires.copy()
+        result._python_requires = self._python_requires.copy()
+        result._build_requires = self._build_requires.copy()
+        result._conf_requires = self._conf_requires.copy()
+        result._alias = self._alias.copy()
+        result._overrides = self._overrides.copy()
+        result.partial = self.partial
+        result.export = self.export
+        return result
 
     def update_lock(self, deps_graph, lock_packages=False):
         for graph_node in deps_graph.nodes:

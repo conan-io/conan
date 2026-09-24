@@ -11,7 +11,7 @@ from uuid import getnode as get_mac
 from conan.api.output import ConanOutput
 from conan.internal.cache.conan_reference_layout import METADATA
 from conan.internal.paths import EXPORT_SOURCES_FILE_NAME, CONANINFO, CONAN_MANIFEST, \
-    EXPORT_FILE_NAME, PACKAGE_FILE_NAME
+    EXPORT_FILE_NAME, PACKAGE_FILE_NAME, CONAN_METADATA_SUBFOLDER
 from conan.internal.rest.caching_file_downloader import ConanInternalCacheDownloader
 from conan.internal.rest.download_cache import DownloadCache
 from conan.internal.rest import response_to_str
@@ -214,7 +214,8 @@ class RestV2Methods:
         result = {}
 
         if not only_metadata:
-            accepted_files = ["conanfile.py", CONAN_MANIFEST,  "metadata/sign"]
+            accepted_files = ["conanfile.py", CONAN_MANIFEST, "metadata/sign",
+                              f"metadata/{CONAN_METADATA_SUBFOLDER}"]
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
             export_file = self._find_compressed_file(ref, server_files, EXPORT_FILE_NAME)
             if export_file is not None:
@@ -333,17 +334,20 @@ class RestV2Methods:
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
             os.makedirs(os.path.dirname(abs_path), exist_ok=True)  # filename in subfolder must exist
+            # Metadata can be re-uploaded for an existing revision, so the same url can return
+            # different contents, it can never be cached, not even when downloaded along the recipe
+            file_metadata = metadata or filename.startswith(f"{METADATA}/")
             if parallel:
                 kwargs = {"url": resource_url, "file_path": abs_path, "retry": retry,
                           "retry_wait": retry_wait, "verify_ssl": self.verify_ssl,
-                          "auth": self.auth, "metadata": metadata}
+                          "auth": self.auth, "metadata": file_metadata}
                 thread = ExceptionThread(target=downloader.download, kwargs=kwargs)
                 threads.append(thread)
                 thread.start()
             else:
                 downloader.download(url=resource_url, file_path=abs_path, auth=self.auth,
                                     verify_ssl=self.verify_ssl, retry=retry, retry_wait=retry_wait,
-                                    metadata=metadata)
+                                    metadata=file_metadata)
         for t in threads:
             t.join()
         for t in threads:  # Need to join all before raising errors

@@ -9,12 +9,13 @@ from conan.internal.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNL
                                         BINARY_EDITABLE, BINARY_UPDATE, BINARY_EDITABLE_BUILD,
                                         BINARY_SKIP)
 from conan.internal.graph.install_graph import InstallGraph
+from conan.internal.model.lockfile import Lockfile
 from conan.internal.source import retrieve_exports_sources, config_source
 from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
 from conan.errors import ConanException
 from conan.internal.model.cpp_info import CppInfo, MockInfoProperty
 from conan.api.model import PkgReference
-from conan.internal.paths import CONANINFO
+from conan.internal.paths import CONANINFO, CONAN_METADATA_SUBFOLDER
 from conan.internal.util import cpu_count
 from conan.internal.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
 
@@ -429,6 +430,25 @@ class BinaryInstaller:
             # something fails)
             node.conanfile.folders.set_base_package(pkg_layout.package())
             ConanOutput().success("Package folder %s" % node.conanfile.package_folder)
+
+            # Bundle-Lockfile
+            if node.binary == BINARY_BUILD and self._global_conf.get("core.lockfile:auto",
+                                                                     check_type=bool):
+                partial_lockfile = Lockfile(node.subgraph())
+                metadata_folder = node.conanfile.recipe_metadata_folder
+                bundled_lockfile = os.path.join(metadata_folder, CONAN_METADATA_SUBFOLDER,
+                                                "conan.lock")
+                if os.path.isfile(bundled_lockfile):
+                    node.conanfile.output.info("Updating existing metadata lockfile with current "
+                                               "graph information")
+                    exported_lockfile = Lockfile.load(bundled_lockfile)
+                    exported_lockfile.partial = True
+                    exported_lockfile.merge(partial_lockfile)
+                else:
+                    exported_lockfile = partial_lockfile
+                node.conanfile.output.info(
+                    f"Storing current lockfile in metadata: {bundled_lockfile}")
+                exported_lockfile.save(bundled_lockfile)
 
     def _call_package_info(self, conanfile, package_folder, is_editable):
 
