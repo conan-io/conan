@@ -1387,3 +1387,73 @@ def test_cmakeconfigdeps_messages_honor_find_quietly():
     target_config = c.load("pkg-Targets-release.cmake")
     assert quiet_guard in target_config
     assert 'message(STATUS "Conan: Target declared imported' in target_config
+
+
+def test_cpp_info_component_objects():
+    c = TestClient()
+    conan_hello = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "arch", "build_type"
+            def package_info(self):
+                self.cpp_info.components["say"].objects = ["mycomponent.o"]
+            """)
+
+    c.save({"conanfile.py": conan_hello})
+    c.run("create . --name=hello --version=1.0")
+    c.run("install --requires=hello/1.0@ -g CMakeConfigDeps")
+    targets = c.load("hello-Targets-release.cmake")
+    # The objects live in their own IMPORTED OBJECT library
+    assert "add_library(hello::say_OBJECTS OBJECT IMPORTED)" in targets
+    assert "set_property(TARGET hello::say_OBJECTS APPEND PROPERTY IMPORTED_CONFIGURATIONS " \
+           "RELEASE)" in targets
+    assert "set_target_properties(hello::say_OBJECTS PROPERTIES IMPORTED_OBJECTS_RELEASE\n" \
+           '                      "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' in targets
+    # And the component target forwards them, so they are transitive too
+    assert "set_property(TARGET hello::say APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+           '             "$<$<CONFIG:RELEASE>:$<TARGET_OBJECTS:hello::say_OBJECTS>>")' in targets
+    assert "set_property(TARGET hello::hello APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+           '             "$<$<CONFIG:RELEASE>:hello::say>")' in targets
+
+
+def test_cpp_info_objects():
+    """ the same, but without components, the objects belong to the root target """
+    c = TestClient()
+    conan_hello = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "arch", "build_type"
+            def package_info(self):
+                self.cpp_info.objects = ["mypkg.o"]
+            """)
+
+    c.save({"conanfile.py": conan_hello})
+    c.run("create . --name=hello --version=1.0")
+    c.run("install --requires=hello/1.0@ -g CMakeConfigDeps")
+    targets = c.load("hello-Targets-release.cmake")
+    assert "add_library(hello::hello_OBJECTS OBJECT IMPORTED)" in targets
+    assert "set_target_properties(hello::hello_OBJECTS PROPERTIES IMPORTED_OBJECTS_RELEASE\n" \
+           '                      "${hello_PACKAGE_FOLDER_RELEASE}/mypkg.o")' in targets
+    assert "set_property(TARGET hello::hello APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+           '             "$<$<CONFIG:RELEASE>:$<TARGET_OBJECTS:hello::hello_OBJECTS>>")' in targets
+
+
+def test_cpp_info_objects_cmake_target_name():
+    """ the auxiliary OBJECT target is derived from the final CMake target name """
+    c = TestClient()
+    conan_hello = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "arch", "build_type"
+            def package_info(self):
+                self.cpp_info.components["say"].set_property("cmake_target_name", "mine::greet")
+                self.cpp_info.components["say"].objects = ["mycomponent.o"]
+            """)
+
+    c.save({"conanfile.py": conan_hello})
+    c.run("create . --name=hello --version=1.0")
+    c.run("install --requires=hello/1.0@ -g CMakeConfigDeps")
+    targets = c.load("hello-Targets-release.cmake")
+    assert "add_library(mine::greet_OBJECTS OBJECT IMPORTED)" in targets
+    assert "set_property(TARGET mine::greet APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+           '             "$<$<CONFIG:RELEASE>:$<TARGET_OBJECTS:mine::greet_OBJECTS>>")' in targets
