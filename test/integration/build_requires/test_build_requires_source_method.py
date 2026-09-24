@@ -142,7 +142,7 @@ class TestBuildEnvSource:
             """)
         c.save({"conanfile.py": pkg})
         c.run("create .", assert_error=True)
-        assert "ERROR: pkg/0.1: Error in source() method, line 12" in c.out
+        assert "ERROR: Error in source() method, line 12" in c.out
 
         # Local will still work, because ``install`` generates env-scripts and no layout
         c.run("install .")

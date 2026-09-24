@@ -1,6 +1,7 @@
 import json
 import os
 import platform
+import shutil
 import textwrap
 
 import pytest
@@ -675,3 +676,124 @@ class TestEnvironmentInPresets:
 
         c.run_command(f"ctest --preset conan-release")
         assert "tests passed" in c.out
+
+
+class TestCMakeLayoutBuildFolder:
+
+    def test_build_folder_vars_empty(self):
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import cmake_layout
+
+            class Conan(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "build_type"
+                generators = "CMakeToolchain"
+
+                def layout(self):
+                    self.folders.build_folder_vars = []
+                    cmake_layout(self)
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("install . -s os=Linux -s build_type=Debug")
+        presets = client.load("build/Debug/generators/CMakePresets.json")
+        assert "conan-debug" in presets
+
+    def test_build_folder_vars_recipe_exclude_build_type(self):
+        # Recipe opts in to folders/preset names without the build_type via "!settings.build_type"
+        client = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import cmake_layout
+
+            class Conan(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                settings = "os", "build_type"
+                generators = "CMakeToolchain"
+
+                def layout(self):
+                    self.folders.build_folder_vars = ["!settings.build_type"]
+                    cmake_layout(self)
+            """)
+        client.save({"conanfile.py": conanfile})
+        client.run("install . -s os=Linux -s build_type=Debug")
+        presets = json.loads(client.load("build/generators/CMakePresets.json"))
+        assert presets["configurePresets"][0]["name"] == "conan-default"
+        assert presets["buildPresets"][0]["name"] == "conan-default"
+
+    def test_build_folder_vars_combinations(self):
+        c = TestClient()
+        c.run("new cmake_exe -d name=hello -d version=0.1")
+        settings = ("-s compiler=gcc -s compiler.version=9 "
+                    "-s compiler.libcxx=libstdc++ -s compiler.cppstd=17")
+
+        # NINJA
+        generator = "-c tools.cmake.cmaketoolchain:generator=Ninja"
+
+        # NINJA + build_folder_vars = cppstd
+        conf = '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.compiler.cppstd"]\''
+        c.run(f"install . {settings} {conf} {generator}")
+        # The folder is now "17/Release" (a nested subfolder, automatic for Release/Debug)
+        presets = json.loads(c.load("build/17/Release/generators/CMakePresets.json"))
+        assert presets["configurePresets"][0]["name"] == "conan-17-release"
+        assert presets["buildPresets"][0]["name"] == "conan-17-release"
+
+        # NINJA + build_folder_vars = cppstd, build_type
+        shutil.rmtree(os.path.join(c.current_folder, "build"))
+        conf = ('-c tools.cmake.cmake_layout:build_folder_vars='
+                '\'["settings.compiler.cppstd", "settings.build_type"]\'')
+        c.run(f"install . {settings} {conf} {generator}")
+        # The folder is now "17-release"
+        presets = json.loads(c.load("build/17-release/generators/CMakePresets.json"))
+        assert presets["configurePresets"][0]["name"] == "conan-17-release"
+        assert presets["buildPresets"][0]["name"] == "conan-17-release"
+
+        # NINJA Multi-Config
+        generator = '-c tools.cmake.cmaketoolchain:generator="Ninja Multi-Config"'
+
+        # NINJA Multi-Config + build_folder_vars = cppstd
+        shutil.rmtree(os.path.join(c.current_folder, "build"))
+        conf = '-c tools.cmake.cmake_layout:build_folder_vars=\'["settings.compiler.cppstd"]\''
+        c.run(f"install . {settings} {conf} {generator}")
+        # The folder is now "17" (for both configs it is the same)
+        presets = json.loads(c.load("build/17/generators/CMakePresets.json"))
+        assert presets["configurePresets"][0]["name"] == "conan-17"
+        assert presets["buildPresets"][0]["name"] == "conan-17-release"
+
+        # NINJA Multi-Config+ build_folder_vars = cppstd, build_type
+        shutil.rmtree(os.path.join(c.current_folder, "build"))
+        conf = ('-c tools.cmake.cmake_layout:build_folder_vars='
+                '\'["settings.compiler.cppstd", "settings.build_type"]\'')
+        c.run(f"install . {settings} {conf} {generator}")
+        # The folder is now "17-release", even if it is multi-config, it will have a dedicated folder
+        presets = json.loads(c.load("build/17-release/generators/CMakePresets.json"))
+        assert presets["configurePresets"][0]["name"] == "conan-17-release"
+        assert presets["buildPresets"][0]["name"] == "conan-17-release"
+
+    def test_build_folder_vars_exclude_build_type(self):
+        # "!settings.build_type" opts out of the build_type folder segment and preset suffix
+        c = TestClient()
+        c.run("new cmake_exe -d name=hello -d version=0.1")
+        settings = ("-s compiler=gcc -s compiler.version=9 "
+                    "-s compiler.libcxx=libstdc++ -s compiler.cppstd=17")
+
+        # NINJA (single-config) + cppstd + !build_type -> folder "build/17", preset "conan-17"
+        generator = "-c tools.cmake.cmaketoolchain:generator=Ninja"
+        conf = ('-c tools.cmake.cmake_layout:build_folder_vars='
+                '\'["settings.compiler.cppstd", "!settings.build_type"]\'')
+        c.run(f"install . {settings} {conf} {generator}")
+        presets = json.loads(c.load("build/17/generators/CMakePresets.json"))
+        assert presets["configurePresets"][0]["name"] == "conan-17"
+        assert presets["buildPresets"][0]["name"] == "conan-17"
+
+        # Only "!settings.build_type" -> folder "build", preset "conan-default"
+        shutil.rmtree(os.path.join(c.current_folder, "build"))
+        conf = ('-c tools.cmake.cmake_layout:build_folder_vars='
+                '\'["!settings.build_type"]\'')
+        c.run(f"install . {settings} {conf} {generator}")
+        presets = json.loads(c.load("build/generators/CMakePresets.json"))
+        assert presets["configurePresets"][0]["name"] == "conan-default"
+        assert presets["buildPresets"][0]["name"] == "conan-default"

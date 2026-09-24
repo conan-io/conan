@@ -65,7 +65,7 @@ def test_source_download_password():
     content = {"credentials": [{"url": server_url, "token": "mytoken2"}]}
     save(os.path.join(c.cache_folder, "source_credentials.json"), json.dumps(content))
     c.run("source .", assert_error=True)
-    assert "ERROR: conanfile.py: Error in source() method, line 6" in c.out
+    assert "ERROR: Error in source() method, line 6" in c.out
     assert "Authentication" in c.out
 
 

@@ -182,15 +182,15 @@ def test_patch_real(no_copy_source):
                  "patches/mypatch_h": patch_contents.format(ext="h"),
                  "patches/mypatch_cpp": patch_contents.format(ext="cpp")})
     client.run('create .')
-    assert "mypkg/1.0: Apply patch (security)" in client.out
-    assert "mypkg/1.0: SOURCE: //smart contents" in client.out
+    assert "Apply patch (security)" in client.out
+    assert "SOURCE: //smart contents" in client.out
     assert "mypkg/1.0: BUILD: //smart contents" in client.out
 
     # Test local source too
     client.run("install .")
     client.run("source .")
-    assert "conanfile.py (mypkg/1.0): Apply patch (security)" in client.out
-    assert "conanfile.py (mypkg/1.0): SOURCE: //smart contents" in client.out
+    assert "Apply patch (security)" in client.out
+    assert "SOURCE: //smart contents" in client.out
     client.run("build .")
     assert "conanfile.py (mypkg/1.0): Apply patch (security)" in client.out
     assert "conanfile.py (mypkg/1.0): BUILD: //smart contents" in client.out
@@ -399,7 +399,7 @@ def test_export_conandata_patches():
     client.save({"conandata.yml": ""})
     client.run("create .", assert_error=True)
     assert "export_conandata_patches(): No patches defined in conandata" in client.out
-    assert "ERROR: mypkg/1.0: Error in source() method" in client.out
+    assert "ERROR: Error in source() method" in client.out
     # wrong patches
     client.save({"conandata.yml": "patches: 123"})
     client.run("create .", assert_error=True)
@@ -412,7 +412,7 @@ def test_export_conandata_patches():
 
     client.save({"patches/mypatch.patch": "mypatch!!!"})
     client.run("create .")
-    assert "mypkg/1.0: mypatch!!!" in client.out
+    assert "mypatch!!!" in client.out
 
     conandata_yml = textwrap.dedent("""
         patches:
@@ -421,7 +421,7 @@ def test_export_conandata_patches():
     """)
     client.save({"conandata.yml": conandata_yml})
     client.run("create .")
-    assert "mypkg/1.0: mypatch!!!" in client.out
+    assert "mypatch!!!" in client.out
 
 
 def test_export_conandata_patches_no_patches():
@@ -494,8 +494,8 @@ def test_export_conandata_patches_extra_origin(trim):
                  "conandata.yml": pkg_conandata,
                  "patches/mypatch2.patch": ""})
     client.run(f'create . -cc core.sources.patch:extra_path="{patches_folder}"')
-    assert "mypkg/1.0: Applying extra patches" in client.out
-    assert "mypkg/1.0: mypatch!!!" in client.out
+    assert "Applying extra patches" in client.out
+    assert "mypatch!!!" in client.out
 
     conandata = load(client.exported_layout().conandata())
     assert "1.0" in conandata

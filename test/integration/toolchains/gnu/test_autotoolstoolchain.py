@@ -223,6 +223,30 @@ def test_unknown_compiler():
     assert "Generator 'AutotoolsToolchain' calling 'generate()'" in client.out
 
 
+@pytest.mark.parametrize("generator", ["AutotoolsToolchain", "GnuToolchain"])
+def test_autotoolstoolchain_compiler_executables_unknown_key_warning(generator):
+    """https://github.com/conan-io/conan/issues/19142 -- same guarantee for AutotoolsToolchain."""
+    client = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:compiler_executables={"RC": "rc", "bogus": "x", "c": "gcc"}
+        """)
+    client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "compiler",
+                                                              "build_type")
+                                               .with_generator(generator),
+                 "profile": profile})
+    client.run("install . --profile:host=profile")
+    assert "compiler_executables: ignoring unknown key(s) ['RC', 'bogus']" in client.out
+
+
 def test_toolchain_and_compilers_build_context():
     """
     Tests how AutotoolsToolchain manages the build context profile if the build profile is

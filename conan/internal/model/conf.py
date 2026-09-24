@@ -44,7 +44,9 @@ BUILT_IN_CONFS = {
     "core.download:parallel": "Number of concurrent threads to download packages",
     "core.download:retry": " (int, default: 2) Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "(int, default: 1s) Seconds to wait between download attempts from Conan server",
-    "core.download:download_cache": "Define path to a file download cache",
+    "core.download:download_cache": "Define path to a file download cache. Files uploaded to a "
+                                    "server are also stored here, so a later download of the same "
+                                    "artifact can be skipped",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
     "core:policies": policies_msg,
@@ -69,6 +71,10 @@ BUILT_IN_CONFS = {
     "core.net.http:cacert_path": "Path containing a custom Cacert file",
     "core.net.http:client_cert": "Path or tuple of files containing a client cert (and key)",
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
+    "core.net.http:trust_store": "(Experimental) If True, additionally verify HTTPS certificates "
+                                  "against the OS-native trust store via the 'truststore' "
+                                  "(needs Python>=3.10) package "
+                                  "(used together with, not instead of, the certifi CA bundle).",
     # Compression for `conan upload`
     "core.upload:compression_format": "The compression format used when uploading Conan packages. "
                                       "Possible values: 'zst', 'xz', 'gz' (default=gz)",
@@ -103,7 +109,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:presets_environment": "String to define wether to add or not the environment section to the CMake presets. Empty by default, will generate the environment section in CMakePresets. Can take values: 'disabled'.",
     "tools.cmake.cmaketoolchain:extra_variables": "Dictionary with variables to be injected in CMakeToolchain (potential override of CMakeToolchain defined variables)",
     "tools.cmake.cmaketoolchain:enabled_blocks": "Select the specific blocks to use in the conan_toolchain.cmake",
-    "tools.cmake.cmaketoolchain:user_presets": "(Experimental) Select a different name instead of CMakeUserPresets.json, empty to disable",
+    "tools.cmake.cmaketoolchain:user_presets": "(Experimental) Select a different name or relative filepath instead of CMakeUserPresets.json, empty to disable. A relative filepath (with directory component) enables CMake 4.4+ --preset-file mode",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
     "tools.cmake.cmake_layout:build_folder": "(Experimental) Allow configuring the base folder of the build for local builds",
     "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",

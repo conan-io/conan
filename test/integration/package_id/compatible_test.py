@@ -713,7 +713,7 @@ class TestCompatibleBuild:
         assert f"compiler.cppstd={expected}" in tc.out
         # Without checking if the compatibles are already in the cache, it will build twice,
         # once for the package and once for the test_package
-        assert tc.out.count("pkg/0.1: Building your package") == 1
+        assert tc.out.count("Building from source pkg/0.1") == 1
         tc.run("list *:*")
         assert f"compiler.cppstd: {expected}" in tc.out
 
@@ -764,7 +764,7 @@ class TestCompatibleBuild:
 
         # Without checking if the compatibles are already in the cache, it will build twice,
         # once for the package and once for the test_package
-        assert tc.out.count("pkg/0.1: Building your package") == 0
+        assert tc.out.count("Building from source pkg/0.1") == 0
 
 
 def test_compatibility_new_setting_forwards_compat():

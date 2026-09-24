@@ -1,11 +1,12 @@
 import json
 import textwrap
-import time
 from datetime import timedelta
-
 from unittest.mock import patch
 
+import pytest
+
 from conan.internal.api.remotes.localdb import LocalDB
+from conan.internal.rest.auth_manager import LOGIN_RETRIES
 from conan.internal.rest.rest_client_v2 import RestV2Methods
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
@@ -413,6 +414,19 @@ class TestRemoteAuth:
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out
 
+    @pytest.mark.parametrize("attempted_user, expected_error", [
+        ("other", "ERROR: Wrong user or password"),
+        ("myuser", 'ERROR: Wrong password for user "myuser"')
+    ], ids=["different-user", "same-user"])
+    def test_remote_auth_error_with_cached_user(self, attempted_user, expected_error):
+        servers = {"default": TestServer(users={"myuser": "password"})}
+        c = TestClient(light=True, servers=servers,
+                       inputs=[attempted_user, "pass"] * LOGIN_RETRIES)
+        c.run("remote set-user default myuser")
+        c.run("remote auth *")
+        assert expected_error in c.out
+        assert "error: Too many failed login attempts, bye!" in c.out
+
     def test_remote_auth_server_expire_token_secret(self):
         server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
         c = TestClient(light=True, servers={"default": server},
@@ -437,23 +451,29 @@ class TestRemoteAuth:
 
     def test_remote_auth_server_expire_token(self):
         server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
-        server.test_server.ra.api_v2.credentials_manager.expire_time = timedelta(seconds=2)
         c = TestClient(light=True, servers={"default": server},
                        inputs=["myuser", "password",
                                "myotheruser", "otherpass",
                                "user", "pass", "user", "pass",
                                "user", "pass"])
+
+        def expire_token(user):
+            manager = server.test_server.ra.api_v2.credentials_manager
+            with patch.object(manager, "expire_time", timedelta(seconds=-1)):
+                token = manager.get_token_for(user)
+            LocalDB(c.cache_folder).store(user, token, None, server.fake_url)
+
         c.run("remote auth *")
         assert "user: myuser" in c.out
         # token not expired yet, should work
         c.run("remote auth *")
         assert "user: myuser" in c.out
         # Token should expire
-        time.sleep(3)
+        expire_token("myuser")
         c.run("remote auth *")
         assert "user: myotheruser" in c.out
         # Token should expire
-        time.sleep(3)
+        expire_token("myotheruser")
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out
 

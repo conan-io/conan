@@ -16,9 +16,13 @@ from conan.internal.util.files import save, load
 def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
                         user_presets_path=None, preset_prefix=None, buildenv=None, runenv=None,
                         cmake_executable=None, absolute_paths=None):
+    # A relative filepath (with dir component) signals CMake 4.4+ --preset-file mode
+    preset_file_path = None
+    if user_presets_path and os.path.dirname(user_presets_path):
+        preset_file_path = user_presets_path.replace("\\", "/")
     preset_path = _CMakePresets.generate(conanfile, toolchain_file, generator, cache_variables,
                                          preset_prefix, buildenv, runenv, cmake_executable,
-                                         absolute_paths)
+                                         absolute_paths, preset_file_path)
     _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix,
                                absolute_paths)
 
@@ -28,7 +32,7 @@ class _CMakePresets:
     """
     @staticmethod
     def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix, buildenv,
-                 runenv, cmake_executable, absolute_paths):
+                 runenv, cmake_executable, absolute_paths, preset_file_path=None):
         toolchain_file = os.path.abspath(os.path.join(conanfile.generators_folder, toolchain_file))
         if not absolute_paths:
             try:  # Make it relative to the build dir if possible
@@ -72,12 +76,13 @@ class _CMakePresets:
             configure_preset = _CMakePresets._configure_preset(conanfile, generator, cache_variables,
                                                                toolchain_file, multiconfig,
                                                                preset_prefix, buildenv,
-                                                               cmake_executable)
+                                                               cmake_executable, preset_file_path)
             # Conan generated presets should have only 1 configurePreset, no more, overwrite it
             data["configurePresets"] = [configure_preset]
         else:
             data = _CMakePresets._contents(conanfile, toolchain_file, cache_variables, generator,
-                                           preset_prefix, buildenv, runenv, cmake_executable)
+                                           preset_prefix, buildenv, runenv, cmake_executable,
+                                           preset_file_path)
 
         preset_content = json.dumps(data, indent=4)
         save(preset_path, preset_content)
@@ -96,7 +101,7 @@ class _CMakePresets:
 
     @staticmethod
     def _contents(conanfile, toolchain_file, cache_variables, generator, preset_prefix, buildenv,
-                  runenv, cmake_executable):
+                  runenv, cmake_executable, preset_file_path=None):
         """
         Contents for the CMakePresets.json
         It uses schema version 3 unless it is forced to 2
@@ -104,7 +109,7 @@ class _CMakePresets:
         multiconfig = is_multi_configuration(generator)
         conf = _CMakePresets._configure_preset(conanfile, generator, cache_variables, toolchain_file,
                                                multiconfig, preset_prefix, buildenv,
-                                               cmake_executable)
+                                               cmake_executable, preset_file_path)
         build = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix)
         test = _CMakePresets._test_preset_fields(conanfile, multiconfig, preset_prefix, runenv)
         ret = {"version": 3,
@@ -118,7 +123,7 @@ class _CMakePresets:
 
     @staticmethod
     def _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig,
-                          preset_prefix, buildenv, cmake_executable):
+                          preset_prefix, buildenv, cmake_executable, preset_file_path=None):
         build_type = conanfile.settings.get_safe("build_type")
         name = _CMakePresets._configure_preset_name(conanfile, multiconfig)
         if preset_prefix:
@@ -187,12 +192,20 @@ class _CMakePresets:
             tc_tip = f"-DCMAKE_TOOLCHAIN_FILE=<output_folder>/{toolchain_file} " \
                 if "CMAKE_TOOLCHAIN_FILE" not in vars_tip else ""
 
-            msg = textwrap.dedent(f"""\
-                CMakeToolchain: Preset '{name}' added to CMakePresets.json.
-                    (cmake>=3.23) cmake --preset {name}
-                    (cmake<3.23) cmake <path> -G {_format_val(generator)}
-                                 {tc_tip}
-                                 {vars_tip}""")
+            if preset_file_path:
+                msg = textwrap.dedent(f"""\
+                    CMakeToolchain: Preset '{name}' added to CMakePresets.json.
+                        (cmake>=4.4) cmake --preset-file {preset_file_path} --preset {name}
+                        (cmake<3.23) cmake <path> -G {_format_val(generator)}
+                                     {tc_tip}
+                                     {vars_tip}""")
+            else:
+                msg = textwrap.dedent(f"""\
+                    CMakeToolchain: Preset '{name}' added to CMakePresets.json.
+                        (cmake>=3.23) cmake --preset {name}
+                        (cmake<3.23) cmake <path> -G {_format_val(generator)}
+                                     {tc_tip}
+                                     {vars_tip}""")
             conanfile.output.info(msg, fg=Color.CYAN)
         return ret
 
@@ -232,7 +245,7 @@ class _CMakePresets:
         build_type = conanfile.settings.get_safe("build_type")
         custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
         if user_defined_build:
-            return custom_conf
+            return custom_conf or "default"
 
         if custom_conf:
             if build_type:
@@ -247,7 +260,7 @@ class _CMakePresets:
         custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
 
         if user_defined_build:
-            return custom_conf
+            return custom_conf or "default"
 
         if multiconfig or not build_type:
             return "default" if not custom_conf else custom_conf

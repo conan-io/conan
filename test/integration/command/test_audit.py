@@ -15,7 +15,7 @@ _sbom_zlib_1_2_11 = """
 {
   "components" : [ {
     "author" : "<Put your name here> <And your email here>",
-    "bom-ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4",
+    "bom-ref" : "pkg:conan/zlib@1.2.11?rrev=6754320047c5dd54830baaaf9fc733c4",
     "description" : "<Description of zlib package here>",
     "licenses" : [ {
       "license" : {
@@ -28,12 +28,12 @@ _sbom_zlib_1_2_11 = """
     "version" : "1.2.11"
   } ],
   "dependencies" : [ {
-    "ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4"
+    "ref" : "pkg:conan/zlib@1.2.11?rrev=6754320047c5dd54830baaaf9fc733c4"
   } ],
   "metadata" : {
     "component" : {
       "author" : "<Put your name here> <And your email here>",
-      "bom-ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4",
+      "bom-ref" : "pkg:conan/zlib@1.2.11?rrev=6754320047c5dd54830baaaf9fc733c4",
       "name" : "zlib/1.2.11",
       "type" : "library"
     },
@@ -678,7 +678,7 @@ class TestAuditProviderBranchouts:
         tc = TestClient(light=True, inputs=["valid_token"])
         tc.run('audit provider add private --url=foo --type=private')
         providers = json.loads(tc.load_home("audit_providers.json"))
-        assert providers["private"]["token"] == 'Z1RWYEZUWmBeT2U='
+        assert providers["private"]["token"] == 'dmFsaWRfdG9rZW4='
 
     def test_provider_remove_no_name(self):
         tc = TestClient(light=True)
@@ -694,4 +694,4 @@ class TestAuditProviderBranchouts:
         tc = TestClient(light=True, inputs=["valid_token"])
         tc.run('audit provider auth conancenter')
         providers = json.loads(tc.load_home("audit_providers.json"))
-        assert providers["conancenter"]["token"] == 'Z1RWYEZUWmBeT2U='
+        assert providers["conancenter"]["token"] == 'dmFsaWRfdG9rZW4='

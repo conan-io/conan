@@ -40,6 +40,39 @@ def test_transitive_py_requires():
     assert "dep/0.1" not in client.out
 
 
+def test_source_should_respect_lockfile_pyrequires():
+    # "conan source" currently does not resolve python_requires against a lockfile the same way
+    # "install"/"create"/"export"/"build" do
+    client = TestClient(light=True)
+    consumer = textwrap.dedent("""
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            python_requires = "dep/[>0.0]@user/channel"
+            def source(self):
+                v = self.python_requires["dep"].ref.version
+                self.output.info("SOURCE DEP VERSION: {}".format(v))
+        """)
+    client.save({"dep/conanfile.py": GenConanfile(),
+                 "conanfile.py": consumer})
+
+    client.run("export dep --name=dep --version=0.1 --user=user --channel=channel")
+    client.run("lock create conanfile.py")  # writes conan.lock, locks dep/0.1
+    lockfile = os.path.join(client.current_folder, "conan.lock")
+    assert os.path.isfile(lockfile)  # the lock is indeed present when "source" runs below
+
+    client.run("export dep --name=dep --version=0.2 --user=user --channel=channel")
+
+    # "install" auto-discovers "conan.lock" and correctly keeps resolving dep/0.1
+    client.run("install conanfile.py")
+    assert "dep/0.1@user/channel" in client.out
+    assert "dep/0.2" not in client.out
+
+    # "source" should behave the same way and also resolve the locked dep/0.1
+    client.run("source conanfile.py")
+    # This fails, it currently resolves to dep/0.2
+    assert "SOURCE DEP VERSION: 0.1" in client.out
+
+
 def test_transitive_matching_ranges():
     client = TestClient(light=True)
     tool = textwrap.dedent("""

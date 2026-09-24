@@ -12,20 +12,24 @@ from conan.internal.util.files import mkdir, chdir, save
 
 
 def run_source_method(conanfile, hook_manager):
+    scoped_output = ConanOutput()
+    old_display = conanfile.display_name
+    conanfile.display_name = ""
+    scoped_output.info(f"Getting sources for {old_display}")
     mkdir(conanfile.source_folder)
     with chdir(conanfile.source_folder):
         hook_manager.execute("pre_source", conanfile=conanfile)
         if hasattr(conanfile, "source"):
-            conanfile.output.highlight("Calling source() in {}".format(conanfile.source_folder))
+            scoped_output.highlight(f"Calling source() in {conanfile.source_folder}")
             with conanfile_exception_formatter(conanfile, "source"):
                 with conanfile_remove_attr(conanfile, ['info', 'settings', "options"], "source"):
                     conanfile.source()
         hook_manager.execute("post_source", conanfile=conanfile)
+    conanfile.display_name = old_display
 
 
 def run_build_method(conanfile, hook_manager):
-    ConanOutput().step("Build step")
-    ConanOutput().info(f"Building {conanfile}")
+    ConanOutput().step(f"Build step for {conanfile.display_name}")
     if os.path.isfile(conanfile.build_folder):
         raise ConanException(f"{conanfile}: Failed to create build folder, there is already a file "
                              f"named: {conanfile.build_folder}")
@@ -57,10 +61,9 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     mkdir(conanfile.package_folder)
     scoped_output = ConanOutput()
     # Make the copy of all the patterns
-    scoped_output.step("Package step")
+    scoped_output.step(f"Package step for {ref}:{package_id}")
     old_display = conanfile.display_name
     conanfile.display_name = ""
-    scoped_output.info(f"Generating the package {ref}:{package_id}")
     scoped_output.info("Packaging in folder %s" % conanfile.package_folder)
 
     hook_manager.execute("pre_package", conanfile=conanfile)

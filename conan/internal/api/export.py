@@ -2,7 +2,7 @@ import os
 import shutil
 
 from conan.tools.files import copy
-from conan.api.output import ConanOutput, Color
+from conan.api.output import ConanOutput
 from conan.tools.scm import Git
 from conan.internal.errors import conanfile_exception_formatter
 from conan.errors import ConanException
@@ -159,8 +159,8 @@ def _export_source(conanfile, destination_source_folder):
         conanfile.exports_sources = (conanfile.exports_sources,)
 
     included_sources, excluded_sources = _classify_patterns(conanfile.exports_sources)
-    for pattern in included_sources:
-        copy(conanfile, pattern, src=conanfile.recipe_folder,
+    if included_sources:
+        copy(conanfile, included_sources, src=conanfile.recipe_folder,
              dst=destination_source_folder, excludes=excluded_sources)
 
     conanfile.folders.set_base_export_sources(destination_source_folder)
@@ -184,9 +184,9 @@ def _export_recipe(conanfile, destination_folder):
 
     included_exports, excluded_exports = _classify_patterns(conanfile.exports)
 
-    for pattern in included_exports:
-        copy(conanfile, pattern, conanfile.recipe_folder, destination_folder,
-             excludes=excluded_exports)
+    if included_exports:
+        copy(conanfile, included_exports, conanfile.recipe_folder,
+             destination_folder, excludes=excluded_exports)
 
     conanfile.folders.set_base_export(destination_folder)
     _run_method(conanfile, "export")
