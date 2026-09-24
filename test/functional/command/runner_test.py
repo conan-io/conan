@@ -764,8 +764,8 @@ def test_create_docker_runner_copy_config_files_excludes_cache():
     client = TestClient()
     client.save_home({"p/fake_binary_package.bin": "fake binary package data",
                       ".conan.db": "fake remote login tokens",
-                      "credentials.json": "fake remote login credentials",
-                      "source_credentials.json": "fake source download credentials"})
+                      "credentials.json": '{"credentials": []}',
+                      "source_credentials.json": '{"credentials": []}'})
 
     profile_build = textwrap.dedent(f"""\
     [settings]
@@ -818,7 +818,7 @@ def test_create_docker_runner_copy_config_files_excludes_setting():
     """
     client = TestClient()
     client.save_home({"p/fake_binary_package.bin": "fake binary package data",
-                      "credentials.json": "fake remote login credentials"})
+                      "credentials.json": '{"credentials": []}'})
 
     profile_build = textwrap.dedent(f"""\
     [settings]
