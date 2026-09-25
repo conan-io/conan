@@ -48,7 +48,7 @@ def test_cps(shared):
 
             def package_info(self):
                 file_loc = glob.glob("**/mypkg.cps", recursive=True)
-                self.cpp_info = CPS.load(file_loc[0]).to_conan()
+                self.cpp_info = CPS.load(file_loc[0], self).to_conan()
         """)
 
     cmake = textwrap.dedent("""\
@@ -176,7 +176,7 @@ def test_cps_components(shared):
 
             def package_info(self):
                 file_loc = glob.glob("**/mypkg.cps", recursive=True)
-                cps_data = CPS.load(file_loc[0])
+                cps_data = CPS.load(file_loc[0], self)
                 # Convert CPS to cpp_info with components
                 self.cpp_info = cps_data.to_conan()
         """)
@@ -337,7 +337,7 @@ def test_cps_components_requires(kind):
 
             def package_info(self):
                 file_loc = glob.glob("**/{name}.cps", recursive=True)
-                cps_data = CPS.load(file_loc[0])
+                cps_data = CPS.load(file_loc[0], self)
                 # Convert CPS to cpp_info with components
                 self.cpp_info = cps_data.to_conan()
         """)
@@ -547,7 +547,7 @@ def test_cps_name_mapping():
 
             def package_info(self):
                 file_loc = glob.glob("**/potato.cps", recursive=True)
-                self.cpp_info = CPS.load(file_loc[0]).to_conan()
+                self.cpp_info = CPS.load(file_loc[0], self).to_conan()
         """)
 
     cmake = textwrap.dedent("""\
