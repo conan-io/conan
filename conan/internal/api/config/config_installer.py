@@ -107,9 +107,8 @@ def _process_zip_file(config, zippath, cache_folder, tmp_folder, first_remove=Fa
 
 
 def _filecopy(src, filename, dst):
-    # https://github.com/conan-io/conan/issues/6556
-    # This is just a local convenience for "conan config install", using copyfile to avoid
-    # copying with permissions that later cause bugs
+    # https://github.com/conan-io/conan/issues/6556 is handled by removing the file if exists
+    # But file permissions such as +x are respected
     src = os.path.join(src, filename)
     dst = os.path.join(dst, filename)
     # Clear the destination file
@@ -118,7 +117,7 @@ def _filecopy(src, filename, dst):
             rmdir(dst)
         else:
             remove(dst)
-    shutil.copyfile(src, dst)
+    shutil.copy(src, dst)
 
 
 def _process_file(directory, filename, config, cache_folder, folder):

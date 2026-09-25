@@ -30,7 +30,7 @@ class Workspace:
         # Return a protected wrapper around workspace overridable callables in order to
         # be able to have clean errors if user errors in conanws.py code
         myattr = object.__getattribute__(self, item)
-        if item not in ("name", "packages", "add", "remove", "clean", "build_order"):
+        if item not in ("name", "packages", "add", "remove", "clean", "build_order", "get_ref"):
             return myattr
 
         def wrapper(*args, **kwargs):
@@ -71,6 +71,10 @@ class Workspace:
             if p["path"] == path:
                 self.output.warning(f"Package {path} already exists, updating its reference")
                 p["ref"] = editable["ref"]
+                if output_folder:
+                    p["output_folder"] = self._conan_rel_path(output_folder)
+                else:
+                    p.pop("output_folder", None)
                 break
         else:
             packages.append(editable)
@@ -111,15 +115,26 @@ class Workspace:
     def packages(self):
         return self.conan_data.get("packages", [])
 
+    def get_ref(self, folder):  # noqa
+        # Fallback for the built-in packages() when the conanfile has no name/version
+        # (e.g. inherited from a python_requires, which is not resolved during discovery)
+        # Return a RecipeReference, a "name/version[@user/channel]" string, or None
+        return None
+
     def load_conanfile(self, conanfile_path):
-        conanfile_path = os.path.join(self.folder, conanfile_path, "conanfile.py")
-        from conan.internal.loader import ConanFileLoader
+        # Standalone loader without pyreq resolver: workspace ref-discovery must not
+        # depend on remotes, cache or version-range resolution
         from conan.internal.cache.home_paths import HomePaths
-        from conan.internal.conan_app import ConanFileHelpers, CmdWrapper
-        cmd_wrap = CmdWrapper(HomePaths(self._conan_api.home_folder).wrapper_path)
-        helpers = ConanFileHelpers(None, cmd_wrap, self._conan_api._api_helpers.global_conf,
-                                   cache=None, home_folder=self._conan_api.home_folder)
+        from conan.internal.conan_app import CmdWrapper, ConanFileHelpers
+        from conan.internal.loader import ConanFileLoader
+        home_folder = self._conan_api.home_folder
+        cmd_wrap = CmdWrapper(HomePaths(home_folder).wrapper_path)
+        helpers = ConanFileHelpers(requester=None, cmd_wrapper=cmd_wrap,
+                                   global_conf=self._conan_api._api_helpers.global_conf,  # noqa
+                                   cache=None, home_folder=home_folder,
+                                   conan_api=self._conan_api)
         loader = ConanFileLoader(pyreq_loader=None, conanfile_helpers=helpers)
+        conanfile_path = os.path.join(self.folder, conanfile_path, "conanfile.py")
         conanfile = loader.load_named(conanfile_path, name=None, version=None, user=None,
                                       channel=None, remotes=None, graph_lock=None)
         return conanfile

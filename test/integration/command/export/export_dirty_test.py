@@ -25,7 +25,7 @@ class TestSourceDirty:
         assert load(source_file) == "hello world!!!"
         # Without any change, the export will generate same recipe revision, reuse source folder
         client.run("create . --name=pkg --version=1.0", assert_error=True)
-        assert "pkg/1.0: Source folder is corrupted, forcing removal" in client.out
+        assert "Source folder is corrupted, forcing removal" in client.out
         assert "ERROR: pkg/1.0: Error in source() method, line 6" in client.out
 
         # The install also removes corrupted source folder before proceeding, then call source

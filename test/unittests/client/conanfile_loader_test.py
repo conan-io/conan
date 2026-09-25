@@ -77,9 +77,9 @@ OpenCV2/*:other_option=Cosa
         assert len(ret.requires.values()) == 3
         assert ret.generators == ["one", "two"]
         assert ret.options.dumps() == 'OpenCV/*:other_option=False\n' \
-                                              'OpenCV/*:use_python=True\n' \
-                                              'OpenCV2/*:other_option=Cosa\n' \
-                                              'OpenCV2/*:use_python2=1'
+                                      'OpenCV/*:use_python=True\n' \
+                                      'OpenCV2/*:other_option=Cosa\n' \
+                                      'OpenCV2/*:use_python2=1'
 
     def test_load_options_error(self):
         conanfile_txt = textwrap.dedent("""
@@ -91,8 +91,8 @@ OpenCV2/*:other_option=Cosa
         save(file_path, conanfile_txt)
         loader = ConanFileLoader(None, None)
         with pytest.raises(ConanException,
-                                    match=r"Error while parsing \[options\] in conanfile.txt\n" \
-                                    r"Options should be specified as 'pkg/\*:option=value'"):
+                           match=r"Error while parsing \[options\] in conanfile.txt\n"
+                                 r"Options should be specified as 'pkg/\*:option=value'"):
             loader.load_conanfile_txt(file_path)
 
     def test_layout_not_predefined(self):

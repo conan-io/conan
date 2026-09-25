@@ -82,3 +82,20 @@ class TestLRU:
         c.run("remove * --lru=1s -c -f=json", redirect_stdout="removed.json")
         removed = json.loads(c.load("removed.json"))
         assert len(removed["Local Cache"]) == 0
+
+    def test_lru_invalid_time_unit(self):
+        c = TestClient(light=True)
+        c.run(f"list *#* --lru=1x")
+        assert "ERROR: Unrecognized time unit: 'x'" in c.out
+
+    def test_lru_invalid_time_value_edge_cases(self):
+        c = TestClient(light=True)
+        c.run("list *#* --lru=as")
+        assert "ERROR: invalid literal for int() with base 10: 'a'" in c.out
+        c.run("list *#* --lru=s")
+        assert "ERROR: invalid literal for int() with base 10: ''" in c.out
+
+    def test_lru_not_in_remotes(self):
+        c = TestClient(light=True, default_server_user=True)
+        c.run("list *#* --lru=1s -r=default", assert_error=True)
+        assert "'--lru' cannot be used in remotes, only in cache" in c.out

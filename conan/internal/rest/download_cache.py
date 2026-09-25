@@ -1,6 +1,7 @@
 import hashlib
 import json
 import os
+import shutil
 from contextlib import contextmanager
 from threading import Lock
 
@@ -8,7 +9,7 @@ import fasteners
 
 from conan.errors import ConanException
 from conan.internal.util.dates import timestamp_now
-from conan.internal.util.files import load, save, remove_if_dirty
+from conan.internal.util.files import load, save, remove_if_dirty, set_dirty_context_manager
 
 
 class DownloadCache:
@@ -32,6 +33,15 @@ class DownloadCache:
         md.update(url.encode())
         h = md.hexdigest()
         return os.path.join(self._path, self._CONAN_CACHE, h), h
+
+    def cache_file(self, url, src_path):
+        """ Store a local file in the cache under the same key a download() of ``url`` would use"""
+        cached_path, h = self.cached_path(url)
+        with self.lock(h):
+            remove_if_dirty(cached_path)
+            if not os.path.exists(cached_path):
+                with set_dirty_context_manager(cached_path):
+                    shutil.copy2(src_path, cached_path)
 
     _thread_locks = {}  # Needs to be shared among all instances
 
@@ -111,6 +121,16 @@ class DownloadCache:
         return files_to_upload
 
     @staticmethod
+    def get_urls_from_backup_sources(cached_path):
+        """All download URLs stored in the backup-sources summary file ``<cached_path>.json``.
+        """
+        summary_path = cached_path + ".json"
+        if not os.path.exists(summary_path):
+            return set()
+        refs = json.loads(load(summary_path)).get("references") or {}
+        return {url for urls in refs.values() for url in urls}
+
+    @staticmethod
     def update_backup_sources_json(cached_path, conanfile, urls):
         """ create or update the sha256.json file with the references and new urls used
         """
@@ -139,7 +159,7 @@ class DownloadCache:
             urls = [urls]
         existing_urls = summary["references"].setdefault(summary_key, [])
         existing_urls.extend(url for url in urls if url not in existing_urls)
-        conanfile.output.verbose(f"Updating ${summary_path} summary file")
+        conanfile.output.verbose(f"Updating {summary_path} summary file")
         summary_dump = json.dumps(summary)
         conanfile.output.debug(f"New summary: ${summary_dump}")
         save(summary_path, json.dumps(summary))

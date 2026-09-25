@@ -95,3 +95,162 @@ class TestTransitiveOptionsAffectPackageID:
                                 "lib3/0.1": ("7b10301e532fc0269d6ac70470aee5780f0836cd", "Build"),
                                 "lib4/0.1": ("dd8f5355b399fd7d96c883ddd39b992ae968cb14", "Build"),
                                 })
+
+
+class TestPackageIDABIOptions:
+    """
+    These tests use the ``shared=True/False`` options for a proxy of the real issue
+    reported in https://github.com/conan-io/conan/issues/19108
+
+    The issue appears in MSVC when headers define
+
+    define FOO_EXPORT __declspec(dllimport)
+
+    Then, a static library will be a different artifact if it links against a static library
+    or a shared library. This isn't a very common issue because of 2 reasons:
+    - The most general linkage method are either all static or all shared, it is not that frequent
+      to have static libraries linking shared libraries
+    - Many third parties and open source libraries declare and use the __declspec(dllexport),
+      which is necessary for correctly exporting the symbols in MSVC. But the dllimport is not
+      that necessary and mostly a linking optimization, so not that frequent
+    """
+    def test_package_id_abi_options(self):
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+                package_id_abi_options = ["shared"]
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "app"
+                version = "0.1"
+                package_type = "static-library"
+                requires = "pkg/0.1"
+            """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "app/conanfile.py": app})
+        c.run("create pkg")
+        c.run("create pkg -o *:shared=True")
+
+        c.run("create app")
+        c.assert_listed_binary({"app": ("e822341e143eb3bba372e24b7cd908c8f91dc24e", "Build")})
+        c.run("list app/0.1:e822341e143eb3bba372e24b7cd908c8f91dc24e")
+        assert "pkg/*:shared: False" in c.out
+
+        c.run("create app -o *:shared=True")
+        c.assert_listed_binary({"app": ("8c15f2b19bd994dcd5b44780eda3f03bde74c217", "Build")})
+        c.run("list app/0.1:8c15f2b19bd994dcd5b44780eda3f03bde74c217")
+        assert "pkg/*:shared: True" in c.out
+
+    def test_package_id_abi_options_conditional(self):
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+                settings = "os"
+
+                def configure(self):
+                    if self.settings.os == "Windows":
+                        self.package_id_abi_options = ["shared"]
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "app"
+                version = "0.1"
+                package_type = "static-library"
+                requires = "pkg/0.1"
+            """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "app/conanfile.py": app})
+        c.run("create pkg -s os=Linux")
+        c.run("create pkg -s os=Linux -o *:shared=True")
+        c.run("create pkg -s os=Windows")
+        c.run("create pkg -s os=Windows -o *:shared=True")
+
+        c.run("create app -s os=Linux")
+        c.assert_listed_binary({"app": ("e250b55435052b5e55b151d0b03900c73d262473", "Build")})
+        c.run("list app/0.1:e250b55435052b5e55b151d0b03900c73d262473")
+        assert "pkg/*:shared: False" not in c.out
+
+        c.run("create app -o *:shared=True -s os=Linux --build=missing:&")
+        c.assert_listed_binary({"app": ("e250b55435052b5e55b151d0b03900c73d262473", "Cache")})
+
+        c.run("create app -s os=Windows")
+        c.assert_listed_binary({"app": ("e822341e143eb3bba372e24b7cd908c8f91dc24e", "Build")})
+        c.run("list app/0.1:e822341e143eb3bba372e24b7cd908c8f91dc24e")
+        assert "pkg/*:shared: False" in c.out
+
+        c.run("create app -o *:shared=True -s os=Windows --build=missing:&")
+        c.assert_listed_binary({"app": ("8c15f2b19bd994dcd5b44780eda3f03bde74c217", "Build")})
+        c.run("list app/0.1:8c15f2b19bd994dcd5b44780eda3f03bde74c217")
+        assert "pkg/*:shared: True" in c.out
+
+    def test_package_id_abi_options_transitive(self):
+        c = TestClient(light=True)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+                package_id_abi_options = ["shared"]
+            """)
+        middle = (GenConanfile("middle", "0.1").with_requires("pkg/0.1")
+                                               .with_package_type("shared-library"))
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "app"
+                version = "0.1"
+                package_type = "application"
+                requires = "middle/0.1"
+            """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "middle/conanfile.py": middle,
+                "app/conanfile.py": app})
+        c.run("create pkg")
+        c.run("create pkg -o *:shared=True")
+        c.run("create middle")
+        c.run("create middle -o *:shared=True")
+
+        c.run("create app")
+        c.assert_listed_binary({"app": ("6da48adc0fa03ddc8b74de14b3fd5513a3688a52", "Build")})
+        # binary not affected, because headers not propagated!
+        c.run("list app/0.1:6da48adc0fa03ddc8b74de14b3fd5513a3688a52")
+        assert "pkg/*:shared: False" not in c.out
+
+        c.run("create app -o *:shared=True")
+        # Still affected by "middle" full package-id, that is static
+        c.assert_listed_binary({"app": ("6da48adc0fa03ddc8b74de14b3fd5513a3688a52", "Build")})
+        c.run("list app/0.1:6da48adc0fa03ddc8b74de14b3fd5513a3688a52")
+        assert "pkg/*:shared: False" not in c.out
+
+        # But if the header is propagated
+        middle = (GenConanfile("middle", "0.1").with_requirement("pkg/0.1", transitive_headers=True)
+                  .with_package_type("shared-library"))
+        c.save({"middle/conanfile.py": middle})
+        c.run("create middle")
+        c.run("create middle -o *:shared=True")
+
+        c.run("create app")
+        c.assert_listed_binary({"app": ("ae20c28d303d1c561f95683add6638d6155c2bd9", "Build")})
+        c.run("list app/0.1:ae20c28d303d1c561f95683add6638d6155c2bd9")
+        assert "pkg/*:shared: False" in c.out
+
+        c.run("create app -o *:shared=True")
+        # Still affected by "middle" full package-id, that is static
+        c.assert_listed_binary({"app": ("321ad086fc1bbb3c2cf7f3e4d8d69c6d2096196d", "Build")})
+        c.run("list app/0.1:321ad086fc1bbb3c2cf7f3e4d8d69c6d2096196d")
+        assert "pkg/*:shared: True" in c.out

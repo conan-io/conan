@@ -107,45 +107,6 @@ def test_brew_check():
     assert "missing: ['non-existing1', 'non-existing2']" in client.out
 
 
-@pytest.mark.tool("brew")
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires brew")
-@pytest.mark.skip(reason="brew update takes a lot of time")
-def test_brew_install_check_mode():
-    client = TestClient()
-    client.save({"conanfile.py": textwrap.dedent("""
-        from conan import ConanFile
-        from conan.tools.system.package_manager import Brew
-
-        class MyPkg(ConanFile):
-            settings = "arch"
-            def system_requirements(self):
-                brew = Brew(self)
-                brew.install(["non-existing1", "non-existing2"])
-        """)})
-    client.run("create . test/1.0@", assert_error=True)
-    assert "System requirements: 'non-existing1, non-existing2' are missing but " \
-           "can't install because tools.system.package_manager:mode is 'check'" in client.out
-
-
-@pytest.mark.tool("brew")
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires brew")
-@pytest.mark.skip(reason="brew update takes a lot of time")
-def test_brew_install_install_mode():
-    client = TestClient()
-    client.save({"conanfile.py": textwrap.dedent("""
-        from conan import ConanFile
-        from conan.tools.system.package_manager import Brew
-
-        class MyPkg(ConanFile):
-            settings = "arch"
-            def system_requirements(self):
-                brew = Brew(self)
-                brew.install(["non-existing1", "non-existing2"])
-        """)})
-    client.run("create . test/1.0@ -c tools.system.package_manager:mode=install", assert_error=True)
-    assert "Error: No formulae found in taps." in client.out
-
-
 def test_collect_system_requirements():
     """ we can know the system_requires for every package because they are part of the graph,
     this naturally execute at ``install``, but we can also prove that with ``graph info`` we can

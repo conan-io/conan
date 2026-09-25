@@ -169,7 +169,8 @@ class TestRestApi:
 
         files = {"conanfile.py": GenConanfile("3").with_requires("1", "12").with_exports("*"),
                  "hello.cpp": "hello",
-                 "conanmanifest.txt": ""}
+                 "conanmanifest.txt": "",
+                 "conan_package.tgz": ""}
         if base_files:
             files.update(base_files)
 

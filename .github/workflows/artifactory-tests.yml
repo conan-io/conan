@@ -1,0 +1,84 @@
+name: Artifactory Integration Tests
+
+on:
+  push:
+    branches:
+      - develop2
+      - 'release/2.*'
+  schedule:
+    - cron: '0 3 * * *'  # Nightly at 3 AM UTC (runs on default branch: develop2)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  artifactory_tests:
+    name: Artifactory ${{ matrix.artifactory-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        artifactory-version:
+          - '7.55.13'
+          - '7.59.9'
+          - '7.63.14'
+          - 'latest'
+
+    services:
+      artifactory:
+        image: releases-docker.jfrog.io/jfrog/artifactory-pro:${{ matrix.artifactory-version }}
+        env:
+          JF_SHARED_DATABASE_TYPE: derby
+          JF_SHARED_DATABASE_ALLOWNONPOSTGRESQL: "true"
+        ports:
+          - 8081:8081
+          - 8082:8082
+        options: >-
+          --health-cmd "curl -sf http://localhost:8081/artifactory/api/system/ping || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+          --health-start-period 60s
+          --log-driver none
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply Artifactory license
+        env:
+          ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
+          ARTIFACTORY_PASSWORD: ${{ secrets.ARTIFACTORY_PASSWORD }}
+          ARTIFACTORY_LICENSE: ${{ secrets.ARTIFACTORY_LICENSE }}
+        run: |
+          curl -sf --output /dev/null -u "${ARTIFACTORY_USER}:${ARTIFACTORY_PASSWORD}" -XPOST http://localhost:8081/artifactory/api/system/license \
+            -H "Content-type: application/json" \
+            -d "{\"licenseKey\": \"${ARTIFACTORY_LICENSE}\"}"
+
+      - name: Wait for Artifactory router (port 8082)
+        run: |
+          until curl -sf http://localhost:8082/artifactory/api/system/ping; do
+            echo "Waiting for Artifactory router..."
+            sleep 5
+          done
+          echo "Artifactory router ready"
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Conan and test dependencies
+        run: |
+          pip install -e .
+          pip install -r conans/requirements_dev.txt
+          pip install -r conans/requirements_server.txt
+
+      - name: Run artifactory_ready tests
+        env:
+          ARTIFACTORY_DEFAULT_URL: http://localhost:8082/artifactory
+        run: pytest test -m "artifactory_ready" -v

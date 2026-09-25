@@ -8,7 +8,7 @@ def is_multi_configuration(generator):
 
 
 def parse_extra_variable(source, key, value):
-    CMAKE_CACHE_TYPES = ["BOOL", "FILEPATH", "PATH", "STRING", "INTERNAL"]
+    CMAKE_CACHE_TYPES = ["BOOL", "FILEPATH", "PATH", "STRING", "INTERNAL"]  # noqa
     if isinstance(value, str):
         return f"\"{value}\""
     elif isinstance(value, (int, float)):

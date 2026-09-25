@@ -30,7 +30,7 @@ def test_package_vendor():
             })
     c.run("create pkga")
     c.run("create app")  # -c tools.graph:vendor=build will be automatic
-    assert "app/0.1: package(): Packaged 1 '.dll' file: pkga.dll" in c.out
+    assert "package(): Packaged 1 '.dll' file: pkga.dll" in c.out
 
     # we can safely remove pkga
     c.run("remove pkg* -c")
@@ -167,7 +167,7 @@ def test_package_vendor_export_pkg():
     c.run("build app")  # -c tools.graph:vendor=build will be automatic
     c.run("export-pkg app")
     assert "pkga/0.1" in c.out  # In the export-pkg process, dependencies are still needed
-    assert "conanfile.py (app/0.1): package(): Packaged 1 '.dll' file: pkga.dll" in c.out
+    assert "package(): Packaged 1 '.dll' file: pkga.dll" in c.out
 
     # we can safely remove pkga, once the package is created, it can work without deps
     c.run("remove pkg* -c")

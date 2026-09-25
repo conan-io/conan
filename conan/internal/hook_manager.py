@@ -32,8 +32,10 @@ class HookManager:
             # TODO: This display_name is ugly, improve it
             display_name = conanfile.display_name
             try:
-                conanfile.display_name = "%s: [HOOK - %s] %s()" % (conanfile.display_name, name,
-                                                                   method_name)
+                if display_name:
+                    conanfile.display_name = f"{display_name}: [HOOK - {name}] {method_name}()"
+                else:
+                    conanfile.display_name = f"[HOOK - {name}] {method_name}()"
                 method(conanfile)
             except ConanInvalidConfiguration:
                 raise

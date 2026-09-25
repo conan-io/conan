@@ -29,5 +29,5 @@ class TestDownloadRetries:
         client = TestClient(servers={"default": test_server}, inputs=["admin", "password"],
                             requester_class=BuggyRequester)
         client.run("install --requires=pkg/0.1@lasote/stable", assert_error=True)
-        assert str(client.out).count("Waiting 0 seconds to retry...") == 2
+        assert str(client.out).count("Waiting 1 seconds to retry...") == 2
         assert str(client.out).count("Error 200 downloading") == 3

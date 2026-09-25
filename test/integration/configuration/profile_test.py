@@ -2,7 +2,6 @@ import json
 import os
 import platform
 import textwrap
-from collections import OrderedDict
 from textwrap import dedent
 
 import pytest
@@ -109,10 +108,12 @@ class TestProfile:
     @pytest.mark.skipif(platform.system() != "Windows", reason="Windows profiles")
     def test_install_profile_settings(self):
         # Create a profile and use it
-        profile_settings = OrderedDict([("compiler", "msvc"),
-                                        ("compiler.version", "191"),
-                                        ("compiler.runtime", "dynamic"),
-                                        ("arch", "x86")])
+        profile_settings = {
+            "compiler": "msvc",
+            "compiler.version": "191",
+            "compiler.runtime": "dynamic",
+            "arch": "x86",
+        }
 
         create_profile(self.client.paths.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
@@ -134,10 +135,11 @@ class TestProfile:
                 assert "compiler.version=191" in info
 
         # Use package settings in profile
-        tmp_settings = OrderedDict()
-        tmp_settings["compiler"] = "gcc"
-        tmp_settings["compiler.libcxx"] = "libstdc++11"
-        tmp_settings["compiler.version"] = "4.8"
+        tmp_settings = {
+            "compiler": "gcc",
+            "compiler.libcxx": "libstdc++11",
+            "compiler.version": "4.8",
+        }
         package_settings = {"hello0/*": tmp_settings}
         create_profile(self.client.paths.profiles_path,
                        "vs_12_86_hello0_gcc", settings=profile_settings,
@@ -182,17 +184,20 @@ class TestProfile:
         self.client.save({"conanfile.py": conanfile})
 
         # Create a profile and use it
-        profile_settings = OrderedDict([("os", "Windows"),
-                                        ("compiler", "msvc"),
-                                        ("compiler.version", "191"),
-                                        ("compiler.runtime", "dynamic"),
-                                        ("arch", "x86")])
+        profile_settings = {
+            "os": "Windows",
+            "compiler": "msvc",
+            "compiler.version": "191",
+            "compiler.runtime": "dynamic",
+            "arch": "x86",
+        }
 
         # Use package settings in profile
-        tmp_settings = OrderedDict()
-        tmp_settings["compiler"] = "gcc"
-        tmp_settings["compiler.libcxx"] = "libstdc++11"
-        tmp_settings["compiler.version"] = "4.8"
+        tmp_settings = {
+            "compiler": "gcc",
+            "compiler.libcxx": "libstdc++11",
+            "compiler.version": "4.8",
+        }
         package_settings = {"*@lasote/*": tmp_settings}
         _create_profile(self.client.paths.profiles_path,
                         "myprofile", settings=profile_settings,

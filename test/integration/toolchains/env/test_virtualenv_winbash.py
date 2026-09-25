@@ -48,7 +48,7 @@ def test_virtualenv_deactivated(client, win_bash):
         assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
         build_contents = client.load("conanbuildenv.sh")
         assert "/cygdrive/c/path/to/ar" in build_contents
-        assert "$PATH:/cygdrive/c/path/to/something" in build_contents
+        assert "${PATH:-}${PATH:+:}/cygdrive/c/path/to/something" in build_contents
     else:
         assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
         build_contents = client.load("conanbuildenv.bat")
@@ -88,7 +88,7 @@ def test_nowinbash(client):
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
     build_contents = client.load("conanbuildenv.sh")
     assert 'export AR="/cygdrive/c/path/to/ar"' in build_contents
-    assert 'export PATH="$PATH:/cygdrive/c/path/to/something"' in build_contents
+    assert 'export PATH="${PATH:-}${PATH:+:}/cygdrive/c/path/to/something"' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     run_contents = client.load("conanrunenv.sh")
     assert 'export RUNTIME_VAR="/cygdrive/c/path/to/exe"' in run_contents
@@ -100,7 +100,7 @@ def test_nowinbash(client):
     assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
     build_contents = client.load("conanbuildenv.sh")
     assert 'export AR="/c/path/to/ar"' in build_contents
-    assert 'export PATH="$PATH:/c/path/to/something"' in build_contents
+    assert 'export PATH="${PATH:-}${PATH:+:}/c/path/to/something"' in build_contents
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     run_contents = client.load("conanrunenv.sh")
     assert 'export RUNTIME_VAR="/c/path/to/exe"' in run_contents

@@ -33,7 +33,7 @@ class _RequesterMock:
         self.retry = 0
         self.retry_wait = 0
 
-    def put(self, *args, **kwargs):
+    def put(self, *args, **kwargs):  # noqa
         return self.response
 
 

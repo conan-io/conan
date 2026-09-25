@@ -86,6 +86,44 @@ def apple_min_version_flag(conanfile):
     }.get(os_sdk, "")
 
 
+def _apple_swift_target_triple(conanfile):
+    """
+    Swift compiler target triple, e.g. ``arm64-apple-ios17.0-simulator``.
+
+    Unlike Clang, ``swiftc`` does not derive its target from the SDK and the
+    architecture, so it has to be computed explicitly.
+    """
+    if not is_apple_os(conanfile):
+        return None
+    arch = to_apple_arch(conanfile)  # None for universal binaries
+    if not arch:
+        return None
+
+    if conanfile.settings.get_safe("os.subsystem") == "catalyst":
+        ios_version = conanfile.settings.get_safe("os.subsystem.ios_version")
+        return f"{arch}-apple-ios{ios_version}-macabi" if ios_version else None
+
+    os_version = conanfile.settings.get_safe("os.version")
+    if not os_version:
+        return None
+    os_sdk = conanfile.settings.get_safe("os.sdk") or \
+        ("macosx" if conanfile.settings.get_safe("os") == "Macos" else None)
+    triple_os, simulator = {
+        "macosx": ("macosx", False),
+        "iphoneos": ("ios", False),
+        "iphonesimulator": ("ios", True),
+        "watchos": ("watchos", False),
+        "watchsimulator": ("watchos", True),
+        "appletvos": ("tvos", False),
+        "appletvsimulator": ("tvos", True),
+        "xros": ("xros", False),
+        "xrsimulator": ("xros", True),
+    }.get(os_sdk, (None, False))
+    if not triple_os:
+        return None
+    return f"{arch}-apple-{triple_os}{os_version}" + ("-simulator" if simulator else "")
+
+
 def resolve_apple_flags(conanfile, is_cross_building=False, is_universal=False):
     """
     Gets the most common flags in Apple systems. If it's a cross-building context

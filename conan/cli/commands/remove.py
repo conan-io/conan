@@ -93,13 +93,15 @@ def remove(conan_api: ConanAPI, parser, *args):
         multi_package_list.add(cache_name, package_list)
 
     result = PackagesList()
+    refs = []
+    prefs = []
     for ref, packages in package_list.items():
         ref_dict = package_list.recipe_dict(ref).copy()
         packages_dict = ref_dict.pop("packages", None)
         if packages_dict is None:
             if confirmation(f"Remove the recipe and all the packages of '{ref.repr_notime()}'?"):
                 if not args.dry_run:
-                    conan_api.remove.recipe(ref, remote=remote)
+                    refs.append(ref)
                 result.add_ref(ref)
                 result.recipe_dict(ref).update(ref_dict)  # it doesn't contain "packages"
         else:
@@ -109,12 +111,16 @@ def remove(conan_api: ConanAPI, parser, *args):
             for pref, pkg_id_info in packages.items():
                 if confirmation(f"Remove the package '{pref.repr_notime()}'?"):
                     if not args.dry_run:
-                        conan_api.remove.package(pref, remote=remote)
+                        prefs.append(pref)
                     result.add_ref(ref)
                     result.recipe_dict(ref).update(ref_dict)  # it doesn't contain "packages"
                     result.add_pref(pref, pkg_id_info)
                     pkg_dict = package_list.package_dict(pref)
                     result.package_dict(pref).update(pkg_dict)
+    if prefs:
+        conan_api.remove.packages(prefs, remote=remote)
+    if refs:
+        conan_api.remove.recipes(refs, remote=remote)
     multi_package_list.add(cache_name, result)
 
     return {

@@ -46,7 +46,7 @@ def test_graph_skip_build_test():
 
     c.run("install app -c tools.graph:skip_build=True --build=pkg/*", assert_error=True)
     assert "ERROR: Package pkg/1.0 skipped its test/tool requires with tools.graph:skip_build, " \
-           "but was marked to be built " in c.out
+           "but was marked to be built" in c.out
 
 
 def test_skip():
@@ -75,7 +75,7 @@ def test_skip():
     assert "pkga" in c.out
     assert "pkgb" in c.out
     # but pkga binary is not really necessary
-    assert re.search(r"Skipped binaries(\s*)pkga/1.0.0", c.out)
+    assert re.search(r"Skipped test binaries(\s*)pkga/1.0.0", c.out)
 
     # skipping all but the current one
     c.run("install pkgc -c &:tools.graph:skip_test=False")

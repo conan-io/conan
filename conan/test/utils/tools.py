@@ -26,6 +26,8 @@ from webtest.app import TestApp
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS
+from conan.internal.api.detect.detect_api import detect_os, detect_msvc_compiler, \
+    default_msvc_ide_version
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal import REVISIONS
@@ -50,6 +52,20 @@ NO_SETTINGS_PACKAGE_ID = "da39a3ee5e6b4b0d3255bfef95601890afd80709"
 
 arch = platform.machine()
 arch_setting = "armv8" if arch in ["arm64", "aarch64"] else arch
+compiler, msvc_version, exe = detect_msvc_compiler()
+default_msvc_version = msvc_version
+default_vs_ide_version = default_msvc_ide_version(msvc_version)
+
+vs2022_profile = """
+[settings]
+os=Windows
+arch=x86_64
+compiler=msvc
+compiler.version=193
+compiler.runtime=dynamic
+build_type=Release
+"""
+
 default_profiles = {
     "Windows": textwrap.dedent("""\
         [settings]
@@ -130,7 +146,7 @@ class TestingResponse:
     def text(self):
         return self.test_response.text
 
-    def iter_content(self, chunk_size=1):  # @UnusedVariable
+    def iter_content(self, chunk_size=1):  # noqa
         return [self.content]
 
     @property
@@ -138,10 +154,7 @@ class TestingResponse:
         return self.test_response.status_code
 
     def json(self):
-        try:
-            return json.loads(self.test_response.content)
-        except:
-            raise ValueError("The response is not a JSON")
+        return json.loads(self.test_response.content)
 
 
 class TestRequester:
@@ -253,7 +266,7 @@ class TestRequester:
     def mount(self, *args, **kwargs):
         pass
 
-    def Session(self):
+    def Session(self):  # noqa
         return self
 
     @property
@@ -331,11 +344,6 @@ class TestServer:
     def latest_recipe(self, ref):
         ref = self.test_server.server_store.get_last_revision(ref)
         return ref
-
-    def recipe_revision_time(self, ref):
-        if not ref.revision:
-            raise Exception("Pass a ref with revision (Testing framework)")
-        return self.test_server.server_store.get_revision_time(ref)
 
     def latest_package(self, pref):
         if not pref.ref.revision:
@@ -435,8 +443,8 @@ class TestClient:
 
         # create default profile
         if light:
-            text = "[settings]\nos=Linux"  # Needed at least build-os
-            save(self.paths.settings_path, "os: [Linux, Windows]")
+            text = f"[settings]\nos={detect_os()}"  # Needed at least build-os
+            save(self.paths.settings_path, "os: [Linux, Windows, Macos]")
         else:
             text = default_profiles[platform.system()]
         save(os.path.join(self.cache_folder, "profiles", "default"), text)
@@ -496,7 +504,6 @@ class TestClient:
             else:
                 remotes.append(Remote(name, server))
         _save(HomePaths(self.cache_folder).remotes_path, remotes)
-
 
     def update_providers(self):
         default_providers = {
@@ -813,30 +820,30 @@ class TestClient:
         return build_folder.replace("\\", "/")
 
     def created_package_id(self, ref):
-        package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)),
+        package_id = re.search(r"Package step for {}:(\S+)".format(re.escape(str(ref))),
                                str(self.out)).group(1)
         return package_id
 
     def created_package_revision(self, ref):
-        package_id = re.search(r"{}: Created package revision (\S+)".format(str(ref)),
-                               str(self.out)).group(1)
-        return package_id
+        pref_str = re.search(r"Full package reference: ({}[^:]*:\S+)".format(re.escape(str(ref))),
+                             str(self.out)).group(1)
+        return PkgReference.loads(pref_str).revision
 
     def created_package_reference(self, ref):
-        pref = re.search(r"{}: Full package reference: (\S+)".format(str(ref)),
-                               str(self.out)).group(1)
-        return PkgReference.loads(pref)
+        pref_str = re.search(r"Full package reference: ({}[^:]*:\S+)".format(re.escape(str(ref))),
+                             str(self.out)).group(1)
+        return PkgReference.loads(pref_str)
 
     def exported_recipe_revision(self):
-        return re.search(r": Exported: .*#(\S+)", str(self.out)).group(1)
+        return re.search(r"Exported: .*#(\S+)", str(self.out)).group(1)
 
     def exported_layout(self):
-        m = re.search(r": Exported: (\S+)", str(self.out)).group(1)
+        m = re.search(r"Exported: (\S+)", str(self.out)).group(1)
         ref = RecipeReference.loads(m)
         return self.cache.recipe_layout(ref)
 
     def created_layout(self):
-        pref = re.search(r"(?s:.*)Full package reference: (\S+)", str(self.out)).group(1)
+        pref = re.findall(r"Full package reference: (\S+)", str(self.out))[-1]
         pref = PkgReference.loads(pref)
         return self.cache.pkg_layout(pref)
 

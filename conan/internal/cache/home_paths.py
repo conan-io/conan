@@ -1,7 +1,5 @@
 import os
 
-from conan.api.output import ConanOutput
-
 _EXTENSIONS_FOLDER = "extensions"
 _PLUGINS = "plugins"
 
@@ -21,12 +19,11 @@ class HomePaths:
         return os.path.join(self._home, "global.conf")
 
     @property
+    def global_conf_path_user(self):
+        return os.path.join(self._home, "global_user.conf")
+
+    @property
     def deployers_path(self):
-        deploy = os.path.join(self._home, _EXTENSIONS_FOLDER, "deploy")
-        if os.path.exists(deploy):
-            ConanOutput().warning("Use 'deployers' cache folder for deployers instead of 'deploy'",
-                                  warn_tag="deprecated")
-            return deploy
         return os.path.join(self._home, _EXTENSIONS_FOLDER, "deployers")
 
     @property

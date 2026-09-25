@@ -14,13 +14,13 @@ def test_tools_apple_is_apple_os():
     conanfile = ConanFileMock()
 
     conanfile.settings = MockSettings({"os": "Macos"})
-    assert is_apple_os(conanfile) == True
+    assert is_apple_os(conanfile)
 
     conanfile.settings = MockSettings({"os": "watchOS"})
-    assert is_apple_os(conanfile) == True
+    assert is_apple_os(conanfile)
 
     conanfile.settings = MockSettings({"os": "Windows"})
-    assert is_apple_os(conanfile) == False
+    assert not is_apple_os(conanfile)
 
 
 def test_tools_apple_to_apple_arch():
@@ -41,7 +41,7 @@ def test_fix_shared_install_name_no_libraries():
 
     with pytest.raises(Exception) as e:
         fix_apple_shared_install_name(conanfile)
-        assert "not found inside package folder" in str(e.value)
+    assert "not found inside package folder" in str(e.value)
 
 
 def test_xcrun_public_settings():

@@ -121,7 +121,8 @@ class Premake:
             if msbuild_platform:
                 msbuild.platform = msbuild_platform
             msbuild.build_type = build_type
-            msbuild.build(sln=f"{workspace}.sln", targets=targets)
+            ext = "slnx" if self.action == "vs2026" else "sln"
+            msbuild.build(sln=f"{workspace}.{ext}", targets=targets)
         else:
             targets = "all" if targets is None else " ".join(targets)
             njobs = build_jobs(self._conanfile)

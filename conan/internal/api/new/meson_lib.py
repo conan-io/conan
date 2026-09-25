@@ -5,6 +5,10 @@ from conan import ConanFile
 from conan.tools.meson import MesonToolchain, Meson
 from conan.tools.layout import basic_layout
 from conan.tools.files import copy
+{% if requires is defined %}
+from conan.tools.gnu import PkgConfigDeps
+{% endif %}
+
 
 class {{package_name}}Conan(ConanFile):
     name = "{{name}}"
@@ -30,7 +34,18 @@ class {{package_name}}Conan(ConanFile):
     def layout(self):
         basic_layout(self)
 
+    {% if requires is defined %}
+    def requirements(self):
+        {% for require in requires -%}
+        self.requires("{{ require }}")
+        {% endfor %}
+    {%- endif %}
+
     def generate(self):
+        {% if requires is defined %}
+        deps = PkgConfigDeps(self)
+        deps.generate()
+        {%- endif %}
         tc = MesonToolchain(self)
         tc.generate()
 
@@ -86,7 +101,17 @@ executable('example', 'src/example.cpp', dependencies: {{name}})
 
 _meson_build = """\
 project('{{name}} ', 'cpp')
+{% if requires is defined -%}
+{% for require in requires -%}
+{{as_name(require)}} = dependency('{{as_name(require)}}', required: true)
+{% endfor %}
+{%- endif %}
+{%- if requires is defined -%}
+library('{{name}}', 'src/{{name}}.cpp', install: true,
+        dependencies:  {{ names(requires) }} )
+{% else %}
 library('{{name}}', 'src/{{name}}.cpp', install: true)
+{% endif -%}
 install_headers('src/{{name}}.h')
 """
 

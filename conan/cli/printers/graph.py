@@ -1,4 +1,5 @@
 from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE, LEVEL_DEBUG
+from conan.errors import ConanException
 
 
 def print_graph_basic(graph):
@@ -61,15 +62,11 @@ def print_graph_basic(graph):
 
     _format_resolved("Resolved alias", graph.aliased)
     if graph.aliased:
-        output.warning("'alias' is a Conan 1.X legacy feature, no longer recommended and "
-                       "it might be removed in 3.0.")
+        output.warning("'alias' is a Conan 1.X legacy, unsupported and undocumented feature, "
+                       "completely discouraged. "
+                       "It might be removed in future Conan versions", warn_tag="deprecated")
         output.warning("Consider using version-ranges instead.")
     _format_resolved("Resolved version ranges", graph.resolved_ranges)
-    for req in graph.resolved_ranges:
-        if str(req.version) == "[]":
-            output.warning("Empty version range usage is discouraged. Use [*] instead",
-                           warn_tag="deprecated")
-            break
 
     overrides = graph.overrides()
     if overrides:
@@ -113,7 +110,7 @@ def print_graph_packages(graph):
     requires = {}
     build_requires = {}
     test_requires = {}
-    skipped_requires = []
+    skipped_requires = {}
     tab = "    "
     for node in graph.nodes:
         if node.recipe in ("Consumer", "Cli"):
@@ -133,7 +130,7 @@ def print_graph_packages(graph):
         if existing[0] == "Skip":
             existing[0] = node.binary
 
-    def _format_requires(title, reqs_to_print):
+    def _format_requires(title, reqs_to_print, header):
         if not reqs_to_print:
             return
         output.info(title, Color.BRIGHT_YELLOW)
@@ -141,7 +138,7 @@ def print_graph_packages(graph):
             name = pref.repr_notime() if status != "Platform" else str(pref.ref)
             msg = f"{tab}{name} - "
             if status == "Skip":
-                skipped_requires.append(str(pref.ref))
+                skipped_requires.setdefault(header, []).append(str(pref.ref))
                 output.verbose(f"{msg}{status}", Color.BRIGHT_CYAN)
             elif status == "Missing" or status == "Invalid":
                 output.write(msg, Color.BRIGHT_CYAN)
@@ -160,10 +157,12 @@ def print_graph_packages(graph):
                 for line in compact_dumps:
                     output.debug(f"{tab}{tab}{line}", Color.BRIGHT_GREEN)
 
-    _format_requires("Requirements", requires)
-    _format_requires("Test requirements", test_requires)
-    _format_requires("Build requirements", build_requires)
+    _format_requires("Requirements", requires, "host")
+    _format_requires("Test requirements", test_requires, "test")
+    _format_requires("Build requirements", build_requires, "build")
 
-    if skipped_requires and not output.level_allowed(LEVEL_VERBOSE):
-        output.info("Skipped binaries", Color.BRIGHT_YELLOW)
-        output.info(f"{tab}{', '.join(skipped_requires)}", Color.BRIGHT_CYAN)
+    if not output.level_allowed(LEVEL_VERBOSE):
+        for header, names in skipped_requires.items():
+            output.info(f"Skipped {header} binaries", Color.BRIGHT_YELLOW)
+            output.info(tab, newline=False)
+            output.info(", ".join(names), Color.BRIGHT_CYAN)

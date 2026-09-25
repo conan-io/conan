@@ -97,7 +97,9 @@ def test_complex_deduce_locations_shared(lib_name, libs, conanfile):
     ("libcurl_imp.lib", "libcurl.dll", ["libcurl_imp"], "libcurl"),
     ("libcrypto.lib", "libcrypto-3-x64.dll", ["libcrypto"], "crypto"),
     ("libssl.lib", "libssl-3-x64.dll", ["libssl"], "ssl"),
-    ("zdll.lib", "zlib1.dll", ["zdll"], "zlib")
+    ("zdll.lib", "zlib1.dll", ["zdll"], "zlib"),
+    ("mimalloc.dll.lib", "mimalloc.dll", ["mimalloc"], "mimalloc"),
+    ("mimalloc.dll.lib", "mimalloc.dll", ["mimalloc.dll"], "mimalloc"),
 ])
 def test_windows_shared_link_locations(lib_name, dll_name, libs, pkg_name, conanfile):
     """
@@ -265,6 +267,26 @@ def test_multiple_matches_exact_match(prefix, conanfile):
     assert result.location == f"{folder}/libdir/{prefix}mylib.a"
     assert result.type == "static-library"
 
+
+def test_multiple_matches_exact_match_mingw_dll_a(conanfile):
+    """
+    Validate .dll.a extension (MingW) used for static import libraries
+    """
+    folder = temp_folder()
+    save(os.path.join(folder, "libdir", "libmylib.dll.a"), "")
+    save(os.path.join(folder, "libdir", "libmylib_setup.dll.a"), "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.libs = ["mylib"]
+    cppinfo.set_relative_base_folder(folder)
+    folder = folder.replace("\\", "/")
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert "WARN: There were several matches for Lib mylib" not in output
+    assert result.location == f"{folder}/libdir/libmylib.dll.a"
+    assert result.type == "static-library"
 
 
 @pytest.mark.parametrize("lib_name, libs", [

@@ -28,8 +28,8 @@ def test_custom_global_generator():
             "conanfile.txt": conanfile})
     c.run("create pkg")
     c.run("install .")
-    assert "conanfile.txt: Generator 'MyCustomGenerator' calling 'generate()'" in c.out
-    assert "conanfile.txt: DEP: pkg/0.1!!" in c.out
+    assert "Generator 'MyCustomGenerator' calling 'generate()'" in c.out
+    assert "DEP: pkg/0.1!!" in c.out
 
     # By CLI also works
     conanfile = textwrap.dedent("""
@@ -38,8 +38,8 @@ def test_custom_global_generator():
         """)
     c.save({"conanfile.txt": conanfile})
     c.run("install . -g MyCustomGenerator")
-    assert "conanfile.txt: Generator 'MyCustomGenerator' calling 'generate()'" in c.out
-    assert "conanfile.txt: DEP: pkg/0.1!!" in c.out
+    assert "Generator 'MyCustomGenerator' calling 'generate()'" in c.out
+    assert "DEP: pkg/0.1!!" in c.out
 
     # In conanfile.py also works
     conanfile = textwrap.dedent("""
@@ -50,8 +50,8 @@ def test_custom_global_generator():
             """)
     c.save({"conanfile.py": conanfile}, clean_first=True)
     c.run("install . ")
-    assert "conanfile.py: Generator 'MyCustomGenerator' calling 'generate()'" in c.out
-    assert "conanfile.py: DEP: pkg/0.1!!" in c.out
+    assert "Generator 'MyCustomGenerator' calling 'generate()'" in c.out
+    assert "DEP: pkg/0.1!!" in c.out
 
 
 def test_custom_global_generator_imports():
@@ -77,8 +77,8 @@ def test_custom_global_generator_imports():
 
     c.save({"conanfile.txt": ""})
     c.run("install . -g MyCustomGenerator")
-    assert "conanfile.txt: Generator 'MyCustomGenerator' calling 'generate()'" in c.out
-    assert "conanfile.txt: MYGENERATE WORKS!!" in c.out
+    assert "Generator 'MyCustomGenerator' calling 'generate()'" in c.out
+    assert "MYGENERATE WORKS!!" in c.out
 
 
 def test_custom_global_generator_multiple():
@@ -108,9 +108,9 @@ def test_custom_global_generator_multiple():
             "conanfile.txt": conanfile})
     c.run("create pkg")
     c.run("install .")
-    assert "conanfile.txt: Generator 'MyGenerator0' calling 'generate()'" in c.out
-    assert "conanfile.txt: Generator 'MyGenerator1' calling 'generate()'" in c.out
-    assert "conanfile.txt: Generator 'MyGenerator2' calling 'generate()'" in c.out
-    assert "conanfile.txt: MyGenerator0!!" in c.out
-    assert "conanfile.txt: MyGenerator1!!" in c.out
-    assert "conanfile.txt: MyGenerator2!!" in c.out
+    assert "Generator 'MyGenerator0' calling 'generate()'" in c.out
+    assert "Generator 'MyGenerator1' calling 'generate()'" in c.out
+    assert "Generator 'MyGenerator2' calling 'generate()'" in c.out
+    assert "MyGenerator0!!" in c.out
+    assert "MyGenerator1!!" in c.out
+    assert "MyGenerator2!!" in c.out

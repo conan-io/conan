@@ -2,7 +2,10 @@ import os
 import textwrap
 
 from conan.api.model import RecipeReference
+from conan.internal.graph.graph_builder import DepsGraphBuilder
 from conan.test.utils.tools import TestClient, GenConanfile
+
+DepsGraphBuilder.ALLOW_ALIAS = True
 
 
 class TestConanAlias:
@@ -50,7 +53,7 @@ class TestConanAlias:
         client.run('remove "*" -c')
 
         client.run("install .")
-        assert "'alias' is a Conan 1.X legacy feature" in client.out
+        assert "'alias' is a Conan 1.X legacy" in client.out
         client.assert_listed_require({"hello/0.1@lasote/channel": "Downloaded (default)"})
         assert "hello/0.x@lasote/channel from" not in client.out
 

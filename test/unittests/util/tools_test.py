@@ -15,17 +15,6 @@ from conan.internal.util.files import load, md5, save
 from conan.internal.util.runners import check_output_runner
 
 
-class RunnerMock:
-    def __init__(self, return_ok=True, output=None):
-        self.command_called = None
-        self.return_ok = return_ok
-        self.output = output
-
-    def __call__(self, command):  # @UnusedVariable
-        self.command_called = command
-        return 0 if self.return_ok else 1
-
-
 def test_replace_in_file():
     text = u'J\xe2nis\xa7'
     tmp_folder = temp_folder()

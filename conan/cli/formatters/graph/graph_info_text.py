@@ -1,5 +1,4 @@
 import fnmatch
-from collections import OrderedDict
 
 from conan.api.model import RecipeReference
 from conan.api.output import ConanOutput, cli_out_write
@@ -29,7 +28,7 @@ def filter_graph(graph, package_filter=None, field_filter=None):
             field_filter.append("ref")
         result = {}
         for id_, n in graph["nodes"].items():
-            new_node = OrderedDict((k, v) for k, v in n.items() if k in field_filter)
+            new_node = {k: v for k, v in n.items() if k in field_filter}
             result[id_] = new_node
         graph["nodes"] = result
     return graph

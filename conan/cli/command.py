@@ -37,7 +37,7 @@ class BaseConanCommand:
                     self._formatters[kind] = action
                 else:
                     raise ConanException("Invalid formatter for {}. The formatter must be"
-                                         "a valid function".format(kind))
+                                         " a valid function".format(kind))
         if method.__doc__:
             self._doc = method.__doc__
         else:

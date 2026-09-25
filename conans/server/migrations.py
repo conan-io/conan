@@ -1,4 +1,4 @@
-from conans.migrations import Migrator
+from conan.internal.api.migrations import Migrator
 
 
 class ServerMigrator(Migrator):

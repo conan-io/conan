@@ -346,6 +346,7 @@ def test_clang_cl_vscrt(build_type, runtime, vscrt):
 
         [conf]
         tools.cmake.cmaketoolchain:generator=Visual Studio 17
+        tools.microsoft.msbuild:installation_path=
 
         [buildenv]
         CC=clang-cl
@@ -906,6 +907,39 @@ def test_new_public_attributes():
     assert expected in content
 
 
+@pytest.mark.parametrize(
+    "package_type, shared_option, default_library, has_fpic",
+    [
+        ("shared-library", None, "shared", False),
+        ("static-library", None, "static", True),
+        ("library", True, "shared", False),
+        ("library", False, "static", True),
+    ],
+)
+def test_package_type(package_type, shared_option, default_library, has_fpic):
+    client = TestClient()
+
+    conanfile = (GenConanfile("pkg", "1.0")
+                 .with_settings("os", "arch", "compiler", "build_type")
+                 .with_package_type(package_type)
+                 .with_generator("MesonToolchain"))
+
+    if shared_option is not None:
+        conanfile = conanfile.with_option("shared", [True, False], shared_option)
+    if has_fpic:
+        conanfile = conanfile.with_option("fPIC", [True, False], True)
+
+    client.save({"conanfile.py": conanfile})
+    client.run("install")
+    content = client.load(MesonToolchain.native_filename)
+    assert "buildtype = 'release'" in content
+    assert f"default_library = '{default_library}'" in content
+    if has_fpic:
+        assert "b_staticpic = True" in content
+    else:
+        assert "b_staticpic" not in content
+
+
 def test_needs_exe_wrapper():
     """
     Tests needs_exe_wrapper depends on `can_run()` function instead of
@@ -947,3 +981,118 @@ def test_needs_exe_wrapper():
     client.run("install . -pr:h host -pr:b build")
     content = client.load(MesonToolchain.cross_filename)
     assert "needs_exe_wrapper = false" in content
+
+
+def test_binaries_attribute():
+    """
+    Tests binaries attribute.
+
+    Issue: https://github.com/conan-io/conan/issues/20007
+    """
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+    from conan import ConanFile
+    from conan.tools.meson import MesonToolchain
+    class Pkg(ConanFile):
+        settings = "os", "compiler", "arch", "build_type"
+        def generate(self):
+            tc = MesonToolchain(self)
+            tc.binaries["wayland-scanner"] = "/path/to/wayland-scanner"
+            tc.binaries["c"] = "/path/to/c"  # overrides the default one defined by tc.c attribute
+            tc.generate()
+    """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install .")
+    content = client.load(MesonToolchain.native_filename)
+    assert "wayland-scanner = '/path/to/wayland-scanner'" in content
+    assert "c = '/path/to/c'" in content
+
+
+def test_exe_wrapper_needs_wrapper():
+    """Issue: https://github.com/conan-io/conan/issues/18718"""
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.meson import MesonToolchain
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            def generate(self):
+                tc = MesonToolchain(self)
+                tc.binaries["exe_wrapper"] = "/usr/bin/qemu"
+                tc.generate()
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s arch=armv8 -s:b arch=x86_64")
+    content = client.load(MesonToolchain.cross_filename)
+    assert "needs_exe_wrapper = true" in content
+    assert "exe_wrapper = '/usr/bin/qemu'" in content
+
+
+@pytest.mark.parametrize("section, key, value", [
+    ("properties", "custom_prop", "value"),
+    ("project_options", "my_option", "enabled"),
+])
+def test_extra_variables_conf(section, key, value):
+    """Issue: https://github.com/conan-io/conan/issues/18718"""
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0")
+                .with_settings("os", "arch", "compiler", "build_type")
+                .with_generator("MesonToolchain")})
+    conf = f'{{"\\"{section}\\"": {{\\"{key}\\": \\"{value}\\"}}}}'
+    client.run(f'install . -c tools.meson.mesontoolchain:extra_variables="{conf}"')
+    content = client.load(MesonToolchain.native_filename)
+    assert f"{key} = '{value}'" in content
+
+
+def test_extra_variables_conf_binaries():
+    """Issue: https://github.com/conan-io/conan/issues/18718"""
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0")
+                .with_settings("os", "arch", "compiler", "build_type")
+                .with_generator("MesonToolchain")})
+    client.run('install . -s arch=armv8 -s:b arch=x86_64 '
+               '-c:h tools.meson.mesontoolchain:extra_variables="{\\"binaries\\": {\\"exe_wrapper\\": \\"/usr/bin/qemu\\"}}"')
+    content = client.load(MesonToolchain.cross_filename)
+    assert "exe_wrapper = '/usr/bin/qemu'" in content
+    assert "needs_exe_wrapper = true" in content
+
+
+def test_extra_variables_needs_exe_wrapper():
+    """
+    Test that needs_exe_wrapper can be overridden via extra_variables conf.
+    """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0")
+                .with_settings("os", "arch", "compiler", "build_type")
+                .with_generator("MesonToolchain")})
+    # Cross-compilation with exe_wrapper defined would normally set needs_exe_wrapper=true
+    # But we override it to false via conf to demonstrate conf has priority
+    client.run('install . -s arch=armv8 -s:b arch=x86_64 '
+               '-c:h tools.meson.mesontoolchain:extra_variables="{\\"binaries\\": {\\"exe_wrapper\\": \\"/usr/bin/qemu\\"}, \\"properties\\": {\\"needs_exe_wrapper\\": \\"false\\"}}"')
+    content = client.load(MesonToolchain.cross_filename)
+    assert "exe_wrapper = '/usr/bin/qemu'" in content
+    print(content)
+    assert "needs_exe_wrapper = 'false'" in content
+
+
+def test_extra_variables_conf_has_priority_over_toolchain():
+    """Issue: https://github.com/conan-io/conan/issues/18718"""
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.meson import MesonToolchain
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            def generate(self):
+                tc = MesonToolchain(self)
+                tc.binaries["custom_tool"] = "/conanfile/path"
+                tc.properties["my_prop"] = "conanfile_value"
+                tc.generate()
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run('install . -c tools.meson.mesontoolchain:extra_variables="{\\"binaries\\": {\\"custom_tool\\": \\"/conf/path\\"}, \\"properties\\": {\\"my_prop\\": \\"conf_value\\"}}"')
+    content = client.load(MesonToolchain.native_filename)
+    assert "custom_tool = '/conf/path'" in content
+    assert "my_prop = 'conf_value'" in content
+    assert "/conanfile/path" not in content
+    assert "conanfile_value" not in content

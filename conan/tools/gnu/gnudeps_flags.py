@@ -45,7 +45,6 @@ class GnuDepsFlags:
         returns an appropriate compiler flags to link with Apple Frameworks
         or an empty array, if Apple Frameworks aren't supported by the given compiler
         """
-        os_ = self._conanfile.settings.get_safe("os")
         if not frameworks or not is_apple_os(self._conanfile):
             return []
         compiler = self._conanfile.settings.get_safe("compiler")
@@ -59,14 +58,14 @@ class GnuDepsFlags:
     def _format_include_paths(self, include_paths):
         if not include_paths:
             return []
-        pattern = "/I%s" if is_msvc(self._conanfile) else "-I%s"
+        pattern = "-I%s"
         return [pattern % (self._adjust_path(include_path))
                 for include_path in include_paths if include_path]
 
     def _format_library_paths(self, library_paths):
         if not library_paths:
             return []
-        pattern = "/LIBPATH:%s" if is_msvc(self._conanfile) else "-L%s"
+        pattern = "-LIBPATH:%s" if is_msvc(self._conanfile) else "-L%s"
         return [pattern % self._adjust_path(library_path)
                 for library_path in library_paths if library_path]
 

@@ -23,7 +23,7 @@ class TestPackageTest:
         client.save({CONANFILE: GenConanfile("hello", "0.1"),
                      "test_package/conanfile.py": test_package})
         client.run("create . --user=lasote --channel=stable")
-        assert "hello/0.1@lasote/stable: Created package" in client.out
+        assert "Created package" in client.out
         client.run("test test_package hello/0.1@lasote/stable")
         assert "hello/0.1@lasote/stable (test package): TESTING" in client.out
         client.run("test hello/0.1@lasote/stable")
@@ -54,7 +54,7 @@ class TestPackageTest:
         client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
         client.run("test test_package hello/0.1@lasote/stable")
         assert "hello/0.1@lasote/stable: Configuring sources" not in client.out
-        assert "hello/0.1@lasote/stable: Created package" not in client.out
+        assert "Created package" not in client.out
         assert "hello/0.1@lasote/stable: Already installed!" in client.out
         assert "hello/0.1@lasote/stable (test package): Running test()" in client.out
 
@@ -77,11 +77,11 @@ class TestPackageTest:
         client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . --user=user --channel=channel")
-        assert "hello/0.1@user/channel: Created package" in client.out
+        assert "Created package" in client.out
 
         # explicit override of user/channel works
         client.run("create . --user=lasote --channel=stable")
-        assert "hello/0.1@lasote/stable: Created package" in client.out
+        assert "Created package" in client.out
 
     def test_test_with_path_errors(self):
         client = TestClient()
@@ -323,13 +323,6 @@ def test_tested_reference_str():
     """
     At the test_package/conanfile the variable `self.tested_reference_str` is injected with the
     str of the reference being tested. It is available in all the methods.
-
-    Compatibility with Conan 2.0:
-    If the 'test_type' is set to "explicit" the require won't be automatically injected and has to
-    be the user the one injecting the require or the build require using the
-    `self.tested_reference_str`. This 'test_type' can be removed in 2.0 if we consider it has
-    to be always explicit. The recipes will still work in Conan 2.0 because the 'test_type' will be
-    ignored.
     """
     client = TestClient()
     test_conanfile = textwrap.dedent("""

@@ -48,7 +48,7 @@ def test_exports_sources_own_code_in_subfolder():
     c.save({"conan/conanfile.py": conanfile,
             "CMakeLists.txt": "mycmake!"})
     c.run("create conan")
-    assert "pkg/0.1: MYCMAKE-SRC: mycmake!" in c.out
+    assert "MYCMAKE-SRC: mycmake!" in c.out
     assert "pkg/0.1: MYCMAKE-BUILD: mycmake!" in c.out
 
     # Local flow
@@ -100,7 +100,7 @@ def test_exports_sources_common_code():
             "pkg/CMakeLists.txt": "mycmake!",
             "common/myutils.cmake": "myutils!"})
     c.run("create pkg")
-    assert "pkg/0.1: MYCMAKE-SRC: mycmake!" in c.out
+    assert "MYCMAKE-SRC: mycmake!" in c.out
     assert "pkg/0.1: MYCMAKE-BUILD: mycmake!" in c.out
     assert "pkg/0.1: MYUTILS-BUILD: myutils!" in c.out
 

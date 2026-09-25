@@ -218,8 +218,7 @@ class Cli:
     @staticmethod
     def exception_exit_error(exception):
         output = ConanOutput()
-        if exception is None:
-            return SUCCESS
+        assert exception is not None
         if isinstance(exception, ConanInvalidConfiguration):
             output.error(exception, error_type="exception")
             return ERROR_INVALID_CONFIGURATION
@@ -296,6 +295,18 @@ def main(args):
     error = SUCCESS
     try:
         cli.run(args)
+        _warn_python_version()
     except BaseException as e:
         error = cli.exception_exit_error(e)
     sys.exit(error)
+
+
+def _warn_python_version():
+    version = sys.version_info
+    if version.minor == 7:
+        ConanOutput().writeln("")
+        ConanOutput().warning("*"*80, warn_tag="deprecated")
+        ConanOutput().warning("Python 3.7 is end-of-life since June 2023. "
+                              "Conan future versions will drop support for it, "
+                              "please upgrade Python", warn_tag="deprecated")
+        ConanOutput().warning("*" * 80, warn_tag="deprecated")

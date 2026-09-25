@@ -119,7 +119,7 @@ class BazelToolchain:
     def cxxflags(self):
         ret = [self.cppstd]
         conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        ret = ret  + self.cxxopt + conf_flags
+        ret = ret + self.cxxopt + conf_flags
         return self._filter_list_empty_fields(ret)
 
     @property

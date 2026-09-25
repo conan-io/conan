@@ -191,7 +191,7 @@ class TestInstall:
         c = TestClient(light=True)
         c.run(f"remote add local '{folder}'")
         c.run("install --requires=boost/[*] --build missing")
-        assert 'boost/1.0: {"potato": 42}' in c.out
+        assert '{"potato": 42}' in c.out
 
     def test_trim_conandata_yaml(self):
         folder = temp_folder()
@@ -277,8 +277,8 @@ class TestInstall:
         client = TestClient(light=True)
         client.run(f"remote add local '{folder}'")
         client.run("install --requires=zlib/0.1 --build=missing -vv")
-        assert "zlib/0.1: Copied 1 file: patch1" in client.out
-        assert "zlib/0.1: Apply patch (file): patches/patch1" in client.out
+        assert "Copied 1 file: patch1" in client.out
+        assert "Apply patch (file): patches/patch1" in client.out
 
     def test_export_user_channel(self):
         folder = temp_folder()
@@ -401,6 +401,19 @@ class TestErrorsUx:
         c.run("install --requires=zlib/[*] --build missing", assert_error=True)
         assert "Cannot connect to 'local-recipes-index' repository, missing 'recipes'" in c.out
 
+    def test_error_existing_remote(self):
+        folder = temp_folder()
+        repo = os.path.join(folder, "repo")
+        mkdir(repo)
+        c = TestClient(light=True)
+        c.run(f"remote add local '{repo}'")
+        c.run(f"remote add local '{repo}'", assert_error=True)
+        assert "already exists in remotes" in c.out
+        assert "The cache folder for remote local existed, removing it" not in c.out
+        c.run(f"remote add local '{repo}' --force")
+        assert "already exists in remotes" in c.out
+        assert "The cache folder for remote local existed, removing it" in c.out
+
 
 class TestPythonRequires:
     @pytest.fixture(scope="class")
@@ -428,7 +441,7 @@ class TestPythonRequires:
         assert "pkg/1.0" in c.out
         c.run("install --requires=pkg/1.0 --build missing -vvv")
         assert "pyreq/1.0#a0d63ca853edefa33582a24a1bb3c75f - Downloaded (local)" in c.out
-        assert "pkg/1.0: Created package" in c.out
+        assert "Created package" in c.out
 
 
 class TestUserChannel:
@@ -552,3 +565,48 @@ class TestResetRemote:
                 "requested, but it doesn't match the current available revision in source") in c.out
         assert ("ERROR: The 'zlib/1.2.11' package has 'exports_sources' but sources "
                 "not found in local cache") in c.out
+
+    def test_reverting_to_older_revision(self):
+        # https://github.com/conan-io/conan/issues/19313
+        folder = temp_folder()
+        recipes_folder = os.path.join(folder, "recipes")
+        zlib_config = textwrap.dedent("""
+           versions:
+             "1.2.11":
+               folder: all
+               """)
+        zlib = textwrap.dedent("""
+           from conan import ConanFile
+           class Zlib(ConanFile):
+               name = "zlib"
+               exports_sources = "*"
+               """)
+        save_files(recipes_folder,
+                   {"zlib/config.yml": zlib_config,
+                    "zlib/all/conanfile.py": zlib,
+                    "zlib/all/conandata.yml": "",
+                    "zlib/all/file.h": "//myheader"})
+
+        c = TestClient(light=True)
+        c.run(f"remote add local '{folder}'")
+        c.run("install --requires=zlib/[*] --build=missing")
+        rev1 = "169da4321a56b77e8538821613a81f1d"
+        c.assert_listed_require({f"zlib/1.2.11#{rev1}": "Downloaded (local)"})
+
+        # Modify zlib code
+        save_files(recipes_folder, {"zlib/all/file.h": "//myheader 222"})
+        c.run("install --requires=zlib/[*] --build=missing --update")
+        rev2 = "8e9fa314a3fd51ab4c930f7e4972f3e7"
+        c.assert_listed_require({f"zlib/1.2.11#{rev2}": "Updated (local)"})
+
+        # Modify zlib code again to a new one
+        save_files(recipes_folder, {"zlib/all/file.h": "//myheader 333"})
+        c.run("install --requires=zlib/[*] --update --build=missing")
+        rev3 = "dd54aebe11b96b3661d8360c68619a72"
+        c.assert_listed_require({f"zlib/1.2.11#{rev3}": "Updated (local)"})
+
+        # Revert to previous one
+        save_files(recipes_folder, {"zlib/all/file.h": "//myheader"})
+        c.run("install --requires=zlib/[*] --update --build=missing")
+        # This crashed https://github.com/conan-io/conan/issues/19313
+        c.assert_listed_require({f"zlib/1.2.11#{rev1}": "Updated (local)"})

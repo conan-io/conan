@@ -5,6 +5,8 @@ from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.internal.methods import auto_header_only_package_id
 from conan.internal.model.info import (ConanInfo, RequirementsInfo, RequirementInfo,
                                        PythonRequiresInfo)
+from conan.internal.model.pkg_type import PackageType
+from conan.internal.model.version_range import required_conan_version_policy
 
 
 def compute_package_id(node, modes, config_version, hook_manager):
@@ -19,10 +21,14 @@ def compute_package_id(node, modes, config_version, hook_manager):
 
     data = OrderedDict()
     build_data = OrderedDict()
+
+    fix_transitive_static = required_conan_version_policy(conanfile, "2.27.9")
+
     for require, transitive in node.transitive_deps.items():
         dep_node = transitive.node
-        require.deduce_package_id_mode(conanfile.package_type, dep_node,
-                                       non_embed_mode, embed_mode, build_mode, unknown_mode)
+        require.deduce_package_id_mode(conanfile, dep_node,
+                                       non_embed_mode, embed_mode, build_mode, unknown_mode,
+                                       fix_transitive_static)
         if require.package_id_mode is not None:
             req_info = RequirementInfo(dep_node.pref.ref, dep_node.pref.package_id,
                                        require.package_id_mode)
@@ -50,6 +56,18 @@ def compute_package_id(node, modes, config_version, hook_manager):
                                conf=conanfile.conf.copy_conaninfo_conf(),
                                config_version=config_version.copy() if config_version else None)
     conanfile.original_info = conanfile.info.clone()
+
+    # To account for effect of headers into consumers, like shared/static variability
+    # It affects to both embed and not embed, that would imply some "repetition" of the information
+    # in embed cases embedding the full package_id, but it is useful to have that info explicit too
+    if conanfile.package_type and conanfile.package_type in [PackageType.SHARED, PackageType.STATIC,
+                                                             PackageType.APP]:
+        for require, transitive in node.transitive_deps.items():
+            if require.headers:
+                header_opts = getattr(transitive.node.conanfile, "package_id_abi_options", ())
+                for pkg_id_option in header_opts:
+                    v = getattr(transitive.node.conanfile.options, pkg_id_option)
+                    setattr(conanfile.info.options[f"{transitive.node.name}/*"], pkg_id_option, v)
 
     run_validate_package_id(conanfile, hook_manager)
 

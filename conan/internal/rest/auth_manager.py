@@ -45,6 +45,7 @@ class ConanApiAuthManager:
     def __init__(self, requester, cache_folder, localdb, global_conf):
         self._requester = requester
         self._creds = _RemoteCreds(localdb)
+        self._remote_creds = None
         self._global_conf = global_conf
         self._cache_folder = cache_folder
 
@@ -56,6 +57,13 @@ class ConanApiAuthManager:
         if method_name == "authenticate":
             return self._authenticate(rest_client, remote, *args, **kwargs)
 
+        if token is None and remote.force_auth:
+            # This remote doesn't allow anonymous access, skip it straight to authentication
+            ConanOutput().info(f"Remote '{remote.name}' requires authentication, "
+                               f"obtaining credentials")
+            self._get_credentials_and_authenticate(rest_client, user, remote)
+            return self.call_rest_api_method(remote, method_name, *args, **kwargs)
+
         try:
             ret = getattr(rest_client, method_name)(*args, **kwargs)
             return ret
@@ -66,21 +74,27 @@ class ConanApiAuthManager:
             # token is None when you change user with user command
             # Anonymous is not enough, ask for a user
             ConanOutput().info(f"Remote '{remote.name}' needs authentication, obtaining credentials")
-            if self._get_credentials_and_authenticate(rest_client, user, remote):
-                return self.call_rest_api_method(remote, method_name, *args, **kwargs)
+            self._get_credentials_and_authenticate(rest_client, user, remote)
+            return self.call_rest_api_method(remote, method_name, *args, **kwargs)
+
+    def _get_remote_creds(self):
+        if self._remote_creds is None:
+            self._remote_creds = RemoteCredentials(self._cache_folder, self._global_conf)
+        return self._remote_creds
 
     def _get_credentials_and_authenticate(self, rest_client, user, remote):
         """Try LOGIN_RETRIES to obtain a password from user input for which
         we can get a valid token from api_client. If a token is returned,
         credentials are stored in localdb and rest method is called"""
-        creds = RemoteCredentials(self._cache_folder, self._global_conf)
+        creds = self._get_remote_creds()
+
         for _ in range(LOGIN_RETRIES):
             input_user, input_password, interactive = creds.auth(remote)
             try:
                 self._authenticate(rest_client, remote, input_user, input_password)
             except AuthenticationException:
                 out = ConanOutput()
-                if user is None:
+                if user is None or input_user != user:
                     out.error('Wrong user or password', error_type="exception")
                 else:
                     out.error(f'Wrong password for user "{user}"', error_type="exception")

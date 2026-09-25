@@ -9,8 +9,11 @@ from requests.auth import AuthBase, HTTPBasicAuth
 from uuid import getnode as get_mac
 
 from conan.api.output import ConanOutput
-
+from conan.internal.cache.conan_reference_layout import METADATA
+from conan.internal.paths import EXPORT_SOURCES_FILE_NAME, CONANINFO, CONAN_MANIFEST, \
+    EXPORT_FILE_NAME, PACKAGE_FILE_NAME, CONAN_METADATA_SUBFOLDER
 from conan.internal.rest.caching_file_downloader import ConanInternalCacheDownloader
+from conan.internal.rest.download_cache import DownloadCache
 from conan.internal.rest import response_to_str
 from conan.internal.rest.client_routes import ClientV2Router
 from conan.internal.rest.file_uploader import FileUploader
@@ -18,7 +21,6 @@ from conan.internal.errors import AuthenticationException, ForbiddenException, N
     RecipeNotFoundException, PackageNotFoundException, EXCEPTION_CODE_MAPPING
 from conan.errors import ConanException
 from conan.api.model import PkgReference
-from conan.internal.paths import EXPORT_SOURCES_TGZ_NAME
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import from_iso8601_to_timestamp
 
@@ -52,19 +54,13 @@ class JWTAuth(AuthBase):
         return request
 
 
-def get_exception_from_error(error_code):
+def _raise_exception_from_error(error_code, text):
     tmp = {v: k for k, v in EXCEPTION_CODE_MAPPING.items()  # All except NotFound
            if k not in (RecipeNotFoundException, PackageNotFoundException)}
-    if error_code in tmp:
-        # logger.debug("REST ERROR: %s" % str(tmp[error_code]))
-        return tmp[error_code]
-    else:
-        base_error = int(str(error_code)[0] + "00")
-        # logger.debug("REST ERROR: %s" % str(base_error))
-        try:
-            return tmp[base_error]
-        except KeyError:
-            return None
+    try:
+        raise tmp[error_code](text)
+    except KeyError:
+        raise ConanException(f"Server exception {error_code}: {text}")
 
 
 def _get_mac_digest():  # To avoid re-hashing all the time the same mac
@@ -126,51 +122,35 @@ class RestV2Methods:
         if ret.status_code != 200:
             ret.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
             text = ret.text if ret.status_code != 404 else "404 Not found"
-            raise get_exception_from_error(ret.status_code)(text)
+            _raise_exception_from_error(ret.status_code, text)
         return ret.content.decode()
 
-    def server_capabilities(self, user=None, password=None):
+    def server_capabilities(self):
         """Get information about the server: status, version, type and capabilities"""
         url = self.router.ping()
-        # logger.debug("REST: ping: %s" % url)
-        if user and password:
-            # This can happen in "conan remote login" cmd. Instead of empty token, use HttpBasic
-            auth = HTTPBasicAuth(user, password)
-        else:
-            auth = self.auth
+        auth = self.auth
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers, verify=self.verify_ssl)
 
         server_capabilities = ret.headers.get('X-Conan-Server-Capabilities')
         if not server_capabilities and not ret.ok:
             # Old Artifactory might return 401/403 without capabilities, we don't want
             # to cache them #5687, so raise the exception and force authentication
-            raise get_exception_from_error(ret.status_code)(response_to_str(ret))
+            _raise_exception_from_error(ret.status_code, response_to_str(ret))
         if server_capabilities is None:
             # Some servers returning 200-ok, even if not valid repo
             raise ConanException(f"Remote {self.remote_url} doesn't seem like a valid Conan remote")
 
         return [cap.strip() for cap in server_capabilities.split(",") if cap]
 
-    def _get_json(self, url, data=None, headers=None):
+    def _get_json(self, url, headers=None):
         req_headers = self.custom_headers.copy()
         req_headers.update(headers or {})
-        if data:  # POST request
-            req_headers.update({'Content-type': 'application/json',
-                                'Accept': 'application/json'})
-            # logger.debug("REST: post: %s" % url)
-            response = self.requester.post(url, auth=self.auth, headers=req_headers,
-                                           verify=self.verify_ssl,
-                                           stream=True,
-                                           data=json.dumps(data))
-        else:
-            # logger.debug("REST: get: %s" % url)
-            response = self.requester.get(url, auth=self.auth, headers=req_headers,
-                                          verify=self.verify_ssl,
-                                          stream=True)
+        response = self.requester.get(url, auth=self.auth, headers=req_headers,
+                                      verify=self.verify_ssl, stream=True)
 
         if response.status_code != 200:  # Error message is text
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
-            raise get_exception_from_error(response.status_code)(response_to_str(response))
+            _raise_exception_from_error(response.status_code, response_to_str(response))
 
         content = response.content.decode()
         content_type = response.headers.get("Content-Type")
@@ -206,12 +186,7 @@ class RestV2Methods:
         # We need to filter the "_/_" user and channel from Artifactory
         ret = []
         for reference in response:
-            try:
-                ref = RecipeReference.loads(reference)
-            except TypeError:
-                raise ConanException("Unexpected response from server.\n"
-                                     "URL: `{}`\n"
-                                     "Expected an iterable, but got {}.".format(url, type(response)))
+            ref = RecipeReference.loads(reference)
             if ref.user == "_":
                 ref.user = None
             if ref.channel == "_":
@@ -236,23 +211,23 @@ class RestV2Methods:
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         server_files = data["files"]
-        result = {}
 
         if not only_metadata:
-            accepted_files = ["conanfile.py", "conan_export.tgz", "conanmanifest.txt",
-                              "metadata/sign"]
+            accepted_files = ["conanfile.py", CONAN_MANIFEST, "metadata/sign",
+                              f"metadata/{CONAN_METADATA_SUBFOLDER}"]
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
-            # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-            urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-            self._download_and_save_files(urls, dest_folder, files, parallel=True)
-            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
+            export_file = self._find_compressed_file(ref, server_files, EXPORT_FILE_NAME)
+            if export_file is not None:
+                files.append(export_file)
+        else:
+            files = []
         if metadata:
             metadata = [f"metadata/{m}" for m in metadata]
-            files = [f for f in server_files if any(fnmatch.fnmatch(f, m) for m in metadata)]
-            urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-            self._download_and_save_files(urls, dest_folder, files, parallel=True, metadata=True)
-            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
-        return result
+            files.extend(f for f in server_files if any(fnmatch.fnmatch(f, m) for m in metadata))
+
+        urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
+        self._download_and_save_files(urls, dest_folder, files, parallel=True)
+        return {fn: os.path.join(dest_folder, fn) for fn in files}
 
     def get_recipe_sources(self, ref, dest_folder):
         # If revision not specified, check latest
@@ -260,43 +235,53 @@ class RestV2Methods:
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         files = data["files"]
-        if EXPORT_SOURCES_TGZ_NAME not in files:
+        src_file = self._find_compressed_file(ref, files, EXPORT_SOURCES_FILE_NAME)
+        if src_file is None:
             return None
-        files = [EXPORT_SOURCES_TGZ_NAME, ]
 
         # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-        urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-        self._download_and_save_files(urls, dest_folder, files, scope=str(ref))
-        ret = {fn: os.path.join(dest_folder, fn) for fn in files}
+        urls = {src_file: self.router.recipe_file(ref, src_file)}
+        self._download_and_save_files(urls, dest_folder, [src_file, ], scope=str(ref))
+        ret = {src_file: os.path.join(dest_folder, src_file)}
         return ret
+
+    @staticmethod
+    def _find_compressed_file(ref, server_files, artifact, exists=False):
+        pkg_files = [f for f in server_files if f.startswith(artifact)]
+        if len(pkg_files) > 1:
+            raise ConanException(f"{ref} is corrupted in the server, it contains "
+                                 f"more than one compressed file: {sorted(pkg_files)}")
+        if not pkg_files:
+            if not exists:
+                return None
+            raise ConanException(f"Recipe {ref} is corrupted in the server, it doesn't contain "
+                                 f"a {artifact} file")
+        return pkg_files[0]
 
     def get_package(self, pref, dest_folder, metadata, only_metadata):
         url = self.router.package_snapshot(pref)
         data = self._get_file_list_json(url)
         server_files = data["files"]
-        result = {}
         # Download only known files, but not metadata (except sign)
         if not only_metadata:  # Retrieve package first, then metadata
-            accepted_files = ["conaninfo.txt", "conan_package.tgz", "conanmanifest.txt",
-                              "metadata/sign"]
+            pkg_file = self._find_compressed_file(pref, server_files, PACKAGE_FILE_NAME, exists=True)
+            accepted_files = [CONANINFO, pkg_file, CONAN_MANIFEST, "metadata/sign"]
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
-            # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-            urls = {fn: self.router.package_file(pref, fn) for fn in files}
-            self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref))
-            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
+        else:
+            files = []
 
         if metadata:
             metadata = [f"metadata/{m}" for m in metadata]
-            files = [f for f in server_files if any(fnmatch.fnmatch(f, m) for m in metadata)]
-            urls = {fn: self.router.package_file(pref, fn) for fn in files}
-            self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref),
-                                          metadata=True)
-            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
-        return result
+            files.extend(f for f in server_files if any(fnmatch.fnmatch(f, m) for m in metadata))
+
+        urls = {fn: self.router.package_file(pref, fn) for fn in files}
+        self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref))
+        return {fn: os.path.join(dest_folder, fn) for fn in files}
 
     def _upload_files(self, files, urls, ref):
         failed = []
         uploader = FileUploader(self.requester, self.verify_ssl, self._config)
+        download_cache = self._get_download_cache()
         # conan_package.tgz and conan_export.tgz are uploaded first to avoid uploading conaninfo.txt
         # or conanamanifest.txt with missing files due to a network failure
         for filename in sorted(files):
@@ -311,17 +296,29 @@ class RestV2Methods:
                 ConanOutput().error(f"\nError uploading file: {filename}, '{exc}'",
                                     error_type="exception")
                 failed.append(filename)
+            else:
+                # metadata files are mutable without a new revision, ConanInternalCacheDownloader
+                # never serves them from the cache either, so don't populate it here
+                if download_cache is not None and not filename.startswith(f"{METADATA}/"):
+                    download_cache.cache_file(resource_url, files[filename])
 
         if failed:
             raise ConanException("Execute upload again to retry upload the failed files: %s"
                                  % ", ".join(failed))
 
-    def _download_and_save_files(self, urls, dest_folder, files, parallel=False, scope=None,
-                                 metadata=False):
+    def _get_download_cache(self):
+        download_cache_folder = self._config.get("core.download:download_cache")
+        if not download_cache_folder:
+            return None
+        if not os.path.isabs(download_cache_folder):
+            raise ConanException("core.download:download_cache must be an absolute path")
+        return DownloadCache(download_cache_folder)
+
+    def _download_and_save_files(self, urls, dest_folder, files, parallel=False, scope=None):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         retry = self._config.get("core.download:retry", check_type=int, default=2)
-        retry_wait = self._config.get("core.download:retry_wait", check_type=int, default=0)
+        retry_wait = self._config.get("core.download:retry_wait", check_type=int, default=1)
         downloader = ConanInternalCacheDownloader(self.requester, self._config, scope=scope)
         threads = []
 
@@ -329,6 +326,7 @@ class RestV2Methods:
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
             os.makedirs(os.path.dirname(abs_path), exist_ok=True)  # filename in subfolder must exist
+            metadata = filename.startswith(f"{METADATA}/")  # To avoid caching it
             if parallel:
                 kwargs = {"url": resource_url, "file_path": abs_path, "retry": retry,
                           "retry_wait": retry_wait, "verify_ssl": self.verify_ssl,
@@ -364,7 +362,7 @@ class RestV2Methods:
         if response.status_code != 200:  # Error message is text
             # To be able to access ret.text (ret.content are bytes)
             response.charset = "utf-8"
-            raise get_exception_from_error(response.status_code)(response.text)
+            _raise_exception_from_error(response.status_code, response.text)
 
     def remove_packages(self, prefs):
         self.check_credentials()
@@ -382,12 +380,12 @@ class RestV2Methods:
                 if response.status_code != 200:  # Error message is text
                     # To be able to access ret.text (ret.content are bytes)
                     response.charset = "utf-8"
-                    raise get_exception_from_error(response.status_code)(response.text)
+                    _raise_exception_from_error(response.status_code, response.text)
 
     def remove_recipe(self, ref):
         """ Remove a recipe and packages """
         self.check_credentials()
-        if ref.revision is None:
+        if ref.revision is None:  # FIXME: This is unused at the moment, check server implementation
             # Remove all the RREVs
             refs = self.get_recipe_revisions_references(ref)
         else:
@@ -402,7 +400,7 @@ class RestV2Methods:
             if response.status_code != 200:  # Error message is text
                 # To be able to access ret.text (ret.content are bytes)
                 response.charset = "utf-8"
-                raise get_exception_from_error(response.status_code)(response.text)
+                _raise_exception_from_error(response.status_code, response.text)
 
     def get_recipe_revision_reference(self, ref):
         # FIXME: implement this new endpoint in the remotes?

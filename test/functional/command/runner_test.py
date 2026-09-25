@@ -10,8 +10,9 @@ from conan.test.assets.sources import gen_function_h, gen_function_cpp
 def docker_from_env():
     try:
         return docker.from_env()
-    except Exception:
-        return docker.DockerClient(base_url=f'unix://{os.path.expanduser("~")}/.rd/docker.sock', version='auto') # Rancher
+    except (Exception,):
+        rancher = f'unix://{os.path.expanduser("~")}/.rd/docker.sock'
+        return docker.DockerClient(base_url=rancher, version='auto')  # Rancher
 
 
 def docker_skip(test_image='ubuntu:22.04'):
@@ -20,10 +21,6 @@ def docker_skip(test_image='ubuntu:22.04'):
         if test_image:
             docker_client.images.pull(test_image)
     except docker.errors.DockerException:
-        return True
-    except docker.errors.ImageNotFound:
-        return True
-    except docker.errors.APIError:
         return True
     return False
 
@@ -165,20 +162,29 @@ def test_create_docker_runner_cache_shared_profile_folder():
     """)
 
     client.save({"build": profile_build})
-    client.save({"docker_default": profile_host}, path = os.path.join(client.cache_folder, "profiles"))
+    client.save_home({"profiles/docker_default": profile_host})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
     client.run("create . -pr:h docker_default -pr:b build")
 
     assert "[100%] Built target example" in client.out
     assert "Removing container" in client.out
 
+
 @pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_dockerfile_folder_path():
     """
-    Tests the ``conan create . ``
+    Tests the ``conan create . ``, also checking the ``copy_config_files`` [runner] setting
+    copies extra home files into the container for both the ``copy`` and ``clean`` cache modes.
     """
     client = TestClient()
+    test_extension = textwrap.dedent("""\
+    from conan.api.output import ConanOutput
+
+    def profile_plugin(profile):
+        ConanOutput().info("my custom profile plugin running")
+    """)
+    client.save_home({"extensions/plugins/profile.py": test_extension})
     profile_build = textwrap.dedent(f"""\
     [settings]
     arch={{{{ detect_api.detect_arch() }}}}
@@ -206,6 +212,7 @@ def test_create_docker_runner_dockerfile_folder_path():
     image=conan-runner-default-test
     cache=copy
     remove=True
+    copy_config_files=extensions/*
     """)
 
     profile_host_clean = textwrap.dedent(f"""\
@@ -224,23 +231,32 @@ def test_create_docker_runner_dockerfile_folder_path():
     image=conan-runner-default-test
     cache=clean
     remove=True
+    copy_config_files=extensions/*
     """)
 
     client.save({"host_copy": profile_host_copy, "host_clean": profile_host_clean, "build": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
+    extra_folder = os.path.join(client.current_folder, ".conanrunner", "extra")
+
     client.run("create . -pr:h host_copy -pr:b build")
 
+    assert "my custom profile plugin running" in client.out
+    assert "conan-runner-docker | my custom profile plugin running" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
+    assert os.path.exists(os.path.join(extra_folder, "extensions", "plugins", "profile.py"))
 
     client.run("create . -pr:h host_clean -pr:b build")
 
+    assert "my custom profile plugin running" in client.out
+    assert "conan-runner-docker | my custom profile plugin running" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
+    assert os.path.exists(os.path.join(extra_folder, "extensions", "plugins", "profile.py"))
 
 
 @pytest.mark.docker_runner
@@ -277,8 +293,8 @@ def test_create_docker_runner_profile_default_folder():
     cache=copy
     remove=True
     """)
-    client.save({"host_from_profile": profile_host}, path = os.path.join(client.cache_folder, "profiles"))
-    client.save({"build_from_profile": profile_build}, path = os.path.join(client.cache_folder, "profiles"))
+    client.save_home({"profiles/host_from_profile": profile_host,
+                      "profiles/build_from_profile": profile_build})
     client.run("new cmake_lib -d name=pkg -d version=0.2")
     client.run("create . -pr:h host_from_profile -pr:b build_from_profile")
 
@@ -368,13 +384,13 @@ def test_create_docker_runner_with_ninja(build_type, shared):
 
     client = TestClient(path_with_spaces=False)
     client.save({'conanfile.py': conanfile,
-                "CMakeLists.txt": gen_cmakelists(libsources=["hello.cpp"],
-                                                appsources=["main.cpp"],
-                                                install=True),
-                "hello.h": gen_function_h(name="hello"),
-                "hello.cpp": gen_function_cpp(name="hello", includes=["hello"]),
-                "main.cpp": gen_function_cpp(name="main", includes=["hello"],
-                                            calls=["hello"])})
+                 "CMakeLists.txt": gen_cmakelists(libsources=["hello.cpp"],
+                                                  appsources=["main.cpp"],
+                                                  install=True),
+                 "hello.h": gen_function_h(name="hello"),
+                 "hello.cpp": gen_function_cpp(name="hello", includes=["hello"]),
+                 "main.cpp": gen_function_cpp(name="main", includes=["hello"],
+                                              calls=["hello"])})
     profile = textwrap.dedent(f"""\
     [settings]
     arch={{{{ detect_api.detect_arch() }}}}
@@ -399,6 +415,7 @@ def test_create_docker_runner_with_ninja(build_type, shared):
     assert 'cmake -G "Ninja"' in client.out
     assert "main: {}!".format(build_type) in client.out
 
+
 @pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_from_configfile():
@@ -415,7 +432,6 @@ def test_create_docker_runner_from_configfile():
             name: my-custom-conan-runner-container
         """)
     client.save({"configfile.yaml": configfile})
-
 
     profile_build = textwrap.dedent(f"""\
     [settings]
@@ -479,7 +495,6 @@ def test_create_docker_runner_from_configfile_with_args():
         """)
     client.save({"configfile.yaml": configfile})
 
-
     profile_build = textwrap.dedent(f"""\
     [settings]
     arch={{{{ detect_api.detect_arch() }}}}
@@ -518,6 +533,7 @@ def test_create_docker_runner_from_configfile_with_args():
 
     docker_client.networks.get("my-network").remove()
 
+
 @pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
 def test_create_docker_runner_default_build_profile():
@@ -554,6 +570,7 @@ def test_create_docker_runner_default_build_profile():
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
     assert "Removing container" in client.out
 
+
 @pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip('ubuntu:22.04'), reason="Only docker running")
 def test_create_docker_runner_profile_composition():
@@ -589,7 +606,7 @@ def test_create_docker_runner_profile_composition():
     client.run("create . -pr:h profile -pr:h profile_extension")
 
     assert "[100%] Built target example" in client.out
-    assert "Restore: pkg/2.0 in pkgc6abef0178849" in client.out
+    assert "Restore: pkg/2.0 in pkg" in client.out
     assert "Restore: pkg/2.0:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/2.0:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
 
@@ -678,13 +695,169 @@ def test_create_docker_runner_in_subfolder():
         """)
 
     client.save({"conan/conanfile.py": conanfile,
-                "conan/host": profile_host,
-                "include/hello.h": header,
-                "src/hello.cpp": source,
-                "CMakeLists.txt": cmakelist})
+                 "conan/host": profile_host,
+                 "include/hello.h": header,
+                 "src/hello.cpp": source,
+                 "CMakeLists.txt": cmakelist})
 
     with client.chdir("conan"):
         client.run("create . -pr:h host -vverbose")
 
     assert "Restore: pkg/1.0" in client.out
+    assert "Removing container" in client.out
+
+
+@pytest.mark.docker_runner
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
+def test_create_docker_runner_broken_layout_fails():
+    # https://github.com/conan-io/conan/issues/20143
+    client = TestClient()
+    profile_build = textwrap.dedent(f"""\
+    [settings]
+    arch={{{{ detect_api.detect_arch() }}}}
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    """)
+
+    profile_host = textwrap.dedent(f"""\
+    [settings]
+    arch={{{{ detect_api.detect_arch() }}}}
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=docker
+    dockerfile={dockerfile_path()}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=shared
+    remove=True
+    """)
+
+    client.save({"host": profile_host, "build": profile_build})
+    client.run("new cmake_lib -d name=pkg -d version=0.2")
+    conanfile = client.load("conanfile.py")
+    conanfile = conanfile.replace(
+        "        cmake_layout(self)",
+        '        raise RuntimeError("broken layout")',
+    )
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -pr:h host -pr:b build", assert_error=True)
+
+    assert "Error in layout() method" in client.out
+    assert "broken layout" in client.out
+
+
+@pytest.mark.docker_runner
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
+def test_create_docker_runner_copy_config_files_excludes_cache():
+    """
+    Tests that ``copy_config_files=*`` does not copy the package cache (``p/``), the local
+    remote-login db (``.conan.db``), or the default-excluded credential files, into the
+    container, even if the pattern matches everything.
+    """
+    client = TestClient()
+    client.save_home({"p/fake_binary_package.bin": "fake binary package data",
+                      ".conan.db": "fake remote login tokens",
+                      "credentials.json": '{"credentials": []}',
+                      "source_credentials.json": '{"credentials": []}'})
+
+    profile_build = textwrap.dedent(f"""\
+    [settings]
+    arch={{{{ detect_api.detect_arch() }}}}
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    """)
+
+    profile_host = textwrap.dedent(f"""\
+    [settings]
+    arch={{{{ detect_api.detect_arch() }}}}
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=docker
+    dockerfile={dockerfile_path()}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=copy
+    remove=True
+    copy_config_files=*
+    """)
+
+    client.save({"host": profile_host, "build": profile_build})
+    client.run("new cmake_lib -d name=pkg -d version=0.2")
+    client.run("create . -pr:h host -pr:b build")
+
+    extra_folder = os.path.join(client.current_folder, ".conanrunner", "extra")
+    assert not os.path.exists(os.path.join(extra_folder, "p"))
+    assert not os.path.exists(os.path.join(extra_folder, ".conan.db"))
+    assert not os.path.exists(os.path.join(extra_folder, "credentials.json"))
+    assert not os.path.exists(os.path.join(extra_folder, "source_credentials.json"))
+    assert "Removing container" in client.out
+
+
+@pytest.mark.docker_runner
+@pytest.mark.skipif(docker_skip(), reason="Only docker running")
+def test_create_docker_runner_copy_config_files_excludes_override():
+    """
+    Tests that a sensitive default exclusion (``credentials.json``) is copied if the user lists
+    its exact name in ``copy_config_files``, while a wildcard exclusion (``.local_recipes_index``)
+    stays excluded even if a pattern of the request also matches it.
+    """
+    client = TestClient()
+    client.save_home({".local_recipes_index/repo/index.json": "fake local-recipes-index clone",
+                      "credentials.json": '{"credentials": []}'})
+
+    profile_build = textwrap.dedent(f"""\
+    [settings]
+    arch={{{{ detect_api.detect_arch() }}}}
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    """)
+
+    profile_host = textwrap.dedent(f"""\
+    [settings]
+    arch={{{{ detect_api.detect_arch() }}}}
+    build_type=Release
+    compiler=gcc
+    compiler.cppstd=gnu17
+    compiler.libcxx=libstdc++11
+    compiler.version=11
+    os=Linux
+    [runner]
+    type=docker
+    dockerfile={dockerfile_path()}
+    build_context={conan_base_path()}
+    image=conan-runner-default-test
+    cache=copy
+    remove=True
+    copy_config_files=credentials.json,.local_recipes_index/*
+    """)
+
+    client.save({"host": profile_host, "build": profile_build})
+    client.run("new cmake_lib -d name=pkg -d version=0.2")
+    client.run("create . -pr:h host -pr:b build")
+
+    extra_folder = os.path.join(client.current_folder, ".conanrunner", "extra")
+    assert os.path.exists(os.path.join(extra_folder, "credentials.json"))
+    assert not os.path.exists(os.path.join(extra_folder, ".local_recipes_index"))
     assert "Removing container" in client.out

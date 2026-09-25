@@ -1,7 +1,9 @@
 import os
 
+from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.tools.env import Environment
+from conan.tools.files import copy
 
 
 def runenv_from_cpp_info(dep, os_name):
@@ -29,10 +31,14 @@ class VirtualRunEnv:
         .bat or .sh script
     """
 
-    def __init__(self, conanfile, auto_generate=False):
+    def __init__(self, conanfile, auto_generate=False, win_copy_folder=None):
         """
 
         :param conanfile:  The current recipe object. Always use ``self``.
+        :param auto_generate: Automatically generate .bat or .sh files
+        :param win_copy_folder: Copy the "bindirs" folders contents from dependencies into this
+               folder, and point the PATH environment variable to it, instead of the dependencies
+               ones. Only for Windows, to avoid PATH and env-var overflow limits.
         """
         self._runenv = None
         self._conanfile = conanfile
@@ -45,6 +51,11 @@ class VirtualRunEnv:
         self.arch = conanfile.settings.get_safe("arch")
         if self.arch:
             self.arch = self.arch.lower()
+        if win_copy_folder and os.path.isabs(win_copy_folder):
+            raise ConanException("win_copy_folder must be a relative path, not an absolute one")
+        is_windows = (conanfile.settings.get_safe("os") or "").startswith("Windows")
+        self._runtime_copy = (os.path.join(conanfile.generators_folder, win_copy_folder)
+                              if win_copy_folder and is_windows else None)
 
     @property
     def _filename(self):
@@ -78,9 +89,22 @@ class VirtualRunEnv:
                 self._runenv.compose_env(dep.runenv_info)
             if require.run:  # Only if the require is run (shared or application to be run)
                 _os = self._conanfile.settings.get_safe("os")
-                self._runenv.compose_env(runenv_from_cpp_info(dep, _os))
+                if self._runtime_copy:
+                    self._runtime_copy_files(dep)
+                else:
+                    runenv = runenv_from_cpp_info(dep, _os)
+                    self._runenv.compose_env(runenv)
 
+        if self._runtime_copy:
+            self._runenv.prepend_path("PATH", self._runtime_copy)
         return self._runenv
+
+    def _runtime_copy_files(self, dep):
+        # Avoid adding all deps to PATH, copy them to a specific folder
+        cpp_info = dep.cpp_info.aggregated_components()
+        for bindir in cpp_info.bindirs:
+            if os.path.isdir(bindir):
+                copy(self._conanfile, "*", src=bindir, dst=self._runtime_copy)
 
     def vars(self, scope="run"):
         """

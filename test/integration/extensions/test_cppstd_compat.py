@@ -30,7 +30,7 @@ def test_compatible_cppstd():
     # Create package with cppstd 17
     c.run("create .  -pr=myprofile -s compiler.cppstd=17")
     package_id = "95dcfeb51c04968b4ee960ee393cf2c1ebcf7782"
-    assert f"pkg/0.1: Package '{package_id}' created" in c.out
+    assert f"Package '{package_id}' created" in c.out
 
     # package can be used with a profile gcc cppstd20 falling back to 17
     c.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
@@ -75,7 +75,7 @@ def test_compatible_cppstd_missing_compiler():
     # Create package with cppstd 17
     c.run("create .  -pr=myprofile -s compiler.cppstd=17")
     package_id = "51a90090adb1cbd330a64b4c3b3b32af809af4f9"
-    assert f"pkg/0.1: Package '{package_id}' created" in c.out
+    assert f"Package '{package_id}' created" in c.out
 
     # package can't be used with cppstd 20 and fallback to 17, because mycompiler is not known
     # to the default cppstd_compat function. Ensure that it does not break and warns the user

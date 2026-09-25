@@ -18,13 +18,13 @@ class RestApiClient:
         self._config = config
         self._remote = remote
 
-    def _capable(self, capability, user=None, password=None):
+    def _capable(self, capability):
         # Caching of capabilities per-remote
         capabilities = getattr(self._remote, "_capabilities", None)
         if capabilities is None:
             tmp = RestV2Methods(self._remote_url, self._token,
                                 self._requester, self._config, self._verify_ssl)
-            capabilities = tmp.server_capabilities(user, password)
+            capabilities = tmp.server_capabilities()
             setattr(self._remote, "_capabilities", capabilities)
         return capability in capabilities
 

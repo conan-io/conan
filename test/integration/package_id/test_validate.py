@@ -31,7 +31,7 @@ class TestValidate:
         client.save({"conanfile.py": conanfile})
 
         client.run("create . --name=pkg --version=0.1 -s os=Linux")
-        assert "pkg/0.1: Package '9a4eb3c8701508aa9458b1a73d0633783ecc2270' created" in client.out
+        assert "Package '9a4eb3c8701508aa9458b1a73d0633783ecc2270' created" in client.out
 
         error = client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
         assert error == ERROR_INVALID_CONFIGURATION
@@ -123,7 +123,7 @@ class TestValidate:
         client.run("create . --name=pkg --version=0.1 -s os=Linux")
         package_id = "9a4eb3c8701508aa9458b1a73d0633783ecc2270"
         missing_id = "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715"
-        assert f"pkg/0.1: Package '{package_id}' created" in client.out
+        assert f"Package '{package_id}' created" in client.out
 
         # This is the main difference, building from source for the specified conf, fails
         client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
@@ -172,7 +172,7 @@ class TestValidate:
         client.save({"conanfile.py": conanfile})
 
         client.run("create . --name=pkg --version=0.1 -s os=Linux")
-        assert "pkg/0.1: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
+        assert "Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
 
         client.run("create . --name=pkg --version=0.1 -s os=Windows", assert_error=True)
         assert "pkg/0.1: Invalid: Windows not supported" in client.out
@@ -238,7 +238,7 @@ class TestValidate:
 
         package_id = "c26ded3c7aa4408e7271e458d65421000e000711"
         client.run("create . --name=pkg --version=0.1 -s os=Linux -s build_type=Release")
-        assert f"pkg/0.1: Package '{package_id}' created" in client.out
+        assert f"Package '{package_id}' created" in client.out
         # compatible_packges fallback works
         client.run("install --requires=pkg/0.1@ -s os=Linux -s build_type=Debug")
         client.assert_listed_binary({"pkg/0.1": (package_id, "Cache")})
@@ -778,7 +778,7 @@ class TestCompatibleSettingsTarget:
         client.save({"conanfile.py": tool_conanfile})
         client.run("create . --name=tool --version=0.1 -s os=Linux -s:h arch=armv6 --build-require")
         package_id = client.created_package_id("tool/0.1")
-        assert f"tool/0.1: Package '{package_id}' created" in client.out
+        assert f"Package '{package_id}' created" in client.out
 
         app_conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -822,7 +822,8 @@ class TestCompatibleSettingsTarget:
         client.run("create . --name=tool --version=0.1 -s os=Linux -s:h arch=armv6 --build-require")
         package_id = client.created_package_id("tool/0.1")
 
-        assert f"tool/0.1: Package '{package_id}' created" in client.out
+        assert f"Package '{package_id}' created" in client.out
+        assert "Full package reference: tool/0.1" in client.out
 
         app_conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -858,7 +859,7 @@ class TestCompatibleSettingsTarget:
         client.save({"conanfile.py": tool_conanfile})
         client.run("create . --name=tool --version=0.1 -s os=Linux -s:h arch=armv6")
         package_id = client.created_package_id("tool/0.1")
-        assert f"tool/0.1: Package '{package_id}' created" in client.out
+        assert f"Package '{package_id}' created" in client.out
 
         app_conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -899,7 +900,7 @@ class TestCompatibleSettingsTarget:
         client.save({"conanfile.py": tool_conanfile})
         client.run("create . --name=tool --version=0.1 -s os=Linux -s:h arch=armv6")
         package_id = client.created_package_id("tool/0.1")
-        assert f"tool/0.1: Package '{package_id}' created" in client.out
+        assert f"Package '{package_id}' created" in client.out
 
         app_conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -947,7 +948,7 @@ class TestCompatibleSettingsTarget:
         client.run("create . --name=tool_a --version=0.1 "
                    "-s os=Linux -s:h arch=armv6 -s:b arch=x86_64 --build-require")
         package_id_tool_a = client.created_package_id("tool_a/0.1")
-        assert f"tool_a/0.1: Package '{package_id_tool_a}' created" in client.out
+        assert f"Package '{package_id_tool_a}' created" in client.out
 
         tool_b_conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -960,7 +961,7 @@ class TestCompatibleSettingsTarget:
         client.run("create . --name=tool_b --version=0.1 -s os=Linux "
                    "-s arch=x86_64 -s:b arch=x86_64")
         package_id_tool_b = client.created_package_id("tool_b/0.1")
-        assert f"tool_b/0.1: Package '{package_id_tool_b}' created" in client.out
+        assert f"Package '{package_id_tool_b}' created" in client.out
 
         app_conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -997,7 +998,7 @@ class TestCompatibleSettingsTarget:
         client.save({"conanfile.py": tool_conanfile})
         client.run("create . --name=tool --version=0.1 -s os=Linux -s:b arch=armv6 --build-require")
         package_id = client.created_package_id("tool/0.1")
-        assert f"tool/0.1: Package '{package_id}' created" in client.out
+        assert f"Package '{package_id}' created" in client.out
 
         client.run("install --tool-requires=tool/0.1 -s os=Linux -s:b arch=armv7")
         # This used to crash, not anymore

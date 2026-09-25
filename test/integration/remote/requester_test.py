@@ -1,3 +1,6 @@
+import sys
+
+import pytest
 from requests import Response
 
 from conan.test.utils.tools import TestClient, TestRequester
@@ -50,6 +53,18 @@ class TestRequester:
     def test_unset_request_timeout_use_default_one(self):
         client = TestClient(requester_class=MyRequester)
         client.save_home({"global.conf": "core.net.http:timeout=!"})
+        client.save({"conanfile.py": conanfile})
+        client.run("create . --name=foo --version=1.0")
+        assert "TIMEOUT: (30, 60)" in client.out
+
+    @pytest.mark.skipif(sys.version_info < (3, 10), reason="truststore requires Python>=3.10")
+    def test_requester_trust_store(self):
+        pytest.importorskip("truststore")
+        # Smoke test: proves the conf is wired up end-to-end through a real ConanRequester
+        # construction (version/import checks, SSLContext + adapter creation), not the
+        # actual OS-trust-store verification outcome (not practically unit-testable).
+        client = TestClient(requester_class=MyRequester)
+        client.save_home({"global.conf": "core.net.http:trust_store=True"})
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=foo --version=1.0")
         assert "TIMEOUT: (30, 60)" in client.out

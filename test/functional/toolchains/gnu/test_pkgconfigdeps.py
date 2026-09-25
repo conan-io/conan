@@ -58,6 +58,7 @@ def test_pkgconfigdeps_with_test_requires():
 @pytest.mark.skipif(platform.system() != "Windows", reason="It makes sense only for Windows")
 @pytest.mark.tool("meson")  # https://github.com/mesonbuild/meson/pull/11649 is part of Meson 1.1.0
 @pytest.mark.tool("pkg_config")
+@pytest.mark.tool("ninja")
 def test_pkgconfigdeps_bindir_and_meson():
     """
     This test checks that the field bindir introduced by PkgConfigDeps is useful for Windows

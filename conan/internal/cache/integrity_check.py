@@ -52,7 +52,7 @@ class IntegrityChecker:
                                        if not k.startswith("export_source")}
 
         if read_manifest != expected_manifest:
-            output_lines = ["", "Manifest mismatch", f"    Folder: {layout.package()}"]
+            output_lines = ["", "Manifest mismatch", f"    Folder: {layout.export()}"]
             diff = read_manifest.difference(expected_manifest)
             for fname, (h1, h2) in diff.items():
                 output_lines.append(f"        {fname} (manifest: {h1}, file: {h2})")

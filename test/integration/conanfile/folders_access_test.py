@@ -172,7 +172,7 @@ class TestRecipeFolder:
         assert "SET_NAME" not in client.out
         assert "pkg/0.1@user/testing: CONFIGURE: MYFILE!" in client.out
         assert "pkg/0.1@user/testing: REQUIREMENTS: MYFILE!" in client.out
-        assert "pkg/0.1@user/testing: PACKAGE: MYFILE!" in client.out
+        assert "PACKAGE: MYFILE!" in client.out
         assert "pkg/0.1@user/testing: PACKAGE_INFO: MYFILE!" in client.out
 
     def test_local_flow(self):

@@ -760,11 +760,11 @@ def test_find_program_for_tool_requires(single_profile):
     """)
 
     client.save({"conanfile.py": conanfile,
-                "libfoo.so": "",
-                "foobin": "",
-                "host_profile": host_profile,
-                "build_profile": build_profile
-                })
+                 "libfoo.so": "",
+                 "foobin": "",
+                 "host_profile": host_profile,
+                 "build_profile": build_profile
+                 })
 
     client.run("create . -pr:b build_profile -pr:h build_profile")
     build_context_package_folder = re.search(r"Package folder ([\w\W]+).conan2([\w\W]+)", str(client.out)).group(2).strip()
@@ -994,7 +994,7 @@ def test_no_build_type():
     assert "Don't specify 'build_type' at build time" not in client.out
 
 
-@pytest.mark.tool("cmake", "3.19")
+@pytest.mark.tool("cmake", "3.23")
 def test_redirect_stdout():
     client = TestClient()
     conanfile = textwrap.dedent("""
@@ -1345,7 +1345,7 @@ def test_cmake_toolchain_crossbuild_set_cmake_compiler():
 
     c.save({"android": android,
             "conanfile.py": conanfile,
-            "CMakeLists.txt": cmake,})
+            "CMakeLists.txt": cmake})
     # first run works ok
     c.run('build . --profile:host=android')
     assert 'sdk: 1.0.0' in c.out

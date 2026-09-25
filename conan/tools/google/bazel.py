@@ -62,8 +62,9 @@ class Bazel:
         if self._use_conan_config:
             bazelrc_build_configs.append(BazelToolchain.bazelrc_config)
         command = "bazel" + self._startup_opts + " build"
-        bazelrc_build_configs.extend(self._conanfile.conf.get("tools.google.bazel:configs", default=[],
-                                                        check_type=list))
+        bazelrc_build_configs.extend(self._conanfile.conf.get("tools.google.bazel:configs",
+                                                              default=[],
+                                                              check_type=list))
         for config in bazelrc_build_configs:
             command += f" --config={config}"
         if args:

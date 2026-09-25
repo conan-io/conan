@@ -60,8 +60,6 @@ test = textwrap.dedent("""
     class HelloTestConan(ConanFile):
         settings = "os", "compiler", "build_type", "arch"
         generators = "CMakeDeps", "CMakeToolchain", "VirtualBuildEnv", "VirtualRunEnv"
-        apply_env = False
-        test_type = "explicit"
         options = {"shared": [True, False], "fPIC": [True, False]}
         default_options = {"shared": False, "fPIC": True}
 

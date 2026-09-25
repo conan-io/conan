@@ -43,7 +43,7 @@ class Pkg(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
-        assert 'conanfile.py: Buffer got msgs Hello' in client.out
+        assert 'Buffer got msgs Hello' in client.out
 
     def test_custom_stream_stderr(self):
         conanfile = textwrap.dedent("""
@@ -58,4 +58,29 @@ class Pkg(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
-        assert 'conanfile.py: Buffer got stderr msgs Hello' in client.out
+        assert 'Buffer got stderr msgs Hello' in client.out
+
+    def test_run_command_not_a_string(self):
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                def source(self):
+                    self.run(["echo", "Hello"])
+            """)
+        client = TestClient(light=True)
+        client.save({"conanfile.py": conanfile})
+        client.run("source", assert_error=True)
+        assert "ConanFile.run() requires command to be a string" in client.out
+
+    def test_run_shell_false_with_env(self):
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                def source(self):
+                    self.run("echo Hello", shell=False, env="conanbuild")
+            """)
+        client = TestClient(light=True)
+        client.save({"conanfile.py": conanfile})
+        client.run("source", assert_error=True)
+        print(client.out)
+        assert "ConanFile.run(..., shell=False) needs env=None" in client.out

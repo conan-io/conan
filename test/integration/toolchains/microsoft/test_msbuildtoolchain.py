@@ -43,3 +43,22 @@ def test_msbuildtoolchain_props_with_extra_flags():
     assert expected_cl_compile in toolchain
     assert expected_link in toolchain
     assert expected_resource_compile in toolchain
+
+
+def test_msbuildtoolchain_rcflags():
+    """Test that tools.build:rcflags is applied to ResourceCompile AdditionalOptions"""
+    profile = textwrap.dedent("""\
+    include(default)
+    [settings]
+    arch=x86_64
+    [conf]
+    tools.build:rcflags=["/flag-rc1", "/flag-rc2"]
+    """)
+    client = TestClient()
+    client.run("new msbuild_lib -d name=hello -d version=0.1")
+    client.save({"myprofile": profile})
+    client.run("install . -pr myprofile")
+    toolchain = client.load(os.path.join("conan", "conantoolchain_release_x64.props"))
+    expected_resource_compile = ("<AdditionalOptions>/flag-rc1 /flag-rc2 %(AdditionalOptions)"
+                                 "</AdditionalOptions>")
+    assert expected_resource_compile in toolchain

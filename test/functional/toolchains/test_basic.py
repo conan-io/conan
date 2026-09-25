@@ -21,7 +21,7 @@ class TestBasic:
         client.save({"conanfile.py": conanfile})
         client.run("install .")
 
-        assert "conanfile.py: Calling generate()" in client.out
+        assert "Calling generate()" in client.out
         toolchain = client.load("conan_toolchain.cmake")
         assert "Conan automatically generated toolchain file" in toolchain
 
@@ -36,9 +36,9 @@ class TestBasic:
         client.save({"conanfile.py": conanfile})
         client.run("install .")
 
-        assert "conanfile.py: Generator 'CMakeToolchain' calling 'generate()'" in client.out
-        assert "conanfile.py: Generator 'MesonToolchain' calling 'generate()'" in client.out
-        assert "conanfile.py: Generator 'CMakeDeps' calling 'generate()'" in client.out
+        assert "Generator 'CMakeToolchain' calling 'generate()'" in client.out
+        assert "Generator 'MesonToolchain' calling 'generate()'" in client.out
+        assert "Generator 'CMakeDeps' calling 'generate()'" in client.out
         toolchain = client.load("conan_toolchain.cmake")
         assert "Conan automatically generated toolchain file" in toolchain
         toolchain = client.load("conan_meson_native.ini")
@@ -57,7 +57,7 @@ class TestBasic:
         client.save({"conanfile.py": conanfile})
         client.run("install .")
 
-        assert "conanfile.py: Generator 'MSBuildToolchain' calling 'generate()'" in client.out
+        assert "Generator 'MSBuildToolchain' calling 'generate()'" in client.out
         toolchain = client.load("conantoolchain.props")
         assert "<?xml version" in toolchain
 

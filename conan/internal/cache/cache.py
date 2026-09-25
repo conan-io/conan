@@ -184,7 +184,7 @@ class PkgCache:
     def create_pkg_layout(self, pref: PkgReference):
         """ called by:
          - RemoteManager.get_package()
-         - cacje restpre
+         - cache restore
         """
         assert pref.ref.revision, "Recipe revision must be known to create the package layout"
         assert pref.package_id, "Package id must be known to create the package layout"
@@ -201,13 +201,20 @@ class PkgCache:
         assert ref.timestamp
         self._db.update_recipe_timestamp(ref)
 
-    def search_recipes(self, pattern=None, ignorecase=True):
+    def update_package_timestamp(self, pref: PkgReference, path=None, build_id=None):
+        """ when the package already exists in cache, but we get a new timestamp from a server
+        that would affect its order in our cache """
+        assert pref.revision
+        assert pref.timestamp
+        self._db.update_package_timestamp(pref, path=path, build_id=build_id)
+
+    def search_recipes(self, pattern=None):
         # Conan references in main storage
         if pattern:
             if isinstance(pattern, RecipeReference):
                 pattern = repr(pattern)
             pattern = translate(pattern)
-            pattern = re.compile(pattern, re.IGNORECASE if ignorecase else 0)
+            pattern = re.compile(pattern)
 
         return self._db.list_references(pattern)
 
@@ -232,8 +239,11 @@ class PkgCache:
         return self._db.get_matching_build_id(ref, build_id)
 
     def remove_recipe_layout(self, layout: RecipeLayout):
+        pkg_ids = self.get_package_references(layout.reference, only_latest_prev=False)
+        for pref in pkg_ids:
+            package_layout = self.pkg_layout(pref)
+            self.remove_package_layout(package_layout)
         layout.remove()
-        # FIXME: This is clearing package binaries from DB, but not from disk/layout
         self._db.remove_recipe(layout.reference)
 
     def remove_package_layout(self, layout: PackageLayout):
@@ -265,7 +275,7 @@ class PkgCache:
             # TODO: The relpath would be the same as the previous one, it shouldn't be ncessary to
             #  update it, the update_package_timestamp() can be simplified and path dropped
             relpath = os.path.relpath(layout.base_folder, self._base_folder)
-            self._db.update_package_timestamp(pref, path=relpath, build_id=build_id)
+            self.update_package_timestamp(pref, path=relpath, build_id=build_id)
 
     def assign_rrev(self, layout: RecipeLayout):
         """ called at export, once the exported recipe revision has been computed, it
@@ -301,16 +311,17 @@ class PkgCache:
             self._db.update_recipe_timestamp(ref)
 
     def get_recipe_lru(self, ref):
-        return self._db.get_recipe_lru(ref)
+        path = self._full_path(self._get_path(ref))
+        return os.path.getmtime(path)  # seconds since EPOCH
 
     def update_recipes_lru(self, refs):
-        self._db.update_recipes_lru(refs)
+        for r in refs:
+            path = self._full_path(self._get_path(r))
+            os.utime(path, None)
 
     def get_package_lru(self, pref):
-        return self._db.get_package_lru(pref)
-
-    def update_packages_lru(self, prefs):
-        self._db.update_packages_lru(prefs)
+        layout = self.pkg_layout(pref)  # It can be a build folder too
+        return os.path.getmtime(layout.base_folder)  # seconds since EPOCH
 
     def path_to_ref(self, path):
         try:

@@ -8,7 +8,7 @@ def new(conan_api, parser, *args):
     """
     Create a new example recipe and source files from a template.
     """
-    parser.add_argument("template", help="Template name, "
+    parser.add_argument("template", nargs="?", default="", help="Template name, "
                         "either a predefined built-in or a user-provided one. "
                         "Available built-in templates: basic, cmake_lib, cmake_exe, header_lib, "
                         "meson_lib, meson_exe, msbuild_lib, msbuild_exe, bazel_lib, bazel_exe, "

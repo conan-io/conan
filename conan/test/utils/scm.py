@@ -20,7 +20,7 @@ def create_local_git_repo(files=None, branch=None, submodules=None, folder=None,
                           tags=None, origin_url=None, main_branch="master"):
     tmp = folder or temp_folder()
     if files:
-        save_files(tmp, files)
+        save_files(tmp, {k: str(v) for k, v in files.items()})
 
     def _run(cmd, p):
         with chdir(p):

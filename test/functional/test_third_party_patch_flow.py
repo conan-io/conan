@@ -106,7 +106,7 @@ def test_third_party_patch_flow():
 
     # of course create should work too
     client.run("create .")
-    assert "mypkg/1.0: Created package" in client.out
+    assert "Created package" in client.out
 
 
 def test_third_party_overwrite_build_file():
@@ -152,7 +152,7 @@ def test_third_party_overwrite_build_file():
 
     # of course create should work too
     client.run("create .")
-    assert "mypkg/1.0: Created package" in client.out
+    assert "Created package" in client.out
 
 
 def test_third_party_git_overwrite_build_file():
@@ -201,4 +201,4 @@ def test_third_party_git_overwrite_build_file():
 
     # of course create should work too
     client.run("create .")
-    assert "mypkg/1.0: Created package" in client.out
+    assert "Created package" in client.out

@@ -79,8 +79,8 @@ class ConanServerConfigParser(ConfigParser):
         """
         try:
             if not os.path.exists(self.config_filename):
-                jwt_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(24))
-                updown_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(24))
+                jwt_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(32))
+                updown_random_secret = ''.join(random.choice(string.ascii_letters) for _ in range(32))
                 server_conf = default_server_conf.format(jwt_secret=jwt_random_secret,
                                                          updown_secret=updown_random_secret)
                 save(self.config_filename, server_conf)

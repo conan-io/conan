@@ -147,7 +147,7 @@ def test_profile_template_profile_dir():
                  "anysubfolder/profile1": tpl1,
                  "anysubfolder/toolchain.cmake": "MyToolchainCMake!!!"})
     client.run("install . -pr=anysubfolder/profile1")
-    assert "conanfile.py: CONTENT: MyToolchainCMake!!!" in client.out
+    assert "CONTENT: MyToolchainCMake!!!" in client.out
 
 
 def test_profile_conf_backslash():
@@ -355,9 +355,9 @@ def test_profile_macro_per_package():
     client.save({"conanfile.py": conanfile,
                  "profile1": tpl1})
     client.run("install . -pr=profile1")
-    assert "conanfile.py (mypkg/0.1): user.conf:key=2!!!!" in client.out
-    assert "conanfile.py (mypkg/0.1): os=Windows!!" in client.out
-    assert "conanfile.py (mypkg/0.1): arch=x86!!" in client.out
+    assert "user.conf:key=2!!!!" in client.out
+    assert "os=Windows!!" in client.out
+    assert "arch=x86!!" in client.out
 
 
 def test_profile_jinja_context():

@@ -4,11 +4,70 @@ import textwrap
 
 from conan.api.output import ConanOutput
 from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_VIRTUAL, BINARY_SKIP, \
-    BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD, BINARY_PLATFORM
+    BINARY_MISSING, BINARY_INVALID, Overrides, BINARY_BUILD, BINARY_EDITABLE_BUILD, \
+    BINARY_PLATFORM, RECIPE_PLATFORM
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.util.files import load
+
+
+def _matching_options(deps_options, ref):
+    """ the values that some recipe ``deps_options`` would define for the given dependency,
+    later patterns win, the same way that ``Options.apply_downstream()`` applies them
+    """
+    result = {}
+    for pattern, options in deps_options.items():
+        if ref_matches(ref, pattern, is_consumer=False):
+            result.update(options)
+    return result
+
+
+def _reproducible_options(node):
+    """ The options that have to be explicitly defined in the command line to build this node
+    standalone, reproducing the same configuration that it has in the current graph.
+
+    The ``self_options`` computed while expanding the graph (the deviation of the options of a
+    package from the ones its own ``default_options`` define) have to be re-applied, both for
+    this node and for its dependencies, because the downstream consumers that defined them
+    won't be there anymore. They can only be skipped when the recipes that will be expanded
+    again from this node define exactly the same value by themselves.
+    """
+    conanfile = node.conanfile
+    # This node own deviation can never be reproduced automatically, no consumer is left for it
+    result = {f"{node.ref}:{name}={value}" for name, value in conanfile.self_options.items()}
+
+    # Vendoring packages hide their dependencies, they don't propagate any option to them
+    deps = [] if conanfile.vendor else [t.node for r, t in node.transitive_deps.items()
+                                        if t.node is not None and r.visible and not r.build
+                                        and t.node.recipe != RECIPE_PLATFORM]
+    # What the recipes of this subgraph would define again for their dependencies by themselves.
+    # "transitive_deps" follows the graph order, and the first recipe that reaches a dependency
+    # is the one that freezes its options, so they are aggregated in reverse, to let it prevail
+    graph_options = {}
+    for dep in reversed(deps):
+        for pattern, options in dep.conanfile.deps_options.items():
+            graph_options.setdefault(pattern, {}).update(options)
+
+    for dep in deps:
+        expected = _matching_options(graph_options, dep.ref)
+        # This node will be the new consumer, so its own options have the highest priority
+        expected.update(_matching_options(conanfile.deps_options, dep.ref))
+        for name, predicted in expected.items():  # what is defined again, but differently
+            option = dep.conanfile.options.get_safe(name)
+            value = option.value if option is not None else None
+            if value is None:
+                # Removed in configure(), like "fPIC" when "shared=True", or never defined.
+                # There is no value to force, it is only reproducible by forcing whatever
+                # condition removed it
+                continue
+            if value != predicted:
+                result.add(f"{dep.ref}:{name}={value}")
+        for name, value in dep.conanfile.self_options.items():  # what nobody defines again
+            if name not in expected:
+                result.add(f"{dep.ref}:{name}={value}")
+    return sorted(result)
 
 
 class _InstallPackageReference:
@@ -24,7 +83,7 @@ class _InstallPackageReference:
         self.binary = None  # The action BINARY_DOWNLOAD, etc must be the same for all nodes
         self.context = None  # Same PREF could be in both contexts, but only 1 context is enough to
         # be able to reproduce, typically host preferrably
-        self.options = []  # to be able to fire a build, the options will be necessary
+        self._options = None  # to be able to fire a build, the options will be necessary
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         # If some package, like ICU, requires itself, built for the "build" context architecture
         # to cross compile, there will be a dependency from the current "self" (host context)
@@ -42,6 +101,13 @@ class _InstallPackageReference:
     def conanfile(self):
         return self.nodes[0].conanfile
 
+    @property
+    def options(self):
+        # Lazy, computing it is not free and only "conan graph build-order" needs it
+        if self._options is None:
+            self._options = _reproducible_options(self.nodes[0])
+        return self._options
+
     @staticmethod
     def create(node):
         result = _InstallPackageReference()
@@ -50,8 +116,6 @@ class _InstallPackageReference:
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
-        # self_options are the minimum to reproduce state
-        result.options = node.conanfile.self_options.dumps().splitlines()
         result.nodes.append(node)
         result.overrides = node.overrides()
         result.info = node.conanfile.info.serialize()  # ConanInfo doesn't have deserialize
@@ -98,7 +162,7 @@ class _InstallPackageReference:
         result.prev = data["prev"]
         result.binary = data["binary"]
         result.context = data["context"]
-        result.options = data["options"]
+        result._options = data["options"]
         result.filenames = data["filenames"] or [filename]
         result.depends = data["depends"]
         result.overrides = Overrides.deserialize(data["overrides"])
@@ -232,7 +296,7 @@ class _InstallConfiguration:
         self.binary = None  # The action BINARY_DOWNLOAD, etc must be the same for all nodes
         self.context = None  # Same PREF could be in both contexts, but only 1 context is enough to
         # be able to reproduce, typically host preferrably
-        self.options = []  # to be able to fire a build, the options will be necessary
+        self._options = None  # to be able to fire a build, the options will be necessary
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         self.depends = []  # List of full prefs
         self.overrides = Overrides()
@@ -256,6 +320,13 @@ class _InstallConfiguration:
     def conanfile(self):
         return self.nodes[0].conanfile
 
+    @property
+    def options(self):
+        # Lazy, computing it is not free and only "conan graph build-order" needs it
+        if self._options is None:
+            self._options = _reproducible_options(self.nodes[0])
+        return self._options
+
     @staticmethod
     def create(node):
         result = _InstallConfiguration()
@@ -264,8 +335,6 @@ class _InstallConfiguration:
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
-        # self_options are the minimum to reproduce state
-        result.options = node.conanfile.self_options.dumps().splitlines()
         result.overrides = node.overrides()
         result.info = node.conanfile.info.serialize()
 
@@ -325,7 +394,7 @@ class _InstallConfiguration:
         result.prev = data["prev"]
         result.binary = data["binary"]
         result.context = data["context"]
-        result.options = data["options"]
+        result._options = data["options"]
         result.filenames = data["filenames"] or [filename]
         result.depends = [PkgReference.loads(p) for p in data["depends"]]
         result.overrides = Overrides.deserialize(data["overrides"])

@@ -26,22 +26,13 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
         components_names = [(components_target_name.replace("::", "_"), components_target_name)
                             for components_target_name in components_targets_names]
 
-        is_win = self.conanfile.settings.get_safe("os") == "Windows"
-        auto_link = self.cmakedeps.get_property("cmake_set_interface_link_directories",
-                                                self.conanfile, check_type=bool)
-        if auto_link:
-            out = self.cmakedeps._conanfile.output # noqa
-            out.warning("CMakeDeps: cmake_set_interface_link_directories is legacy, not necessary",
-                        warn_tag="deprecated")
-
         return {"pkg_name": self.pkg_name,
                 "root_target_name": self.root_target_name,
                 "config_suffix": self.config_suffix,
                 "config": self.configuration.upper(),
                 "deps_targets_names": ";".join(deps_targets_names),
                 "components_names": components_names,
-                "configuration": self.cmakedeps.configuration,
-                "set_interface_link_directories": auto_link and is_win}
+                "configuration": self.cmakedeps.configuration}
 
     @property
     def template(self):

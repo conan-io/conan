@@ -18,7 +18,8 @@ def _print_remotes_json(remotes):
              "verify_ssl": r.verify_ssl,
              "enabled": not r.disabled,
              "allowed_packages": r.allowed_packages,
-             "recipes_only": r.recipes_only}
+             "recipes_only": r.recipes_only,
+             "force_auth": r.force_auth}
             for r in remotes]
     cli_out_write(json.dumps(info, indent=4))
 
@@ -87,6 +88,9 @@ def remote_add(conan_api, parser, subparser, *args):
     subparser.add_argument("--recipes-only", action="store_true", default=False,
                            help="Disallow binary downloads from this remote, only recipes "
                                 "will be downloaded")
+    subparser.add_argument("--force-auth", action="store_true", default=False,
+                           help="Do not allow anonymous access to this remote, always "
+                                "authenticate before attempting any request")
 
     subparser.set_defaults(secure=True)
     args = parser.parse_args(*args)
@@ -96,7 +100,8 @@ def remote_add(conan_api, parser, subparser, *args):
     url = url_folder if remote_type == LOCAL_RECIPES_INDEX else args.url
     r = Remote(args.name, url, args.secure, disabled=False, remote_type=remote_type,
                allowed_packages=args.allowed_packages,
-               recipes_only=args.recipes_only)
+               recipes_only=args.recipes_only,
+               force_auth=args.force_auth)
     conan_api.remotes.add(r, force=args.force, index=args.index)
 
 
@@ -133,16 +138,23 @@ def remote_update(conan_api, parser, subparser, *args):
                            choices=["True", "False"],
                            help="Disallow binary downloads from this remote, only recipes will "
                                 "be downloaded")
+    subparser.add_argument("--force-auth", default=None, const="True", nargs="?",
+                           choices=["True", "False"],
+                           help="Do not allow anonymous access to this remote, always "
+                                "authenticate before attempting any request")
 
     subparser.set_defaults(secure=None)
     args = parser.parse_args(*args)
     if (args.url is None and args.secure is None and args.index is None and
-            args.allowed_packages is None and args.recipes_only is None):
+            args.allowed_packages is None and args.recipes_only is None and
+            args.force_auth is None):
         subparser.error("Please add at least one argument to update")
     args.recipes_only = None if args.recipes_only is None else args.recipes_only == "True"
+    args.force_auth = None if args.force_auth is None else args.force_auth == "True"
     conan_api.remotes.update(args.remote, args.url, args.secure, index=args.index,
                              allowed_packages=args.allowed_packages,
-                             recipes_only=args.recipes_only)
+                             recipes_only=args.recipes_only,
+                             force_auth=args.force_auth)
 
 
 @conan_subcommand()
@@ -284,6 +296,8 @@ def remote_auth(conan_api, parser, subparser, *args):
     no CONAN_LOGIN* and CONAN_PASSWORD* variables available which could be used.
     Usually you'd use this method over conan remote login for scripting which needs to run in CI
     and locally.
+    By default, this command returns exit code 0 even if authentication fails for some remotes.
+    Use --strict to return exit code 1 if authentication fails for any remote.
     """
     subparser.add_argument("remote", help="Pattern or name of the remote/s to authenticate against."
                                           " The pattern uses 'fnmatch' style wildcards.")
@@ -296,6 +310,8 @@ def remote_auth(conan_api, parser, subparser, *args):
                                 "instance has anonymous access enabled and Conan would not ask "
                                 "for username and password even for non-anonymous repositories "
                                 "if not yet authenticated.")
+    subparser.add_argument("--strict", action="store_true",
+                           help="Return exit code 1 if authentication fails for any remote.")
     args = parser.parse_args(*args)
     remotes = conan_api.remotes.list(pattern=args.remote)
     if not remotes:
@@ -307,6 +323,11 @@ def remote_auth(conan_api, parser, subparser, *args):
             results[r.name] = {"user": conan_api.remotes.user_auth(r, args.with_user, args.force)}
         except Exception as e:
             results[r.name] = {"error": str(e)}
+
+    if args.strict:
+        failed = [name for name, v in results.items() if "error" in v]
+        if failed:
+            raise ConanException("Authentication error in remotes: {}".format(", ".join(failed)))
     return results
 
 

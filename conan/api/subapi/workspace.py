@@ -10,7 +10,6 @@ from conan.api.output import ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.printers.graph import print_graph_basic, print_graph_packages
 from conan.errors import ConanException
-from conan.internal.conan_app import ConanApp
 from conan.internal.errors import conanfile_exception_formatter
 from conan.internal.graph.install_graph import ProfileArgs
 from conan.internal.methods import auto_language, auto_shared_fpic_config_options, \
@@ -77,7 +76,6 @@ def _parse_module(conanfile_module, module_id):
 
 
 class WorkspaceAPI:
-    TEST_ENABLED = False
 
     def __init__(self, conan_api):
         self._enabled = True
@@ -85,12 +83,8 @@ class WorkspaceAPI:
         self._folder = _find_ws_folder()
         if self._folder:
             ConanOutput().warning(f"Workspace found: {self._folder}")
-            if (WorkspaceAPI.TEST_ENABLED or os.getenv("CONAN_WORKSPACE_ENABLE")) != "will_break_next":
-                ConanOutput().warning("Workspace ignored as CONAN_WORKSPACE_ENABLE is not set")
-                self._folder = None
-            else:
-                ConanOutput().warning(f"Workspace is a dev-only feature, exclusively for testing")
-                self._ws = _load_workspace(self._folder, conan_api)  # Error if not loading
+            ConanOutput().warning("The Workspace feature is experimental", warn_tag="experimental")
+            self._ws = _load_workspace(self._folder, conan_api)  # Error if not loading
 
     def enable(self, value):
         self._enabled = value
@@ -120,46 +114,100 @@ class WorkspaceAPI:
                 raise ConanException(f"Workspace package not found: {path}")
             ref = editable_info.get("ref")
             try:
-                if ref is None:
-                    conanfile = self._ws.load_conanfile(rel_path)
+                conanfile = self._ws.load_conanfile(rel_path)
+                if ref is not None:
+                    reference = RecipeReference.loads(ref)
+                elif conanfile.name and conanfile.version:
                     reference = RecipeReference(name=conanfile.name, version=conanfile.version,
                                                 user=conanfile.user, channel=conanfile.channel)
                 else:
-                    reference = RecipeReference.loads(ref)
-                reference.validate_ref(reference)
+                    user_ref = self._ws.get_ref(rel_path)
+                    reference = (RecipeReference.loads(str(user_ref))
+                                 if user_ref is not None else None)
             except Exception as e:
                 raise ConanException(f"Workspace package reference could not be deduced by"
                                      f" {rel_path}/conanfile.py or it is not"
                                      f" correctly defined in the conanws.yml file: {e}")
+            if reference is None:
+                raise ConanException(
+                    f"Workspace package reference could not be deduced for '{rel_path}'. "
+                    f"Provide one of:\n"
+                    f"  - 'ref: name/version[@user/channel]' in conanws.yml\n"
+                    f"  - 'name' and 'version' as class attributes in conanfile.py\n"
+                    f"  - 'set_name()' / 'set_version()' methods in conanfile.py\n"
+                    f"  - 'get_ref(folder)' method in conanws.py (typically needed when "
+                    f"set_name/set_version are inherited from a python_requires, since "
+                    f"python_requires are not resolved during workspace discovery)")
+            reference.validate_ref(reference)
             if reference in packages:
                 raise ConanException(f"Workspace package '{str(reference)}' already exists.")
-            packages[reference] = {"path": path}
+            packages[reference] = {"path": path, "conanfile": conanfile}
             if editable_info.get("output_folder"):
                 packages[reference]["output_folder"] = (
                     os.path.normpath(os.path.join(self._folder, editable_info["output_folder"]))
                 )
         return packages
 
-    def open(self, ref, remotes, cwd=None):
-        cwd = cwd or os.getcwd()
-        app = ConanApp(self._conan_api)
+    def open_missing(self, remotes):
+        """
+        For each package in the current workspace definition, if its folder does not
+        exist, open the package into it. If the folder exists, ensure it contains a
+        conanfile.py, raising otherwise.
+        """
+        self._check_ws()
+        opened = []
+        # Disable the workspace while opening: packages() validation would fail on
+        # the very folders we are about to create
+        self.enable(False)
+        try:
+            for package_info in self._ws.packages():
+                rel_path = package_info["path"]
+                ref = package_info.get("ref")
+                abs_path = os.path.normpath(os.path.join(self._folder, rel_path))
+                if os.path.exists(abs_path):
+                    if not os.path.isfile(os.path.join(abs_path, "conanfile.py")):
+                        raise ConanException(f"Folder '{abs_path}' exists but does not "
+                                             f"contain a conanfile.py")
+                    ConanOutput().info(f"Package folder already exists, skipping: {abs_path}")
+                    continue
+                if not ref:
+                    raise ConanException(f"Cannot open workspace package at '{rel_path}': "
+                                         f"missing 'ref' in workspace definition")
+                reference = RecipeReference.loads(ref)
+                parent = os.path.dirname(abs_path) or self._folder
+                os.makedirs(parent, exist_ok=True)
+                ConanOutput().info(f"Opening package '{ref}' into: {abs_path}")
+                self.open(reference, remotes, cwd=parent,
+                          folder=os.path.basename(abs_path))
+                opened.append(reference)
+        finally:
+            self.enable(True)
+        return opened
+
+    def open(self, ref, remotes, cwd=None, folder=None):
+        # Default target is the workspace root when inside a workspace, so running
+        # from a subfolder doesn't clone into that subfolder
+        cwd = cwd or self._folder or os.getcwd()
+        proxy, _, loader, _ = self._conan_api._api_helpers.get_loader()  # noqa
         ref = RecipeReference.loads(ref) if isinstance(ref, str) else ref
-        recipe = app.proxy.get_recipe(ref, remotes, update=False, check_update=False)
+        recipe = proxy.get_recipe(ref, remotes, update=False, check_update=False)
 
         layout, recipe_status, remote = recipe
         if recipe_status == RECIPE_EDITABLE:
             raise ConanException(f"Can't open a dependency that is already an editable: {ref}")
         ref = layout.reference
         conanfile_path = layout.conanfile()
-        conanfile, module = app.loader.load_basic_module(conanfile_path, remotes=remotes)
+        conanfile, module = loader.load_basic_module(conanfile_path, remotes=remotes)
 
         scm = conanfile.conan_data.get("scm") if conanfile.conan_data else None
-        dst_path = os.path.join(cwd, ref.name)
+        target = folder or ref.name
+        dst_path = os.path.join(cwd, target)
         if scm is None:
             conanfile.output.warning("conandata doesn't contain 'scm' information\n"
                                      "doing a local copy!!!")
             shutil.copytree(layout.export(), dst_path)
-            retrieve_exports_sources(app.remote_manager, layout, conanfile, ref, remotes)
+            remote_manager = self._conan_api._api_helpers.remote_manager # noqa
+            retrieve_exports_sources(remote_manager, layout, conanfile, ref, remotes)
             export_sources = layout.export_sources()
             if os.path.exists(export_sources):
                 conanfile.output.warning("There are export-sources, copying them, but the location"
@@ -167,8 +215,8 @@ class WorkspaceAPI:
                 merge_directories(export_sources, dst_path)
         else:
             git = Git(conanfile, folder=cwd)
-            git.clone(url=scm["url"], target=ref.name)
-            git.folder = ref.name  # change to the cloned folder
+            git.clone(url=scm["url"], target=target)
+            git.folder = target  # change to the cloned folder
             git.checkout(commit=scm["commit"])
         return dst_path
 
@@ -177,7 +225,7 @@ class WorkspaceAPI:
             raise ConanException(f"Workspace not defined, please create a "
                                  f"'{WORKSPACE_PY}' or '{WORKSPACE_YML}' file")
 
-    def add(self, path, name=None, version=None, user=None, channel=None, cwd=None,
+    def add(self, path, name=None, version=None, user=None, channel=None,
             output_folder=None, remotes=None):
         """
         Add a new editable package to the current workspace (the current workspace must exist)
@@ -192,9 +240,9 @@ class WorkspaceAPI:
         @return: The reference of the added package
         """
         self._check_ws()
-        full_path = self._conan_api.local.get_conanfile_path(path, cwd, py=True)
-        app = ConanApp(self._conan_api)
-        conanfile = app.loader.load_named(full_path, name, version, user, channel, remotes=remotes)
+        full_path = self._conan_api.local.get_conanfile_path(path, cwd=None, py=True)
+        loader = self._conan_api._api_helpers.loader  # noqa
+        conanfile = loader.load_named(full_path, name, version, user, channel, remotes=remotes)
         if conanfile.name is None or conanfile.version is None:
             raise ConanException("Editable package recipe should declare its name and version")
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
@@ -227,7 +275,7 @@ class WorkspaceAPI:
 
             if not nodes_to_complete:
                 ConanOutput().info("There are no intermediate packages to add to the workspace")
-                return
+                continue
 
             for node in nodes_to_complete:
                 full_path = os.path.join(self._folder, node.name, "conanfile.py")
@@ -277,9 +325,10 @@ class WorkspaceAPI:
 
     def info(self):
         self._check_ws()
+        packages_list = list(self._ws.packages())
         return {"name": self._ws.name(),
                 "folder": self._folder,
-                "packages": self._ws.packages()}
+                "packages": packages_list}
 
     @staticmethod
     def _init_options(conanfile, options):
@@ -326,14 +375,16 @@ class WorkspaceAPI:
         ConanOutput().title("Collapsing workspace packages")
 
         root_class = self._ws.root_conanfile()
+        # To inject things like cmd_wrapper to the consumer conanfile, so self.run() works
+        loader = self._conan_api._api_helpers.loader  # noqa
+        helpers = loader._conanfile_helpers  # noqa
         if root_class is not None:
             conanfile = root_class(f"{WORKSPACE_PY} base project Conanfile")
-            # To inject things like cmd_wrapper to the consumer conanfile, so self.run() works
-            helpers = ConanApp(self._conan_api).loader._conanfile_helpers  # noqa
-            conanfile._conan_helpers = helpers
             conanfile._conan_is_consumer = True
+            # We extract the ref, so pattern-based conf works too
+            ref = RecipeReference(conanfile.name, conanfile.version) if conanfile.name else None
             initialize_conanfile_profile(conanfile, profile_build, profile_host, CONTEXT_HOST,
-                                         is_build_require=False)
+                                         is_build_require=False, ref=ref)
             # consumer_definer(conanfile, profile_host, profile_build)
             self._init_options(conanfile, profile_host.options)
             for field in ("requires", "build_requires", "test_requires", "requirements", "build",
@@ -347,8 +398,10 @@ class WorkspaceAPI:
             ConanOutput().info(f"Workspace {WORKSPACE_PY} not found in the workspace folder, "
                                "using default behavior")
             conanfile = ConanFile(display_name="cli")
+            conanfile._conan_is_consumer = True
             consumer_definer(conanfile, profile_host, profile_build)
             root = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
+        conanfile._conan_helpers = helpers
 
         result = DepsGraph()  # TODO: We might need to copy more information from the original graph
         result.add_node(root)
@@ -370,8 +423,18 @@ class WorkspaceAPI:
                     root.transitive_deps[r] = t
                 else:
                     require = existing.require
+                    # Prefer host node if they are different
+                    n = t.node
+                    if t.node.context != existing.node.context and existing.node.context == CONTEXT_HOST:
+                        n = existing.node
+                        ConanOutput().warning(f"Workspace has dependencies to the same package {require} in different contexts, "
+                                              f"which can cause problems. Using the host context node")
+                    elif require.visible != r.visible and require.visible:
+                        n = existing.node
+                        ConanOutput().warning(f"Workspace has dependencies to the same package {require} with different visibility, "
+                                              f"which can cause problems. Using the visible node")
                     require.aggregate(r)
-                    root.transitive_deps[require] = TransitiveRequirement(require, t.node)
+                    root.transitive_deps[require] = TransitiveRequirement(require, n)
 
         # The graph edges must be defined too
         for r, t in root.transitive_deps.items():
@@ -407,6 +470,10 @@ class WorkspaceAPI:
     def select_packages(self, packages):
         self._check_ws()
         editable = self.packages()
+        # Filter those that are python-requires that shouldn't participate in build-orders or other
+        # orchestration commands
+        editable = {ref: value for ref, value in editable.items()
+                    if value["conanfile"].package_type != "python-require"}
         packages = packages or []
         selected_editables = {}
         for ref, info in editable.items():

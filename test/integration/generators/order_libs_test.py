@@ -14,8 +14,7 @@ def test_library_order():
     c = TestClient()
 
     def _export(libname, refs=None):
-        conanfile = GenConanfile(libname, "0.1").with_package_info(cpp_info={"libs": [libname]},
-                                                                   env_info={})
+        conanfile = GenConanfile(libname, "0.1").with_package_info(cpp_info={"libs": [libname]})
         for r in refs or []:
             conanfile.with_requires(f"{r}/0.1")
         c.save({"conanfile.py": conanfile}, clean_first=True)

@@ -1,3 +1,4 @@
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
 from conan.internal.model.recipe_ref import ref_matches
 
@@ -9,12 +10,12 @@ class BuildMode:
                    => ["!foo"] or ["~foo"] means exclude when building all from sources
     """
     def __init__(self, params):
-        self.missing = False
-        self.never = False
+        self._missing = False
+        self._never = False
         self.cascade = False
-        self.editable = False
-        self.patterns = []
-        self.build_missing_patterns = []
+        self._editable = False
+        self._patterns = []
+        self._build_missing_patterns = []
         self._build_missing_excluded = []
         self._build_compatible_patterns = []
         self._build_compatible_excluded = []
@@ -27,20 +28,23 @@ class BuildMode:
 
         for param in params:
             if param == "missing":
-                self.missing = True
+                self._missing = True
             elif param == "editable":
-                self.editable = True
+                self._editable = True
             elif param == "never":
-                self.never = True
+                self._never = True
             elif param == "cascade":
                 self.cascade = True
+                ConanOutput().warning("Using build-mode 'cascade' is generally inefficient and it "
+                                      "shouldn't be used. Use 'package_id' and 'package_id_modes' "
+                                      "for more efficient re-builds")
             else:
                 if param.startswith("missing:"):
                     clean_pattern = param[len("missing:"):]
                     if clean_pattern and clean_pattern[0] in ["!", "~"]:
                         self._build_missing_excluded.append(clean_pattern[1:])
                     else:
-                        self.build_missing_patterns.append(clean_pattern)
+                        self._build_missing_patterns.append(clean_pattern)
                 elif param == "compatible":
                     self._build_compatible_patterns = ["*"]
                 elif param.startswith("compatible:"):
@@ -54,10 +58,15 @@ class BuildMode:
                     if clean_pattern and clean_pattern[0] in ["!", "~"]:
                         self._excluded_patterns.append(clean_pattern[1:])
                     else:
-                        self.patterns.append(clean_pattern)
+                        self._patterns.append(clean_pattern)
 
-            if self.never and (self.missing or self.patterns or self.cascade):
+            if self._never and (self._missing or self._patterns or self.cascade):
                 raise ConanException("--build=never not compatible with other options")
+
+    @property
+    def editable(self):
+        # we can make this conditional on the context in the future
+        return self._editable
 
     def forced(self, conan_file, ref, with_deps_to_build=False):
         # TODO: ref can be obtained from conan_file
@@ -70,7 +79,7 @@ class BuildMode:
         if conan_file.build_policy == "never":  # this package has been export-pkg
             return False
 
-        if self.never:
+        if self._never:
             return False
 
         if conan_file.build_policy == "always":
@@ -81,15 +90,15 @@ class BuildMode:
             return True
 
         # Patterns to match, if package matches pattern, build is forced
-        for pattern in self.patterns:
+        for pattern in self._patterns:
             if ref_matches(ref, pattern, is_consumer=conan_file._conan_is_consumer):  # noqa
                 return True
         return False
 
     def allowed(self, conan_file):
-        if self.never or conan_file.build_policy == "never":  # this package has been export-pkg
+        if self._never or conan_file.build_policy == "never":  # this package has been export-pkg
             return False
-        if self.missing:
+        if self._missing:
             return True
         if conan_file.build_policy == "missing":
             conan_file.output.info("Building package from source as defined by "
@@ -119,6 +128,6 @@ class BuildMode:
                     return False
             return True  # If it has not been excluded by the negated patterns, it is included
 
-        for pattern in self.build_missing_patterns:
+        for pattern in self._build_missing_patterns:
             if ref_matches(conanfile.ref, pattern, is_consumer=conanfile._conan_is_consumer):  # noqa
                 return True

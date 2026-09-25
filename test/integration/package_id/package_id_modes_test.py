@@ -105,6 +105,48 @@ class TestDepDefinedMode:
         c.run("create pkg")
         c.assert_listed_binary({"pkg/0.1": ("56934f87c11792e356423e081c7cd490f3c1fbe0", "Build")})
 
+    def test_dep_defined_micro(self):
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                package_type = "static-library"
+                package_id_embed_mode = "micro_mode"
+                package_id_non_embed_mode = "micro_mode"
+            """)
+        c.save({"dep/conanfile.py": dep,
+                "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")
+                                                              .with_shared_option(False)})
+        c.run("create dep --version=1.0.0.0")
+        c.run("create pkg")
+        static_id = c.created_package_id("pkg/0.1")
+        c.run("create pkg -o pkg/*:shared=True")
+        shared_id = c.created_package_id("pkg/0.1")
+
+        # micro change (1.0.0.0 → 1.0.0.1) triggers new binaries for both embed and non-embed
+        c.run("create dep --version=1.0.0.1")
+        c.run("create pkg")
+        new_static_id = c.created_package_id("pkg/0.1")
+        assert new_static_id != static_id
+        c.run("create pkg -o pkg/*:shared=True")
+        new_shared_id = c.created_package_id("pkg/0.1")
+        assert new_shared_id != shared_id
+        c.run("list pkg:*")
+        assert "dep/1.0.0.1" in c.out
+
+        # More digits are ignored, same package_id
+        c.run("create dep --version=1.0.0.1.1")
+        c.run("create pkg")
+        new_static_id2 = c.created_package_id("pkg/0.1")
+        assert new_static_id2 == new_static_id
+        c.run("create pkg -o pkg/*:shared=True")
+        new_shared_id2 = c.created_package_id("pkg/0.1")
+        assert new_shared_id2 == new_shared_id
+        c.run("list pkg:*")
+        assert "dep/1.0.0.1" in c.out
+        assert "dep/1.0.0.1.1" not in c.out
+
     def test_dep_python_require_defined(self):
         c = TestClient()
         dep = textwrap.dedent("""
@@ -138,3 +180,27 @@ class TestDepDefinedMode:
         c.assert_listed_binary({"pkg/0.1": ("9b015e30b768df0217ffa2c270f60227c998e609", "Build")})
         c.run("list *:*")
         assert "dep/1.Y.Z" in c.out
+
+
+def test_conf_micro_mode():
+    """micro_mode via global.conf: 4th digit changes affect package_id"""
+    c = TestClient()
+    c.save_home({"global.conf": "core.package_id:default_unknown_mode=micro_mode"})
+    c.save({"dep/conanfile.py": GenConanfile("dep"),
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")})
+    c.run("create dep --version=1.0.0.0")
+    c.run("create pkg")
+    package_id = c.created_package_id("pkg/0.1")
+    c.run("list pkg:*")
+    assert "dep/1.0.0.0" in c.out
+
+    # same patch, different micro → new binary required
+    c.run("create dep --version=1.0.0.1")
+    c.run("install --requires=pkg/0.1", assert_error=True)
+    assert "ERROR: Missing prebuilt package for 'pkg/0.1'" in c.out
+    assert "dep/1.0.0.1" in c.out
+
+    # build the new binary and confirm the package_id changed
+    c.run("create pkg")
+    new_package_id = c.created_package_id("pkg/0.1")
+    assert new_package_id != package_id

@@ -24,6 +24,7 @@ class XcodeToolchain:
         {cflags}
         {cppflags}
         {ldflags}
+        {extra}
         """)
 
     _agreggated_xconfig = textwrap.dedent("""\
@@ -45,13 +46,15 @@ class XcodeToolchain:
         sharedlinkflags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         self._global_ldflags = sharedlinkflags + exelinkflags
+        self.build_settings = {}
 
     def generate(self):
         check_duplicated_generator(self, self._conanfile)
         save(self._agreggated_xconfig_filename, self._agreggated_xconfig_content)
         save(self._vars_xconfig_filename, self._vars_xconfig_content)
         if self._check_if_extra_flags:
-            save(self._flags_xcconfig_filename, self._flags_xcconfig_content)
+            save(self._flags_props_xconfig_filename, self._flags_xcconfig_content)
+            save(self._flags_xcconfig_filename, self._flags_xcconfig_aggregated_content)
         save(GLOBAL_XCCONFIG_FILENAME, self._global_xconfig_content)
 
     @property
@@ -114,16 +117,34 @@ class XcodeToolchain:
 
     @property
     def _check_if_extra_flags(self):
-        return self._global_cflags or self._global_cxxflags or self._global_ldflags or self._global_defines
+        return (self._global_cflags or self._global_cxxflags or self._global_ldflags
+                or self._global_defines or self.build_settings)
 
     @property
     def _flags_xcconfig_content(self):
-        defines = "GCC_PREPROCESSOR_DEFINITIONS = $(inherited) {}".format(" ".join(self._global_defines)) if self._global_defines else ""
-        cflags = "OTHER_CFLAGS = $(inherited) {}".format(" ".join(self._global_cflags)) if self._global_cflags else ""
-        cppflags = "OTHER_CPLUSPLUSFLAGS = $(inherited) {}".format(" ".join(self._global_cxxflags)) if self._global_cxxflags else ""
-        ldflags = "OTHER_LDFLAGS = $(inherited) {}".format(" ".join(self._global_ldflags)) if self._global_ldflags else ""
-        ret = self._flags_xconfig.format(defines=defines, cflags=cflags, cppflags=cppflags, ldflags=ldflags)
+        # Conditioned like the vars props file, so flags from different installed
+        # (config, arch, sdk) combinations don't overwrite each other.
+        condition = _xcconfig_conditional(self._conanfile.settings, self.configuration)
+        defines = "GCC_PREPROCESSOR_DEFINITIONS{} = $(inherited) {}".format(condition, " ".join(self._global_defines)) if self._global_defines else ""
+        cflags = "OTHER_CFLAGS{} = $(inherited) {}".format(condition, " ".join(self._global_cflags)) if self._global_cflags else ""
+        cppflags = "OTHER_CPLUSPLUSFLAGS{} = $(inherited) {}".format(condition, " ".join(self._global_cxxflags)) if self._global_cxxflags else ""
+        ldflags = "OTHER_LDFLAGS{} = $(inherited) {}".format(condition, " ".join(self._global_ldflags)) if self._global_ldflags else ""
+        extra = "\n".join("{}{} = {}".format(k, condition, v) for k, v in self.build_settings.items())
+        ret = self._flags_xconfig.format(defines=defines, cflags=cflags, cppflags=cppflags, ldflags=ldflags,
+                                         extra=extra)
         return ret
+
+    @property
+    def _flags_props_xconfig_filename(self):
+        return "conan_global_flags{}{}".format(_xcconfig_settings_filename(self._conanfile.settings,
+                                                                            self.configuration),
+                                               self.extension)
+
+    @property
+    def _flags_xcconfig_aggregated_content(self):
+        return _add_includes_to_file_or_create(self._flags_xcconfig_filename,
+                                               self._agreggated_xconfig,
+                                               [self._flags_props_xconfig_filename])
 
     @property
     def _flags_xcconfig_filename(self):

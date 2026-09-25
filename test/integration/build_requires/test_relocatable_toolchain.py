@@ -62,14 +62,14 @@ def test_relocatable_toolchain():
     c.assert_listed_binary({"base/1.0": ("62e589af96a19807968167026d906e63ed4de1f5", "Cache"),
                             "sdk/1.0": ("62e589af96a19807968167026d906e63ed4de1f5", "Build")},
                            build=True)
-    assert "sdk/1.0: Calling package()" in c.out
+    assert "Calling package()" in c.out
     assert "sdk/1.0: SDK INFO: CUSTOM PATH: arch:x86_64=>armv8!!!" in c.out
 
     c.run("install consumer -pr:h=embedded -pr:b=linux -v")
     c.assert_listed_binary({"base/1.0": ("62e589af96a19807968167026d906e63ed4de1f5", "Skip"),
                             "sdk/1.0": ("62e589af96a19807968167026d906e63ed4de1f5", "Cache")},
                            build=True)
-    assert "sdk/1.0: Calling package()" not in c.out
+    assert "Calling package()" not in c.out
     assert "sdk/1.0: SDK INFO: CUSTOM PATH: arch:x86_64=>armv8!!!" in c.out
 
     # If I upload everything and remove:
@@ -80,7 +80,7 @@ def test_relocatable_toolchain():
         {"base/1.0": ("62e589af96a19807968167026d906e63ed4de1f5", "Download (default)"),
          "sdk/1.0": ("62e589af96a19807968167026d906e63ed4de1f5", "Build")},
         build=True)
-    assert "sdk/1.0: Calling package()" in c.out
+    assert "Calling package()" in c.out
     assert "sdk/1.0: SDK INFO: CUSTOM PATH: arch:x86_64=>armv8!!!" in c.out
 
     # we can even remove the binary!

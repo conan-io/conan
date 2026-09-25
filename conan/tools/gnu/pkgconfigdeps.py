@@ -58,7 +58,7 @@ class _PCFilesDeps:
             if (dep.ref.name == comp_ref_name or
                 # Or a "replace_require" is used and cpp_info.requires is the root one, e.g.,
                 # zlib/*: zlib-ng/*, and self.cpp_info.requires = ["zlib::zlib"]
-                (dep.ref.name != pkg_name and pkg_name == comp_ref_name)):
+                    (dep.ref.name != pkg_name and pkg_name == comp_ref_name)):
                 return _get_dep_aliases()
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=dep.ref.name,
@@ -78,7 +78,7 @@ class _PCFilesDeps:
             if (dep.ref.name == comp_ref_name or
                 # Or a "replace_require" is used and cpp_info.requires is the root one, e.g.,
                 # zlib/*: zlib-ng/*, and self.cpp_info.requires = ["zlib::zlib"]
-                (dep.ref.name != pkg_name and pkg_name == comp_ref_name)):
+                    (dep.ref.name != pkg_name and pkg_name == comp_ref_name)):
                 return _get_dep_name()
             raise ConanException("Component '{name}::{cname}' not found in '{name}' "
                                  "package requirement".format(name=dep.ref.name,
@@ -123,7 +123,7 @@ class _PCFilesDeps:
 
         # If editable, package_folder can be None
         prefix_path = (dep.recipe_folder if dep.package_folder is None
-                                   else dep.package_folder).replace("\\", "/")
+                       else dep.package_folder).replace("\\", "/")
         pc_variables = {"prefix": prefix_path}
         # Already formatted directories
         pc_variables.update(self._get_formatted_dirs("libdir", cpp_info.libdirs, prefix_path))
@@ -162,12 +162,31 @@ class _PCFilesDeps:
         shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
         return " ".join(libdirsflags + system_libs + shared_flags + framework_flags)
 
-    def _get_cflags(self, includedirvars, cpp_info):
+    @staticmethod
+    def _get_cflags(includedirvars, cpp_info):
         includedirsflags = ['-I"${%s}"' % d for d in includedirvars]
         cxxflags = [var.replace('"', '\\"') for var in cpp_info.cxxflags]
         cflags = [var.replace('"', '\\"') for var in cpp_info.cflags]
         defines = ["-D%s" % var.replace('"', '\\"') for var in cpp_info.defines]
         return " ".join(includedirsflags + cxxflags + cflags + defines)
+
+    def _get_none_requirement_names(self, dep):
+        """
+        When a package has pkg_config_name="none", return the pkg-config names that should
+        replace a root requirement (pkg::pkg). If the package has no components, return [].
+        """
+        if not dep.cpp_info.has_components:
+            return []
+        if dep.cpp_info.default_components is not None:
+            comp_names = dep.cpp_info.default_components
+        else:
+            comp_names = list(dep.cpp_info.get_sorted_components().keys())
+        ret = []
+        for comp_ref_name in comp_names:
+            comp_name = self._get_name(dep, dep.ref.name, comp_ref_name)
+            if comp_name not in ret:
+                ret.append(comp_name)
+        return ret
 
     def _get_component_requirement_names(self, cpp_info):
         """
@@ -202,7 +221,11 @@ class _PCFilesDeps:
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
                 req_conanfile = self._dep
             comp_name = self._get_name(req_conanfile, pkg_ref_name, comp_ref_name)
-            if comp_name not in ret:
+            if comp_name == "none":
+                for none_req in self._get_none_requirement_names(req_conanfile):
+                    if none_req not in ret:
+                        ret.append(none_req)
+            elif comp_name not in ret:
                 ret.append(comp_name)
         return ret
 

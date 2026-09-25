@@ -8,6 +8,7 @@ from test.conftest import tools_locations
 from conan.test.utils.tools import TestClient
 
 
+@pytest.mark.slow
 @pytest.mark.tool("cmake", "3.23")  # Android complains if <3.19
 @pytest.mark.tool("ninja")  # so it easily works in Windows too
 @pytest.mark.tool("android_ndk")

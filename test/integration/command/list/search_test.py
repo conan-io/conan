@@ -1,5 +1,5 @@
 import textwrap
-from collections import OrderedDict
+
 from unittest.mock import patch, Mock
 
 import pytest
@@ -15,18 +15,14 @@ class TestSearch:
 
     @pytest.fixture
     def remotes(self):
-        self.servers = OrderedDict()
-        self.servers["remote1"] = TestServer(server_capabilities=[])
-        self.servers["remote2"] = TestServer(server_capabilities=[])
-
-        self.client = TestClient(servers=self.servers)
+        self.servers = {"remote1": TestServer(server_capabilities=[]),
+                        "remote2": TestServer(server_capabilities=[])}
+        self.client = TestClient(light=True, servers=self.servers)
 
     def test_search_no_params(self):
-        self.servers = OrderedDict()
-        self.client = TestClient(servers=self.servers)
-
-        self.client.run("search", assert_error=True)
-        assert "error: the following arguments are required: reference" in self.client.out
+        client = TestClient(light=True, servers={})
+        client.run("search", assert_error=True)
+        assert "error: the following arguments are required: reference" in client.out
 
     def test_search_no_matching_recipes(self, remotes):
         expected_output = ("Connecting to remote 'remote1' anonymously\n"
@@ -40,11 +36,9 @@ class TestSearch:
         assert expected_output == self.client.out
 
     def test_search_no_configured_remotes(self):
-        self.servers = OrderedDict()
-        self.client = TestClient(servers=self.servers)
-
-        self.client.run("search whatever", assert_error=True)
-        assert "There are no remotes to search from" in self.client.out
+        client = TestClient(light=True)
+        client.run("search whatever", assert_error=True)
+        assert "There are no remotes to search from" in client.out
 
     def test_search_disabled_remote(self, remotes):
         self.client.run("remote disable remote1")
@@ -57,25 +51,20 @@ class TestRemotes:
 
     @pytest.fixture(autouse=True)
     def _setup(self):
-        self.servers = OrderedDict()
         self.users = {}
-        self.client = TestClient()
+        self.servers = {}
+        self.client = TestClient(light=True)
 
     def _add_remote(self, remote_name):
         self.servers[remote_name] = TestServer(users={"user": "passwd"})
         self.users[remote_name] = [("user", "passwd")]
-        self.client = TestClient(servers=self.servers, inputs=["user", "passwd"])
+        self.client = TestClient(light=True, servers=self.servers, inputs=["user", "passwd"])
 
     def _add_recipe(self, remote, reference):
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class MyLib(ConanFile):
-                pass
-            """)
-
-        self.client.save({'conanfile.py': conanfile})
+        self.client.save({'conanfile.py': GenConanfile()})
         reference = RecipeReference.loads(str(reference))
-        self.client.run(f"export . --name={reference.name} --version={reference.version} --user={reference.user} --channel={reference.channel}")
+        self.client.run(f"export . --name={reference.name} --version={reference.version} "
+                        f"--user={reference.user} --channel={reference.channel}")
         self.client.run("upload --force -r {} {}".format(remote, reference))
 
     @pytest.mark.parametrize("exc,output", [
@@ -95,11 +84,6 @@ class TestRemotes:
           {output}
         """)
         assert expected_output == self.client.out
-
-    def test_no_remotes(self):
-        self.client.run("search something", assert_error=True)
-        expected_output = "There are no remotes to search from"
-        assert expected_output in self.client.out
 
     def test_search_by_name(self):
         remote_name = "remote1"
@@ -176,7 +160,6 @@ class TestRemotes:
         assert expected_output in self.client.out
 
     def test_search_package_found_in_one_remote(self):
-
         remote1 = "remote1"
         remote2 = "remote2"
 
@@ -249,7 +232,7 @@ class TestRemotes:
 
 def test_no_user_channel_error():
     # https://github.com/conan-io/conan/issues/13170
-    c = TestClient(default_server_user=True)
+    c = TestClient(light=True, default_server_user=True)
     c.save({"conanfile.py": GenConanfile("pkg")})
     c.run("export . --version=1.0")
     c.run("export . --version=1.0 --user=user --channel=channel")

@@ -1,7 +1,6 @@
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList, PackagesList
 from conan.api.output import ConanOutput
-from conan.cli import make_abs_path
 from conan.cli.command import conan_command, OnceArgument
 from conan.cli.commands.list import print_list_json, print_serial
 from conan.api.input import UserInput
@@ -70,6 +69,8 @@ def upload(conan_api: ConanAPI, parser, *args):
                         help='Upload all matching recipes without confirmation')
     parser.add_argument('--dry-run', default=False, action='store_true',
                         help='Do not execute the real upload (experimental)')
+    parser.add_argument('--allow-disabled', default=False, action='store_true',
+                        help='Allow uploading to disabled remote')
     parser.add_argument("-l", "--list", help="Package list file")
     parser.add_argument("-m", "--metadata", action='append',
                         help='Upload the metadata, even if the package is already in the server and '
@@ -86,11 +87,13 @@ def upload(conan_api: ConanAPI, parser, *args):
         raise ConanException("Cannot define both the pattern and the package list file")
     if args.package_query and args.list:
         raise ConanException("Cannot define package-query and the package list file")
+    if args.allow_disabled:
+        remote.disabled = False
+
+    is_prepared = False
 
     if args.list:
-        listfile = make_abs_path(args.list)
-        multi_package_list = MultiPackagesList.load(listfile)
-        package_list = multi_package_list["Local Cache"]
+        package_list, is_prepared = conan_api.upload.get_pkglist_to_upload(args.list, remote)
         if args.only_recipe:
             package_list.only_recipes()
     else:
@@ -103,13 +106,12 @@ def upload(conan_api: ConanAPI, parser, *args):
             package_list = _ask_confirm_upload(conan_api, package_list)
 
         conan_api.upload.upload_full(package_list, remote, enabled_remotes, args.check,
-                                     args.force, args.metadata, args.dry_run)
-    elif args.list:
+                                     args.force, args.metadata, args.dry_run,
+                                     is_prepared=is_prepared)
+    else:
         # Don't error on no recipes for automated workflows using list,
         # but warn to tell the user that no packages were uploaded
-        ConanOutput().warning(f"No packages were uploaded because the package list is empty.")
-    else:
-        raise ConanException("No recipes found matching pattern '{}'".format(args.pattern))
+        ConanOutput().warning("No packages were uploaded because the selection is empty.")
 
     pkglist = MultiPackagesList()
     pkglist.add(remote.name, package_list)

@@ -7,6 +7,7 @@ from conan.internal.model.conf import Conf
 from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
+from conan.tools.cmake.utils import cmake_escape_value
 
 
 @pytest.mark.parametrize("generator,target", [
@@ -58,6 +59,23 @@ def test_cli_args_configure():
     cmake = CMake(conanfile)
     cmake.configure(cli_args=["--graphviz=foo.dot"])
     assert "--graphviz=foo.dot" in conanfile.command
+
+
+def test_cli_args_configure_extra_args():
+    settings = Settings.loads(default_settings_yml)
+
+    conanfile = ConanFileMock()
+    conanfile.conf = Conf()
+    conanfile.conf.define("tools.cmake:configure_args", ["-DCMAKE_PROJECT_INCLUDE_BEFORE=MyFile",
+                                                         "--fresh"])
+    conanfile.folders.generators = "."
+    conanfile.folders.set_base_generators(temp_folder())
+    conanfile.settings = settings
+
+    write_cmake_presets(conanfile, "toolchain", "Unix Makefiles", {})
+    cmake = CMake(conanfile)
+    cmake.configure()
+    assert '-DCMAKE_PROJECT_INCLUDE_BEFORE=MyFile --fresh' in conanfile.command
 
 
 def test_run_ctest():

@@ -9,6 +9,7 @@ from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for Darwin")
 @pytest.mark.tool("bazel", "6.x")  # not working for Bazel 7.x
 def test_bazel_simple_cross_compilation():

@@ -11,6 +11,7 @@ from test.functional.utils import check_vs_runtime, check_exe_run
 from conan.test.utils.tools import TestClient
 
 
+@pytest.mark.slow
 @pytest.mark.tool("cmake", "3.15")
 @pytest.mark.tool("mingw64")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
@@ -37,6 +38,37 @@ def test_simple_cmake_mingw():
                   subsystem="mingw64", extra_msg="Hello World", cxx11_abi="1")
     check_vs_runtime(f"test_package/{build_folder}/example.exe", client, "15",
                      build_type="Release", static_runtime=False, subsystem="mingw64")
+
+
+@pytest.mark.slow
+@pytest.mark.tool("cmake", "3.15")
+@pytest.mark.tool("ucrt64")
+@pytest.mark.skipif(platform.system() != "Windows", reason="Needs windows")
+def test_simple_cmake_ucrt64():
+    # It is enough to have the @pytest.mark.tool("ucrt64") that defines the compiler in the path
+    # to get the right one
+    client = TestClient()
+    client.run("new cmake_lib -d name=hello -d version=1.0")
+    client.save({"mingw": """
+        [settings]
+        os=Windows
+        arch=x86_64
+        build_type=Release
+        compiler=gcc
+        compiler.exception=seh
+        compiler.libcxx=libstdc++11
+        compiler.threads=win32
+        compiler.version=11.2
+        compiler.cppstd=17
+        """})
+    client.run("create . --profile=mingw")
+    build_folder = client.created_test_build_folder("hello/1.0")
+    # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
+    #  and no one notices. It would be good to have some details in confuser.py to be consistent
+    check_exe_run(client.out, "hello/1.0:", "gcc", None, "Release", "x86_64", "17",
+                  subsystem="ucrt64", extra_msg="Hello World", cxx11_abi="1")
+    check_vs_runtime(f"test_package/{build_folder}/example.exe", client, "15",
+                     build_type="Release", static_runtime=False, subsystem="ucrt64")
 
 # TODO: How to link with mingw statically?
 
@@ -428,18 +460,16 @@ class TestApple(Base):
                 "CMAKE_INSTALL_NAME_DIR": ""
                 }
 
+        arch_flags = {
+            "CMAKE_C_FLAGS": "-m64",
+            "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",
+            "CMAKE_SHARED_LINKER_FLAGS": "-m64",
+            "CMAKE_EXE_LINKER_FLAGS": "-m64",
+        }
         host_profile = self.client.get_default_host_profile()
-        if host_profile.settings.get("arch") == "x86_64":
-            vals.update({
-                "CMAKE_C_FLAGS": "-m64",
-                "CMAKE_CXX_FLAGS": "-m64 -stdlib=libc++",
-                "CMAKE_SHARED_LINKER_FLAGS": "-m64",
-                "CMAKE_EXE_LINKER_FLAGS": "-m64",
-            })
-        else:
-            vals.update({
-                "CMAKE_CXX_FLAGS": "-stdlib=libc++",
-            })
+        if host_profile.settings.get("arch") != "x86_64":
+            arch_flags = {"CMAKE_CXX_FLAGS": "-stdlib=libc++"}
+        vals.update(arch_flags)
 
         def _verify_out(marker=">>"):
             if shared:
@@ -457,6 +487,8 @@ class TestApple(Base):
 
         self._run_app(build_type, dyld_path=shared)
 
+        arch = host_profile.settings.get("arch")
+        check_exe_run(self.client.out, "main", "apple-clang", None, build_type, arch, cppstd=cppstd)
         self._modify_code()
         time.sleep(1)
         self._incremental_build()
@@ -542,7 +574,7 @@ class TestCMakeInstall:
         assert "--loglevel=VERBOSE" in client.out
         assert "unrecognized option" not in client.out
         assert "--verbose" in client.out
-        assert "pkg/0.1: package(): Packaged 1 '.h' file: header.h" in client.out
+        assert "package(): Packaged 1 '.h' file: header.h" in client.out
         package_folder = client.created_layout().package()
         assert os.path.exists(os.path.join(package_folder, "include", "header.h"))
 

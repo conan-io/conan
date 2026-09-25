@@ -275,6 +275,7 @@ def test_compose_conf_dict_updates():
     assert c.dumps() == ("user.company:mydict={'2': 'b'}\n"
                          "user.company:mydict2={'1': 'a', '2': 'b'}\n")
 
+
 def test_compose_conf_numbers():
     c = ConfDefinition()
     c.loads("user.version:value=8.1\n"
@@ -415,6 +416,26 @@ def test_unset_basic_same_behaviour(choices):
 
     c4 = ConfDefinition()
     c4.loads("user.company.cpu:jobs=!")
+    c3.update_conf_definition(c4)
+
+    assert c3.get("user.company.cpu:jobs", choices=choices) is None
+
+
+@pytest.mark.parametrize("choices", [None, ["Foo", "Bar"]])
+def test_unset_tilde_alias_same_behaviour(choices):
+    """=~ is an alias for =! (unset)"""
+    c = ConfDefinition()
+    assert c.get("user.company.cpu:jobs", choices=choices) is None
+
+    c2 = ConfDefinition()
+    c2.loads("user.company.cpu:jobs=~")
+    assert c2.get("user.company.cpu:jobs", choices=choices) is None
+
+    c3 = ConfDefinition()
+    c3.loads("user.company.cpu:jobs=4")
+
+    c4 = ConfDefinition()
+    c4.loads("user.company.cpu:jobs=~")
     c3.update_conf_definition(c4)
 
     assert c3.get("user.company.cpu:jobs", choices=choices) is None

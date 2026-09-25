@@ -42,6 +42,19 @@ class ConanFileLoader:
         return self.load_basic_module(conanfile_path, graph_lock, display, remotes,
                                       update, check_update)[0]
 
+    def _run_init(self, conanfile):
+        # Best-effort init() when there's no pyreq resolver: init() commonly references
+        # self.python_requires, which is unresolved here. Swallow errors so name/version
+        # discovery (set_name/set_version) can still run
+        if self._pyreq_loader is None:
+            try:
+                conanfile.init()
+            except Exception:
+                pass
+            return
+        with conanfile_exception_formatter(conanfile, "init"):
+            conanfile.init()
+
     def load_basic_module(self, conanfile_path, graph_lock=None, display="", remotes=None,
                           update=None, check_update=None, tested_python_requires=None):
         """ loads a conanfile basic object without evaluating anything, returns the module too
@@ -51,12 +64,12 @@ class ConanFileLoader:
             conanfile = cached[0](display)
             conanfile._conan_helpers = self._conanfile_helpers
             if hasattr(conanfile, "init") and callable(conanfile.init):
-                with conanfile_exception_formatter(conanfile, "init"):
-                    conanfile.init()
+                self._run_init(conanfile)
             return conanfile, cached[1]
 
         try:
             module, conanfile = _parse_conanfile(conanfile_path)
+            conanfile._conan_required_version = getattr(module, "required_conan_version", None)
             if isinstance(tested_python_requires, RecipeReference):
                 if getattr(conanfile, "python_requires", None) == "tested_reference_str":
                     conanfile.python_requires = tested_python_requires.repr_notime()
@@ -82,8 +95,7 @@ class ConanFileLoader:
 
             result._conan_helpers = self._conanfile_helpers
             if hasattr(result, "init") and callable(result.init):
-                with conanfile_exception_formatter(result, "init"):
-                    result.init()
+                self._run_init(result)
             return result, module
         except ConanException as e:
             raise ConanException("Error loading conanfile at '{}': {}".format(conanfile_path, e))
@@ -158,7 +170,6 @@ class ConanFileLoader:
 
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         conanfile.display_name = str(ref)
-        conanfile.output.scope = conanfile.display_name
         return conanfile
 
     def load_consumer(self, conanfile_path, name=None, version=None, user=None,
@@ -175,7 +186,6 @@ class ConanFileLoader:
             conanfile.display_name = "%s (%s)" % (os.path.basename(conanfile_path), str(ref))
         else:
             conanfile.display_name = os.path.basename(conanfile_path)
-        conanfile.output.scope = conanfile.display_name
         conanfile._conan_is_consumer = True
         return conanfile
 

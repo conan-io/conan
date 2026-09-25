@@ -2,6 +2,8 @@ import json
 import os
 import textwrap
 
+import pytest
+
 from conan.cps import CPS
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
@@ -34,7 +36,7 @@ def test_cps_static_lib():
     c = TestClient()
     c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1").with_package_file("lib/pkg.a", "-")
                                                           .with_settings("build_type")
-            .with_package_info(cpp_info={"libs": ["pkg"]}, env_info={})})
+            .with_package_info(cpp_info={"libs": ["pkg"]})})
     c.run("create pkg")
 
     settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
@@ -122,38 +124,108 @@ def test_cps_in_pkg():
     assert 'set(zlib_LIBS_RELEASE zlib)' in cmake
 
 
-def test_cps_merge():
-    folder = temp_folder()
-    cps_base = textwrap.dedent("""
+def test_cps_shared_in_pkg():
+    c = TestClient()
+    cps = textwrap.dedent("""\
         {
-          "components" : {
-            "mypkg" : {
+          "components" :
+          {
+            "mypkg" :
+            {
               "includes" : [ "@prefix@/include" ],
-              "type" : "archive"
+              "type" : "dylib"
             }
           },
-          "cps_version" : "0.12.0",
-          "name" : "mypkg",
-          "version" : "1.0"
+          "cps_path" : "@prefix@/cps",
+          "cps_version" : "0.13.0",
+          "name" : "mypkg"
         }
         """)
-    cps_conf = textwrap.dedent("""
+    cps_release = textwrap.dedent("""\
         {
-          "components" : {
-            "mypkg" : {
-              "link_languages" : [ "cpp" ],
-              "location" : "@prefix@/lib/mypkg.lib"
+          "components" :
+          {
+            "mypkg" :
+            {
+              "link_location" : "@prefix@/lib/mypkg.lib",
+              "location" : "@prefix@/bin/mypkg.dll"
             }
           },
           "configuration" : "Release",
           "name" : "mypkg"
         }
         """)
+    cps = "".join(cps.splitlines())
+    cps_release = "".join(cps_release.splitlines())
+    conanfile = textwrap.dedent(f"""
+        import os, json
+        from conan.tools.files import save
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "1.0"
+
+            def package(self):
+                cps = '{cps}'
+                cps_path = os.path.join(self.package_folder, "mypkg.cps")
+                save(self, cps_path, cps)
+                cps = '{cps_release}'
+                cps_path = os.path.join(self.package_folder, "mypkg@release.cps")
+                save(self, cps_path, cps)
+
+            def package_info(self):
+                from conan.cps import CPS
+                self.cpp_info = CPS.load("mypkg.cps").to_conan()
+        """)
+    c.save({"pkg/conanfile.py": conanfile})
+    c.run("create pkg")
+
+    settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
+
+    c.run(f"install --requires=mypkg/1.0 {settings} -g CMakeDeps")
+    cmake = c.load("mypkg-release-x86_64-data.cmake")
+    assert 'set(mypkg_INCLUDE_DIRS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/include")' in cmake
+    assert 'set(mypkg_LIB_DIRS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/lib")'
+    assert 'set(mypkg_LIBS_RELEASE mypkg)' in cmake
+
+
+def test_cps_merge():
+    folder = temp_folder()
+
+    cps_base = textwrap.dedent("""{
+        "components": {
+            "mypkg":{
+                "includes": ["@prefix@/include"],
+                "type": "archive",
+                "definitions": { "*": {"MY_DEFINE": null }}
+            }
+        },
+        "cps_path": "@prefix@/cps",
+        "cps_version": "0.13.0",
+        "name": "mypkg"
+        }
+        """)
+    cps_conf = textwrap.dedent("""{
+        "components" : {
+            "mypkg" : {
+                "link_languages" : [ "cpp" ],
+                "location" : "@prefix@/lib/mypkg.lib"
+            }
+        },
+        "configuration" : "Release",
+        "name" : "mypkg"
+        }
+        """)
     save_files(folder, {"mypkg.cps": cps_base,
                         "mypkg@release.cps": cps_conf})
     cps = CPS.load(os.path.join(folder, "mypkg.cps"))
     json_cps = cps.serialize()
-    print(json.dumps(json_cps, indent=2))
+    mypkg = json_cps["components"]["mypkg"]
+    assert mypkg["includes"] == ["@prefix@/include"]
+    assert mypkg["location"] == "@prefix@/lib/mypkg.lib"
+    assert mypkg["type"] == "archive"
+    assert mypkg["link_languages"] == ["cpp"]
+    assert mypkg["definitions"] == {'*': {'MY_DEFINE': None}}
 
 
 def test_extended_cpp_info():
@@ -163,10 +235,12 @@ def test_extended_cpp_info():
         class Pkg(ConanFile):
             name = "pkg"
             version = "0.1"
+            languages = ["C++"]
             def package_info(self):
                 self.cpp_info.libs = ["mylib"]
                 self.cpp_info.location = "my_custom_location"
                 self.cpp_info.type = "static-library"
+                self.cpp_info.defines = ["MY_DEFINE", "MY_OTHER_DEFINE=1"]
             """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
@@ -180,3 +254,49 @@ def test_extended_cpp_info():
     pkg_comp = pkg["components"]["pkg"]
     assert pkg_comp["type"] == "archive"
     assert pkg_comp["location"] == "my_custom_location"
+    assert pkg_comp["link_languages"] == ["cpp"]
+    assert pkg_comp["definitions"] == {'cpp': {'MY_DEFINE': None, 'MY_OTHER_DEFINE': '1'}}
+
+
+@pytest.mark.parametrize("as_comp", [True, False])
+def test_cps_component_single(as_comp):
+    c = TestClient()
+    cpp_info_comp = '.components["core"]' if as_comp else ""
+    conanfile = textwrap.dedent(f"""\
+        from conan import ConanFile
+        from conan.tools.files import save
+        import os
+
+        class mypkgRecipe(ConanFile):
+            name = "mypkg"
+            version = "0.1"
+
+            requires = "dep/0.1"
+
+            def package(self):
+                save(self, os.path.join(self.package_folder, "lib", "libcore.a"), "")
+
+            def package_info(self):
+                self.cpp_info{cpp_info_comp}.libs = ["core"]
+                self.cpp_info{cpp_info_comp}.requires = ["dep::comp1"]
+                from conan.cps import CPS
+                cps = CPS.from_conan(self)
+                self.cpp_info = cps.to_conan()
+        """)
+    c.save({"conanfile.py": conanfile,
+            "dep/conanfile.py": GenConanfile("dep", "0.1")
+            .with_package_file("lib/comp1.a", "-")
+            .with_package_file("lib/comp2.a", "-")
+            .with_package_info(cpp_info={"components": {"comp1": {"libs": ["comp1"]},
+                                                        "comp2": {"libs": ["comp2"]}}})})
+    c.run("create dep")
+    c.run("create")
+    c.run(f"install --requires=mypkg/0.1 -g CMakeConfigDeps")
+    mypkg_targets = c.load("mypkg-Targets-release.cmake")
+    if as_comp:
+        assert "add_library(mypkg::core" in mypkg_targets
+        assert "# Requirement mypkg::core -> dep::comp1" in mypkg_targets
+    else:
+        assert "add_library(mypkg::core" not in mypkg_targets
+        assert "add_library(mypkg::mypkg" in mypkg_targets
+        assert "# Requirement mypkg::mypkg -> dep::comp1" in mypkg_targets

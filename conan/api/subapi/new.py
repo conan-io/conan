@@ -1,6 +1,7 @@
 import fnmatch
 import os
 import shutil
+from typing import Tuple
 
 from jinja2 import Template, StrictUndefined, UndefinedError, Environment, meta
 
@@ -16,14 +17,15 @@ class NewAPI:
     def __init__(self, conan_api):
         self._conan_api = conan_api
 
-    def save_template(self, template, defines=None, output_folder=None, force=False):
+    def save_template(self, template: str, defines=None, output_folder=None, force=False):
         """
-        Save the 'template' files in the output_folder, replacing the template variables
-        with the 'defines'
-        :param template: The name of the template to use
-        :param defines: A list with the 'k=v' variables to replace in the template
-        :param output_folder: The folder where the template files will be saved, cwd if None
-        :param force: If True, overwrite the files if they already exist, otherwise raise an error
+        Save the ``template`` files in the ``output_folder``, replacing the template variables
+        with the ``defines``
+
+        :param template: The name of the template to use, either built-in ones or those available under ``<conan_home>/templates/command/new/<template>``
+        :param defines: A list with the ``k=v`` variables to replace in the template
+        :param output_folder: The folder where the template files will be saved, cwd if ``None``
+        :param force: If ``True``, overwrite the files if they already exist, otherwise raise an error
         """
         # Manually parsing the remainder
         definitions = {}
@@ -31,7 +33,7 @@ class NewAPI:
             try:
                 k, v = u.split("=", 1)
             except ValueError:
-                raise ConanException(f"Template definitions must be 'key=value', received {u}")
+                raise ConanException(f"Template definitions must be 'key=value', received '{u}'")
             k = k.replace("-", "")  # Remove possible "--name=value"
             # For variables that only show up once, no need for list to keep compatible behaviour
             if k in definitions:
@@ -80,8 +82,8 @@ class NewAPI:
             output.success("File saved: %s" % f)
 
     @staticmethod
-    def get_builtin_template(template_name):
-        from conan.internal.api.new.basic import basic_file
+    def get_builtin_template(template_name: str):
+        from conan.internal.api.new.basic import basic_file, basic_default_file
         from conan.internal.api.new.alias_new import alias_file
         from conan.internal.api.new.cmake_exe import cmake_exe_files
         from conan.internal.api.new.cmake_lib import cmake_lib_files
@@ -101,6 +103,8 @@ class NewAPI:
         from conan.internal.api.new.local_recipes_index import local_recipes_index_files
         from conan.internal.api.new.qbs_lib import qbs_lib_files
         from conan.internal.api.new.workspace import workspace_files
+        if not template_name:
+            return basic_default_file
         new_templates = {"basic": basic_file,
                          "cmake_lib": cmake_lib_files,
                          "cmake_exe": cmake_exe_files,
@@ -125,21 +129,17 @@ class NewAPI:
         template_files = new_templates.get(template_name)
         return template_files
 
-    def get_template(self, template_folder):
-        """ Load a template from a user absolute folder
-        """
+    def get_template(self, template_folder: str):
         if os.path.isdir(template_folder):
             return self._read_files(template_folder)
 
-    def get_home_template(self, template_name):
-        """ Load a template from the Conan home templates/command/new folder
-        """
+    def get_home_template(self, template_name: str):
         folder_template = os.path.join(self._conan_api.home_folder, "templates", "command/new",
                                        template_name)
         if os.path.isdir(folder_template):
             return self._read_files(folder_template)
 
-    def _read_files(self, template_folder):
+    def _read_files(self, template_folder: str) -> Tuple[dict, dict]:
         template_files, non_template_files = {}, {}
         excluded = os.path.join(template_folder, self._NOT_TEMPLATES)
         if os.path.exists(excluded):
@@ -164,7 +164,7 @@ class NewAPI:
         return template_files, non_template_files
 
     @staticmethod
-    def render(template_files, definitions):
+    def render(template_files: dict, definitions: dict):
         result = {}
         name = definitions.get("name", "mypkg")
         if isinstance(name, list):

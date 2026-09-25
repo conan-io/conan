@@ -5,6 +5,7 @@ import textwrap
 import pytest
 
 from conan.test.utils.tools import TestClient
+from test.conftest import tools_locations
 
 xcode_project = textwrap.dedent("""
     name: app
@@ -116,7 +117,6 @@ def test_project_xcodebuild(client):
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool("xcodebuild")
 @pytest.mark.tool("xcodegen")
-@pytest.mark.skip(reason="Different sdks not installed in CI")
 def test_xcodebuild_test_different_sdk(client):
 
     conanfile = textwrap.dedent("""
@@ -131,7 +131,8 @@ def test_xcodebuild_test_different_sdk(client):
             exports_sources = "app.xcodeproj/*", "app/*"
             def build(self):
                 xcode = XcodeBuild(self)
-                xcode.build("app.xcodeproj")
+                # macOS 26 SDK requires signing/entitlements for a Command-line Tool, not needed for this test
+                xcode.build("app.xcodeproj", cli_args=["CODE_SIGNING_ALLOWED=NO"])
                 self.run("otool -l build/Release/app")
         """)
 
@@ -141,12 +142,12 @@ def test_xcodebuild_test_different_sdk(client):
     client.run("install . --build=missing")
     client.run("install . -s build_type=Debug --build=missing")
     client.run_command("xcodegen generate")
-    client.run("create . --build=missing -s os.sdk=macosx -s os.sdk_version=10.15 "
-               "-c tools.apple:sdk_path='/Applications/Xcode11.7.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk'")
-    assert "sdk 10.15.6" in client.out
-    client.run("create . --build=missing -s os.sdk_version=11.3 "
-               "-c tools.apple:sdk_path='/Applications/Xcode12.5.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.3.sdk'")
-    assert "sdk 11.3" in client.out
+    client.run("create . --build=missing -s os.sdk_version=26.0 "
+               f"-c tools.apple:sdk_path='{tools_locations['xcode_sdk']['26.0']['path']['Darwin']}'")
+    assert "sdk 26.0" in client.out
+    client.run("create . --build=missing -s os.sdk_version=26.5 "
+               f"-c tools.apple:sdk_path='{tools_locations['xcode_sdk']['26.5']['path']['Darwin']}'")
+    assert "sdk 26.5" in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")

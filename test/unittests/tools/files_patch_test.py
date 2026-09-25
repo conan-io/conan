@@ -255,7 +255,8 @@ Just the wind that smells fresh before the storm.""") in foo_content
         assert "Calling build()" in client.out
         assert "Warning" not in client.out
 
-    def _save_files(self, file_content):
+    @staticmethod
+    def _save_files(file_content):
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "conanfile.py")
         text_file = os.path.join(tmp_dir, "text.txt")
@@ -263,7 +264,8 @@ Just the wind that smells fresh before the storm.""") in foo_content
         save(text_file, "ONE TWO THREE")
         return tmp_dir, file_path, text_file
 
-    def _build_and_check(self, tmp_dir, file_path, text_file, msg):
+    @staticmethod
+    def _build_and_check(tmp_dir, file_path, text_file, msg):
         loader = ConanFileLoader(None)
         ret = loader.load_consumer(file_path)
         curdir = os.path.abspath(os.curdir)

@@ -1,5 +1,6 @@
 import os
 
+from conan.errors import ConanException
 from conan.tools.build import build_jobs
 from conan.tools.meson.toolchain import MesonToolchain
 
@@ -85,7 +86,11 @@ class Meson:
         verbosity = self._install_verbosity
         if verbosity:
             cmd += " " + verbosity
-        if self._conanfile.conf.get("tools.build:install_strip", check_type=bool):
+        try:
+            do_strip = self._conanfile.conf.get("tools.build:install_strip", check_type=bool)
+        except ConanException:
+            do_strip = "meson" in self._conanfile.conf.get("tools.build:install_strip", check_type=list)
+        if do_strip:
             cmd += " --strip"
         if cli_args:
             cmd += " " + " ".join(cli_args)
@@ -117,7 +122,7 @@ class Meson:
         # Errors are always logged, and status about installed files is controlled by this flag,
         # so it's a bit backwards
         verbosity = self._conanfile.conf.get("tools.build:verbosity", choices=("quiet", "verbose"))
-        return "--quiet" if verbosity else ""
+        return "--quiet" if verbosity == "quiet" else ""
 
     @property
     def _prefix(self):

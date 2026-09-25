@@ -4,16 +4,33 @@ import os
 from conan.api.conan_api import ConanAPI
 from conan.api.model import RecipeReference
 from conan.api.output import ConanOutput, cli_out_write
-from conan.api.subapi.workspace import WorkspaceAPI
 from conan.cli import make_abs_path
 from conan.cli.args import add_reference_args, add_common_install_arguments, add_lockfile_args
-from conan.cli.command import conan_command, conan_subcommand
+from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import print_serial
 from conan.cli.formatters.graph import format_graph_json
 from conan.cli.printers import print_profiles
 from conan.cli.printers.graph import print_graph_packages, print_graph_basic
 from conan.errors import ConanException
 from conan.internal.graph.install_graph import ProfileArgs
+
+
+def _resolve_ws_relative_folder(conan_api, folder):
+    """Split a workspace-root-relative path into (parent_cwd, leaf_folder_name).
+    Returns (None, None) when folder is not set, letting the API pick defaults.
+    Creates any missing intermediate directories.
+    """
+    if not folder:
+        return None, None
+    if os.path.isabs(folder):
+        raise ConanException(f"'--folder' must be relative to the workspace root: {folder}")
+    ws_folder = conan_api.workspace.folder()
+    abs_target = os.path.normpath(os.path.join(ws_folder, folder))
+    if os.path.commonpath([abs_target, ws_folder]) != os.path.normpath(ws_folder):
+        raise ConanException(f"'--folder' escapes the workspace root: {folder}")
+    parent = os.path.dirname(abs_target)
+    os.makedirs(parent, exist_ok=True)
+    return parent, os.path.basename(abs_target)
 
 
 @conan_subcommand(formatters={"text": cli_out_write})
@@ -29,10 +46,16 @@ def workspace_root(conan_api: ConanAPI, parser, subparser, *args):  # noqa
 @conan_subcommand()
 def workspace_open(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Open specific references
+    Open specific references. If no reference is provided, open every package
+    in the current workspace definition whose folder does not yet exist.
     """
-    subparser.add_argument("reference",
-                           help="Open this package source repository")
+    subparser.add_argument("reference", nargs="?",
+                           help="Open this package source repository. If omitted, "
+                                "open all packages in the current workspace definition")
+    subparser.add_argument("--folder",
+                           help="Target folder for the opened package, relative to the "
+                                "workspace root. Subfolders are allowed (e.g. libs/mypkg). "
+                                "Only valid together with a 'reference' argument")
     group = subparser.add_mutually_exclusive_group()
     group.add_argument("-r", "--remote", action="append", default=None,
                        help='Look in the specified remote or remotes server')
@@ -40,8 +63,13 @@ def workspace_open(conan_api: ConanAPI, parser, subparser, *args):
                        help='Do not use remote, resolve exclusively in the cache')
     args = parser.parse_args(*args)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
-    cwd = os.getcwd()
-    conan_api.workspace.open(args.reference, remotes=remotes, cwd=cwd)
+    if args.folder and not args.reference:
+        raise ConanException("'--folder' requires a 'reference' argument")
+    if args.reference:
+        cwd, folder = _resolve_ws_relative_folder(conan_api, args.folder)
+        conan_api.workspace.open(args.reference, remotes=remotes, cwd=cwd, folder=folder)
+    else:
+        conan_api.workspace.open_missing(remotes=remotes)
 
 
 @conan_subcommand()
@@ -53,6 +81,10 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
                            help='Path to the package folder in the user workspace')
     add_reference_args(subparser)
     subparser.add_argument("--ref", help="Open and add this reference")
+    subparser.add_argument("--folder",
+                           help="Target folder for the opened package, relative to the "
+                                "workspace root. Subfolders are allowed (e.g. libs/mypkg). "
+                                "Only valid together with '--ref'")
     subparser.add_argument("-of", "--output-folder",
                            help='The root output folder for generated and build files')
     group = subparser.add_mutually_exclusive_group()
@@ -63,15 +95,30 @@ def workspace_add(conan_api: ConanAPI, parser, subparser, *args):
     args = parser.parse_args(*args)
     if args.path and args.ref:
         raise ConanException("Do not use both 'path' and '--ref' argument")
+    if args.folder and not args.ref:
+        raise ConanException("'--folder' requires '--ref'")
+    if args.ref and any((args.name, args.version, args.user, args.channel)):
+        raise ConanException(
+            "Do not use '--ref' together with '--name', '--version', "
+            "'--user' or '--channel' arguments"
+        )
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
-    cwd = os.getcwd()
     path = args.path
+    name = args.name
+    version = args.version
+    user = args.user
+    channel = args.channel
     if args.ref:
-        # TODO: Use path here to open in this path
-        path = conan_api.workspace.open(args.ref, remotes, cwd=cwd)
+        ref = RecipeReference.loads(args.ref)
+        cwd, folder = _resolve_ws_relative_folder(conan_api, args.folder)
+        path = conan_api.workspace.open(args.ref, remotes, cwd=cwd, folder=folder)
+        name = ref.name
+        version = ref.version
+        user = ref.user
+        channel = ref.channel
     ref = conan_api.workspace.add(path,
-                                  args.name, args.version, args.user, args.channel,
-                                  cwd, args.output_folder, remotes=remotes)
+                                  name, version, user, channel,
+                                  args.output_folder, remotes=remotes)
     ConanOutput().success("Reference '{}' added to workspace".format(ref))
 
 
@@ -82,15 +129,19 @@ def workspace_complete(conan_api: ConanAPI, parser, subparser, *args):
     requirements to other packages in the workspace.
     """
     add_common_install_arguments(subparser)
-    add_lockfile_args(subparser)
+    group = subparser.add_argument_group("lockfile arguments")
+    group.add_argument("-l", "--lockfile", action=OnceArgument,
+                       help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
+                            "existing 'conan.lock' file")
+    group.add_argument("--lockfile-partial", action="store_true",
+                       help="Do not raise an error if some dependency is not found in lockfile")
     args = parser.parse_args(*args)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
-    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     # The lockfile by default if not defined will be read from the root workspace folder
     ws_folder = conan_api.workspace.folder()
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
-                                               cwd=None, partial=args.lockfile_partial,
-                                               overrides=overrides)
+                                               cwd=None, partial=args.lockfile_partial)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
@@ -155,16 +206,20 @@ def workspace_install(conan_api: ConanAPI, parser, subparser, *args):
 def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
     subparser.add_argument("--pkg", action="append", help='Define specific packages')
     add_common_install_arguments(subparser)
-    add_lockfile_args(subparser)
+    group = subparser.add_argument_group("lockfile arguments")
+    group.add_argument("-l", "--lockfile", action=OnceArgument,
+                       help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
+                            "existing 'conan.lock' file")
+    group.add_argument("--lockfile-partial", action="store_true",
+                       help="Do not raise an error if some dependency is not found in lockfile")
     args = parser.parse_args(*args)
     # Basic collaborators: remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
-    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     # The lockfile by default if not defined will be read from the root workspace folder
     ws_folder = conan_api.workspace.folder()
-    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
-                                               cwd=None, partial=args.lockfile_partial,
-                                               overrides=overrides)
+    lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, cwd=ws_folder,
+                                               partial=args.lockfile_partial)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
@@ -185,6 +240,14 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
     order = install_order.install_build_order()
 
     profile_args = ProfileArgs.from_args(args)
+    # Use explicit user lockfile argument, the one in the current folder or explicitly
+    # avoid using any lockfile that could be inside workspace packages folders
+    lock = args.lockfile if args.lockfile else ("conan.lock" if lockfile else "")
+    lockfile_args = [f"--lockfile={lock}"]
+    if args.lockfile_partial:
+        lockfile_args.append("--lockfile-partial")
+    lockfile_args = " ".join(lockfile_args)
+    verbose_args = f"-v{args.v}" if args.v else ""
     for level in order["order"]:
         for elem in level:
             ref = RecipeReference.loads(elem["ref"])
@@ -194,10 +257,11 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                     is_editable = package["binary"] in ("Editable", "EditableBuild")
                     if ws_pkg is None:
                         if is_editable or package["binary"] == "Build":  # Build extern to Workspace
-                            cmd = f'install {package["build_args"]} {profile_args}'
+                            cmd = (f'install {package["build_args"]} {profile_args} '
+                                   f'{lockfile_args} {verbose_args}')
                             ConanOutput().box(f"Workspace building external {ref}")
                             ConanOutput().info(f"Command: {cmd}\n")
-                            conan_api.command.run(cmd)
+                            conan_api.command.run(cmd, raise_on_errors=True)
                     else:
                         path = ws_pkg["path"]
                         output_folder = ws_pkg.get("output_folder")
@@ -208,10 +272,11 @@ def _install_build(conan_api: ConanAPI, parser, subparser, build, *args):
                         of_arg = f'-of="{output_folder}"' if output_folder else ""
                         # TODO: Missing --lockfile-overrides arg here
                         command = "build" if build else "install"
-                        cmd = f'{command} "{path}" {profile_args} {build_arg} {ref_args} {of_arg}'
+                        cmd = (f'{command} "{path}" {profile_args} {build_arg} {ref_args} {of_arg} '
+                               f'{lockfile_args} {verbose_args}')
                         ConanOutput().box(f"Workspace {command}: {ref}")
                         ConanOutput().info(f"Command: {cmd}\n")
-                        conan_api.command.run(cmd)
+                        conan_api.command.run(cmd, raise_on_errors=True)
 
 
 @conan_subcommand(formatters={"json": format_graph_json})
@@ -246,6 +311,7 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
                                                cwd=None,
                                                partial=args.lockfile_partial, overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
@@ -271,6 +337,12 @@ def workspace_super_install(conan_api: ConanAPI, parser, subparser, *args):
                                        deploy=args.deployer, deploy_package=args.deployer_package,
                                        deploy_folder=args.deployer_folder,
                                        envs_generation=args.envs_generation)
+
+    # Update and save lockfile if requested
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
+    conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
+
     ConanOutput().success("Install finished successfully")
 
     return {"graph": ws_graph,
@@ -289,7 +361,8 @@ def workspace_clean(conan_api: ConanAPI, parser, subparser, *args):  # noqa
 @conan_subcommand()
 def workspace_init(conan_api: ConanAPI, parser, subparser, *args):
     """
-    Clean the temporary build folders when possible
+    Initialize a workspace in the given path, creating an empty conanws.yml and conanws.py
+    if they dont exist.
     """
     subparser.add_argument("path", nargs="?", default=os.getcwd(),
                            help="Path to a folder where the workspace will be initialized. "
@@ -306,22 +379,27 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
     """
     subparser.add_argument("--pkg", action="append", help='Define specific packages')
     add_common_install_arguments(subparser)
-    add_lockfile_args(subparser)
+    group = subparser.add_argument_group("lockfile arguments")
+    group.add_argument("-l", "--lockfile", action=OnceArgument,
+                       help="Path to a lockfile. Use --lockfile=\"\" to avoid automatic use of "
+                            "existing 'conan.lock' file")
+    group.add_argument("--lockfile-partial", action="store_true",
+                       help="Do not raise an error if some dependency is not found in lockfile")
+
     args = parser.parse_args(*args)
     # Basic collaborators: remotes, lockfile, profiles
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
-    overrides = eval(args.lockfile_overrides) if args.lockfile_overrides else None
     # The lockfile by default if not defined will be read from the root workspace folder
     ws_folder = conan_api.workspace.folder()
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, conanfile_path=ws_folder,
-                                               cwd=None,
-                                               partial=args.lockfile_partial, overrides=overrides)
+                                               cwd=None, partial=args.lockfile_partial)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
     print_profiles(profile_host, profile_build)
 
     build_mode = args.build if args.build else []
     ConanOutput().box("Exporting workspace recipes to Conan cache")
-    exported_refs = conan_api.workspace.export()
+    exported_refs = conan_api.workspace.export(lockfile=lockfile, remotes=remotes)
     build_mode.extend(f"missing:{r}" for r in exported_refs)
 
     all_packages = conan_api.workspace.packages()
@@ -353,7 +431,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                         cmd = f'install {package["build_args"]} {profile_args}'
                         ConanOutput().box(f"Workspace building external {ref}")
                         ConanOutput().info(f"Build command: {cmd}\n")
-                        conan_api.command.run(cmd)
+                        conan_api.command.run(cmd, raise_on_errors=True)
                     else:  # Package in workspace
                         path = packages[ref]["path"]
                         # TODO: Missing --lockfile-overrides arg here
@@ -364,7 +442,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                         cmd = f'create "{path}" {profile_args} {build} {ref_args}'
                         ConanOutput().box(f"Workspace create {ref}")
                         ConanOutput().info(f"Conan create command: {cmd}\n")
-                        conan_api.command.run(cmd)
+                        conan_api.command.run(cmd, raise_on_errors=True)
 
 
 @conan_subcommand()
@@ -389,6 +467,3 @@ def workspace(conan_api, parser, *args):  # noqa
     """
     Manage Conan workspaces (group of packages in editable mode)
     """
-    if (WorkspaceAPI.TEST_ENABLED or os.getenv("CONAN_WORKSPACE_ENABLE")) != "will_break_next":
-        raise ConanException("Workspace command disabled without CONAN_WORKSPACE_ENABLE env var,"
-                             "please read the docs about this 'incubating' feature")

@@ -4,6 +4,7 @@ import shutil
 from conan.tools.build import build_jobs, cmd_args_to_string
 from conan.errors import ConanException
 
+
 def _configuration_dict_to_commandlist(name, config_dict):
     command_list = ['config:%s' % name]
     for key, value in config_dict.items():

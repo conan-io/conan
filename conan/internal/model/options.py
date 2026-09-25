@@ -131,7 +131,7 @@ class _PackageOptions:
         # for header_only() clearing
         self._data.clear()
 
-    def freeze(self):
+    def conan_freeze(self):
         self._freeze = True
 
     def __contains__(self, option):
@@ -144,7 +144,7 @@ class _PackageOptions:
         # This should never raise any exception, in any case
         self._data.pop(field, None)
 
-    def validate(self):
+    def conan_validate(self):
         for child in self._data.values():
             child.validate()
 
@@ -242,6 +242,11 @@ class Options:
                                   "deprecated, use a pattern like `{}/*:{}` " \
                                   "instead".format(k, package, option)
                             raise ConanException(msg)
+                        if "[" in package:
+                            msg = (f"Options pattern {package} contains a version range, which has no effect. "
+                                   f"Only '&' for consumer and '*' as wildcard are supported in this context.")
+                            from conan.api.output import ConanOutput
+                            ConanOutput().warning(msg, warn_tag="risk")
                         self._deps_package_options.setdefault(package, _PackageOptions())[option] = v
                     else:
                         self._package_options[k] = v
@@ -326,7 +331,7 @@ class Options:
                 item += "/*"
         return self._deps_package_options.setdefault(item, _PackageOptions())
 
-    def scope(self, ref):
+    def conan_scope(self, ref):
         """ when there are free options like "shared=True", they apply to the "consumer" package
         Once we know the name of such consumer package, it can be defined in the data, so it will
         be later correctly apply when processing options """
@@ -384,23 +389,17 @@ class Options:
                     if ref_matches(own_ref, pattern, is_consumer=is_consumer):
                         self._package_options.update_options(options, is_pattern="*" in pattern)
 
-        self._package_options.freeze()
+        self._package_options.conan_freeze()
 
     def get_upstream_options(self, down_options, own_ref, is_consumer):
         """ compute which options should be propagated to the dependencies, a combination of the
         downstream defined default_options with the current default_options ones. This happens
-        at "configure()" time, while building the graph. Also compute the minimum "self_options"
-        which is the state that a package should define in order to reproduce
+        at "configure()" time, while building the graph.
         """
         assert isinstance(down_options, Options)
         # We need to store a copy for internal propagation for test_requires and tool_requires
         private_deps_options = Options()
         private_deps_options._deps_package_options = self._deps_package_options.copy()
-        # self_options are the minimal necessary for a build-order
-        # TODO: check this, isn't this just a copy?
-        self_options = Options()
-        self_options._deps_package_options = down_options._deps_package_options.copy()
-
         # compute now the necessary to propagate all down - self + self deps
         upstream_options = Options()
         for pattern, options in down_options._deps_package_options.items():
@@ -416,4 +415,40 @@ class Options:
         # not be able to do ``self.options["mydep"]`` because it will be empty. self.dependencies
         # is the way to access dependencies (in other methods)
         self._deps_package_options = {}
-        return self_options, upstream_options, private_deps_options
+        return upstream_options, private_deps_options
+
+
+def compute_state_options(conanfile):
+    """ compute the options state of a package that is the minimum necessary to reproduce it
+    when it is later built standalone, like in a "conan graph build-order", returning a
+    (self_options, deps_options) tuple:
+
+    - ``self_options``: which of its own values deviate from what its ``default_options``
+      would define by themselves, as a {option_name: value} dict. A deviation means that some
+      other input (a downstream consumer, the profile, etc) actually forced that value, so
+      nothing would define it again once the downstream consumers are gone.
+    - ``deps_options``: what this recipe defines for its dependencies, as a
+      {pattern: {option_name: value}} dict, like {"zlib/*": {"shared": "True"}}, that is, what
+      it would apply again by itself when the graph is expanded again from it.
+
+    It must be called after ``configure()``, so the values are final, but before
+    ``get_upstream_options()`` merges the downstream defined options into the dependencies ones
+    """
+    options = conanfile.options
+    # The self-scoped values that the recipe "default_options" define by themselves, parsed the
+    # same way that Options() does, they were already validated when it was built from them
+    defaults = {}
+    for name, value in (conanfile.default_options or {}).items():
+        name = str(name).strip()
+        if value is None or ":" in name:  # None means undefined, ":" is dependency-scoped
+            continue
+        if name.endswith("!"):  # the "important" marker is not part of the option name
+            name = name[:-1]
+        defaults[name] = str(value).strip()
+
+    self_options = {name: value for name, value in options._package_options.items()
+                    if value is not None and defaults.get(name) != value}
+    deps_options = {pattern: {name: value for name, value in pkg_options.items()
+                              if value is not None}
+                    for pattern, pkg_options in options._deps_package_options.items()}
+    return self_options, deps_options

@@ -34,6 +34,7 @@ def test(conan_api, parser, *args):
                                                cwd=cwd,
                                                partial=args.lockfile_partial,
                                                overrides=overrides)
+    conan_api.lockfile.check_lockfile_config(lockfile)
     remotes = conan_api.remotes.list(args.remote) if not args.no_remote else []
     profile_host, profile_build = conan_api.profiles.get_profiles_from_args(args)
 

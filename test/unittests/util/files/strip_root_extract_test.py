@@ -91,11 +91,9 @@ class TestZipExtractPlain:
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        try:
+        with pytest.raises(ConanException) as e:
             unzip(ConanFileMock(), zip_file, destination=extract_folder, strip_root=True)
-            assert False, "Expected ConanException"
-        except ConanException as e:
-            assert "The zip file contains more than 1 folder in the root" in str(e)
+        assert "The zip file contains more than 1 folder in the root" in str(e)
 
     def test_invalid_flat_single_file(self):
         tmp_folder = temp_folder()
@@ -108,11 +106,9 @@ class TestZipExtractPlain:
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        try:
+        with pytest.raises(ConanException) as e:
             unzip(ConanFileMock(), zip_file, destination=extract_folder, strip_root=True)
-            assert False, "Expected ConanException"
-        except ConanException as e:
-            assert "The zip file contains a file in the root" in str(e)
+        assert "The zip file contains a file in the root" in str(e)
 
 
 class TestTarExtractPlain:
@@ -252,11 +248,9 @@ class TestTarExtractPlain:
         self._compress_folder(tmp_folder, tgz_file)
 
         extract_folder = temp_folder()
-        try:
+        with pytest.raises(ConanException) as e:
             untargz(tgz_file, destination=extract_folder, strip_root=True)
-            assert False, "Expected ConanException"
-        except ConanException as e:
-            assert "The tgz file contains more than 1 folder in the root" in str(e)
+        assert "The tgz file contains more than 1 folder in the root" in str(e)
 
     def test_invalid_flat_single_file(self):
         tmp_folder = temp_folder()
@@ -269,11 +263,9 @@ class TestTarExtractPlain:
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        try:
+        with pytest.raises(ConanException) as e:
             unzip(ConanFileMock(), tgz_file, destination=extract_folder, strip_root=True)
-            assert False, "Expected ConanException"
-        except ConanException as e:
-            assert "Can't untar a tgz containing files in the root with strip_root enabled" in str(e)
+        assert "Can't untar a tgz containing files in the root with strip_root enabled" in str(e)
 
     def test_invalid_flat_multiple_file(self):
         tmp_folder = temp_folder()
@@ -287,11 +279,9 @@ class TestTarExtractPlain:
 
         # Extract without the subfolder
         extract_folder = temp_folder()
-        try:
+        with pytest.raises(ConanException) as e:
             unzip(ConanFileMock(), tgz_file, destination=extract_folder, strip_root=True)
-            assert False, "Expected ConanException"
-        except ConanException as e:
-            assert "Can't untar a tgz containing files in the root with strip_root enabled" in str(e)
+        assert "Can't untar a tgz containing files in the root with strip_root enabled" in str(e)
 
 
 def _compress_root_folder(folder, tgz_path, root_folder_name="root"):

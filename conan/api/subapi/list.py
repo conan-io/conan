@@ -5,7 +5,6 @@ from typing import Dict
 from conan.api.model import PackagesList, MultiPackagesList, ListPattern, Remote
 from conan.api.output import ConanOutput, TimedOutput
 from conan.internal.api.list.query_parse import filter_package_configs
-from conan.internal.conan_app import ConanBasicApp
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.paths import CONANINFO
 from conan.internal.errors import NotFoundException
@@ -47,18 +46,18 @@ class ListAPI:
     """ Get references from the recipes and packages in the cache or a remote
     """
 
-    def __init__(self, conan_api):
+    def __init__(self, conan_api, api_helpers):
         self._conan_api = conan_api
+        self._api_helpers = api_helpers
 
     def latest_recipe_revision(self, ref: RecipeReference, remote: Remote = None):
         """ For a given recipe reference, return the latest revision of the recipe in the remote,
         or in the local cache if no remote is specified, or ``None`` if the recipe does not exist."""
         assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
-        app = ConanBasicApp(self._conan_api)
         if remote:
-            ret = app.remote_manager.get_latest_recipe_revision(ref, remote=remote)
+            ret = self._api_helpers.remote_manager.get_latest_recipe_revision(ref, remote=remote)
         else:
-            ret = app.cache.get_latest_recipe_revision(ref)
+            ret = self._api_helpers.cache.get_latest_recipe_revision(ref)
 
         return ret
 
@@ -66,11 +65,10 @@ class ListAPI:
         """ For a given recipe reference, return all the revisions of the recipe in the remote,
         or in the local cache if no remote is specified"""
         assert ref.revision is None, "recipe_revisions: ref already have a revision"
-        app = ConanBasicApp(self._conan_api)
         if remote:
-            results = app.remote_manager.get_recipe_revisions(ref, remote=remote)
+            results = self._api_helpers.remote_manager.get_recipe_revisions(ref, remote=remote)
         else:
-            results = app.cache.get_recipe_revisions(ref)
+            results = self._api_helpers.cache.get_recipe_revisions(ref)
 
         return results
 
@@ -80,33 +78,30 @@ class ListAPI:
         #  is used as an "exists" check too in other places, lets respect the None return
         assert pref.revision is None, "latest_package_revision: ref already have a revision"
         assert pref.package_id is not None, "package_id must be defined"
-        app = ConanBasicApp(self._conan_api)
         if remote:
-            ret = app.remote_manager.get_latest_package_revision(pref, remote=remote)
+            ret = self._api_helpers.remote_manager.get_latest_package_revision(pref, remote=remote)
         else:
-            ret = app.cache.get_latest_package_revision(pref)
+            ret = self._api_helpers.cache.get_latest_package_revision(pref)
         return ret
 
     def package_revisions(self, pref: PkgReference, remote=None):
         assert pref.ref.revision is not None, "package_revisions requires a recipe revision, " \
                                               "check latest first if needed"
-        app = ConanBasicApp(self._conan_api)
         if remote:
-            results = app.remote_manager.get_package_revisions(pref, remote=remote)
+            results = self._api_helpers.remote_manager.get_package_revisions(pref, remote=remote)
         else:
-            results = app.cache.get_package_revisions(pref)
+            results = self._api_helpers.cache.get_package_revisions(pref)
         return results
 
     def _packages_configurations(self, ref: RecipeReference,
                                  remote=None) -> Dict[PkgReference, dict]:
         assert ref.revision is not None and ref.revision != "latest", \
             "packages: ref should have a revision. Check latest if needed."
-        app = ConanBasicApp(self._conan_api)
         if not remote:
-            prefs = app.cache.get_package_references(ref)
-            packages = _get_cache_packages_binary_info(app.cache, prefs)
+            prefs = self._api_helpers.cache.get_package_references(ref)
+            packages = _get_cache_packages_binary_info(self._api_helpers.cache, prefs)
         else:
-            packages = app.remote_manager.search_packages(remote, ref)
+            packages = self._api_helpers.remote_manager.search_packages(remote, ref)
         return packages
 
     @staticmethod
@@ -182,13 +177,13 @@ class ListAPI:
         select_bundle = PackagesList()
         # Avoid doing a ``search`` of recipes if it is an exact ref and it will be used later
         search_ref = pattern.search_ref
-        app = ConanBasicApp(self._conan_api)
+        cache = self._api_helpers.cache
         limit_time = _timelimit(lru) if lru else None
         out = ConanOutput()
         remote_name = "local cache" if not remote else remote.name
         if search_ref:
-            refs = _search_recipes(app, search_ref, remote=remote)
-            global_conf = self._conan_api._api_helpers.global_conf  # noqa
+            refs = _search_recipes(self._api_helpers, search_ref, remote=remote)
+            global_conf = self._api_helpers.global_conf  # noqa
             resolve_prereleases = global_conf.get("core.version_ranges:resolve_prereleases")
             refs = pattern.filter_versions(refs, resolve_prereleases)
             pattern.check_refs(refs)
@@ -219,7 +214,7 @@ class ListAPI:
                 rrevs = list(reversed(rrevs))  # Order older revisions first
 
             if lru and pattern.package_id is None:  # Filter LRUs
-                rrevs = [r for r in rrevs if app.cache.get_recipe_lru(r) < limit_time]
+                rrevs = [r for r in rrevs if cache.get_recipe_lru(r) < limit_time]
 
             for rr in rrevs:
                 select_bundle.add_ref(rr)
@@ -261,7 +256,7 @@ class ListAPI:
                     prefs = new_prefs
 
                 if lru:  # Filter LRUs
-                    prefs = [r for r in prefs if app.cache.get_package_lru(r) < limit_time]
+                    prefs = [r for r in prefs if cache.get_package_lru(r) < limit_time]
 
                 # Packages dict has been listed, even if empty
                 select_bundle.recipe_dict(rrev)["packages"] = {}
@@ -317,13 +312,13 @@ class ListAPI:
         (Experimental) Find the remotes where the current package lists can be found
         """
         result = MultiPackagesList()
-        app = ConanBasicApp(self._conan_api)
+        remote_manager = self._api_helpers.remote_manager
         for r in remotes:
             result_pkg_list = PackagesList()
             for ref, ref_contents in package_list.serialize().items():
                 ref = RecipeReference.loads(ref)
                 try:
-                    remote_rrevs = app.remote_manager.get_recipe_revisions(ref, remote=r)
+                    remote_rrevs = remote_manager.get_recipe_revisions(ref, remote=r)
                 except NotFoundException:
                     continue
                 revisions = ref_contents.get("revisions")
@@ -345,7 +340,7 @@ class ListAPI:
                     for pkgid, pkgcontent in packages.items():
                         pref = PkgReference(ref, pkgid)
                         try:
-                            remote_prefs = app.remote_manager.get_package_revisions(pref, remote=r)
+                            remote_prefs = remote_manager.get_package_revisions(pref, remote=r)
                         except NotFoundException:
                             continue
                         pkg_revisions = pkgcontent.get("revisions")
@@ -551,16 +546,16 @@ def _get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
     return result
 
 
-def _search_recipes(app, query: str, remote=None):
+def _search_recipes(api_helpers, query: str, remote=None):
     only_none_user_channel = False
     if query and query.endswith("@"):
         only_none_user_channel = True
         query = query[:-1]
 
     if remote:
-        refs = app.remote_manager.search_recipes(remote, query)
+        refs = api_helpers.remote_manager.search_recipes(remote, query)
     else:
-        refs = app.cache.search_recipes(query)
+        refs = api_helpers.cache.search_recipes(query)
     ret = []
     for r in refs:
         if not only_none_user_channel or (r.user is None and r.channel is None):

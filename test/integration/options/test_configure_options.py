@@ -1,7 +1,7 @@
 import os
 import textwrap
 
-from parameterized import parameterized
+import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
@@ -13,7 +13,7 @@ class TestConfigureOptions:
     header_only options automatically.
     """
 
-    @parameterized.expand([
+    @pytest.mark.parametrize("settings_os, shared, fpic, header_only, result", [
         ["Linux", False, False, False, [False, False, False]],
         ["Windows", False, False, False, [False, None, False]],
         ["Windows", True, False, False, [True, None, False]],
@@ -55,7 +55,7 @@ class TestConfigureOptions:
         if header_only:
             assert "Package 'da39a3ee5e6b4b0d3255bfef95601890afd80709' created" in client.out
 
-    @parameterized.expand([
+    @pytest.mark.parametrize("settings_os, shared, fpic, header_only, result", [
         ["Linux", False, False, False, [False, False, False]],
         ["Linux", False, False, True, [False, False, True]],
         ["Linux", False, True, False, [False, True, False]],
