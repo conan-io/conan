@@ -17,7 +17,7 @@ on:
 
 jobs:
   build_container:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Build Linux container
     outputs:
       image_tag: ${{ steps.dockerfile_hash.outputs.tag }}
@@ -55,7 +55,7 @@ jobs:
 
   linux_tests:
     needs: build_container
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     container:
       image: ghcr.io/${{ github.repository_owner }}/conan-tests:${{ needs.build_container.outputs.image_tag }}
       options: --user conan
@@ -111,7 +111,7 @@ jobs:
 
   linux_runner_tests:
     needs: build_container
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       matrix:
         # Use modern versions due to docker incompatibility with python <3.8
