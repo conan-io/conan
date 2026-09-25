@@ -92,11 +92,11 @@ def graph_build_order(conan_api, parser, subparser, *args):
         deps_graph = conan_api.graph.load_graph_consumer(path, args.name, args.version,
                                                          args.user, args.channel,
                                                          profile_host, profile_build, lockfile,
-                                                         remotes, args.build, args.update)
+                                                         remotes, args.update)
     else:
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
-                                                         remotes, args.build, args.update)
+                                                         remotes, args.update)
     print_graph_basic(deps_graph)
     deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,

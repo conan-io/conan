@@ -949,6 +949,29 @@ def test_build_order_options():
     assert "shared: False" in c.out
 
 
+def test_info_build_order_update():
+    """graph build-order must honor --update like graph info / install (issue #20349).
+
+    A positional args mix-up passed ``args.build`` as ``update``, so ``--update`` alone
+    was ignored and version ranges stayed on the cached recipe.
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("tool")})
+    c.run("create . --version=1.0")
+    c.run("create . --version=1.1")
+    c.run("upload tool/1.1 -r=default -c")
+    c.run("remove tool/1.1 -c")
+    c.save({"conanfile.py": GenConanfile().with_requires("tool/[*]")})
+
+    c.run("graph build-order . --format=json")
+    assert "tool/1.0#" in c.out
+    assert "tool/1.1#" not in c.out
+
+    c.run("graph build-order . --update --format=json")
+    assert "tool/1.1#" in c.out
+    assert "Downloaded (default)" in c.out
+
+
 class TestBuildOrderOptions:
     @pytest.mark.parametrize("order_by", ["recipe", "configuration"])
     def test_build_order_transitive_options(self, order_by):
