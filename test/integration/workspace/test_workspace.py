@@ -802,7 +802,7 @@ class TestWorkspaceBuild:
         # With --build=missing, hello/1.0 must be built first, then app
         c.run("workspace build --build=missing")
         assert ('Command: install --requires=hello/1.0 --build=hello/1.0 '
-                '-o="hello*:shared=True"') in c.out
+                '-o="hello/1.0:shared=True"') in c.out
         assert "Workspace building external hello/1.0" in c.out
 
     def test_workspace_build_missing_with_options_test_requires(self):
