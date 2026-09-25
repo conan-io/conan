@@ -23,17 +23,16 @@ from conan.internal.api.remotes.localdb import LOCALDB
 from conan.internal.cache.home_paths import HomePaths
 from conan.tools.files import copy
 
-# Always excluded from ``copy_config_files``, no override: wildcard patterns, so there's no
-# single file a user could list by exact name to bring them back.
+# Always excluded from ``copy_config_files``, no override.
 _ALWAYS_EXCLUDED_COPY_PATTERNS = [
-    "version.txt",                # host Conan version, used to trigger cache migrations
+    "version.txt",                # host Conan version: copying it could break cache migrations
     ".local_recipes_index/*",     # local clones of local-recipes-index remotes
 ]
 # Excluded by default, but copied if the user lists the exact same name in ``copy_config_files``.
 _SENSITIVE_EXCLUDED_COPY_PATTERNS = [
-    LOCALDB,                      # sqlite db with remote login tokens (plain text)
-    "credentials.json",           # remote login credentials (plain text)
-    "source_credentials.json",    # download/upload source credentials (plain text)
+    LOCALDB,                      # sqlite db with remote login tokens
+    "credentials.json",           # remote login credentials
+    "source_credentials.json",    # download/upload source credentials
 ]
 
 
