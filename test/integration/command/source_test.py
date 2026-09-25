@@ -124,7 +124,7 @@ class ConanLib(ConanFile):
 
         client.run("source .", assert_error=True)
         assert "Running source!" in client.out
-        assert "ERROR: Error in source() method, line 9" in client.out
+        assert "ERROR: conanfile.py: Error in source() method, line 9" in client.out
 
         # Fix the error and repeat
         client.save({CONANFILE: conanfile.replace("err", "")})

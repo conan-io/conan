@@ -819,7 +819,7 @@ def test_build_order_space_in_options():
     tc.run("create dep")
     tc.run("graph build-order . --order-by=configuration --build=dep/1.0 -f=json", redirect_stdout="order.json")
     order = json.loads(tc.load("order.json"))
-    assert order["order"][0][0]["build_args"] == '''--requires=dep/1.0 --build=dep/1.0 -o="dep/*:extras=cxx="yes" gnuext='no'" -o="dep/*:flags=define=FOO define=BAR define=BAZ"'''
+    assert order["order"][0][0]["build_args"] == '''--requires=dep/1.0 --build=dep/1.0 -o="dep/1.0:extras=cxx="yes" gnuext='no'" -o="dep/1.0:flags=define=FOO define=BAR define=BAZ"'''
 
 
 def test_build_order_build_context_compatible():
@@ -947,3 +947,311 @@ def test_build_order_options():
     assert "55c609fe8808aa5308134cb5989d23d3caffccf2" in c.out
     # the built package is the static one, the option is not really propagated
     assert "shared: False" in c.out
+
+
+class TestBuildOrderOptions:
+    @pytest.mark.parametrize("order_by", ["recipe", "configuration"])
+    def test_build_order_transitive_options(self, order_by):
+        # Reproduces https://github.com/conan-io/conan/issues/20314
+        c = TestClient(light=True)
+        c.save({
+            "leaf/conanfile.py": GenConanfile("leaf", "1.0").with_shared_option(False),
+            "middle/conanfile.py": GenConanfile("middle", "1.0").with_shared_option(False)
+                                                                .with_requires("leaf/1.0"),
+            "app/conanfile.py": (
+                GenConanfile("app", "1.0").with_requires("middle/1.0")
+                                              .with_default_option("middle/*:shared", True)
+                                              .with_default_option("leaf/*:shared", True)),
+        })
+        for recipe in ("leaf", "middle"):
+            c.run(f"export {recipe}")
+
+        c.run(f"graph build-order app --build=missing --order-by={order_by} --format=json",
+              redirect_stdout="build-order.json")
+        c.run("graph build-order-merge --file=build-order.json --file=build-order.json --format=json")
+        order = json.loads(c.stdout)["order"]
+        middle = next(item for level in order for item in level
+                      if item["ref"].startswith("middle/"))
+        if order_by == "recipe":
+            middle_ref = middle["ref"]
+            middle = next(package for level in middle["packages"] for package in level)
+        else:
+            middle_ref = middle["ref"]
+
+        assert middle["options"] == ["leaf/1.0:shared=True", "middle/1.0:shared=True"]
+        assert middle["build_args"] == ("--requires=middle/1.0 --build=middle/1.0 "
+                                        "-o=\"leaf/1.0:shared=True\" "
+                                        "-o=\"middle/1.0:shared=True\"")
+
+        c.run(f"graph info {middle['build_args']} --format=json")
+        nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+        isolated_middle = next(node for node in nodes if node.get("ref") == middle_ref)
+        leaf = next(node for node in nodes if node.get("ref", "").startswith("leaf/"))
+        assert isolated_middle["package_id"] == middle["package_id"]
+        assert isolated_middle["options"]["shared"] == "True"
+        assert leaf["options"]["shared"] == "True"
+
+    def test_build_order_options_diamond_precedence(self):
+        # "leaf" is a diamond of "midb" (first, no request) and "mida" (second,
+        # wants shared=True): "midb" wins, so "mida" must force "leaf" back to False.
+        c = TestClient(light=True)
+        c.save({
+            "leaf/conanfile.py": GenConanfile("leaf", "1.0").with_shared_option(False),
+            "midb/conanfile.py": GenConanfile("midb", "1.0").with_requires("leaf/1.0"),
+            "mida/conanfile.py": GenConanfile("mida", "1.0").with_requires("leaf/1.0")
+                                                            .with_default_option("leaf/*:shared",
+                                                                                 True),
+            "app/conanfile.py": GenConanfile("app", "1.0").with_requires("midb/1.0",
+                                                                         "mida/1.0"),
+        })
+        for recipe in ("leaf", "midb", "mida"):
+            c.run(f"export {recipe}")
+
+        c.run("graph info app --format=json")
+        nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+        leaf = next(n for n in nodes if n.get("ref", "").startswith("leaf/"))
+        real_leaf_shared = leaf["options"]["shared"]
+        assert real_leaf_shared == "False"
+
+        c.run("graph build-order app --build=missing --order-by=recipe --format=json")
+        order = json.loads(c.stdout)["order"]
+        mida = next(item for level in order for item in level if item["ref"].startswith("mida/"))
+        package = next(pkg for level in mida["packages"] for pkg in level)
+
+        # Rebuilding "mida" standalone must reproduce the same "leaf" as the real graph
+        c.run(f"graph info {package['build_args']} --format=json")
+        nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+        leaf = next(n for n in nodes if n.get("ref", "").startswith("leaf/"))
+        assert leaf["options"]["shared"] == real_leaf_shared
+
+    def test_build_order_options_diamond_unaware(self):
+        # Opposite of the previous test: "midb" (first) forces shared=True on "leaf",
+        # "mida" (second) asks nothing at all, yet must still force it to reproduce it.
+        c = TestClient(light=True)
+        c.save({
+            "leaf/conanfile.py": GenConanfile("leaf", "1.0").with_shared_option(False),
+            "midb/conanfile.py": GenConanfile("midb", "1.0").with_requires("leaf/1.0")
+                                                            .with_default_option("leaf/*:shared",
+                                                                                 True),
+            "mida/conanfile.py": GenConanfile("mida", "1.0").with_requires("leaf/1.0"),
+            "app/conanfile.py": GenConanfile("app", "1.0").with_requires("midb/1.0",
+                                                                         "mida/1.0"),
+        })
+        for recipe in ("leaf", "midb", "mida"):
+            c.run(f"export {recipe}")
+
+        c.run("graph info app --format=json")
+        nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+        leaf = next(n for n in nodes if n.get("ref", "").startswith("leaf/"))
+        real_leaf_shared = leaf["options"]["shared"]
+        assert real_leaf_shared == "True"
+
+        c.run("graph build-order app --build=missing --order-by=recipe --format=json")
+        order = json.loads(c.stdout)["order"]
+        mida = next(item for level in order for item in level if item["ref"].startswith("mida/"))
+        package = next(pkg for level in mida["packages"] for pkg in level)
+
+        c.run(f"graph info {package['build_args']} --format=json")
+        nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+        leaf = next(n for n in nodes if n.get("ref", "").startswith("leaf/"))
+        assert leaf["options"]["shared"] == real_leaf_shared
+
+    def test_build_order_removed_option_not_forced_as_none(self):
+        # "leaf" drops its own "fPIC" once shared=True (like auto_shared_fpic). "mid"
+        # wants both shared=True and fPIC=False on "leaf"; fPIC must not end up forced
+        # to the literal "None".
+        c = TestClient(light=True)
+        c.save({
+            "leaf/conanfile.py": textwrap.dedent("""
+                from conan import ConanFile
+
+                class Leaf(ConanFile):
+                    name = "leaf"
+                    version = "1.0"
+                    options = {"shared": [True, False], "fPIC": [True, False]}
+                    default_options = {"shared": False, "fPIC": True}
+
+                    def configure(self):
+                        if self.options.shared:
+                            self.options.rm_safe("fPIC")
+                """),
+            "mid/conanfile.py": textwrap.dedent("""
+                from conan import ConanFile
+
+                class Mid(ConanFile):
+                    name = "mid"
+                    version = "1.0"
+                    requires = "leaf/1.0"
+                    default_options = {"leaf/*:shared": True, "leaf/*:fPIC": False}
+                """),
+            "app/conanfile.py": GenConanfile("app", "1.0").with_requires("mid/1.0"),
+        })
+        c.run("export leaf")
+        c.run("export mid")
+
+        c.run("graph build-order app --build=missing --order-by=recipe --format=json")
+        order = json.loads(c.stdout)["order"]
+        mid = next(item for level in order for item in level if item["ref"].startswith("mid/"))
+        package = next(pkg for level in mid["packages"] for pkg in level)
+
+        assert package["options"] == []
+        assert package["build_args"] == "--requires=mid/1.0 --build=mid/1.0"
+
+        c.run(f"graph info {package['build_args']} --format=json")
+        nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+        leaf = next(n for n in nodes if n.get("ref", "").startswith("leaf/"))
+        assert leaf["options"]["shared"] == "True"
+        assert "fPIC" not in leaf["options"]
+
+    def test_build_order_deep_diamond_precedence(self):
+        # pkgf -> pkgd -> pkgb -> pkga (no request, first, wins)
+        # pkgf -> pkge -> pkgc -> pkga (wants shared=True, discarded)
+        # "pkgc" and "pkge" must both force "pkga" back to False. "pkgf" doesn't need
+        # to, since rebuilding it alone naturally re-expands "pkgd" first too, but
+        # forcing it there redundantly (inherited from "pkge") is harmless.
+        c = TestClient(light=True)
+        c.save({
+            "pkga/conanfile.py": GenConanfile("pkga", "1.0").with_shared_option(False),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "1.0").with_requires("pkga/1.0"),
+            "pkgc/conanfile.py": GenConanfile("pkgc", "1.0").with_requires("pkga/1.0")
+                                                            .with_default_option("pkga/*:shared",
+                                                                                 True),
+            "pkgd/conanfile.py": GenConanfile("pkgd", "1.0").with_requires("pkgb/1.0"),
+            "pkge/conanfile.py": GenConanfile("pkge", "1.0").with_requires("pkgc/1.0"),
+            "pkgf/conanfile.py": GenConanfile("pkgf", "1.0").with_requires("pkgd/1.0", "pkge/1.0"),
+            "app/conanfile.py": GenConanfile("app", "1.0").with_requires("pkgf/1.0"),
+        })
+        for recipe in ("pkga", "pkgb", "pkgc", "pkgd", "pkge", "pkgf"):
+            c.run(f"export {recipe}")
+
+        c.run("graph info app --format=json")
+        nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+        pkga = next(n for n in nodes if n.get("ref", "").startswith("pkga/"))
+        assert pkga["options"]["shared"] == "False"
+
+        c.run("graph build-order app --build=missing --order-by=recipe --format=json")
+        order = json.loads(c.stdout)["order"]
+
+        def package(name):
+            item = next(i for level in order for i in level if i["ref"].startswith(name + "/"))
+            return next(pkg for level in item["packages"] for pkg in level)
+
+        assert package("pkga")["options"] == []
+        assert package("pkgb")["options"] == []
+        assert package("pkgc")["options"] == ["pkga/1.0:shared=False"]
+        assert package("pkgd")["options"] == []
+        assert package("pkge")["options"] == ["pkga/1.0:shared=False"]
+        assert package("pkgf")["options"] == ["pkga/1.0:shared=False"]
+
+        for name in ("pkgc", "pkge", "pkgf"):
+            c.run(f"graph info {package(name)['build_args']} --format=json")
+            nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+            isolated_pkga = next(n for n in nodes if n.get("ref", "").startswith("pkga/"))
+            assert isolated_pkga["options"]["shared"] == "False"
+
+    def test_build_order_skipped_dependency(self):
+        # "openssl" is a private static dependency of shared "libcurl": conan marks its
+        # binary BINARY_SKIP (embedded in libcurl.so, no need to download/build it). It
+        # never gets its own install reference, but its options still need to be forced
+        # correctly on "libcurl"'s build_args, since they determine openssl's package_id.
+        c = TestClient(light=True)
+        c.save({
+            "openssl/conanfile.py": GenConanfile("openssl", "1.0").with_shared_option(False)
+                                                                  .with_option("fPIC",
+                                                                              [True, False],
+                                                                              default=True),
+            "libcurl/conanfile.py": GenConanfile("libcurl", "1.0").with_requires("openssl/1.0")
+                                                                  .with_package_type(
+                                                                      "shared-library"),
+            "app/conanfile.py": GenConanfile("app", "1.0").with_requires("libcurl/1.0"),
+        })
+        c.run("export openssl")
+        c.run("export libcurl")
+
+        # Force openssl's real "fPIC" via the profile/CLI, not via any recipe's
+        # default_options, leaving "shared" untouched so it stays BINARY_SKIP.
+        c.run('graph info app -o="openssl/*:fPIC=False" --format=json')
+        nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+        openssl = next(n for n in nodes if n.get("ref", "").startswith("openssl/"))
+        assert openssl["binary"] == "Skip"
+        assert openssl["options"]["fPIC"] == "False"
+
+        c.run('graph build-order app --build=missing -o="openssl/*:fPIC=False" '
+              '--order-by=recipe --format=json')
+        order = json.loads(c.stdout)["order"]
+        libcurl = next(item for level in order for item in level
+                      if item["ref"].startswith("libcurl/"))
+        package = next(pkg for level in libcurl["packages"] for pkg in level)
+        assert package["options"] == ["openssl/1.0:fPIC=False"]
+
+    def test_build_order_options_first_expanded_dep_wins(self):
+        # "mid1" and "mid2" disagree about "leaf", and "app" (outside "top") happens to force
+        # exactly what "mid2" asks for. Rebuilding "top" alone "mid1" is expanded first, so it
+        # is the one that would freeze "leaf", and "top" must force it back to the real value.
+        # The recipes asking for a dependency options must be aggregated respecting the graph
+        # order, taking the first one that reaches it, not the last one
+        c = TestClient(light=True)
+        c.save({
+            "leaf/conanfile.py": GenConanfile("leaf", "1.0").with_shared_option(False),
+            "mid1/conanfile.py": GenConanfile("mid1", "1.0").with_requires("leaf/1.0")
+                                                            .with_default_option("leaf/*:shared",
+                                                                                 True),
+            "mid2/conanfile.py": GenConanfile("mid2", "1.0").with_requires("leaf/1.0")
+                                                            .with_default_option("leaf/*:shared",
+                                                                                 False),
+            "top/conanfile.py": GenConanfile("top", "1.0").with_requires("mid1/1.0", "mid2/1.0"),
+            "app/conanfile.py": GenConanfile("app", "1.0").with_requires("top/1.0")
+                                                          .with_default_option("leaf/*:shared",
+                                                                               False),
+        })
+        for recipe in ("leaf", "mid1", "mid2", "top"):
+            c.run(f"export {recipe}")
+
+        c.run("graph info app --format=json")
+        nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+        leaf = next(n for n in nodes if n.get("ref", "").startswith("leaf/"))
+        assert leaf["options"]["shared"] == "False"  # "app" wins over both "mid1" and "mid2"
+
+        c.run("graph build-order app --build=missing --order-by=recipe --format=json")
+        order = json.loads(c.stdout)["order"]
+        top = next(item for level in order for item in level if item["ref"].startswith("top/"))
+        package = next(pkg for level in top["packages"] for pkg in level)
+        assert package["options"] == ["leaf/1.0:shared=False"]
+
+        # Without forcing it, "mid1" would be expanded first and "leaf" would be shared
+        c.run(f"graph info {package['build_args']} --format=json")
+        nodes = json.loads(c.stdout)["graph"]["nodes"].values()
+        leaf = next(n for n in nodes if n.get("ref", "").startswith("leaf/"))
+        assert leaf["options"]["shared"] == "False"
+
+    @pytest.mark.parametrize("option, values, default, sib_value, expected", [
+        # "sib" asks for a value that is not even valid for "leaf": it is never validated,
+        # because "sib" is not an ancestor of "leaf" and the request never reaches it
+        ("shared", [True, False], False, "banana", ["leaf/1.0:shared=False"]),
+        # "leaf" declares no default and None is a valid value, so "mode" stays undefined.
+        # There is no value that could be forced, it must not be reported as a literal "None"
+        ("mode", [None, "a", "b"], None, "a", []),
+    ])
+    def test_build_order_options_of_non_ancestor_sibling(self, option, values, default,
+                                                         sib_value, expected):
+        # "sib" and "leaf" are siblings under "top", so whatever "sib" asks for "leaf" never
+        # applies to it. It still has to be taken into account, as it would be applied again
+        # when "top" is expanded again, but it cannot be assumed to be a usable value
+        c = TestClient(light=True)
+        sib = GenConanfile("sib", "1.0").with_default_option(f"leaf/*:{option}",
+                                                             f'"{sib_value}"')
+        c.save({
+            "leaf/conanfile.py": GenConanfile("leaf", "1.0").with_option(option, values,
+                                                                         default=default),
+            "sib/conanfile.py": sib,
+            "top/conanfile.py": GenConanfile("top", "1.0").with_requires("sib/1.0", "leaf/1.0"),
+            "app/conanfile.py": GenConanfile("app", "1.0").with_requires("top/1.0"),
+        })
+        for recipe in ("leaf", "sib", "top"):
+            c.run(f"export {recipe}")
+
+        c.run("graph build-order app --build=missing --order-by=recipe --format=json")
+        order = json.loads(c.stdout)["order"]
+        top = next(item for level in order for item in level if item["ref"].startswith("top/"))
+        package = next(pkg for level in top["packages"] for pkg in level)
+        assert package["options"] == expected
