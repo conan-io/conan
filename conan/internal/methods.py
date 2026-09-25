@@ -22,7 +22,7 @@ def run_source_method(conanfile, hook_manager):
         hook_manager.execute("pre_source", conanfile=conanfile)
         if hasattr(conanfile, "source"):
             scoped_output.highlight(f"Calling source() in {conanfile.source_folder}")
-            with conanfile_exception_formatter(conanfile, "source"):
+            with conanfile_exception_formatter(conanfile, "source", ref=old_display):
                 with conanfile_remove_attr(conanfile, ['info', 'settings', "options"], "source"):
                     conanfile.source()
         hook_manager.execute("post_source", conanfile=conanfile)
@@ -70,7 +70,7 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
     hook_manager.execute("pre_package", conanfile=conanfile)
     if hasattr(conanfile, "package"):
         scoped_output.highlight("Calling package()")
-        with conanfile_exception_formatter(conanfile, "package"):
+        with conanfile_exception_formatter(conanfile, "package", ref=old_display):
             with chdir(conanfile.build_folder):
                 with conanfile_remove_attr(conanfile, ['info'], "package"):
                     conanfile.package()
