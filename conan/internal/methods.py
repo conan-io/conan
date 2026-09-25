@@ -6,6 +6,7 @@ from conan.internal.errors import conanfile_exception_formatter, conanfile_remov
 from conan.internal.paths import CONANINFO
 from conan.internal.model.manifest import FileTreeManifest
 from conan.api.model import PkgReference
+from conan.internal.model.options import compute_state_options
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.model.requires import BuildRequirements, TestRequirements, ToolRequirements
 from conan.internal.util.files import mkdir, chdir, save
@@ -119,10 +120,11 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
                                  "build_requirements() methods, not configure()/config_options(), "
                                  "which might raise errors in the future.", warn_tag="deprecated")
 
-    result = conanfile.options.get_upstream_options(down_options, ref, is_consumer)
-    self_options, up_options, private_up_options = result
-    # self_options are the minimum to reproduce state, as defined from downstream (not profile)
-    conanfile.self_options = self_options
+    # The minimum options state to reproduce this package when it is later built standalone,
+    # necessarily computed before get_upstream_options() merges the downstream ones in
+    conanfile.self_options, conanfile.deps_options = compute_state_options(conanfile)
+    up_options, private_up_options = conanfile.options.get_upstream_options(down_options, ref,
+                                                                           is_consumer)
     # up_options are the minimal options that should be propagated to dependencies
     conanfile.up_options = up_options
     conanfile.private_up_options = private_up_options
