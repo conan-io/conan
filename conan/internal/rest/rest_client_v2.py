@@ -211,7 +211,6 @@ class RestV2Methods:
         url = self.router.recipe_snapshot(ref)
         data = self._get_file_list_json(url)
         server_files = data["files"]
-        result = {}
 
         if not only_metadata:
             accepted_files = ["conanfile.py", CONAN_MANIFEST,  "metadata/sign"]
@@ -219,17 +218,15 @@ class RestV2Methods:
             export_file = self._find_compressed_file(ref, server_files, EXPORT_FILE_NAME)
             if export_file is not None:
                 files.append(export_file)
-            # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-            urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-            self._download_and_save_files(urls, dest_folder, files, parallel=True)
-            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
+        else:
+            files = []
         if metadata:
             metadata = [f"metadata/{m}" for m in metadata]
-            files = [f for f in server_files if any(fnmatch.fnmatch(f, m) for m in metadata)]
-            urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
-            self._download_and_save_files(urls, dest_folder, files, parallel=True, metadata=True)
-            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
-        return result
+            files.extend(f for f in server_files if any(fnmatch.fnmatch(f, m) for m in metadata))
+
+        urls = {fn: self.router.recipe_file(ref, fn) for fn in files}
+        self._download_and_save_files(urls, dest_folder, files, parallel=True)
+        return {fn: os.path.join(dest_folder, fn) for fn in files}
 
     def get_recipe_sources(self, ref, dest_folder):
         # If revision not specified, check latest
@@ -264,25 +261,21 @@ class RestV2Methods:
         url = self.router.package_snapshot(pref)
         data = self._get_file_list_json(url)
         server_files = data["files"]
-        result = {}
         # Download only known files, but not metadata (except sign)
         if not only_metadata:  # Retrieve package first, then metadata
             pkg_file = self._find_compressed_file(pref, server_files, PACKAGE_FILE_NAME, exists=True)
             accepted_files = [CONANINFO, pkg_file, CONAN_MANIFEST, "metadata/sign"]
             files = [f for f in server_files if any(f.startswith(m) for m in accepted_files)]
-            # If we didn't indicated reference, server got the latest, use absolute now, it's safer
-            urls = {fn: self.router.package_file(pref, fn) for fn in files}
-            self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref))
-            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
+        else:
+            files = []
 
         if metadata:
             metadata = [f"metadata/{m}" for m in metadata]
-            files = [f for f in server_files if any(fnmatch.fnmatch(f, m) for m in metadata)]
-            urls = {fn: self.router.package_file(pref, fn) for fn in files}
-            self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref),
-                                          metadata=True)
-            result.update({fn: os.path.join(dest_folder, fn) for fn in files})
-        return result
+            files.extend(f for f in server_files if any(fnmatch.fnmatch(f, m) for m in metadata))
+
+        urls = {fn: self.router.package_file(pref, fn) for fn in files}
+        self._download_and_save_files(urls, dest_folder, files, scope=str(pref.ref))
+        return {fn: os.path.join(dest_folder, fn) for fn in files}
 
     def _upload_files(self, files, urls, ref):
         failed = []
@@ -320,8 +313,7 @@ class RestV2Methods:
             raise ConanException("core.download:download_cache must be an absolute path")
         return DownloadCache(download_cache_folder)
 
-    def _download_and_save_files(self, urls, dest_folder, files, parallel=False, scope=None,
-                                 metadata=False):
+    def _download_and_save_files(self, urls, dest_folder, files, parallel=False, scope=None):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         retry = self._config.get("core.download:retry", check_type=int, default=2)
@@ -333,6 +325,7 @@ class RestV2Methods:
             resource_url = urls[filename]
             abs_path = os.path.join(dest_folder, filename)
             os.makedirs(os.path.dirname(abs_path), exist_ok=True)  # filename in subfolder must exist
+            metadata = filename.startswith(f"{METADATA}/")  # To avoid caching it
             if parallel:
                 kwargs = {"url": resource_url, "file_path": abs_path, "retry": retry,
                           "retry_wait": retry_wait, "verify_ssl": self.verify_ssl,
