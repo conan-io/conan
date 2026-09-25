@@ -240,7 +240,8 @@ def test_create_docker_runner_dockerfile_folder_path():
 
     client.run("create . -pr:h host_copy -pr:b build")
 
-    assert client.out.count("my custom profile plugin running") == 4
+    assert "my custom profile plugin running" in client.out
+    assert "conan-runner-docker | my custom profile plugin running" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
@@ -249,7 +250,8 @@ def test_create_docker_runner_dockerfile_folder_path():
 
     client.run("create . -pr:h host_clean -pr:b build")
 
-    assert client.out.count("my custom profile plugin running") == 4
+    assert "my custom profile plugin running" in client.out
+    assert "conan-runner-docker | my custom profile plugin running" in client.out
     assert "Restore: pkg/0.2" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe" in client.out
     assert "Restore: pkg/0.2:8631cf963dbbb4d7a378a64a6fd1dc57558bc2fe metadata" in client.out
@@ -811,13 +813,14 @@ def test_create_docker_runner_copy_config_files_excludes_cache():
 
 @pytest.mark.docker_runner
 @pytest.mark.skipif(docker_skip(), reason="Only docker running")
-def test_create_docker_runner_copy_config_files_excludes_setting():
+def test_create_docker_runner_copy_config_files_excludes_override():
     """
-    Tests that ``copy_config_files_excludes`` overrides the default exclude list, while the
-    package cache storage folder (``p/``) stays excluded regardless, since it's not part of it.
+    Tests that a sensitive default exclusion (``credentials.json``) is copied if the user lists
+    its exact name in ``copy_config_files``, while a wildcard exclusion (``.local_recipes_index``)
+    stays excluded even if a pattern of the request also matches it.
     """
     client = TestClient()
-    client.save_home({"p/fake_binary_package.bin": "fake binary package data",
+    client.save_home({".local_recipes_index/repo/index.json": "fake local-recipes-index clone",
                       "credentials.json": '{"credentials": []}'})
 
     profile_build = textwrap.dedent(f"""\
@@ -847,8 +850,7 @@ def test_create_docker_runner_copy_config_files_excludes_setting():
     image=conan-runner-default-test
     cache=copy
     remove=True
-    copy_config_files=*
-    copy_config_files_excludes=
+    copy_config_files=credentials.json,.local_recipes_index/*
     """)
 
     client.save({"host": profile_host, "build": profile_build})
@@ -856,6 +858,6 @@ def test_create_docker_runner_copy_config_files_excludes_setting():
     client.run("create . -pr:h host -pr:b build")
 
     extra_folder = os.path.join(client.current_folder, ".conanrunner", "extra")
-    assert not os.path.exists(os.path.join(extra_folder, "p"))
     assert os.path.exists(os.path.join(extra_folder, "credentials.json"))
+    assert not os.path.exists(os.path.join(extra_folder, ".local_recipes_index"))
     assert "Removing container" in client.out

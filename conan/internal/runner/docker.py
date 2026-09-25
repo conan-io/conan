@@ -23,15 +23,17 @@ from conan.internal.api.remotes.localdb import LOCALDB
 from conan.internal.cache.home_paths import HomePaths
 from conan.tools.files import copy
 
-# Default value of the ``copy_config_files_excludes`` [runner] setting, overridable in the
-# profile. The package storage folder and sources backup cache are excluded too, dynamically
-# and unconditionally, where they are used below, since they aren't part of this setting.
-_DEFAULT_EXCLUDED_COPY_PATTERNS = [
+# Always excluded from ``copy_config_files``, no override: wildcard patterns, so there's no
+# single file a user could list by exact name to bring them back.
+_ALWAYS_EXCLUDED_COPY_PATTERNS = [
+    "version.txt",                # host Conan version, used to trigger cache migrations
+    ".local_recipes_index/*",     # local clones of local-recipes-index remotes
+]
+# Excluded by default, but copied if the user lists the exact same name in ``copy_config_files``.
+_SENSITIVE_EXCLUDED_COPY_PATTERNS = [
     LOCALDB,                      # sqlite db with remote login tokens (plain text)
     "credentials.json",           # remote login credentials (plain text)
     "source_credentials.json",    # download/upload source credentials (plain text)
-    "version.txt",                # host Conan version, used to trigger cache migrations
-    ".local_recipes_index/*",     # local clones of local-recipes-index remotes
 ]
 
 
@@ -120,10 +122,6 @@ class DockerRunner:
             raise ConanException(f'Invalid cache value: "{self.cache}". Valid values are: clean, copy, shared')
         self.copy_config_files = [p.strip() for p in host_profile.runner.get('copy_config_files', '').split(',')
                                  if p.strip()]
-        excludes_conf = host_profile.runner.get('copy_config_files_excludes')
-        self.copy_config_files_excludes = ([p.strip() for p in excludes_conf.split(',') if p.strip()]
-                                          if excludes_conf is not None
-                                          else list(_DEFAULT_EXCLUDED_COPY_PATTERNS))
         self.container = None
         self.raw_args = raw_args
         self.command = command
@@ -336,7 +334,10 @@ class DockerRunner:
                 cache_paths = [self.conan_api._api_helpers.cache.store,
                               global_conf.get("core.sources:download_cache")
                               or HomePaths(home).default_sources_backup_folder]
-                excludes = self.copy_config_files_excludes + \
+                requested = {p.lower() for p in self.copy_config_files}
+                sensitive_excludes = [e for e in _SENSITIVE_EXCLUDED_COPY_PATTERNS
+                                      if e.lower() not in requested]
+                excludes = _ALWAYS_EXCLUDED_COPY_PATTERNS + sensitive_excludes + \
                     [f"{Path(os.path.relpath(p, home)).as_posix()}/*" for p in cache_paths]
                 self.logger.verbose(f"Copying copy_config_files patterns {self.copy_config_files} to "
                                     f"{self.abs_runner_home_path / 'extra'} (excluding {excludes})")
