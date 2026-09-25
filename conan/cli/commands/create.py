@@ -60,7 +60,7 @@ def create(conan_api, parser, *args):
     # The package_type is not fully processed at export
     is_python_require = conanfile.package_type == "python-require"
     if lockfile:
-        lockfile = conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref, is_build)
+        conan_api.lockfile.update_lockfile_export(lockfile, conanfile, ref, is_build)
 
     print_profiles(profile_host, profile_build)
     runner = conan_api.command.get_runner(profile_host)
@@ -78,8 +78,6 @@ def create(conan_api, parser, *args):
                                                          lockfile=lockfile,
                                                          remotes=remotes, update=args.update,
                                                          python_requires=[ref])
-        lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
-                                                      clean=args.lockfile_clean)
     else:
         requires = [ref] if not is_build else None
         tool_requires = [ref] if is_build else None
@@ -106,9 +104,9 @@ def create(conan_api, parser, *args):
         install_error = conan_api.install.install_binaries(deps_graph=deps_graph, remotes=remotes,
                                                            return_install_error=True)
 
-        # We update the lockfile, so it will be updated for later ``test_package``
-        lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
-                                                      clean=args.lockfile_clean)
+    # We update the lockfile, so it will be updated for later ``test_package``
+    lockfile = conan_api.lockfile.update_lockfile(lockfile, deps_graph, args.lockfile_packages,
+                                                  clean=args.lockfile_clean)
 
     test_package_folder = getattr(conanfile, "test_package_folder", None) \
         if args.test_folder is None else args.test_folder
