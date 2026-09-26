@@ -235,15 +235,12 @@ class CMakeConfigDeps:
             - The name of transitive dependencies for calls to find_dependency
 
         This method creates a map for the root/components belonging to each XXX-config file.
-        Each one reports its components twice: ``components`` are the ones declared by the
-        recipe, the public grouping, and ``deduced_components`` are those plus the internal
-        ones that ``deduce_full_cpp_info()`` derived from them, which need a target of their
-        own in the same file.
         It reads two properties:
             - ``cmake_file_names``: a dict mapping each CMake package file name to a dict with
               ``components`` (list of component names) and optional ``properties`` (per-file
               overrides for CMakeConfigDeps global properties). Every component must belong to
               one of those files, and no root config file named after the recipe is generated.
+              Each listed component must define at most one lib.
             - ``cmake_file_name``: a string with the name for the root config file
               (default: recipe name). If both properties are set, ``cmake_file_names``
               takes precedence and ``cmake_file_name`` is ignored.
@@ -251,18 +248,6 @@ class CMakeConfigDeps:
         cmake_config_name = dep.ref.name
         if cmake_config_name in self._cmake_filenames:
             return self._cmake_filenames[cmake_config_name]
-
-        def _get_deduced_components(cmp_name):
-            # A component with several libs was expanded by deduce_full_cpp_info() into
-            # internal per-lib components. They belong to the same file as their parent.
-            # The declared (not deduced) libs are needed, the parent ones were emptied.
-            # FIXME: alternative to hardcoded "_{name}_{lib}"? check deduce_full_cpp_info
-            cs = []
-            declared_libs = dep.cpp_info.components[cmp_name].libs or []
-            if len(declared_libs) > 1:
-                for c in [f"_{cmp_name}_{lib}" for lib in declared_libs]:
-                    cs.append(c)
-            return cs
 
         ret = {}
         cmake_file_names = self.get_property("cmake_file_names", dep)
@@ -272,16 +257,19 @@ class CMakeConfigDeps:
                 raise ConanException("cmake_file_names property must be a dict")
             for filename, file_info in cmake_file_names.items():
                 cmps_per_file = []
-                deduced_components = []
                 for name in file_info.get("components", []):
                     if name not in components:
                         raise ConanException(f"Component '{name}' does not exist. Check the "
                                              f"'cmake_file_names' property definition.")
+                    declared_libs = dep.cpp_info.components[name].libs or []
+                    if len(declared_libs) > 1:
+                        raise ConanException(
+                            f"{dep}: component '{name}' defines several libs {declared_libs}. "
+                            f"When using 'cmake_file_names', each component must define "
+                            f"at most one lib.")
                     components.remove(name)
                     cmps_per_file.append(name)
-                    deduced_components.extend(_get_deduced_components(name))
                 ret[filename] = {"components": cmps_per_file,
-                                 "deduced_components": deduced_components + cmps_per_file,
                                  "properties": file_info.get("properties", {}),
                                  "is_root": False}
             if components:
@@ -293,8 +281,7 @@ class CMakeConfigDeps:
             cmake_file_name = self.get_property("cmake_file_name", dep)
             root_filename = cmake_file_name or dep.ref.name
             full_cpp_info = self._get_full_cpp_info(dep)
-            ret[root_filename] = {"components": components,
-                                  "deduced_components": list(full_cpp_info.components.keys()),
+            ret[root_filename] = {"components": list(full_cpp_info.components.keys()),
                                   "is_root": True}
         self._cmake_filenames[cmake_config_name] = ret
         return ret
@@ -311,12 +298,10 @@ class _CMakeContextGenerator:
         self.full_cpp_info = full_cpp_info
         self.base_filename = cmake_filename
         # Whether this is the "root" config file for the dependency (as opposed to one of the
-        # per-group files declared through the ``cmake_file_names`` property), and
-        # which components it covers: the ones declared by the recipe, and those plus the
-        # internal ones deduced from them, which get a target of their own.
+        # per-group files declared through the ``cmake_file_names`` property), and which
+        # components it covers.
         self.is_root = cmake_file_info["is_root"]
-        self.file_declared_components = cmake_file_info["components"]
-        self.file_deduced_components = cmake_file_info["deduced_components"]
+        self.file_components = cmake_file_info["components"]
         self.custom_props = cmake_file_info.get("properties", {})
         self.is_build_context = require.build
         # Prepared to filter transitive tool-requires with visible=True
@@ -329,7 +314,7 @@ class _CMakeContextGenerator:
         config_folder = f"_{self.config}" if self.config else ""
         build_suffix = "_BUILD" if self.is_build_context else ""
         self.pkg_folder = dep.package_folder.replace("\\", "/")
-        self.pkg_folder_var = f"{cmake_filename}_PACKAGE_FOLDER{config_folder}{build_suffix}"
+        self.pkg_folder_var = f"{dep.ref.name}_PACKAGE_FOLDER{config_folder}{build_suffix}"
 
     def get_property(self, prop, dep=None, comp_name=None, check_type=None):
         target_dep = dep if dep is not None else self.dep
@@ -406,7 +391,7 @@ class _CMakeContextGenerator:
             cmake_components = self._ctx.get_property("cmake_components", check_type=list)
             if cmake_components is None:
                 cmake_components = []
-                for name in self._ctx.file_declared_components:
+                for name in self._ctx.file_components:
                     if name.startswith("_"):  # Skip private components
                         continue
                     comp_components = self._ctx.get_property("cmake_components", comp_name=name,
@@ -449,7 +434,7 @@ class _CMakeContextGenerator:
             include_dirs = definitions = libraries = None
             if not self._ctx.is_build_context:  # try_compile and legacy globals
                 # Restrict to the components covered by this particular CMake config file
-                components = self._ctx.file_deduced_components
+                components = self._ctx.file_components
                 aggregated_cppinfo = self._ctx.full_cpp_info.aggregated_components(components=components)
                 # FIXME: Proper escaping of paths for CMake
                 incdirs = [relativize_path(i.replace("\\", "/"), self._ctx.consumer_conanfile,
@@ -480,9 +465,7 @@ class _CMakeContextGenerator:
 
         def info(self):
             f = self._ctx.base_filename
-            ref = (str(self._ctx.dep.ref) if self._ctx.is_root
-                   else ",".join(self._ctx.file_deduced_components))
-            return f"{f}Targets.cmake", {"filename": f, "ref": ref}
+            return f"{f}Targets.cmake", {"filename": f}
 
     class _TargetConfiguration:
         """Filename + context for TargetConfigurationTemplate2."""
@@ -546,7 +529,7 @@ class _CMakeContextGenerator:
         def _get_dependencies_and_requires(self):
             requires = {}
             full_cpp_info = self._ctx.full_cpp_info
-            components_per_file = self._ctx.file_deduced_components
+            components_per_file = self._ctx.file_components
             if full_cpp_info.has_components:
                 for name in components_per_file:
                     requires[name] = self._get_component_requires(
@@ -676,7 +659,7 @@ class _CMakeContextGenerator:
             cpp_info = self._ctx.full_cpp_info
             if cpp_info.has_components:
                 # Only the components belonging to this particular CMake config file
-                for name in self._ctx.file_deduced_components:
+                for name in self._ctx.file_components:
                     target_name = self._ctx.get_cmake_target_name(comp_name=name)
                     target = self._get_cmake_lib(cpp_info.components[name], cpp_info_requires,
                                                  comp_name=name)
@@ -812,7 +795,7 @@ class _CMakeContextGenerator:
             exes = {}
             cpp_info = self._ctx.full_cpp_info
             if cpp_info.has_components:
-                for name in self._ctx.file_deduced_components:
+                for name in self._ctx.file_components:
                     comp = cpp_info.components[name]
                     if comp.exe or comp.type is PackageType.APP:
                         target = self._ctx.get_cmake_target_name(comp_name=name)

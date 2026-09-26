@@ -1347,7 +1347,7 @@ def test_cmakeconfigdeps_messages_honor_find_quietly():
 
     targets = c.load("pkgTargets.cmake")
     assert quiet_guard in targets
-    assert 'message(STATUS "Conan: Configuring Targets for pkg/0.1")' in targets
+    assert 'message(STATUS "Conan: Configuring Targets for pkg")' in targets
 
     target_config = c.load("pkg-Targets-release.cmake")
     assert quiet_guard in target_config
@@ -1535,7 +1535,7 @@ class TestCmakeConfigProperties:
         assert not os.path.exists(os.path.join(tc.current_folder, "pkg-config.cmake"))
 
     def test_component_with_several_libs(self):
-        """A component declaring several libs keeps its internal targets in its own file."""
+        """A component declaring several libs is not allowed with cmake_file_names."""
         tc = TestClient()
         dep = textwrap.dedent("""
             import os
@@ -1564,18 +1564,10 @@ class TestCmakeConfigProperties:
         """)
         tc.save({"conanfile.py": dep})
         tc.run("create .")
-        tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps")
-
-        # The 2 libs are expanded into internal targets, all of them in the "Core" file
-        core_targets = tc.load("Core-Targets-release.cmake")
-        assert "add_library(pkg::core INTERFACE IMPORTED)" in core_targets
-        assert "add_library(pkg::_core_core1 STATIC IMPORTED)" in core_targets
-        assert "add_library(pkg::_core_core2 STATIC IMPORTED)" in core_targets
-        assert "# Requirement pkg::core -> pkg::_core_core1 (Full link: True)" in core_targets
-        assert "# Requirement pkg::core -> pkg::_core_core2 (Full link: True)" in core_targets
-        # The internal targets don't leak to the other file, no find_dependency needed either
-        assert "_core_" not in tc.load("Extra-Targets-release.cmake")
-        assert "find_dependency" not in core_targets
+        tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps", assert_error=True)
+        assert ("pkg/1.0: component 'core' defines several libs ['core1', 'core2']. "
+                "When using 'cmake_file_names', each component must define at most one lib."
+                in tc.out)
 
     def test_cmake_file_names_ignores_cmake_file_name(self):
         """When both properties are set, cmake_file_names wins and cmake_file_name is ignored."""
@@ -1974,3 +1966,56 @@ class TestCmakeConfigProperties:
                 "component of 'spirv-tools' to link") in tc.out
         assert "self.cpp_info.requires = [\"spirv-tools::<component>\"]" in tc.out
         assert "Available components: spirv-tools-core, spirv-tools-opt, spirv-tools-link" in tc.out
+
+    def test_print_help_cmake_file_names(self):
+        """Help lists each cmake_file_names find_package, without a fake pkg::pkg root target."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_file_names", {
+                        "CoreKit": {"components": ["core"]},
+                        "ExtraKit": {"components": ["extra"]},
+                    })
+                    self.cpp_info.components["core"].libs = ["core"]
+                    self.cpp_info.components["core"].type = "static-library"
+                    self.cpp_info.components["core"].location = "lib/libcore.a"
+                    self.cpp_info.components["extra"].libs = ["extra"]
+                    self.cpp_info.components["extra"].type = "static-library"
+                    self.cpp_info.components["extra"].location = "lib/libextra.a"
+        """)
+        regular = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Regular(ConanFile):
+                name = "regular"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.libs = ["regular"]
+                    self.cpp_info.type = "static-library"
+                    self.cpp_info.location = "lib/libregular.a"
+        """)
+        tc.save({"pkg/conanfile.py": dep, "regular/conanfile.py": regular})
+        tc.run("create pkg")
+        tc.run("create regular")
+
+        tc.run("install --requires=pkg/1.0 -g CMakeConfigDeps")
+        assert "CMakeConfigDeps necessary find_package() and targets for your CMakeLists.txt" in tc.out
+        assert "find_package(CoreKit)" in tc.out
+        assert "find_package(ExtraKit)" in tc.out
+        assert "find_package(pkg)" not in tc.out
+        assert "target_link_libraries" not in tc.out
+        assert "pkg::pkg" not in tc.out
+
+        tc.run("install --requires=regular/1.0 -g CMakeConfigDeps")
+        assert "CMakeConfigDeps necessary find_package() and targets for your CMakeLists.txt" in tc.out
+        assert "find_package(regular)" in tc.out
+        assert "target_link_libraries(... regular::regular)" in tc.out
