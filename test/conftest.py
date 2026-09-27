@@ -193,6 +193,12 @@ tools_locations = {
             "path": {'Linux': '/usr/share/qbs/bin'}
         }
     },
+    "fish": {
+        "default": "system",
+        # Installed via apt-get in the Linux docker image and brew in the osx-tests workflow.
+        # Not available in the Windows CI image, and fish there would run under WSL/Cygwin anyway.
+        "system": {"path": {'Windows': "skip-tests"}}
+    },
     "emcc": {},
     "node": {},
     "intel_oneapi": {
