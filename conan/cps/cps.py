@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 from enum import Enum
@@ -32,10 +33,9 @@ class CPSComponentType(Enum):
         return CPSComponentType(_package_type_map.get(str(pkg_type), "unknown"))
 
 
-class CPSComponent:
+class CPSComponentConfiguration:
     def __init__(self, component_type=None):
         self.includes = []
-        self.type = component_type or "unknown"
         self.definitions = {}
         self.requires = []
         self.link_requires = []
@@ -45,7 +45,7 @@ class CPSComponent:
         self.link_libraries = []  # system libraries
 
     def serialize(self):
-        component = {"type": str(self.type)}
+        component = {}
         if self.requires:
             component["requires"] = self.requires
         if self.link_requires:
@@ -66,8 +66,7 @@ class CPSComponent:
 
     @staticmethod
     def deserialize(data):
-        comp = CPSComponent()
-        comp.type = CPSComponentType(data.get("type"))
+        comp = CPSComponentConfiguration()
         comp.requires = data.get("requires", [])
         comp.link_requires = data.get("link_requires", [])
         comp.includes = data.get("includes", [])
@@ -76,6 +75,37 @@ class CPSComponent:
         comp.link_location = data.get("link_location")
         comp.link_libraries = data.get("link_libraries", [])
         comp.link_languages = data.get("link_languages", [])
+        return comp
+
+    def update(self, conf):
+        self.link_languages =  conf.link_languages if conf.link_languages else self.link_languages
+        self.location = conf.location if conf.location else self.location
+        self.link_location = conf.link_location if conf.link_location else self.link_location
+        self.link_libraries = conf.link_libraries if conf.link_libraries else self.link_libraries
+
+
+class CPSComponent:
+    def __init__(self, component_type=None):
+        self.type = component_type
+        self.default_configuration = CPSComponentConfiguration()
+        self.configurations = {}
+
+    def serialize(self):
+        result = {}
+        if self.type:
+            result["type"] = str(self.type)
+        result.update(self.default_configuration.serialize())
+        for conf_name, conf in self.configurations.items():
+            result.setdefault("configurations", {})[conf_name] = conf.serialize()
+        return result
+
+    @staticmethod
+    def deserialize(data):
+        comp = CPSComponent()
+        comp.type = CPSComponentType(data.get("type")) if data.get("type") else None
+        comp.default_configuration = CPSComponentConfiguration.deserialize(data)
+        for conf_name, conf in data.get("configurations", {}).items():
+            comp.configurations[conf_name] = CPSComponentConfiguration.deserialize(conf)
         return comp
 
     @staticmethod
@@ -93,7 +123,8 @@ class CPSComponent:
                     result[define] = None
             return result
 
-        cps_comp = CPSComponent()
+        comp = CPSComponent()
+        cps_comp = comp.default_configuration
         if not libname:
             cps_comp.definitions = {
                 cps_langs_mapping.get(lang, "*"): definitions_from_conan(cpp_info.defines)
@@ -102,15 +133,15 @@ class CPSComponent:
             cps_comp.includes = [x.replace("\\", "/") for x in cpp_info.includedirs]
 
         if not cpp_info.libs:
-            cps_comp.type = CPSComponentType.INTERFACE
-            return cps_comp
+            comp.type = CPSComponentType.INTERFACE
+            return comp
 
         if len(cpp_info.libs) > 1 and not libname:  # Multi-lib pkg without components defined
-            cps_comp.type = CPSComponentType.INTERFACE
-            return cps_comp
+            comp.type = CPSComponentType.INTERFACE
+            return comp
 
         cpp_info.deduce_locations(conanfile)
-        cps_comp.type = CPSComponentType.from_conan(cpp_info.type)
+        comp.type = CPSComponentType.from_conan(cpp_info.type)
         cps_comp.location = cpp_info.location
         cps_comp.link_location = cpp_info.link_location
         cps_comp.link_libraries = cpp_info.system_libs
@@ -122,14 +153,11 @@ class CPSComponent:
             cps_langs_mapping.get(lang, "*"): definitions_from_conan(cpp_info.defines)
             for lang in (comp_langs or ["*"])
         } if cpp_info.defines else {}
-        return cps_comp
+
+        return comp
 
     def update(self, conf, conf_def):
-        # TODO: conf not used at the moent
-        self.link_languages = self.link_languages or conf_def.get("link_languages")
-        self.location = self.location or conf_def.get("location")
-        self.link_location = self.link_location or conf_def.get("link_location")
-        self.link_libraries = self.link_libraries or conf_def.get("link_libraries")
+        self.configurations.setdefault(conf, CPSComponentConfiguration()).update(conf_def)
 
 
 class CPS:
@@ -210,17 +238,17 @@ class CPS:
                 cps.components[base_name] = comp
                 for lib in dep.cpp_info.libs:
                     comp = CPSComponent.from_cpp_info(dep.cpp_info, dep, lib)
-                    comp.requires.insert(0, f":{base_name}")  # dep to the common one
+                    comp.default_configuration.requires.insert(0, f":{base_name}")  # dep to the common one
                     cps.components[lib] = comp
                 cps.default_components = dep.cpp_info.libs
                 # FIXME: What if one lib is named equal to the package?
             else:
                 # single component, called same as library
                 component = CPSComponent.from_cpp_info(dep.cpp_info, dep)
-                if not component.requires and dep.dependencies:
+                if not component.default_configuration.requires and dep.dependencies:
                     for transitive_dep in dep.dependencies.host.items():
                         dep_name = transitive_dep[0].ref.name
-                        component.requires.append(f"{dep_name}:{dep_name}")
+                        component.default_configuration.requires.append(f"{dep_name}:{dep_name}")
 
                 # the component will be just the package name
                 cps.default_components = [f"{dep.ref.name}"]
@@ -235,7 +263,7 @@ class CPS:
 
         return cps
 
-    def to_conan(self):
+    def to_conan(self, config=None):
         def strip_prefix(dirs):
             return [d.replace("@prefix@/", "") for d in dirs]
 
@@ -260,7 +288,15 @@ class CPS:
 
         cpp_info = CppInfo()
         cpp_info.default_components = self.default_components
-        for comp_name, comp in self.components.items():
+        for comp_name, full_comp in self.components.items():
+            comp = copy.copy(full_comp.default_configuration)
+            if config is None:
+                if len(full_comp.configurations) == 1:
+                    config_comp = next(iter(full_comp.configurations.values()))
+                    comp.update(config_comp)
+            else:
+                config_comp = full_comp.configurations[config]
+                comp.update(config_comp)
             cpp_comp = cpp_info if len(self.components) == 1 else cpp_info.components[comp_name]
             cpp_comp.includedirs = strip_prefix(comp.includes)
             cpp_comp.defines = definitions(comp.definitions)
@@ -299,10 +335,11 @@ class CPS:
             full_conf = os.path.join(path, f"{basename}@{conf}{ext}")
             if os.path.exists(full_conf):
                 conf_content = json.loads(load(full_conf))
-                for comp, comp_def in conf_content.get("components", {}).items():
-                    existing = base.components.get(comp)
-                    if existing:
-                        existing.update(conf, comp_def)
+                for comp_name, comp_def in conf_content.get("components", {}).items():
+                    comp = CPSComponentConfiguration.deserialize(comp_def)
+                    existing = base.components.get(comp_name)
+                    if existing is not None:
+                        existing.update(conf, comp)
                     else:
-                        base.components[comp] = comp_def
+                        base.components[comp_name] = comp
         return base

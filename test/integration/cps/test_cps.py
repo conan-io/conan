@@ -189,6 +189,68 @@ def test_cps_shared_in_pkg():
     assert 'set(mypkg_LIBS_RELEASE mypkg)' in cmake
 
 
+def test_cps_configurations_in_pkg():
+    c = TestClient()
+    cps = textwrap.dedent("""\
+        {
+            "cps_version": "0.12.0",
+            "name": "zlib",
+            "version": "1.3.1",
+            "configurations": ["release"],
+            "default_components": ["zlib"],
+            "components": {
+                "zlib": {
+                    "type": "archive",
+                    "includes": ["@prefix@/include"],
+                    "configurations": {
+                        "release": {
+                          "location": "@prefix@/lib/zlib.a"
+                        },
+                        "debug": {
+                          "location": "@prefix@/lib/zlibd.a"
+                        }
+                    }
+                }
+            }
+        }
+        """)
+    cps = "".join(cps.splitlines())
+    conanfile = textwrap.dedent(f"""
+        import os
+        from conan.tools.files import save
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "zlib"
+            version = "1.3.1"
+
+            def package(self):
+                cps = '{cps}'
+                cps_path = os.path.join(self.package_folder, "zlib.cps")
+                save(self, cps_path, cps)
+
+            def package_info(self):
+                from conan.cps import CPS
+                self.cpp_info = CPS.load("zlib.cps").to_conan(config="release")
+        """)
+    c.save({"pkg/conanfile.py": conanfile})
+    c.run("create pkg")
+
+    settings = "-s os=Windows -s compiler=msvc -s compiler.version=191 -s arch=x86_64"
+    c.run(f"install --requires=zlib/1.3.1 {settings} -g CPSDeps")
+
+    mapping = json.loads(c.load("build/cps/cpsmap-msvc-191-x86_64-release.json"))
+    for _, path_cps in mapping.items():
+        assert os.path.exists(path_cps)
+
+    assert not os.path.exists(os.path.join(c.current_folder, "zlib.cps"))
+    assert not os.path.exists(os.path.join(c.current_folder, "build", "cps", "zlib.cps"))
+
+    c.run(f"install --requires=zlib/1.3.1 {settings} -g CMakeDeps")
+    cmake = c.load("zlib-release-x86_64-data.cmake")
+    assert 'set(zlib_INCLUDE_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/include")' in cmake
+    assert 'set(zlib_LIB_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/lib")'
+    assert 'set(zlib_LIBS_RELEASE zlib)' in cmake
+
 def test_cps_merge():
     folder = temp_folder()
 
@@ -221,10 +283,11 @@ def test_cps_merge():
     cps = CPS.load(os.path.join(folder, "mypkg.cps"))
     json_cps = cps.serialize()
     mypkg = json_cps["components"]["mypkg"]
+    conf = mypkg["configurations"]["release"]
     assert mypkg["includes"] == ["@prefix@/include"]
-    assert mypkg["location"] == "@prefix@/lib/mypkg.lib"
+    assert conf["location"] == "@prefix@/lib/mypkg.lib"
     assert mypkg["type"] == "archive"
-    assert mypkg["link_languages"] == ["cpp"]
+    assert conf["link_languages"] == ["cpp"]
     assert mypkg["definitions"] == {'*': {'MY_DEFINE': None}}
 
 
