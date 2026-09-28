@@ -1255,3 +1255,32 @@ class TestBuildOrderOptions:
         top = next(item for level in order for item in level if item["ref"].startswith("top/"))
         package = next(pkg for level in top["packages"] for pkg in level)
         assert package["options"] == expected
+
+
+def test_info_build_order_error_update():
+    # https://github.com/conan-io/conan/issues/20349
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg")})
+    c.run("create . --version=1.0")
+    c.run("upload * -r=default -c")
+
+    c2 = TestClient(servers=c.servers)
+    c2.save({"conanfile.py": GenConanfile().with_requires("pkg/[*]")})
+
+    c2.run("graph build-order")
+    assert "pkg/1.0" in c2.out
+    assert "pkg/1.1" not in c2.out
+
+    c.run("create . --version=1.1")
+    c.run("upload * -r=default -c")
+
+    c2.run("graph build-order . --update")
+    assert "pkg/1.1" in c2.out
+    assert "pkg/1.0" not in c2.out
+    assert "Downloaded (default)" in c2.out
+
+    c2.run("remove pkg/1.1 -c")
+    c2.run("graph build-order --requires=pkg/[*] --update")
+    assert "pkg/1.1" in c2.out
+    assert "pkg/1.0" not in c2.out
+    assert "Downloaded (default)" in c2.out
