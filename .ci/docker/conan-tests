@@ -191,10 +191,13 @@ RUN cd /tmp && \
     ./emsdk activate latest --permanent && \
     . /usr/share/emsdk-${EMSDK}/emsdk_env.sh && \
     embuilder build MINIMAL && \
-    embuilder build MINIMAL --wasm64
+    embuilder build MINIMAL --wasm64 && \
+    ln -s "$(find /usr/share/emsdk-${EMSDK}/node -mindepth 1 -maxdepth 1 -type d | head -n1)" /usr/share/emsdk-${EMSDK}/node/current
     # echo "EMSDK_QUIET=1 . /usr/share/emsdk-${EMSDK}/emsdk_env.sh" >> /etc/bash.bashrc
 # Manually add the emsdk binaries to the PATH and set emcc cache directory to a writable location
-ENV PATH="/usr/share/emsdk-$EMSDK:/usr/share/emsdk-$EMSDK/upstream/emscripten:/usr/share/emsdk-$EMSDK/node/22.16.0_64bit/bin:$PATH" \
+# Use a "current" symlink instead of a hardcoded node version: "emsdk install latest" tracks
+# upstream and silently bundles newer node releases over time, which broke this PATH before.
+ENV PATH="/usr/share/emsdk-$EMSDK:/usr/share/emsdk-$EMSDK/upstream/emscripten:/usr/share/emsdk-$EMSDK/node/current/bin:$PATH" \
     EM_CACHE=$HOME/.emscripten_cache
 
 RUN echo "export QT_NO_GLIB=1" >> /etc/profile.d/qt.sh
