@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   ensure_latest_tag_merged:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Ensure latest release is merged in develop2 branch
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
           git merge-base --is-ancestor "$latest_tag" origin/develop2
 
   set_python_versions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       python_versions_linux_windows: ${{ steps.set_versions.outputs.python_versions_linux_windows }}
       python_versions_macos: ${{ steps.set_versions.outputs.python_versions_macos }}
@@ -109,7 +109,7 @@ jobs:
       run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
   covtest_predict:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: CovTest Prediction
     steps:
       - uses: actions/checkout@v4
@@ -150,7 +150,7 @@ jobs:
           include-hidden-files: true
 
   covtest_validation:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: CovTest Validation
     if: always() && github.event_name == 'pull_request'
     needs: [linux_suite, osx_suite, windows_suite, covtest_predict]
@@ -187,7 +187,7 @@ jobs:
             covtest-prediction
 
   code_coverage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Code coverage
     if: github.ref == 'refs/heads/develop2'         # Only measure code coverage on main branch
     needs: [linux_suite, osx_suite, windows_suite]
@@ -229,7 +229,7 @@ jobs:
             .covtest
 
   deploy_to_pypi_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Deploy to TestPyPI
     if: github.ref == 'refs/heads/develop2'
     needs: [linux_suite, osx_suite, windows_suite]
@@ -281,7 +281,7 @@ jobs:
           python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
 
   verify_testpypi:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Verify TestPyPI wheel
     if: github.ref == 'refs/heads/develop2'
     needs: [deploy_to_pypi_test]
