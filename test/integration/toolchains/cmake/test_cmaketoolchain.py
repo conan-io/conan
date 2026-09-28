@@ -1620,14 +1620,37 @@ def test_avoid_ovewrite_user_cmakepresets():
 def test_presets_njobs():
     c = TestClient()
     c.save({"conanfile.txt": ""})
-    c.run('install . -g CMakeToolchain -c tools.build:jobs=42')
+    generator = "-c tools.cmake.cmaketoolchain:generator=Ninja"
+    c.run(f'install . -g CMakeToolchain {generator} -c tools.build:jobs=42')
     presets = json.loads(c.load("CMakePresets.json"))
     assert presets["buildPresets"][0]["jobs"] == 42
     assert presets["testPresets"][0]["execution"]["jobs"] == 42
-    c.run('install . -g CMakeToolchain -c tools.build:jobs=0')
+    c.run(f'install . -g CMakeToolchain {generator} -c tools.build:jobs=0')
     presets = json.loads(c.load("CMakePresets.json"))
     assert "jobs" not in presets["buildPresets"][0]
     assert "execution" not in presets["testPresets"][0]
+
+
+def test_presets_njobs_visual_studio():
+    # https://github.com/conan-io/conan/issues/19405
+    # tools.build:jobs must not leak into the Visual Studio build preset "jobs" field: CMake
+    # maps that to MSBuild's -maxCpuCount, which stacks with the "/MP" flag that tools.build:jobs
+    # already sets in conan_toolchain.cmake, spawning tools.build:jobs**2 compiler processes.
+    c = TestClient()
+    c.save({"conanfile.txt": ""})
+    generator = "-c tools.cmake.cmaketoolchain:generator='Visual Studio 16 2019'"
+    with mock.patch("platform.system", mock.MagicMock(return_value="Windows")):
+        c.run(f'install . -g CMakeToolchain {generator} -c tools.build:jobs=42')
+    presets = json.loads(c.load("CMakePresets.json"))
+    assert "jobs" not in presets["buildPresets"][0]
+    # ctest parallelism is unrelated to MSBuild and still follows tools.build:jobs
+    assert presets["testPresets"][0]["execution"]["jobs"] == 42
+
+    with mock.patch("platform.system", mock.MagicMock(return_value="Windows")):
+        c.run(f'install . -g CMakeToolchain {generator} -c tools.build:jobs=42 '
+              '-c tools.microsoft.msbuild:max_cpu_count=8')
+    presets = json.loads(c.load("CMakePresets.json"))
+    assert presets["buildPresets"][0]["jobs"] == 8
 
 
 def test_add_cmakeexe_to_presets():
