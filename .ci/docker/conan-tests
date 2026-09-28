@@ -185,6 +185,7 @@ RUN cd /tmp && \
     wget https://github.com/emscripten-core/emsdk/archive/refs/tags/${EMSDK}.tar.gz && \
     tar xzf ${EMSDK}.tar.gz --directory /usr/share && \
     cd /usr/share/emsdk-${EMSDK} && \
+    EMSDK_ROOT="$(pwd)" && \
     pyenv local 3.12 && \
     ./emsdk update && \
     ./emsdk install latest && \
@@ -192,7 +193,7 @@ RUN cd /tmp && \
     . /usr/share/emsdk-${EMSDK}/emsdk_env.sh && \
     embuilder build MINIMAL && \
     embuilder build MINIMAL --wasm64 && \
-    ln -s "$(find /usr/share/emsdk-${EMSDK}/node -mindepth 1 -maxdepth 1 -type d | head -n1)" /usr/share/emsdk-${EMSDK}/node/current
+    ln -s "$(find "$EMSDK_ROOT/node" -mindepth 1 -maxdepth 1 -type d | head -n1)" "$EMSDK_ROOT/node/current"
     # echo "EMSDK_QUIET=1 . /usr/share/emsdk-${EMSDK}/emsdk_env.sh" >> /etc/bash.bashrc
 # Manually add the emsdk binaries to the PATH and set emcc cache directory to a writable location
 # Use a "current" symlink instead of a hardcoded node version: "emsdk install latest" tracks
