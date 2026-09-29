@@ -1428,6 +1428,92 @@ class TestCmakeConfigProperties:
         # No root pkg config when all components are listed in cmake_file_names
         assert not os.path.exists(os.path.join(tc.current_folder, "pkg-config.cmake"))
 
+    def test_consumer_overrides_cmake_file_name(self):
+        """A consumer can rename a cmake_file_names group via CMakeConfigDeps.set_property."""
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    # CMake File names for components
+                    self.cpp_info.set_property("cmake_file_names", {
+                        "greetings": {
+                            "components": ["hello", "hello-helpers"],
+                        },
+                        "adieu": {
+                            "components": ["bye", "bye-helpers"],
+                        },
+                    })
+
+                    self.cpp_info.components["hello"].libs = ["hello"]
+                    self.cpp_info.components["hello"].set_property("cmake_target_name", "greet")
+                    self.cpp_info.components["hello"].type = "shared-library"
+                    self.cpp_info.components["hello"].location = "lib/libhello.so"
+
+                    self.cpp_info.components["hello-helpers"].defines = ["HELLO_HELPERS"]
+
+                    self.cpp_info.components["bye"].libs = ["bye"]
+                    self.cpp_info.components["bye"].type = "shared-library"
+                    self.cpp_info.components["bye"].location = "lib/libbye.so"
+                    self.cpp_info.components["bye"].requires = ["hello", "bye-helpers"]
+
+                    self.cpp_info.components["bye-helpers"].defines = ["BYE_HELPERS"]
+        """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeConfigDeps
+
+            class Consumer(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+                requires = "pkg/1.0"
+
+                def generate(self):
+                    deps = CMakeConfigDeps(self)
+                    # Rename the file that owns hello and hello-helpers
+                    deps.set_property("pkg", "cmake_file_names", {
+                        "saludos": {
+                            "components": ["hello", "hello-helpers"],
+                        },
+                        "adieu": {
+                            "components": ["bye", "bye-helpers"],
+                        },
+                    })
+                    deps.generate()
+        """)
+        tc.save({"pkg/conanfile.py": dep, "conanfile.py": consumer})
+        tc.run("create pkg")
+        tc.run("install .")
+
+        # hello and hello-helpers are generated under saludos, not greetings
+        assert not os.path.exists(os.path.join(tc.current_folder, "greetings-config.cmake"))
+
+        saludos_config = tc.load("saludos-config.cmake")
+        assert "set(saludos_LIBRARIES greet pkg::hello-helpers )" in saludos_config
+        saludos_targets = tc.load("saludos-Targets-release.cmake")
+        assert "add_library(greet SHARED IMPORTED)" in saludos_targets
+        assert "add_library(pkg::hello-helpers INTERFACE IMPORTED)" in saludos_targets
+        assert "find_dependency" not in saludos_targets
+
+        # adieu keeps its recipe file name, but the dependency on hello uses saludos
+        adieu_config = tc.load("adieu-config.cmake")
+        assert "set(adieu_LIBRARIES pkg::bye pkg::bye-helpers )" in adieu_config
+        adieu_targets = tc.load("adieu-Targets-release.cmake")
+        assert "find_dependency(saludos REQUIRED CONFIG)" in adieu_targets
+        assert "find_dependency(greetings" not in adieu_targets
+
+        paths = tc.load("conan_cmakedeps_paths.cmake")
+        assert "set(saludos_DIR" in paths
+        assert "set(greetings_DIR" not in paths
+        assert "set(adieu_DIR" in paths
+
+        # No root pkg config when all components are listed in cmake_file_names
+        assert not os.path.exists(os.path.join(tc.current_folder, "pkg-config.cmake"))
+
     def test_paths_include_cmake_file_names(self):
         """conan_cmakedeps_paths.cmake sets DIR for each cmake file from cmake_file_names."""
         tc = TestClient()
@@ -2019,3 +2105,96 @@ class TestCmakeConfigProperties:
         assert "CMakeConfigDeps necessary find_package() and targets for your CMakeLists.txt" in tc.out
         assert "find_package(regular)" in tc.out
         assert "target_link_libraries(... regular::regular)" in tc.out
+
+    def test_library_and_executable_requires_and_tool_requires(self):
+        """A library component and an executable component in different cmake files can be
+        consumed together: the requirement provides the host library, the tool_requires the
+        build executable.
+        """
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_file_names", {
+                        "greetings": {
+                            "components": ["hello"],
+                        },
+                        "apps": {
+                            "components": ["protoc"],
+                        },
+                    })
+                    self.cpp_info.components["hello"].libs = ["hello"]
+                    self.cpp_info.components["hello"].set_property("cmake_target_name", "greet")
+                    self.cpp_info.components["hello"].type = "shared-library"
+                    self.cpp_info.components["hello"].location = "lib/libhello.so"
+
+                    self.cpp_info.components["protoc"].exe = "protoc"
+                    self.cpp_info.components["protoc"].type = "application"
+                    self.cpp_info.components["protoc"].location = "bin/protoc"
+                    self.cpp_info.components["protoc"].set_property("cmake_target_name",
+                                                                   "greet::protoc")
+        """)
+        consumer = textwrap.dedent("""
+            from conan import ConanFile
+
+            class App(ConanFile):
+                settings = "os", "compiler", "build_type", "arch"
+
+                def requirements(self):
+                    self.requires("pkg/1.0")
+
+                def build_requirements(self):
+                    self.tool_requires("pkg/1.0")
+        """)
+        tc.save({"pkg/conanfile.py": dep, "app/conanfile.py": consumer})
+        tc.run("create pkg")
+        tc.run("install app -g CMakeConfigDeps")
+
+        # Host library lives in greetings; the executable is not part of this file
+        host_lib = tc.load("app/greetings-Targets-release.cmake")
+        assert "add_library(greet SHARED IMPORTED)" in host_lib
+        assert "add_executable" not in host_lib
+        assert "${pkg_PACKAGE_FOLDER_RELEASE}/lib/libhello.so" in host_lib
+        assert "protoc" not in host_lib
+        assert "pkg_PACKAGE_FOLDER_RELEASE_BUILD" not in host_lib
+
+        build_lib = tc.load("app/greetings-TargetsBuild-release.cmake")
+        assert "add_library" not in build_lib
+        assert "add_executable" not in build_lib
+
+        # Host and build executables live in the apps config file
+        host_exe = tc.load("app/apps-Targets-release.cmake")
+        assert "add_library" not in host_exe
+        assert "add_executable(greet::protoc IMPORTED)" in host_exe
+        assert "${pkg_PACKAGE_FOLDER_RELEASE}/bin/protoc" in host_exe
+        assert "pkg_PACKAGE_FOLDER_RELEASE_BUILD" not in host_exe
+
+        build_exe = tc.load("app/apps-TargetsBuild-release.cmake")
+        assert "add_library" not in build_exe
+        assert "add_executable(greet::protoc IMPORTED)" in build_exe
+        assert "${pkg_PACKAGE_FOLDER_RELEASE_BUILD}/bin/protoc" in build_exe
+
+        # The shared config files are the host ones, so legacy variables stay available
+        greetings_config = tc.load("app/greetings-config.cmake")
+        assert "set(greetings_LIBRARIES greet )" in greetings_config
+        apps_config = tc.load("app/apps-config.cmake")
+        assert "set(apps_LIBRARIES greet::protoc )" in apps_config
+
+        greetings_targets = tc.load("app/greetingsTargets.cmake")
+        assert "greetings-Targets-*.cmake" in greetings_targets
+        assert "greetings-TargetsBuild-*.cmake" in greetings_targets
+        apps_targets = tc.load("app/appsTargets.cmake")
+        assert "apps-Targets-*.cmake" in apps_targets
+        assert "apps-TargetsBuild-*.cmake" in apps_targets
+
+        assert "find_package(greetings)" in tc.out
+        assert "find_package(apps)" in tc.out
+        assert ("find_package(apps) # Optional. This is a tool-require, "
+                "can't link its targets") in tc.out
+        assert not os.path.exists(os.path.join(tc.current_folder, "app", "pkg-config.cmake"))
