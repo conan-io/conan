@@ -72,7 +72,7 @@ default_profiles = {
         os=Windows
         arch=x86_64
         compiler=msvc
-        compiler.version=195
+        compiler.version=191
         compiler.runtime=dynamic
         build_type=Release
         """),
