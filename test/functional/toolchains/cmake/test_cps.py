@@ -9,7 +9,7 @@ from conan.test.assets.sources import gen_function_h, gen_function_cpp
 from conan.test.utils.tools import TestClient
 
 
-@pytest.mark.tool("cmake", "4.3")
+@pytest.mark.tool("cmake", "4.4")
 @pytest.mark.parametrize("shared", [False, True])
 def test_cps(shared):
     c = TestClient()
@@ -53,7 +53,7 @@ def test_cps(shared):
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.3)
+        cmake_minimum_required(VERSION 4.4)
         project(mypkg CXX)
 
         add_library(mypkg src/mypkg.cpp)
@@ -81,7 +81,7 @@ def test_cps(shared):
     test_cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.3)
+        cmake_minimum_required(VERSION 4.4)
         project(PackageTest CXX)
 
         find_package(mypkg CONFIG REQUIRED)
@@ -137,7 +137,7 @@ def test_cps(shared):
     assert "BAR: 42" in c.out
 
 
-@pytest.mark.tool("cmake", "4.3")
+@pytest.mark.tool("cmake", "4.4")
 @pytest.mark.parametrize("shared", [False, True])
 def test_cps_components(shared):
     c = TestClient()
@@ -183,7 +183,7 @@ def test_cps_components(shared):
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.3)
+        cmake_minimum_required(VERSION 4.4)
         project(mypkg CXX)
 
         # First library: core
@@ -215,7 +215,7 @@ def test_cps_components(shared):
     test_package_cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.3)
+        cmake_minimum_required(VERSION 4.4)
         project(PackageTest CXX)
 
         find_package(mypkg CONFIG REQUIRED)
@@ -291,7 +291,7 @@ def test_cps_components(shared):
     assert "mypkg_utils: Release!" in c.out
 
 
-@pytest.mark.tool("cmake", "4.3")
+@pytest.mark.tool("cmake", "4.4")
 @pytest.mark.parametrize("kind", ["static_public", "static_private", "shared_private"])
 def test_cps_components_requires(kind):
     c = TestClient()
@@ -341,7 +341,7 @@ def test_cps_components_requires(kind):
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.3)
+        cmake_minimum_required(VERSION 4.4)
         project({name} LANGUAGES CXX VERSION 0.1)
 
         {find}
@@ -385,7 +385,7 @@ def test_cps_components_requires(kind):
     test_package_cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.3)
+        cmake_minimum_required(VERSION 4.4)
         project(PackageTest CXX)
 
         find_package({name} CONFIG REQUIRED)
@@ -503,7 +503,7 @@ def test_cps_components_requires(kind):
     assert "liba_utils: Release!" in c.out
 
 
-@pytest.mark.tool("cmake", "4.3")
+@pytest.mark.tool("cmake", "4.4")
 def test_cps_name_mapping():
     c = TestClient()
     c.run("new cmake_lib")
@@ -546,7 +546,7 @@ def test_cps_name_mapping():
     cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.3)
+        cmake_minimum_required(VERSION 4.4)
         project(mypkg CXX)
 
         add_library(mypkg src/mypkg.cpp)
@@ -579,7 +579,7 @@ def test_cps_name_mapping():
     test_cmake = textwrap.dedent("""\
         set(CMAKE_CXX_COMPILER_WORKS 1)
         set(CMAKE_CXX_ABI_COMPILED 1)
-        cmake_minimum_required(VERSION 4.3)
+        cmake_minimum_required(VERSION 4.4)
         project(PackageTest CXX)
 
         find_package(potato CONFIG REQUIRED)
