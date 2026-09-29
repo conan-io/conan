@@ -103,8 +103,6 @@ class LockfileAPI:
                                      requires=[ref] if is_require else None,
                                      python_requires=python_requires,
                                      build_requires=[ref] if is_build_require else None)
-        if lockfile is None:  # If there was no lockfile, it is a partial one to lock export
-            new_lock.partial = True
         return new_lock
 
     @staticmethod
@@ -118,6 +116,7 @@ class LockfileAPI:
         """
         if lockfile is None or clean:
             lockfile = Lockfile(graph, lock_packages)
+            lockfile.partial = True
         else:
             lockfile.update_lock(graph, lock_packages)
         return lockfile
