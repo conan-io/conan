@@ -1,12 +1,14 @@
+import pytest
+
 from conan.test.utils.tools import GenConanfile, TestClient
 
 
 class TestInstallParallel:
 
-    def test_basic_parallel_install(self):
+    @pytest.mark.parametrize("counter", [2, 8])
+    def test_basic_parallel_install(self, counter):
         client = TestClient(default_server_user=True)
         threads = 4
-        counter = 8
 
         client.save_home({"global.conf": f"core.download:parallel={threads}"})
         client.save({"conanfile.py": GenConanfile()})
@@ -24,6 +26,6 @@ class TestInstallParallel:
 
         client.save({"conanfile.txt": conanfile_txt}, clean_first=True)
         client.run("install .")
-        assert "Downloading binary packages in %s parallel threads" % threads in client.out
+        assert "Downloading binary packages in %s parallel threads" % min(threads, counter) in client.out
         for i in range(counter):
             assert "pkg%s/0.1@user/testing: Package installed" % i in client.out

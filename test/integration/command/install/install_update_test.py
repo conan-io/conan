@@ -1,3 +1,4 @@
+import json
 import os
 import textwrap
 from time import sleep
@@ -245,3 +246,97 @@ class TestUpdateOldPolicy:
         c.run("lock create pkg --lockfile base.lock --lockfile-out full.lock --build=* --update")
         # it doesn't crash
         assert "Generated lockfile" in c.out
+
+
+def test_update_remote_not_latest_in_cache():
+    """
+    rrev1 is present in the remote and in the cache, but then we create a new rev locally,
+    if we now try to install using --update, the newer local cache one should be used,
+    not the remote one which is older
+    """
+    tc = TestClient(default_server_user=True, light=True)
+
+    # Different revisions for the same recipe
+    tc.save({"rrev1/conanfile.py": GenConanfile("pkg", "0.1").with_build_msg("rrev1"),
+             "rrev2/conanfile.py": GenConanfile("pkg", "0.1").with_build_msg("rrev2")})
+    tc.run("create rrev1")
+    old_rrev1_layout = tc.created_layout()
+
+    tc.run("list pkg/0.1#latest:*#latest -f=json", redirect_stdout="local.json")
+    local_json = json.loads(tc.load("local.json"))
+    local_timestamp = local_json["Local Cache"]["pkg/0.1"]["revisions"][old_rrev1_layout.reference.ref.revision]["timestamp"]
+
+    tc.run("create rrev2")
+
+    tc.run(f"upload {old_rrev1_layout.reference.repr_notime()} -r=default -c")
+
+    tc.run("list pkg/0.1#latest:*#latest -r=default -f=json", redirect_stdout="remote.json")
+    remote_json = json.loads(tc.load("remote.json"))
+    remote_timestamp = remote_json["default"]["pkg/0.1"]["revisions"][old_rrev1_layout.reference.ref.revision]["timestamp"]
+
+    tc.run("install --requires=pkg/0.1 --update")
+    tc.assert_listed_binary({str(old_rrev1_layout.reference.ref): (old_rrev1_layout.reference.package_id, "Cache")})
+
+    # This rrev is now the newer one
+    tc.run("list pkg/0.1#latest -f=json", redirect_stdout="local.json")
+    local_json = json.loads(tc.load("local.json"))
+    new_local_timestamp = local_json["Local Cache"]["pkg/0.1"]["revisions"][old_rrev1_layout.reference.ref.revision]["timestamp"]
+    assert new_local_timestamp > local_timestamp
+    assert new_local_timestamp == remote_timestamp
+
+
+def test_package_revision_timestamp_mismatch():
+    """
+    Updating from a remote whose latest prev is older than the local newer one failed
+    if the remote's prev was also present in the local cache
+    see https://github.com/conan-io/conan/issues/20333
+    """
+    tc = TestClient(default_server_user=True, light=True)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        import time
+        import os
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def package(self):
+                with open(os.path.join(self.package_folder, "file.txt"), "w") as f:
+                    f.write(str(time.time()))
+        """)
+    tc.save({"conanfile.py": conanfile})
+    tc.run("create")
+    old_layout = tc.created_layout()
+
+    tc.run("create")
+    new_layout = tc.created_layout()
+    assert old_layout.reference.revision != new_layout.reference.revision
+
+    tc.run("list pkg/0.1#latest:*#latest -f=json", redirect_stdout="local.json")
+    local_list = json.loads(tc.load("local.json"))
+    local_timestamp = local_list["Local Cache"]["pkg/0.1"]["revisions"][new_layout.reference.ref.revision]["packages"][new_layout.reference.package_id]["revisions"][new_layout.reference.revision]["timestamp"]
+
+    # We're uploading the old package revision, which locally has an older timestamp than the new one,
+    # but not remotely
+    tc.run(f"upload {old_layout.reference.repr_notime()} -r=default -c")
+    assert f"{old_layout.reference.revision} (Uploaded)" in tc.out
+
+    tc.run("list pkg/0.1#latest:*#latest -r=default -f=json", redirect_stdout="remote.json")
+    remote_json = json.loads(tc.load("remote.json"))
+    remote_timestamp = remote_json["default"]["pkg/0.1"]["revisions"][old_layout.reference.ref.revision]["packages"][old_layout.reference.package_id]["revisions"][old_layout.reference.revision]["timestamp"]
+    # Note that the local latest prev has an older timestamp than the remote's,
+    # as the remote updates the timestamp when uploading
+    assert remote_timestamp > local_timestamp
+
+    # This currently fails
+    tc.run("install --requires=pkg/0.1 --update")
+    assert old_layout.reference.revision in tc.out
+    assert new_layout.reference.revision not in tc.out
+
+    # Now old_layout should have the latest timestamp, server rules
+    tc.run("list pkg/0.1#latest:*#latest -f=json", redirect_stdout="local.json")
+    local_list = json.loads(tc.load("local.json"))
+    after_local_timestamp = local_list["Local Cache"]["pkg/0.1"]["revisions"][old_layout.reference.ref.revision]["packages"][old_layout.reference.package_id]["revisions"][old_layout.reference.revision]["timestamp"]
+    assert after_local_timestamp == remote_timestamp
+    assert after_local_timestamp > local_timestamp

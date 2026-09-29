@@ -918,7 +918,13 @@ def generate_aggregated_env(conanfile):
                     content += [f'echo set "{deactivates_var}=" >> '
                                 f'"%{deactivates_var}%\\{deactivate_filename}"']
 
-                content += [f'call "{b}"' for b in files]
+                call_sub = textwrap.dedent("""\
+                    call "{b}"
+                    if %ERRORLEVEL% NEQ 0 (
+                        echo [ERROR] {b} failed with code %ERRORLEVEL%
+                        exit /b %ERRORLEVEL%
+                    )""")
+                content += [call_sub.format(b=b) for b in files]
 
                 return "\r\n".join(content)
 

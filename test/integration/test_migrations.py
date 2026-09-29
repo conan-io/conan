@@ -1,3 +1,5 @@
+import base64
+import json
 import os
 import textwrap
 from unittest.mock import patch
@@ -173,3 +175,37 @@ class TestMigrationCppstdCompat:
         t.save_home({"version.txt": "2.11"})
         t.run("-v")
         assert "Successfully updated compatibility.py" not in t.out
+
+
+class TestMigrationAuditProviders:
+    def test_migration_strips_vigenere(self):
+        t = TestClient(light=True)
+        t.run("-v")  # init cache
+
+        original_token = "my-secret-token-123"
+
+        def _legacy_cyphered_token(token):
+            key = "private"
+            chars = [chr(i) for i in range(32, 127)]
+            res = []
+            for i, c in enumerate(token):
+                if c not in chars:
+                    res.append(c)
+                else:
+                    res.append(chars[(chars.index(c) + chars.index(key[i % len(key)])) % len(chars)])
+            return base64.standard_b64encode("".join(res).encode()).decode()
+
+        legacy = _legacy_cyphered_token(original_token)
+        providers = {
+            "conancenter": {"url": "https://audit.conan.io/",
+                            "type": "conan-center-proxy",
+                            "token": legacy}
+        }
+        providers_path = os.path.join(t.cache_folder, "audit_providers.json")
+        save(providers_path, json.dumps(providers, indent=4))
+        save(os.path.join(t.cache_folder, "version.txt"), "2.31")
+
+        t.run("-v")  # trigger migrations
+
+        migrated = json.loads(load(providers_path))["conancenter"]["token"]
+        assert base64.standard_b64decode(migrated).decode() == original_token

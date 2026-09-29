@@ -598,14 +598,14 @@ class _Component:
         lib_sanitized = re.escape(libname)
         component_sanitized = re.escape(library_name)
         # At first, exact match
-        regex_static = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:a|lib)")
+        regex_static = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:a|lib|dll\.a)")
         regex_shared = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:so|dylib)")
         regex_dll = re.compile(rf".*(?:{lib_sanitized}|{component_sanitized}).*\.dll")
         static_location = _find_matching(libdirs, regex_static)
         shared_location = _find_matching(libdirs, regex_shared)
         if not any([static_location, shared_location]):
             # Let's extend a little bit the pattern search
-            regex_wider_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib)")
+            regex_wider_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib|dll\.a)")
             regex_wider_shared = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:so|dylib)")
             static_location = _find_matching(libdirs, regex_wider_static)
             shared_location = _find_matching(libdirs, regex_wider_shared)

@@ -104,16 +104,16 @@ class RemoteManager:
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
 
-    def get_recipe_metadata(self, recipe_layout, ref, remote, metadata):
+    def get_recipe_metadata(self, ref, remote, metadata, dest_folder):
         """
-        Get only the metadata for a locally existing recipe in Cache
+        Download only the recipe metadata into ``dest_folder``. The caller decides where
+        it lands (a cache layout folder, or an arbitrary user folder).
         """
         assert ref.revision, "get_recipe without revision specified"
         output = ConanOutput(scope=str(ref))
         output.info("Retrieving recipe metadata from remote '%s'" % remote.name)
-        download_export = recipe_layout.download_export()
         try:
-            self._call_remote(remote, "get_recipe", ref, download_export, metadata,
+            self._call_remote(remote, "get_recipe", ref, dest_folder, metadata,
                               only_metadata=True)
         except BaseException:  # So KeyboardInterrupt also cleans things
             output.error(f"Error downloading metadata from remote '{remote.name}'",
@@ -149,19 +149,18 @@ class RemoteManager:
             mkdir(pkg_layout.metadata())
             self._get_package(pkg_layout, pref, remote, output, metadata)
 
-    def get_package_metadata(self, pref, remote, metadata):
+    def get_package_metadata(self, pref, remote, metadata, dest_folder):
         """
-        only download the metadata, not the packge itself
+        Download only the package metadata into ``dest_folder``. The caller decides where
+        it lands (a cache layout folder, or an arbitrary user folder).
         """
         output = ConanOutput(scope=str(pref.ref))
         output.info("Retrieving package metadata %s from remote '%s'"
                     % (pref.package_id, remote.name))
 
         assert pref.revision is not None
-        pkg_layout = self._cache.pkg_layout(pref)
         try:
-            download_pkg_folder = pkg_layout.download_package()
-            self._call_remote(remote, "get_package", pref, download_pkg_folder,
+            self._call_remote(remote, "get_package", pref, dest_folder,
                               metadata, only_metadata=True)
         except BaseException as e:  # So KeyboardInterrupt also cleans things
             output.error(f"Exception while getting package metadata: {str(pref.package_id)}",

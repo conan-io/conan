@@ -268,6 +268,27 @@ def test_multiple_matches_exact_match(prefix, conanfile):
     assert result.type == "static-library"
 
 
+def test_multiple_matches_exact_match_mingw_dll_a(conanfile):
+    """
+    Validate .dll.a extension (MingW) used for static import libraries
+    """
+    folder = temp_folder()
+    save(os.path.join(folder, "libdir", "libmylib.dll.a"), "")
+    save(os.path.join(folder, "libdir", "libmylib_setup.dll.a"), "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.libs = ["mylib"]
+    cppinfo.set_relative_base_folder(folder)
+    folder = folder.replace("\\", "/")
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert "WARN: There were several matches for Lib mylib" not in output
+    assert result.location == f"{folder}/libdir/libmylib.dll.a"
+    assert result.type == "static-library"
+
+
 @pytest.mark.parametrize("lib_name, libs", [
     ("harfbuzz", ["harfbuzz-icu.lib", "harfbuzz.lib"]),
 ])

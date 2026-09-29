@@ -240,10 +240,10 @@ class TestConanDataUpdate:
         c.save({"conanfile.py": conanfile,
                 "conandata.yml": conandata})
         c.run("create .")
-        assert "pkg/0.1: 0.1-commit: 123!!" in c.out
-        assert "pkg/0.1: 0.1-type: git!!" in c.out
-        assert "pkg/0.1: 0.1-url: myurl!!" in c.out
-        assert "pkg/0.1: 0.2-url: new!!" in c.out
+        assert "0.1-commit: 123!!" in c.out
+        assert "0.1-type: git!!" in c.out
+        assert "0.1-url: myurl!!" in c.out
+        assert "0.2-url: new!!" in c.out
 
     def test_conandata_update_error(self):
         """ test the update_conandata() helper fails if used outside export()
