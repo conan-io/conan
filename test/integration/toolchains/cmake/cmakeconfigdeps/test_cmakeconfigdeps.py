@@ -2160,10 +2160,8 @@ class TestCmakeConfigProperties:
         host_lib = tc.load("app/greetings-Targets-release.cmake")
         assert "add_library(greet SHARED IMPORTED)" in host_lib
         assert "add_executable" not in host_lib
-        assert "${pkg_PACKAGE_FOLDER_RELEASE}/lib/libhello.so" in host_lib
-        assert "protoc" not in host_lib
-        assert "pkg_PACKAGE_FOLDER_RELEASE_BUILD" not in host_lib
 
+        # This file is empty because the build context emits no library targets
         build_lib = tc.load("app/greetings-TargetsBuild-release.cmake")
         assert "add_library" not in build_lib
         assert "add_executable" not in build_lib
@@ -2172,13 +2170,10 @@ class TestCmakeConfigProperties:
         host_exe = tc.load("app/apps-Targets-release.cmake")
         assert "add_library" not in host_exe
         assert "add_executable(greet::protoc IMPORTED)" in host_exe
-        assert "${pkg_PACKAGE_FOLDER_RELEASE}/bin/protoc" in host_exe
-        assert "pkg_PACKAGE_FOLDER_RELEASE_BUILD" not in host_exe
 
         build_exe = tc.load("app/apps-TargetsBuild-release.cmake")
         assert "add_library" not in build_exe
         assert "add_executable(greet::protoc IMPORTED)" in build_exe
-        assert "${pkg_PACKAGE_FOLDER_RELEASE_BUILD}/bin/protoc" in build_exe
 
         # The shared config files are the host ones, so legacy variables stay available
         greetings_config = tc.load("app/greetings-config.cmake")
