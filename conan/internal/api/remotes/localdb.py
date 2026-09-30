@@ -56,7 +56,7 @@ class PluginTokenStore:
 
     def get_login(self, remote_url):
         result = self._wrap(self._get, remote_url)
-        if not result:
+        if result is None:
             return None, None, None
         return result
 
