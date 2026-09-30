@@ -2,6 +2,7 @@ import importlib
 import os
 import pkgutil
 import re
+import shlex
 import signal
 import sys
 import textwrap
@@ -17,6 +18,7 @@ from conan.cli.exit_codes import SUCCESS, ERROR_MIGRATION, ERROR_GENERAL, USER_C
     ERROR_SIGTERM, USER_CTRL_BREAK, ERROR_INVALID_CONFIGURATION, ERROR_UNEXPECTED
 from conan import __version__
 from conan.errors import ConanException, ConanInvalidConfiguration, ConanMigrationError
+from conan.internal.util.files import load
 
 _CONAN_INTERNAL_CUSTOM_COMMANDS_PATH = "_CONAN_INTERNAL_CUSTOM_COMMANDS_PATH"
 
@@ -163,6 +165,32 @@ class Cli:
         cli_out_write("")
         cli_out_write('Type "conan <command> -h" for help', Color.BRIGHT_MAGENTA)
 
+    def _resolve_alias(self, command_argument, remainder_args):
+        aliases_file = os.path.join(self._conan_api.home_folder, "command_alias")
+        if not os.path.isfile(aliases_file):
+            return command_argument, remainder_args
+
+        for line in load(aliases_file).splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            name, _, command = line.partition("=")
+            if name.strip() == command_argument:
+                alias_command = command.strip()
+                break
+        else:
+            return command_argument, remainder_args
+
+        try:
+            alias_tokens = shlex.split(alias_command)
+        except ValueError as e:
+            raise ConanException(f"Error parsing alias '{command_argument}' in "
+                                 f"'{aliases_file}': {e}")
+        if not alias_tokens:
+            raise ConanException(f"Alias '{command_argument}' in '{aliases_file}' is empty")
+
+        return alias_tokens[0], alias_tokens[1:] + remainder_args
+
     def run(self, *args):
         """ Entry point for executing commands, dispatcher to class
         methods
@@ -174,6 +202,9 @@ class Cli:
         except IndexError:  # No parameters
             self._output_help_cli()
             return
+        remainder_args = list(args[0][1:])
+        if command_argument not in self._commands:
+            command_argument, remainder_args = self._resolve_alias(command_argument, remainder_args)
         try:
             command = self._commands[command_argument]
         except KeyError as exc:
@@ -191,7 +222,7 @@ class Cli:
             raise ConanException("Unknown command %s" % str(exc))
 
         try:
-            command.run(self._conan_api, args[0][1:])
+            command.run(self._conan_api, remainder_args)
             _warn_frozen_center(self._conan_api)
         except Exception as e:
             # must be a local-import to get updated value
