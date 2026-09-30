@@ -28,7 +28,8 @@ class TestDetectedArchitecture:
         ['aarch64', 'armv8'],
         ['ARM64', 'armv8'],
         ["riscv64", 'riscv64'],
-        ['riscv32', "riscv32"]
+        ['riscv32', "riscv32"],
+        ["loongarch64", "loongarch64"]
     ])
     def test_various(self, mocked_machine, expected_arch):
         with mock.patch("platform.machine", mock.MagicMock(return_value=mocked_machine)):

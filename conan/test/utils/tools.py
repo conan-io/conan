@@ -56,6 +56,16 @@ compiler, msvc_version, exe = detect_msvc_compiler()
 default_msvc_version = msvc_version
 default_vs_ide_version = default_msvc_ide_version(msvc_version)
 
+vs2022_profile = """
+[settings]
+os=Windows
+arch=x86_64
+compiler=msvc
+compiler.version=193
+compiler.runtime=dynamic
+build_type=Release
+"""
+
 default_profiles = {
     "Windows": textwrap.dedent("""\
         [settings]
@@ -810,7 +820,7 @@ class TestClient:
         return build_folder.replace("\\", "/")
 
     def created_package_id(self, ref):
-        package_id = re.search(r"Generating the package {}:(\S+)".format(re.escape(str(ref))),
+        package_id = re.search(r"Package step for {}:(\S+)".format(re.escape(str(ref))),
                                str(self.out)).group(1)
         return package_id
 

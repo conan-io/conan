@@ -1,7 +1,8 @@
 from conan import conan_version
 
 
-def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwargs):
+def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_info=None,
+                  **kwargs):
     """
     (Experimental) Generate cyclone 1.4 SBOM with JSON format
 
@@ -14,6 +15,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
         name (str, optional): Custom name for the metadata field.
         add_build (bool, optional, default=False): Include build dependencies.
         add_tests (bool, optional, default=False): Include test dependencies.
+        extra_info (dict, optional): Extra CycloneDX component fields, keyed by name, name/version, name/version@user/channel, purl or bom-ref.
 
     Returns:
         The generated CycloneDX 1.4 document as a string.
@@ -28,6 +30,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
     import time
     from datetime import datetime, timezone
     graph = conanfile.subgraph
+    extra_info = extra_info or {}
 
     has_special_root_node = not (getattr(graph.root.ref, "name", False)
                                  and getattr(graph.root.ref, "version", False)
@@ -61,7 +64,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
         **({"components": [{
             "author": node.conanfile.author or "Unknown",
             "bom-ref": _calculate_bomref(node),
-            "description": node.conanfile.description,
+            **({"description": node.conanfile.description} if node.conanfile.description else {}),
             **({"externalReferences": [{
                 "type": "website",
                 "url": node.conanfile.homepage
@@ -71,6 +74,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
             "purl": f"pkg:conan/{node.name}@{node.ref.version}",
             "type": "application" if node.conanfile.package_type == "application" else "library",
             "version": str(node.ref.version),
+            **_component_extra_info(extra_info, node),
         } for node in nodes]} if nodes else {}),
         **({"dependencies": dependencies} if dependencies else {}),
         "metadata": {
@@ -97,7 +101,8 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, **kwar
     return sbom_cyclonedx_1_4
 
 
-def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwargs):
+def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_info=None,
+                  **kwargs):
     """
     (Experimental) Generate cyclone 1.6 SBOM with JSON format
 
@@ -110,6 +115,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
         name (str, optional): Custom name for the metadata field.
         add_build (bool, optional, default=False): Include build dependencies.
         add_tests (bool, optional, default=False): Include test dependencies.
+        extra_info (dict, optional): Extra CycloneDX component fields, keyed by name, name/version, name/version@user/channel, purl or bom-ref.
 
     Returns:
         The generated CycloneDX 1.6 document as a string.
@@ -124,6 +130,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
     import time
     from datetime import datetime, timezone
     graph = conanfile.subgraph
+    extra_info = extra_info or {}
 
     has_special_root_node = not (getattr(graph.root.ref, "name", False)
                                  and getattr(graph.root.ref, "version", False)
@@ -158,7 +165,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
         **({"components": [{
             **({"authors": [{"name": node.conanfile.author}]} if node.conanfile.author else {}),
             "bom-ref": _calculate_bomref(node),
-            "description": node.conanfile.description,
+            **({"description": node.conanfile.description} if node.conanfile.description else {}),
             **({"externalReferences": [{
                 "type": "website",
                 "url": node.conanfile.homepage
@@ -168,6 +175,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, **kwar
             "purl": f"pkg:conan/{node.name}@{node.ref.version}",
             "type": "application" if node.conanfile.package_type == "application" else "library",
             "version": str(node.ref.version),
+            **_component_extra_info(extra_info, node),
         } for node in nodes]} if nodes else {}),
         **({"dependencies": dependencies} if dependencies else {}),
         "metadata": {
@@ -218,10 +226,23 @@ def _calculate_licenses(component):
     return result
 
 
+def _match_keys(node):
+    purl = f"pkg:conan/{node.name}@{node.ref.version}"
+    return (node.name, f"{node.name}/{node.ref.version}", str(node.ref),
+            purl, _calculate_bomref(node))
+
+
+def _component_extra_info(extra_info, node):
+    result = {}
+    for key in _match_keys(node):
+        result.update(extra_info.get(key, {}))
+    return result
+
+
 def _calculate_bomref(component):
     user = f"&user={component.ref.user}" if component.ref.user else ""
     channel = f"&channel={component.ref.channel}" if component.ref.channel else ""
-    return f"pkg:conan/{component.name}@{component.ref.version}?rref={component.ref.revision}{user}{channel}"
+    return f"pkg:conan/{component.name}@{component.ref.version}?rrev={component.ref.revision}{user}{channel}"
 
 
 def should_add_node(node, add_build, add_tests):

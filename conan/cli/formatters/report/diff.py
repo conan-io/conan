@@ -27,6 +27,12 @@ def _generate_json(result):
 def _get_filenames(line, src_prefix, dst_prefix):
     """
     Extracts the source and destination filenames from a diff line.
+
+    Git wraps a path in double quotes (and C-style escapes it) when it contains
+    "unusual" bytes, e.g. non-ASCII characters: `diff --git "a/caf\\303\\251.cmake" "b/..."`.
+    The plain index-based slicing below doesn't know about that quoting, so for a quoted
+    path it ends up one character short of the real boundary, capturing the closing `"`
+    as if it were part of the filename (e.g. trailing `.cmake"` instead of `.cmake`).
     """
     src_index = line.find(src_prefix)
     dst_index = line.find(dst_prefix)
@@ -36,6 +42,11 @@ def _get_filenames(line, src_prefix, dst_prefix):
 
     src_filename = line[src_index + len(src_prefix) - 1:dst_index - 1].strip()
     dst_filename = line[dst_index + len(dst_prefix) - 1:].strip()
+
+    if src_index > 0 and line[src_index - 1] == '"' and src_filename.endswith('"'):
+        src_filename = src_filename[:-1]
+    if dst_index > 0 and line[dst_index - 1] == '"' and dst_filename.endswith('"'):
+        dst_filename = dst_filename[:-1]
 
     return src_filename, dst_filename
 
@@ -74,7 +85,11 @@ def _render_diff(content, template, template_folder, **kwargs):
             return None
         for line in header_contents:
             if line.startswith("rename to "):
-                return line[len("rename to "):]
+                renamed_to = line[len("rename to "):]
+                # Git wraps the path in quotes when it contains unusual bytes (e.g. non-ASCII)
+                if renamed_to.startswith('"') and renamed_to.endswith('"'):
+                    renamed_to = renamed_to[1:-1]
+                return renamed_to
         return None
 
     per_folder = {"folders": {}, "files": {}}

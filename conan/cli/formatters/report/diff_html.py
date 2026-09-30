@@ -62,11 +62,19 @@ diff_html = r"""
 <html lang="en">
     <head>
         <meta charset="utf-8">
+        <script>
+            // Applied as early as possible (before first paint) to avoid a flash of the wrong theme.
+            (function() {
+                var isDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+            })();
+        </script>
         <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAABCFBMVEUAAAA+uf4Ah/2p3PxyvPqNzPkSmP6b0/qTz/mIyPeGx/eIyPeZ0vonpv1qu/ii2fx1wviGx/cFjP0erf+p3PyAxfeAxPcWof6q3PyHyPeKyfgJi/2HzfxCuv4Lk/6p3Pyd2PyGx/cBh/0cqP+Hx/ep3PyGx/dTrvmp3PyGx/cRm/6p3Pya1vyGx/eJyPcGjf0brf+Y0vqp3PwXov6ExvcMlf6p3Pyi2vwap/+FzP2IyPeHyPcPmf4Jkv4Di/16w/gerf8VoP6Ex/hErftft/o8t/4vrv4Ljv2h2Pwsn/xStvtZuvpZtPpNsPpvwvlVsfl0wPh/xPcdrP8Un/40pfwjnPw8qfuLyvgsmPXHAAAANnRSTlMA/sR/BxT+/v7CpjQr/v729fX06ufn59nZ2c/HxMDAp6Wcj46Eg4B8cG9tW1JRUE1FRTYkHRKiySDqAAAAsklEQVQY003P1RqCQBQE4KNid3d3N+quugrYUub7v4ko8sFczfx3A2o8xZoV9FibSYScPeo/qa4TS9czF3C5f9vtCsrs88Wz+3O0MgGoxxASD1eM8GUv4NQQ0icf4g48kRlCsONoAfPaxkri6cExmLHT9BdWS++FEOZtX8w0uM93gmNG67Cd30zKMMJGgyqUQkaItIHq52wa+PMjUDJtxVXIdLQ343J4d0w0jH8H2YJHbR8fvSVyLKSviQAAAABJRU5ErkJggg==">
         <title>Diff report for {{ old_reference }} - {{ new_reference }}</title>
         <style>
             /* --- Colors --- */
             :root {
+                color-scheme: light;
                 --body-bgColor: #ffffff;
                 --sidebar-bgColor: #f4f6fbcc;
                 --sidebar-borderColor: #d0d7de;
@@ -103,8 +111,49 @@ diff_html = r"""
                 --line-number-added-bgColor: #b6f4bb;
                 --line-number-deleted-bgColor: #ffd6d5;
                 --shadow: 0 2px 8px 0 #0001;
+                --hover-shadow: 0 1px 4px 0 #0001;
+                --empty-result-color: black;
                 --radius: 10px;
                 --transition: 0.15s cubic-bezier(.4,0,.2,1);
+            }
+
+            /* Dark mode palette, activated via the theme switch (see .theme-toggle-container) */
+            html[data-theme="dark"] {
+                color-scheme: dark;
+                --body-bgColor: #0d1117;
+                --sidebar-bgColor: #161b22cc;
+                --sidebar-borderColor: #30363d;
+                --sidebar-contents-bgColor: #161b22;
+                --content-bgColor: #0d1117;
+                --search-area-borderColor: #30363d;
+                --search-field-borderColor: #30363d;
+                --file-list-borderColor: #21262d;
+                --folder-summary-hover-bgColor: #1f2937cc;
+                --folder-ul-hover-borderColor: #6e768166;
+                --sidebar-li-a-hover-bgColor: #21262d;
+                --sidebar-link-color: #c9d1d9;
+                --sidebar-file-new-color: #3fb950;
+                --sidebar-file-old-color: #8b949e;
+                --sidebar-file-deleted-color: #f85149;
+                --diff-content-borderColor: #30363d;
+                --diff-content-bgColor: #0d1117;
+                --diff-container-linked-borderColor: #58a6ff;
+                --diff-summary-borderColor: #30363d;
+                --diff-summary-bgColor: #161b22;
+                --diff-summary-hover-bgColor: #1c2129;
+                --new-lines-count-color: #3fb950;
+                --old-lines-count-color: #8b949e;
+                --context-line-color: #8b949e;
+                --context-chunk-header-bgColor: #0d2538;
+                --added-line-bgColor: #033a16;
+                --added-line-color: #c9d1d9;
+                --deleted-line-bgColor: #67060c;
+                --deleted-line-color: #c9d1d9;
+                --line-number-added-bgColor: #196c2e;
+                --line-number-deleted-bgColor: #8e1519;
+                --shadow: 0 2px 8px 0 #0008;
+                --hover-shadow: 0 1px 4px 0 #0008;
+                --empty-result-color: #c9d1d9;
             }
 
             /* --- Global Styles --- */
@@ -113,6 +162,11 @@ diff_html = r"""
                 font-family: monospace;
                 margin: 0px;
                 background-color: var(--body-bgColor);
+                transition: background-color var(--transition), color var(--transition);
+            }
+
+            html[data-theme="dark"] body {
+                color: var(--sidebar-link-color);
             }
 
             /* --- Main Layout --- */
@@ -160,6 +214,29 @@ diff_html = r"""
                 display: none;
                 position: sticky;
                 top: 10px;
+            }
+
+            .theme-toggle-container {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                z-index: 1000;
+            }
+
+            .theme-toggle-container button {
+                cursor: pointer;
+                border: 1px solid var(--search-field-borderColor);
+                border-radius: var(--radius);
+                background-color: var(--sidebar-contents-bgColor);
+                box-shadow: var(--shadow);
+                padding: 6px 10px;
+                font-size: 1.1em;
+                line-height: 1;
+                transition: background-color var(--transition), box-shadow var(--transition);
+            }
+
+            .theme-toggle-container button:hover {
+                background-color: var(--sidebar-li-a-hover-bgColor);
             }
 
             .search-area {
@@ -297,7 +374,7 @@ diff_html = r"""
                 background-color: var(--sidebar-li-a-hover-bgColor);
                 padding: 5px;
                 color: var(--sidebar-link-hover-color);
-                box-shadow: 0 1px 4px 0 #0001;
+                box-shadow: var(--hover-shadow);
             }
 
             .sidebar li a:visited {
@@ -497,13 +574,35 @@ diff_html = r"""
             #empty_result {
                 justify-content: center;
                 align-items: center;
-                color: black;
+                color: var(--empty-result-color);
                 font-weight: bold;
                 font-size: 4em;
                 text-align: center;
             }
         </style>
         <script>
+
+            function syncThemeToggleUI() {
+                const theme = document.documentElement.getAttribute("data-theme") || "light";
+                const icon = document.getElementById("theme-toggle-icon");
+                const button = document.getElementById("theme-toggle-button");
+                if (icon) {
+                    // Sun / crescent moon, escaped to keep this template ASCII-only: the
+                    // report is written with the locale default encoding, which cannot
+                    // represent them on non-UTF-8 Windows codepages
+                    icon.textContent = theme === "dark" ? "\u2600\uFE0F" : "\uD83C\uDF19";
+                }
+                if (button) {
+                    button.title = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+                }
+            }
+
+            function toggleTheme() {
+                const current = document.documentElement.getAttribute("data-theme") || "light";
+                const next = current === "dark" ? "light" : "dark";
+                document.documentElement.setAttribute("data-theme", next);
+                syncThemeToggleUI();
+            }
 
             const data = {{ content | tojson | safe }};
 
@@ -749,6 +848,7 @@ diff_html = r"""
             const observer = new IntersectionObserver(intersectionCallback, options);
 
             document.addEventListener("DOMContentLoaded", (e) => {
+                syncThemeToggleUI();
                 setDataIsLinked(null);
                 document.querySelectorAll('.diff-container').forEach((section) => {
                     observer.observe(section);
@@ -950,6 +1050,11 @@ diff_html = r"""
         </script>
     </head>
     <body>
+        <div class="theme-toggle-container">
+            <button id="theme-toggle-button" onclick="toggleTheme()" title="Toggle dark mode">
+                <span id="theme-toggle-icon" aria-hidden="true">&#x1F319;</span>
+            </button>
+        </div>
         <div class='container'>
             <div class='sidebar'>
                 <div id="sidebar-contents">

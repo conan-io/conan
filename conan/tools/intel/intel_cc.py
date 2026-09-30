@@ -175,16 +175,36 @@ def intel_cc_compilers(conanfile):
     """
     if conanfile.settings.get_safe("compiler") != "intel-cc":
         return None
+
+    # CC/CXX explicitly set in the build environment ([buildenv]) take
+    # precedence over the hard-coded intel-cc defaults
+    build_env = conanfile.buildenv.vars(conanfile, scope="build")
+    if build_env.get("CC") or build_env.get("CXX"):
+        return None
+
     mode = conanfile.settings.get_safe("compiler.mode")
     if mode == "classic":
+        # The Intel C++ Compiler Classic (icc/icpc/icl) was removed from Intel oneAPI 2024.0
+        version = conanfile.settings.get_safe("compiler.version")
+        if version is not None and int(version.split(".")[0]) >= 2024:
+            raise ConanException(
+                "The Intel C++ Compiler Classic (compiler.mode=classic) was removed in Intel "
+                f"oneAPI 2024.0, it is not available for compiler.version={version}. Use "
+                "compiler.mode=icx (or compiler.mode=dpcpp) instead.")
+        if conanfile.settings.get_safe("os") == "Windows":
+            # On Windows the Intel C++ Compiler Classic driver is icl (icl.exe) for both C
+            # and C++; icc/icpc only exist on Linux/macOS.
+            return {"c": "icl", "cpp": "icl"}
         return {"c": "icc", "cpp": "icpc"}
     elif mode == "dpcpp":
         return {"c": "icx", "cpp": "dpcpp"}
     elif mode == "icx":
         if conanfile.settings.get_safe("os") == "Windows":
-            # On Windows, the Intel oneAPI DPC++/C++ Compiler (icx) is invoked through the icx-cl  to ensure
-            # compatibility with the Microsoft Visual Studio environment.
-            return {"c": "icx-cl", "cpp": "icx-cl"}
+            # On Windows use the icx (icx.exe) driver, which is available across oneAPI
+            # versions; the icx-cl (MSVC-style) driver does not exist in older versions.
+            # Select icx-cl explicitly via tools.build:compiler_executables or [buildenv]
+            # if the cl-compatible driver is required.
+            return {"c": "icx", "cpp": "icx"}
         return {"c": "icx", "cpp": "icpx"}
     else:
         return None

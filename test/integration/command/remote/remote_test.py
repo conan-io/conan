@@ -438,6 +438,49 @@ def test_remote_allowed_packages_new():
     assert remotes["remotes"][0]["allowed_packages"] == ["liba/*"]
 
 
+def test_remote_force_auth_new():
+    """Test that --force-auth can be defined in the command line when adding
+    a new remote, and it is saved in the remotes.json file"""
+    tc = TestClient(light=True)
+    tc.run("remote add foo https://foo --force-auth")
+    remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
+    assert remotes["remotes"][0]["force_auth"] is True
+    tc.run("remote list")
+    assert "Forced authentication" in tc.out
+
+
+def test_remote_force_auth_default():
+    """By default, force_auth is False and not stored in remotes.json"""
+    tc = TestClient(light=True)
+    tc.run("remote add foo https://foo")
+    remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
+    assert "force_auth" not in remotes["remotes"][0]
+    tc.run("remote list")
+    assert "Forced authentication" not in tc.out
+
+
+def test_remote_force_auth_update():
+    """Test that an existing remote can be switched to need authentication, and back,
+    via 'conan remote update'"""
+    tc = TestClient(light=True)
+    tc.run("remote add foo https://foo")
+    tc.run("remote update foo --force-auth")
+    remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
+    assert remotes["remotes"][0]["force_auth"] is True
+
+    tc.run("remote update foo --force-auth=False")
+    remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
+    assert "force_auth" not in remotes["remotes"][0]
+
+
+def test_remote_force_auth_json():
+    tc = TestClient(light=True)
+    tc.run("remote add foo https://foo --force-auth")
+    tc.run("remote list -f=json")
+    data = json.loads(tc.stdout)
+    assert data[0]["force_auth"] is True
+
+
 def test_remote_allowed_negation():
     tc = TestClient(light=True, default_server_user=True)
     tc.save({"conanfile.py": GenConanfile()})

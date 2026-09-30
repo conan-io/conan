@@ -72,7 +72,7 @@ class Migrator:
         try:
             tmp = load(self.file_version_path)
             old_version = Version(tmp)
-        except Exception:
+        except Exception:  # noqa, won't ever fail
             old_version = None
         return old_version
 
@@ -132,6 +132,13 @@ class ClientMigrator(Migrator):
         from conan.internal.api.profile.profile_loader import migrate_profile_plugin
         migrate_profile_plugin(self.cache_folder)
 
+        # Strip legacy Vigenere cypher from audit tokens
+        if old_version is not None and old_version < "2.32":
+            from conan.api.subapi.audit import migrate_audit_providers
+            try:
+                migrate_audit_providers(self.cache_folder)
+            except:  # noqa, just make sure this doesn't crash for some reason
+                pass
         # let the back migration files be stored
         # if there was not a previous install (old_version==None)
         if old_version is None or old_version < "2.4":

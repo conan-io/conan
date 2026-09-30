@@ -20,10 +20,10 @@ def test_cascade():
 
     def _assert_built(refs):
         for ref in refs:
-            assert "{}: Copying sources to build folder".format(ref) in c.out
+            assert f"Building from source {ref}" in c.out
         for ref in ["liba/1.0", "libb/1.0", "libc/1.0", "libd/1.0", "libe/1.0", "libf/1.0"]:
             if ref not in refs:
-                assert "{}: Copying sources to build folder".format(ref) not in c.out
+                assert f"Building from source {ref}" not in c.out
 
     # Building A everything is built
     c.run("install app --build=liba* --build cascade")

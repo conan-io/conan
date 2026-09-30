@@ -171,11 +171,7 @@ def test_components_system_libs():
             'requirement_requirement_component_DEPS_TARGET') in t.out
     assert ('component deps: $<$<CONFIG:Release>:>;$<$<CONFIG:Release>:'
             'system_lib_component>;') in t.out
-    assert ('component options: '
-            '$<$<CONFIG:Release>:'
-            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;'
-            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;'
-            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>') in t.out
+    assert 'component options: $<$<CONFIG:Release>:>' in t.out
     # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
     #       <CONFIG:Debug>
 
@@ -227,8 +223,6 @@ def test_components_exelinkflags():
     t.run("create . --build missing -s build_type=Release")
     assert ('component options: '
             '$<$<CONFIG:Release>:'
-            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:>;'
-            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:>;'
             '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-Wl,-link1;-Wl,-link2>>') in t.out
     # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
     #       <CONFIG:Debug>
@@ -280,10 +274,10 @@ def test_components_sharedlinkflags():
     t.save({"conanfile.py": conanfile, "CMakeLists.txt": cmakelists})
     t.run("create . --build missing -s build_type=Release")
     assert ('component options: '
-            '$<$<CONFIG:Release>:'
-            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:-Wl,-link1;-Wl,-link2>;'
-            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:-Wl,-link1;-Wl,-link2>;'
-            '$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:>>') in t.out
+            '$<$<CONFIG:Release>:$<$<OR:'
+               '$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>,'
+               '$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>'
+            '>:-Wl,-link1;-Wl,-link2>>') in t.out
     # NOTE: If there is no "conan install -s build_type=Debug", the properties won't contain the
     #       <CONFIG:Debug>
 

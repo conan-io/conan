@@ -1266,3 +1266,194 @@ class TestNoSoname:
         c.run("install --requires=dep/0.1 -g CMakeConfigDeps")
         cmake = c.load("dep-Targets-release.cmake")
         assert "IMPORTED_NO_SONAME" not in cmake
+
+
+def test_find_mode_none():
+    tc = TestClient()
+
+    dep = textwrap.dedent("""
+    from conan import ConanFile
+    class Dep(ConanFile):
+        name = "dep"
+        version = "0.1"
+        settings = "os", "arch", "compiler", "build_type"
+
+        def package_info(self):
+            self.cpp_info.set_property("cmake_find_mode", "none")
+    """)
+
+    a = textwrap.dedent("""
+    from conan import ConanFile
+    class A(ConanFile):
+        name = "liba"
+        version = "0.1"
+        settings = "os", "arch", "compiler", "build_type"
+        generators = "CMakeConfigDeps", "CMakeToolchain"
+        requires = "dep/0.1"
+    """)
+
+    consumer = textwrap.dedent("""
+    from conan import ConanFile
+    class Consumer(ConanFile):
+        name = "consumer"
+        version = "0.1"
+        requires = "liba/0.1"
+        settings = "os", "arch", "compiler", "build_type"
+        generators = "CMakeConfigDeps", "CMakeToolchain"
+
+    """)
+
+    tc.save({"dep/conanfile.py": dep,
+             "liba/conanfile.py": a,
+             "conanfile.py": consumer})
+
+    tc.run("create dep")
+    tc.run("create liba")
+    tc.run("install .")
+    target_dependency = tc.load("liba-Targets-release.cmake")
+    # The dependency should not have CONFIG requirement
+    assert "find_dependency(dep REQUIRED )" in target_dependency
+
+
+def test_source_package_only_if_direct():
+    """ cpp_info.sources should only be propagated as INTERFACE_SOURCES to consumers that have
+    a direct dependency on the package declaring them, not to transitive consumers
+    """
+    c = TestClient()
+    hello = textwrap.dedent("""
+        from conan import ConanFile
+        class Hello(ConanFile):
+            name = "hello"
+            version = "0.1"
+            settings = "build_type"
+            def package_info(self):
+                self.cpp_info.includedirs = []
+                self.cpp_info.sources = ["src/hello.cpp"]
+        """)
+    c.save({"hello/conanfile.py": hello,
+            "middle/conanfile.py": GenConanfile("middle", "0.1")
+                .with_requirement("hello/0.1")
+                .with_settings("build_type"),
+            "consumer/conanfile.py": GenConanfile("consumer", "0.1")
+                .with_requirement("middle/0.1")
+                .with_settings("build_type")
+            })
+    c.run("create hello")
+    c.run("create middle")
+
+    # "hello" is a direct dependency of "middle" => sources are propagated
+    c.run("install middle -g CMakeConfigDeps")
+    direct_targets = c.load("middle/hello-Targets-release.cmake")
+    assert "INTERFACE_SOURCES" in direct_targets
+
+    # "hello" is a transitive dependency of "consumer" (via "middle") => sources are not propagated
+    c.run("install consumer -g CMakeConfigDeps")
+    transitive_targets = c.load("consumer/hello-Targets-release.cmake")
+    assert "INTERFACE_SOURCES" not in transitive_targets
+
+def test_cmakeconfigdeps_messages_honor_find_quietly():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+
+            def package(self):
+                save(self, os.path.join(self.package_folder, "lib", "lib1.a"), "")
+
+            def package_info(self):
+                self.cpp_info.libs = ["lib1"]
+                self.cpp_info.set_property("cmake_components", ["comp1"])
+        """)
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+    c.run("install --requires=pkg/0.1 -g CMakeConfigDeps")
+
+    quiet_guard = "if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)"
+
+    config = c.load("pkg-config.cmake")
+    assert "pkg_NOT_FOUND_MESSAGE" in config
+    assert "Conan: Error: 'pkg' required COMPONENT '${comp}' not found" in config
+    assert "message(STATUS" not in config
+
+    targets = c.load("pkgTargets.cmake")
+    assert quiet_guard in targets
+    assert 'message(STATUS "Conan: Configuring Targets for pkg/0.1")' in targets
+
+    target_config = c.load("pkg-Targets-release.cmake")
+    assert quiet_guard in target_config
+    assert 'message(STATUS "Conan: Target declared imported' in target_config
+
+
+def test_cpp_info_component_objects():
+    c = TestClient()
+    conan_hello = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "arch", "build_type"
+            def package_info(self):
+                self.cpp_info.components["say"].objects = ["mycomponent.o"]
+            """)
+
+    c.save({"conanfile.py": conan_hello})
+    c.run("create . --name=hello --version=1.0")
+    c.run("install --requires=hello/1.0@ -g CMakeConfigDeps")
+    targets = c.load("hello-Targets-release.cmake")
+    # The objects live in their own IMPORTED OBJECT library
+    assert "add_library(hello::say_OBJECTS OBJECT IMPORTED)" in targets
+    assert "set_property(TARGET hello::say_OBJECTS APPEND PROPERTY IMPORTED_CONFIGURATIONS " \
+           "RELEASE)" in targets
+    assert "set_target_properties(hello::say_OBJECTS PROPERTIES IMPORTED_OBJECTS_RELEASE\n" \
+           '                      "${hello_PACKAGE_FOLDER_RELEASE}/mycomponent.o")' in targets
+    # And the component target forwards them, so they are transitive too
+    assert "set_property(TARGET hello::say APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+           '             "$<$<CONFIG:RELEASE>:$<TARGET_OBJECTS:hello::say_OBJECTS>>")' in targets
+    assert "set_property(TARGET hello::hello APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+           '             "$<$<CONFIG:RELEASE>:hello::say>")' in targets
+
+
+def test_cpp_info_objects():
+    """ the same, but without components, the objects belong to the root target """
+    c = TestClient()
+    conan_hello = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "arch", "build_type"
+            def package_info(self):
+                self.cpp_info.objects = ["mypkg.o"]
+            """)
+
+    c.save({"conanfile.py": conan_hello})
+    c.run("create . --name=hello --version=1.0")
+    c.run("install --requires=hello/1.0@ -g CMakeConfigDeps")
+    targets = c.load("hello-Targets-release.cmake")
+    assert "add_library(hello::hello_OBJECTS OBJECT IMPORTED)" in targets
+    assert "set_target_properties(hello::hello_OBJECTS PROPERTIES IMPORTED_OBJECTS_RELEASE\n" \
+           '                      "${hello_PACKAGE_FOLDER_RELEASE}/mypkg.o")' in targets
+    assert "set_property(TARGET hello::hello APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+           '             "$<$<CONFIG:RELEASE>:$<TARGET_OBJECTS:hello::hello_OBJECTS>>")' in targets
+
+
+def test_cpp_info_objects_cmake_target_name():
+    """ the auxiliary OBJECT target is derived from the final CMake target name """
+    c = TestClient()
+    conan_hello = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            settings = "os", "arch", "build_type"
+            def package_info(self):
+                self.cpp_info.components["say"].set_property("cmake_target_name", "mine::greet")
+                self.cpp_info.components["say"].objects = ["mycomponent.o"]
+            """)
+
+    c.save({"conanfile.py": conan_hello})
+    c.run("create . --name=hello --version=1.0")
+    c.run("install --requires=hello/1.0@ -g CMakeConfigDeps")
+    targets = c.load("hello-Targets-release.cmake")
+    assert "add_library(mine::greet_OBJECTS OBJECT IMPORTED)" in targets
+    assert "set_property(TARGET mine::greet APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
+           '             "$<$<CONFIG:RELEASE>:$<TARGET_OBJECTS:mine::greet_OBJECTS>>")' in targets

@@ -1223,6 +1223,92 @@ def test_set_cmake_lang_compilers_and_launchers():
     assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain
 
 
+@pytest.mark.parametrize("os_,mode,expected_c,expected_cxx", [
+    ("Windows", "classic", "icl", "icl"),
+    ("Linux", "classic", "icc", "icpc"),
+    ("Windows", "icx", "icx", "icx"),
+    ("Linux", "icx", "icx", "icpx"),
+])
+def test_cmaketoolchain_intel_cc_default_compilers(os_, mode, expected_c, expected_cxx):
+    # Regression: intel-cc on Windows must default to icl (classic) / icx (icx), not
+    # icc/icpc or icx-cl (which do not exist there for all versions)
+    # https://github.com/conan-io/conan/issues/20232
+    profile = textwrap.dedent(f"""
+        [settings]
+        os={os_}
+        arch=x86_64
+        compiler=intel-cc
+        compiler.version=2022.2
+        compiler.mode={mode}
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja
+        tools.intel:installation_path=
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert f'set(CMAKE_C_COMPILER "{expected_c}")' in toolchain
+    assert f'set(CMAKE_CXX_COMPILER "{expected_cxx}")' in toolchain
+
+
+@pytest.mark.parametrize("os_", ["Windows", "Linux"])
+def test_cmaketoolchain_intel_cc_buildenv_overrides_default(os_):
+    # CC/CXX defined in [buildenv] take precedence over the hard-coded intel-cc defaults
+    # https://github.com/conan-io/conan/issues/20232
+    profile = textwrap.dedent(f"""
+        [settings]
+        os={os_}
+        arch=x86_64
+        compiler=intel-cc
+        compiler.version=2022.2
+        compiler.mode=icx
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja
+        tools.intel:installation_path=
+        [buildenv]
+        CC=icx.exe
+        CXX=icx.exe
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_C_COMPILER ' not in toolchain
+    assert 'set(CMAKE_CXX_COMPILER ' not in toolchain
+
+
+@pytest.mark.parametrize("os_", ["Windows", "Linux"])
+def test_cmaketoolchain_intel_cc_classic_removed_since_2024(os_):
+    # classic mode was removed from Intel oneAPI 2024.0, installing must raise
+    # https://github.com/conan-io/conan/issues/20232
+    profile = textwrap.dedent(f"""
+        [settings]
+        os={os_}
+        arch=x86_64
+        compiler=intel-cc
+        compiler.version=2024.0
+        compiler.mode=classic
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja
+        tools.intel:installation_path=
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile", assert_error=True)
+    assert "compiler.mode=classic" in client.out
+    assert "removed in Intel oneAPI 2024.0" in client.out
+
+
 def test_cmake_layout_toolchain_folder():
     """ in single-config generators, the toolchain is a different file per configuration
     https://github.com/conan-io/conan/issues/12827
@@ -1736,6 +1822,43 @@ def test_customize_cmakeuserpresets():
     assert not os.path.exists(os.path.join(c.current_folder, "CMakeUserPresets.json"))
 
 
+def test_preset_file_mode_hint():
+    # https://github.com/conan-io/conan/issues/20153
+    # When user_presets_path has directory components, hint shows cmake --preset-file (CMake 4.4+)
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "compiler", "build_type"),
+            "CMakeLists.txt": ""})
+
+    # A plain filename: regular --preset hint
+    c.run("install . -g CMakeToolchain -of=build "
+          "-c tools.cmake.cmaketoolchain:user_presets=my.json")
+    assert "cmake --preset conan-" in c.out
+    assert "--preset-file" not in c.out
+
+    # A relative filepath: --preset-file hint
+    c.run("install . -g CMakeToolchain -of=build "
+          "-c tools.cmake.cmaketoolchain:user_presets=presets/my.json")
+    assert "cmake --preset-file presets/my.json --preset conan-" in c.out
+    assert "cmake>=4.4" in c.out
+    assert os.path.exists(os.path.join(c.current_folder, "presets", "my.json"))
+
+    # Also works via user_presets_path attribute
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.cmake import CMakeToolchain
+        class Pkg(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
+            def generate(self):
+                tc = CMakeToolchain(self)
+                tc.user_presets_path = "custom/ConanPresets.json"
+                tc.generate()
+    """)
+    c.save({"conanfile.py": conanfile})
+    c.run("install . -of=build")
+    assert "cmake --preset-file custom/ConanPresets.json --preset conan-" in c.out
+    assert os.path.exists(os.path.join(c.current_folder, "custom", "ConanPresets.json"))
+
+
 def test_output_dirs_gnudirs_local_default():
     # https://github.com/conan-io/conan/issues/14733
     c = TestClient()
@@ -1980,3 +2103,54 @@ def test_thread_flags(threads, flags):
     assert f'string(APPEND CONAN_C_FLAGS " {flags}")' in toolchain
     assert f'string(APPEND CONAN_SHARED_LINKER_FLAGS " {flags}")' in toolchain
     assert f'string(APPEND CONAN_EXE_LINKER_FLAGS " {flags}")' in toolchain
+
+
+@pytest.mark.parametrize("os_settings, expected", [
+    ("-s os=Macos -s os.version=26.0", "macosx26.0"),
+    ("-s os=iOS -s os.sdk=iphoneos -s os.version=26.0", "ios26.0"),
+    ("-s os=iOS -s os.sdk=iphonesimulator -s os.version=26.0", "ios26.0-simulator"),
+    ("-s os=watchOS -s os.sdk=watchos -s os.version=26.0", "watchos26.0"),
+    ("-s os=watchOS -s os.sdk=watchsimulator -s os.version=26.0", "watchos26.0-simulator"),
+    ("-s os=tvOS -s os.sdk=appletvos -s os.version=26.0", "tvos26.0"),
+    ("-s os=tvOS -s os.sdk=appletvsimulator -s os.version=26.0", "tvos26.0-simulator"),
+    ("-s os=visionOS -s os.sdk=xros -s os.version=26.0", "xros26.0"),
+    ("-s os=visionOS -s os.sdk=xrsimulator -s os.version=26.0", "xros26.0-simulator"),
+    # Catalyst takes its version from os.subsystem.ios_version, not from os.version
+    ("-s os=Macos -s os.version=26.0 -s os.subsystem=catalyst -s os.subsystem.ios_version=16.0",
+     "ios16.0-macabi"),
+])
+def test_swift_compiler_target(os_settings, expected):
+    """ swiftc does not derive its target from the SDK, CMakeToolchain has to set it
+        https://github.com/conan-io/conan/issues/18466
+    """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "build_type")})
+    client.run(f"install . {os_settings} -s arch=armv8 -s build_type=Release -g CMakeToolchain")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert f'set(CMAKE_Swift_COMPILER_TARGET "arm64-apple-{expected}")' in toolchain
+
+
+@pytest.mark.parametrize("os_settings", [
+    "-s os=Linux -s arch=x86_64",  # not an Apple OS
+    "-s os=Macos -s arch=armv8",  # no os.version to build the triple with
+    '-s os=Macos -s os.version=26.0 -s arch="armv8|x86_64"',  # universal binary
+])
+def test_swift_compiler_target_not_set(os_settings):
+    """ when no single triple represents the settings, the block stays silent """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "build_type")})
+    client.run(f"install . {os_settings} -s build_type=Release -g CMakeToolchain")
+    assert "CMAKE_Swift_COMPILER_TARGET" not in client.load("conan_toolchain.cmake")
+
+
+def test_swift_compiler_target_user_override():
+    """ it is only a default, extra_variables is rendered later so the user value wins """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "build_type")})
+    client.run('install . -s os=iOS -s os.sdk=iphoneos -s os.version=26.0 -s arch=armv8 '
+               '-s build_type=Release -g CMakeToolchain '
+               '-c tools.cmake.cmaketoolchain:extra_variables='
+               '\'{"CMAKE_Swift_COMPILER_TARGET": "arm64-apple-ios99.0"}\'')
+    toolchain = client.load("conan_toolchain.cmake")
+    assert "if(NOT DEFINED CMAKE_Swift_COMPILER_TARGET)" in toolchain
+    assert toolchain.index('"arm64-apple-ios26.0"') < toolchain.index('"arm64-apple-ios99.0"')
