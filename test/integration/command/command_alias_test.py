@@ -27,13 +27,41 @@ class TestCommandAlias:
         c.run("rem list")
         assert "myremote" in c.out
 
+    def test_alias_without_optional_arg_uses_command_default(self):
+        # The "--format" argument of "remote list" is optional, defaulting to "text"
+        c = TestClient()
+        c.run("remote add myremote https://fake.example.com")
+        c.save_home({"command_alias": "rl = remote list\n"})
+        c.run("rl")
+        assert "myremote: https://fake.example.com" in c.out
+
     def test_alias_appends_user_args_after_alias_args(self):
+        # The optional "--format" argument, not present in the alias itself, can still be
+        # supplied by the user when invoking the alias
         c = TestClient()
         c.run("remote add myremote https://fake.example.com")
         c.save_home({"command_alias": "myremotes = remote list\n"})
         c.run("myremotes --format=json")
         info = json.loads(c.stdout)
         assert info[0]["name"] == "myremote"
+
+    def test_alias_definition_can_bake_in_an_optional_arg(self):
+        # The optional "--force" argument can be baked into the alias itself, so the user does
+        # not need to type it every time
+        c = TestClient()
+        c.run("remote add myremote https://fake.example.com")
+        c.save_home({"command_alias": "radd = remote add --force\n"})
+        c.run("radd myremote https://updated.example.com")
+        c.run("remote list")
+        assert "myremote: https://updated.example.com" in c.out
+
+    def test_alias_definition_with_optional_arg_containing_equals_sign(self):
+        # The alias line is only split on its *first* "=" (name = command), so an optional
+        # argument that itself contains "=", like "-cc core:non_interactive=True", is preserved
+        c = TestClient()
+        c.save_home({"command_alias": "home2 = config home -cc core:non_interactive=True\n"})
+        c.run("home2")
+        assert c.cache_folder in c.out
 
     def test_alias_does_not_shadow_real_command(self):
         # A real command always takes precedence over any alias with the same name
