@@ -291,7 +291,16 @@ class BinaryInstaller:
         for level in install_order:
             for node in level:
                 for package in node.packages.values():
-                    if package.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                    if package.binary == BINARY_UPDATE:
+                        if self._cache.exists_prev(package.pref):
+                            # The server gave us a newer prev, but we already have it in cache
+                            # so we don't need to download it. Update its timestamp to the server's
+                            # InstallNode doesn't have timestamp
+                            pref_with_timestamp = package.nodes[0].pref
+                            self._cache.update_package_timestamp(pref_with_timestamp)
+                        else:
+                            downloads.append(package)
+                    elif package.binary == BINARY_DOWNLOAD:
                         downloads.append(package)
         if not downloads:
             return

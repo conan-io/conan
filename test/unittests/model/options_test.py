@@ -1,9 +1,10 @@
 import textwrap
+from types import SimpleNamespace
 
 import pytest
 
 from conan.errors import ConanException
-from conan.internal.model.options import Options
+from conan.internal.model.options import Options, compute_state_options
 from conan.api.model import RecipeReference
 
 
@@ -170,11 +171,79 @@ class TestOptionsPropagate:
             sut.static = True
         assert "Incorrect attempt to modify option 'static'" in str(e.value)
 
-        self_options, up_options, up_private = sut.get_upstream_options(down_options, ref, False)
+        up_options, up_private = sut.get_upstream_options(down_options, ref, False)
         assert up_options.dumps() == "zlib/2.0:other=1"
-        # zlib is not in self_options if not propagated to a dependency
-        assert self_options.dumps() == "boost/1.0:static=False"
         assert up_private.dumps() == ""
+
+
+def _conanfile(options, values, default_options):
+    """ a package whose final options are "values", declaring "default_options" in its recipe
+    """
+    return SimpleNamespace(options=Options(options, values), default_options=default_options)
+
+
+class TestOptionsDeviation:
+    def test_no_deviation(self):
+        # The actual values match exactly what "default_options" alone would produce
+        sut = _conanfile({"shared": [True, False], "fpic": [True, False]},
+                         {"shared": False, "fpic": True}, {"shared": False, "fpic": True})
+        assert compute_state_options(sut)[0] == {}
+
+    def test_deviation_from_default(self):
+        # "shared" ended up True, but the recipe's own default says False: some consumer
+        # forced it
+        sut = _conanfile({"shared": [True, False], "fpic": [True, False]},
+                         {"shared": True, "fpic": True}, {"shared": False, "fpic": True})
+        assert compute_state_options(sut)[0] == {"shared": "True"}
+
+    def test_multiple_deviations(self):
+        sut = _conanfile({"shared": [True, False], "fpic": [True, False], "myopt": [1, 2, 3]},
+                         {"shared": True, "fpic": False, "myopt": 2},
+                         {"shared": False, "fpic": False, "myopt": 1})
+        assert compute_state_options(sut)[0] == {"shared": "True", "myopt": "2"}
+
+    def test_no_default_options_at_all(self):
+        # Nothing declared as default: any actual value is a deviation
+        assert compute_state_options(_conanfile({"myopt": [1, 2, 3]}, {"myopt": 2},
+                                                None))[0] == {"myopt": "2"}
+        assert compute_state_options(_conanfile({"myopt": [1, 2, 3]}, {"myopt": 2},
+                                                {}))[0] == {"myopt": "2"}
+
+    def test_removed_option_is_not_a_deviation(self):
+        # Recipes like "auto_shared_fpic" remove "fPIC" from options entirely once
+        # "shared=True" (via configure()'s "self.options.rm_safe('fPIC')"). Once removed,
+        # there simply is no value left to compare or to report, regardless of what its
+        # own default said
+        sut = _conanfile({"shared": [True, False], "fPIC": [True, False]},
+                         {"shared": True, "fPIC": True}, {"shared": False, "fPIC": True})
+        sut.options.rm_safe("fPIC")
+        assert compute_state_options(sut)[0] == {"shared": "True"}
+
+    def test_ignores_dependency_scoped_defaults(self):
+        # A "dep/*:opt"-like pattern in default_options is dependency-scoped: it must not
+        # be mistaken for a self-scoped option, nor affect this computation at all
+        sut = _conanfile({"shared": [True, False]}, {"shared": True},
+                         {"shared": True, "dep/*:opt": "value"})
+        assert compute_state_options(sut)[0] == {}
+
+    def test_default_options_parsing(self):
+        # The self-scoped defaults are parsed in place, it must match how Options() parses
+        # them: skipping None values, stripping spaces and the "important" marker
+        sut = _conanfile({"shared": [True, False], "fpic": [True, False], "myopt": [1, 2]},
+                         {"shared": True, "fpic": False, "myopt": 2},
+                         {" shared! ": " True ", "fpic": None, "dep/*:myopt": 2})
+        # "shared" matches its own default, "fpic" default is None so it is not defined at all,
+        # and the "myopt" default is dependency-scoped, it doesn't apply to this package
+        assert compute_state_options(sut)[0] == {"fpic": "False", "myopt": "2"}
+
+    def test_deps_options(self):
+        # The dependency-scoped values are returned apart, they are what this recipe would
+        # define again by itself for its dependencies, when the graph is expanded again
+        sut = _conanfile({"shared": [True, False]},
+                         {"shared": True, "dep/*:opt": "value", "*:other": "1"}, None)
+        self_options, deps_options = compute_state_options(sut)
+        assert self_options == {"shared": "True"}
+        assert deps_options == {"dep/*": {"opt": "value"}, "*": {"other": "1"}}
 
 
 class TestOptionsNone:

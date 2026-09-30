@@ -57,6 +57,13 @@ class ConanApiAuthManager:
         if method_name == "authenticate":
             return self._authenticate(rest_client, remote, *args, **kwargs)
 
+        if token is None and remote.force_auth:
+            # This remote doesn't allow anonymous access, skip it straight to authentication
+            ConanOutput().info(f"Remote '{remote.name}' requires authentication, "
+                               f"obtaining credentials")
+            self._get_credentials_and_authenticate(rest_client, user, remote)
+            return self.call_rest_api_method(remote, method_name, *args, **kwargs)
+
         try:
             ret = getattr(rest_client, method_name)(*args, **kwargs)
             return ret
@@ -67,8 +74,8 @@ class ConanApiAuthManager:
             # token is None when you change user with user command
             # Anonymous is not enough, ask for a user
             ConanOutput().info(f"Remote '{remote.name}' needs authentication, obtaining credentials")
-            if self._get_credentials_and_authenticate(rest_client, user, remote):
-                return self.call_rest_api_method(remote, method_name, *args, **kwargs)
+            self._get_credentials_and_authenticate(rest_client, user, remote)
+            return self.call_rest_api_method(remote, method_name, *args, **kwargs)
 
     def _get_remote_creds(self):
         if self._remote_creds is None:

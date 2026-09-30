@@ -125,7 +125,7 @@ def write_generators(conanfile, hook_manager, home_folder, envs_generation=None)
         conanfile.output.highlight("Calling generate() method in recipe")
         mkdir(new_gen_folder)
         with chdir(new_gen_folder):
-            with conanfile_exception_formatter(conanfile, "generate"):
+            with conanfile_exception_formatter(conanfile, "generate", ref=old_display):
                 conanfile.generate()
 
     if envs_generation is None:

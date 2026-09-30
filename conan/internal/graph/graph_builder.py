@@ -470,8 +470,6 @@ class DepsGraphBuilder:
             else:
                 down_options = Options(options_values=node.conanfile.default_build_options)
 
-        # down_options is the real propagated one, so update consumer self_options for state
-        node.conanfile.self_options.update(down_options)
         return down_options
 
     @staticmethod
