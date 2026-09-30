@@ -39,6 +39,7 @@ class CPSComponentConfiguration:
         self.definitions = {}
         self.requires = []
         self.link_requires = []
+        self.dyld_requires = []
         self.location = None
         self.link_location = None
         self.link_languages = []
@@ -50,6 +51,8 @@ class CPSComponentConfiguration:
             component["requires"] = self.requires
         if self.link_requires:
             component["link_requires"] = self.link_requires
+        if self.dyld_requires:
+            component["dyld_requires"] = self.dyld_requires
         if self.includes:
             component["includes"] = [x.replace("\\", "/") for x in self.includes]
         if self.definitions:
@@ -69,6 +72,7 @@ class CPSComponentConfiguration:
         comp = CPSComponentConfiguration()
         comp.requires = data.get("requires", [])
         comp.link_requires = data.get("link_requires", [])
+        comp.dyld_requires = data.get("dyld_requires", [])
         comp.includes = data.get("includes", [])
         comp.definitions = data.get("definitions", {})
         comp.location = data.get("location")
@@ -82,6 +86,7 @@ class CPSComponentConfiguration:
         self.location = conf.location if conf.location else self.location
         self.link_location = conf.link_location if conf.link_location else self.link_location
         self.link_libraries = conf.link_libraries if conf.link_libraries else self.link_libraries
+        self.dyld_requires = conf.dyld_requires if conf.dyld_requires else self.dyld_requires
 
 
 class CPSComponent:
@@ -311,7 +316,8 @@ class CPS:
             elif comp.location:
                 location = comp.location
                 lib_location(location, cpp_comp)
-            requires = comp.link_requires + comp.requires
+            # TODO: Conan is using requires for everything, this could be an issue later?
+            requires = comp.link_requires + comp.requires + comp.dyld_requires
             for r in requires:
                 cpp_comp.requires.append(r[1:] if r.startswith(":") else r.replace(":", "::"))
             cpp_comp.system_libs = comp.link_libraries
