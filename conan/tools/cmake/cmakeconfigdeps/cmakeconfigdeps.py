@@ -157,11 +157,11 @@ class CMakeConfigDeps:
             for (require, dep) in direct_deps:
                 note = " # Optional. This is a tool-require, can't link its targets" \
                     if require.build else ""
-                print_root_target = []
+                is_root = False
                 for cmake_filename, info in self.get_cmake_filename(dep).items():
                     msg.append(f"    find_package({cmake_filename}){note}")
-                    print_root_target.append(info["is_root"])
-                if not require.build and not dep.cpp_info.exe and any(print_root_target):
+                    is_root = is_root or info["is_root"]
+                if not require.build and not dep.cpp_info.exe and is_root:
                     target_name = self.get_property("cmake_target_name", dep)
                     link_targets.append(target_name or f"{dep.ref.name}::{dep.ref.name}")
             if link_targets:
