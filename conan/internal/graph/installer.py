@@ -431,24 +431,21 @@ class BinaryInstaller:
             node.conanfile.folders.set_base_package(pkg_layout.package())
             ConanOutput().success("Package folder %s" % node.conanfile.package_folder)
 
-            # Bundle-Lockfile
+            # Create or update a lockfile inside the Conan .conan metadata recipe folder
             if node.binary == BINARY_BUILD and self._global_conf.get("core.lockfile:auto",
                                                                      check_type=bool):
                 partial_lockfile = Lockfile(node.subgraph())
                 metadata_folder = node.conanfile.recipe_metadata_folder
-                bundled_lockfile = os.path.join(metadata_folder, CONAN_METADATA_SUBFOLDER,
-                                                "conan.lock")
-                if os.path.isfile(bundled_lockfile):
+                lockfile = os.path.join(metadata_folder, CONAN_METADATA_SUBFOLDER, "conan.lock")
+                if os.path.isfile(lockfile):
                     node.conanfile.output.info("Updating existing metadata lockfile with current "
                                                "graph information")
-                    exported_lockfile = Lockfile.load(bundled_lockfile)
-                    exported_lockfile.partial = True
+                    exported_lockfile = Lockfile.load(lockfile)
                     exported_lockfile.merge(partial_lockfile)
                 else:
                     exported_lockfile = partial_lockfile
-                node.conanfile.output.info(
-                    f"Storing current lockfile in metadata: {bundled_lockfile}")
-                exported_lockfile.save(bundled_lockfile)
+                node.conanfile.output.info(f"Storing current lockfile in metadata: {lockfile}")
+                exported_lockfile.save(lockfile)
 
     def _call_package_info(self, conanfile, package_folder, is_editable):
 

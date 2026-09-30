@@ -2,7 +2,7 @@ from conan import conan_version
 
 
 def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_info=None,
-                  cpes=None, **kwargs):
+                  **kwargs):
     """
     (Experimental) Generate cyclone 1.4 SBOM with JSON format
 
@@ -15,9 +15,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
         name (str, optional): Custom name for the metadata field.
         add_build (bool, optional, default=False): Include build dependencies.
         add_tests (bool, optional, default=False): Include test dependencies.
-        extra_info (dict, optional): Extra CycloneDX component fields, keyed by name,
-            name/version, name/version@user/channel, purl or bom-ref.
-        cpes (dict, optional): Full CPE 2.3 strings, keyed like ``extra_info``.
+        extra_info (dict, optional): Extra CycloneDX component fields, keyed by name, name/version, name/version@user/channel, purl or bom-ref.
 
     Returns:
         The generated CycloneDX 1.4 document as a string.
@@ -33,7 +31,6 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
     from datetime import datetime, timezone
     graph = conanfile.subgraph
     extra_info = extra_info or {}
-    cpes = cpes or {}
 
     has_special_root_node = not (getattr(graph.root.ref, "name", False)
                                  and getattr(graph.root.ref, "version", False)
@@ -75,7 +72,6 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
             **({"licenses": _calculate_licenses(node)} if node.conanfile.license else {}),
             "name": node.name,
             "purl": f"pkg:conan/{node.name}@{node.ref.version}",
-            "cpe": _calculate_cpe(node, cpes),
             "type": "application" if node.conanfile.package_type == "application" else "library",
             "version": str(node.ref.version),
             **_component_extra_info(extra_info, node),
@@ -106,7 +102,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
 
 
 def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_info=None,
-                  cpes=None, **kwargs):
+                  **kwargs):
     """
     (Experimental) Generate cyclone 1.6 SBOM with JSON format
 
@@ -119,9 +115,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
         name (str, optional): Custom name for the metadata field.
         add_build (bool, optional, default=False): Include build dependencies.
         add_tests (bool, optional, default=False): Include test dependencies.
-        extra_info (dict, optional): Extra CycloneDX component fields, keyed by name,
-            name/version, name/version@user/channel, purl or bom-ref.
-        cpes (dict, optional): Full CPE 2.3 strings, keyed like ``extra_info``.
+        extra_info (dict, optional): Extra CycloneDX component fields, keyed by name, name/version, name/version@user/channel, purl or bom-ref.
 
     Returns:
         The generated CycloneDX 1.6 document as a string.
@@ -137,7 +131,6 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
     from datetime import datetime, timezone
     graph = conanfile.subgraph
     extra_info = extra_info or {}
-    cpes = cpes or {}
 
     has_special_root_node = not (getattr(graph.root.ref, "name", False)
                                  and getattr(graph.root.ref, "version", False)
@@ -180,7 +173,6 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
             **({"licenses": _calculate_licenses(node)} if node.conanfile.license else {}),
             "name": node.name,
             "purl": f"pkg:conan/{node.name}@{node.ref.version}",
-            "cpe": _calculate_cpe(node, cpes),
             "type": "application" if node.conanfile.package_type == "application" else "library",
             "version": str(node.ref.version),
             **_component_extra_info(extra_info, node),
@@ -238,22 +230,6 @@ def _match_keys(node):
     purl = f"pkg:conan/{node.name}@{node.ref.version}"
     return (node.name, f"{node.name}/{node.ref.version}", str(node.ref),
             purl, _calculate_bomref(node))
-
-
-def _calculate_cpe(node, cpes):
-    cpe = None
-    for key in _match_keys(node):
-        if key in cpes:
-            cpe = cpes[key]
-    version = str(node.ref.version)
-    if isinstance(cpe, str) and cpe:
-        parts = cpe.split(":")
-        if len(parts) > 5 and parts[5] == "*":
-            parts[5] = version
-            return ":".join(parts)
-        return cpe
-    # CPE 2.3: vendor unknown -> "*", product and version from the Conan ref
-    return f"cpe:2.3:a:*:{node.name}:{version}:*:*:*:*:*:*:*"
 
 
 def _component_extra_info(extra_info, node):

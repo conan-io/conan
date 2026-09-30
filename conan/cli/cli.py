@@ -303,10 +303,10 @@ def main(args):
 
 def _warn_python_version():
     version = sys.version_info
-    if version.minor == 7:
+    if version.minor == 8:
         ConanOutput().writeln("")
         ConanOutput().warning("*"*80, warn_tag="deprecated")
-        ConanOutput().warning("Python 3.7 is end-of-life since June 2023. "
+        ConanOutput().warning("Python 3.8 is end-of-life since Oct 2024. "
                               "Conan future versions will drop support for it, "
                               "please upgrade Python", warn_tag="deprecated")
         ConanOutput().warning("*" * 80, warn_tag="deprecated")

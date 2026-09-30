@@ -296,19 +296,13 @@ class DepsGraphBuilder:
         layout, recipe_status, remote = result
         conanfile_path = layout.conanfile()
         # Bundle-Lockfile:  check if the recipe exported a "conan.lock", and if it is there, use it
-        if self._auto_lock and (graph_lock is None or graph_lock.export):
+        if self._auto_lock and graph_lock is None:
             exported_lock = os.path.join(layout.metadata(), CONAN_METADATA_SUBFOLDER, "conan.lock")
             if os.path.isfile(exported_lock):
-                exported_lockfile = Lockfile.load(exported_lock)
-                exported_lockfile.partial = True  # to allow consumers to impose their deps
+                graph_lock = Lockfile.load(exported_lock)
+                graph_lock.partial = True  # to allow consumers to impose their deps
                 from conan.api.output import ConanOutput
                 ConanOutput(scope=str(ref)).info(f"Using lockfile from metadata: {exported_lock}")
-                if graph_lock is not None:  # For the export case only
-                    graph_lock = graph_lock.copy()
-                    graph_lock.merge(exported_lockfile)
-                else:
-                    graph_lock = exported_lockfile
-                graph_lock.export = False
 
         dep_conanfile = self._loader.load_conanfile(conanfile_path, ref=ref, graph_lock=graph_lock,
                                                     remotes=self._remotes, update=self._update,

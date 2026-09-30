@@ -8,7 +8,7 @@ import sys
 
 from conan.test.utils.tools import TestClient
 
-EMCC_MIN_PYTHON_VERSION = (3, 8)
+EMCC_MIN_PYTHON_VERSION = (3, 10)
 
 base_emscripten_profile = textwrap.dedent(
     """
