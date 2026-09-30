@@ -179,8 +179,11 @@ class CMakeConfigDeps:
         :param value: Value of the property. Use ``None`` to invalidate any value set by the
          upstream recipe.
         :param build_context: Set to ``True`` if you want to set the property for a dependency that
-         belongs to the build context (``False`` by default).
+         belongs to the build context (``False`` by default). ``cmake_file_names`` cannot be set
+         when this is ``True``.
         """
+        if prop == "cmake_file_names" and build_context:
+            raise ConanException("'cmake_file_names' cannot be set when build_context=True")
         build_suffix = "&build" if build_context else ""
         self._properties.setdefault(f"{dep}{build_suffix}", {}).update({prop: value})
 

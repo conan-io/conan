@@ -2193,3 +2193,63 @@ class TestCmakeConfigProperties:
         assert ("find_package(apps) # Optional. This is a tool-require, "
                 "can't link its targets") in tc.out
         assert not os.path.exists(os.path.join(tc.current_folder, "app", "pkg-config.cmake"))
+
+    def test_consumer_cmake_file_names_build_context(self):
+        """cmake_file_names cannot be overridden for the build context.
+
+        The required package defines per-file properties. A consumer that calls
+        set_property(..., build_context=True) for cmake_file_names fails.
+        """
+        tc = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                settings = "os", "compiler", "build_type", "arch"
+
+                def package_info(self):
+                    self.cpp_info.set_property("cmake_file_names", {
+                        "Core": {
+                            "components": ["core"],
+                            "properties": {
+                                "cmake_extra_dependencies": ["FromRecipe"],
+                                "cmake_extra_variables": {"FROM_RECIPE": 1},
+                            },
+                        },
+                    })
+                    self.cpp_info.components["core"].libs = ["core"]
+                    self.cpp_info.components["core"].type = "static-library"
+                    self.cpp_info.components["core"].location = "lib/libcore.a"
+        """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.cmake import CMakeConfigDeps
+
+            class App(ConanFile):
+                settings = "os", "arch", "compiler", "build_type"
+
+                def requirements(self):
+                    self.requires("pkg/1.0")
+
+                def build_requirements(self):
+                    self.tool_requires("pkg/1.0")
+
+                def generate(self):
+                    deps = CMakeConfigDeps(self)
+                    deps.set_property("pkg", "cmake_file_names", {
+                        "BuildCore": {
+                            "components": ["core"],
+                            "properties": {
+                                "cmake_extra_dependencies": ["FromBuild"],
+                                "cmake_extra_variables": {"FROM_BUILD": 1},
+                            },
+                        },
+                    }, build_context=True)
+                    deps.generate()
+        """)
+        tc.save({"pkg/conanfile.py": dep, "app/conanfile.py": app})
+        tc.run("create pkg")
+        tc.run("install app", assert_error=True)
+        assert "'cmake_file_names' cannot be set when build_context=True" in tc.out
