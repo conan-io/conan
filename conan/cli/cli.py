@@ -162,23 +162,45 @@ class Cli:
                 txt = textwrap.fill(' '.join(data), 80, subsequent_indent=" " * (max_len + 2))
                 cli_out_write(txt)
 
+        aliases = self._load_aliases()
+        if aliases:
+            alias_max_len = max(len(a) for a in aliases) + 1
+            alias_line_format = '{{: <{}}}'.format(alias_max_len)
+            cli_out_write("\nAlias commands", Color.BRIGHT_MAGENTA)
+            for name, command in aliases.items():
+                cli_out_write(alias_line_format.format(name), Color.GREEN, endline="")
+                cli_out_write(command)
+
         cli_out_write("")
         cli_out_write('Type "conan <command> -h" for help', Color.BRIGHT_MAGENTA)
 
-    def _resolve_alias(self, command_argument, remainder_args):
-        aliases_file = os.path.join(self._conan_api.home_folder, "command_alias")
+    def _load_aliases(self):
+        """ Reads the "command_alias.conf" file in the Conan home, a plain text file with one
+        alias per line as ``name = command``, e.g. ``ci = create . --build=missing``, similar to
+        a Git alias. Returns a ``dict`` {name: command}, empty if the file doesn't exist. If an
+        alias name is defined more than once, the last definition wins.
+        """
+        aliases_file = os.path.join(self._conan_api.home_folder, "command_alias.conf")
         if not os.path.isfile(aliases_file):
-            return command_argument, remainder_args
+            return {}
 
+        aliases = {}
         for line in load(aliases_file).splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            name, _, command = line.partition("=")
-            if name.strip() == command_argument:
-                alias_command = command.strip()
-                break
-        else:
+            name, sep, command = line.partition("=")
+            if not sep:
+                continue
+            name = name.strip()
+            if name:
+                aliases[name] = command.strip()
+        return aliases
+
+    def _resolve_alias(self, command_argument, remainder_args):
+        aliases_file = os.path.join(self._conan_api.home_folder, "command_alias.conf")
+        alias_command = self._load_aliases().get(command_argument)
+        if alias_command is None:
             return command_argument, remainder_args
 
         try:
