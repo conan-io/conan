@@ -107,6 +107,7 @@ class PyEnv:
         """
         env = Environment()
         env.prepend_path("PATH", self.bin_path)
+        env.define_path("VIRTUAL_ENV", self.env_dir)
         env.vars(self._conanfile).save_script(self._env_name)
 
     def run(self, args):
