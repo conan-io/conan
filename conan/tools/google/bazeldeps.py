@@ -40,13 +40,10 @@ class _BazelDepBuildGenerator:
     # If both files exist, BUILD.bazel takes precedence over BUILD
     # https://bazel.build/concepts/build-files
     dep_build_filename = "BUILD.bazel"
-    dep_build_filename_rules_cc = "BUILD.rules_cc.bazel"
     dep_build_template = textwrap.dedent("""\
-    {% if rules_cc %}
     load("@rules_cc//cc:cc_import.bzl", "cc_import")
     load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
-    {% endif %}
     {% macro cc_import_macro(libs) %}
     {% for lib_info in libs %}
     cc_import(
@@ -170,19 +167,11 @@ class _BazelDepBuildGenerator:
     @property
     def _absolute_build_file_path(self):
         """
-        Returns the absolute path to the BUILD file created by Conan (Bazel 7/8)
+        Returns the absolute path to the BUILD.bazel file created by Conan.
+        C++ rules are loaded from rules_cc so the same file works on Bazel 7, 8 and 9.
         """
         folder = os.path.join(self._conanfile.generators_folder,
                               self._build_file_path(self.dep_build_filename))
-        return folder.replace("\\", "/")
-
-    @property
-    def _absolute_build_file_path_rules_cc(self):
-        """
-        Returns the absolute path to the BUILD file created by Conan (rules_cc / Bazel 9+)
-        """
-        folder = os.path.join(self._conanfile.generators_folder,
-                              self._build_file_path(self.dep_build_filename_rules_cc))
         return folder.replace("\\", "/")
 
     @property
@@ -391,58 +380,32 @@ class _BazelDepBuildGenerator:
             'repository_name': self._get_repository_name(self._dep),
             'package_folder': self._package_folder,
             'package_build_file_path': self._absolute_build_file_path,
-            'package_build_file_path_rules_cc': self._absolute_build_file_path_rules_cc,
         }
 
     def items(self):
         template = Template(self.dep_build_template, trim_blocks=True, lstrip_blocks=True,
                             undefined=StrictUndefined)
         context = self._get_build_file_context()
-        content = template.render({**context, "rules_cc": False})
-        content_rules_cc = template.render({**context, "rules_cc": True})
+        content = template.render(context)
         return {
             self._build_file_path(self.dep_build_filename): content,
-            self._build_file_path(self.dep_build_filename_rules_cc): content_rules_cc,
         }.items()
 
 
 class _BazelPathsGenerator:
     """
-    Bazel 6.0 needs to know all the dependencies for its current project. So, the only way
-    to do that is to tell the WORKSPACE file how to load all the Conan ones. This is the goal
-    of the function created by this class, the ``load_conan_dependencies`` one.
+    Bazel >= 7.2 needs to know all the dependencies for its current project, provided via the
+    MODULE.bazel file. The generated snippet is loaded with ``include()``, added in Bazel 7.2.
+    This class provides a repository rule to load the dependencies. The rule is used by a
+    module extension, passing the package path and the BUILD file path.
 
-    More information:
-        * https://bazel.build/reference/be/workspace#new_local_repository
-
-    Bazel >= 7.1 needs to know all the dependencies as well, but provided via the MODULE.bazel file.
-    Therefor we provide a static repository rule to load the dependencies. This rule is used by a
-    module extension, passing the package path and the BUILD file path to the repository rule.
-
-    Bazel 9+ requires C++ rules to be loaded from ``rules_cc``. Conan dependencies are exposed as
-    external repositories that cannot resolve ``@rules_cc`` directly, so a separate module
-    extension and BUILD files are generated for Bazel 9+.
+    C++ rules are loaded from ``rules_cc`` (required since Bazel 9, and valid on Bazel 7 and 8).
+    The generated dependency repositories symlink a BUILD.bazel that loads those rules. The root
+    module must depend on ``rules_cc``, which the generated ``conan_deps.MODULE.bazel`` snippet does.
     """
-    repository_filename = "dependencies.bzl"
     modules_filename = "conan_deps_module_extension.bzl"
-    modules_filename_rules_cc = "conan_deps_module_extension_rules_cc.bzl"
     module_include_filename = "conan_deps.MODULE.bazel"
     repository_rules_filename = "conan_deps_repo_rules.bzl"
-    repository_template = textwrap.dedent("""\
-        # This Bazel module should be loaded by your WORKSPACE file.
-        # Add these lines to your WORKSPACE one (assuming that you're using the "bazel_layout"):
-        # load("@//conan:dependencies.bzl", "load_conan_dependencies")
-        # load_conan_dependencies()
-
-        def load_conan_dependencies():
-        {% for dep_info in dependencies %}
-            native.new_local_repository(
-                name="{{dep_info['repository_name']}}",
-                path="{{dep_info['package_folder']}}",
-                build_file="{{dep_info['package_build_file_path']}}",
-            )
-        {% endfor %}
-        """)
     module_template = textwrap.dedent("""\
         # This module provides a repo for each requires-dependency in your conanfile.
         # It's generated by the BazelDeps. Include the generated module snippet from your
@@ -472,34 +435,9 @@ class _BazelPathsGenerator:
                 # - https://bazel.build/rules/lib/builtins/module_ctx#extension_metadata
                 # Important for remote build. Actually it's not reproducible, as local paths will
                 # be different on different machines. But we assume that conan works correctly here.
-                # IMPORTANT: Not compatible with bazel < 7.1
-                reproducible = True,
-            )
-
-        conan_extension = module_extension(
-            implementation = _load_dependencies_impl,
-            os_dependent = True,
-            arch_dependent = True,
-        )
-        """)
-    module_template_rules_cc = textwrap.dedent("""\
-        # Bazel 9+/rules_cc module extension. Use with BUILD.rules_cc.bazel dependency files.
-        # Include the generated module snippet from your MODULE.bazel file:
-        # include("//conan:conan_deps.MODULE.bazel")
-        load(":conan_deps_repo_rules.bzl", "conan_dependency_repo")
-
-        def _load_dependencies_impl(mctx):
-        {% for dep_info in dependencies %}
-            conan_dependency_repo(
-                name = "{{dep_info['repository_name']}}",
-                package_path = "{{dep_info['package_folder']}}",
-                build_file_path = "{{dep_info['package_build_file_path_rules_cc']}}",
-            )
-        {% endfor %}
-
-            return mctx.extension_metadata(
-                root_module_direct_deps = 'all',
-                root_module_direct_dev_deps = [],
+                # IMPORTANT: Not compatible with Bazel < 7.2.
+                # `reproducible` itself needs Bazel >= 7.1; `include()` (Bazel 7.2) is the
+                # minimum because that is how the root MODULE.bazel loads this extension.
                 reproducible = True,
             )
 
@@ -516,7 +454,7 @@ class _BazelPathsGenerator:
         bazel_dep(name = "rules_cc", version = "0.2.17")
 
         load_conan_dependencies = use_extension(
-            "//conan:conan_deps_module_extension_rules_cc.bzl",
+            "//conan:conan_deps_module_extension.bzl",
             "conan_extension",
         )
         use_repo(load_conan_dependencies{% for repository_name in repository_names %}, "{{ repository_name }}"{% endfor %})
@@ -555,12 +493,6 @@ class _BazelPathsGenerator:
     def items(cls, dependencies_context):
         if not dependencies_context:
             return {}
-        # Bazel 6.x, but it'll likely be dropped soon
-        repository_template = Template(cls.repository_template, trim_blocks=True,
-                                       lstrip_blocks=True,
-                                       undefined=StrictUndefined)
-        content_6x = repository_template.render(dependencies=dependencies_context)
-        # Bazel 7.x / 8.x files
         module_template = Template(cls.module_template, trim_blocks=True, lstrip_blocks=True,
                                    undefined=StrictUndefined)
         content = module_template.render(dependencies=dependencies_context)
@@ -568,15 +500,9 @@ class _BazelPathsGenerator:
                                            lstrip_blocks=True, undefined=StrictUndefined)
         content_module_include = module_include_template.render(
             repository_names=[dep["repository_name"] for dep in dependencies_context])
-        # Bazel 9+ files
-        module_template_rules_cc = Template(cls.module_template_rules_cc, trim_blocks=True,
-                                            lstrip_blocks=True, undefined=StrictUndefined)
-        content_rules_cc = module_template_rules_cc.render(dependencies=dependencies_context)
         return {
-            cls.repository_filename: content_6x,  # bazel 6.x compatible
-            cls.modules_filename: content,  # bazel 7.x / 8.x compatible
+            cls.modules_filename: content,
             cls.module_include_filename: content_module_include,
-            cls.modules_filename_rules_cc: content_rules_cc,  # bazel 9+ compatible
             cls.repository_rules_filename: cls.repository_rules_content,
             "BUILD.bazel": "# This is an empty BUILD file."  # Bazel needs this file in each subfolder
         }.items()
@@ -612,20 +538,11 @@ class BazelDeps:
 
     def generate(self):
         """
-        Generates all the targets <DEP>/BUILD.bazel files, a dependencies.bzl (for bazel<7), a
-        conan_deps_repo_rules.bzl and a conan_deps_module_extension.bzl file (for bazel>=7.1) one in the
-        build folder.
+        Generates a ``<DEP>/BUILD.bazel`` file for every dependency (C++ rules loaded from
+        ``rules_cc``), plus ``conan_deps_repo_rules.bzl`` and ``conan_deps_module_extension.bzl``
+        in the generators folder. Requires Bazel >= 7.2 (``include()`` in MODULE.bazel).
 
-        In case of bazel < 7, it's important to highlight that the ``dependencies.bzl`` file should
-        be loaded by your WORKSPACE Bazel file:
-
-        .. code-block:: python
-
-            load("@//[BUILD_FOLDER]:dependencies.bzl", "load_conan_dependencies")
-            load_conan_dependencies()
-
-        In case of Bazel >= 7.2, include the generated module snippet in your MODULE.bazel
-        file:
+        Include the generated module snippet in your MODULE.bazel file:
 
         .. code-block:: python
 

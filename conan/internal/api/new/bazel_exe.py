@@ -17,17 +17,14 @@ class {{package_name}}Recipe(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     # Sources are located in the same place as this recipe, copy them to the recipe
-    exports_sources = "main/*", "WORKSPACE", ".bazelrc"
+    exports_sources = "main/*", "MODULE.bazel", ".bazelrc"
+
     generators = "BazelToolchain"
 
     def layout(self):
         bazel_layout(self)
 
     def build(self):
-        from conan.api.output import ConanOutput
-        ConanOutput().warning("This is the template for Bazel 6.x version, "
-                              "but it will be overridden by the 'bazel_7_exe' template "
-                              "(Bazel >= 7.1 compatible).", warn_tag="deprecated")
         bazel = Bazel(self)
         bazel.build(target="//main:{{name}}")
 
@@ -54,13 +51,17 @@ class {{package_name}}Test(ConanFile):
 """
 
 _bazel_build_exe = """\
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+
 cc_binary(
     name = "{{name}}",
     srcs = ["main.cpp", "{{name}}.cpp", "{{name}}.h"]
 )
 """
 
-_bazel_workspace = " "  # Important not empty, so template doesn't discard it
+_bazel_module = """\
+bazel_dep(name = "rules_cc", version = "0.2.17")
+"""
 _bazel_rc = """\
 {% if output_root_dir is defined %}startup --output_user_root={{output_root_dir}}{% endif %}
 """
@@ -70,7 +71,7 @@ bazel_exe_files = {"conanfile.py": conanfile_exe,
                    "main/{{name}}.h": source_h,
                    "main/main.cpp": test_main,
                    "main/BUILD": _bazel_build_exe,
-                   "WORKSPACE": _bazel_workspace,
+                   "MODULE.bazel": _bazel_module,
                    ".bazelrc": _bazel_rc,
                    "test_package/conanfile.py": test_conanfile_exe_v2
                    }
