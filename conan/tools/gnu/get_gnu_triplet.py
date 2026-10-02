@@ -61,7 +61,7 @@ def _get_gnu_arch(os_, arch):
     return machine
 
 
-def _get_gnu_os(os_, arch, compiler=None):
+def _get_gnu_os(os_, arch, compiler=None, libc=None):
     # Calculate the OS
     if compiler == "gcc":
         windows_op = "w64-mingw32"
@@ -69,7 +69,7 @@ def _get_gnu_os(os_, arch, compiler=None):
         windows_op = "unknown-windows"
 
     op_system = {"Windows": windows_op,
-                 "Linux": "linux-gnu",
+                 "Linux": "linux-musl" if libc == "musl" else "linux-gnu",
                  "Darwin": "apple-darwin",
                  "Android": "linux-android",
                  "Macos": "apple-darwin",
@@ -95,19 +95,20 @@ def _get_gnu_os(os_, arch, compiler=None):
     return op_system
 
 
-def _get_gnu_triplet(os_, arch, compiler=None):
+def _get_gnu_triplet(os_, arch, compiler=None, libc=None):
     """
     Returns string with <machine>-<vendor>-<op_system> triplet (<vendor> can be omitted in practice)
 
     :param os_: os to be used to create the triplet
     :param arch: arch to be used to create the triplet
     :param compiler: compiler used to create the triplet (only needed fo windows)
+    :param libc: libc used to create the triplet (only needed for Linux with musl)
     """
     if os_ == "Windows" and compiler is None:
         raise ConanException("'compiler' parameter for 'get_gnu_triplet()' is not specified and "
                              "needed for os=Windows")
     machine = _get_gnu_arch(os_, arch)
-    op_system = _get_gnu_os(os_, arch, compiler=compiler)
+    op_system = _get_gnu_os(os_, arch, compiler=compiler, libc=libc)
     return {
         'machine': machine,
         'system': op_system,
