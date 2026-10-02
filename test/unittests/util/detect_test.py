@@ -104,3 +104,34 @@ def test_detect_compiler(function, version_return, expected_version):
                     mock.MagicMock(return_value=(0, version_return))):
         ret = function()
         assert ret == expected_version
+
+
+@pytest.mark.parametrize("detected_libc,expected_libc,expected_version", [
+    [("gnu", "2.28"), "glibc", "2.28"],
+    [("musl", "1.2.5"), "musl", "1.2.5"],
+    [("gnu", "2.99"), "glibc", None],
+    [("musl", "0.9.15"), "musl", None],
+    [("uclibc", "1.0.45"), None, None],
+    [(None, None), None, None],
+])
+def test_detect_libc(detected_libc, expected_libc, expected_version):
+    output = RedirectedTestOutput()
+    with redirect_output(output), \
+            mock.patch("conan.internal.api.profile.detect.detect_os", return_value="Linux"), \
+            mock.patch("conan.internal.api.profile.detect.detect_libc",
+                       return_value=detected_libc):
+        result = dict(detect_defaults_settings())
+    assert result.get("os.libc") == expected_libc
+    assert result.get("os.libc.version") == expected_version
+    if expected_libc is not None and expected_version is None:
+        assert "'os.libc.version' will not be defined in the profile" in output
+    if detected_libc[0] == "uclibc":
+        assert "Detected libc 'uclibc' is not defined in settings.yml" in output
+
+
+@mock.patch("conan.internal.api.profile.detect.detect_libc")
+def test_detect_libc_only_linux(detect_libc_mock):
+    with mock.patch("conan.internal.api.profile.detect.detect_os", return_value="Windows"):
+        result = dict(detect_defaults_settings())
+    assert "os.libc" not in result
+    detect_libc_mock.assert_not_called()

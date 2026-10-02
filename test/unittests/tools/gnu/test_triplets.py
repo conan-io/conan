@@ -75,6 +75,21 @@ def test_get_gnu_triplet(os_, arch, compiler, expected):
     assert info["system"] == _get_gnu_os(os_, arch, compiler)
 
 
+@pytest.mark.parametrize("os_, arch, libc, expected", [
+    ["Linux", "x86_64", None, "x86_64-linux-gnu"],
+    ["Linux", "x86_64", "glibc", "x86_64-linux-gnu"],
+    ["Linux", "x86_64", "musl", "x86_64-linux-musl"],
+    ["Linux", "armv8", "musl", "aarch64-linux-musl"],
+    ["Linux", "armv6", "musl", "arm-linux-musleabi"],
+    ["Linux", "armv7hf", "glibc", "arm-linux-gnueabihf"],
+    ["Linux", "armv7hf", "musl", "arm-linux-musleabihf"],
+    ["Android", "armv7", "musl", "arm-linux-androideabi"],
+])
+def test_get_gnu_triplet_libc(os_, arch, libc, expected):
+    info = _get_gnu_triplet(os_, arch, libc=libc)
+    assert info["triplet"] == expected
+
+
 def test_get_gnu_triplet_on_windows_without_compiler():
     with pytest.raises(ConanException):
         _get_gnu_triplet("Windows", "x86")
