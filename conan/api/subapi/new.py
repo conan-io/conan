@@ -92,8 +92,8 @@ class NewAPI:
         from conan.internal.api.new.meson_exe import meson_exe_files
         from conan.internal.api.new.msbuild_lib import msbuild_lib_files
         from conan.internal.api.new.msbuild_exe import msbuild_exe_files
-        from conan.internal.api.new.bazel_lib import bazel_lib_files
-        from conan.internal.api.new.bazel_exe import bazel_exe_files
+        from conan.internal.api.new.bazel_7_lib import bazel_lib_files_7
+        from conan.internal.api.new.bazel_7_exe import bazel_exe_files_7
         from conan.internal.api.new.autotools_lib import autotools_lib_files
         from conan.internal.api.new.autoools_exe import autotools_exe_files
         from conan.internal.api.new.premake_lib import premake_lib_files
@@ -111,8 +111,8 @@ class NewAPI:
                          "meson_exe": meson_exe_files,
                          "msbuild_lib": msbuild_lib_files,
                          "msbuild_exe": msbuild_exe_files,
-                         "bazel_lib": bazel_lib_files,
-                         "bazel_exe": bazel_exe_files,
+                         "bazel_lib": bazel_lib_files_7,
+                         "bazel_exe": bazel_exe_files_7,
                          "autotools_lib": autotools_lib_files,
                          "autotools_exe": autotools_exe_files,
                          "premake_lib": premake_lib_files,

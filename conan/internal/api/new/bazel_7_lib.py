@@ -143,14 +143,14 @@ def _get_bazel_build():
     return ret
 
 
-bazel_lib_files = {"conanfile.py": conanfile_sources_v2,
-                   "main/{{name}}.cpp": source_cpp,
-                   "main/{{name}}.h": source_h,
-                   "main/BUILD": _get_bazel_build(),
-                   "MODULE.bazel": _bazel_module,
-                   ".bazelrc": _bazel_rc,
-                   "test_package/conanfile.py": test_conanfile_v2,
-                   "test_package/main/example.cpp": test_main,
-                   "test_package/main/BUILD": _bazel_build_test,
-                   "test_package/MODULE.bazel": _test_bazel_module_bazel,
-                   "test_package/.bazelrc": _bazel_rc}
+bazel_lib_files_7 = {"conanfile.py": conanfile_sources_v2,
+                     "main/{{name}}.cpp": source_cpp,
+                     "main/{{name}}.h": source_h,
+                     "main/BUILD": _get_bazel_build(),
+                     "MODULE.bazel": _bazel_module,
+                     ".bazelrc": _bazel_rc,
+                     "test_package/conanfile.py": test_conanfile_v2,
+                     "test_package/main/example.cpp": test_main,
+                     "test_package/main/BUILD": _bazel_build_test,
+                     "test_package/MODULE.bazel": _test_bazel_module_bazel,
+                     "test_package/.bazelrc": _bazel_rc}
