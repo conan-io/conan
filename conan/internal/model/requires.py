@@ -10,7 +10,7 @@ class Requirement:
     def __init__(self, ref, *, headers=None, libs=None, build=False, run=None, visible=None,
                  transitive_headers=None, transitive_libs=None, test=None, package_id_mode=None,
                  force=None, override=None, direct=None, options=None, no_skip=False,
-                 consistent=None):
+                 consistent=None, git=None):
         # * prevents the usage of more positional parameters, always ref + **kwargs
         # By default this is a generic library requirement
         self.ref = ref
@@ -40,6 +40,8 @@ class Requirement:
         self.skip = False
         self.required_nodes = set()  # store which intermediate nodes are required, to compute "Skip"
         self.no_skip = no_skip
+        # git source: raw string for https://github.com public open source repositories
+        self.git = git
         # computed ones, not default ones
         self.consistent_policy_new = False
         if self.visible and not self.consistent:
@@ -447,10 +449,10 @@ class ToolRequirements:
         self._requires = requires
 
     def __call__(self, ref, package_id_mode=None, visible=False, run=True, options=None,
-                 override=None):
+                 override=None, git=None):
         # TODO: Check which arguments could be user-defined
         self._requires.tool_require(ref, package_id_mode=package_id_mode, visible=visible, run=run,
-                                    options=options, override=override)
+                                    options=options, override=override, git=git)
 
 
 class TestRequirements:
@@ -458,8 +460,8 @@ class TestRequirements:
     def __init__(self, requires):
         self._requires = requires
 
-    def __call__(self, ref, run=None, options=None, force=None):
-        self._requires.test_require(ref, run=run, options=options, force=force)
+    def __call__(self, ref, run=None, options=None, force=None, git=None):
+        self._requires.test_require(ref, run=run, options=options, force=force, git=git)
 
 
 class Requirements:
@@ -529,6 +531,13 @@ class Requirements:
         return self._requires.values()
 
     def __call__(self, str_ref, **kwargs):
+        """Add a regular requirement (as in ``self.requires("zlib/1.2.11")``).
+
+        Any keyword accepted by ``Requirement`` may be passed through kwargs, including
+        ``git="org/repo[@ref]"`` to source the recipe from a public GitHub repository —
+        symmetric with ``self.test_requires`` and ``self.tool_requires``, which declare
+        ``git=`` in their own signatures.
+        """
         if str_ref is None:
             return
         assert isinstance(str_ref, str)
@@ -561,7 +570,7 @@ class Requirements:
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
-    def test_require(self, ref, run=None, options=None, force=None):
+    def test_require(self, ref, run=None, options=None, force=None, git=None):
         """
              Represent a testing framework like gtest
 
@@ -577,13 +586,13 @@ class Requirements:
         # libs = True => We need to link with it
         # headers = True => We need to include it
         req = Requirement(ref, headers=True, libs=True, build=False, run=run, visible=False,
-                          test=True, package_id_mode=None, options=options, force=force)
+                          test=True, package_id_mode=None, options=options, force=force, git=git)
         if self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
 
     def tool_require(self, ref, raise_if_duplicated=True, package_id_mode=None, visible=False,
-                     run=True, options=None, override=None):
+                     run=True, options=None, override=None, git=None):
         """
          Represent a build tool like "cmake".
 
@@ -597,7 +606,8 @@ class Requirements:
         # FIXME: This raise_if_duplicated is ugly, possibly remove
         ref = RecipeReference.loads(ref)
         req = Requirement(ref, headers=False, libs=False, build=True, run=run, visible=visible,
-                          package_id_mode=package_id_mode, options=options, override=override)
+                          package_id_mode=package_id_mode, options=options, override=override,
+                          git=git)
         if raise_if_duplicated and self._requires.get(req):
             raise ConanException("Duplicated requirement: {}".format(ref))
         self._requires[req] = req
