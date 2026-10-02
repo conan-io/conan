@@ -63,7 +63,8 @@ jobs:
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
             ~/Applications/bazel/9.1.0
-          key: ${{ runner.os }}-macos26-conan-tools-cache
+            ~/Applications/zig/0.16.0
+          key: ${{ runner.os }}-macos26-conan-tools-cache-zig0160
 
       - name: Build CMake old versions not available for ARM
         if: steps.cache-tools.outputs.cache-hit != 'true'
@@ -114,6 +115,18 @@ jobs:
             chmod +x ${HOME}/Applications/bazel/${version}/bazel
           done
 
+      - name: Install Zig
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          version=0.16.0
+          wget -q -O zig-${version}.tar.xz https://ziglang.org/download/${version}/zig-aarch64-macos-${version}.tar.xz
+          tar -xJf zig-${version}.tar.xz
+          mkdir -p ${HOME}/Applications/zig
+          mv zig-aarch64-macos-${version} ${HOME}/Applications/zig/${version}
+          rm zig-${version}.tar.xz
+          ${HOME}/Applications/zig/${version}/zig version
+
   osx_tests:
     needs: osx_setup
     runs-on: macos-26
@@ -146,7 +159,8 @@ jobs:
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
             ~/Applications/bazel/9.1.0
-          key: ${{ runner.os }}-macos26-conan-tools-cache
+            ~/Applications/zig/0.16.0
+          key: ${{ runner.os }}-macos26-conan-tools-cache-zig0160
 
       - name: Select Xcode 26.4.1
         run: |
