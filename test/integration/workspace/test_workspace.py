@@ -15,6 +15,26 @@ from conan.internal.util.files import save_files
 from conan.tools.files import replace_in_file
 
 
+class TestWorkspaceAlias:
+
+    def test_ws_alias_dispatches_to_workspace(self):
+        # 'ws' behaves as 'workspace' for both the base command and its subcommands
+        c = TestClient(light=True)
+        c.save({"conanws.yml": ""})
+        c.run("ws root")
+        assert c.current_folder in c.stdout
+
+        c.run("ws info")
+        assert "packages: (empty)" in c.out
+
+    def test_ws_alias_not_in_help_listing(self):
+        c = TestClient(light=True)
+        c.run("-h")
+        assert "workspace" in c.stdout
+        for line in c.stdout.splitlines():
+            assert not line.strip().startswith("ws "), line
+
+
 class TestWorkspaceRoot:
 
     def test_workspace_root(self):
