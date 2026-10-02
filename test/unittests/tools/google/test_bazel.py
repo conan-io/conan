@@ -1,3 +1,5 @@
+import platform
+
 import pytest
 
 from conan.test.utils.mocks import ConanFileMock
@@ -5,6 +7,8 @@ from conan.tools.google import Bazel
 from conan.tools.google.bazeldeps import _relativize_path
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Remove this skip for Conan 2.x"
+                                                           "Needs conanfile.commands")
 def test_bazel_command_with_empty_config():
     conanfile = ConanFileMock()
     bazel = Bazel(conanfile)
@@ -13,6 +17,8 @@ def test_bazel_command_with_empty_config():
     assert 'bazel build //test:label' in conanfile.commands
 
 
+@pytest.mark.skipif(platform.system() == "Windows", reason="Remove this skip for Conan 2.x."
+                                                           "Needs conanfile.commands")
 def test_bazel_command_with_config_values():
     conanfile = ConanFileMock()
     conanfile.conf.define("tools.google.bazel:configs", ["config", "config2"])
