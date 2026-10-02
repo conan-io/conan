@@ -437,6 +437,10 @@ class _BazelPathsGenerator:
         # load("@//conan:dependencies.bzl", "load_conan_dependencies")
         # load_conan_dependencies()
 
+        print("WARNING: Bazel 6 / WORKSPACE support (dependencies.bzl) is deprecated " +
+              "and will be removed in a future Conan version. " +
+              "Use Bazel >= 7.2 and include(\\"//conan:conan_deps.MODULE.bazel\\").")
+
         def load_conan_dependencies():
         {% for dep_info in dependencies %}
             native.new_local_repository(
