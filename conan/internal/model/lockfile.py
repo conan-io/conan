@@ -118,7 +118,6 @@ class Lockfile:
         self._python_requires = _LockRequires()
         self._build_requires = _LockRequires()
         self._conf_requires = _LockRequires()
-        self._alias = {}
         self._overrides = Overrides()
         self.partial = False
 
@@ -144,7 +143,6 @@ class Lockfile:
             else:
                 self._requires.add(graph_node.ref, pids)
 
-        self._alias.update(deps_graph.aliased)
         self._overrides.update(deps_graph.overrides())
 
         self._requires.sort()
@@ -180,7 +178,6 @@ class Lockfile:
         self._build_requires.merge(other._build_requires)
         self._python_requires.merge(other._python_requires)
         self._conf_requires.merge(other._conf_requires)
-        self._alias.update(other._alias)
         self._overrides.update(other._overrides)
 
     def add(self, requires=None, build_requires=None, python_requires=None, config_requires=None):
@@ -241,9 +238,6 @@ class Lockfile:
             graph_lock._build_requires = _LockRequires.deserialize(data["build_requires"])
         if "python_requires" in data:
             graph_lock._python_requires = _LockRequires.deserialize(data["python_requires"])
-        if "alias" in data:
-            graph_lock._alias = {RecipeReference.loads(k): RecipeReference.loads(v)
-                                 for k, v in data["alias"].items()}
         if "overrides" in data:
             graph_lock._overrides = Overrides.deserialize(data["overrides"])
         if "config_requires" in data:
@@ -261,8 +255,6 @@ class Lockfile:
             result["build_requires"] = self._build_requires.serialize()
         if self._python_requires:
             result["python_requires"] = self._python_requires.serialize()
-        if self._alias:
-            result["alias"] = {repr(k): repr(v) for k, v in self._alias.items()}
         if self._overrides:
             result["overrides"] = self._overrides.serialize()
         if self._conf_requires:
@@ -369,14 +361,6 @@ class Lockfile:
             else:
                 if ref not in matches and not self.partial:
                     raise ConanException(f"Requirement '{repr(ref)}' not in lockfile '{kind}'")
-
-    def replace_alias(self, require, alias):
-        locked_alias = self._alias.get(alias)
-        if locked_alias is not None:
-            require.ref = locked_alias
-            return True
-        elif not self.partial:
-            raise ConanException(f"Requirement alias '{alias}' not in lockfile")
 
     def resolve_locked_pyrequires(self, require, resolve_prereleases=None):
         locked_refs = self._python_requires.refs()  # CHANGE

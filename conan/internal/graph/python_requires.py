@@ -109,9 +109,6 @@ class PyRequireLoader:
         return result
 
     def _resolve_ref(self, requirement, graph_lock, remotes, update):
-        if requirement.alias:
-            raise ConanException("python-requires 'alias' are not supported in Conan 2.0. "
-                                 "Please use version ranges instead")
         if graph_lock:
             graph_lock.resolve_locked_pyrequires(requirement, self._resolve_prereleases)
         # If the lock hasn't resolved the range, and it hasn't failed (it is partial), resolve it
@@ -135,7 +132,4 @@ class PyRequireLoader:
         # TODO: Is this really necessary?
         conanfile.channel = new_ref.channel
 
-        if getattr(conanfile, "alias", None):
-            raise ConanException("python-requires 'alias' are not supported in Conan 2.0. "
-                                 "Please use version ranges instead")
         return conanfile, module, new_ref, os.path.dirname(path), recipe_status, remote

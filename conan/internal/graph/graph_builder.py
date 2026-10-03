@@ -1,4 +1,3 @@
-import os
 from collections import deque
 
 from conan.internal.cache.conan_reference_layout import BasicLayout
@@ -21,7 +20,6 @@ from conan.internal.model.version_range import VersionRange, required_conan_vers
 
 
 class DepsGraphBuilder:
-    ALLOW_ALIAS = False
 
     def __init__(self, proxy, loader, resolver, cache, remotes, update, check_update, global_conf):
         self._proxy = proxy
@@ -230,60 +228,11 @@ class DepsGraphBuilder:
                 if skip_test and require.test:
                     continue
             result.append(require)
-            alias = require.alias  # alias needs to be processed this early
-            if alias is not None:
-                if not DepsGraphBuilder.ALLOW_ALIAS and os.getenv("CONAN_ALLOW_ALIAS") != "will_break_next":
-                    raise ConanException(f"Alias requirements have been removed: '{node}' requiring: '{alias}'")
-                resolved = False
-                if graph_lock is not None:
-                    resolved = graph_lock.replace_alias(require, alias)
-                # if partial, we might still need to resolve the alias
-                if not resolved:
-                    self._resolve_alias(node, require, alias, graph)
             self._resolve_replace_requires(node, require, profile_build, profile_host, graph)
             if graph_lock:
                 graph_lock.resolve_overrides(require, node.context)
             node.transitive_deps[require] = TransitiveRequirement(require, node=None)
         return result
-
-    def _resolve_alias(self, node, require, alias, graph):
-        # First try cached
-        cached = graph.aliased.get(alias)
-        if cached is not None:
-            while True:
-                new_cached = graph.aliased.get(cached)
-                if new_cached is None:
-                    break
-                else:
-                    cached = new_cached
-            require.ref = cached
-            return
-
-        while alias is not None:
-            # if not cached, then resolve
-            try:
-                result = self._proxy.get_recipe(alias, self._remotes, self._update,
-                                                self._check_update)
-                layout, recipe_status, remote = result
-            except ConanException as e:
-                raise GraphMissingError(node, require, str(e))
-
-            conanfile_path = layout.conanfile()
-            dep_conanfile = self._loader.load_basic(conanfile_path)
-            try:
-                pointed_ref = RecipeReference.loads(dep_conanfile.alias)
-            except Exception as e:
-                raise ConanException(f"Alias definition error in {alias}: {str(e)}")
-
-            # UPDATE THE REQUIREMENT!
-            require.ref = pointed_ref
-            graph.aliased[alias] = pointed_ref  # Caching the alias
-            new_req = Requirement(pointed_ref)  # FIXME: Ugly temp creation just for alias check
-            alias = new_req.alias
-            node.conanfile.output.warning("Requirement 'alias' is provided in Conan 2 mainly for "
-                                          "compatibility and upgrade from Conan 1, but it is an "
-                                          "undocumented and legacy feature. Please update to use "
-                                          "standard versioning mechanisms", warn_tag="legacy")
 
     def _resolve_recipe(self, ref, graph_lock):
         result = self._proxy.get_recipe(ref, self._remotes, self._update, self._check_update)
