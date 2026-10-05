@@ -40,9 +40,9 @@ class InstallAPI:
         """
         installer = BinaryInstaller(self._conan_api, self._helpers.global_conf,
                                     self._helpers.hook_manager)
-        install_graph = InstallGraph(deps_graph)
+        install_graph = InstallGraph(deps_graph, order_by="configuration")
         install_graph.raise_errors()
-        install_order = install_graph.install_order()
+        install_order = install_graph.install_order_grouped_by_recipe()
         installer.install_system_requires(deps_graph, install_order=install_order)
         try:  # To be able to capture the output, report or save graph.json, then raise later
             installer.install(deps_graph, remotes, install_order=install_order)
