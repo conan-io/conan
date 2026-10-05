@@ -170,6 +170,8 @@ def lock_update(conan_api, parser, subparser, *args):
     args = parser.parse_args(*args)
 
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, partial=True)
+    if lockfile is None:
+        raise ConanException("No lockfile to update")
     lockfile.update(requires=args.requires, build_requires=args.build_requires,
                     python_requires=args.python_requires, config_requires=args.config_requires)
     conan_api.lockfile.save_lockfile(lockfile, args.lockfile_out)
