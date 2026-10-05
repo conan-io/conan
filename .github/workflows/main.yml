@@ -138,7 +138,7 @@ jobs:
           # matching snapshot, so fetch the snapshot artifact from that many recent
           # successful develop2 runs -- one artifact alone only covers the latest commit.
           run_ids=$(gh run list --repo ${{ github.repository }} --workflow main.yml \
-            --branch develop2 --status success --limit 20 --json databaseId --jq '.[].databaseId')
+            --branch develop2 --limit 20 --json databaseId --jq '.[].databaseId')
           for run_id in $run_ids; do
             gh run download "$run_id" --repo ${{ github.repository }} \
               --name covtest-snapshot --dir .covtest || true
