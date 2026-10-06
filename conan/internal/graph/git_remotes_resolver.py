@@ -46,7 +46,7 @@ class GitRemotesResolver:
         if orig_ref is not ref:
             if (ref.name != orig_ref.name or ref.version != orig_ref.version
                     or ref.user != orig_ref.user or ref.channel != orig_ref.channel):
-                output.warning(f"Ignoring git={require.git!r}: 'replace_requires' "
+                output.warning(f"Ignoring git={require.git}: 'replace_requires' "
                                f"renamed the require ({orig_ref} → {ref}) and took precedence "
                                f"over the git= source.")
                 return
@@ -56,7 +56,7 @@ class GitRemotesResolver:
         # Editable takes precedence over git=: a local editable is a stronger
         # override than a hardcoded remote source.
         if editable_packages is not None and editable_packages.get(ref) is not None:
-            output.info(f"Ignoring git={require.git!r}: package is in editable mode.")
+            output.info(f"Ignoring git={require.git}: package is in editable mode.")
             return
 
         git = require.git  # raw string: "org/repo" or "org/repo@ref"
@@ -64,9 +64,8 @@ class GitRemotesResolver:
         # so anything after is the ref, even if the ref itself contains '@'
         idx = git.split("@", 1)
         if len(idx) == 2 and not idx[1]:
-            raise ConanException(
-                f"Requirement '{ref}': git={git!r} has a trailing '@' with no ref. "
-                f"Drop the '@' to use the default branch, or specify a branch/tag/commit.")
+            raise ConanException(f"Requirement '{ref}': git={git} has a trailing '@' with no ref. "
+                                 "Drop the '@' or specify a branch/tag/commit.")
         repo, git_ref = idx if len(idx) == 2 else (idx[0], None)
 
         # Reconcile the two ways to pin a commit: an explicit recipe revision on the
@@ -81,9 +80,8 @@ class GitRemotesResolver:
         # _required_ref carries the pre-replace state; if it has a revision, the
         # recipe itself declared one.
         if orig_ref.revision and git_ref:
-            raise ConanException(
-                f"Requirement '{ref}' pins a revision and git={git!r} also pins "
-                f"a ref — use only one")
+            raise ConanException(f"Requirement '{ref}' pins a revision and git={git} also pins "
+                                 "a ref — use only one")
         if ref.revision:
             git_ref = ref.revision  # recipe-authored (git_ref is None here) or override
 
@@ -136,7 +134,7 @@ class GitRemotesResolver:
         # it after export. Without a range, pass the exact version so cmd_export
         # enforces the recipe hardcodes match (existing behavior).
         version = None if version_range else str(ref.version)
-        exported_ref, _ = self._clone_and_export(ref, repo, git_ref, loader,
+        exported_ref, _ = self._clone_and_export(ref, url, git_ref, loader,
                                                  force_clone, version=version)
 
         if version_range:
@@ -153,9 +151,10 @@ class GitRemotesResolver:
         # Recipe revision is the git commit SHA (revision_mode='scm' forced during export)
         require.ref.revision = exported_ref.revision
 
-    def _clone_and_export(self, ref, repo, git_ref, loader, force_clone, version=None):
-        url = self._get_url(repo)
-        clone_folder = self._clone_folder(url, git_ref)
+    def _clone_and_export(self, ref, url, git_ref, loader, force_clone, version=None):
+        key = f"{url}:{git_ref or ''}"
+        h = hashlib.md5(key.encode()).hexdigest()[:12]
+        clone_folder =  os.path.join(self._clones_base, h)
         # Leftover from a previous run interrupted mid-clone/checkout: discard it
         remove_if_dirty(clone_folder)
         if force_clone and os.path.exists(clone_folder):
@@ -178,35 +177,27 @@ class GitRemotesResolver:
         # Force revision_mode='scm' → recipe revision = git commit SHA. Enables
         # lockfile reproducibility even against moving branches.
         # no remotes, no lockfile, as python-requires are not supported now
-        return cmd_export(loader, self._cache, _NoopHooks(), ConfDefinition(),
-                          conanfile_path, ref.name, version,
-                          ref.user, ref.channel, revision_mode_scm=True)
-
-    def _clone_folder(self, url, git_ref):
-        key = f"{url}:{git_ref or ''}"
-        h = hashlib.md5(key.encode()).hexdigest()[:12]
-        return os.path.join(self._clones_base, h)
+        return cmd_export(loader, self._cache, _NoopHooks(), ConfDefinition(), conanfile_path,
+                          ref.name, version, ref.user, ref.channel, revision_mode_scm=True)
 
     @staticmethod
-    def _run_git(argv):
-        # argv-form; never shell=True — keeps refs/URLs with metachars intact
-        proc = subprocess.run(argv, capture_output=True, text=True)
-        return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
+    def _do_clone(url, git_ref, clone_folder):
+        def _run_git(argv):
+            # argv-form; never shell=True — keeps refs/URLs with metachars intact
+            proc = subprocess.run(argv, capture_output=True, text=True)
+            return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
-    @classmethod
-    def _do_clone(cls, url, git_ref, clone_folder):
         output = ConanOutput()
         os.makedirs(clone_folder, exist_ok=True)
         # dirty marker: if the process is interrupted mid-clone/checkout, the
         # next run detects the marker via remove_if_dirty and starts fresh
         with set_dirty_context_manager(clone_folder):
             output.info(f"Cloning git repository '{url}'...")
-            ret, out = cls._run_git(["git", "clone", url, clone_folder])
+            ret, out = _run_git(["git", "clone", url, clone_folder])
             if ret != 0:
                 raise ConanException(f"git clone failed for '{url}':\n{out}")
             if git_ref:
                 output.info(f"Checking out git ref '{git_ref}'...")
-                ret, out = cls._run_git(["git", "-C", clone_folder, "checkout", git_ref])
+                ret, out = _run_git(["git", "-C", clone_folder, "checkout", git_ref])
                 if ret != 0:
-                    raise ConanException(
-                        f"git checkout '{git_ref}' failed for '{url}':\n{out}")
+                    raise ConanException(f"git checkout '{git_ref}' failed for '{url}':\n{out}")
