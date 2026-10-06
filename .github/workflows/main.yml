@@ -135,14 +135,25 @@ jobs:
         run: |
           mkdir -p .covtest
           # covtest looks back up to max_commits (default 20) ancestor commits for a
-          # matching snapshot, so fetch the snapshot artifact from that many recent
-          # successful develop2 runs -- one artifact alone only covers the latest commit.
-          run_ids=$(gh run list --repo ${{ github.repository }} --workflow main.yml \
-            --branch develop2 --limit 20 --json databaseId --jq '.[].databaseId')
-          for run_id in $run_ids; do
-            gh run download "$run_id" --repo ${{ github.repository }} \
-              --name covtest-snapshot --dir .covtest || true
+          # matching snapshot, so fetch that many recent snapshots -- one alone only
+          # covers the latest develop2 commit.
+          #
+          # Deliberately not using `gh run list --branch develop2` / `gh run download`:
+          # on a repo this active, GitHub's run-listing-by-branch filter is backed by a
+          # search index that lags badly (observed returning only weeks-old runs), while
+          # the artifacts-by-name listing below has consistently returned fresh results.
+          # So we go straight to the artifact IDs and fetch each one's zip directly.
+          artifact_ids=$(gh api "repos/${{ github.repository }}/actions/artifacts?name=covtest-snapshot&per_page=20" \
+            --jq '.artifacts[] | select(.expired == false) | .id')
+          for artifact_id in $artifact_ids; do
+            curl -sL -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/actions/artifacts/$artifact_id/zip" \
+              -o artifact.zip \
+              && unzip -o -q artifact.zip -d .covtest
+            rm -f artifact.zip
           done
+          echo "Downloaded $(ls .covtest | wc -l) covtest snapshot file(s)"
 
       - name: Run covtest predict
         if: github.event_name == 'pull_request'
