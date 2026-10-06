@@ -2527,3 +2527,12 @@ class TestPyRequires:
         assert "Workspace create liba/0.1" in c.out
         assert "Workspace create libb/0.1" in c.out
         assert "Workspace create dep/0.1" not in c.out
+
+
+def test_workspace_experimental_warning():
+    c = TestClient(light=True)
+    c.save({"conanws.yml": ""}, clean_first=True)
+    c.run("workspace root")
+    assert "WARN: experimental: The Workspace feature is experimental" in c.out
+    c.run("workspace root -cc core:skip_warnings=\"['experimental']\"")
+    assert "WARN: experimental: The Workspace feature is experimental" not in c.out

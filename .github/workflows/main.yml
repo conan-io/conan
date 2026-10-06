@@ -14,6 +14,7 @@ on:
 permissions:
   contents: read
   packages: write
+  actions: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -124,19 +125,27 @@ jobs:
 
       - name: Install covtest
         if: github.event_name == 'pull_request'
-        env:
-          ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_COVTEST_PIP_USERNAME }}
-          ARTIFACTORY_IDENTITY_TOKEN: ${{ secrets.ARTIFACTORY_COVTEST_PIP_IDENTITY_TOKEN }}
-          ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_COVTEST_PIP_URL }}
         run: |
-          pip install covtest --extra-index-url "https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_IDENTITY_TOKEN}@${ARTIFACTORY_URL}" || true
+          pip install git+https://github.com/conan-io/covtest.git || true
+
+      - name: Download recent covtest snapshots from develop2
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p .covtest
+          # covtest looks back up to max_commits (default 20) ancestor commits for a
+          # matching snapshot, so fetch the snapshot artifact from that many recent
+          # successful develop2 runs -- one artifact alone only covers the latest commit.
+          run_ids=$(gh run list --repo ${{ github.repository }} --workflow main.yml \
+            --branch develop2 --status success --limit 20 --json databaseId --jq '.[].databaseId')
+          for run_id in $run_ids; do
+            gh run download "$run_id" --repo ${{ github.repository }} \
+              --name covtest-snapshot --dir .covtest || true
+          done
 
       - name: Run covtest predict
         if: github.event_name == 'pull_request'
-        env:
-          COVTEST_URL: ${{ secrets.COVTEST_SERVER_URL }}
-          COVTEST_USER: ${{ secrets.COVTEST_SERVER_USER }}
-          COVTEST_TOKEN: ${{ secrets.COVTEST_SERVER_TOKEN }}
         run: |
           mkdir -p .covtest
           covtest predict || echo "::warning title=covtest predict Failed::Could not run covtest predict."
@@ -208,14 +217,17 @@ jobs:
           coverage xml
 
       - name: Install and compute covtest
-        env:
-          ARTIFACTORY_USERNAME: ${{ secrets.ARTIFACTORY_COVTEST_PIP_USERNAME }}
-          ARTIFACTORY_IDENTITY_TOKEN: ${{ secrets.ARTIFACTORY_COVTEST_PIP_IDENTITY_TOKEN }}
-          ARTIFACTORY_URL: ${{ secrets.ARTIFACTORY_COVTEST_PIP_URL }}
         run: |
-          pip install covtest --extra-index-url "https://${ARTIFACTORY_USERNAME}:${ARTIFACTORY_IDENTITY_TOKEN}@${ARTIFACTORY_URL}" || true
+          pip install git+https://github.com/conan-io/covtest.git || true
           covtest process || true
-          covtest upload --url=${{ secrets.COVTEST_SERVER_URL }} --user=${{ secrets.COVTEST_SERVER_USER }} --token=${{ secrets.COVTEST_SERVER_TOKEN }} || true
+
+      - name: Upload covtest snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: covtest-snapshot
+          path: .covtest
+          include-hidden-files: true
+          if-no-files-found: warn
 
       - name: Code coverage
         uses: codecov/codecov-action@v5
@@ -226,7 +238,6 @@ jobs:
         with:
           name: |
             .coverage.*
-            .covtest
 
   deploy_to_pypi_test:
     runs-on: ubuntu-26.04
