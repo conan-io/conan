@@ -1457,3 +1457,45 @@ def test_cpp_info_objects_cmake_target_name():
     assert "add_library(mine::greet_OBJECTS OBJECT IMPORTED)" in targets
     assert "set_property(TARGET mine::greet APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
            '             "$<$<CONFIG:RELEASE>:$<TARGET_OBJECTS:mine::greet_OBJECTS>>")' in targets
+
+
+def test_runtime_lib_dirs_no_stale_entries_new_revision():
+    """ https://github.com/conan-io/conan/issues/20374
+    Installing a new recipe revision of the same package and configuration must replace the
+    previous CONAN_RUNTIME_LIB_DIRS entry, not accumulate both of them
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("dep", "1.0").with_settings("build_type")})
+    c.run("create .")
+    rev1 = c.exported_recipe_revision()
+    c.save({"conanfile.py": GenConanfile("dep", "1.0").with_settings("build_type")
+                                                      .with_class_attribute("a = 1")})
+    c.run("create .")
+    rev2 = c.exported_recipe_revision()
+    assert rev1 != rev2
+
+    c.run(f"install --requires dep/1.0#{rev1} -g CMakeConfigDeps")
+    assert c.load("conan_cmakedeps_paths.cmake").count("$<$<CONFIG:Release>:") == 1
+
+    # Same folder, now with the newer recipe revision
+    c.run(f"install --requires dep/1.0#{rev2} -g CMakeConfigDeps")
+
+    paths = c.load("conan_cmakedeps_paths.cmake")
+    # BUG: both the old and the new package folders are listed for Release
+    assert paths.count("$<$<CONFIG:Release>:") == 1
+
+
+def test_runtime_lib_dirs_keep_other_configs():
+    """ Installing a package for a config must not remove the entries of the same package
+    for other configs
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("dep", "1.0").with_settings("build_type")})
+    c.run("create . -s build_type=Debug")
+    c.run("create . -s build_type=Release")
+    c.save({"conanfile.txt": "[requires]\ndep/1.0\n"}, clean_first=True)
+    c.run("install . -g CMakeConfigDeps -s build_type=Debug")
+    c.run("install . -g CMakeConfigDeps -s build_type=Release")
+    paths = c.load("conan_cmakedeps_paths.cmake")
+    assert "$<$<CONFIG:Debug>:" in paths
+    assert "$<$<CONFIG:Release>:" in paths
