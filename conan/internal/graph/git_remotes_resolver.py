@@ -147,6 +147,10 @@ class GitRemotesResolver:
                     f"git remote '{url}'")
             output.info(f"  resolved version: {resolved_version} (in range {version_range})")
             require.ref.version = resolved_version
+        elif exported_ref.version != ref.version:  # It must match
+            raise ConanException(f"{node} requires '{ref}', but the recipe in git "
+                                 f"remote '{url}' creates '{exported_ref}'). "
+                                 f"Check the requirement 'git' argument.")
 
         # Recipe revision is the git commit SHA (revision_mode='scm' forced during export)
         require.ref.revision = exported_ref.revision

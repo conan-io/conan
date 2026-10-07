@@ -2,6 +2,7 @@ import json
 import os
 import re
 import subprocess
+import textwrap
 from unittest import mock
 
 import pytest
@@ -207,6 +208,24 @@ class TestGitRemotesContract:
                                                                 git="myorg/mypkg")})
         c.run("install . --build=missing", assert_error=True)
         assert "Package recipe with version 1.0!=9.9.9" in c.out
+
+    def test_repo_set_version_different_version_errors(self, git_repos):
+        """The recipe computes its version in set_version() (e.g. reading CMakeLists.txt) and
+        the repo tip is ahead of the version the require asks for: it must fail clearly."""
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "mypkg"
+                def set_version(self):
+                    self.version = "7.1.0"
+            """)
+        git_repos("myorg/mypkg", {"conanfile.py": conanfile})
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/7.0.3",
+                                                                git="myorg/mypkg")})
+        c.run("install . --build=missing", assert_error=True)
+        assert "ERROR: conanfile.py requires 'mypkg/7.0.3'" in c.out
+        assert "creates 'mypkg/7.1.0'" in c.out
 
     def test_repo_declares_nothing_git_is_authoritative(self, git_repos):
         """No name/version declared by the recipe → the require's values win."""
