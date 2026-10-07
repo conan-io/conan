@@ -6,8 +6,8 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestServer
 
 
-@pytest.fixture
-def create_libs():
+@pytest.fixture(scope="module")
+def _create_libs():
     tc = TestClient(default_server_user=True, light=True)
     tc.save({"conanfile.py": GenConanfile()})
     tc.run("create . --name=zlib --version=1.0")
@@ -24,6 +24,11 @@ def create_libs():
     tc.save({"conanfile.py": GenConanfile("app", "1.0")
             .with_requires("zlib/1.0", "libcurl/[>=1.0]")})
     return tc
+
+
+@pytest.fixture
+def create_libs(_create_libs):
+    return _create_libs.clone()
 
 
 def test_outdated_command(create_libs):

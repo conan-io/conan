@@ -49,8 +49,8 @@ pkgc_01_id = "2a23b96aea3b4787fcd1816182e8a403349b0815"
 pkgapp_01_id = "f8e4cc2232dff5983eeb2e7403b9c2dc755be44f"
 
 
-@pytest.fixture()
-def client_setup():
+@pytest.fixture(scope="module")
+def _client_setup():
     c = TestClient(light=True)
     pkb_requirements = """
     def requirements(self):
@@ -83,6 +83,11 @@ def client_setup():
     assert "app1/0.1: DEP FILE pkgb: HelloB" in c.out
     assert "app1/0.1: DEP FILE pkgc: HelloC" in c.out
     return c
+
+
+@pytest.fixture()
+def client_setup(_client_setup):
+    return _client_setup.clone()
 
 
 def test_single_config_centralized(client_setup):

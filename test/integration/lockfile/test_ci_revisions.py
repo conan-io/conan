@@ -46,8 +46,8 @@ pkgc_01_id = "1bc0312cddbd3c076e666b84af9cc5ac3d263719"
 pkgapp_01_id = "dda63a9bddbbe704d4858d67156d5dad0361dc19"
 
 
-@pytest.fixture()
-def client_setup():
+@pytest.fixture(scope="module")
+def _client_setup():
     c = TestClient(light=True)
     c.save_home({"global.conf": "core.package_id:default_unknown_mode=recipe_revision_mode"})
     pkb_requirements = """
@@ -81,6 +81,11 @@ def client_setup():
     assert "app1/0.1: DEP FILE pkgb: HelloB" in c.out
     assert "app1/0.1: DEP FILE pkgc: HelloC" in c.out
     return c
+
+
+@pytest.fixture()
+def client_setup(_client_setup):
+    return _client_setup.clone()
 
 
 def test_single_config_centralized(client_setup):

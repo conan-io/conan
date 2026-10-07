@@ -7,16 +7,21 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
+@pytest.fixture(scope="module")
+def _filter_profile_client():
+    c = TestClient()
+    c.save({"lib/conanfile.py": GenConanfile("lib", "1.0").with_settings("os", "build_type")
+           .with_shared_option()})
+    c.run("create lib -s os=Linux")
+    c.run("create lib -s os=Windows")
+    c.run("create lib -s os=Windows -o *:shared=True")
+    return c
+
+
 class TestFilterProfile:
     @pytest.fixture()
-    def client(self):
-        c = TestClient()
-        c.save({"lib/conanfile.py": GenConanfile("lib", "1.0").with_settings("os", "build_type")
-               .with_shared_option()})
-        c.run("create lib -s os=Linux")
-        c.run("create lib -s os=Windows")
-        c.run("create lib -s os=Windows -o *:shared=True")
-        return c
+    def client(self, _filter_profile_client):
+        return _filter_profile_client.clone()
 
     def test_exact_match(self, client):
         c = client
@@ -269,17 +274,22 @@ class TestFilterProfile:
                                               "dependencies, but different confs"
 
 
+@pytest.fixture(scope="module")
+def _missing_binary_deps_client():
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep").with_settings("os"),
+            "lib/conanfile.py": GenConanfile("lib", "1.0").with_settings("os")
+           .with_requires("dep/[>=1.0]")})
+    c.run("create dep --version=1.0 -s os=Linux")
+    c.run("create lib -s os=Linux")
+    c.run("create dep --version=2.0 -s os=Linux")
+    return c
+
+
 class TestMissingBinaryDeps:
     @pytest.fixture()
-    def client(self):
-        c = TestClient()
-        c.save({"dep/conanfile.py": GenConanfile("dep").with_settings("os"),
-                "lib/conanfile.py": GenConanfile("lib", "1.0").with_settings("os")
-               .with_requires("dep/[>=1.0]")})
-        c.run("create dep --version=1.0 -s os=Linux")
-        c.run("create lib -s os=Linux")
-        c.run("create dep --version=2.0 -s os=Linux")
-        return c
+    def client(self, _missing_binary_deps_client):
+        return _missing_binary_deps_client.clone()
 
     def test_other_platform(self, client):
         c = client

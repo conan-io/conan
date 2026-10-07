@@ -7,20 +7,25 @@ from conan.test.utils.env import environment_update
 from conan.test.utils.tools import TestClient, TestServer
 
 
+@pytest.fixture(scope="module")
+def _list_upload_client():
+    c = TestClient(default_server_user=True, light=True)
+    c.save({
+        "zlib.py": GenConanfile("zlib"),
+        "zli.py": GenConanfile("zli", "1.0.0")
+    })
+    c.run("create zli.py")
+    c.run("create zlib.py --version=1.0.0 --user=user --channel=channel")
+    return c
+
+
 class TestListUpload:
     refs = ["zli/1.0.0#f034dc90894493961d92dd32a9ee3b78",
             "zlib/1.0.0@user/channel#ffd4bc45820ddb320ab224685b9ba3fb"]
 
     @pytest.fixture()
-    def client(self):
-        c = TestClient(default_server_user=True, light=True)
-        c.save({
-            "zlib.py": GenConanfile("zlib"),
-            "zli.py": GenConanfile("zli", "1.0.0")
-        })
-        c.run("create zli.py")
-        c.run("create zlib.py --version=1.0.0 --user=user --channel=channel")
-        return c
+    def client(self, _list_upload_client):
+        return _list_upload_client.clone()
 
     def test_list_upload_recipes(self, client):
         pattern = "z*#latest"
@@ -388,19 +393,24 @@ class TestPkgListMerge:
         assert "conan list --graph graph.json --format=json > pkglist.json" in c.out
 
 
+@pytest.fixture(scope="module")
+def _download_upload_client():
+    c = TestClient(default_server_user=True, light=True)
+    c.save({
+        "zlib.py": GenConanfile("zlib"),
+        "zli.py": GenConanfile("zli", "1.0.0")
+    })
+    c.run("create zli.py")
+    c.run("create zlib.py --version=1.0.0 --user=user --channel=channel")
+    c.run("upload * -r=default -c")
+    c.run("remove * -c")
+    return c
+
+
 class TestDownloadUpload:
     @pytest.fixture()
-    def client(self):
-        c = TestClient(default_server_user=True, light=True)
-        c.save({
-            "zlib.py": GenConanfile("zlib"),
-            "zli.py": GenConanfile("zli", "1.0.0")
-        })
-        c.run("create zli.py")
-        c.run("create zlib.py --version=1.0.0 --user=user --channel=channel")
-        c.run("upload * -r=default -c")
-        c.run("remove * -c")
-        return c
+    def client(self, _download_upload_client):
+        return _download_upload_client.clone()
 
     @pytest.mark.parametrize("prev_list", [False, True])
     def test_download_upload_all(self, client, prev_list):
@@ -460,18 +470,23 @@ class TestDownloadUpload:
         assert "Uploading package 'zli/" not in client.out
 
 
+@pytest.fixture(scope="module")
+def _list_remove_client():
+    c = TestClient(default_server_user=True, light=True)
+    c.save({
+        "zlib.py": GenConanfile("zlib"),
+        "zli.py": GenConanfile("zli", "1.0.0")
+    })
+    c.run("create zli.py")
+    c.run("create zlib.py --version=1.0.0 --user=user --channel=channel")
+    c.run("upload * -r=default -c")
+    return c
+
+
 class TestListRemove:
     @pytest.fixture()
-    def client(self):
-        c = TestClient(default_server_user=True, light=True)
-        c.save({
-            "zlib.py": GenConanfile("zlib"),
-            "zli.py": GenConanfile("zli", "1.0.0")
-        })
-        c.run("create zli.py")
-        c.run("create zlib.py --version=1.0.0 --user=user --channel=channel")
-        c.run("upload * -r=default -c")
-        return c
+    def client(self, _list_remove_client):
+        return _list_remove_client.clone()
 
     def test_remove_nothing_only_refs(self, client):
         # It is necessary to do *#* for actually removing something

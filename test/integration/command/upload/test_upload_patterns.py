@@ -12,7 +12,7 @@ class TestUploadPatterns:
     def client(self):
         """ create a few packages, with several recipe revisions, several pids, several prevs
         """
-        client = TestClient(default_server_user=True)
+        client = TestClient(default_server_user=True, light=True)
 
         for pkg in ("pkga", "pkgb"):
             for version in ("1.0", "1.1"):
@@ -145,7 +145,7 @@ class TestUploadPatternErrors:
 
     @pytest.fixture(scope="class")
     def client(self):
-        client = TestClient(default_server_user=True)
+        client = TestClient(default_server_user=True, light=True)
         client.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         client.run(f"create .")
         return client
