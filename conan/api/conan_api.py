@@ -21,7 +21,7 @@ from conan.api.subapi.remotes import RemotesAPI
 from conan.api.subapi.remove import RemoveAPI
 from conan.api.subapi.upload import UploadAPI
 from conan.errors import ConanException
-from conan.internal.api.remotes.localdb import LocalDB
+from conan.internal.api.remotes.localdb import create_token_store
 from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal.conan_app import ConanFileHelpers, CmdWrapper
@@ -176,7 +176,7 @@ class ConanAPI:
         def remote_manager(self):
             if self._remote_manager is None:
                 home_folder = self._conan_api.home_folder
-                localdb = LocalDB(home_folder)
+                localdb = create_token_store(home_folder)
                 requester = self._conan_api._api_helpers.requester  # noqa
                 auth_manager = ConanApiAuthManager(requester, self._conan_api.home_folder, localdb,
                                                    self.global_conf)
