@@ -66,7 +66,48 @@ class TestGitRemotesBasic:
         c.run("install . --build=missing")
         c.run("install . --build=missing --update")
         assert "Updating from git remote" in c.out
-        assert "Cloning" in c.out
+        assert "Fetching updates" in c.out
+        assert "Cloning" not in c.out
+
+    def test_update_fetches_new_upstream_commit(self, git_repos):
+        """--update refreshes the existing clone in place, picking up new upstream commits"""
+        repo_path, _ = git_repos("conan-io/zlib", {"conanfile.py": GenConanfile("zlib", "1.0")})
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.0", git="conan-io/zlib")})
+        c.run("install . --build=missing")
+
+        save(os.path.join(repo_path, "conanfile.py"),
+             str(GenConanfile("zlib", "1.0").with_class_attribute("description = 'new'")))
+        new_sha = git_add_changes_commit(repo_path)
+        c.run("install . --build=missing --update")
+        assert "Cloning" not in c.out
+        assert f"zlib/1.0#{new_sha}" in c.out
+
+    def test_update_commit_ref_skips_fetch(self, git_repos):
+        """A full commit SHA is immutable: --update neither clones nor fetches"""
+        _, sha = git_repos("conan-io/zlib", {"conanfile.py": GenConanfile("zlib", "1.0")})
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.0",
+                                                                git=f"conan-io/zlib@{sha}")})
+        c.run("install . --build=missing")
+        c.run("install . --build=missing --update")
+        assert "Cloning" not in c.out
+        assert "Fetching updates" not in c.out
+        assert f"zlib/1.0#{sha}" in c.out
+
+    def test_update_tag_and_branch_ref(self, git_repos):
+        repo_path, _ = git_repos("conan-io/zlib", {"conanfile.py": GenConanfile("zlib", "1.0")},
+                                 branch="dev")
+        c = TestClient(light=True)
+        c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.0",
+                                                                git="conan-io/zlib@dev")})
+        c.run("install . --build=missing")
+        save(os.path.join(repo_path, "conanfile.py"),
+             str(GenConanfile("zlib", "1.0").with_class_attribute("description = 'new'")))
+        new_sha = git_add_changes_commit(repo_path)
+        c.run("install . --build=missing --update")
+        assert "Cloning" not in c.out
+        assert f"zlib/1.0#{new_sha}" in c.out
 
     @pytest.mark.parametrize("method", [
         "with_requirement",       # self.requires(git=)      — host dependency
@@ -144,6 +185,18 @@ class TestGitRemotesRef:
         c.run("install . --build=missing")
         assert f"git ref: {tag}" in c.out
         assert "mypkg/1.0" in c.out
+
+    def test_invalid_ref_is_error(self, git_repos):
+        """A ref is a single branch/tag/commit name: options like '--detach' or several
+        space-separated arguments must never reach 'git checkout'."""
+        c = TestClient(light=True)
+        for bad_ref in ["--detach", "-b", "main --detach", "a b", "a..b", "a~1", "a^", "a:b",
+                        "a?", "a*", "a[", "a@{1}", "a/", "a.lock"]:
+            c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
+                                                                    git=f"myorg/mypkg@{bad_ref}")})
+            c.run("install . --build=missing", assert_error=True)
+            assert f"invalid git ref '{bad_ref}'" in c.out
+            assert "Cloning git repository" not in c.out
 
     def test_trailing_at_is_error(self, git_repos):
         """A trailing '@' with an empty ref is almost always a typo. Reject it

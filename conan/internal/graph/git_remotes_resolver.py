@@ -1,5 +1,6 @@
 import hashlib
 import os
+import re
 import subprocess
 
 from conan.api.output import ConanOutput
@@ -19,6 +20,24 @@ class GitRemotesResolver:
     def _get_url(repo):
         # Maybe we need to extend this to gitlab too, we could check a "gl:org/repo" format
         return f"https://github.com/{repo}.git"
+
+    @staticmethod
+    def _validate_git_ref(ref, git_ref):
+        """A git ref must be a single branch/tag/commit name, as accepted by
+        'git check-ref-format'. Notably it cannot start with '-' (it would be parsed by
+        'git checkout' as an option, e.g. '--detach') nor contain whitespace."""
+        # Characters/sequences git forbids in ref names (see git-check-ref-format)
+        invalid = (git_ref.startswith("-") or git_ref.startswith("/") or git_ref.endswith("/")
+                   or git_ref.endswith(".") or git_ref.endswith(".lock")
+                   or ".." in git_ref or "@{" in git_ref or "//" in git_ref
+                   or git_ref == "@"
+                   or any(c in git_ref for c in " ~^:?*[\\\x7f")
+                   or any(ord(c) < 32 for c in git_ref))
+        if invalid:
+            raise ConanException(f"Requirement '{ref}': invalid git ref '{git_ref}'. It must be "
+                                 "a single valid branch, tag or commit name: no spaces, "
+                                 "cannot start with '-', and cannot contain any of "
+                                 "'~ ^ : ? * [ \\' or '..'")
 
     def prefetch(self, node, require, update, loader, editable_packages, lockfile=None):
         """If the requirement declares a git= source, clone and export it into the local
@@ -103,6 +122,9 @@ class GitRemotesResolver:
             if locked_rev:
                 git_ref = locked_rev
 
+        if git_ref:
+            self._validate_git_ref(ref, git_ref)
+
         url = self._get_url(repo)
         force_clone = should_update_reference(ref, update)
         version_range = require.version_range
@@ -162,7 +184,9 @@ class GitRemotesResolver:
         # Leftover from a previous run interrupted mid-clone/checkout: discard it
         remove_if_dirty(clone_folder)
         if force_clone and os.path.exists(clone_folder):
-            rmdir(clone_folder)
+            # Incremental update of the existing clone is much cheaper than a full re-clone
+            if not self._do_update(url, git_ref, clone_folder):
+                rmdir(clone_folder)
         if not os.path.exists(clone_folder):
             self._do_clone(url, git_ref, clone_folder)
         conanfile_path = os.path.join(clone_folder, "conanfile.py")
@@ -185,23 +209,44 @@ class GitRemotesResolver:
                           ref.name, version, ref.user, ref.channel, revision_mode_scm=True)
 
     @staticmethod
-    def _do_clone(url, git_ref, clone_folder):
-        def _run_git(argv):
-            # argv-form; never shell=True — keeps refs/URLs with metachars intact
-            proc = subprocess.run(argv, capture_output=True, text=True)
-            return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
+    def _run_git(argv):
+        # argv-form; never shell=True — keeps refs/URLs with metachars intact
+        proc = subprocess.run(argv, capture_output=True, text=True)
+        return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
+    @staticmethod
+    def _do_update(url, git_ref, clone_folder):
+        """Fast-forwards an existing clone to the current remote state of git_ref (or of the
+        default branch HEAD). Returns False if it fails, so the caller can re-clone from scratch.
+        """
+        if git_ref and re.fullmatch(r"[0-9a-fA-F]{40}|[0-9a-fA-F]{64}", git_ref):
+            return True # A full commit SHA is immutable: the existing clone already has it
+        output = ConanOutput()
+        _run_git = GitRemotesResolver._run_git
+        with set_dirty_context_manager(clone_folder):
+            output.info(f"Fetching updates from git repository '{url}'...")
+            # The ref was validated, it is a single name that cannot be parsed as an option
+            ret, _ = _run_git(["git", "-C", clone_folder, "fetch", "origin", git_ref or "HEAD"])
+            if ret != 0:
+                return False
+            ret, _ = _run_git(["git", "-C", clone_folder, "checkout", "--force", "--detach",
+                               "FETCH_HEAD"])
+            return ret == 0
+
+    @staticmethod
+    def _do_clone(url, git_ref, clone_folder):
         output = ConanOutput()
         os.makedirs(clone_folder, exist_ok=True)
         # dirty marker: if the process is interrupted mid-clone/checkout, the
         # next run detects the marker via remove_if_dirty and starts fresh
         with set_dirty_context_manager(clone_folder):
             output.info(f"Cloning git repository '{url}'...")
-            ret, out = _run_git(["git", "clone", url, clone_folder])
+            ret, out = GitRemotesResolver._run_git(["git", "clone", url, clone_folder])
             if ret != 0:
                 raise ConanException(f"git clone failed for '{url}':\n{out}")
             if git_ref:
                 output.info(f"Checking out git ref '{git_ref}'...")
-                ret, out = _run_git(["git", "-C", clone_folder, "checkout", git_ref])
+                ret, out = GitRemotesResolver._run_git(["git", "-C", clone_folder, "checkout",
+                                                        git_ref])
                 if ret != 0:
                     raise ConanException(f"git checkout '{git_ref}' failed for '{url}':\n{out}")
