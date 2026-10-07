@@ -1,7 +1,6 @@
 import json
 import os
 import textwrap
-from time import sleep
 
 from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient, GenConanfile, TestServer
@@ -125,7 +124,6 @@ def test_reuse():
     assert "hello0/1.0@lasote/stable: Retrieving package" in client2.out
 
     client.save({"header.h": "//EMPTY!"})
-    sleep(1)
     client.run("export . --user=lasote --channel=stable")
     client.run("install --requires=hello0/1.0@lasote/stable --build='*'")
     client.run("upload hello0/1.0@lasote/stable -r default")

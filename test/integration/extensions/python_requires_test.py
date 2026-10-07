@@ -1,6 +1,5 @@
 import os
 import textwrap
-import time
 
 from conan.api.model import RecipeReference
 from conan.test.utils.tools import TestClient, GenConanfile
@@ -549,7 +548,6 @@ class TestPyRequiresExtend:
         assert "conanfile.py: PYTHON REQUIRE VAR 42" in client2.out
 
         client.save({"conanfile.py": conanfile.replace("42", "143")})
-        time.sleep(1)  # guarantee time offset
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
 

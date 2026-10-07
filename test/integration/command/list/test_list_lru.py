@@ -1,10 +1,24 @@
 import json
+import os
 import time
 
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
+
+
+def _make_lru_old(client):
+    """ Make all recipes and packages in the cache look like they were last used 10 seconds ago
+    (the LRU is the folders modification time), instead of waiting for the time to pass
+    """
+    old = time.time() - 10
+    cache_p = os.path.join(client.cache_folder, "p")
+    folders = [os.path.join(cache_p, f) for f in os.listdir(cache_p) if f not in ("b", "t")]
+    folders += [os.path.join(cache_p, "b", f) for f in os.listdir(os.path.join(cache_p, "b"))]
+    for folder in folders:
+        if os.path.isdir(folder):
+            os.utime(folder, (old, old))
 
 
 class TestLRU:
@@ -20,7 +34,7 @@ class TestLRU:
         c.run("create . --name=pkg --version=0.1")
         c.run("create . --name=dep --version=0.2")
 
-        time.sleep(2)
+        _make_lru_old(c)
         # This should update the LRU
         c.run("install --requires=pkg/0.1")
         # Removing recipes (+ its binaries) that recipes haven't been used
@@ -35,7 +49,7 @@ class TestLRU:
         assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
         assert "dep" not in c.out
 
-        time.sleep(2)
+        _make_lru_old(c)
         # This should update the LRU of the recipe only
         c.run("graph info --requires=pkg/0.1")
         # IMPORTANT: Note the pattern is NOT the same as the equivalent for 'conan remove'
@@ -76,7 +90,7 @@ class TestLRU:
                 "conanfile.py": GenConanfile("app", "1.0").with_require("dep/1.0")})
 
         c.run("create dep")
-        time.sleep(2)
+        _make_lru_old(c)
         c.run("create .")
         # Dep is not removed because its lru was updated as part of the above create
         c.run("remove * --lru=1s -c -f=json", redirect_stdout="removed.json")

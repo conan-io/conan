@@ -2,7 +2,6 @@ import json
 import os
 import re
 import textwrap
-import time
 from unittest.mock import patch, Mock
 
 import pytest
@@ -108,8 +107,7 @@ def client():
     c.run("upload * -r=default -c")
     c.run("upload * -r=other -c")
 
-    time.sleep(1.0)
-    # We create and upload new revisions later, to avoid timestamp overlaps (low resolution)
+    # Create and upload new revisions later
     with environment_update({"MYREV": "0"}):
         c.run("create zli_rev2.py -s os=Windows")
         c.run("create zli_rev2.py -s os=Linux")

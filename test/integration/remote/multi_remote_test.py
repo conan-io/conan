@@ -1,5 +1,3 @@
-from time import sleep
-
 from conan.api.model import RecipeReference
 from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
@@ -57,7 +55,6 @@ class TestMultiRemotes:
         self._export(client_a, "hello0", "0.0")
         client_a.run("upload hello0/0.0@lasote/stable -r local --only-recipe")
         client_a.run("upload hello0/0.0@lasote/stable -r default --only-recipe")
-        sleep(1)  # For timestamp and updates checks
 
         # Download hello0 from local with client_b
         client_b.run("install --requires=hello0/0.0@lasote/stable -r local --build missing")
@@ -78,7 +75,6 @@ class TestMultiRemotes:
 
         # Upload a new version from client A, but only to the default server (not the ref-listed)
         # Upload hello0 to local and default from client_a
-        sleep(1)  # For timestamp and updates checks
         self._export(client_a, "hello0", "0.0", modifier="\n\n")
         client_a.run("upload hello0/0.0@lasote/stable#latest -r default --only-recipe")
 
@@ -114,7 +110,6 @@ class TestMultiRemotes:
         client.run("install --requires=hello0/0.0@lasote/stable --build missing")
 
         client.run("upload hello0/0.0@lasote/stable -r default")
-        sleep(1)  # For timestamp and updates checks
         self._export(client, "hello0", "0.0", modifier=" ")
         local_remote_rev = client.exported_recipe_revision()
         client.run("install --requires=hello0/0.0@lasote/stable --build missing")
@@ -131,7 +126,6 @@ class TestMultiRemotes:
         client.run("install --requires=hello0/0.0@lasote/stable --update -r default")
         assert f"hello0/0.0@lasote/stable#{local_remote_rev} - Newer" in client.out
 
-        sleep(1)  # For timestamp and updates checks
         # Check that it really updates in case of newer package uploaded to the associated remote
         client_b = TestClient(light=True, servers=servers, inputs=3*["admin", "password"])
         self._export(client_b, "hello0", "0.0", modifier="  ")

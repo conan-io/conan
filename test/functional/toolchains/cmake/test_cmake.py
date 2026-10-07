@@ -196,6 +196,16 @@ class Base:
         return install_out
 
     def _modify_code(self):
+        # Move all the existing files back in time, so the modified files are clearly newer than
+        # the previous build outputs, instead of waiting for the file system clock
+        past = time.time() - 10
+        for root, _, files in os.walk(self.client.current_folder):
+            for f in files:
+                try:
+                    os.utime(os.path.join(root, f), (past, past))
+                except OSError:  # e.g. a .pdb still opened by the Windows mspdbsrv
+                    pass
+
         lib_cpp = gen_function_cpp(name="app", msg="AppImproved", includes=["hello"],
                                    calls=["hello"], preprocessor=["MYVAR", "MYVAR_CONFIG",
                                                                   "MYDEFINE", "MYDEFINE_CONFIG",
@@ -308,7 +318,6 @@ class TestWin(Base):
                          static_runtime=static_runtime)
 
         self._modify_code()
-        time.sleep(1)
         self._incremental_build(build_type=build_type)
         _verify_out(marker="++>>")
         self._run_app(build_type, bin_folder=True, msg="AppImproved")
@@ -369,7 +378,6 @@ class TestWin(Base):
                        }, subsystem="mingw64")
 
         self._modify_code()
-        time.sleep(2)
         self._incremental_build()
         _verify_out(marker="++>>")
         self._run_app(build_type, msg="AppImproved")
@@ -490,7 +498,6 @@ class TestApple(Base):
         arch = host_profile.settings.get("arch")
         check_exe_run(self.client.out, "main", "apple-clang", None, build_type, arch, cppstd=cppstd)
         self._modify_code()
-        time.sleep(1)
         self._incremental_build()
         _verify_out(marker="++>>")
         self._run_app(build_type, dyld_path=shared, msg="AppImproved")
