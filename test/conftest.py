@@ -417,3 +417,29 @@ def _memoize_settings_yml_parsing():
 
 
 _memoize_settings_yml_parsing()
+
+
+def _no_sync_sqlite_databases():
+    """
+    The Conan cache and the local credentials DB open a new sqlite connection for every operation,
+    and every write is synchronously flushed to disk (journal_mode=DELETE + synchronous=FULL),
+    which is very slow in Windows. Durability does not matter for the test suite caches.
+    """
+    from contextlib import contextmanager
+    from conan.internal.api.remotes.localdb import LocalDB
+    from conan.internal.cache.db.table import BaseDbTable
+
+    def _no_sync(connect):
+        @contextmanager
+        def _connect(self):
+            with connect(self) as connection:
+                connection.execute("PRAGMA journal_mode=MEMORY")
+                connection.execute("PRAGMA synchronous=OFF")
+                yield connection
+        return _connect
+
+    BaseDbTable.db_connection = _no_sync(BaseDbTable.db_connection)
+    LocalDB._connect = _no_sync(LocalDB._connect)
+
+
+_no_sync_sqlite_databases()
