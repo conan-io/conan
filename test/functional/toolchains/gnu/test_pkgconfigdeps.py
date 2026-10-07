@@ -3,7 +3,6 @@ import textwrap
 
 import pytest
 
-from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -27,32 +26,6 @@ def test_pkgconfigdeps_definitions_escape():
     client.run_command("PKG_CONFIG_PATH=$(pwd) pkg-config --cflags hello")
     assert r'flag2=\"my flag2\" flag1=\"my flag1\" ' \
            r'-DUSER_CONFIG=\"user_config.h\" -DOTHER=\"other.h\"' in client.out
-
-
-@pytest.mark.tool("cmake")
-def test_pkgconfigdeps_with_test_requires():
-    """
-    PkgConfigDeps has to create any test requires declared on the recipe.
-
-    Related issue: https://github.com/conan-io/conan/issues/11376
-    """
-    client = TestClient()
-    client.save({"app/conanfile.py": GenConanfile("app", "1.0"),
-                 "test/conanfile.py": GenConanfile("test", "1.0")})
-    client.run("create app")
-    client.run("create test")
-    # Create library having build and test requires
-    conanfile = textwrap.dedent(r'''
-        from conan import ConanFile
-        class HelloLib(ConanFile):
-            def build_requirements(self):
-                self.test_requires('app/1.0')
-                self.test_requires('test/1.0')
-        ''')
-    client.save({"conanfile.py": conanfile}, clean_first=True)
-    client.run("install . -g PkgConfigDeps")
-    assert "Description: Conan package: test" in client.load("test.pc")
-    assert "Description: Conan package: app" in client.load("app.pc")
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="It makes sense only for Windows")

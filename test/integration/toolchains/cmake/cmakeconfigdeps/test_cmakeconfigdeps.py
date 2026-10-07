@@ -1499,3 +1499,4 @@ def test_runtime_lib_dirs_keep_other_configs():
     paths = c.load("conan_cmakedeps_paths.cmake")
     assert "$<$<CONFIG:Debug>:" in paths
     assert "$<$<CONFIG:Release>:" in paths
+    assert "set(CMAKE_VS_DEBUGGER_ENVIRONMENT" in paths
