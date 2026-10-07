@@ -363,3 +363,36 @@ def pytest_runtest_setup(item):
         item.old_environ = dict(os.environ)
         tools_env_vars['PATH'] = os.pathsep.join(tools_paths + [os.environ["PATH"]])
         os.environ.update(tools_env_vars)
+
+
+def _memoize_settings_yml_parsing():
+    """
+    Every ``TestClient.run()`` creates a new ``ConanAPI``, which parses again the whole
+    ``settings.yml`` with the pure-Python YAML loader. That parse is the most expensive part of
+    most Conan commands in the test suite, and the text is almost always the same one, so for
+    the test suite only, cache the parsed data by its text. A deep copy is returned, because
+    the caller can modify it (e.g. merging ``settings_user.yml``)
+    """
+    import copy
+    import yaml
+    from conan.internal.model import settings
+
+    parsed = {}
+
+    class _CachedSafeLoadYaml:
+        YAMLError = yaml.YAMLError
+
+        @staticmethod
+        def safe_load(text):
+            if not isinstance(text, str):
+                return yaml.safe_load(text)
+            try:
+                result = parsed[text]
+            except KeyError:
+                result = parsed[text] = yaml.safe_load(text)
+            return copy.deepcopy(result)
+
+    settings.yaml = _CachedSafeLoadYaml
+
+
+_memoize_settings_yml_parsing()
