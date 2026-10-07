@@ -133,6 +133,9 @@ class TestAuthorize:
         tc.run("remote login default pepe -p pepepass")
         assert ("Changed user of remote 'default' "
                 "from 'None' (anonymous) to 'pepe' (authenticated)") in tc.out
+        tc.run("remote logout default")
+        assert ("Changed user of remote 'default' "
+                "from 'pepe' (authenticated) to 'None' (anonymous)") in tc.out
 
 
 class TestAuthenticationTest:

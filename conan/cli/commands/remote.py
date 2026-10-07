@@ -260,7 +260,7 @@ def remote_logout(conan_api, parser, subparser, *args):
     subparser.add_argument("remote", help="Pattern or name of the remote to logout. "
                                           "The pattern uses 'fnmatch' style wildcards.")
     args = parser.parse_args(*args)
-    remotes = conan_api.remotes.list(pattern=args.remote)
+    remotes = conan_api.remotes.list(pattern=args.remote, only_enabled=False)
     if not remotes:
         raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
 
