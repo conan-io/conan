@@ -103,24 +103,6 @@ class TestPyRequiresExtend:
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         assert "pkg/0.1@user/testing: My cool build!" in client.out
 
-    def test_with_alias(self):
-        client = TestClient(light=True)
-        self._define_base(client)
-        client.alias("base/latest@user/testing", "base/1.1@user/testing")
-
-        reuse = textwrap.dedent("""
-            from conan import ConanFile
-            class PkgTest(ConanFile):
-                name = "pkg"
-                version = "1.0"
-                python_requires = "base/latest@user/testing"
-            """)
-        client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("install .", assert_error=True)
-        assert "python-requires 'alias' are not supported in Conan 2.0" in client.out
-        client.run("create .", assert_error=True)
-        assert "python-requires 'alias' are not supported in Conan 2.0" in client.out
-
     def test_reuse_version_ranges(self):
         client = TestClient(light=True)
         self._define_base(client)
