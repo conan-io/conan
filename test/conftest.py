@@ -6,7 +6,28 @@ from shutil import which
 
 import pytest
 
+from conan.internal.api.detect import detect_vs
 from conan.internal.api.detect.detect_vs import vs_installation_path
+
+
+def _cache_vs_installation_path():
+    """
+    Locating a Visual Studio installation runs vswhere twice, and it is done again for every
+    VCVars generation (CMakeToolchain, MSBuildToolchain, etc.), which is slow in Windows. The
+    installed Visual Studio versions do not change during the test session, so cache them
+    """
+    vs_installation = detect_vs._vs_installation_path
+    cached = {}
+
+    def _cached_vs_installation_path(version):
+        if version not in cached:
+            cached[version] = vs_installation(version)
+        return cached[version]
+
+    detect_vs._vs_installation_path = _cached_vs_installation_path
+
+
+_cache_vs_installation_path()
 
 """
 To override these locations with your own in your dev machine:
