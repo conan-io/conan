@@ -167,8 +167,8 @@ class GitRemotesResolver:
             self._do_clone(url, git_ref, clone_folder)
         conanfile_path = os.path.join(clone_folder, "conanfile.py")
         if not os.path.exists(conanfile_path):
-            raise ConanException(
-                f"conanfile.py not found at root of git repo '{url}'")
+            at_ref = f" (ref '{git_ref}')" if git_ref else ""
+            raise ConanException(f"conanfile.py not found at root of git repo '{url}'{at_ref}")
 
         # Hooks are intentionally skipped: git= is aimed at open-source /
         # community workflows that pull recipes straight from public github.com

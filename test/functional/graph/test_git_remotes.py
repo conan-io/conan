@@ -193,6 +193,19 @@ class TestGitRemotesContract:
         c.run("install . --build=missing", assert_error=True)
         assert "conanfile.py not found" in c.out
 
+    def test_missing_conanfile_at_ref_mentions_ref(self, git_repos):
+        """The tag predates the recipe, while the default branch has one: the error must
+        name the ref, otherwise it reads as if the repo had no recipe at all."""
+        path, _ = git_repos("myorg/myrepo", {"README.md": "# hello"}, tags=["v1.0"])
+        c = TestClient(light=True)
+        save(os.path.join(path, "conanfile.py"), str(GenConanfile("zlib", "1.0")))
+        git_add_changes_commit(path)
+        c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.0",
+                                                                git="myorg/myrepo@v1.0")})
+        c.run("install . --build=missing", assert_error=True)
+        assert "conanfile.py not found at root of git repo" in c.out
+        assert "(ref 'v1.0')" in c.out
+
     def test_repo_hardcodes_different_name_errors(self, git_repos):
         git_repos("myorg/mypkg", {"conanfile.py": GenConanfile("wrongname", "1.0")})
         c = TestClient(light=True)
