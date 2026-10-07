@@ -70,9 +70,11 @@ def test_autotools_bash_complete_ucrt64():
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool("msys2")
 @pytest.mark.tool("clang", "20")
-@pytest.mark.parametrize("frontend", ("clang", "clang-cl"))
-@pytest.mark.parametrize("runtime", ("static", "dynamic"))
-@pytest.mark.parametrize("build_type", ("Debug", "Release"))
+# All the pairs of frontend, runtime and build_type values, not all their combinations
+@pytest.mark.parametrize("frontend, runtime, build_type", [("clang", "static", "Debug"),
+                                                           ("clang", "dynamic", "Release"),
+                                                           ("clang-cl", "static", "Release"),
+                                                           ("clang-cl", "dynamic", "Debug")])
 def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     client = TestClient(path_with_spaces=False)
     # Problem is that msys2 also has clang in the path, so we need to make it explicit
