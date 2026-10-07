@@ -748,7 +748,7 @@ def test_defaults_in_components():
     assert re.search(r"BINDIRS: \['.+bin']", client.out)
     assert re.search(r"LIBDIRS: \['.+lib']", client.out)
     assert re.search(r"INCLUDEDIRS: \['.+include']", client.out)
-    assert "WARN: RES DIRS: []"
+    assert "WARN: RESDIRS: []" in client.out
     assert re.search(r"WARN: FOO LIBDIRS: \['.+lib']", client.out)
     assert re.search(r"WARN: FOO INCLUDEDIRS: \['.+include']", client.out)
     assert "WARN: FOO RESDIRS: []" in client.out
@@ -758,7 +758,7 @@ def test_defaults_in_components():
     assert re.search(r"BINDIRS: \['.+bin']", client.out)
     assert re.search(r"LIBDIRS: \['.+lib']", client.out)
     assert re.search(r"INCLUDEDIRS: \['.+include']", client.out)
-    assert "WARN: RES DIRS: []"
+    assert "WARN: RESDIRS: []" in client.out
     assert bool(re.search(r"WARN: FOO LIBDIRS: \['.+lib']", client.out))
     assert bool(re.search(r"WARN: FOO INCLUDEDIRS: \['.+include']", client.out))
     assert "WARN: FOO RESDIRS: []" in client.out

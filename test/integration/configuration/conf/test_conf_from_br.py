@@ -447,7 +447,7 @@ def test_error_bad_types(conf):
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .", assert_error=True)
-    assert "ERROR: tool/0.1: Error in package_info() method, line 10"
+    assert "ERROR: tool/0.1: Error in package_info() method, line 10" in c.out
     assert f'self.conf_info.{conf}' in c.out
     assert "Invalid 'conf' type, please use Python types (int, str, ...)" in c.out
 
