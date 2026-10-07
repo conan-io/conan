@@ -36,10 +36,14 @@ conanfile_py = textwrap.dedent("""
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+# The same configurations are tested with the GnuToolchain, both use the same Apple flags,
+# so each one tests half of them in PRs, and all of them in develop2 (slow)
 @pytest.mark.parametrize("config", [("x86_64", "Macos", "10.14", None),
                                     ("armv8", "iOS", "10.0", "iphoneos"),
-                                    ("x86_64", "iOS", "10.0", "iphonesimulator"),
-                                    ("armv8", "Macos", "10.14", None)  # M1
+                                    pytest.param(("x86_64", "iOS", "10.0", "iphonesimulator"),
+                                                 marks=pytest.mark.slow),
+                                    pytest.param(("armv8", "Macos", "10.14", None),  # M1
+                                                 marks=pytest.mark.slow)
                                     ])
 def test_makefile_arch(config):
     arch, os_, os_version, os_sdk = config
