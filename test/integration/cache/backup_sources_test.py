@@ -1048,8 +1048,10 @@ class TestDownloadCacheBackupSources:
                             f"'origin']\n"
                             f"core.sources:upload_url={self.file_server.fake_url}/backups/"})
 
-        self.client.save({"conanfile.py": conanfile % ([origin_url, mirror_url], sha256)})
+        # A None url (e.g. from an unset env-var) is skipped, as the origin download does
+        self.client.save({"conanfile.py": conanfile % ([None, origin_url, mirror_url], sha256)})
         self.client.run("create .")
+        assert "Could not download from the URL None" in self.client.out
         # Not in the backup yet: the backup gets all the escaped urls, the origin gets none
         assert received == [(f"/backups/{sha256}",
                              f"{origin_url}, http://mirror.other/my%20file%2Cv1.txt?a=b"),

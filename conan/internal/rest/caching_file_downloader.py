@@ -89,8 +89,10 @@ class SourcesCachingDownloader:
                      auth, headers, md5, sha1, sha256):
         # Backup servers receive the original urls, comma separated. Each url is percent-encoded
         # (commas included, so it is safe to split by ",") and recovered with a single unquote()
+        # Non-str urls (like None) are skipped, origin download warns about them and continues
         url_list = urls if isinstance(urls, (list, tuple)) else [urls]
-        origin_urls = ", ".join(quote(url, safe=":/?=&@#[]!$'()*+;") for url in url_list)
+        origin_urls = ", ".join(quote(url, safe=":/?=&@#[]!$'()*+;")
+                                for url in url_list if isinstance(url, str))
         # iterates the origins until one works
         for backup_url in source_origins:
             if backup_url == "origin":  # download from the internet
