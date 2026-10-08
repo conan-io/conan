@@ -135,6 +135,25 @@ class ConanAPI:
             self.cache = PkgCache(self._conan_api.home_folder, self.global_conf)
             self._settings_yml = None
             self._remote_manager = None
+            self._compression_plugin = None
+
+        @property
+        def compression_plugin(self):
+            # NOTE: Users cannot store a reference to this plugin, otherwise it will not
+            # be updated after a "conan config install/install-pkg"
+            if self._compression_plugin is None:
+                compression_plugin_path = HomePaths(
+                    self._conan_api.home_folder).compression_plugin_path
+                if not os.path.exists(compression_plugin_path):
+                    self._compression_plugin = False  # Avoid FS re-check
+                    return None
+                mod, _ = load_python_file(compression_plugin_path)
+                # A plugin can provide just 1 of them
+                if not hasattr(mod, "tar_extract") and not hasattr(mod, "tar_compress"):
+                    raise ConanException("The 'compression.py' plugin does not contain "
+                                         "required `tar_extract` or `tar_compress` functions")
+                self._compression_plugin = mod
+            return self._compression_plugin
 
         def set_core_confs(self, core_confs):
             confs = ConfDefinition()
@@ -165,6 +184,7 @@ class ConanAPI:
             self.cache = PkgCache(self._conan_api.home_folder, self.global_conf)
             self._remote_manager = None
             self._editable_packages = EditablePackages(self._conan_api.home_folder)
+            self._compression_plugin = None
 
         @property
         def settings_yml(self):
@@ -180,7 +200,8 @@ class ConanAPI:
                 requester = self._conan_api._api_helpers.requester  # noqa
                 auth_manager = ConanApiAuthManager(requester, self._conan_api.home_folder, localdb,
                                                    self.global_conf)
-                self._remote_manager = RemoteManager(self.cache, auth_manager, home_folder)
+                self._remote_manager = RemoteManager(self.cache, auth_manager, home_folder,
+                                                     self.compression_plugin)
             return self._remote_manager
 
         @property

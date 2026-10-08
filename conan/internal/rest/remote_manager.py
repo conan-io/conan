@@ -28,11 +28,13 @@ class RemoteManager:
 
     _ErrorMsg = namedtuple("ErrorMsg", ["message"])
 
-    def __init__(self, cache, auth_manager, home_folder):
+    def __init__(self, cache, auth_manager, home_folder, compression_plugin=None):
         self._cache = cache
         self._auth_manager = auth_manager
         self._signer = PkgSignaturesPlugin(cache, home_folder)
         self._home_folder = home_folder
+        self._extract_plugin = getattr(compression_plugin, "tar_extract", None) \
+            if compression_plugin else None
 
     def _local_folder_remote(self, remote):
         if remote.remote_type == LOCAL_RECIPES_INDEX:
@@ -99,7 +101,8 @@ class RemoteManager:
         tgz_file = zipped_files.pop(export_file, None)
 
         if tgz_file:
-            uncompress_file(tgz_file, export_folder, scope=str(ref))
+            uncompress_file(tgz_file, export_folder, scope=str(ref),
+                            extract_plugin=self._extract_plugin)
         mkdir(export_folder)
         for file_name, file_path in zipped_files.items():  # copy CONANFILE
             shutil.move(file_path, os.path.join(export_folder, file_name))
@@ -136,7 +139,8 @@ class RemoteManager:
                 self._signer.verify(ref, download_folder, layout.metadata(), files=zipped_files)
                 # Only 1 file is guaranteed
                 tgz_file = next(iter(zipped_files.values()))
-                uncompress_file(tgz_file, export_sources_folder, scope=str(ref))
+                uncompress_file(tgz_file, export_sources_folder, scope=str(ref),
+                                extract_plugin=self._extract_plugin)
 
     def get_package(self, pref, remote, metadata=None):
         output = ConanOutput(scope=str(pref.ref))
@@ -190,7 +194,8 @@ class RemoteManager:
 
             tgz_file = zipped_files.pop(package_file)
             package_folder = layout.package()
-            uncompress_file(tgz_file, package_folder, scope=str(pref.ref))
+            uncompress_file(tgz_file, package_folder, scope=str(pref.ref),
+                            extract_plugin=self._extract_plugin)
             mkdir(package_folder)  # Just in case it doesn't exist, because uncompress did nothing
             for file_name, file_path in zipped_files.items():  # copy CONANINFO and CONANMANIFEST
                 shutil.move(file_path, os.path.join(package_folder, file_name))
@@ -341,18 +346,25 @@ class RemoteManager:
             raise ConanException(exc, remote=remote)
 
 
-def uncompress_file(src_path, dest_folder, scope=None):
-    if sys.version_info.minor < 14 and src_path.endswith("zst"):
+def uncompress_file(src_path, dest_folder, scope=None, extract_plugin=None):
+    if sys.version_info.minor < 14 and src_path.endswith("zst") and extract_plugin is None:
         raise ConanException(f"File {os.path.basename(src_path)} compressed with 'zst', "
                              f"unsupported for Python<3.14 ")
+
     try:
         filesize = os.path.getsize(src_path)
         big_file = filesize > 10000000  # 10 MB
         if big_file:
             hs = human_size(filesize)
             ConanOutput(scope=scope).info(f"Decompressing {hs} {os.path.basename(src_path)}")
+
+        if extract_plugin is not None:
+            if extract_plugin(src_path, dest_folder, scope) is not False:
+                # If the plugin returns false, fallback to Conan extraction
+                return
+
         with open(src_path, mode='rb') as file_handler:
-            tar_extract(file_handler, dest_folder)
+            tar_extract(fileobj=file_handler, destination_dir=dest_folder)
     except Exception as e:
         error_msg = "Error while extracting downloaded file '%s' to %s\n%s\n"\
                     % (src_path, dest_folder, str(e))
