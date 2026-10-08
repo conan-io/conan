@@ -76,9 +76,9 @@ class BazelToolchain:
         self.force_pic = fpic if (not shared and fpic is not None) else None
         # FIXME: Keeping this option but it's not working as expected. It's not creating the shared
         #        libraries at all.
-        #: String used to add --dynamic_mode=["fully"|"off"]. Depends on self.options.shared value.
-        self.dynamic_mode = "fully" if shared else "off"
-        #: String used to add --cppstd=[FLAG]. Depends on your settings.
+        #: String used to add --dynamic_mode=["fully"|"off"]. None if self.options.shared is undefined.
+        self.dynamic_mode = None if shared is None else ("fully" if shared else "off")
+        #: String used to add --cxxopt=[FLAG]. Depends on your settings.
         self.cppstd = cppstd_flag(self._conanfile)
         #: List of flags used to add --copt=flag1 ... --copt=flagN
         self.copt = []
@@ -130,8 +130,8 @@ class BazelToolchain:
 
     @property
     def ldflags(self):
-        conf_flags = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
-                                              check_type=list)
+        conf_flags = list(self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
+                                                   check_type=list))
         conf_flags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],
                                                    check_type=list))
         linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
