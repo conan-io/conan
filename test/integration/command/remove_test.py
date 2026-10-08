@@ -1,6 +1,8 @@
 import json
 import os
 import shutil
+import stat
+import textwrap
 
 import pytest
 
@@ -63,6 +65,33 @@ class TestRemoveWithoutUserChannel:
 
         client.run("install --requires=lib/1.0@", assert_error=True)
         assert "Unable to find 'lib/1.0' in remotes" in client.out
+
+
+def test_remove_package_with_readonly_folder():
+    """ removing a package that contains a read-only directory must not fail with a
+    permission error, be it on Windows (the directory's own read-only attribute blocks its
+    removal) or on POSIX (removing an entry needs write permission on its parent directory)
+    https://github.com/conan-io/conan/issues/20241
+    """
+    conanfile = textwrap.dedent("""
+        import os, stat
+        from conan import ConanFile
+        from conan.tools.files import save
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            def package(self):
+                d = os.path.join(self.package_folder, "readonlydir")
+                save(self, os.path.join(d, "inside.txt"), "inside!!")
+                os.chmod(d, stat.S_IREAD | stat.S_IEXEC)
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    pkg_layout = client.created_layout()
+    client.run("remove pkg/1.0 -c")
+    assert not os.path.exists(pkg_layout.base_folder)
 
 
 class TestRemovePackageRevisions:
