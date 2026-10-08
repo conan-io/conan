@@ -3,6 +3,7 @@ import textwrap
 
 import pytest
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.tools.files import load
 from conan.tools.google import BazelToolchain
 from conan.test.utils.tools import TestClient
@@ -175,26 +176,10 @@ def test_recipe_without_shared_option():
     """
     A recipe without a shared option must not write --dynamic_mode. A missing option is not False.
     """
-    profile = textwrap.dedent("""
-    [settings]
-    arch=x86_64
-    build_type=Release
-    compiler=apple-clang
-    compiler.cppstd=gnu17
-    compiler.libcxx=libc++
-    compiler.version=13.0
-    os=Macos
-    """)
-    conanfile = textwrap.dedent("""
-    from conan import ConanFile
-    class ExampleConanIntegration(ConanFile):
-        settings = "os", "arch", "build_type", "compiler"
-        generators = "BazelToolchain"
-    """)
     c = TestClient()
-    c.save({"conanfile.py": conanfile,
-            "profile": profile})
-    c.run("install . -pr profile")
+    c.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "build_type", "compiler")
+            .with_generator("BazelToolchain")})
+    c.run("install")
     content = load(c, os.path.join(c.current_folder, BazelToolchain.bazelrc_name))
     assert "--dynamic_mode" not in content
 
@@ -205,14 +190,7 @@ def test_linker_flags_do_not_mutate_conf():
     A second read returns the same flags.
     """
     profile = textwrap.dedent("""
-    [settings]
-    arch=x86_64
-    build_type=Release
-    compiler=apple-clang
-    compiler.cppstd=gnu17
-    compiler.libcxx=libc++
-    compiler.version=13.0
-    os=Macos
+    include(default)
     [conf]
     tools.build:sharedlinkflags+=["--shared"]
     tools.build:exelinkflags+=["--exe"]
@@ -234,5 +212,5 @@ def test_linker_flags_do_not_mutate_conf():
     c = TestClient()
     c.save({"conanfile.py": conanfile,
             "profile": profile})
-    c.run("install . -pr profile")
+    c.run("install -pr profile")
     assert "LDREADS --shared --exe -T'myscript.sh' || --shared --exe -T'myscript.sh' || --shared" in c.out
