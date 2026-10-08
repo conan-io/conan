@@ -8,7 +8,6 @@ import bottle
 import pytest
 from bottle import static_file, HTTPError, request
 from webtest import TestApp
-from urllib.parse import unquote
 
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
@@ -1022,73 +1021,47 @@ class TestDownloadCacheBackupSources:
         assert "sha256 hash failed" in self.client.out
         assert json.loads(load(summary_json)) == meta_after_first
 
-    def test_backup_source_x_source_urls_header(self):
-        client = TestClient(default_server_user=True, light=True)
-        download_cache_folder = temp_folder()
-        http_server_base_folder_backups = temp_folder()
-        http_server_base_folder_internet = temp_folder()
+    def test_backup_sources_origin_urls_header(self):
+        received = []
 
-        save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+        @self.file_server.root_app.hook("before_request")
+        def record_origin_urls():
+            received.append((request.path, request.headers.get("X-Conan-Origin-Urls")))
 
-        fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
-        urls = [f"{fake_url}/internet/myfile.txt", "http://other"]
-
-        class TestFileServerHeaders:
-
-            def __init__(self):
-                self.fake_url = fake_url
-                self.root_app = bottle.Bottle()
-                self.app = TestApp(self.root_app)
-                self._attach_to(self.root_app)
-
-            @staticmethod
-            def _attach_to(app):
-                @app.route("/internet/<file>", method=["GET"])
-                def get_internet_file(file):
-                    assert "X-Source-Urls" not in request.headers
-                    f = static_file(file, http_server_base_folder_internet)
-                    return f
-
-                @app.route("/downloader/<file>", method=["GET"])
-                def get_file(file):
-                    source_urls = request.headers.get("X-Source-Urls")
-                    assert [unquote(url) for url in source_urls.split(", ")] == urls
-                    return static_file(file, http_server_base_folder_backups)
-
-                @app.route("/uploader/<file>", method=["PUT"])
-                def put_file(file):
-                    dest = os.path.join(http_server_base_folder_backups, file)
-                    with open(dest, 'wb') as f:
-                        f.write(request.body.read())
-
+        save(os.path.join(self.file_server.store, "internet", "myfile.txt"), "Hello, world!")
         sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
-        http_server = TestFileServerHeaders()
-        client.servers["file_server"] = http_server
+        origin_url = f"{self.file_server.fake_url}/internet/myfile.txt"
+        mirror_url = "http://mirror.other/my file,v1.txt?a=b"
 
-        conanfile = textwrap.dedent(f"""
-                    from conan import ConanFile
-                    from conan.tools.files import download, load
-                    class Pkg2(ConanFile):
-                        name = "pkg"
-                        version = "1.0"
-                        def source(self):
-                            download(self, %s, "myfile.txt",
-                                     sha256="{sha256}")
-                            self.output.info(f"CONTENT: {{load(self, 'myfile.txt')}}")
-                    """)
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import download
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                def source(self):
+                    download(self, %s, "myfile.txt", sha256="%s")
+            """)
+        self.client.save_home(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
+                            f"core.sources:download_urls=['{self.file_server.fake_url}/backups/', "
+                            f"'origin']\n"
+                            f"core.sources:upload_url={self.file_server.fake_url}/backups/"})
 
-        client.save_home(
-            {"global.conf": f"core.sources:download_cache={download_cache_folder}\n"
-                            f"core.sources:download_urls=['{http_server.fake_url}/downloader/', 'origin']\n"
-                            f"core.sources:upload_url={http_server.fake_url}/uploader/"})
+        self.client.save({"conanfile.py": conanfile % ([origin_url, mirror_url], sha256)})
+        self.client.run("create .")
+        # Not in the backup yet: the backup gets all the escaped urls, the origin gets none
+        assert received == [(f"/backups/{sha256}",
+                             f"{origin_url}, http://mirror.other/my%20file%2Cv1.txt?a=b"),
+                            ("/internet/myfile.txt", None)]
 
-        client.save({"conanfile.py": conanfile % urls})
+        self.client.run("upload * -c -r=default")
+        rmdir(self.download_cache_folder)
+        received.clear()
 
-        client.run("source .")
-        # assert f"Sources for {http_server.fake_url}/internet/myfile.txt found in remote backup" in client.out
-
-        urls.pop()
-        rmdir(download_cache_folder)
-
-        client.save({"conanfile.py": conanfile % urls})
-        client.run("source .")
+        # A single url (not a list) also works, and the .json metadata download doesn't get it
+        self.client.save({"conanfile.py": conanfile % (repr(origin_url), sha256)})
+        self.client.run("source .")
+        assert f"Sources for {origin_url} found in remote backup" in self.client.out
+        assert received == [(f"/backups/{sha256}", origin_url),
+                            (f"/backups/{sha256}.json", None)]
