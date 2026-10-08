@@ -1,7 +1,8 @@
 """
 Creates a ``conan_bzl.rc`` file which defines a conan-config configuration with all the
 attributes defined by the consumer, plus host and target platforms. For gcc on Linux it also
-writes a ``cc_toolchain`` registered from ``conan_toolchain.MODULE.bazel``.
+writes a ``cc_toolchain`` that uses the Unix config shipped with Bazel, registered from
+``conan_toolchain.MODULE.bazel``.
 
 A platform is the host or target machine. Toolchain resolution uses it to select the compiler.
 Platform based resolution is the default since Bazel 7. ``--cpu`` and ``--crosstool_top`` are the
@@ -68,7 +69,6 @@ _PLATFORMS_VERSION = "1.1.0"
 _RULES_CC_VERSION = "0.2.17"
 _TOOLCHAIN_PACKAGE = "conan_toolchain"
 _MODULE_FILENAME = "conan_toolchain.MODULE.bazel"
-_CONFIG_BZL = "cc_toolchain_config.bzl"
 _TOOL_PATH_NAMES = ("gcc", "ld", "ar", "cpp", "nm", "objdump", "objcopy", "strip", "gcov")
 
 
@@ -114,6 +114,58 @@ def _bzl_list(values):
 def _bzl_dict(mapping, keys):
     inner = "\n".join(f"        {_bzl_quote(key)}: {_bzl_quote(mapping[key])}," for key in keys)
     return "{\n" + inner + "\n    }"
+
+
+_GCC_BUILD = Template(textwrap.dedent("""\
+    load("@bazel_tools//tools/cpp:unix_cc_toolchain_config.bzl", "cc_toolchain_config")
+    load("@rules_cc//cc/toolchains:cc_toolchain.bzl", "cc_toolchain")
+
+    package(default_visibility = ["//visibility:public"])
+
+    {{ platforms }}
+
+    filegroup(name = "empty")
+
+    cc_toolchain_config(
+        name = "cc_config",
+        compiler = "gcc",
+        toolchain_identifier = "conan_gcc",
+        host_system_name = "local",
+        target_system_name = "local",
+        target_libc = "glibc",
+        abi_version = "gcc",
+        abi_libc_version = "glibc",
+        cpu = {{ cpu }},
+        {%- if sysroot %}
+        builtin_sysroot = {{ sysroot }},
+        {%- endif %}
+        compile_flags = {{ compile_flags }},
+        link_libs = {{ link_libs }},
+        cxx_builtin_include_directories = {{ includes }},
+        tool_paths = {{ tool_paths }},
+    )
+
+    cc_toolchain(
+        name = "cc_toolchain",
+        toolchain_identifier = "conan_gcc",
+        toolchain_config = ":cc_config",
+        all_files = ":empty",
+        compiler_files = ":empty",
+        dwp_files = ":empty",
+        linker_files = ":empty",
+        objcopy_files = ":empty",
+        strip_files = ":empty",
+        supports_param_files = 0,
+    )
+
+    toolchain(
+        name = "cc",
+        toolchain = ":cc_toolchain",
+        toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
+        exec_compatible_with = {{ exec_constraints }},
+        target_compatible_with = {{ target_constraints }},
+    )
+    """))
 
 
 def _forward_slash(path):
@@ -195,12 +247,6 @@ def _cpu_constraint(constraints):
         if constraint.startswith(prefix):
             return constraint[len(prefix):]
     return "unknown"
-
-
-def _cc_toolchain_config_bzl():
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), _CONFIG_BZL)
-    with open(path, encoding="utf-8") as handle:
-        return handle.read()
 
 
 class BazelToolchain:
@@ -349,53 +395,20 @@ class BazelToolchain:
         return _forward_slash(sysroot) if sysroot else ""
 
     def _gcc_build(self, exec_constraints, target_constraints, tools, includes):
-        platforms = "\n\n".join((
-            _platform_rule("host", exec_constraints),
-            _platform_rule("target", target_constraints),
-        ))
-        return (
-            'load("@rules_cc//cc/toolchains:cc_toolchain.bzl", "cc_toolchain")\n'
-            f'load(":{_CONFIG_BZL}", "cc_toolchain_config")\n'
-            "\n"
-            'package(default_visibility = ["//visibility:public"])\n'
-            "\n"
-            f"{platforms}\n"
-            "\n"
-            'filegroup(name = "empty")\n'
-            "\n"
-            "cc_toolchain_config(\n"
-            '    name = "cc_config",\n'
-            f"    c_compiler = {_bzl_quote(tools['gcc'])},\n"
-            f"    cxx_compiler = {_bzl_quote(tools['g++'])},\n"
-            f"    archiver = {_bzl_quote(tools['ar'])},\n"
-            f"    sysroot = {_bzl_quote(self._sysroot())},\n"
-            f"    target_cpu = {_bzl_quote(_cpu_constraint(target_constraints))},\n"
-            f"    compile_flags = {_bzl_list(_gcc_compile_flags(self._conanfile))},\n"
-            f"    link_flags = {_bzl_list(['-lstdc++'])},\n"
-            f"    cxx_builtin_include_directories = {_bzl_list(includes)},\n"
-            f"    tool_paths = {_bzl_dict(tools, _TOOL_PATH_NAMES)},\n"
-            ")\n"
-            "\n"
-            "cc_toolchain(\n"
-            '    name = "cc_toolchain",\n'
-            '    toolchain_identifier = "conan_gcc",\n'
-            '    toolchain_config = ":cc_config",\n'
-            '    all_files = ":empty",\n'
-            '    compiler_files = ":empty",\n'
-            '    dwp_files = ":empty",\n'
-            '    linker_files = ":empty",\n'
-            '    objcopy_files = ":empty",\n'
-            '    strip_files = ":empty",\n'
-            "    supports_param_files = 0,\n"
-            ")\n"
-            "\n"
-            "toolchain(\n"
-            '    name = "cc",\n'
-            '    toolchain = ":cc_toolchain",\n'
-            '    toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",\n'
-            f"    exec_compatible_with = {_bzl_list(exec_constraints)},\n"
-            f"    target_compatible_with = {_bzl_list(target_constraints)},\n"
-            ")\n"
+        sysroot = self._sysroot()
+        return _GCC_BUILD.render(
+            platforms="\n\n".join((
+                _platform_rule("host", exec_constraints),
+                _platform_rule("target", target_constraints),
+            )),
+            cpu=_bzl_quote(_cpu_constraint(target_constraints)),
+            sysroot=_bzl_quote(sysroot) if sysroot else "",
+            compile_flags=_bzl_list(_gcc_compile_flags(self._conanfile)),
+            link_libs=_bzl_list(["-lstdc++"]),
+            includes=_bzl_list(includes),
+            tool_paths=_bzl_dict(tools, _TOOL_PATH_NAMES),
+            exec_constraints=_bzl_list(exec_constraints),
+            target_constraints=_bzl_list(target_constraints),
         )
 
     def _write_platforms(self, exec_constraints, target_constraints):
@@ -407,8 +420,6 @@ class BazelToolchain:
             tools = self._resolved_tools()
             includes = self._builtin_includes(tools)
             build = self._gcc_build(exec_constraints, target_constraints, tools, includes)
-            save(self._conanfile, os.path.join(folder_name, _CONFIG_BZL),
-                 _cc_toolchain_config_bzl())
         else:
             build = "\n\n".join((
                 _platform_rule("host", exec_constraints),
