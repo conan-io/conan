@@ -271,6 +271,7 @@ class CacheAPI:
         cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
         if temp:
             rmdir(cache.temp_folder)
+            rmdir(cache.git_clones_folder)  # git-source clones are scratch space too
             # Clean those build folders that didn't succeed to create a package and wont be in DB
             builds_folder = cache.builds_folder
             if os.path.isdir(builds_folder):
