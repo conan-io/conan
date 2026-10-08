@@ -8,6 +8,7 @@ import bottle
 import pytest
 from bottle import static_file, HTTPError, request
 from webtest import TestApp
+from urllib.parse import unquote
 
 from conan.internal.errors import NotFoundException
 from conan.errors import ConanException
@@ -368,11 +369,12 @@ class TestDownloadCacheBackupSources:
         http_server_base_folder_internet = temp_folder()
 
         save(os.path.join(http_server_base_folder_internet, "myfile.txt"), "Hello, world!")
+        fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
 
         class TestFileServer2:
 
             def __init__(self):
-                self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
+                self.fake_url = fake_url
                 self.root_app = bottle.Bottle()
                 self.app = TestApp(self.root_app)
                 self._attach_to(self.root_app)
@@ -387,10 +389,13 @@ class TestDownloadCacheBackupSources:
 
                 @app.route("/internet/<file>", method=["GET"])
                 def get_internet_file(file):
+                    assert "X-Source-Urls" not in request.headers
                     return static_file(file, http_server_base_folder_internet)
 
                 @app.route("/downloader/<file>", method=["GET"])
                 def get_file(file):
+                    source_urls = request.headers.get("X-Source-Urls")
+                    assert f"{fake_url}/internet/myfile.txt" == unquote(source_urls)
                     ret = valid_auth("mytoken")
                     return ret or static_file(file, http_server_base_folder_backups)
 

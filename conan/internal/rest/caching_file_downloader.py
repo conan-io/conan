@@ -1,7 +1,7 @@
 import os
 import shutil
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 from urllib.request import url2pathname
 
 from conan.api.output import ConanOutput
@@ -102,9 +102,14 @@ class SourcesCachingDownloader:
                 try:
                     self._output.info(f"Checking backup: {backup_url}")
                     backup_url = backup_url if backup_url.endswith("/") else backup_url + "/"
+                    header_urls = urls if isinstance(urls, (list, tuple)) else [urls]
+                    header_urls = ", ".join(quote(url) for url in header_urls)
                     # The download happens to the user download folder, not to the download cache
                     self._file_downloader.download(backup_url + sha256, download_path,
-                                                   sha256=sha256, overwrite=True)
+                                                   sha256=sha256, overwrite=True,
+                                                   headers={
+                                                       "X-Source-Urls": header_urls
+                                                   })
                     self._file_downloader.download(backup_url + sha256 + ".json",
                                                    download_path + ".json", overwrite=True)
                     self._output.info(f"Sources for {urls} found in remote backup {backup_url}")
