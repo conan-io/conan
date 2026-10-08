@@ -1,13 +1,13 @@
 import os
 import platform
 import textwrap
-import time
 
 import pytest
 
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from test.functional.utils import check_vs_runtime, check_exe_run
+from conan.test.utils.test_files import backdate_folder
 from conan.test.utils.tools import TestClient
 
 
@@ -196,16 +196,8 @@ class Base:
         return install_out
 
     def _modify_code(self):
-        # Move all the existing files back in time, so the modified files are clearly newer than
-        # the previous build outputs, instead of waiting for the file system clock
-        past = time.time() - 10
-        for root, _, files in os.walk(self.client.current_folder):
-            for f in files:
-                try:
-                    os.utime(os.path.join(root, f), (past, past))
-                except OSError:  # e.g. a .pdb still opened by the Windows mspdbsrv
-                    pass
-
+        # The modified files must be clearly newer than the previous build outputs
+        backdate_folder(self.client.current_folder)
         lib_cpp = gen_function_cpp(name="app", msg="AppImproved", includes=["hello"],
                                    calls=["hello"], preprocessor=["MYVAR", "MYVAR_CONFIG",
                                                                   "MYDEFINE", "MYDEFINE_CONFIG",

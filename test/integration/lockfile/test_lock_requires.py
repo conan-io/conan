@@ -6,6 +6,7 @@ import pytest
 
 from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.test_files import wait_clock_tick
 from conan.test.utils.tools import TestClient
 
 
@@ -611,7 +612,8 @@ def test_revision_timestamp():
     rrev = c.exported_recipe_revision()
     c.run("upload *#* -r=default -c")
     c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("_my=2")})
-    # revision 2 (server revision timestamps have sub-second resolution, no need to wait)
+    # revision 2
+    wait_clock_tick()
     c.run("export pkg")
     latest_rrev = c.exported_recipe_revision()
     c.run("upload * -r=default -c")
@@ -620,6 +622,7 @@ def test_revision_timestamp():
     list_json = json.loads(c.stdout)
     server_timestamp = list_json["default"]["pkg/0.1"]["revisions"][latest_rrev]["timestamp"]
 
+    wait_clock_tick()
     ref = RecipeReference.loads(f"pkg/0.1#{rrev}")
     # we force the lock to include the 2nd revision
     c.save({"conanfile.txt": f"[requires]\n{repr(ref)}"}, clean_first=True)

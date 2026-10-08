@@ -3,6 +3,7 @@ import os
 import textwrap
 
 from conan.api.model import RecipeReference
+from conan.test.utils.test_files import wait_clock_tick
 from conan.test.utils.tools import TestClient, GenConanfile, TestServer
 from conan.internal.util.files import load
 
@@ -124,6 +125,7 @@ def test_reuse():
     assert "hello0/1.0@lasote/stable: Retrieving package" in client2.out
 
     client.save({"header.h": "//EMPTY!"})
+    wait_clock_tick()  # The new revision must be newer
     client.run("export . --user=lasote --channel=stable")
     client.run("install --requires=hello0/1.0@lasote/stable --build='*'")
     client.run("upload hello0/1.0@lasote/stable -r default")

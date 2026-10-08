@@ -11,6 +11,7 @@ from conan.internal.errors import ConanConnectionError
 from conan.internal.util.files import save
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.env import environment_update
+from conan.test.utils.test_files import wait_clock_tick
 from conan.test.utils.tools import TestClient, TestServer, NO_SETTINGS_PACKAGE_ID
 
 
@@ -107,7 +108,8 @@ def client():
     c.run("upload * -r=default -c")
     c.run("upload * -r=other -c")
 
-    # Create and upload new revisions later
+    wait_clock_tick()
+    # We create and upload new revisions later, to avoid timestamp overlaps (low resolution)
     with environment_update({"MYREV": "0"}):
         c.run("create zli_rev2.py -s os=Windows")
         c.run("create zli_rev2.py -s os=Linux")
