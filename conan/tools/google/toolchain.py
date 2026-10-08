@@ -3,10 +3,13 @@ Creates a ``conan_bzl.rc`` file which defines a conan-config configuration with 
 attributes defined by the consumer, plus host and target platforms. For gcc on Linux it also
 writes a ``cc_toolchain`` registered from ``conan_toolchain.MODULE.bazel``.
 
+A platform is the host or target machine. Toolchain resolution uses it to select the compiler.
+Platform based resolution is the default since Bazel 7. ``--cpu`` and ``--crosstool_top`` are the
+older selection flags.
+
 More information related:
-    * Toolchains: https://bazel.build/extending/toolchains (deprecated)
-    * Platforms: https://bazel.build/concepts/platforms (new default since Bazel 7.x)
-    * Migrating to platforms: https://bazel.build/concepts/platforms
+    * Platforms: https://bazel.build/concepts/platforms
+    * Toolchains: https://bazel.build/extending/toolchains
     * Issue related: https://github.com/bazelbuild/bazel/issues/6516
 
 Others:
@@ -58,13 +61,15 @@ _ARCH_CONSTRAINTS = {
     "s390x": "s390x",
     "riscv64": "riscv64",
 }
-_PLATFORMS_VERSION = "1.0.0"
+# Newest release on https://registry.bazel.build whose presubmit.yml lists Bazel 7, 8 and 9.
+# The file is modules/<name>/<version>/presubmit.yml in bazelbuild/bazel-central-registry.
+# rules_cc stays on the version BazelDeps writes. Both snippets share the root MODULE.bazel.
+_PLATFORMS_VERSION = "1.1.0"
 _RULES_CC_VERSION = "0.2.17"
-_TOOLCHAIN_PACKAGE = "toolchain"
+_TOOLCHAIN_PACKAGE = "conan_toolchain"
 _MODULE_FILENAME = "conan_toolchain.MODULE.bazel"
 _CONFIG_BZL = "cc_toolchain_config.bzl"
 _TOOL_PATH_NAMES = ("gcc", "ld", "ar", "cpp", "nm", "objdump", "objcopy", "strip", "gcov")
-_TOOL_PATH_KEYS = _TOOL_PATH_NAMES + ("g++",)
 
 
 def _generators_parts(conanfile):
@@ -155,9 +160,8 @@ def _parse_builtin_includes(text):
         if "End of search list" in line:
             break
         path = line.strip()
-        if not path or path.endswith("(framework directory)"):
-            continue
-        found.append(path)
+        if path:
+            found.append(path)
     return found or None
 
 
@@ -167,11 +171,9 @@ def _discover_includes(compiler):
         executable = shutil.which(compiler)
         if not executable:
             return None
-    command = [executable, "-E", "-v", "-xc++", "-"]
-    if executable.lower().endswith((".cmd", ".bat")):
-        command = ["cmd.exe", "/c", *command]
     try:
-        result = subprocess.run(command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+        result = subprocess.run([executable, "-E", "-v", "-xc++", "-"],
+                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                 stderr=subprocess.PIPE, timeout=60, check=False)
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -179,18 +181,12 @@ def _discover_includes(compiler):
 
 
 def _gcc_compile_flags(conanfile):
-    flags = []
     libcxx = conanfile.settings.get_safe("compiler.libcxx")
     if libcxx == "libstdc++":
-        flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
-    elif libcxx == "libstdc++11":
-        flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
-    build_type = conanfile.settings.get_safe("build_type")
-    if build_type == "RelWithDebInfo":
-        flags.append("-g")
-    elif build_type == "MinSizeRel":
-        flags.append("-Os")
-    return flags
+        return ["-D_GLIBCXX_USE_CXX11_ABI=0"]
+    if libcxx == "libstdc++11":
+        return ["-D_GLIBCXX_USE_CXX11_ABI=1"]
+    return []
 
 
 def _cpu_constraint(constraints):
@@ -207,7 +203,6 @@ def _cc_toolchain_config_bzl():
         return handle.read()
 
 
-# FIXME: In the future, it could be BazelPlatform instead? Check https://bazel.build/concepts/platforms
 class BazelToolchain:
     bazelrc_name = "conan_bzl.rc"
     bazelrc_config = "conan-config"
@@ -252,14 +247,10 @@ class BazelToolchain:
         self.cxxopt = []
         #: List of flags used to add --linkopt=flag1 ... --linkopt=flagN
         self.linkopt = []
-        #: String used to add --compilation_mode=["opt"|"dbg"]. Depends on self.settings.build_type.
-        #: RelWithDebInfo and MinSizeRel use opt. Their extra flags live in the gcc toolchain.
-        self.compilation_mode = {
-            "Release": "opt",
-            "Debug": "dbg",
-            "RelWithDebInfo": "opt",
-            "MinSizeRel": "opt",
-        }.get(self._conanfile.settings.get_safe("build_type"))
+        #: String used to add --compilation_mode=["opt"|"dbg"]. Depends on self.settings.build_type
+        self.compilation_mode = {'Release': 'opt', 'Debug': 'dbg'}.get(
+            self._conanfile.settings.get_safe("build_type")
+        )
         # Be aware that this parameter does not admit a compiler absolute path
         # If you want to add it, you will have to use a specific Bazel toolchain
         #: String used to add --compiler=xxxx.
@@ -269,19 +260,6 @@ class BazelToolchain:
         # This is itself a toolchain but just in case
         #: String used to add --crosstool_top.
         self.crosstool_top = None
-        #: @platforms// labels for the target. Derived from settings when None.
-        self.target_constraints = None
-        #: @platforms// labels for the build machine. Derived from settings_build when None.
-        self.exec_constraints = None
-        #: False skips the platform files. Any other value generates them.
-        self.generate_toolchain = None
-        #: Dict of gcc, g++, ar, ld, cpp, nm, objdump, objcopy, strip and gcov paths.
-        #: Merged on top of the tools derived from tools.build:compiler_executables.
-        self.tool_paths = None
-        #: Sysroot passed to the gcc toolchain. None reads tools.build:sysroot.
-        self.sysroot = None
-        #: Absolute include dirs the sandbox accepts. None discovers them with ``compiler -E -v``.
-        self.cxx_builtin_include_directories = None
         # TODO: Have a look at https://bazel.build/reference/be/make-variables
         # FIXME: Missing host_xxxx options. When are they needed? Cross-compilation?
 
@@ -327,36 +305,18 @@ class BazelToolchain:
             "crosstool_top": self.crosstool_top,
         }
 
-    def _wants_platforms(self):
-        return self.generate_toolchain is not False
-
-    def _constraints(self, settings, attribute, override):
-        if override is not None:
-            return override
+    def _constraints(self, settings):
         constraints = _platform_constraints(settings)
         if constraints is None:
             os_name = settings.get_safe("os")
             arch = settings.get_safe("arch")
             raise ConanException(
-                f"Cannot map os={os_name!r} arch={arch!r} to Bazel platform constraints. "
-                f"Set {attribute} to the @platforms// labels to use."
+                f"Cannot map os={os_name!r} arch={arch!r} to Bazel platform constraints."
             )
         return constraints
 
-    def _check_toolchain_repo_collision(self):
-        for _, dep in self._conanfile.dependencies.host.items():
-            name = dep.cpp_info.get_property("bazel_repository_name") or dep.ref.name
-            if name == _TOOLCHAIN_PACKAGE:
-                raise ConanException(
-                    f"Dependency '{dep.ref}' is exposed to Bazel as '{_TOOLCHAIN_PACKAGE}', "
-                    f"which collides with the platform package generated by BazelToolchain. "
-                    f"Set the bazel_repository_name property on that dependency to a different name."
-                )
-
     def _rc_content(self, platform_lines):
         content = Template(self.bazelrc_template).render(self._context())
-        if not platform_lines:
-            return content
         if content and not content.endswith("\n"):
             content += "\n"
         return content + "\n".join(platform_lines) + "\n"
@@ -373,35 +333,19 @@ class BazelToolchain:
         tools = {name: _sibling_tool(c_compiler, name) for name in _TOOL_PATH_NAMES if name != "gcc"}
         tools["gcc"] = _forward_slash(c_compiler)
         tools["g++"] = _forward_slash(cxx_compiler)
-        if self.tool_paths:
-            unknown = [key for key in self.tool_paths if key not in _TOOL_PATH_KEYS]
-            if unknown:
-                raise ConanException(
-                    f"Unknown tool_paths key(s) {unknown}. "
-                    f"Expected one of {list(_TOOL_PATH_KEYS)}."
-                )
-            tools.update({key: _forward_slash(value) for key, value in self.tool_paths.items()})
-        return tools, bool(executables.get("c") or executables.get("cpp") or self.tool_paths)
+        return tools
 
-    def _builtin_includes(self, tools, explicit_compiler):
-        if self.cxx_builtin_include_directories is not None:
-            return list(self.cxx_builtin_include_directories)
+    def _builtin_includes(self, tools):
         discovered = _discover_includes(tools["g++"])
         if discovered is None and tools["g++"] != tools["gcc"]:
             discovered = _discover_includes(tools["gcc"])
         if discovered is not None:
             return discovered
-        message = ("Could not discover compiler builtin include directories. "
-                   "Set cxx_builtin_include_directories on BazelToolchain.")
-        if explicit_compiler:
-            raise ConanException(message)
-        self._conanfile.output.warning(message)
+        self._conanfile.output.warning("Could not discover compiler builtin include directories.")
         return []
 
     def _sysroot(self):
-        sysroot = self.sysroot
-        if sysroot is None:
-            sysroot = self._conanfile.conf.get("tools.build:sysroot") or ""
+        sysroot = self._conanfile.conf.get("tools.build:sysroot") or ""
         return _forward_slash(sysroot) if sysroot else ""
 
     def _gcc_build(self, exec_constraints, target_constraints, tools, includes):
@@ -456,20 +400,21 @@ class BazelToolchain:
 
     def _write_platforms(self, exec_constraints, target_constraints):
         parts = _generators_parts(self._conanfile)
-        package = "//" + "/".join(parts + [_TOOLCHAIN_PACKAGE])
+        folder_name = _TOOLCHAIN_PACKAGE
+        package = "//" + "/".join(parts + [folder_name])
         gcc = self._wants_gcc_toolchain()
         if gcc:
-            tools, explicit_compiler = self._resolved_tools()
-            includes = self._builtin_includes(tools, explicit_compiler)
+            tools = self._resolved_tools()
+            includes = self._builtin_includes(tools)
             build = self._gcc_build(exec_constraints, target_constraints, tools, includes)
-            save(self._conanfile, os.path.join(_TOOLCHAIN_PACKAGE, _CONFIG_BZL),
+            save(self._conanfile, os.path.join(folder_name, _CONFIG_BZL),
                  _cc_toolchain_config_bzl())
         else:
             build = "\n\n".join((
                 _platform_rule("host", exec_constraints),
                 _platform_rule("target", target_constraints),
             )) + "\n"
-        save(self._conanfile, os.path.join(_TOOLCHAIN_PACKAGE, "BUILD.bazel"), build)
+        save(self._conanfile, os.path.join(folder_name, "BUILD.bazel"), build)
         folder = "/".join(parts)
         include = f"//{folder}:{_MODULE_FILENAME}" if folder else f"//:{_MODULE_FILENAME}"
         deps = [f'bazel_dep(name = "platforms", version = "{_PLATFORMS_VERSION}")']
@@ -495,16 +440,11 @@ class BazelToolchain:
         is put as ``conan-config``.
 
         Also writes host and target ``platform()`` rules and a ``conan_toolchain.MODULE.bazel``
-        snippet, unless ``generate_toolchain`` is ``False``. For gcc targeting Linux the same
-        package contains the ``cc_toolchain`` and the module snippet registers it.
+        snippet. For gcc targeting Linux the same package contains the ``cc_toolchain`` and the
+        module snippet registers it.
         """
         check_duplicated_generator(self, self._conanfile)
-        platform_lines = []
-        if self._wants_platforms():
-            self._check_toolchain_repo_collision()
-            exec_constraints = self._constraints(self._conanfile.settings_build, "exec_constraints",
-                                                 self.exec_constraints)
-            target_constraints = self._constraints(self._conanfile.settings, "target_constraints",
-                                                   self.target_constraints)
-            platform_lines = self._write_platforms(exec_constraints, target_constraints)
+        exec_constraints = self._constraints(self._conanfile.settings_build)
+        target_constraints = self._constraints(self._conanfile.settings)
+        platform_lines = self._write_platforms(exec_constraints, target_constraints)
         save(self._conanfile, BazelToolchain.bazelrc_name, self._rc_content(platform_lines))
