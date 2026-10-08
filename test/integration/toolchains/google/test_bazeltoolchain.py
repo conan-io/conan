@@ -40,6 +40,8 @@ def test_default_bazel_toolchain(conanfile):
             "profile": profile})
     c.run("install . -pr profile")
     content = load(c, os.path.join(c.current_folder, "conan", BazelToolchain.bazelrc_name))
+    build = load(c, os.path.join(c.current_folder, "conan", "toolchain", "BUILD.bazel"))
+    assert "cc_toolchain(" not in build
     assert "build:conan-config --cxxopt=-std=gnu++17" in content
     assert "build:conan-config --force_pic=True" in content
     assert "build:conan-config --dynamic_mode=off" in content
@@ -106,7 +108,8 @@ def test_bazel_toolchain_and_cross_compilation(conanfile):
             "profile_host": profile_host})
     c.run("install . -pr:b profile -pr:h profile_host")
     content = load(c, os.path.join(c.current_folder, "conan", BazelToolchain.bazelrc_name))
-    assert "build:conan-config --cpu=darwin_arm64" in content
+    assert "--cpu" not in content
+    assert "build:conan-config --platforms=//conan/toolchain:target" in content
 
 
 def test_toolchain_attributes_and_conf_priority():
@@ -154,7 +157,8 @@ def test_toolchain_attributes_and_conf_priority():
     c = TestClient()
     c.save({"conanfile.py": conanfile,
             "profile": profile})
-    c.run("install . -pr profile")
+    # Same profile for build and host, so platform generation does not depend on the machine.
+    c.run("install . -pr:b profile -pr:h profile")
     content = load(c, os.path.join(c.current_folder, BazelToolchain.bazelrc_name))
     expected = textwrap.dedent("""\
     # Automatic bazelrc file created by Conan
@@ -167,5 +171,8 @@ def test_toolchain_attributes_and_conf_priority():
     build:conan-config --compilation_mode=fastbuild
     build:conan-config --compiler=gcc
     build:conan-config --cpu=armv8
-    build:conan-config --crosstool_top=my_crosstool""")
+    build:conan-config --crosstool_top=my_crosstool
+    build:conan-config --platforms=//toolchain:target
+    build:conan-config --host_platform=//toolchain:host
+    """)
     assert expected == content
