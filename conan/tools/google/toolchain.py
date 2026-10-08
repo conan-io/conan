@@ -211,10 +211,12 @@ class BazelToolchain:
         }
 
     def _constraints(self, settings):
+        os_name = settings.get_safe("os")
+        arch = settings.get_safe("arch")
+        if os_name is None or arch is None:
+            return None
         constraints = _platform_constraints(settings)
         if constraints is None:
-            os_name = settings.get_safe("os")
-            arch = settings.get_safe("arch")
             raise ConanException(
                 f"Cannot map os={os_name!r} arch={arch!r} to Bazel platform constraints."
             )
@@ -262,10 +264,12 @@ class BazelToolchain:
         is put as ``conan-config``.
 
         Also writes host and target ``platform()`` rules and a ``conan_toolchain.MODULE.bazel``
-        snippet. Bazel keeps the compiler it detected.
+        snippet when both profiles define ``os`` and ``arch``. Bazel keeps the compiler it detected.
         """
         check_duplicated_generator(self, self._conanfile)
         exec_constraints = self._constraints(self._conanfile.settings_build)
         target_constraints = self._constraints(self._conanfile.settings)
-        platform_lines = self._write_platforms(exec_constraints, target_constraints)
+        platform_lines = []
+        if exec_constraints and target_constraints:
+            platform_lines = self._write_platforms(exec_constraints, target_constraints)
         save(self._conanfile, BazelToolchain.bazelrc_name, self._rc_content(platform_lines))

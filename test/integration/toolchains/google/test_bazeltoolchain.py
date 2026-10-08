@@ -260,6 +260,29 @@ def test_cross_build_generates_platforms(conanfile):
     assert 'bazel_dep(name = "platforms", version = "1.1.0")' in module
 
 
+@pytest.mark.parametrize("declared, args", [
+    ("", ""),
+    ("settings = 'os'", "-s os=Linux"),
+    ("settings = 'arch'", "-s arch=x86_64"),
+    ("settings = 'build_type'", "-s build_type=Release"),
+])
+def test_missing_os_or_arch_skips_platforms(declared, args):
+    """Unset os or arch omits the platforms. The bazelrc is still written."""
+    settings_line = f"\n            {declared}" if declared else ""
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        class Consumer(ConanFile):
+            generators = "BazelToolchain"{settings_line}
+    """)
+    c = TestClient()
+    c.save({"conanfile.py": conanfile})
+    c.run(f"install . {args}")
+    content = load(c, os.path.join(c.current_folder, BazelToolchain.bazelrc_name))
+    assert "build:conan-config --dynamic_mode=off" in content
+    assert "--platforms" not in content
+    assert not os.path.exists(os.path.join(c.current_folder, "conan_toolchain.MODULE.bazel"))
+
+
 def test_unmapped_arch_fails(conanfile):
     """An arch without a platforms mapping fails the install."""
     c = TestClient()
