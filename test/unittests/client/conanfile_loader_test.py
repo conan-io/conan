@@ -1,10 +1,12 @@
 import os
 import sys
 import textwrap
+from unittest.mock import patch
 
 import pytest
 
-from conan.internal.loader import ConanFileLoader, ConanFileTextLoader, load_python_file
+from conan.internal.loader import ConanFileLoader, ConanFileTextLoader, load_python_file, \
+    _load_python_lock
 from conan.errors import ConanException
 from conan.test.utils.test_files import temp_folder
 from conan.internal.util.files import save, chdir
@@ -221,3 +223,13 @@ def append(data):
             assert loaded1.myconanlogger.value == loaded2.myconanlogger.value
         finally:
             sys.path.remove(temp)
+
+    def test_invalidate_caches_locked(self):
+        """ importlib.invalidate_caches() iterates sys.path_importer_cache, which loading Python
+        files in other threads modifies, so it has to be serialized with them
+        """
+        locked = []
+        with patch("conan.internal.loader.invalidate_caches",
+                   lambda: locked.append(_load_python_lock.locked())):
+            ConanFileLoader()
+        assert locked == [True]
