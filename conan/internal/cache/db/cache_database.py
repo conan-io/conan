@@ -28,7 +28,7 @@ class CacheDatabase:
     def get_latest_package_reference(self, pref):
         prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
         if not prevs:
-            raise ConanReferenceDoesNotExistInDB(f"Package '{pref}' not found")
+            raise ConanReferenceDoesNotExistInDB(f"Package '{pref.repr_notime()}' not found")
         return prevs[0]["pref"]
 
     def get_latest_package_reference_data(self, pref):
