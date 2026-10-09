@@ -42,6 +42,7 @@ def test_default_bazel_toolchain(conanfile):
     content = load(c, os.path.join(c.current_folder, "conan", BazelToolchain.bazelrc_name))
     build = load(c, os.path.join(c.current_folder, "conan", "conan_toolchain", "BUILD.bazel"))
     assert "cc_toolchain(" not in build
+    assert os.path.exists(os.path.join(c.current_folder, "conan", "BUILD.bazel"))
     assert "build:conan-config --cxxopt=-std=gnu++17" in content
     assert "build:conan-config --force_pic=True" in content
     assert "build:conan-config --dynamic_mode=off" in content

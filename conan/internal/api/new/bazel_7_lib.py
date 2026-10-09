@@ -126,6 +126,7 @@ cc_shared_library(
 
 _bazel_module = """\
 bazel_dep(name = "rules_cc", version = "0.2.17")
+include("//conan:conan_toolchain.MODULE.bazel")
 """
 _bazel_rc = """\
 {% if output_root_dir is defined %}startup --output_user_root={{output_root_dir}}{% endif %}
@@ -133,6 +134,7 @@ _bazel_rc = """\
 _test_bazel_module_bazel = """\
 # This requires Bazel >= 7.2
 include("//conan:conan_deps.MODULE.bazel")
+include("//conan:conan_toolchain.MODULE.bazel")
 """
 
 

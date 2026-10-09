@@ -243,6 +243,7 @@ class BazelToolchain:
             build += "\n" + rules
             deps.extend(module_lines)
         save(self._conanfile, os.path.join(folder_name, "BUILD.bazel"), build)
+        save(self._conanfile, "BUILD.bazel", "# This is an empty BUILD file.")
         folder = "/".join(parts)
         include = f"//{folder}:{_MODULE_FILENAME}" if folder else f"//:{_MODULE_FILENAME}"
         module = (
