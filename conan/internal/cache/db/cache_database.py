@@ -6,6 +6,7 @@ from conan.internal.cache.db.packages_table import PackagesDBTable
 from conan.internal.cache.db.recipes_table import RecipesDBTable
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.errors import ConanReferenceDoesNotExistInDB
 from conan.internal.model.version import Version
 
 
@@ -26,7 +27,9 @@ class CacheDatabase:
 
     def get_latest_package_reference(self, pref):
         prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
-        return prevs[0]["pref"] if prevs else None
+        if not prevs:
+            raise ConanReferenceDoesNotExistInDB(f"Package '{pref}' not found")
+        return prevs[0]["pref"]
 
     def get_latest_package_reference_data(self, pref):
         # Used just for PkgCache.pkg_layout_latest()

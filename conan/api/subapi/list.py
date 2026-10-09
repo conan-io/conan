@@ -73,9 +73,6 @@ class ListAPI:
         return results
 
     def latest_package_revision(self, pref: PkgReference, remote=None):
-        # TODO: This returns None if the given package_id is not existing. It should probably
-        #  raise NotFound, but to keep aligned with the above ``latest_recipe_revision`` which
-        #  is used as an "exists" check too in other places, lets respect the None return
         assert pref.revision is None, "latest_package_revision: ref already have a revision"
         assert pref.package_id is not None, "package_id must be defined"
         if remote:
