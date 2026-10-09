@@ -92,12 +92,16 @@ class GnuToolchain:
             if not self.triplets_info["host"]["triplet"]:
                 os_host = conanfile.settings.get_safe("os")
                 arch_host = conanfile.settings.get_safe("arch")
-                self.triplets_info["host"] = _get_gnu_triplet(os_host, arch_host, compiler=compiler)
+                libc_host = conanfile.settings.get_safe("os.libc")
+                self.triplets_info["host"] = _get_gnu_triplet(os_host, arch_host,
+                                                              compiler=compiler, libc=libc_host)
             # Build triplet
             if not self.triplets_info["build"]["triplet"]:
                 os_build = conanfile.settings_build.get_safe('os')
                 arch_build = conanfile.settings_build.get_safe('arch')
-                self.triplets_info["build"] = _get_gnu_triplet(os_build, arch_build, compiler=compiler)
+                libc_build = conanfile.settings_build.get_safe("os.libc")
+                self.triplets_info["build"] = _get_gnu_triplet(os_build, arch_build,
+                                                               compiler=compiler, libc=libc_build)
 
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
         if sysroot:
