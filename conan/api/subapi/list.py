@@ -201,10 +201,7 @@ class ListAPI:
         for r in refs:  # Older versions first
             trefs.info(f"Listing revisions of {r} in {remote_name}", r, refs)
             if pattern.is_latest_rrev or pattern.rrev is None:
-                rrev = self.latest_recipe_revision(r, remote)
-                if rrev is None:
-                    raise NotFoundException(f"Recipe '{r}' not found")
-                rrevs = [rrev]
+                rrevs = [self.latest_recipe_revision(r, remote)]
             else:
                 rrevs = self.recipe_revisions(r, remote)
                 rrevs = pattern.filter_rrevs(rrevs)
@@ -240,11 +237,8 @@ class ListAPI:
                     new_prefs = []
                     for pref in prefs:
                         # Maybe the package_configurations returned timestamp
-                        if pattern.is_latest_prev or pattern.prev is None:
-                            prev = self.latest_package_revision(pref, remote)
-                            if prev is None:
-                                raise NotFoundException(f"Binary package not found: '{pref}")
-                            new_prefs.append(prev)
+                        if pattern.is_latest_prev:
+                            new_prefs.append(self.latest_package_revision(pref, remote))
                         else:
                             prevs = self.package_revisions(pref, remote)
                             prevs = pattern.filter_prevs(prevs)
