@@ -25,6 +25,7 @@ def test_license_field(license_value, expected):
     output = RedirectedTestOutput()
     with redirect_output(output):
         entry = _calculate_licenses(component)[0]
+        assert "The AND relationship is an assumption" in output
     field = next(iter(entry.get("license", entry)))
     assert field == expected
     if isinstance(license_value, tuple):

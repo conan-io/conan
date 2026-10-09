@@ -229,7 +229,7 @@ def _calculate_licenses(component):
         expression = " AND ".join(f"({lic})" for lic in licenses)
         component.conanfile.output.warning(
             f"Licenses were joined as '{expression}'. "
-            "The AND relationship is an assumption.")
+            "The AND relationship is an assumption.", warn_tag="risk")
         return [{"expression": expression}]
     return result
 
