@@ -196,72 +196,76 @@ def _linux_profile(arch="x86_64"):
 
 
 def test_native_build_generates_platforms(conanfile):
-    """A native gcc Linux build writes host and target platforms with the same constraints."""
-    profile = _linux_profile()
+    """A native gcc Linux build writes platforms and one cc_toolchain."""
+    profile = _linux_profile() + textwrap.dedent("""
+    [conf]
+    tools.build:compiler_executables={'c': '/opt/bin/gcc', 'cpp': '/opt/bin/g++'}
+    tools.build:sysroot=/opt/sysroot
+    """)
     c = TestClient()
     c.save({"conanfile.py": conanfile, "profile": profile})
     c.run("install . -pr:b profile -pr:h profile")
     content = load(c, os.path.join(c.current_folder, "conan", BazelToolchain.bazelrc_name))
     assert "build:conan-config --platforms=//conan/conan_toolchain:target" in content
     assert "build:conan-config --host_platform=//conan/conan_toolchain:host" in content
+    assert "-m64" not in content
     build = load(c, os.path.join(c.current_folder, "conan", "conan_toolchain", "BUILD.bazel"))
-    expected_build = textwrap.dedent("""\
-    platform(
-        name = "host",
-        constraint_values = [
-            "@platforms//os:linux",
-            "@platforms//cpu:x86_64",
-        ],
-    )
-
-    platform(
-        name = "target",
-        constraint_values = [
-            "@platforms//os:linux",
-            "@platforms//cpu:x86_64",
-        ],
-    )
-    """)
-    assert expected_build in build
-    assert "cc_toolchain(" not in build
+    assert '"gcc": "/opt/bin/gcc"' in build
+    assert '"ar": "/opt/bin/ar"' in build
+    assert '"-m64"' in build
+    assert 'builtin_sysroot = "/opt/sysroot"' in build
+    assert 'name = "cc_for_target"' in build
+    assert "cc_for_host" not in build
     module = load(c, os.path.join(c.current_folder, "conan", "conan_toolchain.MODULE.bazel"))
-    assert "rules_cc" not in module
-    assert 'bazel_dep(name = "platforms", version = "1.1.0")' in module
+    assert '"//conan/conan_toolchain:cc_for_target"' in module
+
+
+def test_clang_libcxx_is_a_toolchain_flag(conanfile):
+    """clang libc++ becomes -stdlib on the toolchain."""
+    profile = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=clang
+    compiler.cppstd=gnu17
+    compiler.libcxx=libc++
+    compiler.version=15
+    os=Linux
+    [conf]
+    tools.build:compiler_executables={'c': '/opt/bin/clang', 'cpp': '/opt/bin/clang++'}
+    """)
+    c = TestClient()
+    c.save({"conanfile.py": conanfile, "profile": profile})
+    c.run("install . -pr:b profile -pr:h profile")
+    build = load(c, os.path.join(c.current_folder, "conan", "conan_toolchain", "BUILD.bazel"))
+    assert '"gcc": "/opt/bin/clang"' in build
+    assert '"-stdlib=libc++"' in build
 
 
 def test_cross_build_generates_platforms(conanfile):
-    """A gcc Linux cross build writes different host and target platforms and no cc toolchain."""
+    """A gcc Linux cross build writes one cc_toolchain per profile."""
     c = TestClient()
     c.save({"conanfile.py": conanfile,
-            "profile_build": _linux_profile(),
-            "profile_host": _linux_profile("armv8")})
+            "profile_build": _linux_profile() + textwrap.dedent("""
+            [conf]
+            tools.build:compiler_executables={'c': '/opt/host/gcc', 'cpp': '/opt/host/g++'}
+            """),
+            "profile_host": _linux_profile("armv8") + (
+                "[conf]\n"
+                "tools.build:compiler_executables="
+                "{'c': '/opt/cross/aarch64-linux-gnu-gcc', "
+                "'cpp': '/opt/cross/aarch64-linux-gnu-g++'}\n"
+            )})
     c.run("install . -pr:b profile_build -pr:h profile_host")
-    content = load(c, os.path.join(c.current_folder, "conan", BazelToolchain.bazelrc_name))
-    assert "build:conan-config --platforms=//conan/conan_toolchain:target" in content
-    assert "build:conan-config --host_platform=//conan/conan_toolchain:host" in content
     build = load(c, os.path.join(c.current_folder, "conan", "conan_toolchain", "BUILD.bazel"))
-    expected_build = textwrap.dedent("""\
-    platform(
-        name = "host",
-        constraint_values = [
-            "@platforms//os:linux",
-            "@platforms//cpu:x86_64",
-        ],
-    )
-
-    platform(
-        name = "target",
-        constraint_values = [
-            "@platforms//os:linux",
-            "@platforms//cpu:aarch64",
-        ],
-    )
-    """)
-    assert expected_build in build
-    assert "cc_toolchain(" not in build
+    assert "@platforms//cpu:aarch64" in build
+    assert '"gcc": "/opt/cross/aarch64-linux-gnu-gcc"' in build
+    assert '"ar": "/opt/cross/aarch64-linux-gnu-ar"' in build
+    assert '"gcc": "/opt/host/gcc"' in build
+    assert 'name = "cc_for_host"' in build
     module = load(c, os.path.join(c.current_folder, "conan", "conan_toolchain.MODULE.bazel"))
-    assert "rules_cc" not in module
-    assert 'bazel_dep(name = "platforms", version = "1.1.0")' in module
+    assert "cc_for_host" in module
+    assert "cc_for_target" in module
 
 
 @pytest.mark.parametrize("declared, args", [
