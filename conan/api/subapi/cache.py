@@ -150,6 +150,10 @@ class CacheAPI:
     def package_path(self, pref: PkgReference):
         """Returns the path of the package folder in the Conan cache
 
+        If the recipe implements the :ref:`finalize() <reference_conanfile_methods_finalize>`
+        method and it has already been executed, the path of the finalized folder is returned
+        instead.
+
         This folder is exclusively for **read-only** access, typically for debugging purposes,
         it is completely forbidden to modify any of its contents.
 
@@ -264,7 +268,9 @@ class CacheAPI:
         :param build: boolean, remove the "build" folder if True
         :param download: boolean, remove the "download (.tgz)" folder if True
         :param temp: boolean, remove the temporary folders
-        :param backup_sources: boolean, remove the "source" folder if True
+        :param backup_sources: boolean, remove the backup sources files if True. Note that all
+            the backup sources files are removed, not only the ones belonging to the
+            package_list recipes
         :return:
         """
 
@@ -460,11 +466,14 @@ class CacheAPI:
         in the package_list
 
         :param package_list: a PackagesList object to filter backup files from (The files should
-          have been downloaded form any of the references in the package_list)
+          have been downloaded form any of the references in the package_list). Only taken into
+          account if only_upload is True
         :param exclude: if True, exclude the sources that come from URLs present the
           core.sources:exclude_urls global conf
-        :param only_upload: if True, only return the files for packages that are set to be uploaded
-        :return: A list of files that need to be uploaded
+        :param only_upload: if True, only return the files for the recipes and packages of the
+          package_list that are set to be uploaded. If False, the package_list is ignored and all
+          the files are returned
+        :return: A list with the paths of the backup source files and their metadata files
         """
         config = self._api_helpers.global_conf
         download_cache_path = config.get("core.sources:download_cache")

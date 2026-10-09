@@ -52,7 +52,9 @@ class ListAPI:
 
     def latest_recipe_revision(self, ref: RecipeReference, remote: Remote = None):
         """ For a given recipe reference, return the latest revision of the recipe in the remote,
-        or in the local cache if no remote is specified, or ``None`` if the recipe does not exist."""
+        or in the local cache if no remote is specified.
+
+        Raises if the reference is not found in the remote or cache."""
         assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
         if remote:
             ret = self._api_helpers.remote_manager.get_latest_recipe_revision(ref, remote=remote)
@@ -160,7 +162,7 @@ class ListAPI:
         :parameter Remote remote: Remote to search in,
             if ``None``, it will search in the local cache.
         :parameter str lru: If set, it will filter the results to only include
-            packages/binaries that have been used in the last 'lru' time.
+            packages/binaries that have **not** been used in the last 'lru' time.
             It can be a string like ``"2d"`` (2 days) or ``"3h"`` (3 hours).
         :parameter Profile profile: Profile to filter the packages by settings and options.
         """

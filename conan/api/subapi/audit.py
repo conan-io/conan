@@ -184,7 +184,8 @@ class AuditAPI:
         Set authentication token for the provider.
         Note that this does not perform an authentication attempt, it just stores the token for future use.
 
-        :param provider: Provider name
+        :param provider: Provider object as returned by
+            :meth:`get_provider() <conan.api.subapi.audit.AuditAPI.get_provider>`
         :param token: Provider token
         """
         if not provider:
