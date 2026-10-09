@@ -72,6 +72,8 @@ def test_upload_parallel_loader_not_created_in_threads():
         invalidating_threads.add(threading.current_thread())
         original_invalidate_caches()
 
+    # Login first, otherwise all the threads could ask for the credentials at the same time
+    client.run("remote login default admin -p password")
     with patch.object(loader, "invalidate_caches", _invalidate_caches):
         client.run("upload * -c -r default")
     assert invalidating_threads == {threading.current_thread()}
