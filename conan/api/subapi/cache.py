@@ -264,7 +264,8 @@ class CacheAPI:
         :param build: boolean, remove the "build" folder if True
         :param download: boolean, remove the "download (.tgz)" folder if True
         :param temp: boolean, remove the temporary folders
-        :param backup_sources: boolean, remove the "source" folder if True
+        :param backup_sources: boolean, remove the backup sources files downloaded by the
+            package_list recipes if True
         :return:
         """
 
@@ -463,8 +464,9 @@ class CacheAPI:
           have been downloaded form any of the references in the package_list)
         :param exclude: if True, exclude the sources that come from URLs present the
           core.sources:exclude_urls global conf
-        :param only_upload: if True, only return the files for packages that are set to be uploaded
-        :return: A list of files that need to be uploaded
+        :param only_upload: if True, only take into account the recipes and packages of the
+          package_list that are set to be uploaded. Not used if no package_list is given
+        :return: A list with the paths of the backup source files and their metadata files
         """
         config = self._api_helpers.global_conf
         download_cache_path = config.get("core.sources:download_cache")
