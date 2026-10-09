@@ -53,16 +53,6 @@ jobs:
           pip install -r conans/requirements_server.txt
           git config --global core.autocrlf false
 
-      # The tests are dominated by small files I/O, use the runner temp disk (D:) like the
-      # functional tests do, instead of the default TEMP in C:
-      - name: Use the runner temp disk for the test folders
-        run: |
-          $testsFolder = Join-Path $env:RUNNER_TEMP "tmp_tests"
-          New-Item -ItemType Directory -Force -Path $testsFolder
-          echo "CONAN_TEST_FOLDER=$testsFolder" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "TMP=$testsFolder" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "TEMP=$testsFolder" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-
       - name: Determine tests to run
         id: determine_tests
         uses: ./.github/actions/determine-tests
@@ -72,6 +62,12 @@ jobs:
 
       - name: Run Unit & Integration Tests
         uses: ./.github/actions/test-coverage
+        env:
+          # The tests are dominated by small files I/O, use the runner temp disk (D:)
+          # instead of the default TEMP in C:
+          CONAN_TEST_FOLDER: ${{ runner.temp }}\tmp_tests
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
         with:
           python-version: ${{ matrix.python-version }}
           test-type: unit-integration
@@ -260,10 +256,6 @@ jobs:
               Write-Host "GCC not found in PATH."
           }
 
-          $shortGuid = [System.Guid]::NewGuid().ToString().Substring(0, 4)
-          $randomFolder = [System.IO.Path]::Combine("D:\\", "tmp_tests", $shortGuid)
-          New-Item -ItemType Directory -Force -Path $randomFolder
-          $env:CONAN_TEST_FOLDER = $randomFolder
           $env:Path = "C:\tools\cmake\3.15.7\cmake-3.15.7-win64-x64\bin;" + $env:Path
 
           $msys2Path = '${{ steps.msys2-setup.outputs.msys2-location }}'
@@ -272,7 +264,6 @@ jobs:
 
           # Export variables so they persist in the next steps
           echo "PATH=$env:Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "CONAN_TEST_FOLDER=$env:CONAN_TEST_FOLDER" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "MSYS2_PATH=$msys2Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Determine tests to run
@@ -285,6 +276,9 @@ jobs:
 
       - name: Run Functional Tests
         uses: ./.github/actions/test-coverage
+        env:
+          # Use the runner temp disk (D:), faster for small files I/O than C:
+          CONAN_TEST_FOLDER: ${{ runner.temp }}\tmp_tests
         with:
           python-version: ${{ matrix.python-version }}
           test-type: functional
