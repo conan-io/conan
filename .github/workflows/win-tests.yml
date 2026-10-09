@@ -65,7 +65,7 @@ jobs:
         env:
           # The tests are dominated by small files I/O, use the runner temp disk (D:)
           # instead of the default TEMP in C:
-          CONAN_TEST_FOLDER: ${{ runner.temp }}\tmp_tests
+          CONAN_TEST_FOLDER: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
           TEMP: ${{ runner.temp }}
         with:
@@ -278,7 +278,7 @@ jobs:
         uses: ./.github/actions/test-coverage
         env:
           # Use the runner temp disk (D:), faster for small files I/O than C:
-          CONAN_TEST_FOLDER: ${{ runner.temp }}\tmp_tests
+          CONAN_TEST_FOLDER: ${{ runner.temp }}
         with:
           python-version: ${{ matrix.python-version }}
           test-type: functional
