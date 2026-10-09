@@ -193,8 +193,8 @@ class ConanRequester:
                 kwargs["proxies"] = self._proxies
         if self._timeout and self._timeout != INFINITE_TIMEOUT:
             kwargs["timeout"] = self._timeout
-        if not kwargs.get("headers"):
-            kwargs["headers"] = {}
+        # Copy, the caller headers can be reused for other urls, they must not get these urls auth
+        kwargs["headers"] = dict(kwargs.get("headers") or {})
 
         if source_credentials:
             self._url_creds.add_auth(url, kwargs)
