@@ -1,7 +1,8 @@
 import os
 import shutil
+import json
 
-from urllib.parse import urlparse, quote
+from urllib.parse import urlparse
 from urllib.request import url2pathname
 
 from conan.api.output import ConanOutput
@@ -91,8 +92,7 @@ class SourcesCachingDownloader:
         # (commas included, so it is safe to split by ",") and recovered with a single unquote()
         # Non-str urls (like None) are skipped, origin download warns about them and continues
         url_list = urls if isinstance(urls, (list, tuple)) else [urls]
-        origin_urls = ", ".join(quote(url, safe=":/?=&@#[]!$'()*+;")
-                                for url in url_list if isinstance(url, str))
+        origin_urls = json.dumps(url_list)
         # iterates the origins until one works
         for backup_url in source_origins:
             if backup_url == "origin":  # download from the internet

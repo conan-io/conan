@@ -1053,10 +1053,10 @@ class TestDownloadCacheBackupSources:
         self.client.run("create .")
         assert "Could not download from the URL None" in self.client.out
         # Not in the backup yet: the backup gets all the escaped urls, the origin gets none
-        assert received == [(f"/backups/{sha256}",
-                             f"{origin_url}, http://mirror.other/my%20file%2Cv1.txt?a=b"),
-                            ("/internet/myfile.txt", None)]
-
+        assert received == [
+            (f"/backups/{sha256}", json.dumps([None, origin_url, mirror_url])),
+            ('/internet/myfile.txt', None)
+        ]
         self.client.run("upload * -c -r=default")
         rmdir(self.download_cache_folder)
         received.clear()
@@ -1065,5 +1065,7 @@ class TestDownloadCacheBackupSources:
         self.client.save({"conanfile.py": conanfile % (repr(origin_url), sha256)})
         self.client.run("source .")
         assert f"Sources for {origin_url} found in remote backup" in self.client.out
-        assert received == [(f"/backups/{sha256}", origin_url),
-                            (f"/backups/{sha256}.json", None)]
+        assert received == [
+            (f"/backups/{sha256}", json.dumps([origin_url])),
+            (f"/backups/{sha256}.json", None)
+        ]
