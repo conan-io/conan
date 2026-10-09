@@ -30,7 +30,7 @@ class Bazel:
 
     def _get_startup_command_options(self):
         bazelrc_paths = []
-        if self._use_conan_config:
+        if self._use_conan_config and not self._workspace_imports_conan_rc():
             bazelrc_paths.append(self._conan_bazelrc)
         # User bazelrc paths have more prio than Conan one
         # See more info in https://bazel.build/run/bazelrc
@@ -38,6 +38,24 @@ class Bazel:
                                                       check_type=list))
         opts = " ".join(["--bazelrc=" + rc.replace("\\", "/") for rc in bazelrc_paths])
         return f" {opts}" if opts else ""
+
+    def _workspace_imports_conan_rc(self):
+        """True when the workspace .bazelrc already imports conan_bzl.rc."""
+        name = BazelToolchain.bazelrc_name
+        seen = set()
+        for folder in (self._conanfile.source_folder, self._conanfile.build_folder):
+            if not folder or folder in seen:
+                continue
+            seen.add(folder)
+            path = os.path.join(folder, ".bazelrc")
+            if not os.path.isfile(path):
+                continue
+            with open(path, encoding="utf-8") as handle:
+                for line in handle:
+                    stripped = line.strip()
+                    if name in stripped and stripped.startswith(("import ", "try-import")):
+                        return True
+        return False
 
     def build(self, args=None, target="//...", clean=True):
         """

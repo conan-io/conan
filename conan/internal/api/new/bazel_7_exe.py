@@ -61,8 +61,10 @@ cc_binary(
 
 _bazel_module = """\
 bazel_dep(name = "rules_cc", version = "0.2.17")
+include("//conan:conan_toolchain.MODULE.bazel")
 """
 _bazel_rc = """\
+try-import %workspace%/conan/conan_bzl.rc
 {% if output_root_dir is defined %}startup --output_user_root={{output_root_dir}}{% endif %}
 """
 
