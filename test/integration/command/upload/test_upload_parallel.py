@@ -1,5 +1,9 @@
+import threading
+from unittest.mock import patch
+
 from requests import ConnectionError
 
+from conan.internal import loader
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestRequester
 
@@ -43,6 +47,44 @@ def test_upload_parallel_success():
     assert "lib0/1.0@user/channel" in client.out
     client.run('search lib1/1.0@user/channel -r default')
     assert "lib1/1.0@user/channel" in client.out
+
+
+def test_upload_parallel_loader_not_created_in_threads():
+    """ Creating a ConanFileLoader calls importlib.invalidate_caches(), which iterates
+    sys.path_importer_cache while other upload threads might be loading conanfiles and modifying it,
+    randomly failing with "RuntimeError: dictionary changed size during iteration".
+    The race itself can't be reproduced deterministically, so check that the loader is created
+    only by the calling thread and shared by all the upload threads
+    """
+    client = TestClient(default_server_user=True, light=True)
+    client.save_home({"global.conf": "core.upload:parallel=4"})
+    client.save({"tool/conanfile.py": GenConanfile("tool", "1.0"),
+                 "lib/conanfile.py": GenConanfile().with_python_requires("tool/1.0")})
+    client.run("export tool")
+    num_libs = 6
+    for index in range(num_libs):
+        client.run(f"create lib --name=lib{index} --version=1.0")
+
+    invalidating_threads = set()
+    original_invalidate_caches = loader.invalidate_caches
+
+    def _invalidate_caches():
+        invalidating_threads.add(threading.current_thread())
+        original_invalidate_caches()
+
+    # Login first, otherwise all the threads could ask for the credentials at the same time
+    client.run("remote login default admin -p password")
+    with patch.object(loader, "invalidate_caches", _invalidate_caches):
+        client.run("upload * -c -r default")
+    assert invalidating_threads == {threading.current_thread()}
+    assert "Uploading with 4 parallel threads" in client.out
+    assert "Uploading recipe 'tool/1.0#" in client.out
+    for index in range(num_libs):
+        assert f"Uploading recipe 'lib{index}/1.0#" in client.out
+        assert f"Uploading package 'lib{index}/1.0#" in client.out
+    client.run("list *:* -r default")
+    for index in range(num_libs):
+        assert f"lib{index}/1.0" in client.out
 
 
 def test_upload_parallel_fail_on_interaction():

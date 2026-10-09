@@ -18,7 +18,7 @@ inputs:
   duration:
     description: 'Show N slowest test durations (N=0 for all)'
     required: true
-    default: '10'
+    default: '50'
 
   tests:
     description: 'Tests folder and options to run'
