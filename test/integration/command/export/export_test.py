@@ -327,7 +327,7 @@ class TestExportMetadata:
         t = TestClient(light=True)
         t.save({'conanfile.py': GenConanfile().with_revision_mode("auto")})
         t.run("export . --name=name --version=version", assert_error=True)
-        assert "ERROR: Revision mode should be one of 'hash' (default) or 'scm'" in t.out
+        assert "ERROR: Revision mode should be one of 'hash' (default), 'scm' or 'scm_folder'" in t.out
 
     def test_export_no_params(self):
         client = TestClient(light=True)

@@ -109,7 +109,7 @@ def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
 
 def _calc_revision(scoped_output, path, manifest, revision_mode, conanfile):
     if revision_mode not in ["scm", "scm_folder", "hash"]:
-        raise ConanException("Revision mode should be one of 'hash' (default) or 'scm'")
+        raise ConanException("Revision mode should be one of 'hash' (default), 'scm' or 'scm_folder'")
 
     # Use the proper approach depending on 'revision_mode'
     if revision_mode == "hash":
