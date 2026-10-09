@@ -95,8 +95,9 @@ tools_locations = {
         }
     },
     'ninja': {
-        "default": "1.10.2",
-        "1.10.2": {
+        # Whatever version is installed in the CI machines, the runners already provide one
+        "default": "system",
+        "system": {
             "path": {'Windows': f'{windows_choco_root}/ninja/tools'}
         }
     },
