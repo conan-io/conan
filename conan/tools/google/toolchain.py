@@ -25,8 +25,10 @@ import textwrap
 
 from jinja2 import Template
 
+from conan.api.output import Color
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
+from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
 from conan.internal.internal_tools import raise_on_universal_arch
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import cppstd_flag
@@ -97,6 +99,13 @@ def _platform_rule(name, constraints):
         "    ],\n"
         ")"
     )
+
+
+def _is_consumer(conanfile):
+    try:
+        return conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE)
+    except AttributeError:
+        return False
 
 
 def _cross_toolchain(conanfile, exec_constraints, target_constraints, package):
@@ -196,6 +205,10 @@ class BazelToolchain:
         ret = self.linkopt + conf_flags
         return self._filter_list_empty_fields(ret)
 
+    def _rc_path(self):
+        parts = _generators_parts(self._conanfile)
+        return "/".join(parts + [self.bazelrc_name])
+
     def _context(self):
         return {
             "copt": " ".join(f"--copt={flag}" for flag in self.copt),
@@ -274,3 +287,13 @@ class BazelToolchain:
         if exec_constraints and target_constraints:
             platform_lines = self._write_platforms(exec_constraints, target_constraints)
         save(self._conanfile, BazelToolchain.bazelrc_name, self._rc_content(platform_lines))
+        self._conanfile.output.info(f"BazelToolchain generated: {self.bazelrc_name}")
+        rc_path = self._rc_path()
+        if _is_consumer(self._conanfile):
+            config = self.bazelrc_config
+            msg = textwrap.dedent(f"""\
+                BazelToolchain: Config '{config}' added to {rc_path}.
+                    bazel --bazelrc={rc_path} build --config={config} //...
+                    Or add to .bazelrc: try-import %workspace%/{rc_path}
+                    bazel build --config={config} //...""")
+            self._conanfile.output.info(msg, fg=Color.CYAN)
