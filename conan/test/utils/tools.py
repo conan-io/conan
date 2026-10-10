@@ -302,6 +302,10 @@ class TestServer:
         elif REVISIONS not in server_capabilities:
             server_capabilities.append(REVISIONS)
 
+        self._clone_args = {"read_permissions": read_permissions,
+                            "write_permissions": write_permissions, "users": users,
+                            "plugins": plugins, "server_capabilities": server_capabilities,
+                            "complete_urls": complete_urls}
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
         base_url = "%s/v1" % self.fake_url if complete_urls else "v1"
         self.test_server = TestServerLauncher(base_path, read_permissions,
@@ -310,6 +314,15 @@ class TestServer:
                                               plugins=plugins,
                                               server_capabilities=server_capabilities)
         self.app = TestApp(self.test_server.ra.root_app)
+
+    def clone(self):
+        """ A new server with the same configuration and a copy of the contents of this one
+        """
+        server = type(self)(**self._clone_args)
+        base_path = server.test_server._base_path
+        shutil.rmtree(base_path)
+        shutil.copytree(self.test_server._base_path, base_path)
+        return server
 
     @property
     def server_store(self):
@@ -423,6 +436,7 @@ class TestClient:
 
         # Adding the .conan2, so we know clearly while debugging this is a cache folder
         self.cache_folder = cache_folder or os.path.join(temp_folder(path_with_spaces), ".conan2")
+        self._path_with_spaces = path_with_spaces
 
         self.requester_class = requester_class
         self.servers = servers or {}
@@ -440,6 +454,7 @@ class TestClient:
         self.stderr = RedirectedTestOutput()
         self.user_inputs = RedirectedInputStream([])
         self.inputs = inputs or []
+        self._initial_inputs = list(self.inputs)  # self.inputs answers are consumed by the runs
 
         # create default profile
         if light:
@@ -450,6 +465,26 @@ class TestClient:
         save(os.path.join(self.cache_folder, "profiles", "default"), text)
         # Using internal env variable to add another custom commands folder
         self._custom_commands_folder = custom_commands_folder
+
+    def clone(self):
+        """ A new client with a copy of the cache and current folder of this one, and copies of
+        its servers, so an expensive setup can be done once (e.g. in a module fixture) and every
+        test can modify its own copy of it
+        """
+        # Real servers (e.g. Artifactory) cannot be copied, they are shared
+        servers = {name: server.clone() if hasattr(server, "clone") else server
+                   for name, server in self.servers.items()}
+        c = TestClient(servers=servers or False, inputs=list(self._initial_inputs),
+                       requester_class=self.requester_class,
+                       path_with_spaces=self._path_with_spaces,
+                       custom_commands_folder=self._custom_commands_folder)
+        shutil.rmtree(c.cache_folder)
+        shutil.copytree(self.cache_folder, c.cache_folder)
+        shutil.rmtree(c.current_folder)
+        shutil.copytree(self.current_folder, c.current_folder)
+        if servers:
+            c.update_servers()  # The copied cache remotes point to the original servers
+        return c
 
     def load(self, filename):
         return load(os.path.join(self.current_folder, filename))
