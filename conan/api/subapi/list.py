@@ -23,7 +23,7 @@ def _timelimit(expression):
     time_value = expression[:-1]
     try:
         time_value = int(time_value)
-    except TypeError:
+    except ValueError:
         raise ConanException(f"Time value '{time_value}' must be an integer")
     time_units = expression[-1]
     units = {"y": 365 * 24 * 60 * 60,
