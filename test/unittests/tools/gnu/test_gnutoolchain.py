@@ -253,6 +253,39 @@ def test_crossbuild_to_android(build_env_mock):
     assert env_vars["STRIP"] == os.path.join(ndk_bin, "llvm-strip")  # does not exist but appears
 
 
+@pytest.mark.parametrize("arch, android_target", [("armv7", "armv7a-linux-androideabi"),
+                                                  ("armv8", "aarch64-linux-android"),
+                                                  ("x86", "i686-linux-android"),
+                                                  ("x86_64", "x86_64-linux-android")])
+@pytest.mark.parametrize("os_build, ndk_os_folder, ext", [("Macos", "darwin", ""),
+                                                          ("Linux", "linux", ""),
+                                                          ("Windows", "windows", ".cmd")])
+@patch("conan.tools.gnu.gnutoolchain.VirtualBuildEnv")
+def test_crossbuild_to_android_ndk_compilers(build_env_mock, arch, android_target, os_build,
+                                             ndk_os_folder, ext):
+    """ With the NDK path defined, the compilers are the ones of the NDK for the target of the arch,
+    with the api_level, and the folder of the OS of the build machine
+    """
+    build_env_mock.return_value.vars.return_value = {}  # No user defined variables
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Android", "arch": arch, "os.api_level": "21",
+                                       "compiler": "clang"})
+    conanfile.settings_build = MockSettings({"os": os_build, "arch": "x86_64"})
+    ndk_path = temp_folder()
+    conanfile.conf.define("tools.android:ndk_path", ndk_path)
+    gnutc = GnuToolchain(conanfile)
+    env_vars = gnutc.extra_env.vars(conanfile)
+    ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt", f"{ndk_os_folder}-x86_64",
+                           "bin")
+    expected = {"CC": f"{android_target}21-clang{ext}", "CXX": f"{android_target}21-clang++{ext}",
+                "AS": f"{android_target}21-clang{ext}", "LD": "ld", "STRIP": "llvm-strip",
+                "RANLIB": "llvm-ranlib", "AR": "llvm-ar", "ADDR2LINE": "llvm-addr2line",
+                "NM": "llvm-nm", "OBJCOPY": "llvm-objcopy", "OBJDUMP": "llvm-objdump",
+                "READELF": "llvm-readelf", "ELFEDIT": "llvm-elfedit"}
+    for var, tool in expected.items():
+        assert env_vars[var] == os.path.join(ndk_bin, tool)
+
+
 def test_gnu_toolchain_conf_extra_configure_args():
     """ Validate that tools.gnu:extra_configure_args are passed to the configure_args when
         building with GnuToolchain.
