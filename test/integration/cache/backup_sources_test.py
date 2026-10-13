@@ -307,8 +307,9 @@ class TestDownloadCacheBackupSources:
         self.client.run("create . -vv")
         assert (f"WARN: Sources for {self.file_server.fake_url}/internet/myfile.txt not found "
                 f"in remote backup {self.file_server.fake_url}/backup/") in self.client.out
-        assert (f"Downloaded {self.file_server.fake_url}/internet/myfile.txt "
-                f"from {self.file_server.fake_url}/internet/myfile.txt")
+        # Downloaded into the download cache (named with its sha256), from the origin url
+        assert (f"/s/{sha256} from {self.file_server.fake_url}/internet/myfile.txt"
+                in self.client.out.replace("\\", "/"))
         self.client.run("upload * -c -r=default")
 
         rmdir(self.download_cache_folder)

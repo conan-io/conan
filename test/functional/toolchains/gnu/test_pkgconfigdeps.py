@@ -1,4 +1,5 @@
 import platform
+import re
 import textwrap
 
 import pytest
@@ -110,7 +111,8 @@ def test_pkgconfigdeps_bindir_and_meson():
     # Important: Only Meson >= 1.1.0 brings this capability
     # Executing directly "meson test" fails if the bindir field does not exist
     client.run_command("meson test -C test_package/build-release")
-    assert "1/1 ./src/example OK"
+    # Newer Meson versions prefix the test name with the project name: "Testhello:./src/example"
+    assert re.search(r"1/1 (Testhello:)?\./src/example\s+OK", client.out)
 
 
 def test_pkgconfigdeps_component_matches_package_name():

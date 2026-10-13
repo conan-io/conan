@@ -107,7 +107,7 @@ class TestSearchList:
         client.run(f"remote add local '{c3i_folder}'")
         client.run("list potato/1.0#* -r=local")
         # More like remotes than cache
-        assert "ERROR: Recipe not found: 'potato/1.0'"
+        assert "ERROR: Recipe not found: 'potato/1.0'" in client.out
 
     def test_list_rrevs(self, c3i_folder):
         client = TestClient(light=True)

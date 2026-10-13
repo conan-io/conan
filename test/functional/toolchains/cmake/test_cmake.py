@@ -660,7 +660,9 @@ class TestCmakeTestMethod:
         # The create flow must work
         c.run("create . --name=pkg --version=0.1 -pr:b=default -o matrix*:shared=True")
         assert str(c.out).count("1/1 Test #1: example ..........................   Passed") == 2
-        assert "pkg/0.1: RUN: ctest --build-config Release --parallel"
+        # --build-config is only needed by the multi-config generators (Visual Studio in Windows)
+        build_config = "--build-config Release " if platform.system() == "Windows" else ""
+        assert f"pkg/0.1: RUN: ctest {build_config}--parallel" in c.out
 
 
 @pytest.mark.tool("cmake")

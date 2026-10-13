@@ -349,7 +349,7 @@ def test_cmake_find_mode_deprecated():
     tc.save({"conanfile.py": dep})
     tc.run("create .")
     tc.run(f"install --requires=dep/0.1 -g CMakeConfigDeps")
-    assert "CMakeConfigDeps does not support module find mode"
+    assert "CMakeConfigDeps does not support module find mode" in tc.out
 
 
 def test_build_context_deprecated():
