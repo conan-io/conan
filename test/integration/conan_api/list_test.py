@@ -1,16 +1,18 @@
 from conan.api.conan_api import ConanAPI
+from conan.errors import ConanException
 from conan.test.utils.env import environment_update
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, TestRequester
+import pytest
 
 
 def test_get_recipe_revisions():
     """
     Test the "api.list.recipe_revisions"
     """
-    client = TestClient(default_server_user=True)
+    client = TestClient(light=True, default_server_user=True)
     for rev in range(1, 4):
         client.save({"conanfile.py": GenConanfile("foo", "1.0").with_build_msg(f"{rev}")})
         client.run("create .")
@@ -30,7 +32,7 @@ def test_get_package_revisions():
     """
     Test the "api.list.package_revisions"
     """
-    client = TestClient(default_server_user=True)
+    client = TestClient(light=True, default_server_user=True)
     client.save({"conanfile.py": GenConanfile("foo", "1.0").with_package_file("f.txt",
                                                                               env_var="MYVAR")})
     for rev in range(3):
@@ -53,10 +55,31 @@ def test_get_package_revisions():
 
 
 def test_search_recipes_no_user_channel_only():
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name foo --version 1.0 --user user --channel channel")
     client.run("create . --name foo --version 1.0")
     client.run("list foo/1.0@")
     assert "foo/1.0@user/channel" not in client.out
     assert "foo/1.0" in client.out
+
+
+@pytest.mark.parametrize("with_remote", [True, False])
+def test_latest_revision_not_found_returns(with_remote):
+    """
+    The latest revision endpoints should raise when the reference is not found
+    """
+    client = TestClient(light=True, default_server_user=with_remote)
+
+    rref = RecipeReference.loads("foo/1.0")
+    pref = PkgReference.loads("foo/1.0#1234567890abcdef1234567890abcdef:1234567890abcdef1234567890abcdef")
+
+    with client.mocked_servers(TestRequester(client.servers)):
+        api = ConanAPI(client.cache_folder)
+        remote = api.remotes.get("default") if with_remote else None
+
+        with pytest.raises(ConanException):
+            api.list.latest_recipe_revision(rref, remote=remote)
+
+        with pytest.raises(ConanException):
+            api.list.latest_package_revision(pref, remote=remote)
