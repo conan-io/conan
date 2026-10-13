@@ -1,7 +1,9 @@
 import copy
 import os
 import textwrap
+import time
 
+import jwt
 import pytest
 from requests.models import Response
 
@@ -171,12 +173,11 @@ class TestAuthenticationTest:
         assert "ERROR: Recipe 'pkg' not found" in client.out
 
 
-@pytest.mark.xfail(reason="This test is randomly failing")
 def test_token_expired():
     server_folder = temp_folder()
     server_conf = textwrap.dedent("""
        [server]
-       jwt_expire_minutes: 0.02
+       jwt_expire_minutes: 60
        authorize_timeout: 0
        disk_authorize_timeout: 0
        disk_storage_path: ./data
@@ -197,12 +198,14 @@ def test_token_expired():
     c.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
     c.run("upload * -r=default -c")
     localdb = LocalDB(c.cache_folder)
-    user, token, _ = localdb.get_login(server.fake_url)
+    user, token, refresh_token = localdb.get_login(server.fake_url)
     assert user == "admin"
     assert token is not None
 
-    import time
-    time.sleep(3)
+    # Instead of waiting for the token to expire, replace it with an already expired one
+    expired_token = jwt.encode({"user": user, "exp": int(time.time()) - 60},
+                               "mysecretmysecretmysecretmysecret", algorithm="HS256")
+    localdb.store(user, expired_token, refresh_token, server.fake_url)
     c.users = {}
     c.run("remove * -c")
     c.run("install --requires=pkg/0.1@user/stable")

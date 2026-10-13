@@ -1,13 +1,13 @@
 import os
 import platform
 import textwrap
-import time
 
 import pytest
 
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from test.functional.utils import check_vs_runtime, check_exe_run
+from conan.test.utils.test_files import backdate_folder
 from conan.test.utils.tools import TestClient
 
 
@@ -196,6 +196,8 @@ class Base:
         return install_out
 
     def _modify_code(self):
+        # The modified files must be clearly newer than the previous build outputs
+        backdate_folder(self.client.current_folder)
         lib_cpp = gen_function_cpp(name="app", msg="AppImproved", includes=["hello"],
                                    calls=["hello"], preprocessor=["MYVAR", "MYVAR_CONFIG",
                                                                   "MYDEFINE", "MYDEFINE_CONFIG",
@@ -308,7 +310,6 @@ class TestWin(Base):
                          static_runtime=static_runtime)
 
         self._modify_code()
-        time.sleep(1)
         self._incremental_build(build_type=build_type)
         _verify_out(marker="++>>")
         self._run_app(build_type, bin_folder=True, msg="AppImproved")
@@ -369,7 +370,6 @@ class TestWin(Base):
                        }, subsystem="mingw64")
 
         self._modify_code()
-        time.sleep(2)
         self._incremental_build()
         _verify_out(marker="++>>")
         self._run_app(build_type, msg="AppImproved")
@@ -490,7 +490,6 @@ class TestApple(Base):
         arch = host_profile.settings.get("arch")
         check_exe_run(self.client.out, "main", "apple-clang", None, build_type, arch, cppstd=cppstd)
         self._modify_code()
-        time.sleep(1)
         self._incremental_build()
         _verify_out(marker="++>>")
         self._run_app(build_type, dyld_path=shared, msg="AppImproved")

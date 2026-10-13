@@ -33,7 +33,9 @@ class ConanFileLoader:
         self._pyreq_loader = pyreq_loader
         self._cached_conanfile_classes = {}
         self._conanfile_helpers = conanfile_helpers
-        invalidate_caches()
+        # invalidate_caches() iterates sys.path_importer_cache, which loading Python files modifies
+        with _load_python_lock:
+            invalidate_caches()
 
     def load_basic(self, conanfile_path, graph_lock=None, display="", remotes=None,
                    update=None, check_update=None):
