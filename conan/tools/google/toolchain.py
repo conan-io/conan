@@ -1,9 +1,9 @@
 """
 Creates a ``conan_bzl.rc`` file which defines a ``conan-config`` configuration with the flags from
-the profile and the conf, plus host and target platforms. For gcc and clang on Linux it also writes
-a ``cc_toolchain`` in ``conan_toolchain/BUILD.bazel``. That toolchain is how Bazel runs the compiler
-from the profile. The same rule is used for a native build and a cross build. A cross build adds a
-second one for the build profile.
+the profile and the conf, plus host and target platforms. For gcc and clang on Linux, and for msvc
+on Windows, it also writes a ``cc_toolchain`` in ``conan_toolchain/BUILD.bazel``. That
+toolchain is how Bazel runs the compiler from the profile. The same rule is used for a native build
+and a cross build. A cross build adds a second one for the build profile.
 
 A platform is the host or target machine. Toolchain resolution uses it to select the compiler.
 Platform based resolution is the default since Bazel 7. ``--cpu`` and ``--crosstool_top`` are the
@@ -23,8 +23,9 @@ Others:
 """
 import json
 import os
+import posixpath
+import re
 import shutil
-import subprocess
 import textwrap
 
 from jinja2 import Environment, Template
@@ -32,11 +33,14 @@ from jinja2 import Environment, Template
 from conan.api.output import Color
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
-from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
 from conan.internal.internal_tools import raise_on_universal_arch
+from conan.internal.util.runners import check_output_runner, detect_runner
 from conan.tools.build.flags import (architecture_flag, architecture_link_flag, cppstd_flag,
                                      libcxx_flags)
+from conan.tools.cmake.layout import is_consumer
 from conan.tools.files import save
+from conan.tools.microsoft import is_msvc_static_runtime
+from conan.tools.microsoft.visual import _vcvars_call
 
 
 # Conan settings value to @platforms constraint name.
@@ -74,6 +78,12 @@ _PLATFORMS_VERSION = "1.1.0"
 _RULES_CC_VERSION = "0.2.17"
 _TOOLCHAIN_PACKAGE = "conan_toolchain"
 _MODULE_FILENAME = "conan_toolchain.MODULE.bazel"
+# The rules_cc copy of the windows config is the one with archiver_flags and default_link_flags.
+_CONFIG_RULES = {
+    "unix_cc_toolchain_config": "@bazel_tools//tools/cpp:unix_cc_toolchain_config.bzl",
+    "windows_cc_toolchain_config":
+        "@rules_cc//cc/private/toolchain:windows_cc_toolchain_config.bzl",
+}
 # settings.compiler -> (c driver, c++ driver). compiler_executables overrides these.
 _UNIX_COMPILERS = {
     "gcc": ("gcc", "g++"),
@@ -81,52 +91,49 @@ _UNIX_COMPILERS = {
 }
 # unix_cc_toolchain_config reads llvm-cov and objcopy unconditionally.
 _BINUTILS = ("ar", "nm", "objdump", "strip", "objcopy", "gcov", "dwp", "llvm-cov")
-
-
-def _generators_parts(conanfile):
-    folder = conanfile.folders.generators or ""
-    return [part for part in folder.replace("\\", "/").split("/") if part and part != "."]
-
-
-def _platform_constraints(settings):
-    os_name = settings.get_safe("os")
-    arch = settings.get_safe("arch")
-    os_constraint = _OS_CONSTRAINTS.get(os_name)
-    arch_constraint = _ARCH_CONSTRAINTS.get(arch)
-    if not os_constraint or not arch_constraint:
-        return None
-    return [f"@platforms//os:{os_constraint}", f"@platforms//cpu:{arch_constraint}"]
-
-
-def _platform_rule(name, constraints):
-    values = "\n".join(f'        "{constraint}",' for constraint in constraints)
-    return (
-        "platform(\n"
-        f'    name = "{name}",\n'
-        "    constraint_values = [\n"
-        f"{values}\n"
-        "    ],\n"
-        ")"
-    )
-
-
-def _is_consumer(conanfile):
-    try:
-        return conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE)
-    except AttributeError:
-        return False
+# The cross prefix of a driver, "aarch64-linux-gnu-" in "aarch64-linux-gnu-gcc-13".
+_DRIVER_PREFIX = re.compile(r"(.*-)?(?:gcc|g\+\+|clang|clang\+\+)(?:-[\d.]+)?$")
+# Conan arch -> link.exe / lib.exe /MACHINE value. The config cpu stays x64_windows.
+_MSVC_MACHINE = {
+    "x86_64": "X64",
+    "x86": "X86",
+    "armv7": "ARM",
+    "armv8": "ARM64",
+}
+_MSVC_ASSEMBLER = {
+    "X64": "ml64.exe",
+    "X86": "ml.exe",
+}
 
 
 class _ProfileView:
-    """settings and conf pair. The flag helpers read both off the conanfile."""
+    """One profile seen as a conanfile. The flag and vcvars helpers read these attributes."""
 
-    def __init__(self, settings, conf):
+    def __init__(self, settings, conf, settings_build=None):
         self.settings = settings
         self.conf = conf
+        self.settings_build = settings_build
 
 
 def _slash(path):
     return path.replace("\\", "/")
+
+
+def _flags(*flags):
+    return [flag for flag in flags if flag]
+
+
+def _platform_constraints(settings):
+    """The @platforms constraints of a profile. None when it has no os or arch."""
+    os_name, arch = settings.get_safe("os"), settings.get_safe("arch")
+    if os_name is None or arch is None:
+        return None
+    if os_name not in _OS_CONSTRAINTS or arch not in _ARCH_CONSTRAINTS:
+        raise ConanException(
+            f"Cannot map os={os_name!r} arch={arch!r} to Bazel platform constraints."
+        )
+    return [f"@platforms//os:{_OS_CONSTRAINTS[os_name]}",
+            f"@platforms//cpu:{_ARCH_CONSTRAINTS[arch]}"]
 
 
 def _tool_path(name):
@@ -134,95 +141,135 @@ def _tool_path(name):
 
     Bazel uses the string as a path. It does not search PATH.
     """
-    normalized = _slash(name)
-    if "/" in normalized or os.path.isabs(name):
-        return normalized
+    if "/" in _slash(name) or os.path.isabs(name):
+        return _slash(name)
     found = shutil.which(name)
     return _slash(found) if found else None
 
 
-def _sibling(compiler_path, tool):
-    """ar and the rest sit next to the compiler and keep its prefix."""
-    folder, _, name = compiler_path.rpartition("/")
-    stem = name
-    for suffix in ("clang++", "g++", "clang", "gcc"):
-        if name == suffix or name.endswith("-" + suffix):
-            stem = name[:-len(suffix)]
-            break
-    sibling = f"{stem}{tool}"
-    return f"{folder}/{sibling}" if folder else sibling
+def _compiler_executables(conf):
+    return conf.get("tools.build:compiler_executables", default={}, check_type=dict)
 
 
-def _resolve_drivers(conanfile, settings, conf):
-    """Return (c path, c++ path) for a Linux gcc or clang profile, or None."""
+def _binutil(driver, tool):
+    """ar and the rest sit next to the driver and keep its cross prefix."""
+    folder, name = posixpath.split(driver)
+    match = _DRIVER_PREFIX.match(name)
+    prefix = (match.group(1) or "") if match else ""
+    return posixpath.join(folder, prefix + tool)
+
+
+def _builtin_includes(conanfile, driver):
+    """System include folders of a gcc or clang driver. The Bazel sandbox rejects the others."""
+    if not os.path.isfile(driver):
+        return []
+    _, output = detect_runner(f'"{driver}" -E -v -x c++ {os.devnull}')
+    listing = output.partition("#include <...> search starts here:")[2]
+    listing = listing.partition("End of search list.")[0]
+    includes = [_slash(line.strip()) for line in listing.splitlines() if line.strip()]
+    if not includes:
+        conanfile.output.warning(
+            f"BazelToolchain could not detect builtin include directories from {driver}. "
+            "System headers may be rejected by the Bazel sandbox."
+        )
+    return includes
+
+
+def _unix_config(conanfile, settings, conf):
+    """unix_cc_toolchain_config attributes for a Linux gcc or clang profile, or None."""
     compiler = settings.get_safe("compiler")
     if settings.get_safe("os") != "Linux" or compiler not in _UNIX_COMPILERS:
         return None
-    executables = conf.get("tools.build:compiler_executables", default={}, check_type=dict) or {}
+    executables = _compiler_executables(conf)
     c_default, cpp_default = _UNIX_COMPILERS[compiler]
-    # A missing entry uses the default driver name. Set both when the names differ.
-    c_path = _tool_path(executables.get("c") or c_default)
-    cpp_path = _tool_path(executables.get("cpp") or cpp_default)
-    if not c_path or not cpp_path:
+    cc = _tool_path(executables.get("c") or c_default)
+    cxx = _tool_path(executables.get("cpp") or cpp_default)
+    if not cc or not cxx:
         conanfile.output.warning(
             "BazelToolchain could not find the compiler executable. "
             "Set tools.build:compiler_executables or make the compiler available on PATH."
         )
         return None
-    return c_path, cpp_path
-
-
-def _builtin_includes(compiler):
-    if not compiler or not os.path.isfile(compiler):
-        return []
-    try:
-        proc = subprocess.run(
-            [compiler, "-E", "-v", "-x", "c++", "-"],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=30,
-            check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired):
-        return []
-    text = (proc.stderr or b"").decode("utf-8", "replace")
-    text += (proc.stdout or b"").decode("utf-8", "replace")
-    includes = []
-    capture = False
-    for line in text.splitlines():
-        if line.startswith("#include <...>"):
-            capture = True
-            continue
-        if line.startswith("End of search list"):
-            break
-        if capture:
-            path = line.strip()
-            if path:
-                includes.append(_slash(path))
-    return includes
-
-
-def _translated_flags(settings, conf):
-    """Architecture and libcxx flags, the same helpers CMakeToolchain uses."""
     view = _ProfileView(settings, conf)
-    lib, define = libcxx_flags(view)
-    arch = architecture_flag(view) or ""
-    arch_link = architecture_link_flag(view) or ""
-    compile_flags = []
-    cxx_flags = []
-    link_flags = []
-    if arch:
-        compile_flags.append(arch)
-        link_flags.append(arch)
-    if define:
-        compile_flags.append(f"-D{define}")
-    if lib:
-        cxx_flags.append(lib)
-        link_flags.append(lib)
-    if arch_link:
-        link_flags.append(arch_link)
-    return compile_flags, cxx_flags, link_flags
+    arch_flag = architecture_flag(view)
+    stdlib, stdlib_define = libcxx_flags(view)
+    sysroot = conf.get("tools.build:sysroot")
+    return "unix_cc_toolchain_config", {
+        "cpu": _ARCH_CONSTRAINTS[settings.get_safe("arch")],
+        "compiler": compiler,
+        "tool_paths": {"gcc": cc, "cpp": cxx, "ld": cxx,
+                       **{tool: _binutil(cc, tool) for tool in _BINUTILS}},
+        "cxx_builtin_include_directories": _builtin_includes(conanfile, cxx),
+        "compile_flags": _flags(arch_flag, stdlib_define and f"-D{stdlib_define}"),
+        "cxx_flags": _flags(stdlib),
+        "link_flags": _flags(arch_flag, stdlib, architecture_link_flag(view)),
+        "builtin_sysroot": sysroot and _slash(sysroot),
+    }
+
+
+def _vcvars_env(conanfile, settings, conf):
+    """The environment after the same vcvarsall call VCVars writes, for this profile.
+
+    windows_cc_toolchain_config bakes INCLUDE, LIB and PATH into each action, so an activated
+    prompt does not reach cl.exe. The values have to be captured here.
+    """
+    if os.name != "nt":
+        return {}
+    try:
+        call = _vcvars_call(_ProfileView(settings, conf, conanfile.settings_build))
+        output = check_output_runner(f"{call[0]} > nul && set") if call else ""
+    except ConanException:
+        return {}
+    pairs = (line.split("=", 1) for line in output.splitlines() if "=" in line)
+    return {key.upper(): value for key, value in pairs}
+
+
+def _msvc_config(conanfile, settings, conf):
+    """windows_cc_toolchain_config attributes for a Windows msvc profile, or None.
+
+    The cpu stays x64_windows so the config keeps the cl.exe actions. Other architectures use
+    their own cl.exe, their vcvars environment and /MACHINE.
+    """
+    if settings.get_safe("os") != "Windows" or settings.get_safe("compiler") != "msvc":
+        return None
+    arch = settings.get_safe("arch")
+    machine = _MSVC_MACHINE.get(arch)
+    if not machine:
+        conanfile.output.warning(f"BazelToolchain skips the MSVC compiler for arch={arch!r}. "
+                                 f"Supported architectures are {sorted(_MSVC_MACHINE)}.")
+        return None
+    executables = _compiler_executables(conf)
+    cl = _tool_path(executables.get("c") or executables.get("cpp") or "cl")
+    if not cl:
+        conanfile.output.warning("BazelToolchain could not find cl.exe. Set "
+                                 "tools.build:compiler_executables or make cl available on PATH.")
+        return None
+    env = _vcvars_env(conanfile, settings, conf) or os.environ
+    include, lib_env = env.get("INCLUDE", ""), env.get("LIB", "")
+    if not include or not lib_env:
+        conanfile.output.warning(f"BazelToolchain MSVC toolchain has no INCLUDE or LIB for "
+                                 f"arch={arch!r}. Install the Visual Studio tools for that "
+                                 "architecture.")
+    folder = posixpath.dirname(cl)
+    link, lib = posixpath.join(folder, "link.exe"), posixpath.join(folder, "lib.exe")
+    assembler = _MSVC_ASSEMBLER.get(machine)
+    machine_flags = [f"/MACHINE:{machine}"]
+    return "windows_cc_toolchain_config", {
+        "cpu": "x64_windows",
+        "compiler": "msvc-cl",
+        "tool_paths": {"gcc": cl, "cpp": cl, "ld": link, "ar": lib},
+        "cxx_builtin_include_directories": [_slash(p) for p in include.split(";") if p.strip()],
+        "msvc_cl_path": cl,
+        "msvc_link_path": link,
+        "msvc_lib_path": lib,
+        "msvc_ml_path": assembler and posixpath.join(folder, assembler),
+        "msvc_env_include": include,
+        "msvc_env_lib": lib_env,
+        "msvc_env_path": env.get("PATH"),
+        "msvc_env_tmp": env.get("TMP") or env.get("TEMP"),
+        "archiver_flags": machine_flags,
+        "default_link_flags": machine_flags,
+    }
 
 
 def _starlark(value):
@@ -238,37 +285,46 @@ def _starlark(value):
 
 _env = Environment(trim_blocks=True, lstrip_blocks=True)
 _env.filters["starlark"] = _starlark
-_TOOLCHAIN_TEMPLATE = _env.from_string(textwrap.dedent("""\
-    cc_toolchain_config(
-        name = "{{ name }}_config",
-        cpu = {{ cpu|starlark }},
-        compiler = {{ compiler|starlark }},
-        toolchain_identifier = "conan_{{ name }}",
+
+_BUILD_TEMPLATE = _env.from_string(textwrap.dedent("""\
+    {% for rule in toolchains|map(attribute="rule")|unique %}
+    load("{{ config_rules[rule] }}", {{ rule }} = "cc_toolchain_config")
+    {% endfor %}
+    {% if toolchains %}
+    load("@rules_cc//cc/toolchains:cc_toolchain.bzl", "cc_toolchain")
+
+    {% endif %}
+    package(default_visibility = ["//visibility:public"])
+    {% for name, constraints in platforms.items() %}
+
+    platform(
+        name = "{{ name }}",
+        constraint_values = {{ constraints|starlark }},
+    )
+    {% endfor %}
+    {% if toolchains %}
+
+    filegroup(name = "empty")
+    {% endif %}
+    {% for tc in toolchains %}
+
+    {{ tc.rule }}(
+        name = "{{ tc.name }}_config",
+        toolchain_identifier = "conan_{{ tc.name }}",
         host_system_name = "local",
         target_system_name = "local",
         target_libc = "unknown",
         abi_version = "unknown",
         abi_libc_version = "unknown",
-        tool_paths = {{ tool_paths|starlark }},
-        cxx_builtin_include_directories = {{ includes|starlark }},
-        {% if compile_flags %}
-        compile_flags = {{ compile_flags|starlark }},
-        {% endif %}
-        {% if cxx_flags %}
-        cxx_flags = {{ cxx_flags|starlark }},
-        {% endif %}
-        {% if link_flags %}
-        link_flags = {{ link_flags|starlark }},
-        {% endif %}
-        {% if sysroot %}
-        builtin_sysroot = {{ sysroot|starlark }},
-        {% endif %}
+        {% for key, value in tc.attrs.items() if value %}
+        {{ key }} = {{ value|starlark }},
+        {% endfor %}
     )
 
     cc_toolchain(
-        name = "{{ name }}_cc",
-        toolchain_identifier = "conan_{{ name }}",
-        toolchain_config = ":{{ name }}_config",
+        name = "{{ tc.name }}_cc",
+        toolchain_identifier = "conan_{{ tc.name }}",
+        toolchain_config = ":{{ tc.name }}_config",
         all_files = ":empty",
         compiler_files = ":empty",
         dwp_files = ":empty",
@@ -279,33 +335,29 @@ _TOOLCHAIN_TEMPLATE = _env.from_string(textwrap.dedent("""\
     )
 
     toolchain(
-        name = "cc_for_{{ name }}",
-        toolchain = ":{{ name }}_cc",
+        name = "cc_for_{{ tc.name }}",
+        toolchain = ":{{ tc.name }}_cc",
         toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
-        exec_compatible_with = {{ exec_constraints|starlark }},
-        target_compatible_with = {{ target_constraints|starlark }},
-    )"""))
-
-
-def _toolchain_rules(name, cpu, compiler, drivers, includes, compile_flags, cxx_flags, link_flags,
-                     sysroot, exec_constraints, target_constraints):
-    c_path, cpp_path = drivers
-    tool_paths = {"gcc": c_path, "cpp": cpp_path, "ld": cpp_path}
-    for tool in _BINUTILS:
-        tool_paths[tool] = _sibling(c_path, tool)
-    return _TOOLCHAIN_TEMPLATE.render(
-        name=name,
-        cpu=cpu,
-        compiler=compiler,
-        tool_paths=tool_paths,
-        includes=includes,
-        compile_flags=compile_flags,
-        cxx_flags=cxx_flags,
-        link_flags=link_flags,
-        sysroot=sysroot,
-        exec_constraints=exec_constraints,
-        target_constraints=target_constraints,
+        exec_compatible_with = {{ tc.exec_constraints|starlark }},
+        target_compatible_with = {{ tc.target_constraints|starlark }},
     )
+    {% endfor %}
+    """))
+
+_MODULE_TEMPLATE = _env.from_string(textwrap.dedent("""\
+    # Generated by BazelToolchain. Include in your MODULE.bazel file with:
+    # include("{{ include }}")
+
+    bazel_dep(name = "platforms", version = "{{ platforms_version }}")
+    {% if toolchains %}
+    bazel_dep(name = "rules_cc", version = "{{ rules_cc_version }}")
+    register_toolchains(
+    {% for tc in toolchains %}
+        "{{ package }}:cc_for_{{ tc.name }}",
+    {% endfor %}
+    )
+    {% endif %}
+    """))
 
 
 class BazelToolchain:
@@ -396,10 +448,6 @@ class BazelToolchain:
         ret = self.linkopt + conf_flags
         return self._filter_list_empty_fields(ret)
 
-    def _rc_path(self):
-        parts = _generators_parts(self._conanfile)
-        return "/".join(parts + [self.bazelrc_name])
-
     def _context(self):
         return {
             "copt": " ".join(f"--copt={flag}" for flag in self.copt),
@@ -414,100 +462,46 @@ class BazelToolchain:
             "crosstool_top": self.crosstool_top,
         }
 
-    def _constraints(self, settings):
-        os_name = settings.get_safe("os")
-        arch = settings.get_safe("arch")
-        if os_name is None or arch is None:
-            return None
-        constraints = _platform_constraints(settings)
-        if constraints is None:
-            raise ConanException(
-                f"Cannot map os={os_name!r} arch={arch!r} to Bazel platform constraints."
-            )
-        return constraints
+    def _generators_folder(self):
+        """The generators folder relative to the workspace root, "" for the root itself."""
+        folder = posixpath.normpath(_slash(self._conanfile.folders.generators or "."))
+        return "" if folder == "." else folder
 
-    def _rc_content(self, platform_lines):
-        content = Template(self.bazelrc_template).render(self._context())
-        if content and not content.endswith("\n"):
-            content += "\n"
-        return content + "\n".join(platform_lines) + "\n"
-
-    def _describe_toolchain(self, name, settings, conf, exec_constraints, target_constraints):
-        drivers = _resolve_drivers(self._conanfile, settings, conf)
-        if drivers is None:
-            return None
-        includes = _builtin_includes(drivers[1])
-        if os.path.isfile(drivers[1]) and not includes:
-            self._conanfile.output.warning(
-                "BazelToolchain could not detect builtin include directories from "
-                f"{drivers[1]}. System headers may be rejected by the Bazel sandbox."
-            )
-        compile_flags, cxx_flags, link_flags = _translated_flags(settings, conf)
-        sysroot = conf.get("tools.build:sysroot")
-        sysroot = _slash(sysroot) if sysroot else None
-        cpu = _ARCH_CONSTRAINTS.get(settings.get_safe("arch"), settings.get_safe("arch"))
-        return _toolchain_rules(
-            name, cpu, settings.get_safe("compiler"), drivers, includes,
-            compile_flags, cxx_flags, link_flags, sysroot,
-            exec_constraints, target_constraints,
-        )
+    def _toolchains(self, exec_constraints, target_constraints):
+        """One toolchain for the host profile. A cross build adds one for the build profile."""
+        conanfile = self._conanfile
+        profiles = [("target", conanfile.settings, conanfile.conf, target_constraints)]
+        if exec_constraints != target_constraints:
+            profiles.append(("host", conanfile.settings_build, conanfile.conf_build,
+                             exec_constraints))
+        toolchains = []
+        for name, settings, conf, constraints in profiles:
+            config = (_unix_config(conanfile, settings, conf)
+                      or _msvc_config(conanfile, settings, conf))
+            if config:
+                rule, attrs = config
+                toolchains.append({"name": name, "rule": rule, "attrs": attrs,
+                                   "exec_constraints": exec_constraints,
+                                   "target_constraints": constraints})
+        return toolchains
 
     def _write_platforms(self, exec_constraints, target_constraints):
-        parts = _generators_parts(self._conanfile)
-        folder_name = _TOOLCHAIN_PACKAGE
-        package = "//" + "/".join(parts + [folder_name])
-        sections = [
-            _platform_rule("host", exec_constraints),
-            _platform_rule("target", target_constraints),
-        ]
-        registered = []
-        target_rules = self._describe_toolchain(
-            "target", self._conanfile.settings, self._conanfile.conf,
-            exec_constraints, target_constraints,
+        """Writes the platforms, the toolchains and the module snippet. Returns the package."""
+        folder = self._generators_folder()
+        package = f"//{posixpath.join(folder, _TOOLCHAIN_PACKAGE)}"
+        toolchains = self._toolchains(exec_constraints, target_constraints)
+        build = _BUILD_TEMPLATE.render(
+            config_rules=_CONFIG_RULES, toolchains=toolchains,
+            platforms={"host": exec_constraints, "target": target_constraints},
         )
-        if target_rules:
-            registered.append("cc_for_target")
-            sections.append(target_rules)
-        if exec_constraints != target_constraints and self._conanfile.conf_build:
-            host_rules = self._describe_toolchain(
-                "host", self._conanfile.settings_build, self._conanfile.conf_build,
-                exec_constraints, exec_constraints,
-            )
-            if host_rules:
-                registered.append("cc_for_host")
-                sections.append(host_rules)
-        if registered:
-            header = textwrap.dedent("""\
-                load("@bazel_tools//tools/cpp:unix_cc_toolchain_config.bzl", "cc_toolchain_config")
-                load("@rules_cc//cc/toolchains:cc_toolchain.bzl", "cc_toolchain")
-
-                package(default_visibility = ["//visibility:public"])
-                """)
-            build = header + "\n" + "\n\n".join(sections[:2]) + '\n\nfilegroup(name = "empty")\n\n'
-            build += "\n\n".join(sections[2:]) + "\n"
-        else:
-            build = "\n\n".join(sections) + "\n"
-        deps = [f'bazel_dep(name = "platforms", version = "{_PLATFORMS_VERSION}")']
-        if registered:
-            deps.append(f'bazel_dep(name = "rules_cc", version = "{_RULES_CC_VERSION}")')
-            labels = "\n".join(f'    "{package}:{name}",' for name in registered)
-            deps.append(f"register_toolchains(\n{labels}\n)")
-        save(self._conanfile, os.path.join(folder_name, "BUILD.bazel"), build)
-        save(self._conanfile, "BUILD.bazel", "# This is an empty BUILD file.")
-        folder = "/".join(parts)
-        include = f"//{folder}:{_MODULE_FILENAME}" if folder else f"//:{_MODULE_FILENAME}"
-        module = (
-            "# Generated by BazelToolchain. Include in your MODULE.bazel file with:\n"
-            f'# include("{include}")\n'
-            "\n"
-            + "\n".join(deps)
-            + "\n"
+        module = _MODULE_TEMPLATE.render(
+            include=f"//{folder}:{_MODULE_FILENAME}", package=package, toolchains=toolchains,
+            platforms_version=_PLATFORMS_VERSION, rules_cc_version=_RULES_CC_VERSION,
         )
+        save(self._conanfile, os.path.join(_TOOLCHAIN_PACKAGE, "BUILD.bazel"), build)
         save(self._conanfile, _MODULE_FILENAME, module)
-        return [
-            f"build:{self.bazelrc_config} --platforms={package}:target",
-            f"build:{self.bazelrc_config} --host_platform={package}:host",
-        ]
+        save(self._conanfile, "BUILD.bazel", "# This is an empty BUILD file.")
+        return package
 
     def generate(self):
         """
@@ -516,20 +510,26 @@ class BazelToolchain:
         that config. A later install overwrites the file.
 
         Also writes host and target ``platform()`` rules and a ``conan_toolchain.MODULE.bazel``
-        snippet when both profiles define ``os`` and ``arch``. For gcc and clang on Linux it writes
-        the ``cc_toolchain`` that Bazel uses for that profile.
+        snippet when both profiles define ``os`` and ``arch``. For gcc and clang on Linux, and for
+        msvc on Windows, it writes the ``cc_toolchain`` that Bazel uses for that profile. An msvc
+        cross build writes one toolchain per profile, with that profile's vcvars environment.
         """
         check_duplicated_generator(self, self._conanfile)
-        exec_constraints = self._constraints(self._conanfile.settings_build)
-        target_constraints = self._constraints(self._conanfile.settings)
-        platform_lines = []
+        config = self.bazelrc_config
+        lines = [Template(self.bazelrc_template).render(self._context()).rstrip("\n")]
+        if is_msvc_static_runtime(self._conanfile):
+            # The rules_cc windows config links the dynamic runtime unless this feature is set.
+            lines.append(f"build:{config} --features=static_link_msvcrt")
+        exec_constraints = _platform_constraints(self._conanfile.settings_build)
+        target_constraints = _platform_constraints(self._conanfile.settings)
         if exec_constraints and target_constraints:
-            platform_lines = self._write_platforms(exec_constraints, target_constraints)
-        save(self._conanfile, BazelToolchain.bazelrc_name, self._rc_content(platform_lines))
+            package = self._write_platforms(exec_constraints, target_constraints)
+            lines.append(f"build:{config} --platforms={package}:target")
+            lines.append(f"build:{config} --host_platform={package}:host")
+        save(self._conanfile, self.bazelrc_name, "\n".join(lines) + "\n")
         self._conanfile.output.info(f"BazelToolchain generated: {self.bazelrc_name}")
-        rc_path = self._rc_path()
-        if _is_consumer(self._conanfile):
-            config = self.bazelrc_config
+        if is_consumer(self._conanfile):
+            rc_path = posixpath.join(self._generators_folder(), self.bazelrc_name)
             msg = textwrap.dedent(f"""\
                 BazelToolchain: Config '{config}' added to {rc_path}.
                     bazel --bazelrc={rc_path} build --config={config} //...

@@ -133,31 +133,16 @@ class VCVars:
         if compiler not in ("msvc", "clang"):
             return
 
-        vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
-        if vs_install_path == "":  # Empty string means "disable"
+        call = _vcvars_call(conanfile)
+        if call is None:
             return
-
-        vs_version, vcvars_ver = _vcvars_versions(conanfile)
-        if vs_version is None:
-            return
-
-        vcvarsarch = _vcvars_arch(conanfile)
-
-        winsdk_version = conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
-        winsdk_version = winsdk_version or conanfile.settings.get_safe("os.version")
-        # The vs_install_path is like
-        # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
-        # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
-        # C:\Program Files (x86)\Microsoft Visual Studio 14.0
-        vcvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
-                                winsdk_version=winsdk_version, vcvars_ver=vcvars_ver,
-                                vs_install_path=vs_install_path)
+        vcvars, description = call
 
         content = textwrap.dedent(f"""\
             @echo off
             set __VSCMD_ARG_NO_LOGO=1
             set VSCMD_SKIP_SENDTELEMETRY=1
-            echo conanvcvars.bat: Activating environment Visual Studio {vs_version} - {vcvarsarch} - winsdk_version={winsdk_version} - vcvars_ver={vcvars_ver}
+            echo conanvcvars.bat: Activating environment {description}
             {vcvars}
             """)
         from conan.tools.env.environment import create_env_script
@@ -182,6 +167,32 @@ class VCVars:
             conan_vcvars_ps1 = f"{CONAN_VCVARS}.ps1"
             create_env_script(conanfile, content_ps1, conan_vcvars_ps1, scope)
             _create_deactivate_vcvars_file(conanfile, conan_vcvars_ps1)
+
+
+def _vcvars_call(conanfile):
+    """(vcvarsall command, description) for the conanfile settings. None if vcvars is disabled."""
+    vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
+    if vs_install_path == "":  # Empty string means "disable"
+        return None
+
+    vs_version, vcvars_ver = _vcvars_versions(conanfile)
+    if vs_version is None:
+        return None
+
+    vcvarsarch = _vcvars_arch(conanfile)
+
+    winsdk_version = conanfile.conf.get("tools.microsoft:winsdk_version", check_type=str)
+    winsdk_version = winsdk_version or conanfile.settings.get_safe("os.version")
+    # The vs_install_path is like
+    # C:\Program Files (x86)\Microsoft Visual Studio\2019\Community
+    # C:\Program Files (x86)\Microsoft Visual Studio\2017\Community
+    # C:\Program Files (x86)\Microsoft Visual Studio 14.0
+    vcvars = vcvars_command(vs_version, architecture=vcvarsarch, platform_type=None,
+                            winsdk_version=winsdk_version, vcvars_ver=vcvars_ver,
+                            vs_install_path=vs_install_path)
+    description = (f"Visual Studio {vs_version} - {vcvarsarch} - "
+                   f"winsdk_version={winsdk_version} - vcvars_ver={vcvars_ver}")
+    return vcvars, description
 
 
 def _create_deactivate_vcvars_file(conanfile, filename):

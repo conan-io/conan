@@ -242,6 +242,67 @@ def test_clang_libcxx_is_a_toolchain_flag(conanfile):
     assert '"-stdlib=libc++"' in build
 
 
+def test_msvc_generates_windows_toolchain(conanfile):
+    """msvc on Windows x86_64 writes the bundled cl.exe toolchain."""
+    profile = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=msvc
+    compiler.version=193
+    compiler.runtime=static
+    compiler.runtime_type=Release
+    os=Windows
+    [conf]
+    tools.build:compiler_executables={'c': 'C:/VS/cl.exe', 'cpp': 'C:/VS/cl.exe'}
+    """)
+    c = TestClient()
+    c.save({"conanfile.py": conanfile, "profile": profile})
+    c.run("install . -pr:b profile -pr:h profile")
+    content = load(c, os.path.join(c.current_folder, "conan", BazelToolchain.bazelrc_name))
+    assert "build:conan-config --features=static_link_msvcrt" in content
+    build = load(c, os.path.join(c.current_folder, "conan", "conan_toolchain", "BUILD.bazel"))
+    assert "windows_cc_toolchain_config(" in build
+    assert 'cpu = "x64_windows"' in build
+    assert 'compiler = "msvc-cl"' in build
+    assert 'msvc_cl_path = "C:/VS/cl.exe"' in build
+    assert 'msvc_link_path = "C:/VS/link.exe"' in build
+    assert '"/MACHINE:X64"' in build
+    assert "@rules_cc//cc/private/toolchain:windows_cc_toolchain_config.bzl" in build
+    assert "unix_cc_toolchain_config" not in build
+
+
+def test_msvc_cross_arm64(conanfile):
+    """An x64 to arm64 msvc cross build writes one cl.exe toolchain per profile."""
+    def profile(arch, cl):
+        return textwrap.dedent(f"""
+        [settings]
+        arch={arch}
+        build_type=Release
+        compiler=msvc
+        compiler.version=193
+        compiler.runtime=dynamic
+        compiler.runtime_type=Release
+        os=Windows
+        [conf]
+        tools.build:compiler_executables={{'c': '{cl}', 'cpp': '{cl}'}}
+        """)
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile_build": profile("x86_64", "C:/VS/x64/cl.exe"),
+            "profile_host": profile("armv8", "C:/VS/arm64/cl.exe")})
+    c.run("install . -pr:b profile_build -pr:h profile_host")
+    build = load(c, os.path.join(c.current_folder, "conan", "conan_toolchain", "BUILD.bazel"))
+    assert "@platforms//cpu:aarch64" in build
+    assert 'msvc_cl_path = "C:/VS/arm64/cl.exe"' in build
+    assert 'msvc_link_path = "C:/VS/arm64/link.exe"' in build
+    assert '"/MACHINE:ARM64"' in build
+    assert 'msvc_cl_path = "C:/VS/x64/cl.exe"' in build
+    assert '"/MACHINE:X64"' in build
+    assert 'cpu = "x64_windows"' in build
+    assert 'name = "cc_for_host"' in build
+
+
 def test_cross_build_generates_platforms(conanfile):
     """A gcc Linux cross build writes one cc_toolchain per profile."""
     c = TestClient()
