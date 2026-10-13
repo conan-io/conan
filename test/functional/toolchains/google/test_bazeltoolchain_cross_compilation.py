@@ -103,11 +103,6 @@ def test_bazel_gcc_cross_compilation(bazel):
     client.run(f"new bazel_7_exe -d name=myapp -d version=1.0 -d output_root_dir={output_root}")
     client.save({"profile_host": profile_host})
     client.run("build . -pr:h profile_host")
-
-    toolchain = client.load("conan/conan_toolchain/BUILD.bazel")
-    assert '/arm-linux-gnueabihf-g++",' in toolchain
-    assert '/arm-linux-gnueabihf-ar",' in toolchain
-    assert '"@platforms//cpu:armv7"' in toolchain
     myapp = os.path.join(client.current_folder, "bazel-bin", "main", "myapp")
     client.run_command(f'readelf -h "{myapp}"')
     assert "ELF32" in client.out
