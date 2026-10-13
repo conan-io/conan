@@ -776,6 +776,40 @@ def test_cross_x86_64_to_riscv64():
     assert "cpu = 'riscv64'" in cross  # This is the host machine
 
 
+@pytest.mark.parametrize("arch, android_target", [("armv7", "armv7a-linux-androideabi"),
+                                                  ("armv8", "aarch64-linux-android"),
+                                                  ("x86", "i686-linux-android"),
+                                                  ("x86_64", "x86_64-linux-android")])
+@pytest.mark.parametrize("os_build, ndk_os_folder, ext", [("Macos", "darwin", ""),
+                                                          ("Linux", "linux", ""),
+                                                          ("Windows", "windows", ".cmd")])
+def test_cross_to_android_ndk(arch, android_target, os_build, ndk_os_folder, ext):
+    """ With the NDK path defined, the compilers are the ones of the NDK for the target of the arch,
+    with the api_level, and the folder of the OS of the build machine
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile().with_settings("os", "compiler", "arch", "build_type")})
+    c.run(f"install . -g MesonToolchain -s os=Android -s os.api_level=21 -s arch={arch} "
+          f"-s compiler=clang -s compiler.version=18 -s compiler.libcxx=libc++ "
+          f"-s:b os={os_build} -s:b arch=x86_64 -c tools.android:ndk_path=/path/to/ndk")
+    cross = c.load(MesonToolchain.cross_filename)
+    ndk_bin = os.path.join("/path/to/ndk", "toolchains", "llvm", "prebuilt",
+                           f"{ndk_os_folder}-x86_64", "bin")
+    assert f"c = '{os.path.join(ndk_bin, f'{android_target}21-clang{ext}')}'" in cross
+    assert f"cpp = '{os.path.join(ndk_bin, f'{android_target}21-clang++{ext}')}'" in cross
+    assert f"ar = '{os.path.join(ndk_bin, 'llvm-ar')}'" in cross
+    assert "system = 'android'" in cross
+
+
+def test_cross_to_android_ndk_path_required():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile().with_settings("os", "compiler", "arch", "build_type")})
+    c.run("install . -g MesonToolchain -s os=Android -s os.api_level=21 -s arch=armv8 "
+          "-s compiler=clang -s compiler.version=18 -s compiler.libcxx=libc++ "
+          "-s:b os=Linux -s:b arch=x86_64", assert_error=True)
+    assert "You must provide a NDK path. Use 'tools.android:ndk_path' configuration field." in c.out
+
+
 def test_conf_extra_apple_flags():
     host = textwrap.dedent("""
     [settings]
