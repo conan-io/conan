@@ -286,6 +286,13 @@ def test_crossbuild_to_android_ndk_compilers(build_env_mock, arch, android_targe
         assert env_vars[var] == os.path.join(ndk_bin, tool)
 
 
+def test_gnu_toolchain_autoreconf_args_default():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    gnutc = GnuToolchain(conanfile)
+    assert gnutc.autoreconf_args == {"--force": None, "--install": None}
+
+
 def test_gnu_toolchain_conf_extra_configure_args():
     """ Validate that tools.gnu:extra_configure_args are passed to the configure_args when
         building with GnuToolchain.

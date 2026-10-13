@@ -508,6 +508,13 @@ def test_crossbuild_to_android_ndk_compilers(build_env_mock, arch, android_targe
         assert env_vars[var] == os.path.join(ndk_bin, tool)
 
 
+def test_autoreconf_args_default():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    at = AutotoolsToolchain(conanfile)
+    assert at.autoreconf_args == ["--force", "--install"]
+
+
 def test_apple_isysrootflag():
     """Even when no cross building it is adjusted because it could target a Mac version"""
     conanfile = ConanFileMock()
