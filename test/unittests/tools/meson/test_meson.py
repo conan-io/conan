@@ -134,6 +134,8 @@ def test_meson_install_cli_args():
     ("watchOS", "armv7k", "darwin", "arm", "armv7k"),
     ("watchOS", "armv8_32", "darwin", "aarch64", "armv8_32"),
     ("visionOS", "armv8", "darwin", "aarch64", "armv8"),
+    ("Emscripten", "wasm", "emscripten", "wasm32", "wasm32"),
+    ("Emscripten", "wasm64", "emscripten", "wasm64", "wasm64"),
 ])
 def test_to_meson_machine(os_, arch, system, cpu_family, cpu):
     assert to_meson_machine(os_, arch) == {"system": system, "cpu_family": cpu_family,
