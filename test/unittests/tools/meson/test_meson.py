@@ -6,7 +6,8 @@ from conan.tools.meson import Meson
 from conan.internal.model.conf import ConfDefinition
 from conan.test.utils.mocks import ConanFileMock, MockSettings
 from conan.test.utils.test_files import temp_folder
-from conan.tools.meson.helpers import get_apple_subsystem, to_cstd_flag, to_cppstd_flag
+from conan.tools.meson.helpers import (get_apple_subsystem, to_cstd_flag, to_cppstd_flag,
+                                      to_meson_machine)
 
 
 def test_meson_build():
@@ -114,3 +115,26 @@ def test_meson_install_cli_args():
     meson.install(cli_args=["--no-rebuild"])
 
     assert '--no-rebuild' in str(conanfile.command)
+
+
+@pytest.mark.parametrize("os_, arch, system, cpu_family, cpu", [
+    # https://mesonbuild.com/Reference-tables.html#operating-system-names
+    # https://mesonbuild.com/Reference-tables.html#cpu-families
+    ("Android", "armv7", "android", "arm", "armv7"),
+    ("Android", "armv8", "android", "aarch64", "armv8"),
+    ("Android", "x86", "android", "x86", "x86"),
+    ("Android", "x86_64", "android", "x86_64", "x86_64"),
+    ("Linux", "armv7hf", "linux", "arm", "armv7hf"),
+    ("Macos", "x86_64", "darwin", "x86_64", "x86_64"),
+    ("Macos", "armv8", "darwin", "aarch64", "armv8"),
+    ("iOS", "armv7", "darwin", "arm", "armv7"),
+    ("iOS", "armv7s", "darwin", "arm", "armv7s"),
+    ("iOS", "armv8.3", "darwin", "aarch64", "armv8.3"),
+    ("tvOS", "armv8", "darwin", "aarch64", "armv8"),
+    ("watchOS", "armv7k", "darwin", "arm", "armv7k"),
+    ("watchOS", "armv8_32", "darwin", "aarch64", "armv8_32"),
+    ("visionOS", "armv8", "darwin", "aarch64", "armv8"),
+])
+def test_to_meson_machine(os_, arch, system, cpu_family, cpu):
+    assert to_meson_machine(os_, arch) == {"system": system, "cpu_family": cpu_family,
+                                           "cpu": cpu, "endian": "little"}
