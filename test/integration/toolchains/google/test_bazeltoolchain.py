@@ -38,7 +38,7 @@ def test_default_bazel_toolchain(conanfile):
     c = TestClient()
     c.save({"conanfile.py": conanfile,
             "profile": profile})
-    c.run("install . -pr profile")
+    c.run("install . -pr:b profile -pr:h profile")
     content = load(c, os.path.join(c.current_folder, "conan", BazelToolchain.bazelrc_name))
     build = load(c, os.path.join(c.current_folder, "conan", "conan_toolchain", "BUILD.bazel"))
     assert "cc_toolchain(" not in build
@@ -213,6 +213,7 @@ def test_native_build_generates_platforms(conanfile):
     assert '"gcc": "/opt/bin/gcc"' in build
     assert '"ar": "/opt/bin/ar"' in build
     assert '"-m64"' in build
+    assert '"-lstdc++"' in build
     assert 'builtin_sysroot = "/opt/sysroot"' in build
     assert 'name = "cc_for_target"' in build
     assert "cc_for_host" not in build
