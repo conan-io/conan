@@ -810,6 +810,41 @@ def test_cross_to_android_ndk_path_required():
     assert "You must provide a NDK path. Use 'tools.android:ndk_path' configuration field." in c.out
 
 
+def test_objc_compilers_and_env_flags():
+    host = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    os=Macos
+    compiler=apple-clang
+    compiler.version=14.0
+    [buildenv]
+    OBJCFLAGS=-DMY_OBJC
+    OBJCXXFLAGS=-DMY_OBJCXX
+    LDFLAGS=-Lmy_libs
+    """)
+    c = TestClient()
+    c.save({"conanfile.txt": "[generators]\nMesonToolchain", "host": host})
+    c.run("install . -pr:a host")
+    tc = c.load("conan_meson_native.ini")
+    assert "objc = 'clang'" in tc
+    assert "objcpp = 'clang++'" in tc
+    assert re.search(r"objc_args = \[.*'-DMY_OBJC'.*\]", tc)
+    assert re.search(r"objcpp_args = \[.*'-DMY_OBJCXX'.*\]", tc)
+    assert re.search(r"objc_link_args = \[.*'-Lmy_libs'.*\]", tc)
+    assert re.search(r"objcpp_link_args = \[.*'-Lmy_libs'.*\]", tc)
+
+    # The compilers can be defined by conf
+    host = host + textwrap.dedent("""
+    [conf]
+    tools.build:compiler_executables={"objc": "myobjc", "objcpp": "myobjcpp"}
+    """)
+    c.save({"host": host})
+    c.run("install . -pr:a host")
+    tc = c.load("conan_meson_native.ini")
+    assert "objc = 'myobjc'" in tc
+    assert "objcpp = 'myobjcpp'" in tc
+
+
 def test_conf_extra_apple_flags():
     host = textwrap.dedent("""
     [settings]
