@@ -659,6 +659,93 @@ def test_bitcode_enable_flag():
     assert 'set(BITCODE "-fembed-bitcode")' in toolchain
 
 
+def _apple_toolchain(op_system, os_version, sdk, arch, confs="", build_type="Release"):
+    profile = textwrap.dedent("""
+        [settings]
+        os={}
+        os.version={}
+        {}
+        arch={}
+        compiler=apple-clang
+        compiler.version=17
+        compiler.libcxx=libc++
+        build_type={}
+        [conf]
+        {}
+        """).format(op_system, os_version, f"os.sdk={sdk}" if sdk else "", arch, build_type, confs)
+    client = TestClient(path_with_spaces=False)
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type") \
+                              .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    return client.load("conan_toolchain.cmake")
+
+
+@pytest.mark.parametrize("op_system, os_version, sdk, arch, apple_arch", [
+    ("watchOS", "8.1", "watchos", "armv7k", "armv7k"),
+    ("tvOS", "13.2", "appletvos", "armv8", "arm64"),
+    ("iOS", "10.0", "iphonesimulator", "x86_64", "x86_64"),
+    ("Macos", "11.0", None, "armv8|x86_64", "arm64;x86_64"),  # Universal binary
+])
+def test_apple_toolchain_architectures_sdk_and_deployment_target(op_system, os_version, sdk, arch,
+                                                                 apple_arch):
+    toolchain = _apple_toolchain(op_system, os_version, sdk, arch)
+    assert f'set(CMAKE_OSX_ARCHITECTURES {apple_arch} CACHE STRING "" FORCE)' in toolchain
+    if sdk:
+        assert f'set(CMAKE_OSX_SYSROOT {sdk} CACHE STRING "" FORCE)' in toolchain
+    assert f'set(CMAKE_OSX_DEPLOYMENT_TARGET "{os_version}" CACHE STRING "")' in toolchain
+
+
+@pytest.mark.parametrize("op_system, os_version, sdk, arch", [
+    ("watchOS", "8.1", "watchos", "armv7k"),
+    ("tvOS", "13.2", "appletvos", "armv8"),
+])
+@pytest.mark.parametrize("conf_value, present, absent", [
+    (True,
+     ['set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "YES")',
+      'set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")', 'set(BITCODE "-fembed-bitcode")',
+      'set(FOBJC_ARC "-fobjc-arc")', 'set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "YES")',
+      'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "NO")',
+      'set(VISIBILITY "-fvisibility=default")'],
+     ['set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")', 'set(FOBJC_ARC "-fno-objc-arc")',
+      'set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "NO")',
+      'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "YES")',
+      'set(VISIBILITY "-fvisibility=hidden -fvisibility-inlines-hidden")']),
+    (False,
+     ['set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")', 'set(FOBJC_ARC "-fno-objc-arc")',
+      'set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "NO")',
+      'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "YES")',
+      'set(VISIBILITY "-fvisibility=hidden -fvisibility-inlines-hidden")'],
+     ['set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")', 'set(BITCODE "-fembed-bitcode")',
+      'set(FOBJC_ARC "-fobjc-arc")', 'set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "YES")',
+      'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "NO")',
+      'set(VISIBILITY "-fvisibility=default")']),
+    (None,  # Not defined: nothing is set
+     [],
+     ['set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE', 'set(BITCODE "-', 'set(FOBJC_ARC "-',
+      'set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC', 'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN',
+      'set(VISIBILITY "-']),
+])
+def test_apple_bitcode_arc_and_visibility_flags(op_system, os_version, sdk, arch, conf_value, present,
+                                                absent):
+    """ Same checks of the toolchain than the functional test_cmake_toolchain_xcode_flags.py,
+    that need the Apple SDKs to build, but they only need to install """
+    confs = "" if conf_value is None else "\n".join(
+        f"tools.apple:enable_{flag}={conf_value}" for flag in ("bitcode", "arc", "visibility"))
+    toolchain = _apple_toolchain(op_system, os_version, sdk, arch, confs)
+    for line in present:
+        assert line in toolchain
+    for line in absent:
+        assert line not in toolchain
+
+
+def test_apple_bitcode_marker_in_debug():
+    toolchain = _apple_toolchain("watchOS", "8.1", "watchos", "armv7k",
+                                 confs="tools.apple:enable_bitcode=True", build_type="Debug")
+    assert 'set(BITCODE "-fembed-bitcode-marker")' in toolchain
+    assert 'set(BITCODE "-fembed-bitcode")' not in toolchain
+
+
 def test_cmake_presets_binary_dir_available():
     client = TestClient(path_with_spaces=False)
     conanfile = textwrap.dedent("""
