@@ -215,7 +215,7 @@ class TestMsysClang:
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
         # TODO: Version is still not controlled
-        assert "main __clang_major__22" in client.out
+        assert "main __clang_major__23" in client.out
         # Not using libstdc++
         assert "_GLIBCXX_USE_CXX11_ABI" not in client.out
         assert "main __cplusplus2014" in client.out
