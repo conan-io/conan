@@ -4,6 +4,7 @@ import textwrap
 
 from jinja2 import Template, StrictUndefined
 
+from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.internal.model.dependencies import get_transitive_requires
 from conan.internal.model.pkg_type import PackageType
@@ -429,10 +430,16 @@ class _BazelPathsGenerator:
     module_include_filename = "conan_deps.MODULE.bazel"
     repository_rules_filename = "conan_deps_repo_rules.bzl"
     repository_template = textwrap.dedent("""\
+        # DEPRECATED: Bazel 6 / WORKSPACE support. This file will be removed in a future
+        # Conan version. Use Bazel >= 7.2 and include("//conan:conan_deps.MODULE.bazel").
         # This Bazel module should be loaded by your WORKSPACE file.
         # Add these lines to your WORKSPACE one (assuming that you're using the "bazel_layout"):
         # load("@//conan:dependencies.bzl", "load_conan_dependencies")
         # load_conan_dependencies()
+
+        print("WARNING: Bazel 6 / WORKSPACE support (dependencies.bzl) is deprecated " +
+              "and will be removed in a future Conan version. " +
+              "Use Bazel >= 7.2 and include(\\"//conan:conan_deps.MODULE.bazel\\").")
 
         def load_conan_dependencies():
         {% for dep_info in dependencies %}
@@ -642,3 +649,8 @@ class BazelDeps:
 
         for name, content in _BazelPathsGenerator.items(dependencies_context):
             save(name, content)
+        ConanOutput().warning(
+            "Bazel 6 support in BazelDeps (dependencies.bzl / WORKSPACE) is deprecated "
+            "and will be removed in a future Conan version. "
+            "Use Bazel >= 7.2 and include(\"//conan:conan_deps.MODULE.bazel\").",
+            warn_tag="deprecated")

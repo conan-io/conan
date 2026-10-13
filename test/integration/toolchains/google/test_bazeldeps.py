@@ -56,7 +56,10 @@ def test_bazel_relative_paths():
             "consumer/conanfile.py": conanfile})
     c.run("create dep")
     c.run("install consumer")
+    assert "WARN: deprecated: Bazel 6 support in BazelDeps" in c.out
     assert "Generator 'BazelToolchain' calling 'generate()'" in c.out
+    assert 'print("WARNING: Bazel 6 / WORKSPACE support (dependencies.bzl) is deprecated' in c.load(
+        "consumer/conandeps/dependencies.bzl")
     build_file = c.load("consumer/conandeps/dep/BUILD.bazel")
     expected = textwrap.dedent("""\
     # Components precompiled libs
