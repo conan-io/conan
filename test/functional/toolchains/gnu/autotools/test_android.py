@@ -8,11 +8,14 @@ from conan.test.utils.tools import TestClient
 from test.conftest import tools_locations
 
 
-@pytest.mark.parametrize("arch, expected_arch", [('armv8', 'aarch64'),
-                                                 ('armv7', 'arm'),
-                                                 ('x86', 'i386'),
-                                                 ('x86_64', 'x86_64')
-                                                 ])
+# Every architecture is covered in PRs by one of the Android tests of the Autotools,
+# GnuToolchain and Meson toolchains, the rest of combinations are slow (develop2)
+@pytest.mark.parametrize("arch, expected_arch", [
+    ('armv8', 'aarch64'),
+    ('armv7', 'arm'),
+    pytest.param('x86', 'i386', marks=pytest.mark.slow),
+    pytest.param('x86_64', 'x86_64', marks=pytest.mark.slow),
+])
 @pytest.mark.tool("android_ndk")
 @pytest.mark.tool("autotools")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="NDK only installed on MAC")
