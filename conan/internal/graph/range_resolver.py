@@ -76,8 +76,7 @@ class RangeResolver:
             return self._resolve_version(version_range, local_found, self._resolve_prereleases)
 
     def _search_remote_recipes(self, remote, search_ref):
-        if remote.allowed_packages and not any(search_ref.matches(f, is_consumer=False)
-                                               for f in remote.allowed_packages):
+        if not remote.is_package_allowed(search_ref):
             return []
         pattern = str(search_ref)
         pattern_cached = self._cached_remote_found.setdefault(pattern, {})

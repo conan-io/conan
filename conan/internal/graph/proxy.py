@@ -127,8 +127,7 @@ class ConanProxy:
         results = []
         need_update = should_update_reference(reference, update) or check_update
         for remote in remotes:
-            if remote.allowed_packages and not any(reference.matches(f, is_consumer=False)
-                                                   for f in remote.allowed_packages):
+            if not remote.is_package_allowed(reference):
                 output.debug(f"Excluding remote {remote.name} because recipe is filtered out")
                 continue
             output.info(f"Checking remote: {remote.name}")
