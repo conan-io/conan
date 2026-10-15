@@ -1,5 +1,6 @@
 import pytest
 from conan.api.model import Remote
+from conan.api.model.remote import _is_package_allowed
 from conan.internal.model.recipe_ref import RecipeReference
 
 
@@ -24,7 +25,7 @@ from conan.internal.model.recipe_ref import RecipeReference
 def test_remote_is_package_allowed(patterns, allowed, rejected):
     remote = Remote("remote", "https://remote", allowed_packages=patterns)
     for ref in allowed:
-        assert remote.is_package_allowed(RecipeReference.loads(ref)), f"{ref} should be allowed"
+        assert _is_package_allowed(remote, RecipeReference.loads(ref)), f"{ref} should be allowed"
     for ref in rejected:
-        assert not remote.is_package_allowed(RecipeReference.loads(ref)), \
+        assert not _is_package_allowed(remote, RecipeReference.loads(ref)), \
             f"{ref} should be rejected"

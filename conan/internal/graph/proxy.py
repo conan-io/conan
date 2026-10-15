@@ -2,6 +2,7 @@ import os
 from fnmatch import fnmatch
 
 from conan.api.output import ConanOutput
+from conan.api.model.remote import _is_package_allowed
 from conan.internal.cache.conan_reference_layout import BasicLayout
 from conan.internal.graph.graph import (RECIPE_DOWNLOADED, RECIPE_INCACHE, RECIPE_NEWER,
                                         RECIPE_NOT_IN_REMOTE, RECIPE_UPDATED, RECIPE_EDITABLE,
@@ -127,7 +128,7 @@ class ConanProxy:
         results = []
         need_update = should_update_reference(reference, update) or check_update
         for remote in remotes:
-            if not remote.is_package_allowed(reference):
+            if not _is_package_allowed(remote, reference):
                 output.debug(f"Excluding remote {remote.name} because recipe is filtered out")
                 continue
             output.info(f"Checking remote: {remote.name}")
