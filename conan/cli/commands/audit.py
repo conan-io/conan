@@ -205,9 +205,11 @@ def audit_provider(conan_api, parser, subparser, *args):
         else:
             token = args.token
 
-        provider = conan_api.audit.get_provider(args.name)
         if token:
-            conan_api.audit.auth_provider(provider, token)
+            provider = conan_api.audit.auth_provider(args.name, token)
+        else:
+            provider = conan_api.audit.get_provider(args.name)
+
 
         return [provider], args.action
     elif args.action == "remove":
@@ -228,8 +230,7 @@ def audit_provider(conan_api, parser, subparser, *args):
         else:
             token = args.token
 
-        provider = conan_api.audit.get_provider(args.name)
-        conan_api.audit.auth_provider(provider, token)
+        provider = conan_api.audit.auth_provider(args.name, token)
         return [provider], args.action
 
 
