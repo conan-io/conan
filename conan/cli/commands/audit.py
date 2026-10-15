@@ -156,9 +156,9 @@ def _text_provider_formatter(providers_action):
     if action == "remove":
         cli_out_write("Provider removed successfully.")
     elif action == "add":
-        cli_out_write("Provider added successfully.")
+        cli_out_write(f"Provider '{providers[0].name}' added successfully.")
     elif action == "auth":
-        cli_out_write("Provider authentication added.")
+        cli_out_write(f"Provider '{providers[0].name}' authenticated successfully.")
     elif action == "list":
         if not providers:
             cli_out_write("No providers found.")

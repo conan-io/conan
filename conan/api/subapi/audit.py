@@ -191,12 +191,12 @@ class AuditAPI:
             raise ConanException("Provider not found")
 
         providers = _load_providers(self._providers_path)
-        provider = self.get_provider(provider_name)
-
-        assert provider.name in providers
-        providers[provider.name]["token"] = base64.standard_b64encode(token.encode()).decode()
-        setattr(provider, "token", token)
+        providers[provider_name]["token"] = base64.standard_b64encode(token.encode()).decode()
         _save_providers(self._providers_path, providers)
+
+        provider = self.get_provider(provider_name)
+        setattr(provider, "token", token)
+        return provider
 
 
 def _load_providers(providers_path):
