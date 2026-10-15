@@ -473,7 +473,7 @@ class CacheAPI:
         :param only_upload: if True, only return the files for the recipes and packages of the
           package_list that are set to be uploaded. If False, the package_list is ignored and all
           the files are returned
-        :return: A list with the paths of the backup source files and their metadata files
+        :return: A list with the paths of the backup source files and their associated json files
         """
         config = self._api_helpers.global_conf
         download_cache_path = config.get("core.sources:download_cache")
