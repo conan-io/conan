@@ -132,7 +132,8 @@ class _InstallPackageReference:
     def _build_args(self):
         if self.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD):
             return None
-        cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
+        # The build context uses --build-require, to not apply the host profile [tool_requires]
+        cmd = f"--requires={self.ref}" if self.context == "host"             else f"--tool-requires={self.ref} --build-require"
         compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
         cmd += f" --build={compatible}{self.ref}"
         if self.options:
@@ -361,7 +362,8 @@ class _InstallConfiguration:
     def _build_args(self):
         if self.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD):
             return None
-        cmd = f"--requires={self.ref}" if self.context == "host" else f"--tool-requires={self.ref}"
+        # The build context uses --build-require, to not apply the host profile [tool_requires]
+        cmd = f"--requires={self.ref}" if self.context == "host"             else f"--tool-requires={self.ref} --build-require"
         compatible = "compatible:" if self.info and self.info.get("compatibility_delta") else ""
         cmd += f" --build={compatible}{self.ref}"
         if self.options:

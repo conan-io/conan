@@ -190,7 +190,8 @@ class DepsGraphBuilder:
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
 
-        for pattern, tool_requires in profile.tool_requires.items():
+        profile_tool_requires = {} if conanfile._conan_skip_profile_tool_requires             else profile.tool_requires  # noqa
+        for pattern, tool_requires in profile_tool_requires.items():
             is_consumer = conanfile._conan_is_consumer  # noqa
             if pattern[0] in "!~" and pattern[1] == "(":  # This is a negated OR operation
                 assert pattern[-1] == ")", (f"Malformed profile OR expression without"

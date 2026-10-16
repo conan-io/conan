@@ -174,7 +174,7 @@ def test_info_build_order_build_require():
                         "context": "build",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--tool-requires=dep/0.1 --build=dep/0.1',
+                        'build_args': '--tool-requires=dep/0.1 --build-require --build=dep/0.1',
                         "options": [],
                         "overrides": {}
                     }
@@ -233,13 +233,13 @@ def test_info_build_order_options():
                   'context': 'build', 'depends': [], "overrides": {},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=2'], 'filenames': [],
                   'info': {'options': {'myopt': '2'}},
-                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o:b="tool/0.1:myopt=2"'},
+                  'build_args': '--tool-requires=tool/0.1 --build-require --build=tool/0.1 -o:b="tool/0.1:myopt=2"'},
                  {'package_id': 'a9035d84c5880b26c4b44acf70078c9a7dd37412', 'prev': None,
                   'context': 'build', 'depends': [], "overrides": {},
                   'info': {'options': {'myopt': '1'}},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=1'],
                   'filenames': [],
-                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o:b="tool/0.1:myopt=1"'}
+                  'build_args': '--tool-requires=tool/0.1 --build-require --build=tool/0.1 -o:b="tool/0.1:myopt=1"'}
              ]]}
         ],
         [
@@ -1286,3 +1286,61 @@ def test_info_build_order_error_update():
     assert "pkg/1.1" in c2.out
     assert "pkg/1.0" not in c2.out
     assert "Downloaded (default)" in c2.out
+
+
+def test_build_order_profile_tool_requires_first_level():
+    # https://github.com/conan-io/conan/issues/20413
+    # The install command of "compiler" must not require "compiler-wrapper", which is only
+    # built later, and which is injected by the host profile [tool_requires]
+    c = TestClient()
+    host = textwrap.dedent("""\
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=clang
+        compiler.version=22
+        compiler.libcxx=libstdc++11
+
+        [tool_requires]
+        *: compiler-wrapper/1.0
+        """)
+    build = textwrap.dedent("""\
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=clang
+        compiler.version=21
+        compiler.libcxx=libstdc++11
+        """)
+    c.save({"compiler/conanfile.py": GenConanfile("compiler", "1.0")
+                                     .with_settings("os", "arch", "compiler"),
+            "wrapper/conanfile.py": GenConanfile("compiler-wrapper", "1.0")
+                                    .with_settings("os", "arch", "compiler")
+                                    .with_tool_requires("compiler/1.0"),
+            "host": host, "build": build})
+    c.run("export compiler")
+    c.run("export wrapper")
+
+    profiles = "-pr:h=host -pr:b=build"
+    c.run(f"graph build-order --tool-requires=compiler-wrapper/1.0 {profiles} --build=missing "
+          "--order-by=configuration --format=json")
+    print(c.out)
+    order = json.loads(c.stdout)
+    nodes = [node for level in order["order"] for node in level]
+    assert [n["ref"].split("#")[0] for n in nodes] == ["compiler/1.0", "compiler-wrapper/1.0"]
+    compiler, wrapper = nodes
+    assert compiler["depends"] == []
+    assert wrapper["depends"] == [compiler["pref"]]
+    assert compiler["info"]["settings"]["compiler.version"] == "21"
+
+    # Executing the generated command for the first node, from an empty cache. As it is a
+    # build-require, the host profile [tool_requires] are not applied to the virtual root
+    assert compiler["build_args"] == ("--tool-requires=compiler/1.0 --build-require "
+                                      "--build=compiler/1.0")
+    c.run(f"install {compiler['build_args']} {order['profiles']['self']['args']}")
+    assert "Missing" not in c.out
+    c.assert_listed_binary({"compiler/1.0": (compiler["package_id"], "Build")}, build=True)
+    assert "compiler-wrapper/1.0:" not in c.out
+
+    c.run(f"install {wrapper['build_args']} {order['profiles']['self']['args']}")
+    c.assert_listed_binary({"compiler-wrapper/1.0": (wrapper["package_id"], "Build")}, build=True)

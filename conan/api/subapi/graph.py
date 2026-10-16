@@ -86,7 +86,7 @@ class GraphAPI:
 
     def _load_root_virtual_conanfile(self, profile_host, profile_build, requires, tool_requires,
                                      lockfile, remotes, update, check_updates=False,
-                                     python_requires=None):
+                                     python_requires=None, is_build_require=False):
         loader = self._helpers.loader
         conanfile = loader.load_virtual(requires=requires,
                                         tool_requires=tool_requires,
@@ -95,6 +95,9 @@ class GraphAPI:
                                         update=update, check_updates=check_updates)
 
         consumer_definer(conanfile, profile_host, profile_build)
+        # A build-require is not installed for the "host" context, so the virtual root
+        # (host) must not get the host profile [tool_requires]
+        conanfile._conan_skip_profile_tool_requires = is_build_require  # noqa
         root_node = Node(ref=None, conanfile=conanfile, context=CONTEXT_HOST, recipe=RECIPE_VIRTUAL)
         return root_node
 
@@ -115,7 +118,8 @@ class GraphAPI:
             profile.options.conan_scope(ref)
 
     def load_graph_requires(self, requires, tool_requires, profile_host, profile_build,
-                            lockfile, remotes, update, check_updates=False, python_requires=None):
+                            lockfile, remotes, update, check_updates=False, python_requires=None,
+                            is_build_require=False):
         requires = [RecipeReference.loads(r) if isinstance(r, str) else r for r in requires] \
             if requires else None
         tool_requires = [RecipeReference.loads(r) if isinstance(r, str) else r
@@ -130,7 +134,8 @@ class GraphAPI:
                                                       profile_build=profile_build,
                                                       lockfile=lockfile, remotes=remotes,
                                                       update=update,
-                                                      python_requires=python_requires)
+                                                      python_requires=python_requires,
+                                                      is_build_require=is_build_require)
 
         if not requires and not tool_requires and python_requires is not None:
             # This only happens at `conan create` for python-requires, the graph is not needed
