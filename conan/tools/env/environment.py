@@ -37,13 +37,11 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
             if os.path.isfile(f):
                 ps1s.append(f)
         else:  # Simple name like "conanrunenv"
+            # Powershell is never used unless explicit extension
             path_bat = "{}.bat".format(f)
             path_sh = "{}.sh".format(f)
-            path_ps1 = "{}.ps1".format(f)
             if os.path.isfile(path_bat) and "bat" in accept:
                 bats.append(path_bat)
-            if os.path.isfile(path_ps1) and "ps1" in accept:
-                ps1s.append(path_ps1)
             if os.path.isfile(path_sh) and "sh" in accept:
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
@@ -580,25 +578,23 @@ class EnvVars:
                          checking if we are running inside Windows (checking also the subsystem) or not.
         """
         name, ext = os.path.splitext(filename)
+        filename = os.path.join(self._conanfile.generators_folder, filename)
         if ext:
-            is_bat = ext == ".bat"
-            is_ps1 = ext == ".ps1"
+            paths = [filename]
         else:  # Need to deduce it automatically
-            is_bat = self._subsystem == WINDOWS
-            is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str)
-            if is_ps1:
-                filename = filename + ".ps1"
-                is_bat = False
-            else:
-                filename = filename + (".bat" if is_bat else ".sh")
+            ext = ".bat" if self._subsystem == WINDOWS else ".sh"
+            paths = [filename + ext]
+            if self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str):
+                paths.append(filename + ".ps1")
 
-        path = os.path.join(self._conanfile.generators_folder, filename)
-        if is_bat:
-            self.save_bat(path)
-        elif is_ps1:
-            self.save_ps1(path)
-        else:
-            self.save_sh(path)
+        for p in paths:
+            if p.endswith(".bat"):
+                self.save_bat(p)
+            elif p.endswith(".ps1"):
+                self.save_ps1(p)
+            else:
+                assert p.endswith(".sh")
+                self.save_sh(p)
 
         if self._conanfile.conf.get("tools.env:dotenv", check_type=bool):
             bt = self._conanfile.settings.get_safe("build_type")
@@ -612,7 +608,8 @@ class EnvVars:
             self.save_dotenv(f"{name}.env")
 
         if self._scope:
-            register_env_script(self._conanfile, path, self._scope)
+            for p in paths:
+                register_env_script(self._conanfile, p, self._scope)
 
 
 def _deactivate_func_name(filename):
