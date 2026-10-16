@@ -22,7 +22,10 @@ class NewAPI:
         Save the ``template`` files in the ``output_folder``, replacing the template variables
         with the ``defines``
 
-        :param template: The name of the template to use, either built-in ones or those available under ``<conan_home>/templates/command/new/<template>``
+        :param template: The template to use: a path to a folder containing the template files
+            (absolute or relative to the current working directory), or the name of a template,
+            either those available under ``<conan_home>/templates/command/new/<template>``
+            or the built-in ones
         :param defines: A list with the ``k=v`` variables to replace in the template
         :param output_folder: The folder where the template files will be saved, cwd if ``None``
         :param force: If ``True``, overwrite the files if they already exist, otherwise raise an error
