@@ -286,6 +286,7 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
                                       'generators = "BazelToolchain", "BazelDeps"\n'
                                       '    requires = "myfirstlib/1.2.11"')
         module = textwrap.dedent("""
+        include("//conan:conan_toolchain.MODULE.bazel")
         load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "conan_extension")
         use_repo(load_conan_dependencies, "myfirstlib")
         """)
