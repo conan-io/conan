@@ -90,7 +90,7 @@ class TestPlatformRequires:
                 requires = "dep/[>=1.0]"
 
                 def generate(self):
-                    for r, _ in self.dependencies.items():
+                    for r, _ in self.dependencies.items(remove_system=False):
                         self.output.info(f"DEPENDENCY {r.ref}")
                 """)
         client.save({"conanfile.py": conanfile,
@@ -108,7 +108,7 @@ class TestPlatformRequires:
                 requires = "dep/1.1"
 
                 def generate(self):
-                    for r, _ in self.dependencies.items():
+                    for r, _ in self.dependencies.items(remove_system=False):
                         self.output.info(f"DEPENDENCY {repr(r.ref)}")
                 """)
         client.save({"conanfile.py": conanfile,
@@ -123,7 +123,7 @@ class TestPlatformRequires:
                requires = "dep/1.1#rev1"
 
                def generate(self):
-                   for r, _ in self.dependencies.items():
+                   for r, _ in self.dependencies.items(remove_system=False):
                        self.output.info(f"DEPENDENCY {repr(r.ref)}")
                """)
         client.save({"conanfile.py": conanfile})
@@ -357,3 +357,30 @@ class TestPackageID:
         assert f"dep/1.0{revision or '#platform'} - Platform" in client.out
         assert "pkg/1.0#7ed9bbd2a7c3c4381438c163c93a9f21:" \
                f"{package_id} - Build" in client.out
+
+
+def test_platform_requires_package_info_check():
+    tc = TestClient(light=True)
+    consumer = textwrap.dedent("""
+    from conan import ConanFile
+
+    class Consumer(ConanFile):
+        name = "consumer"
+        version = "1.0"
+
+        requires = "pkg/1.0"
+
+        def package_info(self):
+            for r, dep in self.dependencies.items():
+                self.output.info(f"DEPENDENCY {r.ref}")
+            self.output.info(f"Pkg in dependencies: {'pkg' in self.dependencies}")
+    """)
+    tc.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0"),
+             "consumer/conanfile.py": consumer,
+             "profile": "[platform_requires]\npkg/1.0"})
+    tc.run("create pkg")
+    tc.run("create consumer")
+
+    tc.run("install --requires=consumer/1.0 -pr:h=default -pr:h=profile")
+    assert "DEPENDENCY pkg/1.0" not in tc.out
+    assert "Pkg in dependencies: False" in tc.out

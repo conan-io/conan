@@ -77,7 +77,7 @@ class TestToolRequires:
                 tool_requires = "tool/[>=1.0]"
 
                 def generate(self):
-                    for r, _ in self.dependencies.items():
+                    for r, _ in self.dependencies.items(remove_system=False):
                         self.output.info(f"DEPENDENCY {r.ref}")
                 """)
         client.save({"conanfile.py": conanfile,
@@ -94,7 +94,7 @@ class TestToolRequires:
                 tool_requires = "tool/1.1"
 
                 def generate(self):
-                    for r, _ in self.dependencies.items():
+                    for r, _ in self.dependencies.items(remove_system=False):
                         self.output.info(f"DEPENDENCY {repr(r.ref)}")
                 """)
         client.save({"conanfile.py": conanfile,
@@ -109,7 +109,7 @@ class TestToolRequires:
                tool_requires = "tool/1.1#rev1"
 
                def generate(self):
-                   for r, _ in self.dependencies.items():
+                   for r, _ in self.dependencies.items(remove_system=False):
                        self.output.info(f"DEPENDENCY {repr(r.ref)}")
                """)
         client.save({"conanfile.py": conanfile})
