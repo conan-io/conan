@@ -770,6 +770,11 @@ class _PathGenerator:
         list(APPEND CONAN_{{pkg_name}}_DIR_MULTI "{{folder}}")
         {% endfor %}
         {% endfor %}
+        {% if pkg_paths %}
+        # Fallback for packages not found via <pkg>_DIR. Not using DIR_MULTI, it accumulates
+        # across installs, so the first installed would take priority over the latest
+        list(PREPEND CMAKE_PREFIX_PATH {% for p in pkg_paths.values() | unique %}"{{ p }}" {% endfor %})
+        {% endif %}
         {% if host_runtime_dirs %}
         {% for (pkg_name, config), dirs in host_runtime_dirs.items() %}
         {% for d in dirs %}
