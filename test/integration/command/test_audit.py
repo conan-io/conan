@@ -119,7 +119,11 @@ def test_conan_audit_proxy():
     tc.run("audit list zlib/1.2.11", assert_error=True)
     assert "Authentication required for the CVE provider: 'conancenter" in tc.out
 
+    tc.run("audit provider list")
+    assert 'conancenter (type: conan-center-proxy) - https://fakeurl/' in tc.out
+
     tc.run("audit provider auth conancenter --token=valid_token")
+    assert "Provider 'conancenter' authenticated successfully" in tc.out
 
     with proxy_response(200, successful_response):
         tc.run("audit list zlib/1.2.11")
@@ -273,6 +277,7 @@ def test_conan_audit_private():
     assert "Missing authentication token for 'myprivate' provider" in tc.out
 
     tc.run("audit provider auth myprivate --token=valid_token")
+    assert "Provider 'myprivate' authenticated successfully" in tc.out
 
     with proxy_response(200, successful_response):
         tc.run("audit list zlib/1.2.11 -p=myprivate")

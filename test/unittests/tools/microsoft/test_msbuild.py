@@ -3,7 +3,9 @@ import os
 import pytest
 
 from conan import ConanFile
-from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc, is_msvc_static_runtime
+from conan.errors import ConanException
+from conan.tools.microsoft import MSBuild, MSBuildToolchain, is_msvc, is_msvc_static_runtime, \
+    msvc_runtime_flag
 from conan.internal.model.conf import ConfDefinition, Conf
 from conan.internal.model.settings import Settings
 from conan.test.utils.mocks import MockSettings, ConanFileMock, MockOptions
@@ -237,6 +239,28 @@ def test_is_msvc_static_runtime(compiler, shared, runtime, build_type, expected)
                              "cppstd": "17"})
     conanfile = ConanFileMock(settings, options)
     assert is_msvc_static_runtime(conanfile) == expected
+
+
+@pytest.mark.parametrize("runtime, runtime_type, expected", [
+    ("static", "Release", "MT"),
+    ("static", "Debug", "MTd"),
+    ("dynamic", "Release", "MD"),
+    ("dynamic", "Debug", "MDd"),
+    ("dynamic", None, "MD"),
+    (None, None, ""),
+])
+def test_msvc_runtime_flag(runtime, runtime_type, expected):
+    settings = MockSettings({"compiler": "msvc",
+                             "compiler.version": "193",
+                             "compiler.runtime": runtime,
+                             "compiler.runtime_type": runtime_type})
+    assert msvc_runtime_flag(ConanFileMock(settings)) == expected
+
+
+def test_msvc_runtime_flag_invalid_runtime():
+    settings = MockSettings({"compiler": "msvc", "compiler.runtime": "other"})
+    with pytest.raises(ConanException, match="compiler.runtime should be 'static' or 'dynamic'"):
+        msvc_runtime_flag(ConanFileMock(settings))
 
 
 def test_msbuildtoolchain_changing_flags_via_attributes():

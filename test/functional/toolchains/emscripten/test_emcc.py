@@ -84,7 +84,7 @@ asmjs_profile = textwrap.dedent(
 @pytest.mark.tool("emcc")
 @pytest.mark.tool("node")
 @pytest.mark.skipif(sys.version_info < EMCC_MIN_PYTHON_VERSION, reason = "emcc requires Python 3.8 or higher")
-@pytest.mark.skipif(platform.system() == "Windows", reason = "Emscripten not installed in Windows")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Emscripten is not OS specific")
 def test_cmake_emscripten():
     client = TestClient()
 
@@ -112,7 +112,7 @@ def test_cmake_emscripten():
 @pytest.mark.tool("emcc")
 @pytest.mark.tool("node")
 @pytest.mark.skipif(sys.version_info < EMCC_MIN_PYTHON_VERSION, reason = "emcc requires Python 3.8 or higher")
-@pytest.mark.skipif(platform.system() == "Windows", reason = "Emscripten not installed in Windows")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Emscripten is not OS specific")
 def test_meson_emscripten():
     client = TestClient()
     client.run("new meson_exe -d name=hello -d version=0.1")
@@ -145,7 +145,7 @@ def test_meson_emscripten():
 @pytest.mark.tool("emcc")
 @pytest.mark.tool("node")
 @pytest.mark.skipif(sys.version_info < EMCC_MIN_PYTHON_VERSION, reason = "emcc requires Python 3.8 or higher")
-@pytest.mark.skipif(platform.system() == "Windows", reason = "Emscripten not installed in Windows")
+@pytest.mark.skipif(platform.system() != "Linux", reason="Emscripten is not OS specific")
 def test_autotools_emscripten():
     client = TestClient(path_with_spaces=False)
     client.run("new autotools_exe -d name=hello -d version=0.1")

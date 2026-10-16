@@ -349,7 +349,7 @@ def test_cmake_find_mode_deprecated():
     tc.save({"conanfile.py": dep})
     tc.run("create .")
     tc.run(f"install --requires=dep/0.1 -g CMakeConfigDeps")
-    assert "CMakeConfigDeps does not support module find mode"
+    assert "CMakeConfigDeps does not support module find mode" in tc.out
 
 
 def test_build_context_deprecated():
@@ -1499,3 +1499,29 @@ def test_runtime_lib_dirs_keep_other_configs():
     paths = c.load("conan_cmakedeps_paths.cmake")
     assert "$<$<CONFIG:Debug>:" in paths
     assert "$<$<CONFIG:Release>:" in paths
+
+
+class TestRuntimeDirs:
+
+    def test_runtime_lib_dirs_multiconf(self):
+        client = TestClient()
+        app = GenConanfile().with_requires("dep/1.0").with_generator("CMakeConfigDeps")\
+            .with_settings("build_type")
+        client.save({"lib/conanfile.py": GenConanfile(),
+                     "dep/conanfile.py": GenConanfile("dep").with_requires("onelib/1.0",
+                                                                           "twolib/1.0"),
+                     "app/conanfile.py": app})
+        client.run("create lib --name=onelib --version=1.0")
+        client.run("create lib --name=twolib --version=1.0")
+        client.run("create dep  --version=1.0")
+
+        client.run(f'install app -s build_type=Release')
+        client.run(f'install app -s build_type=Debug')
+
+        contents = client.load("app/conan_cmakedeps_paths.cmake")
+        pattern_lib_dirs = r"set\(CONAN_RUNTIME_LIB_DIRS ([^)]*)\)"
+        runtime_lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
+        assert "<CONFIG:Release>" in runtime_lib_dirs
+        assert "<CONFIG:Debug>" in runtime_lib_dirs
+        # too simple of a check, but this is impossible to test automatically
+        assert "set(CMAKE_VS_DEBUGGER_ENVIRONMENT" in contents

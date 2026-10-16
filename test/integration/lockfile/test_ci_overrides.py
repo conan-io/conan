@@ -79,7 +79,7 @@ def test_graph_build_order_override_error():
             build_args = package["build_args"]
             c.run(f"install {build_args} --lockfile=output.lock")
             ref = RecipeReference.loads(package["ref"])
-            assert f"{ref}: Building from source"
+            assert f"Building from source {ref}:" in c.out
 
     c.run("install --requires=libc/0.1 --lockfile=output.lock")
     # All works, all binaries exist now
@@ -126,7 +126,7 @@ def test_graph_build_order_override_replace_requires(replace_pattern):
             build_args = package["build_args"]
             c.run(f"install {build_args} --lockfile=output.lock -pr=profile")
             ref = RecipeReference.loads(package["ref"])
-            assert f"{ref}: Building from source"
+            assert f"Building from source {ref}:" in c.out
 
     c.run("install --requires=libc/0.1 --lockfile=output.lock -pr=profile")
     # All works, all binaries exist now

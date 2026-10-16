@@ -92,9 +92,9 @@ class TestLRU:
     def test_lru_invalid_time_value_edge_cases(self):
         c = TestClient(light=True)
         c.run("list *#* --lru=as")
-        assert "ERROR: invalid literal for int() with base 10: 'a'" in c.out
+        assert "ERROR: Time value 'a' must be an integer" in c.out
         c.run("list *#* --lru=s")
-        assert "ERROR: invalid literal for int() with base 10: ''" in c.out
+        assert "ERROR: Time value '' must be an integer" in c.out
 
     def test_lru_not_in_remotes(self):
         c = TestClient(light=True, default_server_user=True)

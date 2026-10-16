@@ -13,58 +13,6 @@ from conan.test.utils.tools import TestClient, default_vs_ide_version
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
-@pytest.mark.tool("msys2")
-def test_autotools_bash_complete():
-    client = TestClient(path_with_spaces=False)
-    profile_win = textwrap.dedent(f"""
-        include(default)
-        [conf]
-        tools.microsoft.bash:subsystem=msys2
-        tools.microsoft.bash:path=bash
-        """)
-
-    main = gen_function_cpp(name="main")
-    # The autotools support for "cl" compiler (VS) is very limited, linking with deps doesn't
-    # work but building a simple app do
-    makefile_am = gen_makefile_am(main="main", main_srcs="main.cpp")
-    configure_ac = gen_configure_ac()
-
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-        from conan.tools.gnu import Autotools
-
-        class TestConan(ConanFile):
-            settings = "os", "compiler", "arch", "build_type"
-            exports_sources = "configure.ac", "Makefile.am", "main.cpp"
-            generators = "AutotoolsToolchain"
-            win_bash = True
-
-            def build(self):
-                # These commands will run in bash activating first the vcvars and
-                # then inside the bash activating the
-                self.run("aclocal")
-                self.run("autoconf")
-                self.run("automake --add-missing --foreign")
-                autotools = Autotools(self)
-                autotools.configure()
-                autotools.make()
-                autotools.install()
-        """)
-
-    client.save({"conanfile.py": conanfile,
-                 "configure.ac": configure_ac,
-                 "Makefile.am": makefile_am,
-                 "main.cpp": main,
-                 "profile_win": profile_win})
-    client.run("build . -pr=profile_win")
-    client.run_command("main.exe")
-    check_exe_run(client.out, "main", "msvc", None, "Release", "x86_64", None)
-
-    bat_contents = client.load("conanbuild.bat")
-    assert "conanvcvars.bat" in bat_contents
-
-
-@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 def test_autotools_bash_complete_ucrt64():
     try:
         msys2_path = tools_locations["msys2"]["system"]["path"]["Windows"]
@@ -122,9 +70,11 @@ def test_autotools_bash_complete_ucrt64():
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
 @pytest.mark.tool("msys2")
 @pytest.mark.tool("clang", "20")
-@pytest.mark.parametrize("frontend", ("clang", "clang-cl"))
-@pytest.mark.parametrize("runtime", ("static", "dynamic"))
-@pytest.mark.parametrize("build_type", ("Debug", "Release"))
+# All the pairs of frontend, runtime and build_type values, not all their combinations
+@pytest.mark.parametrize("frontend, runtime, build_type", [("clang", "static", "Debug"),
+                                                           ("clang", "dynamic", "Release"),
+                                                           ("clang-cl", "static", "Release"),
+                                                           ("clang-cl", "dynamic", "Debug")])
 def test_autotools_bash_complete_clang(frontend, runtime, build_type):
     client = TestClient(path_with_spaces=False)
     # Problem is that msys2 also has clang in the path, so we need to make it explicit

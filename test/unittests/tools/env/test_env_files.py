@@ -235,4 +235,5 @@ def test_relativize(values, expected):
         content = load("test.sh")
         content = content.replace("\\", "/")
         assert f'export PATH={expected}' in content
-        assert f'export OTHER="{expected}:$OTHER"'
+        # The prepended value is followed by the previous one only if it is not empty
+        assert f'export OTHER={expected[:-1]}${{OTHER:+:$OTHER}}"' in content
