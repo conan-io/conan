@@ -1,3 +1,4 @@
+import json
 import os.path
 import re
 
@@ -40,6 +41,31 @@ def test_cache_clean(use_pkglist):
 
     c.run("cache clean -bs -v")
     assert "Cleaning 0 backup sources" in c.out
+
+
+def test_cache_clean_backup_sources_pattern():
+    """ Cleaning the backup sources with a pattern only removes the ones used by the matching
+    recipes, while cleaning without pattern removes all of them, even those not belonging to any
+    recipe in the cache
+    """
+    c = TestClient(light=True)
+    c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0"),
+            "other/conanfile.py": GenConanfile("other", "1.0")})
+    c.run("export pkg")
+    c.run("export other")
+    backups = os.path.join(c.cache_folder, "sources", "s")
+    for blob, ref in (("pkgsha", "pkg/1.0"), ("othersha", "other/1.0"), ("unknownsha", "unknown")):
+        save(os.path.join(backups, blob), "contents")
+        save(os.path.join(backups, f"{blob}.json"),
+             json.dumps({"references": {ref: ["https://fake/url"]}, "timestamp": 0}))
+
+    c.run("cache clean pkg/* -bs")
+    assert sorted(os.listdir(backups)) == ["othersha", "othersha.json",
+                                           "unknownsha", "unknownsha.json"]
+    c.run("cache clean * -bs")
+    assert sorted(os.listdir(backups)) == ["unknownsha", "unknownsha.json"]
+    c.run("cache clean -bs")
+    assert os.listdir(backups) == []
 
 
 def test_cache_clean_all():

@@ -2,13 +2,14 @@ import json
 
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern, MultiPackagesList
-from conan.api.output import cli_out_write
+from conan.api.output import cli_out_write, ConanOutput
 from conan.cli import make_abs_path
 from conan.cli.command import conan_command, conan_subcommand, OnceArgument
 from conan.cli.commands.list import print_list_text, print_list_json, print_serial
 from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.util.files import remove
 
 
 def _get_package_sign_error(pkg_list):
@@ -166,12 +167,20 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
     else:
         ref_pattern = ListPattern(args.pattern or "*", rrev="*", package_id="*", prev="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+    # Without pattern nor list, all the backup sources are cleaned, not only the ones belonging
+    # to the recipes in the cache
+    clean_all_backup_sources = args.backup_sources and not args.pattern and not args.list
     if args.build or args.source or args.download or args.temp or args.backup_sources:
         conan_api.cache.clean(package_list, source=args.source, build=args.build,
                               download=args.download, temp=args.temp,
-                              backup_sources=args.backup_sources)
+                              backup_sources=args.backup_sources and not clean_all_backup_sources)
     else:
         conan_api.cache.clean(package_list)
+    if clean_all_backup_sources:
+        backup_files = conan_api.cache.get_backup_sources(exclude=False, only_upload=False)
+        ConanOutput().verbose(f"Cleaning {len(backup_files)} backup sources")
+        for f in backup_files:
+            remove(f)
 
 
 def print_list_check_integrity_json(data):
