@@ -49,8 +49,8 @@ class ReportAPI:
                               remotes)
             return export_ref, cache_path, new_export
 
-        old_export_ref, old_cache_path, old_new_export = _source(old_path, old_reference)
-        new_export_ref, new_cache_path, new_new_export = _source(new_path, new_reference)
+        old_export_ref, old_cache_path, old_is_exported = _source(old_path, old_reference)
+        new_export_ref, new_cache_path, new_is_exported = _source(new_path, new_reference)
 
         old_diff_path = os.path.abspath(os.path.join(old_cache_path, os.path.pardir)).replace("\\",
                                                                                               "/")
@@ -72,9 +72,9 @@ class ReportAPI:
         conan_run(command, stdout=stdout, stderr=stderr)
         diff = stdout.getvalue()
 
-        if old_new_export:
+        if old_is_exported:
             self._conan_api.remove.recipe(old_export_ref)
-        if new_new_export:
+        if new_is_exported:
             self._conan_api.remove.recipe(new_export_ref)
 
         return {
