@@ -179,23 +179,24 @@ class AuditAPI:
 
         _save_providers(self._providers_path, providers)
 
-    def auth_provider(self, provider, token: str):
+    def auth_provider(self, provider_name, token: str):
         """
         Set authentication token for the provider.
         Note that this does not perform an authentication attempt, it just stores the token for future use.
 
-        :param provider: Provider name
+        :param provider_name: Provider name
         :param token: Provider token
         """
-        if not provider:
+        if not provider_name:
             raise ConanException("Provider not found")
 
         providers = _load_providers(self._providers_path)
-
-        assert provider.name in providers
-        providers[provider.name]["token"] = base64.standard_b64encode(token.encode()).decode()
-        setattr(provider, "token", token)
+        providers[provider_name]["token"] = base64.standard_b64encode(token.encode()).decode()
         _save_providers(self._providers_path, providers)
+
+        provider = self.get_provider(provider_name)
+        setattr(provider, "token", token)
+        return provider
 
 
 def _load_providers(providers_path):
