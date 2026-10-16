@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import stat
 import tarfile
 import tempfile
 
@@ -396,6 +397,11 @@ class CacheAPI:
             fileobj = the_tar.extractfile("pkglist.json")
             pkglist = fileobj.read()
             the_tar.extraction_filter = (lambda member, _: member)  # fully_trusted (Py 3.14)
+            for member in the_tar.getmembers():
+                # Extraction opens the destination for writing, read-only files would fail
+                dest = os.path.join(cache_folder, member.name)
+                if member.isfile() and os.path.isfile(dest) and not os.access(dest, os.W_OK):
+                    os.chmod(dest, os.stat(dest).st_mode | stat.S_IWRITE)
             the_tar.extractall(path=cache_folder)
             the_tar.close()
 
@@ -434,7 +440,7 @@ class CacheAPI:
                 if db_pkg_folder != unzipped_pkg_folder:
                     # If a previous package exists, like a previous restore, then remove it
                     if os.path.exists(pkg_layout.package()):
-                        shutil.rmtree(pkg_layout.package())
+                        rmdir(pkg_layout.package())
                     shutil.move(os.path.join(cache_folder, unzipped_pkg_folder),
                                 pkg_layout.package())
                     pref_bundle["package_folder"] = db_pkg_folder
@@ -447,7 +453,7 @@ class CacheAPI:
                     if db_metadata_folder != unzipped_metadata_folder:
                         # We need to put the package in the final location in the cache
                         if os.path.exists(pkg_layout.metadata()):
-                            shutil.rmtree(pkg_layout.metadata())
+                            rmdir(pkg_layout.metadata())
                         shutil.move(os.path.join(cache_folder, unzipped_metadata_folder),
                                     pkg_layout.metadata())
                         pref_bundle["metadata_folder"] = db_metadata_folder
