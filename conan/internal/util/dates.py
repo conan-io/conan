@@ -1,8 +1,7 @@
 import calendar
 import datetime
+import sys
 import time
-
-from dateutil import parser
 
 
 def from_timestamp_to_iso8601(timestamp):
@@ -11,7 +10,12 @@ def from_timestamp_to_iso8601(timestamp):
 
 
 def _from_iso8601_to_datetime(iso_str):
-    return parser.isoparse(iso_str)
+    # https://docs.python.org/3.11/whatsnew/3.11.html#datetime
+    if sys.version_info >= (3, 11):
+        return datetime.datetime.fromisoformat(iso_str)
+    else:
+        from dateutil import parser
+        return parser.isoparse(iso_str)
 
 
 def from_iso8601_to_timestamp(iso_str):
