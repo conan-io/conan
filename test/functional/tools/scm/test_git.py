@@ -1333,9 +1333,47 @@ def test_revision_mode_scm_dirty_whole_repo():
     t.run("export pkg")
     assert t.exported_recipe_revision() == commit
 
-    # Dirty change outside pkga/ — only detectable by checking the whole repo
+    # Dirty change outside pkg/ — only detectable by checking the whole repo
     t.save({"other/file.txt": "modified content"})
 
     # Must raise: revision_mode=scm checks the full repository for dirtiness
     t.run("export pkg", assert_error=True)
     assert "Can't have a dirty repository using revision_mode='scm'" in t.out
+
+@pytest.mark.tool("git")
+def test_revision_mode_scm_folder_conanfile_in_subfolder():
+    """Regression test for https://github.com/conan-io/conan/issues/20124
+    When using revision_mode=scm_folder together with conanfile inside a
+    subfolder (self.folders.root is not empty), the root folder must be
+    used for both retrieving the commit as well as the dirtiness check.
+    """
+    conanfile = textwrap.dedent("""\
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            revision_mode = "scm_folder"
+
+            def layout(self):
+                self.folders.root = ".."
+        """)
+    t = TestClient()
+    t.init_git_repo({"pkg/conan/conanfile.py": conanfile})
+    t.save({"pkg/content.txt": "new content",
+            "other/file.txt": "other content"})
+
+    # Dirty change outside recipe_folder, but inside root must fail
+    t.run("export pkg/conan", assert_error=True)
+    assert "Can't have a dirty repository using revision_mode='scm'/'scm_folder'" in t.out
+
+    # The last commit changing anything inside the root must be exported,
+    # dirty change outside root is okay
+    commit = git_add_changes_commit(os.path.join(t.current_folder, "pkg"))
+    t.run("export pkg/conan")
+    assert t.exported_recipe_revision() == commit
+
+    # Commits changing only files outside the root folder must not affect the exported commit
+    git_add_changes_commit(t.current_folder)
+    t.run("export pkg/conan")
+    assert t.exported_recipe_revision() == commit
