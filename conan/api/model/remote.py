@@ -63,3 +63,20 @@ class Remote:
         such as uploading packages, so this method is not usually needed when only interacting
         with the Conan API"""
         self._caching = {}
+
+
+def _is_package_allowed(remote, reference):
+    """ Returns True if the package reference is allowed to be used from this remote,
+    based on the allowed_packages patterns.
+
+    Patterns starting with ``!`` (or ``~``) are exclusions that always win. A reference
+    is allowed if no exclusion matches it and, when there are non-negated patterns, at
+    least one of them matches. If no patterns are defined, all packages are allowed.
+    """
+    if not remote.allowed_packages:
+        return True
+    excluded = [p[1:] for p in remote.allowed_packages if p.startswith(("!", "~"))]
+    included = [p for p in remote.allowed_packages if not p.startswith(("!", "~"))]
+    if any(reference.matches(p, is_consumer=False) for p in excluded):
+        return False
+    return not included or any(reference.matches(p, is_consumer=False) for p in included)

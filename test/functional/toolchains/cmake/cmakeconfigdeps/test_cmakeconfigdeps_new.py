@@ -276,10 +276,10 @@ class TestLibs:
         c.run("new cmake_exe -d name=game -d version=0.1 -d requires=gamelib/0.1")
         c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
-        assert "matrix/0.1: Hello World Release!"
-        assert "engine/0.1: Hello World Release!"
-        assert "gamelib/0.1: Hello World Release!"
-        assert "game/0.1: Hello World Release!"
+        assert "matrix/0.1: Hello World Release!" in c.out
+        assert "engine/0.1: Hello World Release!" in c.out
+        assert "gamelib/0.1: Hello World Release!" in c.out
+        assert "game/0.1: Hello World Release!" in c.out
 
         # Make sure that transitive headers are private, fails to include, traits work
         game_cpp = c.load("src/game.cpp")
@@ -298,10 +298,10 @@ class TestLibs:
         c2.run("new cmake_exe -d name=game -d version=0.1 -d requires=gamelib/0.1")
         c2.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
-        assert "matrix/0.1: Hello World Release!"
-        assert "engine/0.1: Hello World Release!"
-        assert "gamelib/0.1: Hello World Release!"
-        assert "game/0.1: Hello World Release!"
+        assert "matrix/0.1: Hello World Release!" in c2.out
+        assert "engine/0.1: Hello World Release!" in c2.out
+        assert "gamelib/0.1: Hello World Release!" in c2.out
+        assert "game/0.1: Hello World Release!" in c2.out
 
 
 class TestLibsIntegration:
@@ -374,9 +374,9 @@ class TestLibsLinkageTraits:
         c.run(f"create . -o engine/*:shared=True -c tools.cmake.cmakedeps:new={new_value} "
               "-c tools.compilation:verbosity=verbose")
         assert re.search(r"Skipped host binaries(\s*)matrix/0.1", c.out)
-        assert "matrix/0.1: Hello World Release!"
-        assert "engine/0.1: Hello World Release!"
-        assert "game/0.1: Hello World Release!"
+        assert "matrix/0.1: Hello World Release!" in c.out
+        assert "engine/0.1: Hello World Release!" in c.out
+        assert "game/0.1: Hello World Release!" in c.out
 
     @pytest.mark.tool("cmake", "3.27")
     @pytest.mark.parametrize("shared", [False, True])
