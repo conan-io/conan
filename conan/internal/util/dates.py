@@ -20,15 +20,6 @@ def from_timestamp_to_iso8601(timestamp):
     return "%s" % datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc).isoformat()
 
 
-def _from_iso8601_to_datetime(iso_str):
-    # https://docs.python.org/3.11/whatsnew/3.11.html#datetime
-    if sys.version_info >= (3, 11):
-        return datetime.datetime.fromisoformat(iso_str)
-    else:
-        from dateutil import parser
-        return parser.isoparse(iso_str)
-
-
 def from_iso8601_to_timestamp(iso_str):
     # used by RestClient v2 to transform from HTTP API (iso) to Conan internal timestamp
     datetime_time = _from_iso8601_to_datetime(iso_str)
