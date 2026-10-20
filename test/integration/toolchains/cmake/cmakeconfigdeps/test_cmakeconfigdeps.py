@@ -890,6 +890,17 @@ class TestPropertiesBuildContext:
         assert 'set(MyZlibName_VERSION_STRING "1.3.1")' in config
 
 
+def test_cmake_prefix_path_fallback():
+    # The folder with the config files is also added to CMAKE_PREFIX_PATH, only once
+    tc = TestClient()
+    tc.save({"conanfile.py": GenConanfile("hello", "1.0")})
+    tc.run("create .")
+    tc.run("install --requires=hello/1.0 -g CMakeConfigDeps")
+    paths_content = tc.load("conan_cmakedeps_paths.cmake")
+    assert paths_content.count('list(PREPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}" )') == 1
+    assert "set(hello_DIR" in paths_content
+
+
 class TestExtraFindExtraVariants:
     def test_generated_dir_entries(self):
         tc = TestClient()
