@@ -716,10 +716,12 @@ class TestBuildOrderReduce:
         c.run("graph build-order . --order-by=recipe --reduce --format=json",
               redirect_stdout="bo2.json")
         c.run(f"graph build-order-merge --file=bo1.json --file=bo2.json", assert_error=True)
-        assert "ERROR: Reduced build-order file cannot be merged: bo2.json"
+        assert "ERROR: Reduced build-order file cannot be merged: " in c.out
+        assert c.out.strip().endswith("bo2.json")  # absolute path of the file
         # different order
         c.run(f"graph build-order-merge --file=bo2.json --file=bo1.json", assert_error=True)
-        assert "ERROR: Reduced build-order file cannot be merged: bo2.json"
+        assert "ERROR: Reduced build-order file cannot be merged: " in c.out
+        assert c.out.strip().endswith("bo2.json")  # absolute path of the file
 
     def test_error_different_orders(self):
         c = TestClient()

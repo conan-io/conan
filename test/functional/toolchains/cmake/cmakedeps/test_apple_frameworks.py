@@ -198,7 +198,9 @@ timer_cpp = textwrap.dedent("""
 @pytest.mark.parametrize("settings",
                          ['',
                           '-s os=iOS -s os.sdk=iphoneos -s os.version=10.0 -s arch=armv8',
-                          "-s os=tvOS -s os.sdk=appletvos -s os.version=11.0 -s arch=armv8"])
+                          # Same cross-building path as iOS, checked only in develop2
+                          pytest.param("-s os=tvOS -s os.sdk=appletvos -s os.version=11.0 "
+                                       "-s arch=armv8", marks=pytest.mark.slow)])
 def test_apple_own_framework_cross_build(settings):
     client = TestClient()
 

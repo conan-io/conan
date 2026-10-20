@@ -201,6 +201,13 @@ class TestGenericBlocks:
         content = toolchain.content
         assert 'include("myowntoolchain.cmake")' in content
 
+    def test_user_toolchain_conf(self, conanfile):
+        conanfile.conf.define("tools.cmake.cmaketoolchain:user_toolchain",
+                              ["myowntoolchain.cmake", "other.cmake"])
+        content = CMakeToolchain(conanfile).content
+        assert 'include("myowntoolchain.cmake")' in content
+        assert 'include("other.cmake")' in content
+
 
 class TestBlocksFunctionality:
     def test_cmake_toolchain(self, conanfile):
