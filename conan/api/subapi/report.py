@@ -34,19 +34,23 @@ class ReportAPI:
         """
 
         def _source(path_to_conanfile, reference):
+            # Only the revisions newly exported here are removed after computing the diff
+            new_export = False
             if path_to_conanfile is None:
                 export_ref, cache_path = _get_ref_from_cache_or_remote(self._conan_api, reference,
                                                                        remotes)
             else:
-                export_ref, cache_path = _export_recipe_from_path(self._conan_api, path_to_conanfile,
-                                                                  reference, remotes, cwd)
+                export_ref, cache_path, new_export = _export_recipe_from_path(self._conan_api,
+                                                                              path_to_conanfile,
+                                                                              reference, remotes,
+                                                                              cwd)
             exported_path = self._conan_api.local.get_conanfile_path(cache_path, cwd, py=True)
             _configure_source(self._conan_api, self._helpers.hook_manager, exported_path, export_ref,
                               remotes)
-            return export_ref, cache_path
+            return export_ref, cache_path, new_export
 
-        old_export_ref, old_cache_path = _source(old_path, old_reference)
-        new_export_ref, new_cache_path = _source(new_path, new_reference)
+        old_export_ref, old_cache_path, old_is_exported = _source(old_path, old_reference)
+        new_export_ref, new_cache_path, new_is_exported = _source(new_path, new_reference)
 
         old_diff_path = os.path.abspath(os.path.join(old_cache_path, os.path.pardir)).replace("\\",
                                                                                               "/")
@@ -68,9 +72,9 @@ class ReportAPI:
         conan_run(command, stdout=stdout, stderr=stderr)
         diff = stdout.getvalue()
 
-        if old_path:
+        if old_is_exported:
             self._conan_api.remove.recipe(old_export_ref)
-        if new_path:
+        if new_is_exported:
             self._conan_api.remove.recipe(new_export_ref)
 
         return {
@@ -145,10 +149,12 @@ def _get_ref_from_cache_or_remote(conan_api, reference, enabled_remotes):
 def _export_recipe_from_path(conan_api, path_to_conanfile, reference, enabled_remotes, cwd=None):
     path = conan_api.local.get_conanfile_path(path_to_conanfile, cwd, py=True)
     ref = RecipeReference.loads(reference)
+    ref.revision = None
+    existing_revisions = conan_api.list.recipe_revisions(ref)
     export_ref, conanfile = conan_api.export.export(path=path,
                                                     name=ref.name, version=str(ref.version),
                                                     user=ref.user, channel=ref.channel,
                                                     lockfile=None,
                                                     remotes=enabled_remotes)
     cache_path = conan_api.cache.export_path(export_ref)
-    return export_ref, cache_path
+    return export_ref, cache_path, export_ref not in existing_revisions
