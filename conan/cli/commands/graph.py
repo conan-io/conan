@@ -197,8 +197,7 @@ def graph_info(conan_api, parser, subparser, *args):
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.update,
-                                                         check_updates=args.check_updates,
-                                                         is_build_require=args.build_require)
+                                                         check_updates=args.check_updates)
     print_graph_basic(deps_graph)
     if not deps_graph.error:
         conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
@@ -279,8 +278,7 @@ def graph_explain(conan_api, parser,  subparser, *args):
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.update,
-                                                         check_updates=args.check_updates,
-                                                         is_build_require=args.build_require)
+                                                         check_updates=args.check_updates)
     print_graph_basic(deps_graph)
     deps_graph.report_graph_error()
     conan_api.graph.analyze_binaries(deps_graph, args.build, remotes=remotes, update=args.update,
@@ -362,8 +360,7 @@ def graph_outdated(conan_api, parser, subparser, *args):
         deps_graph = conan_api.graph.load_graph_requires(args.requires, args.tool_requires,
                                                          profile_host, profile_build, lockfile,
                                                          remotes, args.update,
-                                                         check_updates=args.check_updates,
-                                                         is_build_require=args.build_require)
+                                                         check_updates=args.check_updates)
     print_graph_basic(deps_graph)
 
     # Data structure to store info per library

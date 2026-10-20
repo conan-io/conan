@@ -599,32 +599,3 @@ def test_install_json_format_not_visible():
 
     c.run("create app")
     assert "pkg/0.0.1: LOADED! contents!!!" in c.out
-
-
-class TestInstallBuildRequire:
-    def test_tool_requires_build_require(self):
-        # https://github.com/conan-io/conan/issues/20413
-        # --build-require do not apply the host profile [tool_requires] to the "virtual" root
-        c = TestClient()
-        c.save({"tool/conanfile.py": GenConanfile("tool", "1.0"),
-                "other/conanfile.py": GenConanfile("other", "1.0").with_tool_requires("tool/1.0"),
-                "host": "[settings]\nos=Linux\n[tool_requires]\n*: other/1.0",
-                "build": "[settings]\nos=Linux"})
-        c.run("export tool")
-        c.run("export other")
-        c.run("install --tool-requires=tool/1.0 -pr:h=host -pr:b=build -nr", assert_error=True)
-        assert "Missing binary: other/1.0" in c.out
-        c.run("install --tool-requires=tool/1.0 --build-require --build=tool/1.0 "
-              "-pr:h=host -pr:b=build -nr")
-        c.assert_listed_binary({"tool/1.0": (NO_SETTINGS_PACKAGE_ID, "Build")}, build=True)
-        assert "other/1.0:" not in c.out
-        # The same for graph info
-        c.run("graph info --tool-requires=tool/1.0 --build-require -pr:h=host -pr:b=build -nr")
-        assert "other/1.0" not in c.out.split("Profile build")[-1]
-
-    @pytest.mark.parametrize("args", ["--requires=pkg/1.0", "--tool-requires=pkg/1.0 "
-                                      "--requires=pkg/1.0"])
-    def test_build_require_error(self, args):
-        c = TestClient()
-        c.run(f"install {args} --build-require", assert_error=True)
-        assert "--build-require should only be used with <path> or --tool-requires" in c.out

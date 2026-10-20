@@ -61,7 +61,6 @@ class ConanFile:
     win_bash_run = None  # For run scope
 
     _conan_is_consumer = False
-    _conan_skip_profile_tool_requires = False
     _conan_required_version = None
 
     # #### Requirements

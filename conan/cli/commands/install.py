@@ -87,8 +87,7 @@ def _run_install_command(conan_api, args, cwd, return_install_error=True):
                                               args.update, is_build_require=args.build_require)
     else:
         deps_graph = gapi.load_graph_requires(args.requires, args.tool_requires, profile_host,
-                                              profile_build, lockfile, remotes, args.update,
-                                              is_build_require=args.build_require)
+                                              profile_build, lockfile, remotes, args.update)
     print_graph_basic(deps_graph)
     deps_graph.report_graph_error()
     gapi.analyze_binaries(deps_graph, args.build, remotes, update=args.update, lockfile=lockfile)

@@ -174,7 +174,7 @@ def test_info_build_order_build_require():
                         "context": "build",
                         'depends': [],
                         "binary": "Build",
-                        'build_args': '--tool-requires=dep/0.1 --build-require --build=dep/0.1',
+                        'build_args': '--tool-requires=dep/0.1 --build=dep/0.1',
                         "options": [],
                         "overrides": {}
                     }
@@ -233,13 +233,13 @@ def test_info_build_order_options():
                   'context': 'build', 'depends': [], "overrides": {},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=2'], 'filenames': [],
                   'info': {'options': {'myopt': '2'}},
-                  'build_args': '--tool-requires=tool/0.1 --build-require --build=tool/0.1 -o:b="tool/0.1:myopt=2"'},
+                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o:b="tool/0.1:myopt=2"'},
                  {'package_id': 'a9035d84c5880b26c4b44acf70078c9a7dd37412', 'prev': None,
                   'context': 'build', 'depends': [], "overrides": {},
                   'info': {'options': {'myopt': '1'}},
                   'binary': 'Build', 'options': ['tool/0.1:myopt=1'],
                   'filenames': [],
-                  'build_args': '--tool-requires=tool/0.1 --build-require --build=tool/0.1 -o:b="tool/0.1:myopt=1"'}
+                  'build_args': '--tool-requires=tool/0.1 --build=tool/0.1 -o:b="tool/0.1:myopt=1"'}
              ]]}
         ],
         [
@@ -1333,10 +1333,7 @@ def test_build_order_profile_tool_requires_first_level():
     assert wrapper["depends"] == [compiler["pref"]]
     assert compiler["info"]["settings"]["compiler.version"] == "21"
 
-    # Executing the generated command for the first node, from an empty cache. As it is a
-    # build-require, the host profile [tool_requires] are not applied to the virtual root
-    assert compiler["build_args"] == ("--tool-requires=compiler/1.0 --build-require "
-                                      "--build=compiler/1.0")
+    # Executing the generated command for the first node, from an empty cache
     c.run(f"install {compiler['build_args']} {order['profiles']['self']['args']}")
     assert "Missing" not in c.out
     c.assert_listed_binary({"compiler/1.0": (compiler["package_id"], "Build")}, build=True)
