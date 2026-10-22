@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from conan.api.output import ConanOutput
 from conan.internal.subsystems import deduce_subsystem, WINDOWS, subsystem_path
 from conan.errors import ConanException
+from conan.internal.graph.graph import RECIPE_CONSUMER, RECIPE_EDITABLE
 from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.util.files import save
 
@@ -42,10 +43,10 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
             path_ps1 = "{}.ps1".format(f)
             if os.path.isfile(path_bat) and "bat" in accept:
                 bats.append(path_bat)
-            if os.path.isfile(path_ps1) and "ps1" in accept:
-                # .bat is preferred, only use .ps1 when not covered by .bat
-                if not os.path.isfile(path_bat) or _has_ps1_only_scripts(conanfile, path_ps1):
-                    ps1s.append(path_ps1)
+            # With "tools.env:ps1" the .ps1 are only for developers, Conan always uses the bat/sh
+            skip_ps1 = conanfile.conf.get("tools.env:ps1", check_type=bool)
+            if os.path.isfile(path_ps1) and "ps1" in accept and not skip_ps1:
+                ps1s.append(path_ps1)
             if os.path.isfile(path_sh) and "sh" in accept:
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
@@ -75,17 +76,21 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
         return cmd
 
 
-def _has_ps1_only_scripts(conanfile, aggregated_ps1):
-    """ Whether the scripts registered for an aggregated conan{group}.ps1 include some .ps1
-    without a .bat equivalent, which would not be activated by the aggregated conan{group}.bat
+def generate_consumer_ps1(conanfile):
+    """ Whether to generate extra .ps1 files for the developer flow, "tools.env:ps1". Only for
+    the consumer (local conanfile, "conan install <path>") and test_package, not for the cache
     """
-    name = os.path.splitext(os.path.basename(aggregated_ps1))[0]
-    if not name.startswith("conan"):  # Aggregated files are always named conan{group}
+    if not conanfile.conf.get("tools.env:ps1", check_type=bool):
         return False
-    group = name[len("conan"):]
-    registered = conanfile.env_scripts.get(group, [])
-    bat_stems = {os.path.splitext(f)[0] for f in registered if f.endswith(".bat")}
-    return any(f.endswith(".ps1") and os.path.splitext(f)[0] not in bat_stems for f in registered)
+    if conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str):
+        raise ConanException("Conf 'tools.env:ps1' is incompatible with "
+                             "'tools.env.virtualenv:powershell', define only one of them")
+    if conanfile.tested_reference_str:
+        return True
+    try:
+        return conanfile._conan_node.recipe in (RECIPE_CONSUMER, RECIPE_EDITABLE)  # noqa
+    except AttributeError:
+        return False
 
 
 class _EnvValue:
@@ -595,23 +600,31 @@ class EnvVars:
                          checking if we are running inside Windows (checking also the subsystem) or not.
         """
         name, ext = os.path.splitext(filename)
-        filename = os.path.join(self._conanfile.generators_folder, filename)
         if ext:
-            paths = [filename]
+            is_bat = ext == ".bat"
+            is_ps1 = ext == ".ps1"
         else:  # Need to deduce it automatically
-            ext = ".bat" if self._subsystem == WINDOWS else ".sh"
-            paths = [filename + ext]
-            if self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str):
-                paths.append(filename + ".ps1")  # generates both the .bat and .ps1
-
-        for p in paths:
-            if p.endswith(".bat"):
-                self.save_bat(p)
-            elif p.endswith(".ps1"):
-                self.save_ps1(p)
+            is_bat = self._subsystem == WINDOWS
+            is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str)
+            if is_ps1:
+                filename = filename + ".ps1"
+                is_bat = False
             else:
-                assert p.endswith(".sh")
-                self.save_sh(p)
+                filename = filename + (".bat" if is_bat else ".sh")
+
+        path = os.path.join(self._conanfile.generators_folder, filename)
+        if is_bat:
+            self.save_bat(path)
+        elif is_ps1:
+            self.save_ps1(path)
+        else:
+            self.save_sh(path)
+
+        # Extra .ps1 for developers, the .bat/.sh are still generated and used by Conan commands
+        path_ps1 = None
+        if generate_consumer_ps1(self._conanfile) and not ext and not is_ps1:
+            path_ps1 = os.path.join(self._conanfile.generators_folder, name + ".ps1")
+            self.save_ps1(path_ps1)
 
         if self._conanfile.conf.get("tools.env:dotenv", check_type=bool):
             bt = self._conanfile.settings.get_safe("build_type")
@@ -625,8 +638,9 @@ class EnvVars:
             self.save_dotenv(f"{name}.env")
 
         if self._scope:
-            for p in paths:
-                register_env_script(self._conanfile, p, self._scope)
+            register_env_script(self._conanfile, path, self._scope)
+            if path_ps1:
+                register_env_script(self._conanfile, path_ps1, self._scope)
 
 
 def _deactivate_func_name(filename):

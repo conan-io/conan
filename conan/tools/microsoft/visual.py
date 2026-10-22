@@ -165,7 +165,10 @@ class VCVars:
         create_env_script(conanfile, content, conan_vcvars_bat, scope)
         _create_deactivate_vcvars_file(conanfile, conan_vcvars_bat)
 
-        is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str)
+        from conan.tools.env.environment import generate_consumer_ps1
+        consumer_ps1 = generate_consumer_ps1(self._conanfile)
+        is_ps1 = self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str) \
+            or consumer_ps1
         if is_ps1:
             content_ps1 = textwrap.dedent(rf"""
             if (-not $env:VSCMD_ARG_VCVARS_VER){{

@@ -43,7 +43,6 @@ def test_virtualenv(client):
             name = "app"
             version = "0.1"
             requires = "pkg/0.1"
-            settings = "os"  # Needs for the conanrun scope
 
             def build(self):
                 self.output.info("----------BUILD----------------")
@@ -54,6 +53,10 @@ def test_virtualenv(client):
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Windows -s:h os=Windows")
 
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
+    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
+    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     with open(os.path.join(client.current_folder, "conanbuildenv.ps1"), "r", encoding="utf-16") as f:
         buildenv = f.read()
     assert '$env:MYPATH1="c:/path/to/ar"' in buildenv
@@ -115,8 +118,6 @@ def test_virtualenv_test_package(powershell):
     assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
     assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
 
-
-@pytest.mark.tool("ninja")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
 @pytest.mark.parametrize("powershell", ["powershell.exe", "pwsh"])
 def test_vcvars(powershell):
@@ -142,7 +143,7 @@ def test_vcvars(powershell):
     hello_cpp = gen_function_cpp(name="main")
     cmakelists = gen_cmakelists(appname="hello", appsources=["hello.cpp"])
     client.save({"conanfile.py": conanfile, "hello.cpp": hello_cpp, "CMakeLists.txt": cmakelists})
-    powershell_exe = powershell
+    powershell_exe = "powershell.exe" if powershell == "powershell" else "pwsh"
     client.run(f"build . -c tools.env.virtualenv:powershell={powershell} -c tools.cmake.cmaketoolchain:generator=Ninja")
     client.run_command(rf'{powershell_exe} -Command ".\build\Release\generators\conanbuild.ps1; dir env:"')
     #check the conanbuid.ps1 activation message
@@ -159,6 +160,7 @@ def test_vcvars(powershell):
     assert "conanvcvars.ps1" in conanbuild
     #check that the conanvcvars.ps1 is setting the environment
     assert "conanvcvars.bat&set" in vcvars_ps1
+
 
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Test for powershell")
