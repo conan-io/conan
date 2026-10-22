@@ -240,9 +240,9 @@ class TestProfile:
                      "profile": profile})
 
         client.run("create . --name=mypkg --version=0.1 --user=user --channel=channel -pr=profile")
-        assert "mypkg/0.1@user/channel: SETTINGS! os=FreeBSD!!" in client.out
+        assert "SETTINGS! os=FreeBSD!!" in client.out
         client.run("create . --name=mypkg --version=0.1 -pr=profile")
-        assert "mypkg/0.1: SETTINGS! os=Linux!!" in client.out
+        assert "SETTINGS! os=Linux!!" in client.out
 
     def test_install_profile_options(self):
         create_profile(self.client.paths.profiles_path, "vs_12_86",

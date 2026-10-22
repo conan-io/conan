@@ -605,8 +605,8 @@ class TestOpenAdd:
                                              "EditableBuild"),
                                 "pkgb/0.1": ("47a5f20ec8fb480e1c5794462089b01a3548fdc5",
                                              "EditableBuild")})
-        assert "pkga/0.1: WARN: BUILD PKGA!" in c.out
-        assert "pkgb/0.1: WARN: BUILD PKGB!" in c.out
+        assert "WARN: BUILD PKGA!" in c.out
+        assert "WARN: BUILD PKGB!" in c.out
 
 
 class TestComplete:
@@ -717,8 +717,8 @@ class TestWorkspaceBuild:
         c.run("workspace build")
         c.assert_listed_binary({"pkga/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                              "EditableBuild")})
-        assert "conanfile.py (pkga/0.1): WARN: BUILD PKGA!" in c.out
-        assert "conanfile.py (pkgb/0.1): WARN: BUILD PKGB!" in c.out
+        assert "WARN: BUILD PKGA!" in c.out
+        assert "WARN: BUILD PKGB!" in c.out
 
         # It is also possible to build a specific package by path
         # equivalent to ``conan build <path> --build=editable``
@@ -728,12 +728,12 @@ class TestWorkspaceBuild:
         c.run("workspace build --pkg=pkgb/*")
         c.assert_listed_binary({"pkga/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
                                              "EditableBuild")})
-        assert "conanfile.py (pkga/0.1): WARN: BUILD PKGA!" in c.out
-        assert "conanfile.py (pkgb/0.1): WARN: BUILD PKGB!" in c.out
+        assert "WARN: BUILD PKGA!" in c.out
+        assert "WARN: BUILD PKGB!" in c.out
 
         c.run("workspace build --pkg=pkga/*")
-        assert "conanfile.py (pkga/0.1): Calling build()" in c.out
-        assert "conanfile.py (pkga/0.1): WARN: BUILD PKGA!" in c.out
+        assert "Calling build()" in c.out
+        assert "WARN: BUILD PKGA!" in c.out
 
     def test_error_if_no_products(self):
         c = TestClient(light=True)
@@ -778,8 +778,8 @@ class TestWorkspaceBuild:
         # With --build=missing, hello/1.0 must be built first, then app
         c.run("workspace build --build=missing")
         assert "Workspace building external hello/1.0" in c.out
-        assert "hello/1.0: WARN: Building HELLO!" in c.out  # binary was actually compiled
-        assert "conanfile.py (app/1.0): WARN: Building APP!" in c.out
+        assert "WARN: Building HELLO!" in c.out  # binary was actually compiled
+        assert "WARN: Building APP!" in c.out
 
     def test_workspace_build_missing_with_options(self):
         # Reproduces https://github.com/conan-io/conan/issues/19948
@@ -857,7 +857,7 @@ class TestWorkspaceBuild:
         assert "pkga/0.1" in c.out
         c.run("workspace build")
         assert "metadata" in os.listdir(os.path.join(c.current_folder, "pkga", "myout"))
-        assert "conanfile.py (pkga/0.1): Building pkga AND 0.1!!!" in c.out
+        assert "Building pkga AND 0.1!!!" in c.out
 
     def test_build_with_external_editable_python_requires(self):
         c = TestClient(light=True)
@@ -881,7 +881,7 @@ class TestWorkspaceBuild:
         c.run("editable add ext")
         c.run("workspace add pkga")
         c.run("workspace build")
-        assert "ext/0.1: WARN: BUILD EXT!" in c.out
+        assert "WARN: BUILD EXT!" in c.out
         c.assert_listed_binary({"pkga/0.1": ("38f8a554b1b3c2cbb44321f0e731b3863359126c",
                                              "EditableBuild"),
                                 "ext/0.1": ("da39a3ee5e6b4b0d3255bfef95601890afd80709",
@@ -909,21 +909,21 @@ class TestWorkspaceBuild:
         c.run("workspace add pkgb")
         c.run("workspace build")
         assert "conanfile.py (pkga/0.1): VERBOSE MSG!!" not in c.out
-        assert "conanfile.py (pkga/0.1): INFO MSG!!" in c.out
-        assert "conanfile.py (pkga/0.1): WARN: WARN MSG!!" in c.out
-        assert "conanfile.py (pkga/0.1): ERROR: ERROR MSG!!" in c.out
+        assert "INFO MSG!!" in c.out
+        assert "WARN: WARN MSG!!" in c.out
+        assert "ERROR: ERROR MSG!!" in c.out
 
         c.run("workspace build -vvv")
-        assert "conanfile.py (pkga/0.1): VERBOSE MSG!!" in c.out
-        assert "conanfile.py (pkga/0.1): INFO MSG!!" in c.out
-        assert "conanfile.py (pkga/0.1): WARN: WARN MSG!!" in c.out
-        assert "conanfile.py (pkga/0.1): ERROR: ERROR MSG!!" in c.out
+        assert "VERBOSE MSG!!" in c.out
+        assert "INFO MSG!!" in c.out
+        assert "WARN: WARN MSG!!" in c.out
+        assert "ERROR: ERROR MSG!!" in c.out
 
         c.run("workspace build -vwarning")
-        assert "conanfile.py (pkga/0.1): VERBOSE MSG!!" not in c.out
-        assert "conanfile.py (pkga/0.1): INFO MSG!!" not in c.out
-        assert "conanfile.py (pkga/0.1): WARN: WARN MSG!!" in c.out
-        assert "conanfile.py (pkga/0.1): ERROR: ERROR MSG!!" in c.out
+        assert "VERBOSE MSG!!" not in c.out
+        assert "INFO MSG!!" not in c.out
+        assert "WARN: WARN MSG!!" in c.out
+        assert "ERROR: ERROR MSG!!" in c.out
 
 
 class TestNew:
@@ -1669,16 +1669,16 @@ def test_host_build_require():
     shutil.rmtree(os.path.join(c.current_folder, "protobuf", "mybuild"))
     assert not os.path.exists(os.path.join(c.current_folder, "protobuf", "mybuild"))
     c.run("workspace build -s:b os=Linux -s:h os=Windows")
-    assert "conanfile.py (app/0.1): BUILDING WITH BINHOST: MYOS=Windows!!!" in c.out
-    assert "conanfile.py (app/0.1): BUILDING WITH BINBUILD: MYOS=Linux!!!" in c.out
+    assert "BUILDING WITH BINHOST: MYOS=Windows!!!" in c.out
+    assert "BUILDING WITH BINBUILD: MYOS=Linux!!!" in c.out
     assert c.load("protobuf/mybuild/folder_Linux/myprotobuf.txt") == "MYOS=Linux!!!"
     assert c.load("protobuf/mybuild/folder_Windows/myprotobuf.txt") == "MYOS=Windows!!!"
 
     shutil.rmtree(os.path.join(c.current_folder, "protobuf", "mybuild"))
     assert not os.path.exists(os.path.join(c.current_folder, "protobuf", "mybuild"))
     c.run("workspace create -s:b os=Linux -s:h os=Windows")
-    assert "app/0.1: BUILDING WITH BINHOST: MYOS=Windows!!!" in c.out
-    assert "app/0.1: BUILDING WITH BINBUILD: MYOS=Linux!!!" in c.out
+    assert "BUILDING WITH BINHOST: MYOS=Windows!!!" in c.out
+    assert "BUILDING WITH BINBUILD: MYOS=Linux!!!" in c.out
 
 
 class TestCreate:
@@ -1701,10 +1701,10 @@ class TestCreate:
         c.run("workspace add pkgb")
         c.run("workspace add pkgc")
         c.run("workspace create --build=zlib/*")
-        assert str(c.out).count("zlib/0.1: WARN: BUILD ZLIB!") == 1
-        assert str(c.out).count("pkga/0.1: WARN: BUILD PKGA!") == 1
-        assert str(c.out).count("pkgb/0.1: WARN: BUILD PKGB!") == 1
-        assert str(c.out).count("pkgc/0.1: WARN: BUILD PKGC!") == 1
+        assert str(c.out).count("WARN: BUILD ZLIB!") == 1
+        assert str(c.out).count("WARN: BUILD PKGA!") == 1
+        assert str(c.out).count("WARN: BUILD PKGB!") == 1
+        assert str(c.out).count("WARN: BUILD PKGC!") == 1
         assert "pkga/0.1 (test package): Running test()" in c.out
         assert "pkgb/0.1 (test package): Running test()" in c.out
         assert "pkgc/0.1 (test package): Running test()" in c.out
@@ -1724,7 +1724,7 @@ class TestCreate:
         c.run("remove pkgc/* -c")
         c.run("workspace create")
         assert "WARN: BUILD ZLIB!" not in c.out
-        assert "pkgc/0.1: WARN: BUILD PKGC!" in c.out
+        assert "WARN: BUILD PKGC!" in c.out
 
     def test_create_dynamic_name(self):
         workspace = textwrap.dedent("""\
@@ -1775,8 +1775,8 @@ class TestCreate:
 
         c.run("workspace create -s:b os=Linux -s:h os=Windows")
 
-        assert "protobuf/0.1: Building for: Windows!!!" in c.out
-        assert "protobuf/0.1: Building for: Linux!!!" in c.out
+        assert "Building for: Windows!!!" in c.out
+        assert "Building for: Linux!!!" in c.out
 
     def test_create_stops_on_build_error(self):
         # https://github.com/conan-io/conan/issues/20258

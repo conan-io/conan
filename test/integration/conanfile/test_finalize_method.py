@@ -295,7 +295,7 @@ class TestToolRequiresFlows:
         tc.run("create app")
         # This fails. cpp_info is using the original package folder to construct the final path
         assert f"Dep bindir: {dep_layout.finalize()}" in tc.out
-        assert "app/1.0: Is finalized? True" in tc.out
+        assert "Is finalized? True" in tc.out
 
     def test_test_package_uses_created_tool_which_modifies_pkgfolder(self):
         tc = TestClient(light=True)

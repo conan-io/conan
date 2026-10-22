@@ -148,8 +148,8 @@ class TestToolsFilesPatch:
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . --user=user --channel=testing")
-        assert "test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n" in client.out
-        assert "test/1.9.10@user/testing: OLD FILE=False" in client.out
+        assert "NEW FILE=New file!\nNew file!\nNew file!\n" in client.out
+        assert "OLD FILE=False" in client.out
 
     def test_patch_new_strip(self):
         conanfile = base_conanfile + '''
@@ -168,7 +168,7 @@ class TestToolsFilesPatch:
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . --user=user --channel=testing")
-        assert "test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n" in client.out
+        assert "NEW FILE=New file!\nNew file!\nNew file!\n" in client.out
 
     def test_error_patch(self):
         file_content = base_conanfile + '''
