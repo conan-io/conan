@@ -112,6 +112,9 @@ class NewAPI:
                          "msbuild_exe": msbuild_exe_files,
                          "bazel_lib": bazel_lib_files_7,
                          "bazel_exe": bazel_exe_files_7,
+                         # Backward compatibility aliases, to be removed with Bazel 6 support
+                         "bazel_7_lib": bazel_lib_files_7,
+                         "bazel_7_exe": bazel_exe_files_7,
                          "autotools_lib": autotools_lib_files,
                          "autotools_exe": autotools_exe_files,
                          "premake_lib": premake_lib_files,
