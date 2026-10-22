@@ -80,10 +80,10 @@ def test_cache_path_exist_errors(created_package):
     assert "ERROR: Recipe 'foo/1.0#rev' not found" in t.out
 
     t.run(f"cache path foo/1.0:pid1", assert_error=True)
-    assert f"ERROR: 'foo/1.0#{recipe_revision}:pid1' not found in cache" in t.out
+    assert f"ERROR: Package 'foo/1.0#{recipe_revision}:pid1' not found" in t.out
 
     t.run(f"cache path foo/1.0#{recipe_revision}:pid1", assert_error=True)
-    assert f"ERROR: 'foo/1.0#{recipe_revision}:pid1' not found in cache" in t.out
+    assert f"ERROR: Package 'foo/1.0#{recipe_revision}:pid1' not found" in t.out
 
     t.run(f"cache path foo/1.0#{recipe_revision}:{pref.package_id}#rev2", assert_error=True)
     assert f"ERROR: No entry for package 'foo/1.0#{recipe_revision}:{pref.package_id}#rev2" in t.out

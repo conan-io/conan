@@ -120,6 +120,9 @@ class GraphAPI:
             if requires else None
         tool_requires = [RecipeReference.loads(r) if isinstance(r, str) else r
                          for r in tool_requires] if tool_requires else None
+        for r in (requires or []) + (tool_requires or []):
+            if r.user == "_" or r.channel == "_":
+                raise ConanException(f"Invalid reference '{r}': Invalid package user/channel '_'")
 
         self._scope_options(profile_host, requires=requires, tool_requires=tool_requires)
         root_node = self._load_root_virtual_conanfile(requires=requires, tool_requires=tool_requires,

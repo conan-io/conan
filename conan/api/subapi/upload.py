@@ -36,7 +36,9 @@ class UploadAPI:
         :parameter force: If ``True``, it will skip the check and mark that all items need to be
             uploaded. A ``force_upload`` key will be added to the entries that will be uploaded.
         """
-        loader = self._api_helpers.loader
+        self._check_upstream(self._api_helpers.loader, package_list, remote, enabled_remotes, force)
+
+    def _check_upstream(self, loader, package_list, remote, enabled_remotes, force):
         for ref, _ in package_list.items():
             layout = self._api_helpers.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
@@ -61,10 +63,12 @@ class UploadAPI:
             Default ``None`` means all metadata will be uploaded together with the package artifacts.
             If metadata contains an empty string (``""``),
             it means that no metadata files should be uploaded."""
+        self._prepare(self._api_helpers.loader, package_list, enabled_remotes, metadata)
+
+    def _prepare(self, loader, package_list, enabled_remotes, metadata):
         if metadata and metadata != [''] and '' in metadata:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
 
-        loader = self._api_helpers.loader
         preparator = PackagePreparator(loader, self._api_helpers.cache,
                                        self._api_helpers.remote_manager,
                                        self._api_helpers.global_conf)
@@ -113,6 +117,10 @@ class UploadAPI:
             but will still prepare the artifacts and check the upstream.
         """
 
+        # Creating a loader is not thread-safe (it invalidates the import system caches while
+        # other threads might be loading conanfiles), so all threads share this single one
+        loader = self._api_helpers.loader if not is_prepared else None
+
         def _upload_pkglist(pkglist, subtitle=lambda _: None):
             if not is_prepared:
                 if check_integrity:
@@ -120,9 +128,9 @@ class UploadAPI:
                     self._conan_api.cache.check_integrity(pkglist)
                 # Check if the recipes/packages are in the remote
                 subtitle("Checking server for existing packages")
-                self.check_upstream(pkglist, remote, enabled_remotes, force)
+                self._check_upstream(loader, pkglist, remote, enabled_remotes, force)
                 subtitle("Preparing artifacts for upload")
-                self.prepare(pkglist, enabled_remotes, metadata)
+                self._prepare(loader, pkglist, enabled_remotes, metadata)
 
             if not dry_run:
                 subtitle("Uploading artifacts")

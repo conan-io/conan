@@ -120,7 +120,7 @@ def test_cps_in_pkg():
     c.run(f"install --requires=zlib/1.3.1 {settings} -g CMakeDeps")
     cmake = c.load("zlib-release-x86_64-data.cmake")
     assert 'set(zlib_INCLUDE_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/include")' in cmake
-    assert 'set(zlib_LIB_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/lib")'
+    assert 'set(zlib_LIB_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/lib")' in cmake
     assert 'set(zlib_LIBS_RELEASE zlib)' in cmake
 
 
@@ -185,7 +185,7 @@ def test_cps_shared_in_pkg():
     c.run(f"install --requires=mypkg/1.0 {settings} -g CMakeDeps")
     cmake = c.load("mypkg-release-x86_64-data.cmake")
     assert 'set(mypkg_INCLUDE_DIRS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/include")' in cmake
-    assert 'set(mypkg_LIB_DIRS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/lib")'
+    assert 'set(mypkg_LIB_DIRS_RELEASE "${mypkg_PACKAGE_FOLDER_RELEASE}/lib")' in cmake
     assert 'set(mypkg_LIBS_RELEASE mypkg)' in cmake
 
 
@@ -248,7 +248,7 @@ def test_cps_configurations_in_pkg():
     c.run(f"install --requires=zlib/1.3.1 {settings} -g CMakeDeps")
     cmake = c.load("zlib-release-x86_64-data.cmake")
     assert 'set(zlib_INCLUDE_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/include")' in cmake
-    assert 'set(zlib_LIB_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/lib")'
+    assert 'set(zlib_LIB_DIRS_RELEASE "${zlib_PACKAGE_FOLDER_RELEASE}/lib")' in cmake
     assert 'set(zlib_LIBS_RELEASE zlib)' in cmake
 
 def test_cps_merge():

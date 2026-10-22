@@ -897,8 +897,18 @@ class _PathGenerator:
         list(APPEND CONAN_{{pkg_name}}_DIR_MULTI "{{folder}}")
         {% endfor %}
         {% endfor %}
+        {% if pkg_paths %}
+        # Fallback for packages not found via <pkg>_DIR. Not using DIR_MULTI, it accumulates
+        # across installs, so the first installed would take priority over the latest
+        list(PREPEND CMAKE_PREFIX_PATH {% for p in pkg_paths.values() | unique %}"{{ p }}" {% endfor %})
+        {% endif %}
         {% if host_runtime_dirs %}
-        set(CONAN_RUNTIME_LIB_DIRS {{ host_runtime_dirs }} )
+        {% for (pkg_name, config), dirs in host_runtime_dirs.items() %}
+        {% for d in dirs %}
+        # conan-runtime-dir: {{ pkg_name }} {{ config }} {{ d }}
+        {% endfor %}
+        {% endfor %}
+        set(CONAN_RUNTIME_LIB_DIRS {% for (_, config), dirs in host_runtime_dirs.items() %}{% for d in dirs %}"$<$<CONFIG:{{ config }}>:{{ d }}>" {% endfor %}{% endfor %})
         # Only for VS, needs CMake>=3.27
         set(CMAKE_VS_DEBUGGER_ENVIRONMENT "PATH=${CONAN_RUNTIME_LIB_DIRS};%PATH%")
         {% endif %}
@@ -1034,18 +1044,15 @@ class _PathGenerator:
         save(self._conanfile, self._conan_cmakedeps_paths, content)
 
     def _get_host_runtime_dirs(self):
+        # {(pkg_name, config): [paths]}. Entries of previous generations are kept (cumulative),
+        # except those of the same package and config, so a new version/revision replaces them
         host_runtime_dirs = {}
 
-        # Get the previous configuration
         if os.path.exists(self._conan_cmakedeps_paths):
-            existing_toolchain = load(self._conan_cmakedeps_paths)
-            pattern_lib_dirs = r"set\(CONAN_RUNTIME_LIB_DIRS ([^)]*)\)"
-            variable_match = re.search(pattern_lib_dirs, existing_toolchain)
-            if variable_match:
-                capture = variable_match.group(1)
-                matches = re.findall(r'"\$<\$<CONFIG:([A-Za-z]*)>:([^>]*)>"', capture)
-                for config, paths in matches:
-                    host_runtime_dirs.setdefault(config, []).append(paths)
+            existing = load(self._conan_cmakedeps_paths)
+            values = re.findall(rf"^# conan-runtime-dir: (\S+) (\S+) (.+)$", existing, re.M)
+            for pkg_name, config, path in values:
+                host_runtime_dirs.setdefault((pkg_name, config), []).append(path)
 
         is_win = self._conanfile.settings.get_safe("os") == "Windows"
 
@@ -1055,11 +1062,11 @@ class _PathGenerator:
             config = req.settings.get_safe("build_type", self._cmakedeps.configuration)
             aggregated_cppinfo = req.cpp_info.aggregated_components()
             runtime_dirs = aggregated_cppinfo.bindirs if is_win else aggregated_cppinfo.libdirs
+            paths = []
             for d in runtime_dirs:
                 d = d.replace("\\", "/")
                 d = relativize_path(d, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
-                existing = host_runtime_dirs.setdefault(config, [])
-                if d not in existing:
-                    existing.append(d)
-
-        return ' '.join(f'"$<$<CONFIG:{c}>:{i}>"' for c, v in host_runtime_dirs.items() for i in v)
+                paths.append(d)
+            # Replaces previous entries of the same package and config, keeps the rest
+            host_runtime_dirs[(req.ref.name, config)] = paths
+        return host_runtime_dirs

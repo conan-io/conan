@@ -181,7 +181,7 @@ class TestConfigInstallPkg:
 
         # Without the lockfile, it is free to update
         c.run("config install-pkg myconf_a/[*] --lockfile-out=config.lock")
-        assert "Installing new or updating configuration packages"
+        assert "Installing new or updating configuration packages" in c.out
         _check_conf(c, "myconf_a/0.2")
         _check_conf_file(c, ["myconf_a/0.2"])
         result = json.loads(c.load("config.lock"))
@@ -276,7 +276,7 @@ class TestConfigInstallPkgFromFile:
 
         # Now installing "updates" without disrupting the order
         c.run("config install-pkg myconf_c/0.1")
-        assert "Installing new or updating configuration packages"
+        assert "Installing new or updating configuration packages" in c.out
         _check_conf(c, "myconf_c/0.1")
         _check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1", "myconf_c/0.1"])
 

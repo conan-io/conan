@@ -350,7 +350,7 @@ def test_cmake_find_mode_deprecated():
     tc.save({"conanfile.py": dep})
     tc.run("create .")
     tc.run(f"install --requires=dep/0.1 -g CMakeConfigDeps")
-    assert "CMakeConfigDeps does not support module find mode"
+    assert "CMakeConfigDeps does not support module find mode" in tc.out
 
 
 def test_build_context_deprecated():
@@ -889,6 +889,17 @@ class TestPropertiesBuildContext:
         assert "find_package(MyZlibName)" in c.out
         config = c.load("pkg/MyZlibNameConfig.cmake")
         assert 'set(MyZlibName_VERSION_STRING "1.3.1")' in config
+
+
+def test_cmake_prefix_path_fallback():
+    # The folder with the config files is also added to CMAKE_PREFIX_PATH, only once
+    tc = TestClient()
+    tc.save({"conanfile.py": GenConanfile("hello", "1.0")})
+    tc.run("create .")
+    tc.run("install --requires=hello/1.0 -g CMakeConfigDeps")
+    paths_content = tc.load("conan_cmakedeps_paths.cmake")
+    assert paths_content.count('list(PREPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_LIST_DIR}" )') == 1
+    assert "set(hello_DIR" in paths_content
 
 
 class TestExtraFindExtraVariants:
@@ -1459,6 +1470,74 @@ def test_cpp_info_objects_cmake_target_name():
     assert "add_library(mine::greet_OBJECTS OBJECT IMPORTED)" in targets
     assert "set_property(TARGET mine::greet APPEND PROPERTY INTERFACE_LINK_LIBRARIES\n" \
            '             "$<$<CONFIG:RELEASE>:$<TARGET_OBJECTS:mine::greet_OBJECTS>>")' in targets
+
+
+def test_runtime_lib_dirs_no_stale_entries_new_revision():
+    """ https://github.com/conan-io/conan/issues/20374
+    Installing a new recipe revision of the same package and configuration must replace the
+    previous CONAN_RUNTIME_LIB_DIRS entry, not accumulate both of them
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("dep", "1.0").with_settings("build_type")})
+    c.run("create .")
+    rev1 = c.exported_recipe_revision()
+    c.save({"conanfile.py": GenConanfile("dep", "1.0").with_settings("build_type")
+                                                      .with_class_attribute("a = 1")})
+    c.run("create .")
+    rev2 = c.exported_recipe_revision()
+    assert rev1 != rev2
+
+    c.run(f"install --requires dep/1.0#{rev1} -g CMakeConfigDeps")
+    assert c.load("conan_cmakedeps_paths.cmake").count("$<$<CONFIG:Release>:") == 1
+
+    # Same folder, now with the newer recipe revision
+    c.run(f"install --requires dep/1.0#{rev2} -g CMakeConfigDeps")
+
+    paths = c.load("conan_cmakedeps_paths.cmake")
+    # BUG: both the old and the new package folders are listed for Release
+    assert paths.count("$<$<CONFIG:Release>:") == 1
+
+
+def test_runtime_lib_dirs_keep_other_configs():
+    """ Installing a package for a config must not remove the entries of the same package
+    for other configs
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("dep", "1.0").with_settings("build_type")})
+    c.run("create . -s build_type=Debug")
+    c.run("create . -s build_type=Release")
+    c.save({"conanfile.txt": "[requires]\ndep/1.0\n"}, clean_first=True)
+    c.run("install . -g CMakeConfigDeps -s build_type=Debug")
+    c.run("install . -g CMakeConfigDeps -s build_type=Release")
+    paths = c.load("conan_cmakedeps_paths.cmake")
+    assert "$<$<CONFIG:Debug>:" in paths
+    assert "$<$<CONFIG:Release>:" in paths
+
+
+class TestRuntimeDirs:
+
+    def test_runtime_lib_dirs_multiconf(self):
+        client = TestClient()
+        app = GenConanfile().with_requires("dep/1.0").with_generator("CMakeConfigDeps")\
+            .with_settings("build_type")
+        client.save({"lib/conanfile.py": GenConanfile(),
+                     "dep/conanfile.py": GenConanfile("dep").with_requires("onelib/1.0",
+                                                                           "twolib/1.0"),
+                     "app/conanfile.py": app})
+        client.run("create lib --name=onelib --version=1.0")
+        client.run("create lib --name=twolib --version=1.0")
+        client.run("create dep  --version=1.0")
+
+        client.run(f'install app -s build_type=Release')
+        client.run(f'install app -s build_type=Debug')
+
+        contents = client.load("app/conan_cmakedeps_paths.cmake")
+        pattern_lib_dirs = r"set\(CONAN_RUNTIME_LIB_DIRS ([^)]*)\)"
+        runtime_lib_dirs = re.search(pattern_lib_dirs, contents).group(1)
+        assert "<CONFIG:Release>" in runtime_lib_dirs
+        assert "<CONFIG:Debug>" in runtime_lib_dirs
+        # too simple of a check, but this is impossible to test automatically
+        assert "set(CMAKE_VS_DEBUGGER_ENVIRONMENT" in contents
 
 
 class TestCmakeConfigProperties:

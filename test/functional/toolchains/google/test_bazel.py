@@ -221,7 +221,7 @@ def test_transitive_libs_consuming_6x(shared, bazel_output_root_dir):
 
         client.run(f"create . -o '*:shared={shared}'")
         assert "mysecondlib() First define MY_VALUE and other define 2" in client.out
-        assert "myfirstlib/1.2.11: Hello World Release!"
+        assert "myfirstlib/1.2.11: Hello World Release!" in client.out
 
 
 @pytest.mark.slow
@@ -355,7 +355,7 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
 
         client.run(f"create . -o '*:shared={shared}'")
         assert "mysecondlib() First define MY_VALUE and other define 2" in client.out
-        assert "myfirstlib/1.2.11: Hello World Release!"
+        assert "myfirstlib/1.2.11: Hello World Release!" in client.out
 
 
 @pytest.mark.slow
