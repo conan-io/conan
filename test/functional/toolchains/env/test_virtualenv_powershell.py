@@ -97,7 +97,7 @@ def test_virtualenv_test_package(powershell):
                 self.run("dir")
                 self.run('cd "hello world"')
                 self.run("set MYVC_CUSTOMVAR1")
-                self.run("set MYVC_CUSTOMVAR2", env=["conanbuild.ps1"])
+                self.run("set MYVC_CUSTOMVAR2")
             """)
     client.save({"conanfile.py": GenConanfile("pkg", "1.0"),
                  "test_package/conanfile.py": test_package})

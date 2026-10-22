@@ -37,11 +37,15 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
             if os.path.isfile(f):
                 ps1s.append(f)
         else:  # Simple name like "conanrunenv"
-            # Powershell is never used unless explicit extension
             path_bat = "{}.bat".format(f)
             path_sh = "{}.sh".format(f)
+            path_ps1 = "{}.ps1".format(f)
             if os.path.isfile(path_bat) and "bat" in accept:
                 bats.append(path_bat)
+            if os.path.isfile(path_ps1) and "ps1" in accept:
+                # .bat is preferred, only use .ps1 when not covered by .bat
+                if not os.path.isfile(path_bat) or _has_ps1_only_scripts(conanfile, path_ps1):
+                    ps1s.append(path_ps1)
             if os.path.isfile(path_sh) and "sh" in accept:
                 path_sh = subsystem_path(subsystem, path_sh)
                 shs.append(path_sh)
@@ -69,6 +73,19 @@ def environment_wrap_command(conanfile, env_filenames, env_folder, cmd, subsyste
         return '{} ; cmd /c "{}"'.format(ps1_launchers, cmd)
     else:
         return cmd
+
+
+def _has_ps1_only_scripts(conanfile, aggregated_ps1):
+    """ Whether the scripts registered for an aggregated conan{group}.ps1 include some .ps1
+    without a .bat equivalent, which would not be activated by the aggregated conan{group}.bat
+    """
+    name = os.path.splitext(os.path.basename(aggregated_ps1))[0]
+    if not name.startswith("conan"):  # Aggregated files are always named conan{group}
+        return False
+    group = name[len("conan"):]
+    registered = conanfile.env_scripts.get(group, [])
+    bat_stems = {os.path.splitext(f)[0] for f in registered if f.endswith(".bat")}
+    return any(f.endswith(".ps1") and os.path.splitext(f)[0] not in bat_stems for f in registered)
 
 
 class _EnvValue:
@@ -585,7 +602,7 @@ class EnvVars:
             ext = ".bat" if self._subsystem == WINDOWS else ".sh"
             paths = [filename + ext]
             if self._conanfile.conf.get("tools.env.virtualenv:powershell", check_type=str):
-                paths.append(filename + ".ps1")
+                paths.append(filename + ".ps1")  # generates both the .bat and .ps1
 
         for p in paths:
             if p.endswith(".bat"):
