@@ -650,7 +650,7 @@ class BazelDeps:
         for name, content in _BazelPathsGenerator.items(dependencies_context):
             save(name, content)
         ConanOutput().warning(
-            "Bazel 6 support in BazelDeps (dependencies.bzl / WORKSPACE) is deprecated "
-            "and will be removed in a future Conan version. "
-            "Use Bazel >= 7.2 and include(\"//conan:conan_deps.MODULE.bazel\").",
+            "Bazel 6.x support is deprecated and will be removed in a future Conan release. "
+            "Please upgrade to Bazel 7.2 or newer. "
+            "For more details, see:  https://docs.conan.io/2/reference/tools/google/bazeldeps.html#generated-files",
             warn_tag="deprecated")
