@@ -4,7 +4,6 @@ import textwrap
 
 from jinja2 import Template, StrictUndefined
 
-from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
 from conan.internal.model.dependencies import get_transitive_requires
 from conan.internal.model.pkg_type import PackageType
@@ -437,9 +436,9 @@ class _BazelPathsGenerator:
         # load("@//conan:dependencies.bzl", "load_conan_dependencies")
         # load_conan_dependencies()
 
-        print("WARNING: Bazel 6 / WORKSPACE support (dependencies.bzl) is deprecated " +
-              "and will be removed in a future Conan version. " +
-              "Use Bazel >= 7.2 and include(\\"//conan:conan_deps.MODULE.bazel\\").")
+        print("WARNING: Bazel 6.x support is deprecated and will be removed in a future " +
+              "Conan release. Please upgrade to Bazel 7.2 or newer. For more details, see: " +
+              "https://docs.conan.io/2/reference/tools/google/bazeldeps.html#generated-files")
 
         def load_conan_dependencies():
         {% for dep_info in dependencies %}
@@ -649,8 +648,3 @@ class BazelDeps:
 
         for name, content in _BazelPathsGenerator.items(dependencies_context):
             save(name, content)
-        ConanOutput().warning(
-            "Bazel 6.x support is deprecated and will be removed in a future Conan release. "
-            "Please upgrade to Bazel 7.2 or newer. "
-            "For more details, see:  https://docs.conan.io/2/reference/tools/google/bazeldeps.html#generated-files",
-            warn_tag="deprecated")
