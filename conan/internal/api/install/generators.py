@@ -37,7 +37,8 @@ _generators = {"CMakeToolchain": "conan.tools.cmake",
                "QbsDeps": "conan.tools.qbs",
                "QbsProfile": "conan.tools.qbs",
                "CPSDeps": "conan.tools.cps",
-               "ROSEnv": "conan.tools.ros"
+               "ROSEnv": "conan.tools.ros",
+               "ZigDeps": "conan.tools.zig"
                }
 
 
