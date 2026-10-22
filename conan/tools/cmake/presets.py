@@ -3,7 +3,7 @@ import os
 import platform
 import textwrap
 
-from conan.api.output import ConanOutput, Color
+from conan.api.output import Color
 from conan.tools.cmake.layout import get_build_folder_custom_vars, is_consumer
 from conan.tools.cmake.toolchain.blocks import GenericSystemBlock
 from conan.tools.cmake.utils import is_multi_configuration
@@ -16,10 +16,14 @@ from conan.internal.util.files import save, load
 def write_cmake_presets(conanfile, toolchain_file, generator, cache_variables,
                         user_presets_path=None, preset_prefix=None, buildenv=None, runenv=None,
                         cmake_executable=None, absolute_paths=None):
-    preset_path, preset_data = _CMakePresets.generate(conanfile, toolchain_file, generator,
-                                                      cache_variables, preset_prefix, buildenv,
-                                                      runenv, cmake_executable, absolute_paths)
-    _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data,
+    # A relative filepath (with dir component) signals CMake 4.4+ --preset-file mode
+    preset_file_path = None
+    if user_presets_path and os.path.dirname(user_presets_path):
+        preset_file_path = user_presets_path.replace("\\", "/")
+    preset_path = _CMakePresets.generate(conanfile, toolchain_file, generator, cache_variables,
+                                         preset_prefix, buildenv, runenv, cmake_executable,
+                                         absolute_paths, preset_file_path)
+    _IncludingPresets.generate(conanfile, preset_path, user_presets_path, preset_prefix,
                                absolute_paths)
 
 
@@ -28,7 +32,7 @@ class _CMakePresets:
     """
     @staticmethod
     def generate(conanfile, toolchain_file, generator, cache_variables, preset_prefix, buildenv,
-                 runenv, cmake_executable, absolute_paths):
+                 runenv, cmake_executable, absolute_paths, preset_file_path=None):
         toolchain_file = os.path.abspath(os.path.join(conanfile.generators_folder, toolchain_file))
         if not absolute_paths:
             try:  # Make it relative to the build dir if possible
@@ -64,7 +68,8 @@ class _CMakePresets:
                                      "avoid collision with your CMakePresets.json")
         if os.path.exists(preset_path) and multiconfig:
             data = json.loads(load(preset_path))
-            build_preset = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix)
+            build_preset = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix,
+                                                              generator)
             test_preset = _CMakePresets._test_preset_fields(conanfile, multiconfig, preset_prefix,
                                                             runenv)
             _CMakePresets._insert_preset(data, "buildPresets", build_preset)
@@ -72,17 +77,18 @@ class _CMakePresets:
             configure_preset = _CMakePresets._configure_preset(conanfile, generator, cache_variables,
                                                                toolchain_file, multiconfig,
                                                                preset_prefix, buildenv,
-                                                               cmake_executable)
+                                                               cmake_executable, preset_file_path)
             # Conan generated presets should have only 1 configurePreset, no more, overwrite it
             data["configurePresets"] = [configure_preset]
         else:
             data = _CMakePresets._contents(conanfile, toolchain_file, cache_variables, generator,
-                                           preset_prefix, buildenv, runenv, cmake_executable)
+                                           preset_prefix, buildenv, runenv, cmake_executable,
+                                           preset_file_path)
 
         preset_content = json.dumps(data, indent=4)
         save(preset_path, preset_content)
-        ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {preset_path}")
-        return preset_path, data
+        conanfile.output.info(f"CMakeToolchain generated: {preset_path}")
+        return preset_path
 
     @staticmethod
     def _insert_preset(data, preset_type, preset):
@@ -96,7 +102,7 @@ class _CMakePresets:
 
     @staticmethod
     def _contents(conanfile, toolchain_file, cache_variables, generator, preset_prefix, buildenv,
-                  runenv, cmake_executable):
+                  runenv, cmake_executable, preset_file_path=None):
         """
         Contents for the CMakePresets.json
         It uses schema version 3 unless it is forced to 2
@@ -104,8 +110,8 @@ class _CMakePresets:
         multiconfig = is_multi_configuration(generator)
         conf = _CMakePresets._configure_preset(conanfile, generator, cache_variables, toolchain_file,
                                                multiconfig, preset_prefix, buildenv,
-                                               cmake_executable)
-        build = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix)
+                                               cmake_executable, preset_file_path)
+        build = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix, generator)
         test = _CMakePresets._test_preset_fields(conanfile, multiconfig, preset_prefix, runenv)
         ret = {"version": 3,
                "vendor": {"conan": {}},
@@ -118,7 +124,7 @@ class _CMakePresets:
 
     @staticmethod
     def _configure_preset(conanfile, generator, cache_variables, toolchain_file, multiconfig,
-                          preset_prefix, buildenv, cmake_executable):
+                          preset_prefix, buildenv, cmake_executable, preset_file_path=None):
         build_type = conanfile.settings.get_safe("build_type")
         name = _CMakePresets._configure_preset_name(conanfile, multiconfig)
         if preset_prefix:
@@ -187,10 +193,20 @@ class _CMakePresets:
             tc_tip = f"-DCMAKE_TOOLCHAIN_FILE=<output_folder>/{toolchain_file} " \
                 if "CMAKE_TOOLCHAIN_FILE" not in vars_tip else ""
 
-            msg = textwrap.dedent(f"""\
-                CMakeToolchain: Preset '{name}' added to CMakePresets.json.
-                    (cmake>=3.23) cmake --preset {name}
-                    (cmake<3.23) cmake <path> -G {_format_val(generator)} {tc_tip} {vars_tip}""")
+            if preset_file_path:
+                msg = textwrap.dedent(f"""\
+                    CMakeToolchain: Preset '{name}' added to CMakePresets.json.
+                        (cmake>=4.4) cmake --preset-file {preset_file_path} --preset {name}
+                        (cmake<3.23) cmake <path> -G {_format_val(generator)}
+                                     {tc_tip}
+                                     {vars_tip}""")
+            else:
+                msg = textwrap.dedent(f"""\
+                    CMakeToolchain: Preset '{name}' added to CMakePresets.json.
+                        (cmake>=3.23) cmake --preset {name}
+                        (cmake<3.23) cmake <path> -G {_format_val(generator)}
+                                     {tc_tip}
+                                     {vars_tip}""")
             conanfile.output.info(msg, fg=Color.CYAN)
         return ret
 
@@ -208,12 +224,23 @@ class _CMakePresets:
         return ret
 
     @staticmethod
-    def _build_preset_fields(conanfile, multiconfig, preset_prefix):
+    def _build_preset_fields(conanfile, multiconfig, preset_prefix, generator):
         ret = _CMakePresets._common_preset_fields(conanfile, multiconfig, preset_prefix)
-        build_preset_jobs = build_jobs(conanfile)
+        build_preset_jobs = _CMakePresets._build_preset_jobs(conanfile, generator)
         if build_preset_jobs:
             ret["jobs"] = build_preset_jobs
         return ret
+
+    @staticmethod
+    def _build_preset_jobs(conanfile, generator):
+        # "jobs" maps to "cmake --build --parallel", which for Visual Studio becomes MSBuild's
+        # "-maxCpuCount", a different parallelism than "tools.build:jobs", which already drives
+        # the compiler "/MP" flag in conan_toolchain.cmake. Reusing it here stacks both effects
+        # (tools.build:jobs**2 processes), so split by generator like _cmake_cmd_line_args() does.
+        # https://github.com/conan-io/conan/issues/19405
+        if generator and "Visual Studio" in generator:
+            return conanfile.conf.get("tools.microsoft.msbuild:max_cpu_count", check_type=int)
+        return build_jobs(conanfile)
 
     @staticmethod
     def _test_preset_fields(conanfile, multiconfig, preset_prefix, runenv):
@@ -230,7 +257,7 @@ class _CMakePresets:
         build_type = conanfile.settings.get_safe("build_type")
         custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
         if user_defined_build:
-            return custom_conf
+            return custom_conf or "default"
 
         if custom_conf:
             if build_type:
@@ -245,7 +272,7 @@ class _CMakePresets:
         custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
 
         if user_defined_build:
-            return custom_conf
+            return custom_conf or "default"
 
         if multiconfig or not build_type:
             return "default" if not custom_conf else custom_conf
@@ -262,8 +289,7 @@ class _IncludingPresets:
     """
 
     @staticmethod
-    def generate(conanfile, preset_path, user_presets_path, preset_prefix, preset_data,
-                 absolute_paths):
+    def generate(conanfile, preset_path, user_presets_path, preset_prefix, absolute_paths):
         if not user_presets_path:
             return
 
@@ -311,7 +337,7 @@ class _IncludingPresets:
             data = _IncludingPresets._update_stubs(data, inherited_user, output_dir, absolute_paths)
 
         data = json.dumps(data, indent=4)
-        ConanOutput(str(conanfile)).info(f"CMakeToolchain generated: {user_presets_path}")
+        conanfile.output.info(f"CMakeToolchain generated: {user_presets_path}")
         save(user_presets_path, data)
 
     @staticmethod
@@ -327,11 +353,8 @@ class _IncludingPresets:
         }
         for inc in data.get("include", []):
             inc_path = os.path.join(output_dir, inc) if not absolute_paths else inc
-            assert os.path.exists(inc_path), f"Presets include must point to an existing file: '{inc_path}'"
-            try:
-                inc_json = json.loads(load(inc_path))
-            except Exception:
-                continue
+            assert os.path.exists(inc_path), f"Presets include file not found: '{inc_path}'"
+            inc_json = json.loads(load(inc_path))
             for preset_type in ("configurePresets", "buildPresets", "testPresets"):
                 for p in inc_json.get(preset_type, []):
                     name = p.get("name")

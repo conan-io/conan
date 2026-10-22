@@ -9,7 +9,7 @@ from conan.test.utils.tools import TestClient
 def test_build_requires_options_different():
     # copied from https://github.com/conan-io/conan/pull/9839
     # This is a test that crashed in 1.X, because of conflicting options
-    client = TestClient()
+    client = TestClient(light=True)
 
     conanfile_openssl_1_1_1 = GenConanfile("openssl", "1.1.1")
     conanfile_openssl_3_0_0 = GenConanfile("openssl", "3.0.0") \
@@ -43,7 +43,7 @@ def test_different_options_values_profile():
     protobuf by default is a static library (shared=False)
     The profile or CLI args can select for each one (library and protoc) the "shared" value
     """
-    c = TestClient()
+    c = TestClient(light=True)
     protobuf = textwrap.dedent("""
         from conan import ConanFile
         class Proto(ConanFile):
@@ -86,7 +86,7 @@ def test_different_options_values_recipe(scope):
     protobuf by default is a static library (shared=False)
     The "consumer" conanfile.py can use ``self.requires(...,options=)`` to define protobuf:shared
     """
-    c = TestClient()
+    c = TestClient(light=True)
     protobuf = textwrap.dedent("""
         from conan import ConanFile
         class Proto(ConanFile):
@@ -123,7 +123,7 @@ def test_different_options_values_recipe_attributes():
     protobuf by default is a static library (shared=False)
     The "consumer" conanfile.py can use ``default_options`` to define protobuf:shared
     """
-    c = TestClient()
+    c = TestClient(light=True)
     protobuf = textwrap.dedent("""
         from conan import ConanFile
         class Proto(ConanFile):
@@ -163,7 +163,7 @@ def test_different_options_values_recipe_priority():
     "consumer" defines a protobuf:shared=3 value, that must be respected for HOST context
     But build context, it is assigned by "mypkg", and build-require is private
     """
-    c = TestClient()
+    c = TestClient(light=True)
     protobuf = textwrap.dedent("""
         from conan import ConanFile
         class Proto(ConanFile):

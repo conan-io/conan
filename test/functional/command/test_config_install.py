@@ -505,6 +505,16 @@ class TestConfigInstall:
         c.run('config install "%s"' % source_folder)
         assert os.access(c.paths.settings_path, os.W_OK)
 
+    def test_maintain_executable(self):
+        c = TestClient(light=True)
+        source_folder = self._create_profile_folder()
+        filepath = os.path.join(source_folder, 'remotes.json')
+        mode = os.stat(filepath).st_mode
+        os.chmod(filepath, mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+        c.run('config install "%s"' % source_folder)
+        assert os.access(os.path.join(c.cache_folder, "remotes.json"), os.X_OK)
+
 
 class TestConfigInstallSched:
 

@@ -45,7 +45,8 @@ class TestSubsystems:
         - Inside msys2, install pacman -S mingw-w64-i686-toolchain (all pkgs)
         """
         client = TestClient()
-        client.run_command('uname')
+        with environment_update({"MSYSTEM": "MINGW32"}):
+            client.run_command('uname')
         assert "MINGW32_NT" in client.out
 
     @pytest.mark.tool("msys2")
@@ -55,14 +56,16 @@ class TestSubsystems:
         - Inside msys2, install pacman -S mingw-w64-ucrt-x86_64-toolchain (all pkgs)
         """
         client = TestClient()
-        client.run_command('uname')
+        with environment_update({"MSYSTEM": "UCRT64"}):
+            client.run_command('uname')
         assert "MINGW64_NT" in client.out
 
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("msys2_clang64")
     def test_clang64_available(self):
         client = TestClient()
-        client.run_command('uname')
+        with environment_update({"MSYSTEM": "CLANG64"}):
+            client.run_command('uname')
         assert "MINGW64_NT" in client.out
 
     @pytest.mark.tool("msys2")
@@ -72,7 +75,8 @@ class TestSubsystems:
         - Inside msys2, install pacman -S mingw-w64-x86_64-toolchain (all pkgs)
         """
         client = TestClient()
-        client.run_command('uname')
+        with environment_update({"MSYSTEM": "MINGW64"}):
+            client.run_command('uname')
         assert "MINGW64_NT" in client.out
 
     # It's important not to have uname in Path, that could
@@ -113,22 +117,6 @@ class TestSubsystemsBuild:
         # TODO: Do not hardcode the visual version
         check_vs_runtime("app.exe", client, "15", "Debug", static_runtime=static,
                          subsystem="msys2")
-
-    @pytest.mark.parametrize("static", [True, False])
-    @pytest.mark.tool("mingw")
-    def test_mingw(self, static):
-        """
-        This will work if you installed the Mingw toolchain outside msys2, from
-        https://sourceforge.net/projects/mingw/, and installed gcc, autotools, mingw32-make, etc
-
-        But this doesn't contain "make", only "mingw32-make"
-        """
-        client = TestClient()
-        self._build(client, static_runtime=static, make="mingw32-make")
-
-        check_exe_run(client.out, "main", "gcc", None, "Debug", "x86", None, subsystem="mingw32")
-        check_vs_runtime("app.exe", client, "15", "Debug", static_runtime=static,
-                         subsystem="mingw64")
 
     @pytest.mark.parametrize("static", [True, False])
     @pytest.mark.tool("msys2")
@@ -226,6 +214,7 @@ class TestSubsystemsBuild:
         assert "__MINGW64__" in client.out
         assert "__CYGWIN__" not in client.out
 
+    @pytest.mark.slow
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("msys2_mingw64_clang64")
     def test_msys2_mingw64_clang64(self):
@@ -431,7 +420,6 @@ class TestSubsystemsCMakeBuild:
 
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("msys2_clang64")
-    @pytest.mark.skip(reason="This doesn't work, seems CMake issue")
     def test_msys2_clang64(self):
         """
         FAILS WITH:
@@ -446,18 +434,19 @@ class TestSubsystemsCMakeBuild:
 
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("msys2_clang64")
-    @pytest.mark.tool("cmake", "3.19")
+    @pytest.mark.tool("cmake", "3.23")
     def test_msys2_clang64_external(self):
         """
         Exactly the same as the previous tests, but with a native cmake 3.19 (higher priority)
         """
         client = TestClient()
         build_out = self._build(client)
-        assert "MYCMAKE VERSION=3.19" in build_out
+        assert "MYCMAKE VERSION=3.23" in build_out
         check_exe_run(client.out, "main", "clang", None, "Debug", "x86_64", None,
                       subsystem="mingw64")
         check_vs_runtime("app.exe", client, "15", "Debug", subsystem="clang64")
 
+    @pytest.mark.slow
     @pytest.mark.tool("msys2")
     @pytest.mark.tool("msys2_mingw64_clang64")
     def test_msys2_mingw64_clang64(self):

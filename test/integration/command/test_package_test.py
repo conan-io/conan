@@ -23,7 +23,7 @@ class TestPackageTest:
         client.save({CONANFILE: GenConanfile("hello", "0.1"),
                      "test_package/conanfile.py": test_package})
         client.run("create . --user=lasote --channel=stable")
-        assert "hello/0.1@lasote/stable: Created package" in client.out
+        assert "Created package" in client.out
         client.run("test test_package hello/0.1@lasote/stable")
         assert "hello/0.1@lasote/stable (test package): TESTING" in client.out
         client.run("test hello/0.1@lasote/stable")
@@ -54,7 +54,7 @@ class TestPackageTest:
         client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
         client.run("test test_package hello/0.1@lasote/stable")
         assert "hello/0.1@lasote/stable: Configuring sources" not in client.out
-        assert "hello/0.1@lasote/stable: Created package" not in client.out
+        assert "Created package" not in client.out
         assert "hello/0.1@lasote/stable: Already installed!" in client.out
         assert "hello/0.1@lasote/stable (test package): Running test()" in client.out
 
@@ -77,11 +77,11 @@ class TestPackageTest:
         client.save({CONANFILE: GenConanfile().with_name("hello").with_version("0.1"),
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . --user=user --channel=channel")
-        assert "hello/0.1@user/channel: Created package" in client.out
+        assert "Created package" in client.out
 
         # explicit override of user/channel works
         client.run("create . --user=lasote --channel=stable")
-        assert "hello/0.1@lasote/stable: Created package" in client.out
+        assert "Created package" in client.out
 
     def test_test_with_path_errors(self):
         client = TestClient()

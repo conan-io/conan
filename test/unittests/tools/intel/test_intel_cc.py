@@ -5,7 +5,9 @@ import pytest
 from unittest.mock import patch
 
 from conan.tools.build.flags import architecture_flag, cppstd_flag
+from conan.tools.env import Environment
 from conan.tools.intel import IntelCC
+from conan.tools.intel.intel_cc import intel_cc_compilers
 from conan.errors import ConanException
 from conan.internal.model.conf import ConfDefinition
 from conan.test.utils.mocks import ConanFileMock, MockSettings
@@ -122,10 +124,22 @@ def test_installation_path_in_conf():
     })
     fake_path = "mysuper/path/to/intel/oneapi"
     conanfile.conf = ConfDefinition()
-    conanfile.conf.loads(textwrap.dedent("""\
-        tools.intel:installation_path=%s
-    """ % fake_path))
+    conanfile.conf.loads(textwrap.dedent(f'tools.intel:installation_path={fake_path}'))
     assert IntelCC(conanfile).installation_path == fake_path
+
+
+def test_invalid_installation_path_in_conf():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({
+        "compiler.version": "2026.0",
+        "os": "Windows"
+    })
+
+    conanfile.conf = ConfDefinition()
+    conanfile.conf.loads(textwrap.dedent('tools.intel:installation_path=""'))
+    with pytest.raises(ConanException) as e:
+        IntelCC(conanfile).generate()
+    assert "Invalid 'tools.intel:installation_path'" in str(e.value)
 
 
 @pytest.mark.parametrize("os_,call_command,setvars_file", [
@@ -150,3 +164,57 @@ def test_setvars_command_with_custom_arguments(platform_system, os_, call_comman
     """ % (fake_path, args)))
     expected = '%s "%s" %s' % (call_command, os.path.join(fake_path, setvars_file), args)
     assert IntelCC(conanfile).command == expected
+
+
+@pytest.mark.parametrize("os_,mode,expected_c,expected_cpp", [
+    ("Linux", "icx", "icx", "icpx"),
+    ("Windows", "icx", "icx", "icx"),
+    ("Linux", "classic", "icc", "icpc"),
+    ("Macos", "classic", "icc", "icpc"),
+    ("Windows", "classic", "icl", "icl"),
+    ("Linux", "dpcpp", "icx", "dpcpp"),
+])
+def test_intel_cc_compilers(os_, mode, expected_c, expected_cpp):
+    settings = MockSettings({"compiler": "intel-cc", "compiler.mode": mode, "os": os_})
+    conanfile = ConanFileMock(settings)
+    conanfile._conan_buildenv = Environment()
+    result = intel_cc_compilers(conanfile)
+    assert result["c"] == expected_c
+    assert result["cpp"] == expected_cpp
+
+
+def test_intel_cc_compilers_not_intel():
+    settings = MockSettings({"compiler": "gcc"})
+    conanfile = ConanFileMock(settings)
+    assert intel_cc_compilers(conanfile) is None
+
+
+@pytest.mark.parametrize("os_", ["Windows", "Linux"])
+@pytest.mark.parametrize("version,expected_c,expected_cpp", [
+    ("2021.1", "icl", "icl"),
+    ("2023.2", "icl", "icl"),
+])
+def test_intel_cc_classic_supported_until_2023(os_, version, expected_c, expected_cpp):
+    # classic mode is available up to Intel oneAPI 2023.2 (included)
+    expected = {"Windows": ("icl", "icl"), "Linux": ("icc", "icpc")}[os_]
+    settings = MockSettings({"compiler": "intel-cc", "compiler.mode": "classic",
+                             "compiler.version": version, "os": os_})
+    conanfile = ConanFileMock(settings)
+    conanfile._conan_buildenv = Environment()
+    result = intel_cc_compilers(conanfile)
+    assert result["c"] == expected[0]
+    assert result["cpp"] == expected[1]
+
+
+@pytest.mark.parametrize("os_", ["Windows", "Linux"])
+@pytest.mark.parametrize("version", ["2024.0", "2024.1", "2025.2", "2026.0"])
+def test_intel_cc_classic_removed_since_2024(os_, version):
+    # classic mode was removed from Intel oneAPI 2024.0, it must raise on every OS
+    settings = MockSettings({"compiler": "intel-cc", "compiler.mode": "classic",
+                             "compiler.version": version, "os": os_})
+    conanfile = ConanFileMock(settings)
+    conanfile._conan_buildenv = Environment()
+    with pytest.raises(ConanException) as e:
+        intel_cc_compilers(conanfile)
+    assert "compiler.mode=classic" in str(e.value)
+    assert "2024.0" in str(e.value)

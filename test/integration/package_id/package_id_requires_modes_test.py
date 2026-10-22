@@ -10,6 +10,7 @@ class TestPackageIDRequirementsModes:
     @pytest.mark.parametrize("mode, accepted_version, rejected_version, pattern",
                              [("unrelated_mode", "2.0", "", ""),
                               ("patch_mode", "1.0.0.1", "1.0.1", "1.0.1"),
+                              ("micro_mode", "1.0.0.0", "1.0.0.1", "1.0.0.1"),
                               ("minor_mode", "1.0.1", "1.2", "1.2.Z"),
                               ("major_mode", "1.5", "2.0", "2.Y.Z"),
                               ("semver_mode", "1.5", "2.0", "2.Y.Z"),
@@ -37,6 +38,8 @@ class TestPackageIDRequirementsModes:
                          [("unrelated_mode", "da39a3ee5e6b4b0d3255bfef95601890afd80709"),
                           ("semver_mode", "13b9e753af3958dd1b2d4b3f935b04b8fb6b6760"),
                           ("patch_mode", "38d7a3ec6a09165ab3e5306f81c539a2e0a784bd"),
+                          # micro_mode with 0.1.1.1 → "0.1.1.1", same repr as full_version_mode
+                          ("micro_mode", "13b9e753af3958dd1b2d4b3f935b04b8fb6b6760"),
                           ("minor_mode", "a5e7ad26ccf4a5049090976846da1c6ed165cced"),
                           ("major_mode", "6ac597ffb99c3747ed78699f206dc1041537a8df"),
                           # This is equal to semver_mode for 0.X.Y.Z..
@@ -75,7 +78,7 @@ class TestPackageIDError:
         client.save({"conanfile.py": GenConanfile().with_require("dep2/1.0@user/testing")
                                                    .with_require("dep3/1.0@user/testing")})
         client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
-        assert "consumer/1.0@user/testing: Created" in client.out
+        assert "Created package" in client.out
 
     def test_transitive_multi_mode2_package_id(self):
         # https://github.com/conan-io/conan/issues/6942
@@ -102,7 +105,7 @@ class TestPackageIDError:
         client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
         assert "dep2/1.0@user/testing: PkgNames: ['dep1']" in client.out
         assert "consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']" in client.out
-        assert "consumer/1.0@user/testing: Created" in client.out
+        assert "Created package" in client.out
 
     def test_transitive_multi_mode_build_requires(self):
         # https://github.com/conan-io/conan/issues/6942
@@ -131,7 +134,7 @@ class TestPackageIDError:
         client.run('create . --name=consumer --version=1.0 --user=user --channel=testing --build=*')
         assert "dep2/1.0@user/testing: PkgNames: ['dep1']" in client.out
         assert "consumer/1.0@user/testing: PKGNAMES: ['dep1', 'dep2']" in client.out
-        assert "consumer/1.0@user/testing: Created" in client.out
+        assert "Full package reference: consumer/1.0@user/testing" in client.out
 
 
 class TestRequirementPackageId:
@@ -152,6 +155,17 @@ class TestRequirementPackageId:
         c.run("list pkg:*")
         assert f"dep/{pattern}" in c.out
 
+    def test_micro_mode(self):
+        c = TestClient(light=True)
+        pkg = GenConanfile("pkg", "0.1").with_requirement("dep/1.2.3.4",
+                                                          package_id_mode="micro_mode")
+        c.save({"dep/conanfile.py": GenConanfile("dep", "1.2.3.4"),
+                "pkg/conanfile.py": pkg})
+        c.run("create dep")
+        c.run("create pkg")
+        c.run("list pkg:*")
+        assert "dep/1.2.3.4" in c.out
+
     def test_wrong_mode(self):
         c = TestClient(light=True)
         pkg = GenConanfile("pkg", "0.1").with_requirement("dep/1.2.3", package_id_mode="nothing")
@@ -164,6 +178,7 @@ class TestRequirementPackageId:
 
     @pytest.mark.parametrize("mode, pattern",
                              [("patch_mode", "1.2.3"),
+                              ("micro_mode", "1.2.3.0"),
                               ("minor_mode", "1.2.Z"),
                               ("major_mode", "1.Y.Z")])
     def test_half_diamond(self, mode, pattern):
@@ -190,6 +205,7 @@ class TestRequirementPackageId:
 
     @pytest.mark.parametrize("mode, pattern",
                              [("patch_mode", "1.2.3"),
+                              ("micro_mode", "1.2.3.0"),
                               ("minor_mode", "1.2.Z"),
                               ("major_mode", "1.Y.Z")])
     def test_half_diamond_conflict(self, mode, pattern):

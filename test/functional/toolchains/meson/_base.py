@@ -11,7 +11,7 @@ def check_binary(t):
     if platform.system() == "Darwin":
         assert f"main {arch_macro['gcc'][host_arch]} defined" in t.out
         assert "main __apple_build_version__" in t.out
-        assert "main __clang_major__17" in t.out
+        assert "main __clang_major__21" in t.out
         # TODO: check why __clang_minor__ seems to be not defined in XCode 12
         # commented while migrating to XCode12 CI
         # assert ("main __clang_minor__0" in t.out

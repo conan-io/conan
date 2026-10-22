@@ -92,7 +92,7 @@ def test_editable_envvars_package_info():
             "pkg/conanfile.py": pkg})
     c.run("editable add dep ")
     c.run("install pkg -s os=Linux -s:b os=Linux -g CMakeDeps")
-    assert "conanfile.py (pkg/1.0): DEP CONFINFO mylayoutconf" in c.out
+    assert "DEP CONFINFO mylayoutconf" in c.out
     cmake = c.load("pkg/dep-release-data.cmake")
     assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/mylayoutinclude")' in cmake
     runenv = c.load("pkg/conanrunenv-release.sh")
@@ -134,7 +134,7 @@ def test_editable_envvars_package():
             "pkg/conanfile.py": pkg})
     c.run("editable add dep ")
     c.run("install pkg -s os=Linux -s:b os=Linux -g CMakeDeps")
-    assert "conanfile.py (pkg/1.0): DEP CONFINFO mylayoutconf" in c.out
+    assert "DEP CONFINFO mylayoutconf" in c.out
     cmake = c.load("pkg/dep-release-data.cmake")
     assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/mylayoutinclude")' in cmake
     runenv = c.load("pkg/conanrunenv-release.sh")
@@ -143,7 +143,7 @@ def test_editable_envvars_package():
     c.run("editable remove dep")
     c.run("create dep")
     c.run("install pkg -s os=Linux -s:b os=Linux -g CMakeDeps")
-    assert "conanfile.py (pkg/1.0): DEP CONFINFO mypkginfoconf" in c.out
+    assert "DEP CONFINFO mypkginfoconf" in c.out
     cmake = c.load("pkg/dep-release-data.cmake")
     assert 'set(dep_INCLUDE_DIRS_RELEASE "${dep_PACKAGE_FOLDER_RELEASE}/mypkginfoinclude")' in cmake
     runenv = c.load("pkg/conanrunenv-release.sh")
@@ -220,9 +220,9 @@ def test_editable_conf_tool_require_builtin():
     c.run("editable add dep")
     c.run("install pkg -s os=Linux -s:b os=Linux")
     ndk_path = os.path.join(c.current_folder, "dep", "mybuild")
-    assert f"conanfile.py: NDK: {ndk_path}!!!" in c.out
+    assert f"NDK: {ndk_path}!!!" in c.out
 
     c.run("editable remove dep")
     c.run("create dep")
     c.run("install pkg -s os=Linux -s:b os=Linux")
-    assert re.search("conanfile.py: NDK: .*mypkg!!!", str(c.out))
+    assert re.search("NDK: .*mypkg!!!", str(c.out))

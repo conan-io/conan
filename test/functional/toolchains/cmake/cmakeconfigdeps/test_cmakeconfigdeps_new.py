@@ -33,9 +33,9 @@ class TestExes:
                 def layout(self):
                     cmake_layout(self)
                     self.cpp.build.exe = "mytool"
-                    name = "mytool.exe" if platform.system() == "Windows" else "mytool"
-                    app_loc = os.path.join("build", str(self.settings.build_type), name)
-                    self.cpp.build.location = app_loc
+                    self.cpp.build.set_property("cmake_target_name", "MyTool::myexe")
+                    name = f"{self.settings.build_type}/mytool.exe" if platform.system() == "Windows" else "mytool"
+                    self.cpp.build.location = name
 
                 def build(self):
                     cmake = CMake(self)
@@ -276,10 +276,10 @@ class TestLibs:
         c.run("new cmake_exe -d name=game -d version=0.1 -d requires=gamelib/0.1")
         c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
-        assert "matrix/0.1: Hello World Release!"
-        assert "engine/0.1: Hello World Release!"
-        assert "gamelib/0.1: Hello World Release!"
-        assert "game/0.1: Hello World Release!"
+        assert "matrix/0.1: Hello World Release!" in c.out
+        assert "engine/0.1: Hello World Release!" in c.out
+        assert "gamelib/0.1: Hello World Release!" in c.out
+        assert "game/0.1: Hello World Release!" in c.out
 
         # Make sure that transitive headers are private, fails to include, traits work
         game_cpp = c.load("src/game.cpp")
@@ -298,10 +298,10 @@ class TestLibs:
         c2.run("new cmake_exe -d name=game -d version=0.1 -d requires=gamelib/0.1")
         c2.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
-        assert "matrix/0.1: Hello World Release!"
-        assert "engine/0.1: Hello World Release!"
-        assert "gamelib/0.1: Hello World Release!"
-        assert "game/0.1: Hello World Release!"
+        assert "matrix/0.1: Hello World Release!" in c2.out
+        assert "engine/0.1: Hello World Release!" in c2.out
+        assert "gamelib/0.1: Hello World Release!" in c2.out
+        assert "game/0.1: Hello World Release!" in c2.out
 
 
 class TestLibsIntegration:
@@ -373,10 +373,10 @@ class TestLibsLinkageTraits:
         c.run("new cmake_exe -d name=game -d version=0.1 -d requires=engine/0.1")
         c.run(f"create . -o engine/*:shared=True -c tools.cmake.cmakedeps:new={new_value} "
               "-c tools.compilation:verbosity=verbose")
-        assert re.search(r"Skipped binaries(\s*)matrix/0.1", c.out)
-        assert "matrix/0.1: Hello World Release!"
-        assert "engine/0.1: Hello World Release!"
-        assert "game/0.1: Hello World Release!"
+        assert re.search(r"Skipped host binaries(\s*)matrix/0.1", c.out)
+        assert "matrix/0.1: Hello World Release!" in c.out
+        assert "engine/0.1: Hello World Release!" in c.out
+        assert "game/0.1: Hello World Release!" in c.out
 
     @pytest.mark.tool("cmake", "3.27")
     @pytest.mark.parametrize("shared", [False, True])
@@ -1108,7 +1108,8 @@ class TestToolRequires:
         # Ninja for same layout in all platforms
         c.run(f"install bye --build-require -c:a tools.cmake.cmakedeps:new={new_value} "
               f"-c:a tools.cmake.cmaketoolchain:generator=Ninja")
-        cmake = c.load("bye/build/Release/generators/hello-TargetsBuild-release.cmake")
+        # Despite installing "bye" in the build context, "hello" should be in the host one
+        cmake = c.load("bye/build/Release/generators/hello-Targets-release.cmake")
         assert "add_library(hello::hello INTERFACE IMPORTED)" in cmake
 
 
@@ -1688,14 +1689,11 @@ def test_multiple_find_package_subfolder():
 
 
 @pytest.mark.tool("cmake", "3.27")
-def test_find_package_casing_non_fallback():
+def test_find_package_casing_yes_fallback():
     """ CMakeConfigDeps creates hello_DIR by default, but CMake looks for
     the package name as given in find_package, so casing matters,
     and it won't look for hello_DIR, but to HellO_DIR.
-
-    Note that this would work without the layout, because CMake would fallback
-    to find the lowercase hello-config.cmake file in the CMAKE_INSTALL_PREFIX,
-    which happens to be the same folder the generated config file ends up without the layout."""
+    But the CMAKE_PREFIX_PATH fallback works"""
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(test NONE)
@@ -1722,8 +1720,9 @@ def test_find_package_casing_non_fallback():
     client.run(f"create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"build .", assert_error=True)
-    assert 'Could not find a package configuration file provided by "HellO"' in client.out
+    client.run("build .")
+    # Now it works, thanks to the fallback
+    assert "Conan: Target declared imported INTERFACE library 'hello::hello'" in client.out
 
 
 @pytest.mark.tool("cmake", "3.27")
@@ -1775,7 +1774,50 @@ def test_find_package_extra_variants():
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
     client.run("build")
-    assert 'Conan: Configuring Targets for hello/1.0' in client.out
+    assert 'Conan: Configuring Targets for hello' in client.out
     # And this follows the expected found variable generation
     assert "Found HellO!" in client.out
     assert "Found hello!" not in client.out
+
+
+@pytest.mark.tool("cmake")
+def test_find_package_quietly():
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save
+
+        class Test(ConanFile):
+            name = "dep"
+            version = "0.1"
+
+            def package(self):
+                save(self, os.path.join(self.package_folder, "lib", "lib1.a"), "")
+
+            def package_info(self):
+                self.cpp_info.libs = ["lib1"]
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+
+    conanfile = textwrap.dedent("""
+        [requires]
+        dep/0.1
+
+        [generators]
+        CMakeConfigDeps
+        CMakeToolchain
+        """)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(consumer NONE)
+        find_package(dep QUIET)
+        """)
+
+    client.save({"conanfile.txt": conanfile, "CMakeLists.txt": cmakelists}, clean_first=True)
+    client.run("install .")
+    client.run_command("cmake . -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release")
+    # Because we used QUIET, not in output
+    assert "Target declared imported" not in client.out
+    assert "Configuring Targets for dep" not in client.out

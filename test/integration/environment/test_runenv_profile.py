@@ -29,8 +29,8 @@ def client():
 
 def test_buildenv_profile_cli(client):
     client.run("install . -pr=profile1")
-    assert "conanfile.py: MyVar1=MyValue1_1!!" in client.out
-    assert "conanfile.py: MyVar2=MyValue2_1!!" in client.out
+    assert "MyVar1=MyValue1_1!!" in client.out
+    assert "MyVar2=MyValue2_1!!" in client.out
     env = client.load("conanrunenv.sh")
     assert "MyValue1_1" in env
     assert "MyValue2_1" in env

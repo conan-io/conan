@@ -55,6 +55,11 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         dependency_filenames = self._get_dependency_filenames()
         # Get the nodes that have the property cmake_find_mode=None (no files to generate)
         dependency_find_modes = self._get_dependencies_find_modes()
+        # ``cmake_extra_dependencies`` lets a recipe declare extra ``find_dependency()`` calls
+        extra_dependencies = self.cmakedeps.get_property("cmake_extra_dependencies",
+                                                         self.conanfile, check_type=list) or []
+        dependency_filenames.extend(extra_dependencies)
+        dependency_find_modes.update({extra: "" for extra in extra_dependencies})
 
         # Make the root_folder relative to the generated xxx-data.cmake file
         root_folder = self._root_folder
@@ -141,13 +146,24 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
 
               # COMPOUND VARIABLES
-              set({{ pkg_name }}_COMPILE_OPTIONS{{ config_suffix }}
-                  "$<$<COMPILE_LANGUAGE:CXX>:{{ pkg_var(pkg_name, 'COMPILE_OPTIONS_CXX', config_suffix) }}>"
-                  "$<$<COMPILE_LANGUAGE:C>:{{ pkg_var(pkg_name, 'COMPILE_OPTIONS_C', config_suffix) }}>")
-              set({{ pkg_name }}_LINKER_FLAGS{{ config_suffix }}
-                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ pkg_var(pkg_name, 'SHARED_LINK_FLAGS', config_suffix) }}>"
-                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ pkg_var(pkg_name, 'SHARED_LINK_FLAGS', config_suffix) }}>"
-                  "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ pkg_var(pkg_name, 'EXE_LINK_FLAGS', config_suffix) }}>")
+              set({{ pkg_name }}_COMPILE_OPTIONS{{ config_suffix }})
+              if (NOT "{{ pkg_var(pkg_name, 'COMPILE_OPTIONS_CXX', config_suffix) }}" STREQUAL "")
+                  list(APPEND {{ pkg_name }}_COMPILE_OPTIONS{{ config_suffix }}
+                      "$<$<COMPILE_LANGUAGE:CXX>:{{ pkg_var(pkg_name, 'COMPILE_OPTIONS_CXX', config_suffix) }}>")
+              endif ()
+              if (NOT "{{ pkg_var(pkg_name, 'COMPILE_OPTIONS_C', config_suffix) }}" STREQUAL "")
+                  list(APPEND {{ pkg_name }}_COMPILE_OPTIONS{{ config_suffix }}
+                      "$<$<COMPILE_LANGUAGE:C>:{{ pkg_var(pkg_name, 'COMPILE_OPTIONS_C', config_suffix) }}>")
+              endif ()
+              set({{ pkg_name }}_LINKER_FLAGS{{ config_suffix }})
+              if (NOT "{{ pkg_var(pkg_name, 'SHARED_LINK_FLAGS', config_suffix) }}" STREQUAL "")
+                  list(APPEND {{ pkg_name }}_LINKER_FLAGS{{ config_suffix }}
+                      "$<$<OR:$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>,$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>>:{{ pkg_var(pkg_name, 'SHARED_LINK_FLAGS', config_suffix) }}>")
+              endif ()
+              if (NOT "{{ pkg_var(pkg_name, 'EXE_LINK_FLAGS', config_suffix) }}" STREQUAL "")
+                  list(APPEND {{ pkg_name }}_LINKER_FLAGS{{ config_suffix }}
+                      "$<$<STREQUAL{{ ':$' }}<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ pkg_var(pkg_name, 'EXE_LINK_FLAGS', config_suffix) }}>")
+              endif ()
 
 
               set({{ pkg_name }}_COMPONENTS{{ config_suffix }} {{ components_names }})
@@ -176,14 +192,24 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
               set({{ pkg_name }}_{{ comp_variable_name }}_NO_SONAME_MODE{{ config_suffix }} {{ cpp.no_soname }})
 
               # COMPOUND VARIABLES
-              set({{ pkg_name }}_{{ comp_variable_name }}_LINKER_FLAGS{{ config_suffix }}
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>:{{ comp_var(pkg_name, comp_variable_name, 'SHARED_LINK_FLAGS', config_suffix) }}>
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>:{{ comp_var(pkg_name, comp_variable_name, 'SHARED_LINK_FLAGS', config_suffix) }}>
-                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ comp_var(pkg_name, comp_variable_name, 'EXE_LINK_FLAGS', config_suffix) }}>
-              )
-              set({{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS{{ config_suffix }}
-                  "$<$<COMPILE_LANGUAGE:CXX>:{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix) }}>"
-                  "$<$<COMPILE_LANGUAGE:C>:{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_C', config_suffix) }}>")
+              set({{ pkg_name }}_{{ comp_variable_name }}_LINKER_FLAGS{{ config_suffix }})
+              if (NOT "{{ comp_var(pkg_name, comp_variable_name, 'SHARED_LINK_FLAGS', config_suffix) }}" STREQUAL "")
+                  list(APPEND {{ pkg_name }}_{{ comp_variable_name }}_LINKER_FLAGS{{ config_suffix }}
+                      $<$<OR:$<STREQUAL:$<TARGET_PROPERTY:TYPE>,SHARED_LIBRARY>,$<STREQUAL:$<TARGET_PROPERTY:TYPE>,MODULE_LIBRARY>>:{{ comp_var(pkg_name, comp_variable_name, 'SHARED_LINK_FLAGS', config_suffix) }}>)
+              endif ()
+              if (NOT "{{ comp_var(pkg_name, comp_variable_name, 'EXE_LINK_FLAGS', config_suffix) }}" STREQUAL "")
+                  list(APPEND {{ pkg_name }}_{{ comp_variable_name }}_LINKER_FLAGS{{ config_suffix }}
+                      $<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:{{ comp_var(pkg_name, comp_variable_name, 'EXE_LINK_FLAGS', config_suffix) }}>)
+              endif ()
+              set({{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS{{ config_suffix }})
+              if (NOT "{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix) }}" STREQUAL "")
+                  list(APPEND {{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS{{ config_suffix }}
+                      "$<$<COMPILE_LANGUAGE:CXX>:{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_CXX', config_suffix) }}>")
+              endif ()
+              if (NOT "{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_C', config_suffix) }}" STREQUAL "")
+                  list(APPEND {{ pkg_name }}_{{ comp_variable_name }}_COMPILE_OPTIONS{{ config_suffix }}
+                      "$<$<COMPILE_LANGUAGE:C>:{{ comp_var(pkg_name, comp_variable_name, 'COMPILE_OPTIONS_C', config_suffix) }}>")
+              endif ()
 
               {%- endfor %}
           """)
@@ -311,7 +337,9 @@ class _TargetDataContext:
         self.build_paths = join_paths(cpp_info.builddirs)
         self.framework_paths = join_paths(cpp_info.frameworkdirs)
         self.libs = join_flags(" ", cpp_info.libs)
-        self.system_libs = join_flags(" ", cpp_info.system_libs)
+        extra_interface_libs = cmakedeps.get_property("cmake_extra_interface_libs", conanfile,
+                                                      comp_name, check_type=list) or []
+        self.system_libs = join_flags(" ", list(cpp_info.system_libs) + list(extra_interface_libs))
         self.frameworks = join_flags(" ", cpp_info.frameworks)
         self.defines = join_defines(cpp_info.defines, "-D")
         self.compile_definitions = join_defines(cpp_info.defines)

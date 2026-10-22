@@ -142,7 +142,7 @@ def test_complete(client):
 
 
 def test_dependents_new_buildenv():
-    client = TestClient()
+    client = TestClient(light=True)
     boost = textwrap.dedent("""
         from conan import ConanFile
         class Boost(ConanFile):
@@ -216,7 +216,7 @@ def test_tool_requires_conanfile_txt():
             """)
     client.save({"conanfile.txt": consumer}, clean_first=True)
     client.run("install . --build=missing")
-    assert "build_req/1.0@test/test: Created package" in client.out
+    assert "Created package" in client.out
 
 
 def test_profile_override_conflict():
@@ -516,10 +516,11 @@ class TestBuildTrackHost:
     ])
     def test_host_version_different_ref(self, host_version, assert_error, assert_msg):
         tc = TestClient(light=True)
+        app = (GenConanfile("app", "1.0").with_requires("libgettext/[>0.1]")
+               .with_tool_requirement(f"gettext/<host_version:{host_version}"))
         tc.save({"gettext/conanfile.py": GenConanfile("gettext"),
                  "libgettext/conanfile.py": GenConanfile("libgettext"),
-                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("libgettext/[>0.1]")
-                                                   .with_tool_requirement(f"gettext/<host_version:{host_version}")})
+                 "app/conanfile.py": app})
         tc.run("create libgettext --version=0.2")
         tc.run("create gettext --version=0.1 --build-require")
         tc.run("create gettext --version=0.2 --build-require")
@@ -689,10 +690,10 @@ def test_build_missing_build_requires():
     c.run("remove tool*:* -c")
     c.run("install app")
     assert "- Build" not in c.out
-    assert re.search(r"Skipped binaries(\s*)tool/0.1, tooldep/0.1", c.out)
+    assert re.search(r"Skipped build binaries(\s*)tool/0.1, tooldep/0.1", c.out)
     c.run("install app --build=missing")
     assert "- Build" not in c.out
-    assert re.search(r"Skipped binaries(\s*)tool/0.1, tooldep/0.1", c.out)
+    assert re.search(r"Skipped build binaries(\s*)tool/0.1, tooldep/0.1", c.out)
 
 
 def test_requirement_in_wrong_method():
@@ -780,7 +781,7 @@ def test_build_run_false(min_conan_version, should_propagate):
     required_conan_version_line = ""
     if min_conan_version:
         required_conan_version_line = f"required_conan_version='{min_conan_version}'"
-    tc = TestClient()
+    tc = TestClient(light=True)
     cmake = textwrap.dedent("""
     from conan import ConanFile
     from conan.tools.files import save

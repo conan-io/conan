@@ -346,6 +346,7 @@ def test_clang_cl_vscrt(build_type, runtime, vscrt):
 
         [conf]
         tools.cmake.cmaketoolchain:generator=Visual Studio 17
+        tools.microsoft.msbuild:installation_path=
 
         [buildenv]
         CC=clang-cl
@@ -775,6 +776,75 @@ def test_cross_x86_64_to_riscv64():
     assert "cpu = 'riscv64'" in cross  # This is the host machine
 
 
+@pytest.mark.parametrize("arch, android_target", [("armv7", "armv7a-linux-androideabi"),
+                                                  ("armv8", "aarch64-linux-android"),
+                                                  ("x86", "i686-linux-android"),
+                                                  ("x86_64", "x86_64-linux-android")])
+@pytest.mark.parametrize("os_build, ndk_os_folder, ext", [("Macos", "darwin", ""),
+                                                          ("Linux", "linux", ""),
+                                                          ("Windows", "windows", ".cmd")])
+def test_cross_to_android_ndk(arch, android_target, os_build, ndk_os_folder, ext):
+    """ With the NDK path defined, the compilers are the ones of the NDK for the target of the arch,
+    with the api_level, and the folder of the OS of the build machine
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile().with_settings("os", "compiler", "arch", "build_type")})
+    c.run(f"install . -g MesonToolchain -s os=Android -s os.api_level=21 -s arch={arch} "
+          f"-s compiler=clang -s compiler.version=18 -s compiler.libcxx=libc++ "
+          f"-s:b os={os_build} -s:b arch=x86_64 -c tools.android:ndk_path=/path/to/ndk")
+    cross = c.load(MesonToolchain.cross_filename)
+    ndk_bin = os.path.join("/path/to/ndk", "toolchains", "llvm", "prebuilt",
+                           f"{ndk_os_folder}-x86_64", "bin")
+    assert f"c = '{os.path.join(ndk_bin, f'{android_target}21-clang{ext}')}'" in cross
+    assert f"cpp = '{os.path.join(ndk_bin, f'{android_target}21-clang++{ext}')}'" in cross
+    assert f"ar = '{os.path.join(ndk_bin, 'llvm-ar')}'" in cross
+    assert "system = 'android'" in cross
+
+
+def test_cross_to_android_ndk_path_required():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile().with_settings("os", "compiler", "arch", "build_type")})
+    c.run("install . -g MesonToolchain -s os=Android -s os.api_level=21 -s arch=armv8 "
+          "-s compiler=clang -s compiler.version=18 -s compiler.libcxx=libc++ "
+          "-s:b os=Linux -s:b arch=x86_64", assert_error=True)
+    assert "You must provide a NDK path. Use 'tools.android:ndk_path' configuration field." in c.out
+
+
+def test_objc_compilers_and_env_flags():
+    host = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    os=Macos
+    compiler=apple-clang
+    compiler.version=14.0
+    [buildenv]
+    OBJCFLAGS=-DMY_OBJC
+    OBJCXXFLAGS=-DMY_OBJCXX
+    LDFLAGS=-Lmy_libs
+    """)
+    c = TestClient()
+    c.save({"conanfile.txt": "[generators]\nMesonToolchain", "host": host})
+    c.run("install . -pr:a host")
+    tc = c.load("conan_meson_native.ini")
+    assert "objc = 'clang'" in tc
+    assert "objcpp = 'clang++'" in tc
+    assert re.search(r"objc_args = \[.*'-DMY_OBJC'.*\]", tc)
+    assert re.search(r"objcpp_args = \[.*'-DMY_OBJCXX'.*\]", tc)
+    assert re.search(r"objc_link_args = \[.*'-Lmy_libs'.*\]", tc)
+    assert re.search(r"objcpp_link_args = \[.*'-Lmy_libs'.*\]", tc)
+
+    # The compilers can be defined by conf
+    host = host + textwrap.dedent("""
+    [conf]
+    tools.build:compiler_executables={"objc": "myobjc", "objcpp": "myobjcpp"}
+    """)
+    c.save({"host": host})
+    c.run("install . -pr:a host")
+    tc = c.load("conan_meson_native.ini")
+    assert "objc = 'myobjc'" in tc
+    assert "objcpp = 'myobjcpp'" in tc
+
+
 def test_conf_extra_apple_flags():
     host = textwrap.dedent("""
     [settings]
@@ -1005,3 +1075,93 @@ def test_binaries_attribute():
     content = client.load(MesonToolchain.native_filename)
     assert "wayland-scanner = '/path/to/wayland-scanner'" in content
     assert "c = '/path/to/c'" in content
+
+
+def test_exe_wrapper_needs_wrapper():
+    """Issue: https://github.com/conan-io/conan/issues/18718"""
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.meson import MesonToolchain
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            def generate(self):
+                tc = MesonToolchain(self)
+                tc.binaries["exe_wrapper"] = "/usr/bin/qemu"
+                tc.generate()
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("install . -s arch=armv8 -s:b arch=x86_64")
+    content = client.load(MesonToolchain.cross_filename)
+    assert "needs_exe_wrapper = true" in content
+    assert "exe_wrapper = '/usr/bin/qemu'" in content
+
+
+@pytest.mark.parametrize("section, key, value", [
+    ("properties", "custom_prop", "value"),
+    ("project_options", "my_option", "enabled"),
+])
+def test_extra_variables_conf(section, key, value):
+    """Issue: https://github.com/conan-io/conan/issues/18718"""
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0")
+                .with_settings("os", "arch", "compiler", "build_type")
+                .with_generator("MesonToolchain")})
+    conf = f'{{"\\"{section}\\"": {{\\"{key}\\": \\"{value}\\"}}}}'
+    client.run(f'install . -c tools.meson.mesontoolchain:extra_variables="{conf}"')
+    content = client.load(MesonToolchain.native_filename)
+    assert f"{key} = '{value}'" in content
+
+
+def test_extra_variables_conf_binaries():
+    """Issue: https://github.com/conan-io/conan/issues/18718"""
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0")
+                .with_settings("os", "arch", "compiler", "build_type")
+                .with_generator("MesonToolchain")})
+    client.run('install . -s arch=armv8 -s:b arch=x86_64 '
+               '-c:h tools.meson.mesontoolchain:extra_variables="{\\"binaries\\": {\\"exe_wrapper\\": \\"/usr/bin/qemu\\"}}"')
+    content = client.load(MesonToolchain.cross_filename)
+    assert "exe_wrapper = '/usr/bin/qemu'" in content
+    assert "needs_exe_wrapper = true" in content
+
+
+def test_extra_variables_needs_exe_wrapper():
+    """
+    Test that needs_exe_wrapper can be overridden via extra_variables conf.
+    """
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("pkg", "1.0")
+                .with_settings("os", "arch", "compiler", "build_type")
+                .with_generator("MesonToolchain")})
+    # Cross-compilation with exe_wrapper defined would normally set needs_exe_wrapper=true
+    # But we override it to false via conf to demonstrate conf has priority
+    client.run('install . -s arch=armv8 -s:b arch=x86_64 '
+               '-c:h tools.meson.mesontoolchain:extra_variables="{\\"binaries\\": {\\"exe_wrapper\\": \\"/usr/bin/qemu\\"}, \\"properties\\": {\\"needs_exe_wrapper\\": \\"false\\"}}"')
+    content = client.load(MesonToolchain.cross_filename)
+    assert "exe_wrapper = '/usr/bin/qemu'" in content
+    print(content)
+    assert "needs_exe_wrapper = 'false'" in content
+
+
+def test_extra_variables_conf_has_priority_over_toolchain():
+    """Issue: https://github.com/conan-io/conan/issues/18718"""
+    client = TestClient()
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.meson import MesonToolchain
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+            def generate(self):
+                tc = MesonToolchain(self)
+                tc.binaries["custom_tool"] = "/conanfile/path"
+                tc.properties["my_prop"] = "conanfile_value"
+                tc.generate()
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run('install . -c tools.meson.mesontoolchain:extra_variables="{\\"binaries\\": {\\"custom_tool\\": \\"/conf/path\\"}, \\"properties\\": {\\"my_prop\\": \\"conf_value\\"}}"')
+    content = client.load(MesonToolchain.native_filename)
+    assert "custom_tool = '/conf/path'" in content
+    assert "my_prop = 'conf_value'" in content
+    assert "/conanfile/path" not in content
+    assert "conanfile_value" not in content

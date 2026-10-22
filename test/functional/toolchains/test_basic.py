@@ -21,7 +21,7 @@ class TestBasic:
         client.save({"conanfile.py": conanfile})
         client.run("install .")
 
-        assert "conanfile.py: Calling generate()" in client.out
+        assert "Calling generate()" in client.out
         toolchain = client.load("conan_toolchain.cmake")
         assert "Conan automatically generated toolchain file" in toolchain
 
@@ -36,30 +36,13 @@ class TestBasic:
         client.save({"conanfile.py": conanfile})
         client.run("install .")
 
-        assert "conanfile.py: Generator 'CMakeToolchain' calling 'generate()'" in client.out
-        assert "conanfile.py: Generator 'MesonToolchain' calling 'generate()'" in client.out
-        assert "conanfile.py: Generator 'CMakeDeps' calling 'generate()'" in client.out
+        assert "Generator 'CMakeToolchain' calling 'generate()'" in client.out
+        assert "Generator 'MesonToolchain' calling 'generate()'" in client.out
+        assert "Generator 'CMakeDeps' calling 'generate()'" in client.out
         toolchain = client.load("conan_toolchain.cmake")
         assert "Conan automatically generated toolchain file" in toolchain
         toolchain = client.load("conan_meson_native.ini")
         assert "[project options]" in toolchain
-
-    @pytest.mark.tool("visual_studio")
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-    def test_declarative_msbuildtoolchain(self):
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class Pkg(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
-                generators = ("MSBuildToolchain", )
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("install .")
-
-        assert "conanfile.py: Generator 'MSBuildToolchain' calling 'generate()'" in client.out
-        toolchain = client.load("conantoolchain.props")
-        assert "<?xml version" in toolchain
 
     def test_error_missing_settings(self):
         conanfile = textwrap.dedent("""

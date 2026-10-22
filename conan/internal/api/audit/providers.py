@@ -30,7 +30,7 @@ class ConanCenterProvider:
                 output.write(f"'{self.name}'\n", fg=Color.BRIGHT_WHITE)
                 output.write("\nTo resolve, please:\n")
                 output.write("  1. Visit: ", fg=Color.BRIGHT_WHITE, newline=False)
-                output.write("https://audit.conan.io/register\n", fg=Color.BRIGHT_BLUE)
+                output.write("https://conan.io/audit/register\n", fg=Color.BRIGHT_BLUE)
                 output.write("  2. Register to obtain the access token and activate it.\n",
                              fg=Color.BRIGHT_WHITE)
                 output.write("  3. Use the command below to authenticate:\n", fg=Color.BRIGHT_WHITE)
@@ -60,7 +60,7 @@ class ConanCenterProvider:
                 ConanOutput().error(f"Authentication error ({response.status_code}).\n"
                                     f"Your token may be invalid or not yet validated. If you recently registered, please check your email to validate your token.\n"
                                     f" - Set a valid token using: 'conan audit provider auth {self.name} --token=<your_token>'\n"
-                                    f" - If you don’t have a token, register at: https://audit.conan.io/register")
+                                    f" - If you don’t have a token, register at: https://conan.io/audit/register")
 
                 result["conan_error"] = f"Authentication error ({response.status_code})."
                 break
@@ -89,7 +89,7 @@ class ConanCenterProvider:
                     )
                 output.write("Visit our website to learn more about JFrog's DevSecOps solution: ",
                              fg=Color.BRIGHT_WHITE, newline=False)
-                output.write("https://audit.conan.io/limit", newline=True,
+                output.write("https://conan.io/audit/limit", newline=True,
                              fg=Color.BRIGHT_BLUE)
                 output.write("\n")
 
@@ -218,7 +218,7 @@ class PrivateProvider:
                 ConanOutput().warning(
                     f"An error occurred while connecting to the '{self.name}' provider.\n"
                     "This is likely because your JFrog Platform instance does not have JFrog Curation.\n"
-                    "For more information, visit: https://audit.conan.io/missing-curation\n"
+                    "For more information, visit: https://conan.io/audit/missing-curation\n"
                 )
 
             # Raises if some HTTP error was found

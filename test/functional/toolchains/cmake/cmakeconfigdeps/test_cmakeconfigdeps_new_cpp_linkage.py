@@ -2,7 +2,6 @@ import platform
 import textwrap
 import pytest
 
-from conan.test.assets.genconanfile import GenConanfile
 from conan.test.assets.sources import gen_function_c, gen_function_h, gen_function_cpp
 from conan.test.utils.tools import TestClient
 
@@ -271,3 +270,137 @@ def test_inter_component_vis():
              "test_package/conanfile.py": test_conanfile})
 
     tc.run("create")
+
+
+@pytest.mark.tool("cmake", "3.27")
+def test_compile_only_transitive_headers():
+    """
+    engine (SHARED) requires matrix with libs=False, headers=True, transitive_headers=True.
+    engine's public header (engine.h) includes matrix.h, so consumers that include engine.h
+    must have matrix's include directory on their compile path.
+    The $<COMPILE_ONLY:matrix::matrix> in the generated cmake propagates that include directory
+    for compilation without adding matrix to the link step.
+    If those two lines are absent the consumer cannot find matrix.h and the build fails.
+    """
+    tc = TestClient()
+
+    # matrix: installs only a header with an inline helper — nothing to link
+    matrix_h = textwrap.dedent("""\
+        #pragma once
+        inline int matrix_value() { return 42; }
+        """)
+    matrix_conanfile = textwrap.dedent("""\
+        import os
+        from conan import ConanFile
+        from conan.tools.files import copy
+        class Matrix(ConanFile):
+            name = "matrix"
+            version = "0.1"
+            package_type = "header-library"
+            exports_sources = "include/*"
+            def package(self):
+                copy(self, "*.h", src=self.source_folder, dst=self.package_folder)
+        """)
+
+    # engine: SHARED library whose public header exposes matrix.h
+    engine_h = textwrap.dedent("""\
+        #pragma once
+        #include "matrix.h"
+        #ifdef _WIN32
+          #define ENGINE_EXPORT __declspec(dllexport)
+        #else
+          #define ENGINE_EXPORT
+        #endif
+        ENGINE_EXPORT int engine_get();
+        """)
+    engine_cpp = textwrap.dedent("""\
+        #include "engine.h"
+        int engine_get() { return matrix_value() + 1; }
+        """)
+    engine_cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        cmake_minimum_required(VERSION 3.27)
+        project(engine CXX)
+        find_package(matrix REQUIRED CONFIG)
+        add_library(engine SHARED src/engine.cpp)
+        target_include_directories(engine PUBLIC
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:include>)
+        target_link_libraries(engine PRIVATE matrix::matrix)
+        install(TARGETS engine DESTINATION lib)
+        install(FILES include/engine.h DESTINATION include)
+        """)
+    engine_conanfile = textwrap.dedent("""\
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+        class Engine(ConanFile):
+            name = "engine"
+            version = "0.1"
+            package_type = "shared-library"
+            settings = "os", "compiler", "build_type", "arch"
+            exports_sources = "CMakeLists.txt", "src/*", "include/*"
+            generators = "CMakeToolchain", "CMakeConfigDeps"
+            def requirements(self):
+                self.requires("matrix/0.1", transitive_headers=True)
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+            def package_info(self):
+                self.cpp_info.libs = ["engine"]
+        """)
+
+    # consumer: exe that only links engine::engine but includes engine.h (which includes matrix.h)
+    consumer_cmake = textwrap.dedent("""\
+        set(CMAKE_CXX_COMPILER_WORKS 1)
+        set(CMAKE_CXX_ABI_COMPILED 1)
+        cmake_minimum_required(VERSION 3.27)
+        project(consumer CXX)
+        find_package(engine REQUIRED CONFIG)
+        add_executable(app src/main.cpp)
+        target_link_libraries(app PRIVATE engine::engine)
+        """)
+    consumer_cpp = textwrap.dedent("""\
+        #include "engine.h"
+        int main() {
+            // matrix_value() is declared in matrix.h, included transitively via engine.h.
+            // Without $<COMPILE_ONLY:matrix::matrix> in engine's cmake targets file the
+            // compiler cannot find matrix.h and this line causes a build error.
+            return engine_get() - matrix_value() - 1;
+        }
+        """)
+    consumer_conanfile = textwrap.dedent("""\
+        import os
+        from conan import ConanFile
+        from conan.tools.cmake import CMake
+        class Consumer(ConanFile):
+            settings = "os", "compiler", "build_type", "arch"
+            generators = "CMakeToolchain", "CMakeConfigDeps"
+            requires = "engine/0.1"
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+        """)
+
+    tc.save({
+        "matrix/include/matrix.h": matrix_h,
+        "matrix/conanfile.py": matrix_conanfile,
+        "engine/include/engine.h": engine_h,
+        "engine/src/engine.cpp": engine_cpp,
+        "engine/CMakeLists.txt": engine_cmake,
+        "engine/conanfile.py": engine_conanfile,
+        "consumer/src/main.cpp": consumer_cpp,
+        "consumer/CMakeLists.txt": consumer_cmake,
+        "consumer/conanfile.py": consumer_conanfile,
+    })
+    tc.run("create matrix")
+    tc.run("create engine")
+    tc.run("build consumer")
+    # This fails to build if target_link_libraries({{lib}} INTERFACE $<COMPILE_ONLY is not there

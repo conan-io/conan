@@ -10,7 +10,6 @@ from io import BytesIO
 
 from conan.internal.api.uploader import gzopen_without_timestamps
 from conan.tools.files.files import untargz
-from conan.internal.subsystems import get_cased_path
 from conan.errors import ConanException
 
 
@@ -27,6 +26,32 @@ def wait_until_removed(folder):
         raise Exception("Could remove folder %s: %s" % (folder, latest_exception))
 
 
+def wait_clock_tick():
+    """ Wait until the clock moves forward, so everything timestamped afterwards (e.g. new
+    revisions in the cache or the server) is strictly newer than everything timestamped before.
+    The revision timestamps keep the time.time() resolution, which can be ~16ms in Windows
+    (Python < 3.13), so this is a much shorter wait than a sleep(1)
+    """
+    start = time.time()
+    while time.time() <= start:
+        time.sleep(0.001)
+
+
+def backdate_folder(folder, seconds=10):
+    """ Move the modification time of a folder and everything inside it some seconds to the
+    past, so files written later (or the cache LRU updated later) are clearly newer, instead of
+    waiting for the time to pass
+    """
+    past = time.time() - seconds
+    for root, dirs, files in os.walk(folder):
+        for name in dirs + files:
+            try:
+                os.utime(os.path.join(root, name), (past, past))
+            except OSError:  # e.g. a .pdb still opened by the Windows mspdbsrv
+                pass
+    os.utime(folder, (past, past))
+
+
 CONAN_TEST_FOLDER = os.getenv('CONAN_TEST_FOLDER', None)
 if CONAN_TEST_FOLDER and not os.path.exists(CONAN_TEST_FOLDER):
     os.makedirs(CONAN_TEST_FOLDER)
@@ -34,8 +59,6 @@ if CONAN_TEST_FOLDER and not os.path.exists(CONAN_TEST_FOLDER):
 
 def temp_folder(path_with_spaces=True, create_dir=True):
     t = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
-    # Make sure that the temp folder is correctly cased, as tempfile return lowercase for Win
-    t = get_cased_path(t)
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     t = os.path.realpath(t)
     # FreeBSD and Solaris do not use GNU Make as a the default 'make' program which has trouble

@@ -83,4 +83,4 @@ def test_build_require_undetected_loop():
     c.run("create cmake")
     c.run("install app")
     # It doesn't hang, and it sees correctly just 1 dependency
-    assert "conanfile.py (test/1.0): NUM DEPS: 1" in c.out
+    assert "NUM DEPS: 1" in c.out

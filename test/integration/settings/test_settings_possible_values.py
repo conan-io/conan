@@ -25,9 +25,9 @@ def test_settings_definitions():
     c.save({"conanfile.py": conanfile})
     # New settings are there
     c.run("install . -s os=Linux")
-    assert "conanfile.py: Windows, WindowsStore, WindowsCE, Linux," in c.out
-    assert "conanfile.py: iOS: ['7.0', '7.1', '8.0'," in c.out
-    assert "conanfile.py: iOS2: ['7.0', '7.1', '8.0'," in c.out
+    assert "Windows, WindowsStore, WindowsCE, Linux," in c.out
+    assert "iOS: ['7.0', '7.1', '8.0'," in c.out
+    assert "iOS2: ['7.0', '7.1', '8.0'," in c.out
 
 
 def test_settings_definitions_compiler():
@@ -54,6 +54,6 @@ def test_settings_definitions_compiler():
             "profile": profile})
     # New settings are there
     c.run("install . -pr=profile -s:b compiler=gcc")
-    assert "conanfile.py: HOST: 170, 180, 190, 191, 192" in c.out
-    assert "conanfile.py: BUILD: 4.1, 4.4, 4.5, 4.6, 4.7," in c.out
-    assert "conanfile.py: CPPSTDS: [None, '14', '17', '20', '23']" in c.out
+    assert "HOST: 170, 180, 190, 191, 192" in c.out
+    assert "BUILD: 4.1, 4.4, 4.5, 4.6, 4.7," in c.out
+    assert "CPPSTDS: [None, '14', '17', '20', '23']" in c.out

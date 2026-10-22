@@ -11,13 +11,18 @@ on:
       - 'release/*'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+  actions: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   ensure_latest_tag_merged:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Ensure latest release is merged in develop2 branch
     steps:
       - uses: actions/checkout@v4
@@ -31,14 +36,15 @@ jobs:
           git merge-base --is-ancestor "$latest_tag" origin/develop2
 
   set_python_versions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       python_versions_linux_windows: ${{ steps.set_versions.outputs.python_versions_linux_windows }}
       python_versions_macos: ${{ steps.set_versions.outputs.python_versions_macos }}
       run_slow_tests: ${{ steps.set_versions.outputs.run_slow_tests }}
+      run_covtest: ${{ steps.fetch_pr.outputs.run_covtest }}
     name: Determine Python versions
     steps:
-      - name: Fetch current PR body and check for slow-tests marker
+      - name: Fetch current PR body and check for slow-tests/covtest markers
         if: github.event_name == 'pull_request'
         id: fetch_pr
         run: |
@@ -50,12 +56,17 @@ jobs:
           else
             echo "run_slow_tests=false" >> $GITHUB_OUTPUT
           fi
+          if echo "$BODY" | grep -Fq '$runcovtest'; then
+            echo "run_covtest=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_covtest=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Determine Python versions
         id: set_versions
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/develop2" || "${{ github.ref }}" == refs/heads/release/* ]]; then
-            echo "python_versions_linux_windows=['3.14', '3.7']" >> $GITHUB_OUTPUT
+            echo "python_versions_linux_windows=['3.14', '3.8']" >> $GITHUB_OUTPUT
             echo "python_versions_macos=['3.14', '3.8']" >> $GITHUB_OUTPUT
           else
             echo "python_versions_linux_windows=['3.10']" >> $GITHUB_OUTPUT
@@ -72,31 +83,120 @@ jobs:
           fi
 
   linux_suite:
-    needs: [ensure_latest_tag_merged, set_python_versions]
+    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
     uses: ./.github/workflows/linux-tests.yml
     name: Linux test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
       run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
+      run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
   osx_suite:
-    needs: [ensure_latest_tag_merged, set_python_versions]
+    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
     uses: ./.github/workflows/osx-tests.yml
     name: OSX test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_macos }}
       run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
+      run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
   windows_suite:
-    needs: [ensure_latest_tag_merged, set_python_versions]
+    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
     uses: ./.github/workflows/win-tests.yml
     name: Windows test suite
     with:
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
       run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
+      run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
+
+  covtest_predict:
+    runs-on: ubuntu-26.04
+    name: CovTest Prediction
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        if: github.event_name == 'pull_request'
+        with:
+          python-version: '3.10'
+
+      - name: Install covtest
+        if: github.event_name == 'pull_request'
+        run: |
+          pip install git+https://github.com/conan-io/covtest.git || true
+
+      - name: Download recent covtest snapshots from develop2
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p .covtest
+          # covtest looks back up to max_commits (default 20) ancestor commits for a
+          # matching snapshot, so fetch the snapshot artifact from that many recent
+          # successful develop2 runs -- one artifact alone only covers the latest commit.
+          run_ids=$(gh run list --repo ${{ github.repository }} --workflow main.yml \
+            --branch develop2 --status success --limit 20 --json databaseId --jq '.[].databaseId')
+          for run_id in $run_ids; do
+            gh run download "$run_id" --repo ${{ github.repository }} \
+              --name covtest-snapshot --dir .covtest || true
+          done
+
+      - name: Run covtest predict
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p .covtest
+          covtest predict || echo "::warning title=covtest predict Failed::Could not run covtest predict."
+          touch .covtest/covtests.tests
+
+      - uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request'
+        with:
+          name: covtest-prediction
+          path: .covtest/covtests.tests
+          include-hidden-files: true
+
+  covtest_validation:
+    runs-on: ubuntu-26.04
+    name: CovTest Validation
+    if: always() && github.event_name == 'pull_request'
+    needs: [linux_suite, osx_suite, windows_suite, covtest_predict]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Download test results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          path: test-results/
+          merge-multiple: false
+
+      - name: Download covtest prediction
+        uses: actions/download-artifact@v4
+        with:
+          name: covtest-prediction
+          path: covtest-prediction/
+        continue-on-error: true
+
+      - name: Validate covtest prediction
+        run: python .ci/covtest_validation.py
+
+      - name: Cleanup artifacts
+        if: always()
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: |
+            test-results-*
+            covtest-prediction
 
   code_coverage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Code coverage
     if: github.ref == 'refs/heads/develop2'         # Only measure code coverage on main branch
     needs: [linux_suite, osx_suite, windows_suite]
@@ -116,6 +216,19 @@ jobs:
           coverage report
           coverage xml
 
+      - name: Install and compute covtest
+        run: |
+          pip install git+https://github.com/conan-io/covtest.git || true
+          covtest process || true
+
+      - name: Upload covtest snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: covtest-snapshot
+          path: .covtest
+          include-hidden-files: true
+          if-no-files-found: warn
+
       - name: Code coverage
         uses: codecov/codecov-action@v5
         with:
@@ -127,7 +240,7 @@ jobs:
             .coverage.*
 
   deploy_to_pypi_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Deploy to TestPyPI
     if: github.ref == 'refs/heads/develop2'
     needs: [linux_suite, osx_suite, windows_suite]
@@ -140,7 +253,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: '3.10'
 
       - name: Install dependencies
         run: |
@@ -179,7 +292,7 @@ jobs:
           python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
 
   verify_testpypi:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Verify TestPyPI wheel
     if: github.ref == 'refs/heads/develop2'
     needs: [deploy_to_pypi_test]
@@ -195,7 +308,7 @@ jobs:
     steps:
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: '3.10'
 
       - name: Install ${{ matrix.package }} (${{ matrix.mode }})
         run: |

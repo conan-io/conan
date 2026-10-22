@@ -187,6 +187,10 @@ void {{package_name}}(){
     std::cout << "  {{name}}/{{version}}: __INTEL_COMPILER" << __INTEL_COMPILER<< "\n";
     #endif
 
+    #if __INTEL_LLVM_COMPILER
+    std::cout << "  {{name}}/{{version}}: __INTEL_LLVM_COMPILER" << __INTEL_LLVM_COMPILER<< "\n";
+    #endif
+
     #if __GNUC__
     std::cout << "  {{name}}/{{version}}: __GNUC__" << __GNUC__<< "\n";
     #endif

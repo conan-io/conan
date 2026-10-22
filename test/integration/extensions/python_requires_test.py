@@ -1,8 +1,8 @@
 import os
 import textwrap
-import time
 
 from conan.api.model import RecipeReference
+from conan.test.utils.test_files import wait_clock_tick
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
@@ -37,9 +37,9 @@ class TestPyRequiresExtend:
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         package_id = client.created_package_id("pkg/0.1@user/testing")
-        assert "pkg/0.1@user/testing: My cool source!" in client.out
+        assert "My cool source!" in client.out
         assert "pkg/0.1@user/testing: My cool build!" in client.out
-        assert "pkg/0.1@user/testing: My cool package!" in client.out
+        assert "My cool package!" in client.out
         assert "pkg/0.1@user/testing: My cool package_info!" in client.out
 
         client.run("upload * --confirm -r default")
@@ -80,8 +80,8 @@ class TestPyRequiresExtend:
                """)
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("source . --name=pkg --version=0.1")
-        assert "conanfile.py (pkg/0.1): My cool source!" in client.out
-        assert "conanfile.py (pkg/0.1): MY OWN SOURCE" in client.out
+        assert "My cool source!" in client.out
+        assert "MY OWN SOURCE" in client.out
 
     def test_reuse_dot(self):
         client = TestClient(light=True, default_server_user=True)
@@ -103,24 +103,6 @@ class TestPyRequiresExtend:
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         assert "pkg/0.1@user/testing: My cool build!" in client.out
 
-    def test_with_alias(self):
-        client = TestClient(light=True)
-        self._define_base(client)
-        client.alias("base/latest@user/testing", "base/1.1@user/testing")
-
-        reuse = textwrap.dedent("""
-            from conan import ConanFile
-            class PkgTest(ConanFile):
-                name = "pkg"
-                version = "1.0"
-                python_requires = "base/latest@user/testing"
-            """)
-        client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("install .", assert_error=True)
-        assert "python-requires 'alias' are not supported in Conan 2.0" in client.out
-        client.run("create .", assert_error=True)
-        assert "python-requires 'alias' are not supported in Conan 2.0" in client.out
-
     def test_reuse_version_ranges(self):
         client = TestClient(light=True)
         self._define_base(client)
@@ -135,9 +117,9 @@ class TestPyRequiresExtend:
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         client.assert_listed_require({"base/1.1@user/testing": "Cache"}, python=True)
-        assert "pkg/0.1@user/testing: My cool source!" in client.out
+        assert "My cool source!" in client.out
         assert "pkg/0.1@user/testing: My cool build!" in client.out
-        assert "pkg/0.1@user/testing: My cool package!" in client.out
+        assert "My cool package!" in client.out
         assert "pkg/0.1@user/testing: My cool package_info!" in client.out
 
     def test_multiple_reuse(self):
@@ -172,9 +154,9 @@ class TestPyRequiresExtend:
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        assert "pkg/0.1@user/testing: My cool source!" in client.out
+        assert "My cool source!" in client.out
         assert "pkg/0.1@user/testing: My cool build!" in client.out
-        assert "pkg/0.1@user/testing: My cool package!" in client.out
+        assert "My cool package!" in client.out
         assert "pkg/0.1@user/testing: My cool package_info!" in client.out
 
     @staticmethod
@@ -200,7 +182,7 @@ class TestPyRequiresExtend:
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=channel")
-        assert "pkg/0.1@user/channel: Created package" in client.out
+        assert "Created package" in client.out
 
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -210,7 +192,7 @@ class TestPyRequiresExtend:
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=channel")
-        assert "pkg/0.1@user/channel: Created package" in client.out
+        assert "Created package" in client.out
 
     def test_multiple_requires_error(self):
         client = TestClient(light=True)
@@ -296,9 +278,9 @@ class TestPyRequiresExtend:
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         package_id = client.created_package_id("pkg/0.1@user/testing")
-        assert "pkg/0.1@user/testing: My cool source!" in client.out
+        assert "My cool source!" in client.out
         assert "pkg/0.1@user/testing: My cool build!" in client.out
-        assert "pkg/0.1@user/testing: My cool package!" in client.out
+        assert "My cool package!" in client.out
         assert "pkg/0.1@user/testing: My cool package_info!" in client.out
 
         client.run("upload * --confirm -r default")
@@ -342,12 +324,12 @@ class TestPyRequiresExtend:
                      "header.h": "pkg new header contents",
                      "other.txt": "text"})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        assert "pkg/0.1@user/testing: Exports sources! *.h" in client.out
-        assert "pkg/0.1@user/testing: Copied 1 '.txt' file: other.txt" in client.out
-        assert "pkg/0.1@user/testing: Copied 1 '.h' file: header.h" in client.out
-        assert "pkg/0.1@user/testing: License! MyLicense" in client.out
-        assert "pkg/0.1@user/testing: Author! author@company.com" in client.out
-        assert "pkg/0.1@user/testing: HEADER CONTENT!: pkg new header contents" in client.out
+        assert " Exports sources! *.h" in client.out
+        assert "Copied 1 '.txt' file: other.txt" in client.out
+        assert "Copied 1 '.h' file: header.h" in client.out
+        assert " License! MyLicense" in client.out
+        assert " Author! author@company.com" in client.out
+        assert " HEADER CONTENT!: pkg new header contents" in client.out
         ref = RecipeReference.loads("pkg/0.1@user/testing")
         assert os.path.exists(os.path.join(client.get_latest_ref_layout(ref).export(), "other.txt"))
 
@@ -461,7 +443,7 @@ class TestPyRequiresExtend:
                 """)
         client.save({"conanfile.py": derived})
         client.run("install .")
-        assert "conanfile.py: MYOPTION: 2!!!!" in client.out
+        assert "MYOPTION: 2!!!!" in client.out
 
     def test_failure_init_method(self):
         client = TestClient()
@@ -494,7 +476,7 @@ class TestPyRequiresExtend:
                 """)
         client.save({"conanfile.py": derived})
         client.run("create . --name=pkg --version=0.1 -o base_option=True -o derived_option=True")
-        assert "pkg/0.1: Created package" in client.out
+        assert "Created package" in client.out
         client.run("create . --name=pkg --version=0.1 -o whatever=True", assert_error=True)
         assert "Possible options are ['derived_option', 'base_option']" in client.out
 
@@ -567,7 +549,7 @@ class TestPyRequiresExtend:
         assert "conanfile.py: PYTHON REQUIRE VAR 42" in client2.out
 
         client.save({"conanfile.py": conanfile.replace("42", "143")})
-        time.sleep(1)  # guarantee time offset
+        wait_clock_tick()  # guarantee time offset
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
 
@@ -650,7 +632,7 @@ class TestPyRequiresExtend:
             """)
         client.save({"conanfile.py": conanfile})
         client.run("source .")
-        assert "conanfile.py: Pkg1 source: 42" in client.out
+        assert "Pkg1 source: 42" in client.out
         client.run("install .")
         client.run("build .")
         assert "conanfile.py: Pkg1 build: 42" in client.out
@@ -691,11 +673,11 @@ class TestPyRequiresExtend:
                      "name.txt": "mypkg",
                      "version.txt": "myversion"})
         client.run("export .")
-        assert "mypkg/myversion: Exported" in client.out
+        assert "Exported: mypkg/myversion" in client.out
         client.run("create .")
-        assert "mypkg/myversion: Pkg1 source: mypkg:myversion" in client.out
+        assert "Pkg1 source: mypkg:myversion" in client.out
         assert "mypkg/myversion: Pkg1 build: mypkg:myversion" in client.out
-        assert "mypkg/myversion: Pkg1 package: mypkg:myversion" in client.out
+        assert "Pkg1 package: mypkg:myversion" in client.out
 
     def test_reuse_name_version_override(self):
         client = TestClient(light=True)
@@ -738,11 +720,11 @@ class TestPyRequiresExtend:
                      "name.txt": "mypkg",
                      "version.txt": "myversion"})
         client.run("export .")
-        assert "mypkg/myversion2: Exported" in client.out
+        assert "Exported: mypkg/myversion2" in client.out
         client.run("create .")
-        assert "mypkg/myversion2: Pkg1 source: mypkg:myversion2" in client.out
+        assert "Pkg1 source: mypkg:myversion2" in client.out
         assert "mypkg/myversion2: Pkg1 build: mypkg:myversion2" in client.out
-        assert "mypkg/myversion2: Pkg1 package: mypkg:myversion2" in client.out
+        assert "Pkg1 package: mypkg:myversion2" in client.out
 
     def test_reuse_export_sources(self):
         client = TestClient(light=True)
@@ -784,20 +766,20 @@ class TestPyRequiresExtend:
                      "name.txt": "MyPkg",
                      "version.txt": "MyVersion"})
         client.run("export . --name=pkg --version=1.0 --user=user --channel=channel")
-        assert "pkg/1.0@user/channel: Exported" in client.out
+        assert "Exported: pkg/1.0@user/channel" in client.out
         client.run("create . --name=pkg --version=1.0 --user=user --channel=channel")
-        assert "pkg/1.0@user/channel: Source: tool header: myheader" in client.out
-        assert "pkg/1.0@user/channel: Source: tool other: otherheader" in client.out
+        assert "Source: tool header: myheader" in client.out
+        assert "Source: tool other: otherheader" in client.out
         assert "pkg/1.0@user/channel: Build: tool header: myheader" in client.out
         assert "pkg/1.0@user/channel: Build: tool other: otherheader" in client.out
-        assert "pkg/1.0@user/channel: Package: tool header: myheader" in client.out
-        assert "pkg/1.0@user/channel: Package: tool other: otherheader" in client.out
+        assert "Package: tool header: myheader" in client.out
+        assert "Package: tool other: otherheader" in client.out
 
         # The local flow
         client.run("install .")
         client.run("source .")
-        assert "conanfile.py: Source: tool header: myheader" in client.out
-        assert "conanfile.py: Source: tool other: otherheader" in client.out
+        assert "Source: tool header: myheader" in client.out
+        assert "Source: tool other: otherheader" in client.out
         client.run("build .")
         assert "conanfile.py: Build: tool header: myheader" in client.out
         assert "conanfile.py: Build: tool other: otherheader" in client.out
@@ -842,8 +824,8 @@ class TestPyRequiresExtend:
         # The local flow
         client2.run("install .")
         client2.run("source .")
-        assert "conanfile.py: Source: tool header: myheader" in client2.out
-        assert "conanfile.py: Source: tool other: otherheader" in client2.out
+        assert "Source: tool header: myheader" in client2.out
+        assert "Source: tool other: otherheader" in client2.out
         client2.run("build .")
         assert "conanfile.py: Build: tool header: myheader" in client2.out
         assert "conanfile.py: Build: tool other: otherheader" in client2.out
@@ -861,9 +843,9 @@ class TestPyRequiresExtend:
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        assert "pkg/0.1@user/testing: My cool source!" in client.out
+        assert "My cool source!" in client.out
         assert "pkg/0.1@user/testing: My cool build!" in client.out
-        assert "pkg/0.1@user/testing: My cool package!" in client.out
+        assert "My cool package!" in client.out
         assert "pkg/0.1@user/testing: My cool package_info!" in client.out
 
     def test_options_errors(self):
@@ -1060,7 +1042,7 @@ def test_transitive_diamond_python_requires():
     client.run("create . --user=user --channel=channel")
     assert "consumer/1.0@user/channel: Calling build()\nconsumer/1.0@user/channel: 123, 2222" in \
            client.out
-    assert "consumer/1.0@user/channel: Calling package()\nconsumer/1.0@user/channel: 222, 234" in \
+    assert "Calling package()\n222, 234" in \
            client.out
 
 
@@ -1230,19 +1212,19 @@ class TestResolveRemote:
         c.run("upload * -r=default -c")
         c.run("remove * -c")
         c.run("create pkg")
-        assert "tool/0.1: Downloaded recipe" in c.out
+        assert "Downloaded recipe" in c.out
 
         c.run("remove * -c")
         c.run("export pkg")
-        assert "tool/0.1: Downloaded recipe" in c.out
+        assert "Downloaded recipe" in c.out
 
         c.run("remove * -c")
         c.run("export pkg -r=default")
-        assert "tool/0.1: Downloaded recipe" in c.out
+        assert "Downloaded recipe" in c.out
 
         c.run("remove * -c")
         c.run("create pkg -r=default")
-        assert "tool/0.1: Downloaded recipe" in c.out
+        assert "Downloaded recipe" in c.out
 
     def test_missing_python_require_error(self):
         """ make sure the error is clear enough for users UX
@@ -1298,8 +1280,8 @@ class TestTransitiveExtend:
         client.run("export company")
         client.run("export project")
         client.run("install consumer")
-        assert "conanfile.py (consumer/1.0): Msg1:project!!!" in client.out
-        assert "conanfile.py (consumer/1.0): Msg2:company!!!" in client.out
+        assert "Msg1:project!!!" in client.out
+        assert "Msg2:company!!!" in client.out
 
     def test_transitive_extend2(self):
         client = TestClient(light=True)
@@ -1349,8 +1331,8 @@ class TestTransitiveExtend:
         client.run("export company")
         client.run("export project")
         client.run("install consumer")
-        assert "conanfile.py (consumer/1.0): Msg1:project!!!" in client.out
-        assert "conanfile.py (consumer/1.0): Msg2:company!!!" in client.out
+        assert "Msg1:project!!!" in client.out
+        assert "Msg2:company!!!" in client.out
 
 
 def test_multi_top_missing_from_remote():

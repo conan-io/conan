@@ -57,7 +57,6 @@ class MSBuildDeps:
           <PropertyGroup>
             <ConanDebugPath>$(Conan{{name}}BinaryDirectories);$(ConanDebugPath)</ConanDebugPath>
             <LocalDebuggerEnvironment>PATH=$(ConanDebugPath);%PATH%</LocalDebuggerEnvironment>
-            <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
             {% if ca_exclude %}
             <CAExcludePath>$(Conan{{name}}IncludeDirectories);$(CAExcludePath)</CAExcludePath>
             {% endif %}

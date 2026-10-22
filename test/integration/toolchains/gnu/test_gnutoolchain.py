@@ -226,7 +226,7 @@ def test_unknown_compiler():
                  })
     # this used to crash, because of build_type_flags in GnuToolchain returning empty string
     client.run("install . -s compiler=xlc")
-    assert "conanfile.py: Generator 'GnuToolchain' calling 'generate()'" in client.out
+    assert "Generator 'GnuToolchain' calling 'generate()'" in client.out
 
 
 def test_toolchain_and_compilers_build_context():
@@ -653,3 +653,27 @@ def test_thread_flags(threads, flags):
         assert f'export CXXFLAGS="${{CXXFLAGS:-}}${{CXXFLAGS:+ }}-stdlib=libc++ {flags}"' in toolchain
         assert f'export CFLAGS="${{CFLAGS:-}}${{CFLAGS:+ }}{flags}"' in toolchain
         assert f'export LDFLAGS="${{LDFLAGS:-}}${{LDFLAGS:+ }}{flags}"' in toolchain
+
+
+def test_gnutoolchain_asflags_sysroot():
+    """Test that sysroot and arch flags are propagated to ASFLAGS."""
+    profile = textwrap.dedent("""
+        [settings]
+        os=Macos
+        arch=armv8
+        compiler=gcc
+        compiler.version=11
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:sysroot=/my/sysroot
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type") \
+        .with_generator("GnuToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conangnutoolchain.sh")
+    assert "ASFLAGS" in toolchain
+    assert "--sysroot /my/sysroot" in toolchain

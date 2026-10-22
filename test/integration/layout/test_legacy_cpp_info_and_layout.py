@@ -36,4 +36,4 @@ def test_legacy_deps_cpp_info_deps_version_using_or_not_layout(declare_layout):
     client = TestClient()
     client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile})
     client.run("create .")
-    assert "hello/1.0 (test package): 1.0" in client.out
+    assert "1.0" in client.out

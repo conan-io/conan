@@ -6,7 +6,28 @@ from shutil import which
 
 import pytest
 
-from conan.internal.api.detect.detect_vs import vswhere
+from conan.internal.api.detect import detect_vs
+from conan.internal.api.detect.detect_vs import vs_installation_path
+
+
+def _cache_vs_installation_path():
+    """
+    Locating a Visual Studio installation runs vswhere twice, and it is done again for every
+    VCVars generation (CMakeToolchain, MSBuildToolchain, etc.), which is slow in Windows. The
+    installed Visual Studio versions do not change during the test session, so cache them
+    """
+    vs_installation = detect_vs._vs_installation_path
+    cached = {}
+
+    def _cached_vs_installation_path(version):
+        if version not in cached:
+            cached[version] = vs_installation(version)
+        return cached[version]
+
+    detect_vs._vs_installation_path = _cached_vs_installation_path
+
+
+_cache_vs_installation_path()
 
 """
 To override these locations with your own in your dev machine:
@@ -24,12 +45,11 @@ tools_locations = {
         "3.15": {},
         "3.16": {"disabled": True},
         "3.17": {"disabled": True},
-        "3.19": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-windows-x86_64/bin"}},
         # To explicitly skip one tool for one version, define the path as 'skip-tests'
         # if you don't define the path for one platform it will run the test with the
         # tool in the path. For example here it will skip the test with CMake in Darwin but
         # in Linux it will run with the version found in the path if it's not specified
-        "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.19.7-windows-x86_64/bin",
+        "3.23": {"path": {"Windows": "C:/ws/cmake/cmake-3.23.1-windows-x86_64/bin",
                           "Darwin": "skip-tests"}},
     },
     'ninja': {
@@ -56,9 +76,10 @@ tools_locations = {
         }
     },
     'visual_studio': {"default": "15",
-                      "15": {},
-                      "16": {"disabled": True},
-                      "17": {}},
+                      "15": {"disabled": not vs_installation_path("15")},
+                      "16": {"disabled": not vs_installation_path("16")},
+                      "17": {"disabled": not vs_installation_path("17")},
+                      "18": {"disabled": not vs_installation_path("18")}},
     'pkg_config': {
         "exe": "pkg-config",
         "default": "0.28",
@@ -78,11 +99,6 @@ tools_locations = {
                      'Darwin': '/Users/runner/Applications/CMake/3.15.7/bin',
                      'Linux': '/usr/share/cmake-3.15.7/bin'}
         },
-        "3.19": {
-            "path": {'Windows': 'C:/tools/cmake/3.19.7/cmake-3.19.7-win64-x64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/3.19.7/bin',
-                     'Linux': '/usr/share/cmake-3.19.7/bin'}
-        },
         "3.23": {
             "path": {'Windows': 'C:/tools/cmake/3.23.5/cmake-3.23.5-windows-x86_64/bin',
                      'Darwin': '/Users/runner/Applications/CMake/3.23.5/bin',
@@ -93,15 +109,16 @@ tools_locations = {
                      'Darwin': '/Users/runner/Applications/CMake/3.27.9/bin',
                      'Linux': "/usr/share/cmake-3.27.9/bin"}
         },
-        "4.2": {
-            "path": {'Windows': 'C:/tools/cmake/4.2.1/cmake-4.2.1-windows-x86_64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/4.2.1/bin',
-                     'Linux': "/usr/share/cmake-4.2.1/bin"}
+        "4.4": {
+            "path": {'Windows': 'C:/tools/cmake/4.4.3/cmake-4.4.3-windows-x86_64/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/4.4.3/bin',
+                     'Linux': "/usr/share/cmake-4.4.3/bin"}
         }
     },
     'ninja': {
-        "default": "1.10.2",
-        "1.10.2": {
+        # Whatever version is installed in the CI machines, the runners already provide one
+        "default": "system",
+        "system": {
             "path": {'Windows': f'{windows_choco_root}/ninja/tools'}
         }
     },
@@ -144,7 +161,6 @@ tools_locations = {
         "system": {"path": {'Windows': f"{msys2_path}/clang64/bin"}},
     },
     'msys2_mingw64_clang64': {
-        "disabled": True,
         "platform": "Windows",
         "default": "system",
         "exe": "clang",
@@ -158,15 +174,18 @@ tools_locations = {
     },
     'bazel': {
         "default": "7.x",
-        "6.x": {"path": {'Linux': '/usr/share/bazel-6.5.0/bin',
-                         'Windows': 'C:/tools/bazel/6.5.0',
-                         'Darwin': '/Users/runner/Applications/bazel/6.5.0'}},
+        "6.x": {"path": {'Linux': '/usr/share/bazel-6.6.0/bin',
+                         'Windows': 'C:/tools/bazel/6.6.0',
+                         'Darwin': '/Users/runner/Applications/bazel/6.6.0'}},
         "7.x": {"path": {'Linux': '/usr/share/bazel-7.6.2/bin',
                          'Windows': 'C:/tools/bazel/7.6.2',
                          'Darwin': '/Users/runner/Applications/bazel/7.6.2'}},
         "8.x": {"path": {'Linux': '/usr/share/bazel-8.4.2/bin',
                          'Windows': 'C:/tools/bazel/8.4.2',
                          'Darwin': '/Users/runner/Applications/bazel/8.4.2'}},
+        "9.x": {"path": {'Linux': '/usr/share/bazel-9.1.0/bin',
+                         'Windows': 'C:/tools/bazel/9.1.0',
+                         'Darwin': '/Users/runner/Applications/bazel/9.1.0'}},
     },
     'premake': {
         "exe": "premake5",
@@ -198,12 +217,18 @@ tools_locations = {
     },
     "emcc": {},
     "node": {},
-    # TODO: Intel oneAPI is not installed in CI yet. Uncomment this line whenever it's done.
-    # "intel_oneapi": {
-    #     "default": "2021.3",
-    #     "exe": "dpcpp",
-    #     "2021.3": {"path": {"Linux": "/opt/intel/oneapi/compiler/2021.3.0/linux/bin"}}
-    # }
+    "intel_oneapi": {
+        "default": "2026.0",
+        "exe": "icpx",
+        "2026.0": {
+            "path": {"Linux": "/opt/intel/oneapi/compiler/2026.0/bin"},
+            "root": {"Linux": "/opt/intel/oneapi"}
+        }
+    },
+    'xcode_sdk': {
+        "26.0": {"path": {"Darwin": "/Applications/Xcode_26.0.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk"}},
+        "26.5": {"path": {"Darwin": "/Applications/Xcode_26.5.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk"}},
+    }
 }
 
 
@@ -224,14 +249,6 @@ try:
     update(tools_locations, user_tool_locations)
 except ImportError as e:
     user_tool_locations = None
-
-
-tools_environments = {
-    'mingw32': {'Windows': {'MSYSTEM': 'MINGW32'}},
-    'mingw64': {'Windows': {'MSYSTEM': 'MINGW64'}},
-    'ucrt64': {'Windows': {'MSYSTEM': 'UCRT64'}},
-    'msys2_clang64': {"Windows": {"MSYSTEM": "CLANG64"}}
-}
 
 
 _cached_tools = {}
@@ -257,7 +274,7 @@ def _get_individual_tool(name, version):
 
     tool_platform = platform.system()
     if tool.get("platform", tool_platform) != tool_platform:
-        return None, None
+        return None
 
     version = version or tool.get("default")
     tool_version = tool.get(version)
@@ -266,8 +283,8 @@ def _get_individual_tool(name, version):
         if tool_version.get("disabled"):
             return False
         if name == "visual_studio":
-            if vswhere():  # TODO: Missing version detection
-                return None, None
+            if vs_installation_path(version):
+                return None
 
         tool_path = tool_version.get("path", {}).get(tool_platform)
         tool_path = tool_path.replace("/", "\\") if tool_platform == "Windows" and tool_path is not None else tool_path
@@ -286,12 +303,7 @@ def _get_individual_tool(name, version):
             return True
         tool_path = None
 
-    try:
-        tool_env = tools_environments[name][tool_platform]
-    except KeyError:
-        tool_env = None
-
-    cached = tool_path, tool_env
+    cached = tool_path
 
     # Check this particular tool is installed
     old_environ = None
@@ -310,7 +322,7 @@ def _get_individual_tool(name, version):
         # finds the exe in a path that is not the one set in the conf -> fail
         cached = True
     elif tool_path is None:
-        cached = exe_path, tool_env
+        cached = exe_path
 
     if old_environ is not None:
         os.environ.clear()
@@ -362,11 +374,9 @@ def pytest_runtest_setup(item):
             pytest.skip("Required '{}' tool version '{}' is not available".format(tool_name,
                                                                                   version_msg))
 
-        tool_path, tool_env = result
+        tool_path = result
         if tool_path:
             tools_paths.append(tool_path)
-        if tool_env:
-            tools_env_vars.update(tool_env)
         # Fix random failures CI because of this: https://issues.jenkins.io/browse/JENKINS-9104
         if tool_name == "visual_studio":
             tools_env_vars['_MSPDBSRV_ENDPOINT_'] = str(uuid.uuid4())
@@ -375,3 +385,62 @@ def pytest_runtest_setup(item):
         item.old_environ = dict(os.environ)
         tools_env_vars['PATH'] = os.pathsep.join(tools_paths + [os.environ["PATH"]])
         os.environ.update(tools_env_vars)
+
+
+def _memoize_settings_yml_parsing():
+    """
+    Every ``TestClient.run()`` creates a new ``ConanAPI``, which parses again the whole
+    ``settings.yml`` with the pure-Python YAML loader. That parse is the most expensive part of
+    most Conan commands in the test suite, and the text is almost always the same one, so for
+    the test suite only, cache the parsed data by its text. A deep copy is returned, because
+    the caller can modify it (e.g. merging ``settings_user.yml``)
+    """
+    import copy
+    import yaml
+    from conan.internal.model import settings
+
+    parsed = {}
+
+    class _CachedSafeLoadYaml:
+        YAMLError = yaml.YAMLError
+
+        @staticmethod
+        def safe_load(text):
+            if not isinstance(text, str):
+                return yaml.safe_load(text)
+            try:
+                result = parsed[text]
+            except KeyError:
+                result = parsed[text] = yaml.safe_load(text)
+            return copy.deepcopy(result)
+
+    settings.yaml = _CachedSafeLoadYaml
+
+
+_memoize_settings_yml_parsing()
+
+
+def _no_sync_sqlite_databases():
+    """
+    The Conan cache and the local credentials DB open a new sqlite connection for every operation,
+    and every write is synchronously flushed to disk (journal_mode=DELETE + synchronous=FULL),
+    which is very slow in Windows. Durability does not matter for the test suite caches.
+    """
+    from contextlib import contextmanager
+    from conan.internal.api.remotes.localdb import LocalDB
+    from conan.internal.cache.db.table import BaseDbTable
+
+    def _no_sync(connect):
+        @contextmanager
+        def _connect(self):
+            with connect(self) as connection:
+                connection.execute("PRAGMA journal_mode=MEMORY")
+                connection.execute("PRAGMA synchronous=OFF")
+                yield connection
+        return _connect
+
+    BaseDbTable.db_connection = _no_sync(BaseDbTable.db_connection)
+    LocalDB._connect = _no_sync(LocalDB._connect)
+
+
+_no_sync_sqlite_databases()

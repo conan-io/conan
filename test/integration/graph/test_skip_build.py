@@ -75,7 +75,7 @@ def test_skip():
     assert "pkga" in c.out
     assert "pkgb" in c.out
     # but pkga binary is not really necessary
-    assert re.search(r"Skipped binaries(\s*)pkga/1.0.0", c.out)
+    assert re.search(r"Skipped test binaries(\s*)pkga/1.0.0", c.out)
 
     # skipping all but the current one
     c.run("install pkgc -c &:tools.graph:skip_test=False")

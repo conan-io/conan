@@ -1,0 +1,76 @@
+
+description: 'Compute the pytest test selection for a leg, optionally narrowed by a covtest prediction'
+
+inputs:
+  test-types:
+    description: 'Space-separated test folder names this leg covers (e.g. "functional" or "unittests integration")'
+    required: true
+
+  run-slow-tests:
+    description: 'Whether to include slow-marked functional tests (ignored for non-functional test-types)'
+    required: false
+    default: 'false'
+
+  run-covtest:
+    description: 'Whether to narrow the selection using the covtest prediction artifact'
+    required: false
+    default: 'false'
+
+outputs:
+  tests:
+    description: 'Computed tests argument for the test-coverage action'
+    value: ${{ steps.compute.outputs.tests }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download covtest prediction
+      if: inputs.run-covtest == 'true'
+      uses: actions/download-artifact@v4
+      with:
+        name: covtest-prediction
+        path: covtest-prediction
+      continue-on-error: true
+
+    - name: Compute tests
+      id: compute
+      shell: bash
+      run: |
+        default_tests() {
+          for t in ${{ inputs.test-types }}; do
+            if [ "$t" == "functional" ]; then
+              if [ "${{ inputs.run-slow-tests }}" == "true" ]; then
+                echo -n "test/functional "
+              else
+                echo -n 'test/functional -m "not slow" '
+              fi
+            else
+              echo -n "test/$t "
+            fi
+          done
+        }
+
+        if [ "${{ inputs.run-covtest }}" != "true" ]; then
+          echo "tests=$(default_tests)" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        PRED_FILE=covtest-prediction/covtests.tests
+        if [ ! -s "$PRED_FILE" ]; then
+          # No usable prediction (config changed, no snapshot, server unreachable) -- fall back
+          echo "::warning::covtest prediction unavailable for '${{ inputs.test-types }}', running the full test suite for this leg instead of the narrowed selection"
+          echo "tests=$(default_tests)" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+
+        PATTERN=$(for t in ${{ inputs.test-types }}; do echo -n "^test/$t/|"; done | sed 's/|$//')
+        FILTERED=covtest-prediction/filtered.tests
+        grep -E "$PATTERN" "$PRED_FILE" > "$FILTERED" || true
+        if [ -s "$FILTERED" ]; then
+          # covtest already narrowed this down to the tests it considers relevant to the
+          # diff, so run them even if they're slow-marked -- run-slow-tests only governs
+          # the unfiltered default_tests() selection.
+          echo "tests=@$FILTERED" >> $GITHUB_OUTPUT
+        else
+          echo "tests=" >> $GITHUB_OUTPUT
+        fi

@@ -1,3 +1,6 @@
+import os
+
+from conan.api.conan_api import ConanAPI
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -33,6 +36,32 @@ class TestEditablePackageTest:
         t.run('install --requires=lib/version@user/name')
         t.assert_listed_require({"lib/version@user/name": "Editable"})
 
+    def test_ref_shortcut(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --ref=lib/1.0@user/channel')
+        assert "Reference 'lib/1.0@user/channel' in editable mode" in t.out
+        t.run("editable list")
+        assert "lib/1.0@user/channel" in t.out
+
+    def test_ref_shortcut_no_user_channel(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --ref=lib/1.0')
+        assert "Reference 'lib/1.0' in editable mode" in t.out
+
+    def test_ref_incompatible_with_name(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --ref=lib/1.0 --name=other', assert_error=True)
+        assert "--ref is incompatible with --name/--version/--user/--channel" in t.out
+
+    def test_ref_rejects_revision(self):
+        t = TestClient()
+        t.save({'conanfile.py': GenConanfile()})
+        t.run('editable add . --ref=lib/1.0#abc123', assert_error=True)
+        assert "cannot contain a revision" in t.out
+
     def test_pyrequires_remote(self):
         t = TestClient(default_server_user=True)
         t.save({"conanfile.py": GenConanfile("pyreq", "1.0")})
@@ -59,3 +88,16 @@ def test_editable_no_name_version_test_package():
 
     tc.run("editable add .", assert_error=True)
     assert "ERROR: Editable package recipe should declare its name and version" in tc.out
+
+
+def test_editable_add_output_folder_relative_to_cwd():
+    """ A relative output_folder is relative to the given cwd, as the path is,
+    not to the current directory of the process
+    """
+    tc = TestClient(light=True)
+    tc.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0")})
+    cwd = os.path.join(tc.current_folder, "pkg")
+    api = ConanAPI(tc.cache_folder)
+    ref = api.local.editable_add(".", cwd=cwd, output_folder="build")
+    output_folder = api.local.editable_list()[ref]["output_folder"]
+    assert output_folder == os.path.join(cwd, "build")

@@ -4,14 +4,13 @@ import textwrap
 import pytest
 
 from conan.internal.api.detect import detect_api
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, default_vs_ide_version, default_msvc_version
 
 
 class TestProfileDetectAPI:
     @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-    @pytest.mark.tool("visual_studio", "17")
+    @pytest.mark.tool("visual_studio")
     def test_profile_detect_compiler(self):
-
         client = TestClient()
         tpl1 = textwrap.dedent("""
             {% set compiler, version, compiler_exe = detect_api.detect_default_compiler() %}
@@ -31,8 +30,7 @@ class TestProfileDetectAPI:
 
         client.save({"profile1": tpl1})
         client.run("profile show -pr=profile1 --context=host")
-        # FIXME: check update setting
-        update = str(int(detect_api.detect_msvc_update("194")) % 10)
+        update = str(int(detect_api.detect_msvc_update(default_msvc_version)) % 10)
         expected = textwrap.dedent(f"""\
             [settings]
             compiler=msvc
@@ -40,9 +38,9 @@ class TestProfileDetectAPI:
             compiler.runtime=dynamic
             compiler.runtime_type=Release
             compiler.update={update}
-            compiler.version=194
+            compiler.version={default_msvc_version}
             [conf]
-            tools.microsoft.msbuild:vs_version=17
+            tools.microsoft.msbuild:vs_version={default_vs_ide_version}
             """)
         assert expected in client.out
 

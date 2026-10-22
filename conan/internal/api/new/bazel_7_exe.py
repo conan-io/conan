@@ -51,13 +51,17 @@ class {{package_name}}Test(ConanFile):
 """
 
 _bazel_build_exe = """\
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+
 cc_binary(
     name = "{{name}}",
     srcs = ["main.cpp", "{{name}}.cpp", "{{name}}.h"]
 )
 """
 
-_bazel_workspace = " "  # Important not empty, so template doesn't discard it
+_bazel_module = """\
+bazel_dep(name = "rules_cc", version = "0.2.17")
+"""
 _bazel_rc = """\
 {% if output_root_dir is defined %}startup --output_user_root={{output_root_dir}}{% endif %}
 """
@@ -67,7 +71,7 @@ bazel_exe_files_7 = {"conanfile.py": conanfile_exe,
                      "main/{{name}}.h": source_h,
                      "main/main.cpp": test_main,
                      "main/BUILD": _bazel_build_exe,
-                     "MODULE.bazel": _bazel_workspace,
+                     "MODULE.bazel": _bazel_module,
                      ".bazelrc": _bazel_rc,
                      "test_package/conanfile.py": test_conanfile_exe_v2
                      }

@@ -261,5 +261,5 @@ def test_local_folders_without_layout():
 
     client.save({"conanfile.py": conan_file})
     client.run("install .")
-    assert "conanfile.py (test/1.2.3): generate sf: {}".format(client.current_folder) in client.out
-    assert "conanfile.py (test/1.2.3): generate bf: {}".format(client.current_folder) in client.out
+    assert "generate sf: {}".format(client.current_folder) in client.out
+    assert "generate bf: {}".format(client.current_folder) in client.out

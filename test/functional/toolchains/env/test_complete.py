@@ -64,7 +64,7 @@ def test_cmake_virtualenv(matrix_client):
     client.run("create cmakewrapper --name=cmakewrapper --version=0.1")
     client.run("create consumer --name=consumer --version=0.1")
     assert "MYCMAKE WRAPPER!!" in client.out
-    assert "consumer/0.1: Created package" in client.out
+    assert "Created package" in client.out
 
 
 @pytest.mark.tool("cmake")

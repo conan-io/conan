@@ -15,7 +15,7 @@ _sbom_zlib_1_2_11 = """
 {
   "components" : [ {
     "author" : "<Put your name here> <And your email here>",
-    "bom-ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4",
+    "bom-ref" : "pkg:conan/zlib@1.2.11?rrev=6754320047c5dd54830baaaf9fc733c4",
     "description" : "<Description of zlib package here>",
     "licenses" : [ {
       "license" : {
@@ -28,12 +28,12 @@ _sbom_zlib_1_2_11 = """
     "version" : "1.2.11"
   } ],
   "dependencies" : [ {
-    "ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4"
+    "ref" : "pkg:conan/zlib@1.2.11?rrev=6754320047c5dd54830baaaf9fc733c4"
   } ],
   "metadata" : {
     "component" : {
       "author" : "<Put your name here> <And your email here>",
-      "bom-ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4",
+      "bom-ref" : "pkg:conan/zlib@1.2.11?rrev=6754320047c5dd54830baaaf9fc733c4",
       "name" : "zlib/1.2.11",
       "type" : "library"
     },
@@ -119,7 +119,11 @@ def test_conan_audit_proxy():
     tc.run("audit list zlib/1.2.11", assert_error=True)
     assert "Authentication required for the CVE provider: 'conancenter" in tc.out
 
+    tc.run("audit provider list")
+    assert 'conancenter (type: conan-center-proxy) - https://fakeurl/' in tc.out
+
     tc.run("audit provider auth conancenter --token=valid_token")
+    assert "Provider 'conancenter' authenticated successfully" in tc.out
 
     with proxy_response(200, successful_response):
         tc.run("audit list zlib/1.2.11")
@@ -190,7 +194,7 @@ def test_conan_audit_proxy():
     assert ("ERROR: Provider 'conancenter' not found. Please specify a valid provider name or add "
             "it using: 'conan audit provider add conancenter --url=https://audit.conan.io/ "
             "--type=conan-center-proxy --token=<token>'") in tc.out
-    assert "If you don't have a valid token, register at: https://audit.conan.io/register." in tc.out
+    assert "If you don't have a valid token, register at: https://conan.io/audit/register." in tc.out
 
     if platform.system() != "Windows":
         providers_stat = os.stat(os.path.join(tc.cache_folder, "audit_providers.json"))
@@ -273,6 +277,7 @@ def test_conan_audit_private():
     assert "Missing authentication token for 'myprivate' provider" in tc.out
 
     tc.run("audit provider auth myprivate --token=valid_token")
+    assert "Provider 'myprivate' authenticated successfully" in tc.out
 
     with proxy_response(200, successful_response):
         tc.run("audit list zlib/1.2.11 -p=myprivate")
@@ -678,7 +683,7 @@ class TestAuditProviderBranchouts:
         tc = TestClient(light=True, inputs=["valid_token"])
         tc.run('audit provider add private --url=foo --type=private')
         providers = json.loads(tc.load_home("audit_providers.json"))
-        assert providers["private"]["token"] == 'Z1RWYEZUWmBeT2U='
+        assert providers["private"]["token"] == 'dmFsaWRfdG9rZW4='
 
     def test_provider_remove_no_name(self):
         tc = TestClient(light=True)
@@ -694,4 +699,4 @@ class TestAuditProviderBranchouts:
         tc = TestClient(light=True, inputs=["valid_token"])
         tc.run('audit provider auth conancenter')
         providers = json.loads(tc.load_home("audit_providers.json"))
-        assert providers["conancenter"]["token"] == 'Z1RWYEZUWmBeT2U='
+        assert providers["conancenter"]["token"] == 'dmFsaWRfdG9rZW4='

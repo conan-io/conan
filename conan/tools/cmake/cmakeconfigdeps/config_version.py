@@ -3,38 +3,25 @@ import textwrap
 import jinja2
 from jinja2 import Template
 
-from conan.errors import ConanException
-
 
 class ConfigVersionTemplate2:
     """
-    foo-config-version.cmake
+    foo-config-version.cmake / FooConfigVersion.cmake
+
+    Thin Jinja renderer. Filename and context are built by CMakeConfigDeps.
     """
-    def __init__(self, cmakedeps, conanfile):
-        self._cmakedeps = cmakedeps
-        self._conanfile = conanfile
+    def __init__(self, filename, context):
+        self._filename = filename
+        self._context = context
+
+    @property
+    def filename(self):
+        return self._filename
 
     def content(self):
         t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
                      undefined=jinja2.StrictUndefined)
         return t.render(self._context)
-
-    @property
-    def filename(self):
-        f = self._cmakedeps.get_cmake_filename(self._conanfile)
-        return f"{f}-config-version.cmake" if f == f.lower() else f"{f}ConfigVersion.cmake"
-
-    @property
-    def _context(self):
-        policy = self._cmakedeps.get_property("cmake_config_version_compat", self._conanfile)
-        if policy is None:
-            policy = "SameMajorVersion"
-        if policy not in ("AnyNewerVersion", "SameMajorVersion", "SameMinorVersion", "ExactVersion"):
-            raise ConanException(f"Unknown cmake_config_version_compat={policy} in {self._conanfile}")
-        version = self._cmakedeps.get_property("system_package_version", self._conanfile)
-        version = version or self._conanfile.ref.version
-        return {"version": version,
-                "policy": policy}
 
     @property
     def _template(self):

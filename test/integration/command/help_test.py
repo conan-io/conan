@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 from conan import __version__
-from conan.test.utils.env import environment_update
 from conan.test.utils.tools import TestClient
 
 
@@ -52,24 +51,24 @@ def test_all_commands_call_args_parse():
     tc = TestClient(light=True)
     tc.run("-h")
     commands = tc.api.command.cli._builtin_commands
-    with environment_update({"CONAN_WORKSPACE_ENABLE": "will_break_next"}):
-        for command, info in commands.items():
-            if len(info._subcommands) > 0:
-                for subcommand in info._subcommands.values():
-                    with patch("conan.cli.command.ConanArgumentParser.parse_args",
-                               side_effect=Exception("called")) as mock_run:
-                        try:
-                            tc.run(f"{command} {subcommand.name} -h")
-                        except:
-                            pass
-                        finally:
-                            assert mock_run.called, f'Command "conan {command} {subcommand.name}" did not call parse_args()'
-            else:
+
+    for command, info in commands.items():
+        if len(info._subcommands) > 0:
+            for subcommand in info._subcommands.values():
                 with patch("conan.cli.command.ConanArgumentParser.parse_args",
                            side_effect=Exception("called")) as mock_run:
                     try:
-                        tc.run(f"{command} -h")
+                        tc.run(f"{command} {subcommand.name} -h")
                     except:
                         pass
                     finally:
-                        assert mock_run.called, f'Command "conan {command}" did not call parse_args()'
+                        assert mock_run.called, f'Command "conan {command} {subcommand.name}" did not call parse_args()'
+        else:
+            with patch("conan.cli.command.ConanArgumentParser.parse_args",
+                       side_effect=Exception("called")) as mock_run:
+                try:
+                    tc.run(f"{command} -h")
+                except:
+                    pass
+                finally:
+                    assert mock_run.called, f'Command "conan {command}" did not call parse_args()'

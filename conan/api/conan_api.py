@@ -54,8 +54,8 @@ class ConanAPI:
         """
 
         version = sys.version_info
-        if version.major == 2 or version.minor < 7:
-            raise ConanException("Conan needs Python >= 3.7")
+        if version.major == 2 or version.minor < 8:
+            raise ConanException("Conan needs Python >= 3.8")
         if cache_folder is not None and not os.path.isabs(cache_folder):
             raise ConanException("cache_folder has to be an absolute path")
 
@@ -208,7 +208,6 @@ class ConanAPI:
         def get_loader(self):
             ws_editables = self._conan_api.workspace.packages()
             editable_packages = self._editable_packages.update_copy(ws_editables)
-
             legacy_update = self.global_conf.get("core:update_policy", choices=["legacy"])
             # This proxy is caching information
             proxy = ConanProxy(self.cache, self.remote_manager, editable_packages,

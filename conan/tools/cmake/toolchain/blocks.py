@@ -7,13 +7,14 @@ from jinja2 import Template
 from conan.internal.internal_tools import universal_arch_separator, is_universal_arch
 from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
 from conan.tools.android.utils import android_abi
-from conan.tools.apple.apple import is_apple_os, to_apple_arch
+from conan.tools.apple.apple import is_apple_os, to_apple_arch, _apple_swift_target_triple
 from conan.tools.build import build_jobs
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, libcxx_flags, threads_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.utils import is_multi_configuration
 from conan.tools.intel import IntelCC
+from conan.tools.intel.intel_cc import intel_cc_compilers
 from conan.tools.microsoft.visual import msvc_version_to_toolset_version, msvc_platform_from_arch
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.subsystems import deduce_subsystem, WINDOWS
@@ -467,6 +468,13 @@ class AppleSystemBlock(Block):
         # Setting CMAKE_OSX_DEPLOYMENT_TARGET if "os.version" is defined by the used conan profile
         set(CMAKE_OSX_DEPLOYMENT_TARGET "{{ cmake_osx_deployment_target }}" CACHE STRING "")
         {% endif %}
+        {% if swift_target is defined %}
+        # Swift does not derive its target triple from CMAKE_OSX_SYSROOT/CMAKE_OSX_ARCHITECTURES
+        # the way Clang does, so it is set explicitly. Only a default, any user value wins
+        if(NOT DEFINED CMAKE_Swift_COMPILER_TARGET)
+            set(CMAKE_Swift_COMPILER_TARGET "{{ swift_target }}")
+        endif()
+        {% endif %}
         set(BITCODE "")
         set(FOBJC_ARC "")
         set(VISIBILITY "")
@@ -561,6 +569,10 @@ class AppleSystemBlock(Block):
             # Despite the OSX part in the variable name(s) they apply also to other SDKs than
             # macOS like iOS, tvOS, watchOS or visionOS.
             ctxt_toolchain["cmake_osx_deployment_target"] = host_os_version
+
+        swift_target = _apple_swift_target_triple(self._conanfile)
+        if swift_target:
+            ctxt_toolchain["swift_target"] = swift_target
 
         return ctxt_toolchain
 
@@ -782,6 +794,9 @@ class ExtraFlagsBlock(Block):
         {% if cflags %}
         string(APPEND CONAN_C_FLAGS{{suffix}} "{% for cflag in cflags %} {{ cflag }}{% endfor %}")
         {% endif %}
+        {% if asmflags %}
+        string(APPEND CONAN_ASM_FLAGS{{suffix}} "{% for asmflag in asmflags %} {{ asmflag }}{% endfor %}")
+        {% endif %}
         {% if sharedlinkflags %}
         string(APPEND CONAN_SHARED_LINKER_FLAGS{{suffix}} "{% for sharedlinkflag in sharedlinkflags %} {{ sharedlinkflag }}{% endfor %}")
         {% endif %}
@@ -839,6 +854,7 @@ class ExtraFlagsBlock(Block):
         # Now, it's time to get all the flags defined by the user
         cxxflags = self._toolchain.extra_cxxflags + self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
         cflags = self._toolchain.extra_cflags + self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
+        asmflags = self._toolchain.extra_asmflags + self._conanfile.conf.get("tools.build:asmflags", default=[], check_type=list)
         sharedlinkflags = self._toolchain.extra_sharedlinkflags + self._conanfile.conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
         exelinkflags = self._toolchain.extra_exelinkflags + self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
         rcflags = self._conanfile.conf.get("tools.build:rcflags", default=[], check_type=list)
@@ -862,6 +878,7 @@ class ExtraFlagsBlock(Block):
             "suffix": suffix,
             "cxxflags": cxxflags,
             "cflags": cflags,
+            "asmflags": asmflags,
             "sharedlinkflags": sharedlinkflags,
             "exelinkflags": exelinkflags,
             "rcflags": rcflags,
@@ -881,6 +898,9 @@ class CMakeFlagsInitBlock(Block):
             if(DEFINED CONAN_C_FLAGS_${config})
               string(APPEND CMAKE_C_FLAGS_${config}_INIT " ${CONAN_C_FLAGS_${config}}")
             endif()
+            if(DEFINED CONAN_ASM_FLAGS_${config})
+              string(APPEND CMAKE_ASM_FLAGS_${config}_INIT " ${CONAN_ASM_FLAGS_${config}}")
+            endif()
             if(DEFINED CONAN_SHARED_LINKER_FLAGS_${config})
               string(APPEND CMAKE_SHARED_LINKER_FLAGS_${config}_INIT " ${CONAN_SHARED_LINKER_FLAGS_${config}}")
             endif()
@@ -897,6 +917,9 @@ class CMakeFlagsInitBlock(Block):
         endif()
         if(DEFINED CONAN_C_FLAGS)
           string(APPEND CMAKE_C_FLAGS_INIT " ${CONAN_C_FLAGS}")
+        endif()
+        if(DEFINED CONAN_ASM_FLAGS)
+          string(APPEND CMAKE_ASM_FLAGS_INIT " ${CONAN_ASM_FLAGS}")
         endif()
         if(DEFINED CONAN_SHARED_LINKER_FLAGS)
           string(APPEND CMAKE_SHARED_LINKER_FLAGS_INIT " ${CONAN_SHARED_LINKER_FLAGS}")
@@ -960,16 +983,27 @@ class CompilersBlock(Block):
         compilers_mapping = {"c": "C", "cuda": "CUDA", "cpp": "CXX", "objc": "OBJC",
                              "objcpp": "OBJCXX", "rc": "RC", 'fortran': "Fortran", 'asm': "ASM",
                              "hip": "HIP", "ispc": "ISPC"}
+        unknown = [k for k in compilers_by_conf if k not in compilers_mapping]
+        if unknown:
+            self._conanfile.output.warning(
+                f"tools.build:compiler_executables: ignoring unknown key(s) {sorted(unknown)}, "
+                f"expected one of {sorted(compilers_mapping)}", warn_tag="risk")
         for comp, lang in compilers_mapping.items():
             # To set CMAKE_<LANG>_COMPILER
             if comp in compilers_by_conf:
                 compilers[lang] = compilers_by_conf[comp]
         compiler = self._conanfile.settings.get_safe("compiler")
-        if compiler == "msvc" and "Ninja" in str(self._toolchain.generator):
-            # None of them defined, if one is defined by user, user should define the other too
-            if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+        # None of them defined, if one is defined by user, user should define the other too
+        if "c" not in compilers_by_conf and "cpp" not in compilers_by_conf:
+            if compiler == "msvc" and "Ninja" in str(self._toolchain.generator):
                 compilers["C"] = "cl"
                 compilers["CXX"] = "cl"
+            # Default compilers for intel-cc when not configured
+            else:
+                intel_defaults = intel_cc_compilers(self._conanfile)
+                if intel_defaults:
+                    compilers["C"] = intel_defaults["c"]
+                    compilers["CXX"] = intel_defaults["cpp"]
         return {"compilers": compilers}
 
 

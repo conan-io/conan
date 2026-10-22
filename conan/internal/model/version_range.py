@@ -178,6 +178,8 @@ class _ConditionSet:
 
 class VersionRange:
     def __init__(self, expression):
+        if not expression:
+            raise ConanException(f'Error parsing empty version range')
         self._expression = expression
         tokens = expression.split(",")
         prereleases = False

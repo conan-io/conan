@@ -93,6 +93,8 @@ class {{package_name}}TestConan(ConanFile):
 
 
 _bazel_build_test = """\
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+
 cc_binary(
     name = "example",
     srcs = ["example.cpp"],
@@ -103,6 +105,8 @@ cc_binary(
 """
 
 _bazel_build = """\
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 cc_library(
     name = "{{name}}",
     srcs = ["{{name}}.cpp"],
@@ -111,6 +115,8 @@ cc_library(
 """
 
 _bazel_build_shared = """
+load("@rules_cc//cc:cc_shared_library.bzl", "cc_shared_library")
+
 cc_shared_library(
     name = "{{name}}_shared",
     shared_lib_name = "lib{{name}}_shared.%s",
@@ -118,13 +124,15 @@ cc_shared_library(
 )
 """
 
-_bazel_workspace = " "  # Important not empty, so template doesn't discard it
+_bazel_module = """\
+bazel_dep(name = "rules_cc", version = "0.2.17")
+"""
 _bazel_rc = """\
 {% if output_root_dir is defined %}startup --output_user_root={{output_root_dir}}{% endif %}
 """
 _test_bazel_module_bazel = """\
-load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "conan_extension")
-use_repo(load_conan_dependencies, "{{name}}")
+# This requires Bazel >= 7.2
+include("//conan:conan_deps.MODULE.bazel")
 """
 
 
@@ -141,7 +149,7 @@ bazel_lib_files_7 = {"conanfile.py": conanfile_sources_v2,
                      "main/{{name}}.cpp": source_cpp,
                      "main/{{name}}.h": source_h,
                      "main/BUILD": _get_bazel_build(),
-                     "MODULE.bazel": _bazel_workspace,
+                     "MODULE.bazel": _bazel_module,
                      ".bazelrc": _bazel_rc,
                      "test_package/conanfile.py": test_conanfile_v2,
                      "test_package/main/example.cpp": test_main,

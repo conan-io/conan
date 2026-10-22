@@ -7,6 +7,46 @@ from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
+def test_lockfile_multiple_overrides_warning():
+    r"""
+    pkga uses toola/1.0 as build tool: toola/1.0 -> libe/1.0 -> libf/1.0 (override -> libf/2.0)
+    pkgb requires pkga
+    pkgb uses toola/1.1 as build tool: toola/1.1 -> libe/1.0 -> libf/1.0 (override -> libf/3.0)
+
+    Lockfile from pkgb has overrides[libf/1.0] = {libf/2.0, libf/3.0}.
+    libf/1.0 is not in the lockfile because all consumers override it.
+    Applying lockfile to libe (which requires libf/1.0) should warn about multiple overrides.
+    """
+    c = TestClient(light=True)
+    c.save({"libf/conanfile.py": GenConanfile("libf"),
+            "libe/conanfile.py": GenConanfile("libe", "1.0").with_requires("libf/1.0"),
+            "toola/conanfile.py": GenConanfile("toola", "1.0").with_requirement("libe/1.0")
+                                                              .with_requirement("libf/2.0",
+                                                                                override=True),
+            "toola2/conanfile.py": GenConanfile("toola", "1.1").with_requirement("libe/1.0")
+                                                               .with_requirement("libf/3.0",
+                                                                                 override=True),
+            "pkga/conanfile.py": GenConanfile("pkga", "1.0").with_tool_requires("toola/1.0"),
+            "pkgb/conanfile.py": GenConanfile("pkgb", "1.0").with_requires("pkga/1.0")
+                                                            .with_tool_requires("toola/1.1"),
+            })
+    c.run("export libf --version=1.0")
+    c.run("export libf --version=2.0")
+    c.run("export libf --version=3.0")
+    c.run("export libe")
+    c.run("export toola")
+    c.run("export toola2")
+    c.run("export pkga")
+    c.run("lock create pkgb")
+    lock = json.loads(c.load("pkgb/conan.lock"))
+    assert set(lock["overrides"]["libf/1.0"]) == {"libf/2.0", "libf/3.0"}
+
+    # libf/1.0 is absent from lockfile (overridden away by both build chains)
+    # applying lockfile to libe fails resolution and warns about ambiguous overrides
+    c.run("graph info libe --lockfile=pkgb/conan.lock", assert_error=True)
+    assert "multiple possible overrides" in c.out
+
+
 def test_graph_build_order_override_error():
     """
     libc -> libb -> liba -> zlib/1.2
@@ -39,7 +79,7 @@ def test_graph_build_order_override_error():
             build_args = package["build_args"]
             c.run(f"install {build_args} --lockfile=output.lock")
             ref = RecipeReference.loads(package["ref"])
-            assert f"{ref}: Building from source"
+            assert f"Building from source {ref}:" in c.out
 
     c.run("install --requires=libc/0.1 --lockfile=output.lock")
     # All works, all binaries exist now
@@ -86,7 +126,7 @@ def test_graph_build_order_override_replace_requires(replace_pattern):
             build_args = package["build_args"]
             c.run(f"install {build_args} --lockfile=output.lock -pr=profile")
             ref = RecipeReference.loads(package["ref"])
-            assert f"{ref}: Building from source"
+            assert f"Building from source {ref}:" in c.out
 
     c.run("install --requires=libc/0.1 --lockfile=output.lock -pr=profile")
     # All works, all binaries exist now

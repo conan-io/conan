@@ -1,3 +1,5 @@
+import os
+import sys
 import zipfile
 import tarfile
 from os.path import join, exists
@@ -171,3 +173,32 @@ def test_untargz_with_strip_root_and_pattern():
     unzip(conanfile, archive, dest_dir, pattern="src/*", strip_root=True)
     assert exists(join(dest_dir, "bar.txt"))
     assert not exists(join(dest_dir, "foo.txt"))
+
+
+@pytest.mark.skipif(sys.version_info.minor < 14, reason="zstd needs Python >= 3.14")
+def test_untargz_zst():
+    tmp_dir = temp_folder()
+    tar_path = join(tmp_dir, "file.tar.zst")
+    foo_txt = join(tmp_dir, "foo.txt")
+    save(foo_txt, "foo-content")
+    with tarfile.open(tar_path, "w:zst") as tar:
+        tar.add(foo_txt, "foo.txt")
+
+    conanfile = ConanFileMock({})
+    dest_dir = temp_folder()
+    unzip(conanfile, tar_path, dest_dir)
+    assert exists(join(dest_dir, "foo.txt"))
+
+
+@pytest.mark.skipif(sys.version_info.minor >= 14, reason="validate zstd error in python<3.14")
+def test_untargz_zst_unsupported_python():
+    # Fake a .tar.zst, the version check happens before any decompression is attempted
+    archive = create_example_tar()
+    zst_archive = join(os.path.dirname(archive), "file.tzst")
+    os.rename(archive, zst_archive)
+
+    conanfile = ConanFileMock({})
+    dest_dir = temp_folder()
+    with pytest.raises(ConanException) as error:
+        unzip(conanfile, zst_archive, dest_dir)
+    assert "File file.tzst compressed with 'zst', unsupported for Python<3.14" in str(error.value)

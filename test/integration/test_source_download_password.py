@@ -6,6 +6,7 @@ import textwrap
 from shutil import copy
 from unittest import mock
 
+import bottle
 import pytest
 
 from conan.internal.api.uploader import compress_files
@@ -17,7 +18,7 @@ from conan.internal.util.files import save
 
 
 def test_source_download_password():
-    c = TestClient()
+    c = TestClient(light=True)
     file_server = TestFileServer()
     c.servers["file_server"] = file_server
     save(os.path.join(file_server.store, "myfile.txt"), "hello world!")
@@ -71,7 +72,7 @@ def test_source_download_password():
 
 def test_source_credentials_only_download():
     # https://github.com/conan-io/conan/issues/16396
-    c = TestClient(default_server_user=True)
+    c = TestClient(default_server_user=True, light=True)
     url = c.servers["default"].fake_url
 
     content = {"credentials": [{"url": url, "token": "password stpaces"}]}
@@ -84,6 +85,42 @@ def test_source_credentials_only_download():
         c.run("upload * -c -r=default")
         c.run("remove * -c")
         c.run("download pkg/0.1 -r=default")
+
+
+def test_source_credentials_not_leaked_to_other_mirrors():
+    # The credentials of a mirror were added to the recipe headers dict, and then sent to the
+    # next mirrors, that might not be the same server
+    c = TestClient(light=True)
+    file_server = TestFileServer()
+    c.servers["file_server"] = file_server
+    save(os.path.join(file_server.store, "mirror2", "myfile.txt"), "hello world!")
+    received = []
+
+    @file_server.root_app.hook("before_request")
+    def record_headers():
+        received.append((bottle.request.path, bottle.request.headers.get("Authorization"),
+                         bottle.request.headers.get("X-Custom")))
+
+    server_url = file_server.fake_url
+    conanfile = textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.files import download
+        class Pkg(ConanFile):
+            def source(self):
+                headers = {{"X-Custom": "value"}}
+                download(self, ["{server_url}/mirror1/myfile.txt",
+                                "{server_url}/mirror2/myfile.txt"], "myfile.txt",
+                         headers=headers)
+                self.output.info(f"Headers: {{headers}}")
+            """)
+    c.save({"conanfile.py": conanfile})
+    content = {"credentials": [{"url": f"{server_url}/mirror1", "token": "mytoken"}]}
+    save(os.path.join(c.cache_folder, "source_credentials.json"), json.dumps(content))
+    c.run("source .")
+    assert received == [("/mirror1/myfile.txt", "Bearer mytoken", "value"),
+                        ("/mirror2/myfile.txt", None, "value")]
+    # The recipe headers are not modified either
+    assert "Headers: {'X-Custom': 'value'}" in c.out
 
 
 @pytest.mark.skipif(sys.version_info.minor < 12 or platform.system() == "Windows",
@@ -106,7 +143,7 @@ def test_blocked_malicius_tgz():
             def source(self):
                 get(self, "http://fake_url/myfiles.tgz")
             """)
-    client = TestClient()
+    client = TestClient(light=True)
     client.save({"conanfile.py": conan_file})
 
     with mock.patch("conan.tools.files.files.download") as mock_download:

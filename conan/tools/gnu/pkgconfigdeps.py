@@ -170,6 +170,24 @@ class _PCFilesDeps:
         defines = ["-D%s" % var.replace('"', '\\"') for var in cpp_info.defines]
         return " ".join(includedirsflags + cxxflags + cflags + defines)
 
+    def _get_none_requirement_names(self, dep):
+        """
+        When a package has pkg_config_name="none", return the pkg-config names that should
+        replace a root requirement (pkg::pkg). If the package has no components, return [].
+        """
+        if not dep.cpp_info.has_components:
+            return []
+        if dep.cpp_info.default_components is not None:
+            comp_names = dep.cpp_info.default_components
+        else:
+            comp_names = list(dep.cpp_info.get_sorted_components().keys())
+        ret = []
+        for comp_ref_name in comp_names:
+            comp_name = self._get_name(dep, dep.ref.name, comp_ref_name)
+            if comp_name not in ret:
+                ret.append(comp_name)
+        return ret
+
     def _get_component_requirement_names(self, cpp_info):
         """
         Get all the pkg-config valid names from the requirements ones given a CppInfo object.
@@ -203,7 +221,11 @@ class _PCFilesDeps:
             else:  # For instance, dep == "hello/1.0" and req == "hello::cmp1" -> hello == hello
                 req_conanfile = self._dep
             comp_name = self._get_name(req_conanfile, pkg_ref_name, comp_ref_name)
-            if comp_name not in ret:
+            if comp_name == "none":
+                for none_req in self._get_none_requirement_names(req_conanfile):
+                    if none_req not in ret:
+                        ret.append(none_req)
+            elif comp_name not in ret:
                 ret.append(comp_name)
         return ret
 

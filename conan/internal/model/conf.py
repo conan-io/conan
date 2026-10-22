@@ -21,12 +21,10 @@ from conan.internal.util.files import load, save
 policies_msg = """\
 A list of opt-in behaviors that can be defined in the configuration to control specific aspects of Conan's behavior,
 such as keeping deprecated behaviours:
-   - deprecated_build_order_args: Allow deprecated skipping of --order-by argument in conan graph build-order - To be removed in Conan 2.32
-   - deprecated_empty_version_range: Allow using deprecated empty version range expressions - To be removed in Conan 2.32
-If the policy 'required_conan_version>=version' is defined, different behaviors can be enabled:
    - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19705 for transitive static libraries package_id
    - If required_conan_version>=2.28, bugfix https://github.com/conan-io/conan/pull/19849 for VirtualBuildEnv bindir path propagation based on requirement run trait
-   - If required_conan_version>=2.28, https://github.com/conan-io/conan/pull/19286 defaults the new 'consistent' trait to True for the host context, even when 'visible=False'"""
+   - If required_conan_version>=2.28, https://github.com/conan-io/conan/pull/19286 defaults the new 'consistent' trait to True for the host context, even when 'visible=False'
+   - If required_conan_version>=2.30, bugfix https://github.com/conan-io/conan/pull/20073 for propagation of the 'transitive_header' trait"""
 
 BUILT_IN_CONFS = {
     "core:required_conan_version": "Raise if current version does not match the defined range.",
@@ -45,7 +43,9 @@ BUILT_IN_CONFS = {
     "core.download:parallel": "Number of concurrent threads to download packages",
     "core.download:retry": " (int, default: 2) Number of retries in case of failure when downloading from Conan server",
     "core.download:retry_wait": "(int, default: 1s) Seconds to wait between download attempts from Conan server",
-    "core.download:download_cache": "Define path to a file download cache",
+    "core.download:download_cache": "Define path to a file download cache. Files uploaded to a "
+                                    "server are also stored here, so a later download of the same "
+                                    "artifact can be skipped",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
     "core:policies": policies_msg,
@@ -70,6 +70,10 @@ BUILT_IN_CONFS = {
     "core.net.http:cacert_path": "Path containing a custom Cacert file",
     "core.net.http:client_cert": "Path or tuple of files containing a client cert (and key)",
     "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
+    "core.net.http:trust_store": "(Experimental) If True, additionally verify HTTPS certificates "
+                                  "against the OS-native trust store via the 'truststore' "
+                                  "(needs Python>=3.10) package "
+                                  "(used together with, not instead of, the certifi CA bundle).",
     # Compression for `conan upload`
     "core.upload:compression_format": "The compression format used when uploading Conan packages. "
                                       "Possible values: 'zst', 'xz', 'gz' (default=gz)",
@@ -104,7 +108,7 @@ BUILT_IN_CONFS = {
     "tools.cmake.cmaketoolchain:presets_environment": "String to define wether to add or not the environment section to the CMake presets. Empty by default, will generate the environment section in CMakePresets. Can take values: 'disabled'.",
     "tools.cmake.cmaketoolchain:extra_variables": "Dictionary with variables to be injected in CMakeToolchain (potential override of CMakeToolchain defined variables)",
     "tools.cmake.cmaketoolchain:enabled_blocks": "Select the specific blocks to use in the conan_toolchain.cmake",
-    "tools.cmake.cmaketoolchain:user_presets": "(Experimental) Select a different name instead of CMakeUserPresets.json, empty to disable",
+    "tools.cmake.cmaketoolchain:user_presets": "(Experimental) Select a different name or relative filepath instead of CMakeUserPresets.json, empty to disable. A relative filepath (with directory component) enables CMake 4.4+ --preset-file mode",
     "tools.cmake.cmake_layout:build_folder_vars": "Settings and Options that will produce a different build folder and different CMake presets names",
     "tools.cmake.cmake_layout:build_folder": "(Experimental) Allow configuring the base folder of the build for local builds",
     "tools.cmake.cmake_layout:test_folder": "(Experimental) Allow configuring the base folder of the build for test_package",
@@ -133,6 +137,7 @@ BUILT_IN_CONFS = {
     "tools.google.bazel:bazelrc_path": "List of paths to bazelrc files to be used as 'bazel --bazelrc=rcpath1 ... build'",
     "tools.meson.mesontoolchain:backend": "Any Meson backend: ninja, vs, vs2010, vs2012, vs2013, vs2015, vs2017, vs2019, xcode",
     "tools.meson.mesontoolchain:extra_machine_files": "List of paths for any additional native/cross file references to be appended to the existing Conan ones",
+    "tools.meson.mesontoolchain:extra_variables": "Dict of dicts defining extra variables per meson file section: 'properties', 'binaries', 'project_options'",
     "tools.microsoft:winsdk_version": "Use this winsdk_version in vcvars",
     "tools.microsoft:msvc_update": "Force the specific update irrespective of compiler.update (CMakeToolchain and VCVars)",
     "tools.microsoft.msbuild:vs_version": "Defines the IDE version (15, 16, 17) when using the msvc compiler. Necessary if compiler.version specifies a toolset that is not the IDE default",
@@ -162,6 +167,7 @@ BUILT_IN_CONFS = {
     "tools.build:compiler_executables": "Defines a Python dict-like with the compilers path to be used. Allowed keys {'c', 'cpp', 'cuda', 'objc', 'objcxx', 'rc', 'fortran', 'asm', 'hip', 'ispc'}",
     "tools.build:cxxflags": "List of extra CXX flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:cflags": "List of extra C flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
+    "tools.build:asmflags": "List of extra ASM flags used by CMakeToolchain",
     "tools.build:defines": "List of extra definition flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:sharedlinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
     "tools.build:exelinkflags": "List of extra flags used by different toolchains like CMakeToolchain, AutotoolsToolchain and MesonToolchain",
@@ -600,7 +606,7 @@ class Conf:
 class ConfDefinition:
     # Order is important, "define" must be latest
     actions = (("+=", "append"), ("=+", "prepend"),
-               ("=!", "unset"), ("*=", "update"), ("=", "define"))
+               ("=!", "unset"), ("=~", "unset"), ("*=", "update"), ("=", "define"))
 
     def __init__(self):
         self._pattern_confs = {}
@@ -786,19 +792,26 @@ def load_global_conf(home_folder):
     home_paths = HomePaths(home_folder)
     global_conf_path = home_paths.global_conf_path
     new_config = ConfDefinition()
-    if os.path.exists(global_conf_path):
-        text = load(global_conf_path)
+
+    def render(tmp_text):
         distro = None
         if platform.system() in ["Linux", "FreeBSD"]:
             import distro
-        template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
-        home_folder = home_folder.replace("\\", "/")
+        template = Environment(loader=FileSystemLoader(home_folder)).from_string(tmp_text)
         from conan import conan_version
-        content = template.render({"platform": platform, "os": os, "distro": distro,
-                                   "conan_version": conan_version,
-                                   "conan_home_folder": home_folder,
-                                   "detect_api": detect_api,
-                                   "hashlib": hashlib})
+        home_folder_fwd = home_folder.replace("\\", "/")
+        try:
+            c = template.render({"platform": platform, "os": os, "distro": distro,
+                                 "conan_version": conan_version,
+                                 "conan_home_folder": home_folder_fwd, "detect_api": detect_api,
+                                 "hashlib": hashlib})
+        except Exception as e:
+            raise ConanException(f"Error loading 'global.conf' in home folder: {e}")
+        return c
+
+    if os.path.exists(global_conf_path):
+        text = load(global_conf_path)
+        content = render(text)
         new_config.loads(content)
     else:  # creation of a blank global.conf file for user convenience
         default_global_conf = textwrap.dedent("""\
@@ -810,21 +823,10 @@ def load_global_conf(home_folder):
             """)
         save(global_conf_path, default_global_conf)
 
-    # TODO: This is a bit repeated, to be refactored later, to keep PR clear
     global_conf_path_user = home_paths.global_conf_path_user
     if os.path.exists(global_conf_path_user):
         text = load(global_conf_path_user)
-        distro = None
-        if platform.system() in ["Linux", "FreeBSD"]:
-            import distro
-        template = Environment(loader=FileSystemLoader(home_folder)).from_string(text)
-        from conan import conan_version
-        home_folder_fwd = home_folder.replace("\\", "/")
-        content = template.render({"platform": platform, "os": os, "distro": distro,
-                                   "conan_version": conan_version,
-                                   "conan_home_folder": home_folder_fwd,
-                                   "detect_api": detect_api,
-                                   "hashlib": hashlib})
+        content = render(text)
         user_conf = ConfDefinition()
         user_conf.loads(content)
         new_config.update_conf_definition(user_conf)

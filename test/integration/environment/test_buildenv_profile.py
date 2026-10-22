@@ -37,8 +37,8 @@ def test_buildenv_profile_cli(client):
     client.save({"profile2": profile2})
 
     client.run("install . -pr=profile1 -pr=profile2")
-    assert "conanfile.py: MyVar1=MyValue1_2!!" in client.out
-    assert "conanfile.py: MyVar2=MyValue2_1 MyValue2_2" in client.out
+    assert "MyVar1=MyValue1_2!!" in client.out
+    assert "MyVar2=MyValue2_1 MyValue2_2" in client.out
 
 
 def test_buildenv_profile_include(client):
@@ -51,8 +51,8 @@ def test_buildenv_profile_include(client):
     client.save({"profile2": profile2})
 
     client.run("install . -pr=profile2")
-    assert "conanfile.py: MyVar1=MyValue1_2!!" in client.out
-    assert "conanfile.py: MyVar2=MyValue2_1 MyValue2_2" in client.out
+    assert "MyVar1=MyValue1_2!!" in client.out
+    assert "MyVar2=MyValue2_1 MyValue2_2" in client.out
 
 
 def test_buildenv_package_patterns():

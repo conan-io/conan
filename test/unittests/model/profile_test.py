@@ -56,13 +56,14 @@ class TestProfile:
         np.update_package_settings({"MyPackage": [("os", "Windows")]})
 
         np.update_package_settings({"MyPackage": [("OTHER", "2")]})
-        assert np.package_settings_values == {"MyPackage": [("os", "Windows"), ("OTHER", "2")]}
+        assert np.package_settings_values == {"MyPackage": [("OTHER", "2"), ("os", "Windows")]}
 
         np._package_settings_values = None  # invalidate caching
         np.update_package_settings({"MyPackage": [("compiler", "2"), ("compiler.version", "3")]})
-        assert np.package_settings_values == {"MyPackage": [("os", "Windows"), ("OTHER", "2"),
+        assert np.package_settings_values == {"MyPackage": [("OTHER", "2"),
                                                             ("compiler", "2"),
-                                                            ("compiler.version", "3")]}
+                                                            ("compiler.version", "3"),
+                                                            ("os", "Windows")]}
 
     def test_profile_dump_order(self):
         # Settings
