@@ -249,6 +249,8 @@ class CMakeConfigDeps:
             - ``cmake_file_name``: a string with the name for the root config file
               (default: recipe name). If both properties are set, ``cmake_file_names``
               takes precedence and ``cmake_file_name`` is ignored.
+
+        :meta private:
         """
         cmake_config_name = dep.ref.name
         if cmake_config_name in self._cmake_filenames:
