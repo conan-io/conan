@@ -125,6 +125,7 @@ BUILT_IN_CONFS = {
     "tools.graph:vendor": "(Experimental) If 'build', enables the computation of dependencies of vendoring packages to build them",
     "tools.graph:skip_binaries": "Allow the graph to skip binaries not needed in the current configuration (True by default)",
     "tools.graph:skip_build": "(Experimental) Do not expand build/tool_requires",
+    "tools.graph:compatibility_libc_unset": "(Experimental) (boolean, default True) Allow the compatibility plugin to fall back to binaries without a defined 'os.libc' or 'os.libc.version' setting, and consumers without them to binaries that define them",
     "tools.graph:skip_test": "(Experimental) Do not expand test_requires. If building it might need 'tools.build:skip_test=True'",
     "tools.gnu:make_program": "Indicate path to make program",
     "tools.gnu:disable_flags": "Disable the automatic addition of flags to some build systems. List of possible values: ['arch', 'arch_link', 'libcxx', 'build_type', 'build_type_link', 'threads','cppstd', 'cstd']",
