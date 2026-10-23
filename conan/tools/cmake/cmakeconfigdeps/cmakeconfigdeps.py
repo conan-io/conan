@@ -166,10 +166,7 @@ class CMakeConfigDeps:
                     link_targets.append(target_name or f"{dep.ref.name}::{dep.ref.name}")
             if link_targets:
                 msg.append(f"    target_link_libraries(... {' '.join(link_targets)})")
-            if self._conanfile._conan_is_consumer:  # noqa
-                self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
-            else:
-                self._conanfile.output.verbose("\n".join(msg), fg=Color.CYAN)
+            self._conanfile.output.info("\n".join(msg), fg=Color.CYAN)
 
     def set_property(self, dep, prop, value, build_context=False):
         """
@@ -780,7 +777,7 @@ class _CMakeContextGenerator:
                 link_languages = ["CXX" if c == "C++" else c for c in link_languages]
                 target["link_languages"] = link_languages
                 if lib_type == "SHARED" and self._ctx.get_property("nosoname", comp_name=comp_name,
-                                                                   check_type=bool):
+                                                              check_type=bool):
                     target["no_soname"] = True
             return target
 
