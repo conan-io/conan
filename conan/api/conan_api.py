@@ -49,8 +49,9 @@ class ConanAPI:
     """
     def __init__(self, cache_folder=None):
         """
-        :param cache_folder: Conan cache/home folder. It will have less priority than the
-                             ``"home_folder"`` defined in a Workspace.
+        :param cache_folder: Absolute path to the Conan home folder. If ``None``, it will be
+                             resolved as explained in
+                             :attr:`home_folder <conan.api.conan_api.ConanAPI.home_folder>`.
         """
 
         version = sys.version_info

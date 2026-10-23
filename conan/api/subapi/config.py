@@ -90,7 +90,8 @@ class ConfigAPI:
         :param remotes: Remotes to look for the configuration package
         :param profile: If specified, use that profile to resolve for profile-specific different
             configurations, like depending on different settings.
-        :return: list of RecipeReferences of the installed configuration packages
+        :return: list of RecipeReferences of all the configuration packages installed in the
+            Conan home after this operation, including the previously installed ones
         """
         ConanOutput().warning("The 'conan config install-pkg' is experimental",
                               warn_tag="experimental")
@@ -131,7 +132,8 @@ class ConfigAPI:
         :param remotes: Remotes to look for the configuration package
         :param profile: If specified, use that profile to resolve for profile-specific different
             configurations, like depending on different settings.
-        :return: list of RecipeReferences of the installed configuration packages
+        :return: list of RecipeReferences of all the configuration packages installed in the
+            Conan home after this operation, including the previously installed ones
         """
         ConanOutput().warning("The 'conan config install-pkg' is experimental",
                               warn_tag="experimental")
@@ -319,8 +321,8 @@ class ConfigAPI:
 
         :returns: A read-only object representing the settings scheme, with a
             ``possible_values()`` method that returns a dictionary with the possible
-            values for each setting, and a ``fields`` property that returns an ordered
-            list with the fields of each setting.
+            values for each setting, and a ``fields`` property that returns an
+            alphabetically sorted list with the names of the settings.
             Note that it's possible to access nested settings using attribute access,
             such as ``settings_yml.compiler.possible_values()``.
         """
@@ -335,7 +337,7 @@ class ConfigAPI:
 
             @property
             def fields(self):
-                """ returns a dict with the fields of each setting """
+                """ returns an alphabetically sorted list with the names of the settings """
                 return self._settings.fields
 
             def __getattr__(self, item):
