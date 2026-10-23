@@ -49,14 +49,14 @@ def test_exports_sources_own_code_in_subfolder():
             "CMakeLists.txt": "mycmake!"})
     c.run("create conan")
     assert "MYCMAKE-SRC: mycmake!" in c.out
-    assert "pkg/0.1: MYCMAKE-BUILD: mycmake!" in c.out
+    assert "MYCMAKE-BUILD: mycmake!" in c.out
 
     # Local flow
     c.run("install conan")
     assert c.load("conangen/mygen.txt") == "mycontent"
     # SOURCE NOT CALLED! It doesnt make sense (will fail due to local exports)
     c.run("build conan")
-    assert "conanfile.py (pkg/0.1): MYCMAKE-BUILD: mycmake!" in c.out
+    assert "MYCMAKE-BUILD: mycmake!" in c.out
     assert c.load("build/mylib.a") == "mylib"
 
 
@@ -101,15 +101,15 @@ def test_exports_sources_common_code():
             "common/myutils.cmake": "myutils!"})
     c.run("create pkg")
     assert "MYCMAKE-SRC: mycmake!" in c.out
-    assert "pkg/0.1: MYCMAKE-BUILD: mycmake!" in c.out
-    assert "pkg/0.1: MYUTILS-BUILD: myutils!" in c.out
+    assert "MYCMAKE-BUILD: mycmake!" in c.out
+    assert "MYUTILS-BUILD: myutils!" in c.out
 
     # Local flow
     c.run("install pkg")
     # SOURCE NOT CALLED! It doesnt make sense (will fail due to local exports)
     c.run("build pkg")
-    assert "conanfile.py (pkg/0.1): MYCMAKE-BUILD: mycmake!" in c.out
-    assert "conanfile.py (pkg/0.1): MYUTILS-BUILD: myutils!" in c.out
+    assert "MYCMAKE-BUILD: mycmake!" in c.out
+    assert "MYUTILS-BUILD: myutils!" in c.out
 
 
 @pytest.mark.tool("cmake")

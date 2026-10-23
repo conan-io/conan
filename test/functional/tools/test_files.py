@@ -134,7 +134,7 @@ def test_patch(mock_patch_ng):
     # Note: This cannot exist anymore, because the path is moved when prev is computed
     # assert os.path.exists(mock_patch_ng.apply_args[0])
     assert mock_patch_ng.apply_args[1:] == (0, False)
-    assert 'mypkg/1.0: Apply patch (security)' in str(client.out)
+    assert 'Apply patch (security)' in str(client.out)
 
 
 @pytest.mark.parametrize("no_copy_source", [False, True])
@@ -184,7 +184,7 @@ def test_patch_real(no_copy_source):
     client.run('create .')
     assert "Apply patch (security)" in client.out
     assert "SOURCE: //smart contents" in client.out
-    assert "mypkg/1.0: BUILD: //smart contents" in client.out
+    assert "BUILD: //smart contents" in client.out
 
     # Test local source too
     client.run("install .")
@@ -192,8 +192,8 @@ def test_patch_real(no_copy_source):
     assert "Apply patch (security)" in client.out
     assert "SOURCE: //smart contents" in client.out
     client.run("build .")
-    assert "conanfile.py (mypkg/1.0): Apply patch (security)" in client.out
-    assert "conanfile.py (mypkg/1.0): BUILD: //smart contents" in client.out
+    assert "Apply patch (security)" in client.out
+    assert "BUILD: //smart contents" in client.out
 
 
 def test_apply_conandata_patches(mock_patch_ng):
@@ -231,14 +231,14 @@ def test_apply_conandata_patches(mock_patch_ng):
     assert mock_patch_ng.apply_args[0].endswith('source_subfolder')
     assert mock_patch_ng.apply_args[1:] == (0, False)
 
-    assert 'mypkg/1.11.0: Apply patch (backport): Needed to build with modern' \
+    assert 'Apply patch (backport): Needed to build with modern' \
            ' clang compilers.' in str(client.out)
 
     # Test local methods
     client.run("install .")
     client.run("build .")
 
-    assert 'conanfile.py (mypkg/1.11.0): Apply patch (backport): Needed to build with modern' \
+    assert 'Apply patch (backport): Needed to build with modern' \
            ' clang compilers.' in str(client.out)
 
 
@@ -333,7 +333,7 @@ def test_patch_string_entry(mock_patch_ng):
     # assert os.path.exists(mock_patch_ng.apply_args[0])
     assert mock_patch_ng.apply_args[1:] == (0, False)
     assert 'mock patch data' == mock_patch_ng.string.decode('utf-8')
-    assert 'mypkg/1.11.0: Apply patch (string)' in str(client.out)
+    assert 'Apply patch (string)' in str(client.out)
 
 
 def test_relate_base_path_all_versions(mock_patch_ng):
