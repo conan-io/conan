@@ -214,7 +214,7 @@ class RecipeReference:
 
 
 class PkgReference:
-    """ An exact (no version-range, no alias) reference of a package binary,
+    """ An exact (no version-range) reference of a package binary,
     it represents a reference of the form
     ``name/version[@user/channel][#revision][%timestamp]:package_id[#revision][%timestamp]``.
     Should be enough to locate a package binary in the cache or in a server
