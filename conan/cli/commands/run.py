@@ -34,6 +34,14 @@ def run(conan_api, parser, *args):
         # Default values for install
         setattr(args, "output_folder", tmpdir)
         setattr(args, "generator", [])
+        # If there is no conanfile in the cwd and no --requires/--tool-requires,
+        # use an in-memory virtual conanfile so that a profile [tool_requires]
+        # section is enough and executables from them can be executed
+        if args.path == "." and not args.requires and not args.tool_requires \
+                and not os.path.isfile(os.path.join(cwd, "conanfile.py")) \
+                and not os.path.isfile(os.path.join(cwd, "conanfile.txt")):
+            args.path = None
+            args.tool_requires = []
         try:
             deps_graph, lockfile, _ = _run_install_command(conan_api, args, cwd,
                                                            return_install_error=False)

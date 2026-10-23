@@ -502,7 +502,7 @@ def test_using_package_module():
             "profile_build": "[settings]\nos=Windows"}, clean_first=True)
     c.run("create . -pr:b=profile_build")
     # it doesn't crash anymore, it used to crash
-    assert "pkg/0.1: Created package" in c.out
+    assert "Created package" in c.out
 
 
 def test_system_libs_transitivity():

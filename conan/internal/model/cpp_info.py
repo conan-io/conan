@@ -88,6 +88,7 @@ class _Component:
 
         self._sysroot = None
         self._requires = None
+        self.ignored_requires = []
 
         self._consumer_conanfile = None
 
@@ -597,14 +598,14 @@ class _Component:
         lib_sanitized = re.escape(libname)
         component_sanitized = re.escape(library_name)
         # At first, exact match
-        regex_static = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:a|lib)")
+        regex_static = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:a|lib|dll\.a)")
         regex_shared = re.compile(rf"(?:lib)?{lib_sanitized}\.(?:so|dylib)")
         regex_dll = re.compile(rf".*(?:{lib_sanitized}|{component_sanitized}).*\.dll")
         static_location = _find_matching(libdirs, regex_static)
         shared_location = _find_matching(libdirs, regex_shared)
         if not any([static_location, shared_location]):
             # Let's extend a little bit the pattern search
-            regex_wider_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib)")
+            regex_wider_static = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:a|lib|dll\.a)")
             regex_wider_shared = re.compile(rf"(?:lib)?{lib_sanitized}(?:[._-].+)?\.(?:so|dylib)")
             static_location = _find_matching(libdirs, regex_wider_static)
             shared_location = _find_matching(libdirs, regex_wider_shared)
@@ -796,9 +797,13 @@ class CppInfo:
             opened = new_open
         return result
 
-    def aggregated_components(self):
+    def aggregated_components(self, components=None):
         """Aggregates all the components as global values, returning a new CppInfo
         Used by many generators to obtain a unified, aggregated view of all components
+
+        :param components: if not ``None``, restrict the aggregation to only these
+         component names (used to compute the aggregated view of a subset of components,
+         e.g. the ones grouped in a single CMake config file).
         """
         # This method had caching before, but after a ``--deployer``, the package changes
         # location, and this caching was invalid, still pointing to the Conan cache instead of
@@ -806,7 +811,9 @@ class CppInfo:
         if self.has_components:
             result = _Component()
             # Reversed to make more dependant first
-            for component in reversed(self.get_sorted_components().values()):
+            for cmp_name, component in reversed(self.get_sorted_components().items()):
+                if components is not None and cmp_name not in components:
+                    continue
                 result.merge(component)
             # NOTE: The properties are not aggregated because they might refer only to the
             # component like "cmake_target_name" describing the target name FOR THE component
@@ -853,9 +860,10 @@ class CppInfo:
                 raise ConanException(msg)
         # TODO: discuss if there are cases that something is required but not transitive
         for e in direct_dependencies:
-            if e not in external:
+            if e not in external and e not in self._package.ignored_requires:
                 msg = f"{conanfile}: package_info(): The direct dependency '{e}' is not used by " \
-                      f"any '(cpp_info/components).requires'."
+                      f"any '(cpp_info/components).requires'. If this is intentional, add it to " \
+                      f"'self.cpp_info.ignored_requires'."
                 raise ConanException(msg)
 
     @property

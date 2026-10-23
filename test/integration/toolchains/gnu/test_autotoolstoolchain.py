@@ -223,6 +223,30 @@ def test_unknown_compiler():
     assert "Generator 'AutotoolsToolchain' calling 'generate()'" in client.out
 
 
+@pytest.mark.parametrize("generator", ["AutotoolsToolchain", "GnuToolchain"])
+def test_autotoolstoolchain_compiler_executables_unknown_key_warning(generator):
+    """https://github.com/conan-io/conan/issues/19142 -- same guarantee for AutotoolsToolchain."""
+    client = TestClient()
+    profile = textwrap.dedent("""
+        [settings]
+        os=Linux
+        arch=x86_64
+        compiler=gcc
+        compiler.version=6
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:compiler_executables={"RC": "rc", "bogus": "x", "c": "gcc"}
+        """)
+    client.save({"conanfile.py": GenConanfile().with_settings("os", "arch", "compiler",
+                                                              "build_type")
+                                               .with_generator(generator),
+                 "profile": profile})
+    client.run("install . --profile:host=profile")
+    assert "compiler_executables: ignoring unknown key(s) ['RC', 'bogus']" in client.out
+
+
 def test_toolchain_and_compilers_build_context():
     """
     Tests how AutotoolsToolchain manages the build context profile if the build profile is
@@ -433,3 +457,27 @@ def test_thread_flags(threads, flags):
         assert f'export CXXFLAGS="${{CXXFLAGS:-}}${{CXXFLAGS:+ }}-stdlib=libc++ {flags}"' in toolchain
         assert f'export CFLAGS="${{CFLAGS:-}}${{CFLAGS:+ }}{flags}"' in toolchain
         assert f'export LDFLAGS="${{LDFLAGS:-}}${{LDFLAGS:+ }}{flags}"' in toolchain
+
+
+def test_autotoolstoolchain_asflags_sysroot():
+    """Test that sysroot and arch flags are propagated to ASFLAGS."""
+    profile = textwrap.dedent("""
+        [settings]
+        os=Macos
+        arch=armv8
+        compiler=gcc
+        compiler.version=11
+        compiler.libcxx=libstdc++11
+        build_type=Release
+
+        [conf]
+        tools.build:sysroot=/my/sysroot
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type") \
+        .with_generator("AutotoolsToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    toolchain = client.load("conanautotoolstoolchain.sh")
+    assert "ASFLAGS" in toolchain
+    assert "--sysroot /my/sysroot" in toolchain

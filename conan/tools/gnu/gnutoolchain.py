@@ -209,12 +209,19 @@ class GnuToolchain:
         ret = {}
         # Configuration map
         compilers_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
-                             "rc": "RC", "nm": "NM", "ranlib": "RANLIB",
+                             "rc": "RC", "objc": "OBJC", "objcpp": "OBJCXX", "asm": "AS",
+                             "nm": "NM", "ranlib": "RANLIB",
                              "objdump": "OBJDUMP", "strip": "STRIP"}
         # Compiler definitions by conf
         compilers_by_conf = self._conanfile.conf.get("tools.build:compiler_executables",
                                                      default={}, check_type=dict)
         if compilers_by_conf:
+            unknown = [k for k in compilers_by_conf if k not in compilers_mapping]
+            if unknown:
+                self._conanfile.output.warning(
+                    f"tools.build:compiler_executables: ignoring unknown key(s) "
+                    f"{sorted(unknown)}, expected one of {sorted(compilers_mapping)}",
+                    warn_tag="risk")
             for comp, env_var in compilers_mapping.items():
                 if comp in compilers_by_conf:
                     compiler = compilers_by_conf[comp]
@@ -312,6 +319,14 @@ class GnuToolchain:
         return self._filter_list_empty_fields(ret)
 
     @property
+    def asflags(self):
+        if not self._is_apple_system:
+            return []
+        ret = [self.arch_flag, self.sysroot_flag, self.apple_isysroot_flag, self.apple_arch_flag,
+               self.apple_min_version_flag]
+        return self._filter_list_empty_fields(ret)
+
+    @property
     def ldflags(self):
         ret = [self.arch_flag, self.sysroot_flag, self.arch_ld_flag] + self.threads_flags
         apple_flags = [self.apple_isysroot_flag, self.apple_arch_flag, self.apple_min_version_flag]
@@ -386,6 +401,8 @@ class GnuToolchain:
         env.append("CXXFLAGS", self.cxxflags)
         env.append("CFLAGS", self.cflags)
         env.append("LDFLAGS", self.ldflags)
+        if self.asflags:
+            env.append("ASFLAGS", self.asflags)
         if self.rcflags:
             env.append("RCFLAGS", self.rcflags)
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)

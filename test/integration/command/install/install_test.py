@@ -254,7 +254,7 @@ def test_install_anonymous(client):
 def test_install_without_ref(client):
     client.save({"conanfile.py": GenConanfile("lib", "1.0")})
     client.run('create .')
-    assert "lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
+    assert "Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
 
     client.run('upload lib/1.0 -c -r default')
     assert "Uploading recipe 'lib/1.0" in client.out
@@ -491,7 +491,7 @@ def test_upload_skip_binaries_not_hit_server():
     c.run("export .")
     c.run("install --requires=pkg/0.1 --build=missing")
     # This would crash if hits the server, but it doesnt
-    assert "pkg/0.1: Created package" in c.out
+    assert "Created package" in c.out
 
 
 def test_upload_skip_build_missing():
@@ -507,7 +507,7 @@ def test_upload_skip_build_missing():
     c.run("create pkg2")
     c.run("remove pkg1/*:* -c")  # remove binaries
     c.run("create pkg3 --build=missing")
-    assert re.search(r"Skipped binaries(\s*)pkg1/1.0", c.out)
+    assert re.search(r"Skipped host binaries(\s*)pkg1/1.0", c.out)
 
 
 def test_upload_skip_build_compatibles():

@@ -134,9 +134,10 @@ def test_get_gnu_triplet_for_cross_building_raise_error():
 
 
 def test_compilers_mapping():
-    autotools_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC"}
-    compilers = {"c": "path_to_c", "cpp": "path_to_cpp", "cuda": "path_to_cuda",
-                 "fortran": "path_to_fortran"}
+    autotools_mapping = {"c": "CC", "cpp": "CXX", "cuda": "NVCC", "fortran": "FC",
+                         "rc": "RC", "objc": "OBJC", "objcpp": "OBJCXX", "asm": "AS",
+                         "nm": "NM", "ranlib": "RANLIB", "objdump": "OBJDUMP", "strip": "STRIP"}
+    compilers = {k: f"path_to_{k}" for k in autotools_mapping}
     settings = MockSettings({"build_type": "Release",
                              "os": "Windows",
                              "arch": "x86_64",
@@ -250,6 +251,46 @@ def test_crossbuild_to_android(build_env_mock):
     assert gnutc.triplets_info["host"]["triplet"] == "aarch64-linux-android"
     assert env_vars["LD"] == os.path.join(ndk_bin, "ld")  # exists
     assert env_vars["STRIP"] == os.path.join(ndk_bin, "llvm-strip")  # does not exist but appears
+
+
+@pytest.mark.parametrize("arch, android_target", [("armv7", "armv7a-linux-androideabi"),
+                                                  ("armv8", "aarch64-linux-android"),
+                                                  ("x86", "i686-linux-android"),
+                                                  ("x86_64", "x86_64-linux-android")])
+@pytest.mark.parametrize("os_build, ndk_os_folder, ext", [("Macos", "darwin", ""),
+                                                          ("Linux", "linux", ""),
+                                                          ("Windows", "windows", ".cmd")])
+@patch("conan.tools.gnu.gnutoolchain.VirtualBuildEnv")
+def test_crossbuild_to_android_ndk_compilers(build_env_mock, arch, android_target, os_build,
+                                             ndk_os_folder, ext):
+    """ With the NDK path defined, the compilers are the ones of the NDK for the target of the arch,
+    with the api_level, and the folder of the OS of the build machine
+    """
+    build_env_mock.return_value.vars.return_value = {}  # No user defined variables
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Android", "arch": arch, "os.api_level": "21",
+                                       "compiler": "clang"})
+    conanfile.settings_build = MockSettings({"os": os_build, "arch": "x86_64"})
+    ndk_path = temp_folder()
+    conanfile.conf.define("tools.android:ndk_path", ndk_path)
+    gnutc = GnuToolchain(conanfile)
+    env_vars = gnutc.extra_env.vars(conanfile)
+    ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt", f"{ndk_os_folder}-x86_64",
+                           "bin")
+    expected = {"CC": f"{android_target}21-clang{ext}", "CXX": f"{android_target}21-clang++{ext}",
+                "AS": f"{android_target}21-clang{ext}", "LD": "ld", "STRIP": "llvm-strip",
+                "RANLIB": "llvm-ranlib", "AR": "llvm-ar", "ADDR2LINE": "llvm-addr2line",
+                "NM": "llvm-nm", "OBJCOPY": "llvm-objcopy", "OBJDUMP": "llvm-objdump",
+                "READELF": "llvm-readelf", "ELFEDIT": "llvm-elfedit"}
+    for var, tool in expected.items():
+        assert env_vars[var] == os.path.join(ndk_bin, tool)
+
+
+def test_gnu_toolchain_autoreconf_args_default():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    gnutc = GnuToolchain(conanfile)
+    assert gnutc.autoreconf_args == {"--force": None, "--install": None}
 
 
 def test_gnu_toolchain_conf_extra_configure_args():

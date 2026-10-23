@@ -1,5 +1,4 @@
 import os
-import textwrap
 
 import pytest
 import yaml
@@ -58,17 +57,8 @@ class GraphManagerTest:
         manifest = FileTreeManifest.create(recipe_layout.export())
         manifest.save(recipe_layout.export())
 
-    def alias_cache(self, alias, target):
-        ref = RecipeReference.loads(alias)
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class Alias(ConanFile):
-                alias = "%s"
-            """ % target)
-        self._cache_recipe(ref, conanfile)
-
     @staticmethod
-    def recipe_consumer(reference=None, requires=None, build_requires=None):
+    def recipe_consumer(reference=None, requires=None, build_requires=None, shared=None):
         path = temp_folder()
         path = os.path.join(path, "conanfile.py")
         conanfile = GenConanfile()
@@ -81,6 +71,8 @@ class GraphManagerTest:
         if build_requires:
             for r in build_requires:
                 conanfile.with_build_requires(r)
+        if shared is not None:
+            conanfile.with_shared_option(shared)
         save(path, str(conanfile))
         return path
 

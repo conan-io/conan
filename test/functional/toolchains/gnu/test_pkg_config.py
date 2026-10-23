@@ -74,7 +74,7 @@ class TestPkgConfig:
         assert "VARIABLES: /usr/local" in c.out
 
 
-def test_pkg_config_round_tripe_cpp_info():
+def test_pkg_config_round_trip_cpp_info():
     """ test that serialize and deserialize CppInfo works
     """
     try:
@@ -82,9 +82,8 @@ def test_pkg_config_round_tripe_cpp_info():
         exe = tools_locations["pkg_config"]["exe"]
         os_ = platform.system()
         pkg_config_path = tools_locations["pkg_config"][version]["path"][os_] + "/" + exe
-    except KeyError:
-        pytest.skip("pkg-config path not defined")
-        return
+    except KeyError:  # pragma: no cover
+        pytest.skip("pkg-config path not defined")  # pragma: no cover
 
     c = TestClient()
     conanfile = textwrap.dedent("""
@@ -136,3 +135,64 @@ def test_pkg_config_round_tripe_cpp_info():
     # paths
     assert f'set(pkg_INCLUDE_DIRS_NONE "{prefix}/usr/local/include/libastral")' in pkg_data
     assert f'set(pkg_LIB_DIRS_NONE "{prefix}/usr/local/lib/libastral")' in pkg_data
+
+
+@pytest.mark.tool("pkg_config")
+def test_pkg_config_external_path():
+    c = TestClient()
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.gnu import PkgConfig
+        from conan.tools import CppInfo
+
+        class Pkg(ConanFile):
+            name = "mypkg"
+            version = "0.1"
+
+            def package(self):
+                pkg_config = PkgConfig(self, "mylibastral")
+                cpp_info = CppInfo(self)
+                pkg_config.fill_cpp_info(cpp_info, is_system=False, system_libs=["m"])
+                cpp_info.save(os.path.join(self.package_folder, "cpp_info.json"))
+
+            def package_info(self):
+                self.output.info(f"MYCWD {os.getcwd()}")
+                self.cpp_info = CppInfo(self).load("cpp_info.json")
+        """)
+    prefix = "C:" if platform.system() == "Windows" else ""
+    libastral_pc = textwrap.dedent("""\
+        prefix=%s/usr/local
+        exec_prefix=${prefix}
+        libdir=${exec_prefix}/lib
+        includedir=${prefix}/include
+
+        Name: mylibastral
+        Description: Interface library for Astral data flows
+        Version: 6.6.6
+        Libs: -L${libdir}/libastral -lastral -lm -Wl,--whole-archive
+        Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
+        """ % prefix)
+    profile = textwrap.dedent(f"""
+        [settings]
+        os=Linux
+        arch=armv8
+        [buildenv]
+        PKG_CONFIG_PATH+=(path){{{{profile_dir}}}}/mypcs
+        """)
+    c.save({"conanfile.py": conanfile,
+            "mypcs/mylibastral.pc": libastral_pc,
+            "profile": profile})
+    c.run("create . -pr=profile")
+    # With the environment_update, it works
+    # with environment_update({"PKG_CONFIG_PATH": f"{c.current_folder}/mypcs"}):
+    c.run("install --requires=mypkg/0.1 -pr=profile -g CMakeDeps")
+    pkg_data = c.load("mypkg-none-armv8-data.cmake")
+    assert 'set(mypkg_DEFINITIONS_NONE "-D_USE_LIBASTRAL")' in pkg_data
+    assert 'set(mypkg_SHARED_LINK_FLAGS_NONE "-Wl,--whole-archive")' in pkg_data
+    assert 'set(mypkg_COMPILE_DEFINITIONS_NONE "_USE_LIBASTRAL")' in pkg_data
+    assert 'set(mypkg_LIBS_NONE astral)' in pkg_data
+    assert 'set(mypkg_SYSTEM_LIBS_NONE m)' in pkg_data
+    # paths
+    assert f'set(mypkg_INCLUDE_DIRS_NONE "{prefix}/usr/local/include/libastral")' in pkg_data
+    assert f'set(mypkg_LIB_DIRS_NONE "{prefix}/usr/local/lib/libastral")' in pkg_data

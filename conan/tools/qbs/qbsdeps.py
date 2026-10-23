@@ -68,7 +68,9 @@ class _QbsDepGenerator:
         def _get_package_name(dep):
             # TODO: pkgconfig uses suffix, do we need it? see:
             # https://github.com/conan-io/conan/blob/develop2/conan/tools/gnu/pkgconfigdeps.py#L319
-            return dep.cpp_info.get_property("pkg_config_name") or dep.ref.name
+            return (dep.cpp_info.get_property("qbs_file_name") or
+                    dep.cpp_info.get_property("pkg_config_name") or
+                    dep.ref.name)
 
         def _get_component_name(dep, comp_name):
             if comp_name not in dep.cpp_info.components:
@@ -130,8 +132,11 @@ class _QbsDepGenerator:
             if not requires:
                 # If no requires were found, let's try to get all the direct visible
                 # dependencies, e.g., requires = "other_pkg/1.0"
-                for deprequire, _ in self._dep.dependencies.direct_host.items():
-                    requires.append((deprequire.ref.name, deprequire.ref.version))
+                # Use _get_package_name so dependency names match generated JSON
+                # filenames when pkg_config_name / qbs_file_name is set
+                # (e.g. recipe "clipper" -> file "polyclipping.json").
+                for _, dep in self._dep.dependencies.direct_host.items():
+                    requires.append((_get_package_name(dep), dep.ref.version))
             file = _QbsDepsModuleFile(
                 self, self._dep, self._dep.cpp_info, requires, module_name
             )

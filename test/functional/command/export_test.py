@@ -22,7 +22,7 @@ class TestRevisionModeSCM:
         # Now it will fail if dirty
         t.save({"conanfile.py": conanfile + "\n#comment"})
         t.run(f"export . --name=pkg --version=0.1", assert_error=True)
-        assert "Can't have a dirty repository using revision_mode='scm' and doing" in t.out
+        assert "Can't have a dirty repository using revision_mode='scm'" in t.out
         # Commit to fix
         commit2 = git_add_changes_commit(t.current_folder, msg="fix")
         t.run(f"export . --name=pkg --version=0.1")

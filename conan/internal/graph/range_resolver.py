@@ -3,6 +3,7 @@ from conan.internal.graph.proxy import should_update_reference
 from conan.errors import ConanException
 from conan.api.model import RecipeReference
 from conan.internal.model.version_range import VersionRange
+from conan.api.model.remote import _is_package_allowed
 
 
 class RangeResolver:
@@ -76,8 +77,7 @@ class RangeResolver:
             return self._resolve_version(version_range, local_found, self._resolve_prereleases)
 
     def _search_remote_recipes(self, remote, search_ref):
-        if remote.allowed_packages and not any(search_ref.matches(f, is_consumer=False)
-                                               for f in remote.allowed_packages):
+        if not _is_package_allowed(remote, search_ref):
             return []
         pattern = str(search_ref)
         pattern_cached = self._cached_remote_found.setdefault(pattern, {})

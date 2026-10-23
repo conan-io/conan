@@ -87,8 +87,8 @@ class TestHooks:
 
         c.run("source .")
         hook_msg = "[HOOK - complete_hook/hook_complete.py]"
-        assert f"conanfile.py (pkg/0.1): {hook_msg} pre_source(): Hello" in c.out
-        assert f"conanfile.py (pkg/0.1): {hook_msg} post_source(): Hello" in c.out
+        assert f"{hook_msg} pre_source(): Hello" in c.out
+        assert f"{hook_msg} post_source(): Hello" in c.out
 
         c.run("install .")
         assert f"conanfile.py (pkg/0.1): {hook_msg} pre_validate(): Hello" in c.out
@@ -111,21 +111,21 @@ class TestHooks:
         c.run("export-pkg . ")
         assert f"{hook_msg} pre_export(): Hello" in c.out
         assert f"{hook_msg} post_export(): Hello" in c.out
-        assert f"conanfile.py (pkg/0.1): {hook_msg} pre_package(): Hello" in c.out
-        assert f"conanfile.py (pkg/0.1): {hook_msg} post_package(): Hello" in c.out
-        assert f"conanfile.py (pkg/0.1): {hook_msg} post_package_id(): Hello" in c.out
+        assert f"{hook_msg} pre_package(): Hello" in c.out
+        assert f"{hook_msg} post_package(): Hello" in c.out
+        assert f"{hook_msg} post_package_id(): Hello" in c.out
 
         c.run("create . ")
         assert f"pkg/0.1: {hook_msg} pre_validate(): Hello" in c.out
         assert f"pkg/0.1: {hook_msg} post_validate(): Hello" in c.out
         assert f"pkg/0.1: {hook_msg} pre_export(): Hello" in c.out
         assert f"pkg/0.1: {hook_msg} post_export(): Hello" in c.out
-        assert f"pkg/0.1: {hook_msg} pre_source(): Hello" in c.out
-        assert f"pkg/0.1: {hook_msg} post_source(): Hello" in c.out
+        assert f"{hook_msg} pre_source(): Hello" in c.out
+        assert f"{hook_msg} post_source(): Hello" in c.out
         assert f"pkg/0.1: {hook_msg} pre_build(): Hello" in c.out
         assert f"pkg/0.1: {hook_msg} post_build(): Hello" in c.out
-        assert f"pkg/0.1: {hook_msg} pre_package(): Hello" in c.out
-        assert f"pkg/0.1: {hook_msg} post_package(): Hello" in c.out
+        assert f"{hook_msg} pre_package(): Hello" in c.out
+        assert f"{hook_msg} post_package(): Hello" in c.out
         assert f"pkg/0.1: {hook_msg} pre_package_info(): Hello" in c.out
         assert f"pkg/0.1: {hook_msg} post_package_info(): Hello" in c.out
         assert f"pkg/0.1: {hook_msg} post_package_id(): Hello" in c.out

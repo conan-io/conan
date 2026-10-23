@@ -105,7 +105,7 @@ def test_python_requires_for_build_requires():
 
     client2.run("create . --name=pkg --version=0.1 -pr=myprofile")
     assert "tool/1.1.1" in client2.out
-    assert f"pkg/0.1: Package '{PKG_ID_1}' created" in client2.out
+    assert f"Package '{PKG_ID_1}' created" in client2.out
 
     client.run("create . --name=tool --version=1.1.2")
     client2.run("install --requires=pkg/0.1@ -pr=myprofile", assert_error=True)
@@ -115,7 +115,7 @@ def test_python_requires_for_build_requires():
 
     client2.run("create . --name=pkg --version=0.1 -pr=myprofile")
     # assert "pkg/0.1: Applying build-requirement: tool/1.1.2", client2.out)
-    assert f"pkg/0.1: Package '{PKG_ID_2}' created" in client2.out
+    assert f"Package '{PKG_ID_2}' created" in client2.out
 
 
 class TestPythonRequiresHeaderOnly:

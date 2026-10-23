@@ -205,3 +205,8 @@ class Profile:
         Specified package settings are prioritized to profile"""
         for package_name, settings in package_settings.items():
             self.package_settings[package_name].update(settings)
+            # Sort so parent settings (e.g. compiler) precede sub-settings (compiler.version)
+            # regardless of include order, mirroring what profile_loader does per-file
+            self.package_settings[package_name] = OrderedDict(
+                sorted(self.package_settings[package_name].items())
+            )

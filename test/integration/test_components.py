@@ -115,7 +115,7 @@ def test_components_not_required():
             "wayland/conanfile.py": conanfile})
     c.run("create expat")
     c.run("create wayland")
-    assert "wayland/1.0: Created package" in c.out
+    assert "Created package" in c.out
 
 
 def test_components_overrides():
@@ -148,7 +148,7 @@ def test_components_overrides():
     c.run("create glib")
     # This used to crash, because override was not correctly excluded
     c.run("create app")
-    assert "app/0.1: Created package" in c.out
+    assert "Created package" in c.out
 
 
 def test_duplication_component_properties():

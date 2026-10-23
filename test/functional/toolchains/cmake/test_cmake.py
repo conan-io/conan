@@ -1,13 +1,13 @@
 import os
 import platform
 import textwrap
-import time
 
 import pytest
 
 from conan.test.assets.cmake import gen_cmakelists
 from conan.test.assets.sources import gen_function_cpp, gen_function_h
 from test.functional.utils import check_vs_runtime, check_exe_run
+from conan.test.utils.test_files import backdate_folder
 from conan.test.utils.tools import TestClient
 
 
@@ -31,7 +31,6 @@ def test_simple_cmake_mingw():
         compiler.cppstd=17
         """})
     client.run("create . --profile=mingw")
-    print(client.out)
     build_folder = client.created_test_build_folder("hello/1.0")
     # FIXME: Note that CI contains 10.X, so it uses another version rather than the profile one
     #  and no one notices. It would be good to have some details in confuser.py to be consistent
@@ -197,6 +196,8 @@ class Base:
         return install_out
 
     def _modify_code(self):
+        # The modified files must be clearly newer than the previous build outputs
+        backdate_folder(self.client.current_folder)
         lib_cpp = gen_function_cpp(name="app", msg="AppImproved", includes=["hello"],
                                    calls=["hello"], preprocessor=["MYVAR", "MYVAR_CONFIG",
                                                                   "MYDEFINE", "MYDEFINE_CONFIG",
@@ -309,7 +310,6 @@ class TestWin(Base):
                          static_runtime=static_runtime)
 
         self._modify_code()
-        time.sleep(1)
         self._incremental_build(build_type=build_type)
         _verify_out(marker="++>>")
         self._run_app(build_type, bin_folder=True, msg="AppImproved")
@@ -370,7 +370,6 @@ class TestWin(Base):
                        }, subsystem="mingw64")
 
         self._modify_code()
-        time.sleep(2)
         self._incremental_build()
         _verify_out(marker="++>>")
         self._run_app(build_type, msg="AppImproved")
@@ -488,8 +487,9 @@ class TestApple(Base):
 
         self._run_app(build_type, dyld_path=shared)
 
+        arch = host_profile.settings.get("arch")
+        check_exe_run(self.client.out, "main", "apple-clang", None, build_type, arch, cppstd=cppstd)
         self._modify_code()
-        time.sleep(1)
         self._incremental_build()
         _verify_out(marker="++>>")
         self._run_app(build_type, dyld_path=shared, msg="AppImproved")
@@ -573,7 +573,7 @@ class TestCMakeInstall:
         assert "--loglevel=VERBOSE" in client.out
         assert "unrecognized option" not in client.out
         assert "--verbose" in client.out
-        assert "pkg/0.1: package(): Packaged 1 '.h' file: header.h" in client.out
+        assert "package(): Packaged 1 '.h' file: header.h" in client.out
         package_folder = client.created_layout().package()
         assert os.path.exists(os.path.join(package_folder, "include", "header.h"))
 
@@ -660,7 +660,9 @@ class TestCmakeTestMethod:
         # The create flow must work
         c.run("create . --name=pkg --version=0.1 -pr:b=default -o matrix*:shared=True")
         assert str(c.out).count("1/1 Test #1: example ..........................   Passed") == 2
-        assert "pkg/0.1: RUN: ctest --build-config Release --parallel"
+        # --build-config is only needed by the multi-config generators (Visual Studio in Windows)
+        build_config = "--build-config Release " if platform.system() == "Windows" else ""
+        assert f"pkg/0.1: RUN: ctest {build_config}--parallel" in c.out
 
 
 @pytest.mark.tool("cmake")

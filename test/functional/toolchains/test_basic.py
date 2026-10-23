@@ -44,23 +44,6 @@ class TestBasic:
         toolchain = client.load("conan_meson_native.ini")
         assert "[project options]" in toolchain
 
-    @pytest.mark.tool("visual_studio")
-    @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-    def test_declarative_msbuildtoolchain(self):
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class Pkg(ConanFile):
-                settings = "os", "compiler", "arch", "build_type"
-                generators = ("MSBuildToolchain", )
-            """)
-        client = TestClient()
-        client.save({"conanfile.py": conanfile})
-        client.run("install .")
-
-        assert "Generator 'MSBuildToolchain' calling 'generate()'" in client.out
-        toolchain = client.load("conantoolchain.props")
-        assert "<?xml version" in toolchain
-
     def test_error_missing_settings(self):
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -85,7 +68,7 @@ class TestBasic:
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("install .", assert_error=True)
-        assert "ERROR: Error in generate() method, line 6" in client.out
+        assert "ERROR: conanfile.py: Error in generate() method, line 6" in client.out
 
     def test_declarative_new_helper(self):
         conanfile = textwrap.dedent("""

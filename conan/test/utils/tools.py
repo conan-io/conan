@@ -56,6 +56,16 @@ compiler, msvc_version, exe = detect_msvc_compiler()
 default_msvc_version = msvc_version
 default_vs_ide_version = default_msvc_ide_version(msvc_version)
 
+vs2022_profile = """
+[settings]
+os=Windows
+arch=x86_64
+compiler=msvc
+compiler.version=193
+compiler.runtime=dynamic
+build_type=Release
+"""
+
 default_profiles = {
     "Windows": textwrap.dedent("""\
         [settings]
@@ -665,21 +675,6 @@ class TestClient:
         tmp.revision = rrev
         return tmp
 
-    def alias(self, source, target):
-        """
-        creates a new recipe with "conan new alias" template, "conan export" it, and remove it
-        @param source: the reference of the current recipe
-        @param target: the target reference that this recipe is pointing (aliasing to)
-        """
-        source = RecipeReference.loads(source)
-        target = target.split("/", 1)[1]
-        self.run(f"new alias -d name={source.name} -d version={source.version} "
-                 f"-d target={target} -f")
-        user = f"--user={source.user}" if source.user else ""
-        channel = f"--channel={source.channel}" if source.channel else ""
-        self.run(f"export . {user} {channel}")
-        os.remove(os.path.join(self.current_folder, "conanfile.py"))
-
     def init_git_repo(self, files=None, branch=None, submodules=None, folder=None, origin_url=None,
                       main_branch="master"):
         if folder is not None:
@@ -810,19 +805,19 @@ class TestClient:
         return build_folder.replace("\\", "/")
 
     def created_package_id(self, ref):
-        package_id = re.search(r"{}: Package '(\S+)' created".format(str(ref)),
+        package_id = re.search(r"Package step for {}:(\S+)".format(re.escape(str(ref))),
                                str(self.out)).group(1)
         return package_id
 
     def created_package_revision(self, ref):
-        package_id = re.search(r"{}: Created package revision (\S+)".format(str(ref)),
-                               str(self.out)).group(1)
-        return package_id
+        pref_str = re.search(r"Full package reference: ({}[^:]*:\S+)".format(re.escape(str(ref))),
+                             str(self.out)).group(1)
+        return PkgReference.loads(pref_str).revision
 
     def created_package_reference(self, ref):
-        pref = re.search(r"{}: Full package reference: (\S+)".format(str(ref)),
-                         str(self.out)).group(1)
-        return PkgReference.loads(pref)
+        pref_str = re.search(r"Full package reference: ({}[^:]*:\S+)".format(re.escape(str(ref))),
+                             str(self.out)).group(1)
+        return PkgReference.loads(pref_str)
 
     def exported_recipe_revision(self):
         return re.search(r"Exported: .*#(\S+)", str(self.out)).group(1)
@@ -833,7 +828,7 @@ class TestClient:
         return self.cache.recipe_layout(ref)
 
     def created_layout(self):
-        pref = re.search(r"(?s:.*)Full package reference: (\S+)", str(self.out)).group(1)
+        pref = re.findall(r"Full package reference: (\S+)", str(self.out))[-1]
         pref = PkgReference.loads(pref)
         return self.cache.pkg_layout(pref)
 

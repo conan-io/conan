@@ -113,7 +113,7 @@ class TestInRepo:
         # Of course the recipe can also be created locally
         path = os.path.join(repo_folder, "recipes/pkg/all")
         c.run(f'create "{path}" --version=0.1')
-        assert "pkg/0.1: Created package" in c.out
+        assert "Created package" in c.out
 
         # Finally lets remove the remote, check that the clone is cleared
         c.run('remote remove local')

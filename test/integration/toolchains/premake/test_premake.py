@@ -73,9 +73,8 @@ def test_premake_build():
                 """
     )
     tc.save({"conanfile.py": conanfile})
-    tc.run(
-        "build . -s compiler=gcc -s compiler.version=13 -s compiler.libcxx=libstdc++ -s arch=x86_64 -c tools.build:jobs=4",
-    )
+    tc.run("build . -s compiler=gcc -s compiler.version=13 -s compiler.libcxx=libstdc++ "
+           "-s arch=x86_64 -c tools.build:jobs=4")
     assert 'conanfile.premake5.lua" gmake --arch=x86_64!!' in tc.out
     assert "Running make config=release all -j4!!" in tc.out
 
@@ -99,9 +98,8 @@ def test_premake_build_with_targets():
                 """
     )
     tc.save({"conanfile.py": conanfile})
-    tc.run(
-        "build . -s compiler=gcc -s compiler.version=13 -s compiler.libcxx=libstdc++ -s arch=armv8 -c tools.build:jobs=42",
-    )
+    tc.run("build . -s compiler=gcc -s compiler.version=13 -s compiler.libcxx=libstdc++ "
+           "-s arch=armv8 -c tools.build:jobs=42")
     assert 'conanfile.premake5.lua" gmake --arch=arm64!!' in tc.out
     assert "Running make config=release app test -j42!!" in tc.out
 
@@ -143,6 +141,10 @@ def test_premake_msbuild_platform():
     assert 'conanfile.premake5.lua" vs2022 --arch=x86_64!!' in tc.out
     assert 'Running msbuild.exe "App.sln" -p:Configuration="Release" -p:Platform="Win64"!!' in tc.out
 
+    tc.run("build . -pr win -s compiler.version=195")
+    assert 'conanfile.premake5.lua" vs2026 --arch=x86_64!!' in tc.out
+    assert 'Running msbuild.exe "App.slnx" -p:Configuration="Release" -p:Platform="Win64"!' in tc.out
+
 
 def test_premake_build_with_custom_configuration():
     tc = TestClient()
@@ -166,8 +168,7 @@ def test_premake_build_with_custom_configuration():
                 """
     )
     tc.save({"conanfile.py": conanfile})
-    tc.run(
-        "build . -s compiler=gcc -s compiler.version=13 -s compiler.libcxx=libstdc++ -s arch=armv8 -c tools.build:jobs=4",
-    )
+    tc.run("build . -s compiler=gcc -s compiler.version=13 -s compiler.libcxx=libstdc++ "
+           "-s arch=armv8 -c tools.build:jobs=4")
     assert 'conanfile.premake5.lua" gmake --arch=arm64!!' in tc.out
     assert "Running make config=releasedll all -j4!!" in tc.out

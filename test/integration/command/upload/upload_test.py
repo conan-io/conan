@@ -106,9 +106,8 @@ class TestUpload:
 
     def test_pattern_upload_no_recipes(self):
         client = TestClient(default_server_user=True, light=True)
-        client.save({"conanfile.py": conanfile})
-        client.run("upload bogus/*@dummy/testing --confirm -r default", assert_error=True)
-        assert "No recipes found matching pattern 'bogus/*@dummy/testing'" in client.out
+        client.run("upload bogus/*@dummy/testing --confirm -r default")
+        assert "WARN: No packages were uploaded because the selection is empty." in client.out
 
     def test_broken_sources_tgz(self):
         # https://github.com/conan-io/conan/issues/2854
@@ -393,7 +392,7 @@ class TestUpload:
         client.save({"conanfile.py": GenConanfile()})
 
         client.run('create . --name=lib --version=1.0')
-        assert "lib/1.0: Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
+        assert "Package '{}' created".format(NO_SETTINGS_PACKAGE_ID) in client.out
         client.run('upload lib/1.0 -c -r default')
         assert "Uploading recipe 'lib/1.0" in client.out
 

@@ -2,6 +2,7 @@ import os
 import textwrap
 
 from conan.api.model import RecipeReference
+from conan.internal.util.files import gather_files
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
@@ -58,6 +59,64 @@ def test_exports_sources():
     assert_files(ref_layout.source(), ['hello.h'])
     assert_files(ref_layout.export(), ['conanfile.py', 'conanmanifest.txt', ])
     assert_files(ref_layout.export_sources(), ['hello.h'])
+
+
+def test_exports_sources_multiple_patterns():
+    """ Several exports_sources patterns export the union of what they match, minus the excludes
+    """
+    c = TestClient(light=True)
+    c.save({"conanfile.py": GenConanfile("hello", "0.1")
+                            .with_exports_sources("*.h", "src/*.cpp", "docs/*.md",
+                                                  "!docs/private.md"),
+            "hello.h": "", "other.h": "",
+            "src/lib.cpp": "", "src/util.cpp": "",
+            "docs/readme.md": "", "docs/private.md": "",
+            "unmatched.txt": ""})
+    c.run("export .")
+
+    ref_layout = c.get_latest_ref_layout(RecipeReference.loads("hello/0.1"))
+    exported, _ = gather_files(ref_layout.export_sources())
+    assert sorted(exported) == ["docs/readme.md", "hello.h", "other.h",
+                                "src/lib.cpp", "src/util.cpp"]
+
+
+def test_exports_multiple_patterns():
+    """ Same for the ``exports`` attribute: union of all the patterns, minus the excludes
+    """
+    c = TestClient(light=True)
+    c.save({"conanfile.py": GenConanfile("hello", "0.1")
+                            .with_exports("*.h", "src/*.cpp", "docs/*.md", "!docs/private.md"),
+            "hello.h": "", "other.h": "",
+            "src/lib.cpp": "", "src/util.cpp": "",
+            "docs/readme.md": "", "docs/private.md": "",
+            "unmatched.txt": ""})
+    c.run("export .")
+
+    ref_layout = c.get_latest_ref_layout(RecipeReference.loads("hello/0.1"))
+    exported, _ = gather_files(ref_layout.export())
+    assert sorted(exported) == ["conanfile.py", "conanmanifest.txt", "docs/readme.md",
+                                "hello.h", "other.h", "src/lib.cpp", "src/util.cpp"]
+
+
+def test_export_walks_recipe_folder_once_per_exports_attribute():
+    """ All the patterns of one attribute are passed to a single copy() call, so the recipe
+    folder is walked once for exports_sources and once for exports, not once per pattern.
+    copy() traces one "copy(pattern=...)" line per call, visible with -vv (debug)
+    """
+    c = TestClient(light=True)
+    c.save({"conanfile.py": GenConanfile("hello", "0.1")
+                            .with_exports_sources("*.h", "src/*.cpp")
+                            .with_exports("*.txt", "docs/*.md"),
+            "hello.h": "", "src/lib.cpp": "",
+            "notes.txt": "", "docs/readme.md": ""})
+    c.run("export . -vv")
+
+    walks = [line for line in c.out.splitlines() if "copy(pattern=" in line]
+    trace = "\n".join(walks)
+    assert len(walks) == 2, f"Expected 1 walk for exports_sources + 1 for exports, got:\n{trace}"
+    # and each pair of patterns travelled together, in the very same copy() call
+    assert any("*.h" in w and "src/*.cpp" in w for w in walks), trace
+    assert any("*.txt" in w and "docs/*.md" in w for w in walks), trace
 
 
 def test_test_package_copied():

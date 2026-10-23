@@ -6,10 +6,10 @@ import pytest
 
 from conan.api.model import PkgReference
 from conan.test.assets.visual_project_files import get_vs_project_files
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, vs2022_profile
 
 
-@pytest.mark.tool("visual_studio")
+@pytest.mark.tool("visual_studio", "17")
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires MSBuild")
 def test_msbuilddeps_dedup_paths_functional():
     """Real MSBuild build with multi-component package sharing the same
@@ -62,6 +62,7 @@ def test_msbuilddeps_dedup_paths_functional():
         """)
 
     client = TestClient(path_with_spaces=False)
+    client.save_home({"profiles/default": vs2022_profile})
 
     client.save({"pkg/conanfile.py": mypkg})
     client.run("create pkg")

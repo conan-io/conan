@@ -91,6 +91,38 @@ def test_other_client_can_link_autotools(transitive_shared_client):
     # client.run("create . --build=missing")
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="win_copy_folder is Windows-only")
+def test_virtualrunenv_win_copy_folder(transitive_shared_client):
+    client = TestClient(servers=transitive_shared_client.servers)
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.env import VirtualRunEnv
+
+        class Pkg(ConanFile):
+            settings = "os", "compiler", "arch", "build_type"
+
+            def requirements(self):
+                self.requires("app/0.1")
+
+            def generate(self):
+                # Copy to "imported-bin" inside generators folder
+                runenv = VirtualRunEnv(self, win_copy_folder="imported-bin")
+                runenv.generate()
+
+            def build(self):
+                self.run("app", env="conanrun")
+        """)
+    client.save({"conanfile.py": conanfile})
+    client.run("build . -o *:shared=True")
+    assert "app/0.1: Hello World Release!" in client.out
+    assert "chat/0.1: Hello World Release!" in client.out
+    assert "hello/0.1: Hello World Release!" in client.out
+    client.run_command(r".\imported-bin\app")
+    assert "app/0.1: Hello World Release!" in client.out
+    assert "chat/0.1: Hello World Release!" in client.out
+    assert "hello/0.1: Hello World Release!" in client.out
+
+
 @pytest.mark.tool("cmake")
 def test_shared_cmake_toolchain_components():
     """ the same as above, but with components.

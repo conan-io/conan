@@ -3,20 +3,22 @@ import sqlite3
 from contextlib import contextmanager
 from sqlite3 import OperationalError
 
+from conan.api.output import ConanOutput
 from conan.errors import ConanException
-from conan.internal.api.remotes import encrypt
 
 REMOTES_USER_TABLE = "users_remotes"
 LOCALDB = ".conan.db"
 
-_localdb_encryption_key = os.environ.pop('CONAN_LOGIN_ENCRYPTION_KEY', None)
+if os.environ.pop('CONAN_LOGIN_ENCRYPTION_KEY', None) is not None:
+    ConanOutput().warning("CONAN_LOGIN_ENCRYPTION_KEY env-var is defined but no longer used: "
+                          "credentials in the local DB are stored in plain text",
+                          warn_tag="risk")
 
 
 class LocalDB:
 
     def __init__(self, dbfolder):
         self.dbfile = os.path.join(dbfolder, LOCALDB)
-        self.encryption_key = _localdb_encryption_key
 
         # Create the database file if it doesn't exist
         if not os.path.exists(self.dbfile):
@@ -33,16 +35,6 @@ class LocalDB:
                 except Exception as e:
                     message = f"Could not initialize local sqlite database {self.dbfile}"
                     raise ConanException(message, e)
-
-    def _encode(self, value):
-        if value and self.encryption_key:
-            return encrypt.encode(value, self.encryption_key)
-        return value
-
-    def _decode(self, value):
-        if value and self.encryption_key:
-            return encrypt.decode(value, self.encryption_key)
-        return value
 
     def clean(self, remote_url=None):
         with self._connect() as connection:
@@ -81,8 +73,8 @@ class LocalDB:
                 if not rs:
                     return None, None, None
                 name = rs[0]
-                token = self._decode(rs[1])
-                refresh_token = self._decode(rs[2])
+                token = rs[1]
+                refresh_token = rs[2]
                 return name, token, refresh_token
             except Exception:
                 raise ConanException("Couldn't read login\n Try removing '%s' file" % self.dbfile)
@@ -94,8 +86,6 @@ class LocalDB:
         """ Login is a tuple of (user, token) """
         with self._connect() as connection:
             try:
-                token = self._encode(token)
-                refresh_token = self._encode(refresh_token)
                 statement = connection.cursor()
                 statement.execute("INSERT OR REPLACE INTO %s (remote_url, user, token, "
                                   "refresh_token) "

@@ -201,6 +201,13 @@ class PkgCache:
         assert ref.timestamp
         self._db.update_recipe_timestamp(ref)
 
+    def update_package_timestamp(self, pref: PkgReference, path=None, build_id=None):
+        """ when the package already exists in cache, but we get a new timestamp from a server
+        that would affect its order in our cache """
+        assert pref.revision
+        assert pref.timestamp
+        self._db.update_package_timestamp(pref, path=path, build_id=build_id)
+
     def search_recipes(self, pattern=None):
         # Conan references in main storage
         if pattern:
@@ -268,7 +275,7 @@ class PkgCache:
             # TODO: The relpath would be the same as the previous one, it shouldn't be ncessary to
             #  update it, the update_package_timestamp() can be simplified and path dropped
             relpath = os.path.relpath(layout.base_folder, self._base_folder)
-            self._db.update_package_timestamp(pref, path=relpath, build_id=build_id)
+            self.update_package_timestamp(pref, path=relpath, build_id=build_id)
 
     def assign_rrev(self, layout: RecipeLayout):
         """ called at export, once the exported recipe revision has been computed, it

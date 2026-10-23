@@ -77,7 +77,7 @@ class LocalAPI:
         ref = RecipeReference(conanfile.name, conanfile.version, conanfile.user, conanfile.channel)
         # Retrieve conanfile.py from target_path
         target_path = self.get_conanfile_path(path=path, cwd=cwd, py=True)
-        output_folder = make_abs_path(output_folder) if output_folder else None
+        output_folder = make_abs_path(output_folder, cwd) if output_folder else None
         # Check the conanfile is there, and name/version matches
         self._helpers.editable_packages.add(ref, target_path, output_folder=output_folder)
         return ref
@@ -102,7 +102,7 @@ class LocalAPI:
         return self._helpers.editable_packages.edited_refs
 
     def source(self, path, name=None, version=None, user=None, channel=None,
-               remotes: List[Remote] = None):
+               remotes: List[Remote] = None, lockfile=None):
         """ Calls the ``source()`` method of the current (user folder) ``conanfile.py``
 
         This method does not require computing a dependency graph, because the ``source()``
@@ -114,10 +114,11 @@ class LocalAPI:
         :param user: The user of the package. If not defined, it is taken from conanfile
         :param channel: The channel of the package. If not defined, it is taken from conanfile
         :param remotes: The remotes to resolve possible ``python-requires`` for this recipe if needed.
+        :param lockfile: The lockfile to use for the ``python-requires`` resolution, if needed.
         """
         loader = self._helpers.loader
         conanfile = loader.load_consumer(path, name=name, version=version,
-                                         user=user, channel=channel, graph_lock=None,
+                                         user=user, channel=channel, graph_lock=lockfile,
                                          remotes=remotes)
         # This profile is empty, but with the conf from global.conf
         profile = self._conan_api.profiles.get_profile([])

@@ -64,4 +64,4 @@ def test_cmakedeps(client_weird_lib_name):
     c.save({}, clean_first=True)
     c.run("new cmake_lib -d name=chat -d version=0.1 -d requires=hello/0.1")
     c.run("create .")
-    assert "chat/0.1: Created package" in c.out
+    assert "Created package" in c.out

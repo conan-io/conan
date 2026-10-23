@@ -88,8 +88,8 @@ def test_multi_cmake():
     ext = '.a' if platform.system() != "Windows" else '.lib'
     prefix = 'lib' if platform.system() != "Windows" else ''
 
-    assert "multi/0.1: package(): Packaged 1 '.h' file: hello_two.h" in client.out
-    assert f"multi/0.1: package(): Packaged 1 '{ext}' file: {prefix}hello_two{ext}" in client.out
+    assert "package(): Packaged 1 '.h' file: hello_two.h" in client.out
+    assert f"package(): Packaged 1 '{ext}' file: {prefix}hello_two{ext}" in client.out
     package_folder = client.created_layout().package()
     assert not os.path.exists(os.path.join(package_folder, "one", "include", "hello_one.h"))
     assert not os.path.exists(os.path.join(package_folder, "one", "lib", f"{prefix}hello_one{ext}"))

@@ -17,20 +17,19 @@ class TestToolsCustomVersions:
         default_cmake_version = tools_locations["cmake"]["default"]
         assert "cmake version {}".format(default_cmake_version) in client.out
 
-    @pytest.mark.tool("cmake", "3.19")
-    def test_custom_cmake_3_19(self):
+    @pytest.mark.tool("cmake", "3.23")
+    def test_custom_cmake_3_23(self):
         client = TestClient()
         client.run_command('cmake --version')
-        assert "cmake version 3.19" in client.out
+        assert "cmake version 3.23" in client.out
 
     @pytest.mark.tool("mingw64")
-    @pytest.mark.tool("cmake", "3.19")
-    @pytest.mark.skipif(platform.system() != "Windows",
-                        reason="Mingw test")
+    @pytest.mark.tool("cmake", "3.23")
+    @pytest.mark.skipif(platform.system() != "Windows", reason="Mingw test")
     def test_custom_cmake_mingw64(self):
         client = TestClient()
         client.run_command('cmake --version')
-        assert "cmake version 3.19" in client.out
+        assert "cmake version 3.23" in client.out
         main = gen_function_cpp(name="main")
         cmakelist = textwrap.dedent("""
             set(CMAKE_CXX_COMPILER_WORKS 1)

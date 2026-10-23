@@ -51,6 +51,8 @@ def _get_gnu_arch(os_, arch):
             machine = 'riscv64'
         elif 'riscv32' in arch:
             machine = "riscv32"
+        elif "loongarch64" in arch:
+            machine = "loongarch64"
 
     if machine is None:
         raise ConanException("Unknown '%s' machine, Conan doesn't know how to "
