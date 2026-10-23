@@ -1281,10 +1281,10 @@ class TestNoSoname:
 
 
 class TestRequireTraitsFiltering:
-    def test_libs_false_keeps_location_skips_system_libs_and_frameworks(self):
-        """libs=False must  add the package's own extra system_libs/frameworks, and the
-        library's own location/type is unaffected, and headers=True must still expose
-        include dirs and defines."""
+    def test_libs_false_keeps_location_system_libs_and_frameworks(self):
+        """libs=False alone must not drop the package's own system_libs/frameworks (those
+        are only cleared when headers is also False), the library's own location/type is
+        unaffected, and headers=True must still expose include dirs and defines."""
         c = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1351,10 +1351,10 @@ class TestRequireTraitsFiltering:
         for absent in ("INTERFACE_INCLUDE_DIRECTORIES", "DEP_DEFINE"):
             assert absent not in cmake
 
-    def test_headers_and_libs_false_skips_flags_and_sources_too(self):
+    def test_headers_and_libs_false_skips_flags_system_libs_and_sources_too(self):
         """With neither headers nor libs needed (e.g. a run=True-only dependency), the
-        remaining compile/link flags and injected sources must be dropped as well, while the
-        target is still declared so it can be depended upon."""
+        remaining compile/link flags, system_libs and injected sources must be dropped as
+        well, while the target is still declared so it can be depended upon."""
         c = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile
@@ -1372,6 +1372,7 @@ class TestRequireTraitsFiltering:
                     self.cpp_info.sharedlinkflags = ["-Wl,--dep-shared"]
                     self.cpp_info.exelinkflags = ["-Wl,--dep-exe"]
                     self.cpp_info.sources = ["src/extra.cpp"]
+                    self.cpp_info.system_libs = ["pthread"]
             """)
         app = textwrap.dedent("""
             from conan import ConanFile
@@ -1385,19 +1386,20 @@ class TestRequireTraitsFiltering:
         c.run("install app -g CMakeConfigDeps")
         cmake = c.load("app/dep-Targets-release.cmake")
         # Location/type are unaffected by libs=False (see class docstring), only the flags/
-        # sources actually gated by the combined headers=False+libs=False are dropped
+        # system_libs/sources actually gated by the combined headers=False+libs=False are dropped
         assert "add_library(dep::dep SHARED IMPORTED)" in cmake
         assert "IMPORTED_LOCATION_RELEASE" in cmake
-        for absent in ("INTERFACE_INCLUDE_DIRECTORIES", "DEP_DEFINE",
+        for absent in ("INTERFACE_INCLUDE_DIRECTORIES", "DEP_DEFINE", "pthread",
                        "-fdep-cxx", "-fdep-c", "-Wl,--dep-shared", "-Wl,--dep-exe"):
             assert absent not in cmake
         # sources not filtered for now
         assert "INTERFACE_SOURCES" in cmake
         assert "extra.cpp" in cmake
 
-    def test_libs_false_on_component_skips_system_libs(self):
+    def test_libs_false_on_component_keeps_system_libs(self):
         """The same filtering must apply to named components, not just the root cpp_info:
-        libs=False does not drop the component's own system_libs, nor its location/type."""
+        libs=False alone does not drop the component's own system_libs, nor its location/type
+        (system_libs is only cleared when headers is also False)."""
         c = TestClient()
         dep = textwrap.dedent("""
             from conan import ConanFile

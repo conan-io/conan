@@ -703,7 +703,7 @@ class _CMakeContextGenerator:
             exelinkflags = ";".join(cmake_escape_value(v) for v in info.exelinkflags)
             if not self._ctx.require.libs and not self._ctx.require.headers:
                 # Neither compiling against it nor linking it: no compile/link flags
-                cxxflags = cflags = sharedlinkflags = exelinkflags = ""
+                system_libs = cxxflags = cflags = sharedlinkflags = exelinkflags = ""
             sources = []
             if self._ctx.require.direct:
                 sources = [self._cmake_pkg_path(source) for source in info.sources]
