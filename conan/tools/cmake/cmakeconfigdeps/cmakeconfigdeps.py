@@ -233,12 +233,14 @@ class CMakeConfigDeps:
         Get the name of the files for the find_package(XXX) for the root and the rest of
         the components.
         This is used by CMakeConfigDeps to determine:
+
             - The filename to generate (XXX-config.cmake)
             - The name of the defined XXX_DIR variables
             - The name of transitive dependencies for calls to find_dependency
 
         This method creates a map for the root/components belonging to each XXX-config file.
         It reads two properties:
+
             - ``cmake_file_names``: a dict mapping each CMake package file name to a dict with
               ``components`` (list of component names) and optional ``properties`` (per-file
               overrides for CMakeConfigDeps global properties). Every component must belong to
@@ -247,6 +249,8 @@ class CMakeConfigDeps:
             - ``cmake_file_name``: a string with the name for the root config file
               (default: recipe name). If both properties are set, ``cmake_file_names``
               takes precedence and ``cmake_file_name`` is ignored.
+
+        :meta private:
         """
         cmake_config_name = dep.ref.name
         if cmake_config_name in self._cmake_filenames:
