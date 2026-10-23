@@ -57,6 +57,8 @@ def test_bazel_relative_paths():
     c.run("create dep")
     c.run("install consumer")
     assert "Generator 'BazelToolchain' calling 'generate()'" in c.out
+    assert 'print("WARNING: Bazel 6.x support is deprecated' in c.load(
+        "consumer/conandeps/dependencies.bzl")
     build_file = c.load("consumer/conandeps/dep/BUILD.bazel")
     expected = textwrap.dedent("""\
     # Components precompiled libs
