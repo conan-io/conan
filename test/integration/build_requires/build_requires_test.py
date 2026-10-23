@@ -825,3 +825,72 @@ def test_build_run_false(min_conan_version, should_propagate):
     else:
         assert "MYCMAKE!!!" not in tc.out
         assert "Error in build() method" in tc.out
+
+
+def test():
+    openssl = textwrap.dedent(r"""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save, chdir
+        class Pkg(ConanFile):
+            settings = "build_type"
+            package_type = "shared-library"
+            def package(self):
+                with chdir(self, self.package_folder):
+                    echo = "@echo off\necho MYOPENSSL={}!!".format(self.settings.build_type)
+                    save(self, "bin/myopenssl.bat", echo)
+                    save(self, "bin/myopenssl.sh", echo)
+                    os.chmod("bin/myopenssl.sh", 0o777)
+            """)
+
+    tool = textwrap.dedent(r"""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save, chdir
+        class Pkg(ConanFile):
+            type = "application"
+            settings = "os", "build_type"
+            def requirements(self):
+                self.requires("openssl/1.0")
+
+            def package(self):
+                with chdir(self, self.package_folder):
+                    echo = "@echo off\necho {}={}!!".format(self.name, self.settings.build_type)
+                    save(self, f"bin/my{self.name}.bat", echo + "\ncall myopenssl.bat")
+                    save(self, f"bin/my{self.name}.sh", echo + "\n myopenssl.sh")
+                    os.chmod(f"bin/my{self.name}.sh", 0o777)
+            """)
+    # FIXME: Make tool_requires(consistent=True) available
+    consumer = textwrap.dedent(r"""
+        import os
+        from conan import ConanFile
+        from conan.tools.files import save, chdir
+        class Pkg(ConanFile):
+            type = "application"
+            settings = "os", "build_type"
+
+            def build_requirements(self):
+                self.requires("tool1/1.0", build=True, visible=False, run=True, consistent=True)
+                self.requires("tool2/1.0", build=True, visible=False, run=True, consistent=True)
+
+            # tool_requires = "tool1/1.0", "tool2/1.0"
+            def build(self):
+                self.run("mytool1")
+                self.run("mytool2")
+            """)
+
+    c = TestClient()
+    c.save({"tool/conanfile.py": tool,
+            "openssl/conanfile.py": openssl,
+            "consumer/conanfile.py": consumer})
+
+    c.run("create openssl --name=openssl --version=1.0")
+    c.run("create tool --name=tool1 --version=1.0")
+    c.run("create tool --name=tool2 --version=1.0")
+
+    c.run("graph info consumer --build=missing --format=html", redirect_stdout="graph.html")
+    c.open("graph.html")
+    c.run("build consumer --build=missing")
+    print(c.out)
+    assert "tool1=Release!!" in c.out
+    assert "tool2=Release!!" in c.out
