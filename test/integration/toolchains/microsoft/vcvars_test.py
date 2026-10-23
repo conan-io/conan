@@ -40,7 +40,7 @@ def test_vcvars_generator_ps1():
     client = TestClient(path_with_spaces=False)
     client.save({"conanfile.txt": ""})
     client.run('install . -g VCVars -s os=Windows -s compiler="msvc" -s compiler.version=191 '
-               '-s compiler.cppstd=14 -s compiler.runtime=static -c tools.env:ps1=True')
+               '-s compiler.cppstd=14 -s compiler.runtime=static')
 
     # The .bat is always generated and used by Conan
     assert "conanvcvars.bat" in client.load("conanbuild.bat")

@@ -161,7 +161,6 @@ BUILT_IN_CONFS = {
     "tools.apple:enable_arc": "(boolean) Enable/Disable ARC Apple Clang flags",
     "tools.apple:enable_visibility": "(boolean) Enable/Disable Visibility Apple Clang flags",
     "tools.env.virtualenv:powershell": "If specified, it generates PowerShell launchers (.ps1). Use this configuration setting the PowerShell executable you want to use (e.g., 'powershell.exe' or 'pwsh')",
-    "tools.env:ps1": "(boolean) Generate also PowerShell launchers (.ps1) for the consumer (local conanfile) and test_package, to activate the environment in developer PowerShell terminals. Conan commands will still use the .bat/.sh files",
     "tools.env:dotenv": "(Experimental) Generate dotenv environment files",
     "tools.env:deactivation_mode": "(Experimental) If 'function', generate a deactivate function instead of a script to unset the environment variables",
     # Compilers/Flags configurations
