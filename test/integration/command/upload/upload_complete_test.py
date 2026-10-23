@@ -1,4 +1,5 @@
 import os
+from unittest.mock import patch
 
 from requests import ConnectionError
 
@@ -119,7 +120,9 @@ class TestUpload:
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*")}
         client.save(files)
         client.run("export . --user=frodo --channel=stable")
-        client.run("upload hello* --confirm -r default")
+        with patch("time.sleep") as sleep:  # Do not really wait the default 5 seconds
+            client.run("upload hello* --confirm -r default")
+        sleep.assert_called_once_with(5)
         assert "Can't connect because of the evil mock" in client.out
         assert "Waiting 5 seconds to retry..." in client.out
 

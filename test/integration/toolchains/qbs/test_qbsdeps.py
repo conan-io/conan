@@ -104,6 +104,44 @@ def test_pkg_config_name():
     assert os.path.exists(module_path)
 
 
+def test_dependency_uses_pkg_config_name():
+    # Recipe-level requires must reference the same name used for the JSON file
+    # when the dependency overrides pkg_config_name (clipper -> polyclipping).
+    dep = textwrap.dedent('''
+        from conan import ConanFile
+
+        class Dep(ConanFile):
+            name = "clipper"
+            version = "1.0"
+            def package_info(self):
+                self.cpp_info.set_property("pkg_config_name", "polyclipping")
+        ''')
+    consumer = textwrap.dedent('''
+        from conan import ConanFile
+
+        class Consumer(ConanFile):
+            name = "assimp"
+            version = "1.0"
+            requires = "clipper/1.0"
+        ''')
+    client = TestClient()
+    client.save({"conanfile.py": dep})
+    client.run("create .")
+    client.save({"conanfile.py": consumer}, clean_first=True)
+    client.run("create .")
+    client.run("install --requires=assimp/1.0@ -g QbsDeps")
+
+    dep_path = os.path.join(client.current_folder, "conan-qbs-deps", "polyclipping.json")
+    assert os.path.exists(dep_path)
+    assert not os.path.exists(os.path.join(client.current_folder, "conan-qbs-deps", "clipper.json"))
+
+    consumer_path = os.path.join(client.current_folder, "conan-qbs-deps", "assimp.json")
+    consumer_content = json.loads(load(consumer_path))
+    assert consumer_content.get("dependencies") == [
+        {"name": "polyclipping", "version": "1.0"}
+    ]
+
+
 def test_qbs_file_name():
     # Checks we can override module name using the "qbs_file_name" property
     conanfile = textwrap.dedent('''

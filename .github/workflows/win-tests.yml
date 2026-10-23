@@ -32,14 +32,6 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Install Visual Studio Build Tools
-        run: |
-          Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "vs_buildtools15.exe"
-          Start-Process -FilePath ".\vs_buildtools15.exe" -ArgumentList `
-            "--quiet",  "--wait", "--norestart", "--nocache", `
-            "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
-            "--add", "Microsoft.Component.MSBuild" -WindowStyle Hidden -Wait
-
       - name: Determine pip cache directory
         id: pip-cache-dir
         shell: pwsh
@@ -70,6 +62,12 @@ jobs:
 
       - name: Run Unit & Integration Tests
         uses: ./.github/actions/test-coverage
+        env:
+          # The tests are dominated by small files I/O, use the runner temp disk (D:)
+          # instead of the default TEMP in C:
+          CONAN_TEST_FOLDER: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
         with:
           python-version: ${{ matrix.python-version }}
           test-type: unit-integration
@@ -100,11 +98,14 @@ jobs:
             --installPath "C:\Program Files\Microsoft Visual Studio\2022\Enterprise" `
             --add `
             Microsoft.VisualStudio.Component.VC.14.38.17.8.x86.x64 `
+            --add `
+            Microsoft.VisualStudio.Component.VC.v141.x86.x64 `
           }
 
-      - name: Verify MSVC v14.38 toolset installation
+      - name: Verify MSVC v14.38 toolset, v141 toolset and Windows 10 SDK installation
         if: matrix.runner == 'windows-2022'
-        run: dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
+        run: |
+          dir "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Tools\MSVC"
 
       - name: Install Visual Studio 2017 Build Tools
         run: |
@@ -151,7 +152,6 @@ jobs:
       - name: Install Chocolatey packages
         run: |
           choco install pkgconfiglite --version 0.28
-          choco install ninja --version 1.10.2
           choco install mingw
           # mirrors.kernel.org/sourceware/cygwin returns 404; use alternative mirror from this list: https://cygwin.com/mirrors.html
           choco install cygwin --execution-timeout=300 --package-parameters="'/Site:https://mirror.clarkson.edu/cygwin/'"
@@ -185,7 +185,7 @@ jobs:
             C:\tools\cmake\3.15.7
             C:\tools\cmake\3.23.5
             C:\tools\cmake\3.27.9
-            C:\tools\cmake\4.3.4
+            C:\tools\cmake\4.4.3
             C:\tools\bazel\6.6.0
             C:\tools\bazel\7.6.2
             C:\tools\bazel\8.4.2
@@ -195,7 +195,7 @@ jobs:
       - name: Install CMake versions
         if: steps.cache-tools.outputs.cache-hit != 'true'
         run: |
-          $CMAKE_BUILD_VERSIONS = "3.15.7", "3.23.5", "3.27.9", "4.3.4"
+          $CMAKE_BUILD_VERSIONS = "3.15.7", "3.23.5", "3.27.9", "4.4.3"
           foreach ($version in $CMAKE_BUILD_VERSIONS) {
             Write-Host "Downloading CMake version $version for Windows..."
             $destination = "C:\tools\cmake\$version"
@@ -256,10 +256,6 @@ jobs:
               Write-Host "GCC not found in PATH."
           }
 
-          $shortGuid = [System.Guid]::NewGuid().ToString().Substring(0, 4)
-          $randomFolder = [System.IO.Path]::Combine("D:\\", "tmp_tests", $shortGuid)
-          New-Item -ItemType Directory -Force -Path $randomFolder
-          $env:CONAN_TEST_FOLDER = $randomFolder
           $env:Path = "C:\tools\cmake\3.15.7\cmake-3.15.7-win64-x64\bin;" + $env:Path
 
           $msys2Path = '${{ steps.msys2-setup.outputs.msys2-location }}'
@@ -268,7 +264,6 @@ jobs:
 
           # Export variables so they persist in the next steps
           echo "PATH=$env:Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          echo "CONAN_TEST_FOLDER=$env:CONAN_TEST_FOLDER" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "MSYS2_PATH=$msys2Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Determine tests to run
@@ -281,6 +276,9 @@ jobs:
 
       - name: Run Functional Tests
         uses: ./.github/actions/test-coverage
+        env:
+          # Use the runner temp disk (D:), faster for small files I/O than C:
+          CONAN_TEST_FOLDER: ${{ runner.temp }}
         with:
           python-version: ${{ matrix.python-version }}
           test-type: functional

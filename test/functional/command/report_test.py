@@ -115,3 +115,27 @@ def test_compare_paths(fixture_client, old_args, new_args, formatter):
         assert "(new)/s/new-file-for-v2.txt" in output_html
         # We have exports information
         assert "(old)/e/v1.txt" in output_html
+
+
+@pytest.mark.tool("git")
+def test_compare_path_keeps_existing_revision(fixture_client):
+    """ The recipe exported from the path must not be removed after computing the diff if
+    that same revision already existed in the cache
+    """
+    tc = fixture_client
+    tc.run("create v1 --version=1.0")
+    rrev = tc.exported_layout().reference.revision
+
+    tc.run("report diff -op=v1 -or=pkg/1.0 -nr=pkg/2.0")
+    tc.run(f"cache path pkg/1.0#{rrev}")
+
+
+@pytest.mark.tool("git")
+def test_compare_same_path(fixture_client):
+    """ Comparing a path against itself exports the same revision twice, which must only be
+    removed once, and still be removed as it didn't exist before
+    """
+    tc = fixture_client
+    tc.run("report diff -op=v2 -or=pkg/2.0 -np=v2 -nr=pkg/2.0")
+    tc.run("cache path pkg/2.0", assert_error=True)
+    assert "ERROR: Recipe 'pkg/2.0' not found" in tc.out

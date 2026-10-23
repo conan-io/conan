@@ -7,6 +7,7 @@ import pytest
 
 from conan.api.model import RecipeReference
 from conan.cli.exit_codes import ERROR_GENERAL
+from conan.internal.errors import ConanReferenceDoesNotExistInDB
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conan.internal.util.files import load
 
@@ -198,8 +199,8 @@ def test_package_folder_build_error():
                assert_error=True)
 
     assert "Build error" in client.out
-    pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
-    assert pref is None
+    with pytest.raises(ConanReferenceDoesNotExistInDB):
+        client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
 
 
 def test_create_with_name_and_version():
@@ -748,7 +749,7 @@ def test_defaults_in_components():
     assert re.search(r"BINDIRS: \['.+bin']", client.out)
     assert re.search(r"LIBDIRS: \['.+lib']", client.out)
     assert re.search(r"INCLUDEDIRS: \['.+include']", client.out)
-    assert "WARN: RES DIRS: []"
+    assert "WARN: RESDIRS: []" in client.out
     assert re.search(r"WARN: FOO LIBDIRS: \['.+lib']", client.out)
     assert re.search(r"WARN: FOO INCLUDEDIRS: \['.+include']", client.out)
     assert "WARN: FOO RESDIRS: []" in client.out
@@ -758,7 +759,7 @@ def test_defaults_in_components():
     assert re.search(r"BINDIRS: \['.+bin']", client.out)
     assert re.search(r"LIBDIRS: \['.+lib']", client.out)
     assert re.search(r"INCLUDEDIRS: \['.+include']", client.out)
-    assert "WARN: RES DIRS: []"
+    assert "WARN: RESDIRS: []" in client.out
     assert bool(re.search(r"WARN: FOO LIBDIRS: \['.+lib']", client.out))
     assert bool(re.search(r"WARN: FOO INCLUDEDIRS: \['.+include']", client.out))
     assert "WARN: FOO RESDIRS: []" in client.out

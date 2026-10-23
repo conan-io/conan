@@ -378,7 +378,7 @@ class TestRemoteFlows:
 
         client.run("remove * -c")
         client.run("install --requires=dep/1.0 -r=default")
-        assert "dep/1.0: Calling finalize()"
+        assert "dep/1.0: Calling finalize()" in client.out
         assert f"Running finalize method in {downloaded_pref_layout.finalize()}" in client.out
 
     def test_upload_verify_integrity(self, client):

@@ -690,10 +690,10 @@ def test_build_missing_build_requires():
     c.run("remove tool*:* -c")
     c.run("install app")
     assert "- Build" not in c.out
-    assert re.search(r"Skipped binaries(\s*)tool/0.1, tooldep/0.1", c.out)
+    assert re.search(r"Skipped build binaries(\s*)tool/0.1, tooldep/0.1", c.out)
     c.run("install app --build=missing")
     assert "- Build" not in c.out
-    assert re.search(r"Skipped binaries(\s*)tool/0.1, tooldep/0.1", c.out)
+    assert re.search(r"Skipped build binaries(\s*)tool/0.1, tooldep/0.1", c.out)
 
 
 def test_requirement_in_wrong_method():

@@ -14,6 +14,7 @@ on:
 permissions:
   contents: read
   packages: write
+  actions: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -21,7 +22,7 @@ concurrency:
 
 jobs:
   ensure_latest_tag_merged:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Ensure latest release is merged in develop2 branch
     steps:
       - uses: actions/checkout@v4
@@ -35,7 +36,7 @@ jobs:
           git merge-base --is-ancestor "$latest_tag" origin/develop2
 
   set_python_versions:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       python_versions_linux_windows: ${{ steps.set_versions.outputs.python_versions_linux_windows }}
       python_versions_macos: ${{ steps.set_versions.outputs.python_versions_macos }}
@@ -65,7 +66,7 @@ jobs:
         id: set_versions
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/develop2" || "${{ github.ref }}" == refs/heads/release/* ]]; then
-            echo "python_versions_linux_windows=['3.14', '3.7']" >> $GITHUB_OUTPUT
+            echo "python_versions_linux_windows=['3.14', '3.8']" >> $GITHUB_OUTPUT
             echo "python_versions_macos=['3.14', '3.8']" >> $GITHUB_OUTPUT
           else
             echo "python_versions_linux_windows=['3.10']" >> $GITHUB_OUTPUT
@@ -109,7 +110,7 @@ jobs:
       run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
   covtest_predict:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: CovTest Prediction
     steps:
       - uses: actions/checkout@v4
@@ -125,16 +126,26 @@ jobs:
       - name: Install covtest
         if: github.event_name == 'pull_request'
         run: |
-          git clone https://x-access-token:${{ secrets.COVTEST_READ_TOKEN }}@github.com/conan-io/covtest.git ./covtest_repo || echo "::warning title=Git Clone Failed::Could not clone covtest repo."
-          pip install ./covtest_repo || echo "::warning title=Pip Install Failed::Could not install covtest repo."
-          rm -rf ./covtest_repo || true
+          pip install git+https://github.com/conan-io/covtest.git || true
+
+      - name: Download recent covtest snapshots from develop2
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p .covtest
+          # covtest looks back up to max_commits (default 20) ancestor commits for a
+          # matching snapshot, so fetch the snapshot artifact from that many recent
+          # successful develop2 runs -- one artifact alone only covers the latest commit.
+          run_ids=$(gh run list --repo ${{ github.repository }} --workflow main.yml \
+            --branch develop2 --status success --limit 20 --json databaseId --jq '.[].databaseId')
+          for run_id in $run_ids; do
+            gh run download "$run_id" --repo ${{ github.repository }} \
+              --name covtest-snapshot --dir .covtest || true
+          done
 
       - name: Run covtest predict
         if: github.event_name == 'pull_request'
-        env:
-          COVTEST_URL: ${{ secrets.COVTEST_SERVER_URL }}
-          COVTEST_USER: ${{ secrets.COVTEST_SERVER_USER }}
-          COVTEST_TOKEN: ${{ secrets.COVTEST_SERVER_TOKEN }}
         run: |
           mkdir -p .covtest
           covtest predict || echo "::warning title=covtest predict Failed::Could not run covtest predict."
@@ -148,7 +159,7 @@ jobs:
           include-hidden-files: true
 
   covtest_validation:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: CovTest Validation
     if: always() && github.event_name == 'pull_request'
     needs: [linux_suite, osx_suite, windows_suite, covtest_predict]
@@ -185,7 +196,7 @@ jobs:
             covtest-prediction
 
   code_coverage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Code coverage
     if: github.ref == 'refs/heads/develop2'         # Only measure code coverage on main branch
     needs: [linux_suite, osx_suite, windows_suite]
@@ -205,13 +216,18 @@ jobs:
           coverage report
           coverage xml
 
-      - name: Compute covtest
+      - name: Install and compute covtest
         run: |
-          git clone https://x-access-token:${{ secrets.COVTEST_READ_TOKEN }}@github.com/conan-io/covtest.git ./covtest_repo || true
-          pip install ./covtest_repo || true
-          rm -rf ./covtest_repo || true
+          pip install git+https://github.com/conan-io/covtest.git || true
           covtest process || true
-          covtest upload --url=${{ secrets.COVTEST_SERVER_URL }} --user=${{ secrets.COVTEST_SERVER_USER }} --token=${{ secrets.COVTEST_SERVER_TOKEN }} || true
+
+      - name: Upload covtest snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: covtest-snapshot
+          path: .covtest
+          include-hidden-files: true
+          if-no-files-found: warn
 
       - name: Code coverage
         uses: codecov/codecov-action@v5
@@ -222,10 +238,9 @@ jobs:
         with:
           name: |
             .coverage.*
-            .covtest
 
   deploy_to_pypi_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Deploy to TestPyPI
     if: github.ref == 'refs/heads/develop2'
     needs: [linux_suite, osx_suite, windows_suite]
@@ -238,7 +253,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: '3.10'
 
       - name: Install dependencies
         run: |
@@ -277,7 +292,7 @@ jobs:
           python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
 
   verify_testpypi:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     name: Verify TestPyPI wheel
     if: github.ref == 'refs/heads/develop2'
     needs: [deploy_to_pypi_test]
@@ -293,7 +308,7 @@ jobs:
     steps:
       - uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: '3.10'
 
       - name: Install ${{ matrix.package }} (${{ matrix.mode }})
         run: |

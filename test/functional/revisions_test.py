@@ -24,9 +24,6 @@ def _create(c_v2, ref, conanfile=None, args=None, assert_error=False):
         return pref
 
 
-DepsGraphBuilder.ALLOW_ALIAS = True
-
-
 @pytest.mark.artifactory_ready
 class TestInstallingPackagesWithRevisions:
 
@@ -107,34 +104,6 @@ class TestInstallingPackagesWithRevisions:
                 assert_error=True)
         assert "ERROR: Version conflict" in self.c_v2.out
         # assert "Different revisions of {} has been requested".format(lib1), self.c_v2.out)
-
-    def test_alias_to_a_rrev(self):
-        """ If an alias points to a RREV, it resolved that RREV and no other"""
-
-        # Upload one revision
-        pref = _create(self.c_v2, self.ref)
-        self.c_v2.run(f"upload {self.ref} -r=default -c")
-
-        # Upload other revision
-        _create(self.c_v2, self.ref, conanfile=GenConanfile().with_build_msg("Build Rev 2"))
-        self.c_v2.run(f"upload {self.ref} -r=default -c")
-        self.c_v2.remove_all()
-
-        # Create an alias to the first revision
-        self.c_v2.alias("lib/latest@conan/stable", repr(pref.ref))
-        alias_ref = RecipeReference.loads("lib/latest@conan/stable")
-        exported = load(self.c_v2.get_latest_ref_layout(alias_ref).conanfile())
-        assert 'alias = "{}"'.format(repr(pref.ref)) in exported
-
-        self.c_v2.run(f"upload lib/latest@conan/stable -r=default -c")
-        self.c_v2.remove_all()
-
-        self.c_v2.run("install --requires=lib/(latest)@conan/stable")
-        # Shouldn't be packages in the cache
-        assert "doesn't belong to the installed recipe revision" not in self.c_v2.out
-
-        # Read current revision
-        assert pref.ref.revision == self.recipe_revision(self.ref)
 
     def test_revision_metadata_update_on_install(self):
         """If a clean v2 client installs a RREV/PREV from a server, it get

@@ -82,8 +82,7 @@ class WorkspaceAPI:
         self._conan_api = conan_api
         self._folder = _find_ws_folder()
         if self._folder:
-            ConanOutput().warning(f"Workspace found: {self._folder}")
-            ConanOutput().warning("The Workspace feature is experimental", warn_tag="experimental")
+            ConanOutput().info(f"Workspace (experimental feature) found: {self._folder}")
             self._ws = _load_workspace(self._folder, conan_api)  # Error if not loading
 
     def enable(self, value):
@@ -423,8 +422,18 @@ class WorkspaceAPI:
                     root.transitive_deps[r] = t
                 else:
                     require = existing.require
+                    # Prefer host node if they are different
+                    n = t.node
+                    if t.node.context != existing.node.context and existing.node.context == CONTEXT_HOST:
+                        n = existing.node
+                        ConanOutput().warning(f"Workspace has dependencies to the same package {require} in different contexts, "
+                                              f"which can cause problems. Using the host context node")
+                    elif require.visible != r.visible and require.visible:
+                        n = existing.node
+                        ConanOutput().warning(f"Workspace has dependencies to the same package {require} with different visibility, "
+                                              f"which can cause problems. Using the visible node")
                     require.aggregate(r)
-                    root.transitive_deps[require] = TransitiveRequirement(require, t.node)
+                    root.transitive_deps[require] = TransitiveRequirement(require, n)
 
         # The graph edges must be defined too
         for r, t in root.transitive_deps.items():

@@ -155,10 +155,14 @@ def test_windows_cross_compiling_x86():
     assert "main _MSVC_LANG2014" in client.out
 
 
-@pytest.mark.parametrize("arch, expected_arch", [('armv8', 'aarch64'),
-                                                 ('armv7', 'arm'),
-                                                 ('x86', 'i386'),
-                                                 ('x86_64', 'x86_64')])
+# Every architecture is covered in PRs by one of the Android tests of the Autotools,
+# GnuToolchain and Meson toolchains, the rest of combinations are slow (develop2)
+@pytest.mark.parametrize("arch, expected_arch", [
+    pytest.param('armv8', 'aarch64', marks=pytest.mark.slow),
+    pytest.param('armv7', 'arm', marks=pytest.mark.slow),
+    pytest.param('x86', 'i386', marks=pytest.mark.slow),
+    ('x86_64', 'x86_64'),
+])
 @pytest.mark.tool("meson")
 @pytest.mark.tool("android_ndk")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Android NDK only tested in MacOS for now")

@@ -1,8 +1,8 @@
 import os
 import textwrap
-import time
 
 from conan.api.model import RecipeReference
+from conan.test.utils.test_files import wait_clock_tick
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
@@ -102,24 +102,6 @@ class TestPyRequiresExtend:
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         assert "pkg/0.1@user/testing: My cool build!" in client.out
-
-    def test_with_alias(self):
-        client = TestClient(light=True)
-        self._define_base(client)
-        client.alias("base/latest@user/testing", "base/1.1@user/testing")
-
-        reuse = textwrap.dedent("""
-            from conan import ConanFile
-            class PkgTest(ConanFile):
-                name = "pkg"
-                version = "1.0"
-                python_requires = "base/latest@user/testing"
-            """)
-        client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("install .", assert_error=True)
-        assert "python-requires 'alias' are not supported in Conan 2.0" in client.out
-        client.run("create .", assert_error=True)
-        assert "python-requires 'alias' are not supported in Conan 2.0" in client.out
 
     def test_reuse_version_ranges(self):
         client = TestClient(light=True)
@@ -567,7 +549,7 @@ class TestPyRequiresExtend:
         assert "conanfile.py: PYTHON REQUIRE VAR 42" in client2.out
 
         client.save({"conanfile.py": conanfile.replace("42", "143")})
-        time.sleep(1)  # guarantee time offset
+        wait_clock_tick()  # guarantee time offset
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
 

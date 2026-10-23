@@ -373,7 +373,6 @@ class Overrides:
 class DepsGraph:
     def __init__(self):
         self.nodes = []
-        self.aliased = {}
         self.resolved_ranges = {}
         self.replaced_requires = {}
         self.options_conflicts = {}

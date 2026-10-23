@@ -291,7 +291,16 @@ class BinaryInstaller:
         for level in install_order:
             for node in level:
                 for package in node.packages.values():
-                    if package.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                    if package.binary == BINARY_UPDATE:
+                        if self._cache.exists_prev(package.pref):
+                            # The server gave us a newer prev, but we already have it in cache
+                            # so we don't need to download it. Update its timestamp to the server's
+                            # InstallNode doesn't have timestamp
+                            pref_with_timestamp = package.nodes[0].pref
+                            self._cache.update_package_timestamp(pref_with_timestamp)
+                        else:
+                            downloads.append(package)
+                    elif package.binary == BINARY_DOWNLOAD:
                         downloads.append(package)
         if not downloads:
             return
@@ -301,9 +310,10 @@ class BinaryInstaller:
         ConanOutput().subtitle(f"Downloading {download_count} package{plural}")
         parallel = self._global_conf.get("core.download:parallel", check_type=int,
                                          default=cpu_count())
-        if parallel:  # User can define core.download:parallel=0 to deactivate parallelism
-            ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
-            thread_pool = ThreadPool(parallel)
+        if parallel and download_count:  # User can define core.download:parallel=0 to deactivate parallelism
+            thread_count = min(parallel, download_count)
+            ConanOutput().info(f"Downloading binary packages in {thread_count} parallel threads")
+            thread_pool = ThreadPool(thread_count)
             thread_pool.map(self._download_pkg, downloads)
             thread_pool.close()
             thread_pool.join()
