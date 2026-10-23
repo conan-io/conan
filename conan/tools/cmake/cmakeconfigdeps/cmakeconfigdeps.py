@@ -695,11 +695,19 @@ class _CMakeContextGenerator:
             requires = cpp_info_requires[comp_name]
             assert isinstance(requires, dict)
             defines = ";".join(cmake_escape_value(f) for f in info.defines)
-            # FIXME: Filter by lib traits!!!!!
-            if not self._ctx.require.headers:  # If not depending on headers, paths and
+            # If not depending on headers, header-only info (paths, defines) is not injected
+            if not self._ctx.require.headers:
                 includedirs = defines = None
             extra_libs = self._ctx.get_property("cmake_extra_interface_libs", comp_name=comp_name,
                                            check_type=list) or []
+            system_libs = " ".join(info.system_libs + extra_libs)
+            cxxflags = ";".join(cmake_escape_value(f) for f in info.cxxflags)
+            cflags = ";".join(cmake_escape_value(f) for f in info.cflags)
+            sharedlinkflags = ";".join(cmake_escape_value(v) for v in info.sharedlinkflags)
+            exelinkflags = ";".join(cmake_escape_value(v) for v in info.exelinkflags)
+            if not self._ctx.require.libs and not self._ctx.require.headers:
+                # Neither compiling against it nor linking it: no compile/link flags
+                system_libs = cxxflags = cflags = sharedlinkflags = exelinkflags = ""
             sources = []
             if self._ctx.require.direct:
                 sources = [self._cmake_pkg_path(source) for source in info.sources]
@@ -709,12 +717,11 @@ class _CMakeContextGenerator:
                       "includedirs": includedirs,
                       "defines": defines,
                       "requires": requires,
-                      "cxxflags": ";".join(cmake_escape_value(f) for f in info.cxxflags),
-                      "cflags": ";".join(cmake_escape_value(f) for f in info.cflags),
-                      "sharedlinkflags": ";".join(cmake_escape_value(v)
-                                                  for v in info.sharedlinkflags),
-                      "exelinkflags": ";".join(cmake_escape_value(v) for v in info.exelinkflags),
-                      "system_libs": " ".join(info.system_libs + extra_libs),
+                      "cxxflags": cxxflags,
+                      "cflags": cflags,
+                      "sharedlinkflags": sharedlinkflags,
+                      "exelinkflags": exelinkflags,
+                      "system_libs": system_libs,
                       "sources": " ".join(sources)
                       }
             if objects:
@@ -730,25 +737,39 @@ class _CMakeContextGenerator:
             if info.package_framework:
                 assert isinstance(info.package_framework, str), \
                     f"package_framework should be a str"
+                # This validates the recipe itself, regardless of whether this particular
+                # requirement links libs: it is invalid independently of who consumes it.
                 if info.libs:
                     raise ConanException("Can't define .libs and .package_framework for the same "
                                          "component")
-                target["package_framework"] = {}
-                lib_type = "SHARED" if info.type is PackageType.SHARED else \
-                    "STATIC" if info.type is PackageType.STATIC else "STATIC"
-                assert lib_type, f"Unknown package type {info.type}"
-                assert info.location, \
-                    f"cpp_info.location missing for framework {info.package_framework}"
-                target["type"] = lib_type
-                target["package_framework"]["location"] = self._cmake_pkg_path(info.location)
-                # empty as frameworks have their own way to inject headers
-                target["includedirs"] = []
-                # FIXME: Not needed for CMake < 3.24. Remove when Conan requires CMake >= 3.24
-                target["package_framework"]["frameworkdir"] = self._cmake_pkg_path(self._ctx.pkg_folder)
+                if self._ctx.require.libs or self._ctx.require.headers:
+                    target["package_framework"] = {}
+                    lib_type = "SHARED" if info.type is PackageType.SHARED else \
+                        "STATIC" if info.type is PackageType.STATIC else "STATIC"
+                    assert lib_type, f"Unknown package type {info.type}"
+                    assert info.location, \
+                        f"cpp_info.location missing for framework {info.package_framework}"
+                    target["type"] = lib_type
+                    target["package_framework"]["location"] = self._cmake_pkg_path(info.location)
+                    # empty as frameworks have their own way to inject headers
+                    target["includedirs"] = []
+                    # FIXME: Not needed for CMake < 3.24. Remove when Conan requires CMake >= 3.24
+                    target["package_framework"]["frameworkdir"] = \
+                        self._cmake_pkg_path(self._ctx.pkg_folder)
             if info.libs:
+                # Same as above: this validates the recipe itself (a structural invariant of the
+                # dependency), so it must not depend on how this particular requirement is used.
                 if len(info.libs) != 1:
                     raise ConanException(f"New CMakeDeps only allows 1 lib per component:\n"
                                          f"{self._ctx.dep}: {info.libs}")
+                # IMPORTANT! LINKERS IN LINUX FOR SHARED MIGHT NEED THE LOCATION EVEN IF NOT
+                # REALLY LINKING THIS LIB: e.g. "engine" privately links "matrix" (matrix is
+                # not required directly by the consumer, so require.libs=False here), but
+                # libengine.so still has a DT_NEEDED entry for libmatrix.so, and on Linux `ld`
+                # must resolve that transitively at link time (via -rpath-link, which CMake
+                # derives from IMPORTED_LOCATION). So do NOT gate this on self._ctx.require.libs.
+                # Whether this target actually gets linked anywhere is a separate, per-edge
+                # decision already made above, in "requires".
                 assert info.location, "info.location missing for .libs, it should have been deduced"
                 location = self._cmake_pkg_path(info.location)
                 link_location = (self._cmake_pkg_path(info.link_location)
