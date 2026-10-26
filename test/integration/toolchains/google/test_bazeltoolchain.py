@@ -192,9 +192,9 @@ def test_linker_flags_do_not_mutate_conf():
     profile = textwrap.dedent("""
     include(default)
     [conf]
-    tools.build:sharedlinkflags+=["--shared"]
-    tools.build:exelinkflags+=["--exe"]
-    tools.build:linker_scripts+=["myscript.sh"]
+    tools.build:sharedlinkflags=["--shared"]
+    tools.build:exelinkflags=["--exe"]
+    tools.build:linker_scripts=["myscript.sh"]
     """)
     conanfile = textwrap.dedent("""
     from conan import ConanFile
