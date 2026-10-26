@@ -392,10 +392,9 @@ class ParallelBlock(Block):
         """)
 
     def context(self):
-        # TODO: Check this conf
-
         compiler = self._conanfile.settings.get_safe("compiler")
-        if compiler != "msvc" or "Visual" not in self._toolchain.generator:
+        # MSVC or toolset == ClangCL -> Visual + clang
+        if "Visual" not in self._toolchain.generator or compiler not in ("msvc", "clang"):
             return
 
         jobs = build_jobs(self._conanfile)
