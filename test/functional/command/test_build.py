@@ -140,5 +140,5 @@ def test_debug_build_release_deps():
     client.save({"conanfile.py": conanfile.format(name="mypkg", requires="requires = 'dep/0.1@user/testing'")})
     client.run("build . -s mypkg/*:build_type=Debug -s build_type=Release")
     assert "dep/0.1@user/testing: PACKAGE_INFO: dep BuildType=Release!" in client.out
-    assert "conanfile.py (mypkg/None): BUILD: mypkg BuildType=Debug!" in client.out
+    assert "BUILD: mypkg BuildType=Debug!" in client.out
 

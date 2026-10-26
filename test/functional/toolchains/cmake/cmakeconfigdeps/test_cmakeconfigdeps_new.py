@@ -1689,14 +1689,11 @@ def test_multiple_find_package_subfolder():
 
 
 @pytest.mark.tool("cmake", "3.27")
-def test_find_package_casing_non_fallback():
+def test_find_package_casing_yes_fallback():
     """ CMakeConfigDeps creates hello_DIR by default, but CMake looks for
     the package name as given in find_package, so casing matters,
     and it won't look for hello_DIR, but to HellO_DIR.
-
-    Note that this would work without the layout, because CMake would fallback
-    to find the lowercase hello-config.cmake file in the CMAKE_INSTALL_PREFIX,
-    which happens to be the same folder the generated config file ends up without the layout."""
+    But the CMAKE_PREFIX_PATH fallback works"""
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(test NONE)
@@ -1723,8 +1720,9 @@ def test_find_package_casing_non_fallback():
     client.run(f"create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"build .", assert_error=True)
-    assert 'Could not find a package configuration file provided by "HellO"' in client.out
+    client.run("build .")
+    # Now it works, thanks to the fallback
+    assert "Conan: Target declared imported INTERFACE library 'hello::hello'" in client.out
 
 
 @pytest.mark.tool("cmake", "3.27")

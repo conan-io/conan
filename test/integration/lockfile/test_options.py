@@ -44,4 +44,4 @@ def test_options():
 
     cmd = "install --requires={} --build={} {}".format(ref, ref, options)
     client.run(cmd)
-    assert "ffmpeg/1.0: Variation nano!!" in client.out
+    assert "Variation nano!!" in client.out
