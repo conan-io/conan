@@ -3,7 +3,7 @@ import platform
 import pytest
 
 from conan.test.utils.mocks import ConanFileMock
-from conan.tools.google import Bazel
+from conan.tools.google import Bazel, BazelToolchain
 from conan.tools.google.bazeldeps import _relativize_path
 
 
@@ -29,6 +29,23 @@ def test_bazel_command_with_config_values():
     assert "bazel --bazelrc=/path/to/bazelrc build " \
            "--config=config --config=config2 //test:label" in commands
     assert "bazel --bazelrc=/path/to/bazelrc clean" in commands
+
+
+def test_bazel_skips_rc_when_workspace_imports_it(tmp_path):
+    conanfile = ConanFileMock()
+    conanfile.folders.set_base_generators(str(tmp_path))
+    conanfile.folders.set_base_source(str(tmp_path))
+    conanfile.folders.set_base_build(str(tmp_path))
+    tmp_path.joinpath(BazelToolchain.bazelrc_name).write_text("", encoding="utf-8")
+    tmp_path.joinpath(".bazelrc").write_text(
+        "try-import %workspace%/conan/conan_bzl.rc\n", encoding="utf-8")
+    conanfile.conf.define("tools.google.bazel:bazelrc_path", ["/path/to/bazelrc"])
+    bazel = Bazel(conanfile)
+    bazel.build(target="//test:label", clean=False)
+    command = next(cmd for cmd in conanfile._commands if " build " in cmd)
+    assert "--config=conan-config" in command
+    assert "--bazelrc=/path/to/bazelrc" in command
+    assert BazelToolchain.bazelrc_name not in command
 
 
 @pytest.mark.parametrize("path, pattern, expected", [
