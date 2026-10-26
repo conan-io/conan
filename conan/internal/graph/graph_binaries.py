@@ -159,6 +159,10 @@ class GraphBinariesAnalyzer:
         compatibility_mode = self._global_conf.get("core.graph:compatibility_mode",
                                                    choices=("optimized",))
         use_compatibility_optimization = compatibility_mode == "optimized"
+        # A single DB query for all the binaries of this recipe revision in the cache, instead of
+        # one for every candidate (it can be dozens, and most of them are not in the cache)
+        cached_prefs = self._cache.get_package_references(node.ref)
+        cached_package_ids = {pref.package_id for pref in cached_prefs}
 
         if not should_update_reference(conanfile.ref, update):
             # First look all in the cache
@@ -171,7 +175,8 @@ class GraphBinariesAnalyzer:
                     if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD):
                         self._compatible_found(conanfile, package_id, compatible_package)
                     return
-                cache_latest_prev = self._compatible_cache_latest_prev(node)  # not check remotes
+                # not check remotes
+                cache_latest_prev = self._compatible_cache_latest_prev(node, cached_package_ids)
                 if cache_latest_prev:
                     # If we have binary info, it means that the package was already processed,
                     # and we got a hit from the cache of compatibles
@@ -217,7 +222,8 @@ class GraphBinariesAnalyzer:
                     if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
                         self._compatible_found(conanfile, package_id, compatible_package)
                     return
-                cache_latest_prev = self._compatible_cache_latest_prev(node)  # Not check remotes
+                # Not check remotes
+                cache_latest_prev = self._compatible_cache_latest_prev(node, cached_package_ids)
                 available_remotes = compatible_packages.get(package_id,
                                                             [] if use_compatibility_optimization
                                                             else remotes)
@@ -238,10 +244,12 @@ class GraphBinariesAnalyzer:
         node.binary = original_binary
         node._package_id = original_package_id
 
-    def _compatible_cache_latest_prev(self, node):
+    def _compatible_cache_latest_prev(self, node, cached_package_ids):
         """ simplified checking of compatible_packages, that should be found existing, but
         will never be built, for example. They cannot be editable either at this point.
         """
+        if node.package_id not in cached_package_ids:
+            return None
         # Obtain the cache_latest valid one, cleaning things if dirty
         while True:
             package_layout = self._cache.pkg_layout_latest(node.pref)

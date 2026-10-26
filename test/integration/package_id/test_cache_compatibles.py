@@ -2,8 +2,11 @@ import os
 import re
 import textwrap
 
+from unittest import mock
+
 import pytest
 
+from conan.internal.cache.cache import PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.test.utils.tools import TestClient, GenConanfile
 
@@ -93,6 +96,41 @@ def test_cppstd():
     assert "dep/0.1: Main binary package '94758b7bbcb365aaf355913b35431c0da6ed6da5' missing" \
            in client.out
     assert f"Found compatible package '{package_id}'" in client.out
+
+
+def test_cppstd_cache_queries():
+    """ The compatible candidates that are not in the cache shouldn't be queried one by one in the
+    DB (a new sqlite connection for every query), the existing ones are known with a single query
+    """
+    client = TestClient()
+    compatibles = textwrap.dedent("""\
+        def compatibility(conanfile):
+            return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
+        """)
+    client.save_home({"extensions/plugins/compatibility/compatibility.py": compatibles})
+    client.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_settings("compiler"),
+                 "consumer/conanfile.py": GenConanfile().with_requires("dep/0.1")})
+    base_settings = "-s compiler=gcc -s compiler.version=8 -s compiler.libcxx=libstdc++11"
+    client.run(f"create dep {base_settings} -s compiler.cppstd=14")
+    package_id = client.created_package_id("dep/0.1")
+
+    def install(cppstd, assert_error=False):
+        # Count the "pkg_layout_latest" cache queries, it also queries the main binary
+        with mock.patch.object(PkgCache, "pkg_layout_latest", autospec=True,
+                               side_effect=PkgCache.pkg_layout_latest) as queries:
+            client.run(f"install consumer {base_settings} -s compiler.cppstd={cppstd}",
+                       assert_error=assert_error)
+        return queries.call_count
+
+    # 3 compatible candidates (11, 14, 20) and only one of them exists in the cache
+    assert install(17) == 2  # main binary and the compatible one found
+    assert f"Found compatible package '{package_id}'" in client.out
+
+    # 3 compatible candidates (11, 14, 17), none exist in the cache
+    client.run("remove dep/0.1:* -c")
+    assert install(20, assert_error=True) == 1  # only the main binary
+    assert "dep/0.1: Checking 3 compatible configurations" in client.out
+    assert "ERROR: Missing binary" in client.out
 
 
 def test_cppstd_validated():
