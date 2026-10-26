@@ -159,6 +159,28 @@ class PackagesDBTable(BaseDbTable):
             rows = r.fetchall()
         return [self._as_dict(self.row_type(*row)) for row in rows]
 
+    def get_latest_package_revisions_data(self, ref: RecipeReference):
+        """ The same as ``get_package_revisions_references(only_latest_prev=True)``, but for all
+        the package ids of the recipe revision at once """
+        assert ref.revision, "To search package revisions you must provide a recipe revision."
+        query = f'SELECT {self.columns.reference}, ' \
+                f'{self.columns.rrev}, ' \
+                f'{self.columns.pkgid}, ' \
+                f'{self.columns.prev}, ' \
+                f'{self.columns.path}, ' \
+                f'MAX({self.columns.timestamp}), ' \
+                f'{self.columns.build_id}, ' \
+                f'{self.columns.lru} ' \
+                f'FROM {self.table_name} ' \
+                f"WHERE {self.columns.rrev} = '{ref.revision}' " \
+                f"AND {self.columns.reference} = '{str(ref)}' " \
+                f'AND {self.columns.prev} IS NOT NULL ' \
+                f'GROUP BY {self.columns.pkgid} '
+        with self.db_connection() as conn:
+            r = conn.execute(query)
+            rows = r.fetchall()
+        return [self._as_dict(self.row_type(*row)) for row in rows]
+
     def get_package_revisions_reference_exists(self, pref: PkgReference):
         assert pref.ref.revision, "To check package revision existence you must provide a recipe revision."
         assert pref.package_id, "To check package revisions existence you must provide a package id."

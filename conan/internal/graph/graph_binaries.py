@@ -159,10 +159,16 @@ class GraphBinariesAnalyzer:
         compatibility_mode = self._global_conf.get("core.graph:compatibility_mode",
                                                    choices=("optimized",))
         use_compatibility_optimization = compatibility_mode == "optimized"
-        # A single DB query for all the binaries of this recipe revision in the cache, instead of
-        # one for every candidate (it can be dozens, and most of them are not in the cache)
-        cached_prefs = self._cache.get_package_references(node.ref)
-        cached_package_ids = {pref.package_id for pref in cached_prefs}
+        cached_layouts = None
+
+        def query_cache_latest_prev():
+            # A single DB query for all the binaries of this recipe revision in the cache, instead
+            # of one for every candidate (it can be dozens, and most of them are not in the cache).
+            # It is done lazily, as the candidates already evaluated by other nodes don't need it
+            nonlocal cached_layouts
+            if cached_layouts is None:
+                cached_layouts = self._cache.pkg_layouts_latest(node.ref)
+            return self._compatible_cache_latest_prev(node, cached_layouts)
 
         if not should_update_reference(conanfile.ref, update):
             # First look all in the cache
@@ -175,8 +181,7 @@ class GraphBinariesAnalyzer:
                     if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD):
                         self._compatible_found(conanfile, package_id, compatible_package)
                     return
-                # not check remotes
-                cache_latest_prev = self._compatible_cache_latest_prev(node, cached_package_ids)
+                cache_latest_prev = query_cache_latest_prev()  # not check remotes
                 if cache_latest_prev:
                     # If we have binary info, it means that the package was already processed,
                     # and we got a hit from the cache of compatibles
@@ -222,8 +227,7 @@ class GraphBinariesAnalyzer:
                     if node.binary in (BINARY_CACHE, BINARY_DOWNLOAD, BINARY_UPDATE):
                         self._compatible_found(conanfile, package_id, compatible_package)
                     return
-                # Not check remotes
-                cache_latest_prev = self._compatible_cache_latest_prev(node, cached_package_ids)
+                cache_latest_prev = query_cache_latest_prev()  # Not check remotes
                 available_remotes = compatible_packages.get(package_id,
                                                             [] if use_compatibility_optimization
                                                             else remotes)
@@ -244,22 +248,19 @@ class GraphBinariesAnalyzer:
         node.binary = original_binary
         node._package_id = original_package_id
 
-    def _compatible_cache_latest_prev(self, node, cached_package_ids):
+    def _compatible_cache_latest_prev(self, node, cached_layouts):
         """ simplified checking of compatible_packages, that should be found existing, but
         will never be built, for example. They cannot be editable either at this point.
         """
-        if node.package_id not in cached_package_ids:
-            return None
+        # The latest layout of the candidate, if it exists, was already read from the DB
+        package_layout = cached_layouts.get(node.package_id)
         # Obtain the cache_latest valid one, cleaning things if dirty
-        while True:
-            package_layout = self._cache.pkg_layout_latest(node.pref)
-            cache_latest_prev = package_layout.reference if package_layout else None
-            if cache_latest_prev is None:
-                break
+        while package_layout is not None:
             if not self._evaluate_clean_pkg_folder_dirty(node, package_layout):
-                break
-
-        return cache_latest_prev
+                return package_layout.reference
+            # It was dirty and removed, so the previous revision (if any) has to be queried
+            package_layout = self._cache.pkg_layout_latest(node.pref)
+        return None
 
     @staticmethod
     def _binary_in_cache(node, cache_latest_prev):

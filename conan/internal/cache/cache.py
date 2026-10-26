@@ -176,6 +176,22 @@ class PkgCache:
         # we use abspath to convert cache forward slash in Windows to backslash
         return PackageLayout(pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
 
+    def pkg_layouts_latest(self, ref: RecipeReference):
+        """
+        The same as pkg_layout_latest() for all the package ids that exist in the cache for the
+        recipe revision, with a single DB query. Returns a dict {package_id: PackageLayout}
+        """
+        assert ref.revision, "Recipe revision must be known to get the package layouts"
+        result = {}
+        for data in self._db.get_latest_packages_data(ref):
+            pref_path = data.get("path")
+            pref = data.get("pref")  # new revision with timestamp
+            self._pkg_paths[pref] = pref_path
+            # we use abspath to convert cache forward slash in Windows to backslash
+            result[pref.package_id] = PackageLayout(
+                pref, os.path.abspath(os.path.join(self._base_folder, pref_path)))
+        return result
+
     def create_ref_layout(self, ref: RecipeReference):
         """ called exclusively by:
         - RemoteManager.get_recipe()
