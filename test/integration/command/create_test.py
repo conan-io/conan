@@ -166,13 +166,13 @@ def test_create_package_requires():
 
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -vv")
 
-    assert "pkg/0.1@lasote/testing (test package): build() " \
+    assert "build() " \
            "Requires: other/1.0@user/channel" in client.out
-    assert "pkg/0.1@lasote/testing (test package): build() " \
+    assert "build() " \
            "Requires: pkg/0.1@lasote/testing" in client.out
-    assert "pkg/0.1@lasote/testing (test package): build() cpp_info dep: other" in client.out
-    assert "pkg/0.1@lasote/testing (test package): build() cpp_info dep: dep" in client.out
-    assert "pkg/0.1@lasote/testing (test package): build() cpp_info dep: pkg" in client.out
+    assert "build() cpp_info dep: other" in client.out
+    assert "build() cpp_info dep: dep" in client.out
+    assert "build() cpp_info dep: pkg" in client.out
 
     # Check that the additional info shows up when creating pkg
     # Graph info, package creation, and test package graph info

@@ -155,7 +155,6 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
                                 "os=Windows AND (arch=x86 OR compiler=gcc)")
     args = parser.parse_args(*args)
 
-    # If pattern is None, it will be replaced by "*"
     if args.pattern and args.list:
         raise ConanException("Cannot specify both pattern and list")
 
@@ -163,9 +162,11 @@ def cache_clean(conan_api: ConanAPI, parser, subparser, *args):
         listfile = make_abs_path(args.list)
         multi_package_list = MultiPackagesList.load(listfile)
         package_list = multi_package_list["Local Cache"]
-    else:
+    elif args.pattern or args.package_query:
         ref_pattern = ListPattern(args.pattern or "*", rrev="*", package_id="*", prev="*")
         package_list = conan_api.list.select(ref_pattern, package_query=args.package_query)
+    else:
+        package_list = None  # The whole cache
     if args.build or args.source or args.download or args.temp or args.backup_sources:
         conan_api.cache.clean(package_list, source=args.source, build=args.build,
                               download=args.download, temp=args.temp,

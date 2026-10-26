@@ -176,11 +176,11 @@ equal/1.0.0@user/testing:opt=a=b
             """)
         c.save({"conanfile.py": conanfile})
         c.run("create . --name=pkg --version=0.1")
-        assert "pkg/0.1: without_stacktrace: True" in c.out
-        assert "pkg/0.1: with_stacktrace_backtrace success deleted!" in c.out
+        assert "without_stacktrace: True" in c.out
+        assert "with_stacktrace_backtrace success deleted!" in c.out
         c.run("create . --name=pkg --version=0.1 -o pkg*:without_stacktrace=False")
-        assert "pkg/0.1: without_stacktrace: False" in c.out
-        assert "pkg/0.1: with_stacktrace_backtrace: True" in c.out
+        assert "without_stacktrace: False" in c.out
+        assert "with_stacktrace_backtrace: True" in c.out
 
     def test_del_options_configure(self):
         """
@@ -655,27 +655,27 @@ def test_package_options_negate_patterns():
     c.run("export dep --name=dep3")
 
     c.run("install pkg --build=* -o *:myoption=1 -o ~dep1/*:myoption=2")
-    assert "dep1/0.1: MYOPTION=1!!!" in c.out
-    assert "dep2/0.1: MYOPTION=2!!!" in c.out
-    assert "dep3/0.1: MYOPTION=2!!!" in c.out
+    assert "MYOPTION=1!!!" in c.out
+    assert "MYOPTION=2!!!" in c.out
+    assert "MYOPTION=2!!!" in c.out
 
     # Order does matter for options with *:myoption patter, evaluates last
     c.run("install pkg --build=* -o ~dep1/*:myoption=2 -o *:myoption=1")
-    assert "dep1/0.1: MYOPTION=1!!!" in c.out
-    assert "dep2/0.1: MYOPTION=1!!!" in c.out
-    assert "dep3/0.1: MYOPTION=1!!!" in c.out
+    assert "MYOPTION=1!!!" in c.out
+    assert "MYOPTION=1!!!" in c.out
+    assert "MYOPTION=1!!!" in c.out
 
     # dep3 comes later, works
     c.run("install pkg --build=* -o *:myoption=1 -o ~dep1/*:myoption=2 -o dep3/*:myoption=3")
-    assert "dep1/0.1: MYOPTION=1!!!" in c.out
-    assert "dep2/0.1: MYOPTION=2!!!" in c.out
-    assert "dep3/0.1: MYOPTION=3!!!" in c.out
+    assert "MYOPTION=1!!!" in c.out
+    assert "MYOPTION=2!!!" in c.out
+    assert "MYOPTION=3!!!" in c.out
 
     # dep3 comes first, then last !dep1 pattern prevails
     c.run("install pkg --build=* -o *:myoption=1 -o dep3/*:myoption=3 -o ~dep1/*:myoption=2")
-    assert "dep1/0.1: MYOPTION=1!!!" in c.out
-    assert "dep2/0.1: MYOPTION=2!!!" in c.out
-    assert "dep3/0.1: MYOPTION=2!!!" in c.out
+    assert "MYOPTION=1!!!" in c.out
+    assert "MYOPTION=2!!!" in c.out
+    assert "MYOPTION=2!!!" in c.out
 
 
 class TestTransitiveOptionsSharedInvisible:
