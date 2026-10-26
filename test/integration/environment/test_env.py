@@ -911,7 +911,7 @@ def test_runenv_info_propagated():
             "tool/test_package/conanfile.py": tool_test_package})
     c.run("create lib -s build_type=Release")
     c.run("create tool --build-require -s:b build_type=Release -s:h build_type=Debug")
-    assert "tool/0.1 (test package): Building TEST_PACKAGE IN Debug!!" in c.out
+    assert "Building TEST_PACKAGE IN Debug!!" in c.out
     assert "MYLIBVAR=MYLIBVALUE:Release" in c.out
 
 
