@@ -1,7 +1,7 @@
 from conan.api.conan_api import ConanAPI
 from conan.errors import ConanException
 from conan.test.utils.env import environment_update
-from conan.api.model import PkgReference
+from conan.api.model import PkgReference, ListPattern
 from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient, TestRequester
@@ -83,3 +83,17 @@ def test_latest_revision_not_found_returns(with_remote):
 
         with pytest.raises(ConanException):
             api.list.latest_package_revision(pref, remote=remote)
+
+
+def test_select_revision_iteration_no_info():
+    client = TestClient(light=True)
+    client.save({"conanfile.py": GenConanfile("foo", "1.0").with_settings("os").with_shared_option(True)})
+    client.run("create .")
+
+    api = ConanAPI(client.cache_folder)
+    selection = api.list.select(ListPattern("foo/1.0:*#*"))
+    for ref, packages in selection.items():
+        for package in packages.values():
+            assert "timestamp" in package
+            assert "settings" not in package
+            assert "options" not in package

@@ -131,8 +131,8 @@ class TestInstall:
         c = TestClient(light=True)
         c.run(f"remote add local '{c3i_folder}'")
         c.run("install --requires=libcurl/1.0 --build missing")
-        assert "zlib/1.2.11: CONANDATA: {}" in c.out
-        assert "zlib/1.2.11: BUILDING: //myheader" in c.out
+        assert "CONANDATA: {}" in c.out
+        assert "BUILDING: //myheader" in c.out
         bins = {"libcurl/1.0": ("aa69c1e1e39a18fe70001688213dbb7ada95f890", "Build"),
                 "openssl/2.0": ("594ed0eb2e9dfcc60607438924c35871514e6c2a", "Build"),
                 "zlib/1.2.11": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")}

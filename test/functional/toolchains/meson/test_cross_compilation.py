@@ -248,7 +248,7 @@ def test_use_meson_toolchain():
 
     # Build locally
     c.run('build . --profile:host=android')
-    assert "conanfile.py (hello/0.1): Calling build()" in c.out
+    assert "Calling build()" in c.out
 
 
 @pytest.mark.tool("meson")

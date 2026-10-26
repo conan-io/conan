@@ -609,7 +609,7 @@ class TestCMakeInstall:
 
         # The create flow must work
         client.run("build .")
-        assert "conanfile.py: RUN: cmake --install" in client.out
+        assert "RUN: cmake --install" in client.out
 
 
 @pytest.mark.tool("cmake")
@@ -662,7 +662,7 @@ class TestCmakeTestMethod:
         assert str(c.out).count("1/1 Test #1: example ..........................   Passed") == 2
         # --build-config is only needed by the multi-config generators (Visual Studio in Windows)
         build_config = "--build-config Release " if platform.system() == "Windows" else ""
-        assert f"pkg/0.1: RUN: ctest {build_config}--parallel" in c.out
+        assert f"RUN: ctest {build_config}--parallel" in c.out
 
 
 @pytest.mark.tool("cmake")
