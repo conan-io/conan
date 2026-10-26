@@ -4,7 +4,7 @@ import shutil
 import tarfile
 import tempfile
 
-from conan.api.model import PackagesList
+from conan.api.model import PackagesList, ListPattern
 from conan.api.output import ConanOutput
 from conan.internal.api.uploader import compress_files, get_compress_level
 from conan.internal.cache.cache import PkgCache
@@ -257,20 +257,21 @@ class CacheAPI:
                         pkg_bundle["pkgsign_error"] = str(e)
         return package_list
 
-    def clean(self, package_list, source=True, build=True, download=True, temp=True,
+    def clean(self, package_list=None, source=True, build=True, download=True, temp=True,
               backup_sources=False) -> None:
         """
         Remove non critical folders from the cache, like source, build and download (.tgz store)
         folders.
 
-        :param package_list: the package lists that should be cleaned
+        :param package_list: the package list that should be cleaned. If ``None``, the whole cache
+            is cleaned, and with ``backup_sources`` all the backup sources files are removed,
+            including the ones that do not belong to any recipe in the cache
         :param source: boolean, remove the "source" folder if True
         :param build: boolean, remove the "build" folder if True
         :param download: boolean, remove the "download (.tgz)" folder if True
         :param temp: boolean, remove the temporary folders
-        :param backup_sources: boolean, remove the backup sources files if True. Note that all
-            the backup sources files are removed, not only the ones belonging to the
-            package_list recipes
+        :param backup_sources: boolean, remove the backup sources files if True. If a
+            ``package_list`` is given, only the ones downloaded by its recipes
         :return:
         """
 
@@ -289,12 +290,16 @@ class CacheAPI:
                         rmdir(folder)
 
         if backup_sources:
+            # Without package_list, there is no filtering: all the backup sources are removed
             backup_files = self._conan_api.cache.get_backup_sources(package_list, exclude=False,
                                                                     only_upload=False)
             ConanOutput().verbose(f"Cleaning {len(backup_files)} backup sources")
             for f in backup_files:
                 remove(f)
 
+        if package_list is None:
+            package_list = self._conan_api.list.select(ListPattern("*", rrev="*", package_id="*",
+                                                                   prev="*"))
         for ref, packages in package_list.items():
             ConanOutput(ref.repr_notime()).verbose("Cleaning recipe cache contents")
             ref_layout = cache.recipe_layout(ref)
@@ -466,13 +471,11 @@ class CacheAPI:
         in the package_list
 
         :param package_list: a PackagesList object to filter backup files from (The files should
-          have been downloaded form any of the references in the package_list). Only taken into
-          account if only_upload is True
+          have been downloaded form any of the references in the package_list)
         :param exclude: if True, exclude the sources that come from URLs present the
           core.sources:exclude_urls global conf
-        :param only_upload: if True, only return the files for the recipes and packages of the
-          package_list that are set to be uploaded. If False, the package_list is ignored and all
-          the files are returned
+        :param only_upload: if True, only take into account the recipes and packages of the
+          package_list that are set to be uploaded. Not used if no package_list is given
         :return: A list with the paths of the backup source files and their associated json files
         """
         config = self._api_helpers.global_conf

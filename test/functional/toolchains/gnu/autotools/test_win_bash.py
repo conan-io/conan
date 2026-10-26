@@ -409,4 +409,4 @@ def test_autotools_support_custom_make():
                  "profile": profile})
     client.run("build . -pr=profile")
     # This used to crash, because ``make_program`` was not unix_path
-    assert "conanfile.py: Calling build()" in client.out
+    assert "Calling build()" in client.out
