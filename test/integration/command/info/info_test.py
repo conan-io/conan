@@ -514,4 +514,4 @@ def test_graph_info_provides_conflict_html():
     tc.run("graph info --requires=bar/1.0 --requires=foo/1.0 --format=html", assert_error=True)
     # It got properly serialized
     assert '"type": "provide_conflict"' in tc.out
-    assert "Both 'bar/1.0' and 'foo/1.0' provide '['bar']'"
+    assert "Both 'bar/1.0' and 'foo/1.0' provide '['bar']'" in tc.out

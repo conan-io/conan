@@ -80,9 +80,10 @@ def test_apple_meson_toolchain_native_compilation_objective_c():
     assert "Hello, World!" in t.out
 
 
+# The iOS cross-building with Meson is already tested in test_cross_compilation.py
 @pytest.mark.parametrize("arch, os_, os_version, sdk", [
-    ('armv8', 'iOS', '10.0', 'iphoneos'),
-    ('x86_64', 'iOS', '10.0', 'iphonesimulator'),
+    pytest.param('armv8', 'iOS', '10.0', 'iphoneos', marks=pytest.mark.slow),
+    pytest.param('x86_64', 'iOS', '10.0', 'iphonesimulator', marks=pytest.mark.slow),
     ('armv8', 'Macos', '11.0', None)  # Apple Silicon
 ])
 @pytest.mark.tool("meson")

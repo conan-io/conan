@@ -24,7 +24,7 @@ def test_premake_args_without_toolchain():
         "build . -s compiler=msvc -s compiler.version=193 -s compiler.runtime=dynamic"
     )
     assert (
-        'conanfile.py: Running premake5 --file="myproject.lua" vs2022 --myarg=myvalue!!'
+        'Running premake5 --file="myproject.lua" vs2022 --myarg=myvalue!!'
         in c.out
     )
 

@@ -84,7 +84,7 @@ def test_exclude_patterns_settings():
     # All except zlib are Release, the only missing is zlib debug
     client.run("install consumer -s build_type=Debug "
                "                 -s !zlib*:build_type=Release", assert_error=True)
-    assert "ERROR: Missing prebuilt package for 'zlib/1.0'"
+    assert "ERROR: Missing prebuilt package for 'zlib/1.0'" in client.out
 
     # All the packages matches !potato* so all are Release
     client.run("install consumer -s build_type=Debug -s !potato*:build_type=Release")
@@ -96,10 +96,10 @@ def test_exclude_patterns_settings():
     client.run("install --requires consumer/1.0 -s consumer/*:build_type=Debug")
 
     # Priority between package scoped settings
-    client.run('remove consumer/*#* -c')
-    client.run("install --reference consumer/1.0 -s build_type=Debug", assert_error=True)
+    client.run('remove consumer/*:* -c')  # Remove the packages, not the recipe
+    client.run("install --requires consumer/1.0 -s build_type=Debug", assert_error=True)
     # Pre-check, there is no Debug package for any of them
-    assert "ERROR: Missing prebuilt package for 'consumer/1.0', 'openssl/1.0', 'zlib/1.0'"
+    assert "ERROR: Missing prebuilt package for 'consumer/1.0', 'openssl/1.0', 'zlib/1.0'" in client.out
     # Pre-check there are Release packages
     client.run("create consumer --name=consumer --version=1.0 -s build_type=Release")
 

@@ -1,9 +1,10 @@
 import json
-import time
+import os
 
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.test_files import backdate_folder
 from conan.test.utils.tools import TestClient
 
 
@@ -20,7 +21,7 @@ class TestLRU:
         c.run("create . --name=pkg --version=0.1")
         c.run("create . --name=dep --version=0.2")
 
-        time.sleep(2)
+        backdate_folder(os.path.join(c.cache_folder, "p"))  # LRU = folders mtime
         # This should update the LRU
         c.run("install --requires=pkg/0.1")
         # Removing recipes (+ its binaries) that recipes haven't been used
@@ -35,7 +36,7 @@ class TestLRU:
         assert "da39a3ee5e6b4b0d3255bfef95601890afd80709" in c.out
         assert "dep" not in c.out
 
-        time.sleep(2)
+        backdate_folder(os.path.join(c.cache_folder, "p"))  # LRU = folders mtime
         # This should update the LRU of the recipe only
         c.run("graph info --requires=pkg/0.1")
         # IMPORTANT: Note the pattern is NOT the same as the equivalent for 'conan remove'
@@ -76,7 +77,7 @@ class TestLRU:
                 "conanfile.py": GenConanfile("app", "1.0").with_require("dep/1.0")})
 
         c.run("create dep")
-        time.sleep(2)
+        backdate_folder(os.path.join(c.cache_folder, "p"))  # LRU = folders mtime
         c.run("create .")
         # Dep is not removed because its lru was updated as part of the above create
         c.run("remove * --lru=1s -c -f=json", redirect_stdout="removed.json")
@@ -91,9 +92,9 @@ class TestLRU:
     def test_lru_invalid_time_value_edge_cases(self):
         c = TestClient(light=True)
         c.run("list *#* --lru=as")
-        assert "ERROR: invalid literal for int() with base 10: 'a'" in c.out
+        assert "ERROR: Time value 'a' must be an integer" in c.out
         c.run("list *#* --lru=s")
-        assert "ERROR: invalid literal for int() with base 10: ''" in c.out
+        assert "ERROR: Time value '' must be an integer" in c.out
 
     def test_lru_not_in_remotes(self):
         c = TestClient(light=True, default_server_user=True)

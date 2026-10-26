@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import os
 import shutil
-import time
+import socketserver
 
 from conan.internal import REVISIONS
 from conans.server import SERVER_CAPABILITIES
@@ -67,34 +67,36 @@ class TestServerLauncher:
             self.ra.api_v2.install(plugin)
 
     def start(self, daemon=True):
-        """from multiprocessing import Process
-        self.p1 = Process(target=ra.run, kwargs={"host": "0.0.0.0"})
-        self.p1.start()
-        self.p1"""
+        """ Run the server in a background thread, listening only in localhost.
+        The socket is already listening when this method returns, no need to wait
+        """
         import threading
+        from wsgiref.simple_server import make_server, WSGIRequestHandler, WSGIServer
 
-        class StoppableThread(threading.Thread):
-            """Thread class with a stop() method. The thread itself has to check
-            regularly for the stopped() condition."""
+        class _Server(WSGIServer):
+            def server_bind(self):
+                # Skip the HTTPServer.server_bind() socket.getfqdn() call, it is not needed and
+                # it can block for a long time while resolving the hostname in CI machines
+                socketserver.TCPServer.server_bind(self)
+                self.server_name, self.server_port = self.server_address[:2]
+                self.setup_environ()
 
-            def __init__(self, *args, **kwargs):
-                super(StoppableThread, self).__init__(*args, **kwargs)
-                self._stop = threading.Event()
+        class _QuietHandler(WSGIRequestHandler):
+            def log_message(self, *args, **kwargs):
+                pass
 
-            def stop(self):
-                self._stop.set()
-
-            def stopped(self):
-                return self._stop.is_set()
-
-        self.t1 = StoppableThread(target=self.ra.run, kwargs={"host": "0.0.0.0", "quiet": True})
-        self.t1.daemon = daemon
-        self.t1.start()
-        time.sleep(1)
+        self._server = make_server("127.0.0.1", self.port, self.ra.root_app,
+                                   server_class=_Server, handler_class=_QuietHandler)
+        self.port = self._server.server_port
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=daemon,
+                                        kwargs={"poll_interval": 0.1})
+        self._thread.start()
 
     def stop(self):
         self.ra.root_app.close()
-        self.t1.stop()
+        self._server.shutdown()
+        self._server.server_close()
+        self._thread.join()
 
     def clean(self):
         if os.path.exists(self._base_path):
