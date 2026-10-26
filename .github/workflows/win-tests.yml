@@ -177,6 +177,12 @@ jobs:
                 automake
                 libtool
 
+      # MSYS2 dropped mingw32-make for the (deprecated) mingw32 environment, it is no longer in
+      # the repo database nor in the mingw-w64-i686-toolchain group, but the last build is kept
+      - name: Install mingw-w64-i686-make from the MSYS2 repo files
+        shell: msys2 {0}
+        run: pacman --noconfirm -U https://repo.msys2.org/mingw/mingw32/mingw-w64-i686-make-4.4.1-5-any.pkg.tar.zst
+
       - name: Cache CMake and Bazel installations
         id: cache-tools
         uses: actions/cache@v4
