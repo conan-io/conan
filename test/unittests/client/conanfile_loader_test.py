@@ -233,3 +233,18 @@ def append(data):
                    lambda: locked.append(_load_python_lock.locked())):
             ConanFileLoader()
         assert locked == [True]
+
+    def test_invalidate_caches_retried_on_concurrent_import(self):
+        """ Any thread importing a module can modify sys.path_importer_cache while it is being
+        iterated, that must not make the creation of the loader fail (flaky in CI Python 3.10)
+        """
+        calls = []
+
+        def _invalidate():
+            calls.append(1)
+            if len(calls) < 3:
+                raise RuntimeError("dictionary changed size during iteration")
+
+        with patch("conan.internal.loader.invalidate_caches", _invalidate):
+            ConanFileLoader()
+        assert len(calls) == 3
