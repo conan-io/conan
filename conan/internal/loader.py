@@ -314,9 +314,9 @@ _load_python_lock = Lock()  # Loading our Python files is not thread-safe (modif
 
 
 def _invalidate_import_caches():
-    # invalidate_caches() iterates sys.path_importer_cache without a snapshot (Python < 3.12 and
-    # also removes entries from it), while any import in any thread can add entries to it. The lock
-    # only serializes our own loading, so retry if some other code modified the dict meanwhile
+    # invalidate_caches() copies and modifies sys.path_importer_cache, which imports done by code
+    # outside this module can also modify. The lock only serializes our own loading, so retry if
+    # the dict changed meanwhile ("dictionary changed size during iteration" seen in CI)
     for _ in range(10):
         try:
             with _load_python_lock:
