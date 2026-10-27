@@ -126,6 +126,7 @@ class AutotoolsToolchain:
         self.apple_isysroot_flag = isysroot_flag
         self.apple_min_version_flag = min_flag
         self.apple_extra_flags = apple_extra_flags(self._conanfile)
+        self._asflags = None
 
     def _resolve_android_cross_compilation(self):
         # Issue related: https://github.com/conan-io/conan/issues/13443
@@ -240,11 +241,17 @@ class AutotoolsToolchain:
 
     @property
     def asflags(self):
-        if not is_apple_os(self._conanfile):
-            return []
-        ret = [self.arch_flag, self.sysroot_flag, self.apple_isysroot_flag, self.apple_arch_flag,
-               self.apple_min_version_flag]
-        return self._filter_list_empty_fields(ret)
+        if self._asflags is None:
+            if not is_apple_os(self._conanfile):
+                return []
+            ret = [self.arch_flag, self.sysroot_flag, self.apple_isysroot_flag, self.apple_arch_flag,
+                   self.apple_min_version_flag]
+            self._asflags = self._filter_list_empty_fields(ret)
+        return self._asflags
+
+    @asflags.setter
+    def asflags(self, value):
+        self._asflags = value
 
     @property
     def ldflags(self):
