@@ -41,6 +41,7 @@ class AutotoolsToolchain:
         self.extra_defines = []
 
         # Defines
+        self.arflags = None
         self.ndebug = None
         build_type = self._conanfile.settings.get_safe("build_type")
         if build_type in ['Release', 'RelWithDebInfo', 'MinSizeRel']:
@@ -332,6 +333,8 @@ class AutotoolsToolchain:
             env.append("ASFLAGS", self.asflags)
         if self.rcflags:
             env.append("RCFLAGS", self.rcflags)
+        if self.arflags is not None:
+            env.define("ARFLAGS", " ".join(self._filter_list_empty_fields(self.arflags)))
         env.prepend_path("PKG_CONFIG_PATH", self._conanfile.generators_folder)
         # Objective C/C++
         self._include_obj_arc_flags(env)

@@ -730,6 +730,15 @@ def test_conf_compiler_executable():
     assert "/c/my/path/myg++" == env["CXX"]
 
 
+def test_arflags_disabled_from_recipe():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    conanfile.settings_build = conanfile.settings
+    toolchain = AutotoolsToolchain(conanfile)
+    toolchain.arflags = []
+    assert toolchain.vars()["ARFLAGS"] == ""
+
+
 def test_autotools_toolchain_conf_extra_configure_args():
     """Validate that tools.gnu:extra_configure_args are passed to configure command only.
 
