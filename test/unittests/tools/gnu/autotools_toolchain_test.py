@@ -738,7 +738,7 @@ def test_asflags_disabled_from_recipe():
     conanfile.settings_build = conanfile.settings
     toolchain = AutotoolsToolchain(conanfile)
     assert "--sysroot /my/sysroot" in toolchain.vars()["ASFLAGS"]
-    toolchain.asflags = []
+    toolchain.extra_asflags = []
     assert "ASFLAGS" not in toolchain.vars().keys()
 
 
