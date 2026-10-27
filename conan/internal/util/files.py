@@ -179,11 +179,11 @@ def _change_permissions(func, path, exc_info):
     # attribute (st_file_attributes only exists in Windows), so check the attribute explicitly
     attributes = getattr(os.stat(path), "st_file_attributes", 0)
     parent = os.path.dirname(path)
-    if not os.access(path, os.W_OK) or attributes & stat.FILE_ATTRIBUTE_READONLY:
-        os.chmod(path, stat.S_IRWXU if os.path.isdir(path) else stat.S_IWUSR)
-    elif not os.access(parent, os.W_OK):
-        # In POSIX, removing an entry requires write permission in its parent folder
+    if not os.access(parent, os.W_OK):
+        # In POSIX, removing an entry only depends on write permission in its parent folder
         os.chmod(parent, stat.S_IRWXU)
+    elif not os.access(path, os.W_OK) or attributes & stat.FILE_ATTRIBUTE_READONLY:
+        os.chmod(path, stat.S_IRWXU if os.path.isdir(path) else stat.S_IWUSR)
     else:
         raise OSError("Cannot change permissions for {}! Exception info: {}".format(path, exc_info))
     func(path)
