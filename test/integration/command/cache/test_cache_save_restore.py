@@ -158,9 +158,13 @@ def test_cache_save_excluded_folders():
 
     # exclude source
     c.run("cache save * --no-source")
+    # Check default compression function is being used and not compression.py plugin one
+    assert "Compressing conan_cache_save.tgz\n" in c.out
     c3 = TestClient()
     shutil.copy2(cache_path, c3.current_folder)
     c3.run("cache restore conan_cache_save.tgz")
+    # Default decompress does not have any output
+    assert "Decompressing conan_cache_save.tgz" not in c3.out
     ref_layout = c3.get_latest_ref_layout(ref)
     assert not os.path.exists(os.path.join(ref_layout.source(), "mysrc.c"))
 
