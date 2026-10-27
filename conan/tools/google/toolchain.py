@@ -130,13 +130,12 @@ class BazelToolchain:
 
     @property
     def ldflags(self):
-        conf_flags = list(self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
-                                                   check_type=list))
-        conf_flags.extend(self._conanfile.conf.get("tools.build:exelinkflags", default=[],
-                                                   check_type=list))
-        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[], check_type=list)
-        conf_flags.extend(["-T'" + linker_script + "'" for linker_script in linker_scripts])
-        ret = self.linkopt + conf_flags
+        shared = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
+                                          check_type=list)
+        exe = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[],
+                                                  check_type=list)
+        ret = self.linkopt + shared + exe + ["-T'" + script + "'" for script in linker_scripts]
         return self._filter_list_empty_fields(ret)
 
     def _context(self):
