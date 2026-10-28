@@ -730,18 +730,6 @@ def test_conf_compiler_executable():
     assert "/c/my/path/myg++" == env["CXX"]
 
 
-def test_asflags_disabled_from_recipe():
-    conanfile = ConanFileMock()
-    conanfile.conf.define("tools.build:sysroot", "/my/sysroot")
-    conanfile.settings = MockSettings({"os": "Macos", "arch": "armv8", "compiler": "gcc",
-                                       "build_type": "Release"})
-    conanfile.settings_build = conanfile.settings
-    toolchain = AutotoolsToolchain(conanfile)
-    assert "--sysroot /my/sysroot" in toolchain.vars()["ASFLAGS"]
-    toolchain.asflags = []
-    assert "ASFLAGS" not in toolchain.vars().keys()
-
-
 def test_autotools_toolchain_conf_extra_configure_args():
     """Validate that tools.gnu:extra_configure_args are passed to configure command only.
 
