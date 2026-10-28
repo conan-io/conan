@@ -15,7 +15,7 @@ from conan.errors import ConanException
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, renamedir, mkdir
+from conan.internal.util.files import rmdir, renamedir, mkdir, load, save
 
 
 class PkgCache:
@@ -31,12 +31,50 @@ class PkgCache:
             mkdir(self._store_folder)
             db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
             self._base_folder = os.path.abspath(self._store_folder)
-            self._db = CacheDatabase(filename=db_filename)
+            self._db = self._database(db_filename, global_conf)
             # path of the packages already read from DB by pkg_layout_latest(), to avoid querying
             # again the same row in pkg_layout(). Entries are dropped when their row is removed or updated
             self._pkg_paths = {}
         except Exception as e:
             raise ConanException(f"Couldn't initialize storage in {self._store_folder}: {e}")
+
+    def _database(self, default, global_conf):
+        location = default + ".location"
+        folder = global_conf.get("core.cache:database_path", check_type=str)
+        if folder and not os.path.isabs(folder):
+            raise ConanException("core.cache:database_path must be an absolute directory")
+        storage = os.path.normcase(os.path.realpath(self._store_folder))
+        folder = os.path.normcase(os.path.realpath(folder or storage))
+        filename = os.path.join(folder, "cache.sqlite3")
+        owner = filename + ".storage"
+        bound = os.path.exists(location)
+        if bound:
+            if load(location) != filename:
+                raise ConanException("Cache database location changed. Use a fresh cache")
+            if not os.path.isfile(filename):
+                raise ConanException("Cache database is missing. Use a fresh cache")
+        elif folder == storage:
+            return CacheDatabase(default)
+        elif (any(name != "cache.sqlite3" for name in os.listdir(self._store_folder)) or
+              (os.path.isfile(default) and CacheDatabase(default).list_references())):
+            raise ConanException("core.cache:database_path requires a fresh cache")
+        if ((bound or os.path.exists(owner)) and
+                (not os.path.isfile(owner) or load(owner) != storage)):
+            raise ConanException("Cache database belongs to another package storage")
+        if not bound:
+            if os.path.exists(filename):
+                raise ConanException("Cache database directory already contains a database")
+            mkdir(folder)
+            try:
+                with open(owner, "x", encoding="utf-8") as handle:
+                    handle.write(storage)
+            except FileExistsError:
+                if load(owner) != storage:
+                    raise ConanException("Cache database belongs to another package storage")
+        database = CacheDatabase(filename)
+        if not bound:
+            save(location, filename)
+        return database
 
     @property
     def store(self):
