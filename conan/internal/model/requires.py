@@ -222,12 +222,14 @@ class Requirement:
                  (self.consistent and other.consistent) or
                  (self.ref == other.ref and self.options == other.options)))
 
-    def aggregate(self, other):
+    def aggregate(self, other, other_pkgtype_known=True):
         """ when closing loop and finding the same dependency on a node, the information needs
         to be aggregated
+        :type other: Requirement
         :param other: is the existing Require that the current node has, which information has to be
         appended to "self", which is the requires that is being propagated to the current node
         from upstream
+        :param other_pkgtype_known: If the other require knows the package type yet or not
         """
         assert self.build == other.build
         if other.override:
@@ -236,8 +238,15 @@ class Requirement:
             # the propagated one.
             self.force = True
             return
-        self.headers |= other.headers
-        self.libs |= other.libs
+        if other_pkgtype_known:
+            # Traits of a requirement not yet expanded are not inferred from package_type yet.
+            # They will be aggregated when it is expanded and closes the diamond
+            self.headers |= other.headers
+            self.libs |= other.libs
+        else:
+            # Only the traits explicitly defined in the requires() are known
+            self.headers |= other._headers is True
+            self.libs |= other._libs is True
         self.run = self.run or other.run
         self.visible |= other.visible
         self.consistent |= other.consistent
