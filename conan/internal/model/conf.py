@@ -47,7 +47,7 @@ BUILT_IN_CONFS = {
                                     "server are also stored here, so a later download of the same "
                                     "artifact can be skipped",
     "core.cache:storage_path": "Absolute path where the packages and database are stored",
-    "core.cache:database_path": "Absolute directory for the cache database, separate from packages",
+    "core.cache:root_database_folder": "(Experimental) Root folder for cache databases",
     "core:update_policy": "(Legacy). If equal 'legacy' when multiple remotes, update based on order of remotes, only the timestamp of the first occurrence of each revision counts.",
     "core:policies": policies_msg,
     # Sources backup
