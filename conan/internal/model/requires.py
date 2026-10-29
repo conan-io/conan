@@ -238,8 +238,8 @@ class Requirement:
             # the propagated one.
             self.force = True
             return
+        # Traits of a requirement not yet expanded are not inferred from package_type yet.
         if other_pkgtype_known:
-            # Traits of a requirement not yet expanded are not inferred from package_type yet.
             # They will be aggregated when it is expanded and closes the diamond
             self.headers |= other.headers
             self.libs |= other.libs
