@@ -61,6 +61,8 @@ class ConanFile:
     win_bash_run = None  # For run scope
 
     _conan_is_consumer = False
+    _conan_settings_build = None
+    _conan_settings_build_factory = None  # most recipes never read settings_build: clone it lazily
     _conan_required_version = None
 
     # #### Requirements
@@ -81,6 +83,19 @@ class ConanFile:
     conf = None
     generator_info = None
     conan_data = None
+
+    @property
+    def settings_build(self):
+        factory = self._conan_settings_build_factory
+        if factory is not None:
+            self._conan_settings_build = factory()
+            self._conan_settings_build_factory = None
+        return self._conan_settings_build
+
+    @settings_build.setter
+    def settings_build(self, value):
+        self._conan_settings_build = value
+        self._conan_settings_build_factory = None
 
     def __init__(self, display_name=""):
         self.display_name = display_name
