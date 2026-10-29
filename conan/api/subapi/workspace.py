@@ -403,6 +403,8 @@ class WorkspaceAPI:
         conanfile._conan_helpers = helpers
 
         result = DepsGraph()  # TODO: We might need to copy more information from the original graph
+        # the nodes keep their bit in the requires required_nodes, the registry has to be shared
+        result.nodes_by_bit = deps_graph.nodes_by_bit
         result.add_node(root)
         conanfile.workspace_packages = {}
 

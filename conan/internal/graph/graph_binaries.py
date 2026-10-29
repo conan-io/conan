@@ -554,10 +554,14 @@ class GraphBinariesAnalyzer:
                                    node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD,
                                                        BINARY_EDITABLE))
                 deps_required = set()
+                deps_bits = 0
                 for req, t in node.transitive_deps.items():
                     if req.files or (req.direct and is_consumer):
                         deps_required.add(t.node)
-                        deps_required.update(req.required_nodes)
+                        deps_bits |= req.required_nodes
+                # the reversed binary string has a "1" at index i if graph.nodes_by_bit[i] is set
+                deps_required.update(graph.nodes_by_bit[i]
+                                     for i, flag in enumerate(bin(deps_bits)[:1:-1]) if flag == "1")
 
                 # Third pass, mark requires as skippeable
                 for dep in node.transitive_deps.values():

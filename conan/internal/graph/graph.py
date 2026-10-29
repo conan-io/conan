@@ -71,6 +71,7 @@ class Node:
         self.replaced_requires = {}  # To track the replaced requires for self.edges[old-ref]
         self.skipped_build_requires = False
         self.editable_output_folder = None  # In case this node is editable
+        self.bit = None  # its bitmask in the DepsGraph.nodes_by_bit registry, for required_nodes
 
     def subgraph(self):
         nodes = [self]
@@ -161,8 +162,9 @@ class Node:
         # If the requirement propagates .files downstream, cannot be skipped
         # But if the files are not needed in this graph branch, can be marked "Skip"
         if down_require.files:
-            down_require.required_nodes = require.required_nodes.copy()
-        down_require.required_nodes.add(self)
+            down_require.required_nodes = require.required_nodes | self.bit
+        else:
+            down_require.required_nodes = self.bit
         d.src.propagate_downstream(down_require, node, visibility_conflicts)
 
     def check_downstream_exists(self, require):
@@ -373,6 +375,7 @@ class Overrides:
 class DepsGraph:
     def __init__(self):
         self.nodes = []
+        self.nodes_by_bit = []
         self.resolved_ranges = {}
         self.replaced_requires = {}
         self.options_conflicts = {}
@@ -394,6 +397,10 @@ class DepsGraph:
         return self.nodes[0] if self.nodes else None
 
     def add_node(self, node):
+        if node.bit is None:  # sticky: a node moved to a derived graph (workspaces) keeps it
+            # append-only registry (orphans leave self.nodes, but can stay in required_nodes)
+            node.bit = 1 << len(self.nodes_by_bit)
+            self.nodes_by_bit.append(node)
         self.nodes.append(node)
 
     @staticmethod
