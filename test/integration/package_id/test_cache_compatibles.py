@@ -2,8 +2,12 @@ import os
 import re
 import textwrap
 
+from contextlib import contextmanager
+from unittest import mock
+
 import pytest
 
+from conan.internal.cache.db.packages_table import PackagesDBTable
 from conan.internal.cache.home_paths import HomePaths
 from conan.test.utils.tools import TestClient, GenConanfile
 
@@ -93,6 +97,88 @@ def test_cppstd():
     assert "dep/0.1: Main binary package '94758b7bbcb365aaf355913b35431c0da6ed6da5' missing" \
            in client.out
     assert f"Found compatible package '{package_id}'" in client.out
+
+
+@contextmanager
+def _count_packages_db_queries():
+    """ Every query to the packages table opens a new sqlite connection, count them """
+    queries = []
+    db_connection = PackagesDBTable.db_connection
+
+    @contextmanager
+    def counting_connection(self):
+        queries.append(1)
+        with db_connection(self) as connection:
+            yield connection
+
+    with mock.patch.object(PackagesDBTable, "db_connection", counting_connection):
+        yield queries
+
+
+class TestCacheCompatiblesDBQueries:
+    """ Avoid doing more DB queries than necessary: the compatible candidates (it can be dozens)
+    must not be queried one by one in the DB, and the ones already evaluated for other nodes
+    (typically tool-requires and test-requires) shouldn't need any query at all
+    """
+    base_settings = "-s compiler=gcc -s compiler.version=8 -s compiler.libcxx=libstdc++11"
+
+    @pytest.fixture()
+    def client(self):
+        client = TestClient()
+        compatibles = textwrap.dedent("""\
+            def compatibility(conanfile):
+                return [{"settings": [("compiler.cppstd", v)]} for v in ("11", "14", "17", "20")]
+            """)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compatibles})
+        client.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_settings("compiler"),
+                     "consumer/conanfile.py": GenConanfile().with_requires("dep/0.1"),
+                     "tool_consumer/conanfile.py": GenConanfile().with_requires("dep/0.1")
+                                                                 .with_tool_requires("dep/0.1")})
+        client.run(f"create dep {self.base_settings} -s compiler.cppstd=14")
+        return client
+
+    def test_found_in_cache(self, client):
+        package_id = client.created_package_id("dep/0.1")
+        # 3 compatible candidates (11, 14, 20), only one of them exists in the cache
+        with _count_packages_db_queries() as queries:
+            client.run(f"install consumer {self.base_settings} -s compiler.cppstd=17")
+        assert f"Found compatible package '{package_id}'" in client.out
+        assert len(queries) == 2  # main binary, and all the candidates in the cache together
+
+    def test_not_found(self, client):
+        client.run("remove dep/0.1:* -c")
+        # 3 compatible candidates (11, 14, 17), none exist in the cache
+        with _count_packages_db_queries() as queries:
+            client.run(f"install consumer {self.base_settings} -s compiler.cppstd=20",
+                       assert_error=True)
+        assert "dep/0.1: Checking 3 compatible configurations" in client.out
+        assert "ERROR: Missing binary" in client.out
+        assert len(queries) == 2  # main binary, and all the candidates in the cache together
+
+    def test_first_candidate_found(self, client):
+        """ The first candidate is the existing one, it shouldn't be more expensive than before
+        """
+        compatibles = textwrap.dedent("""\
+            def compatibility(conanfile):
+                return [{"settings": [("compiler.cppstd", "14")]}]
+            """)
+        client.save_home({"extensions/plugins/compatibility/compatibility.py": compatibles})
+        with _count_packages_db_queries() as queries:
+            client.run(f"install consumer {self.base_settings} -s compiler.cppstd=17")
+        assert "dep/0.1: Checking 1 compatible configurations" in client.out
+        assert len(queries) == 2  # main binary, and the compatible one. Just like before
+
+    def test_cached_solution(self, client):
+        """ The dependency in the build context has a different binary, but the compatible
+        candidates are shared, so it is resolved without any DB query for the compatible ones
+        """
+        with _count_packages_db_queries() as queries:
+            client.run(f"install tool_consumer {self.base_settings} -s compiler.cppstd=17 "
+                       f"-s:b compiler=gcc -s:b compiler.version=8 -s:b compiler.libcxx=libstdc++11 "
+                       "-s:b compiler.cppstd=20")
+        assert client.out.count("Found compatible package") == 2
+        # host main binary + the candidates in the cache | build main binary, solution is cached
+        assert len(queries) == 3
 
 
 def test_cppstd_validated():

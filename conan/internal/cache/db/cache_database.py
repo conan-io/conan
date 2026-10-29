@@ -37,6 +37,10 @@ class CacheDatabase:
         prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
         return prevs[0] if prevs else None
 
+    def get_latest_packages_data(self, ref):
+        # Used just for PkgCache.pkg_layouts_latest()
+        return self._packages.get_latest_package_revisions_data(ref)
+
     def update_recipe_timestamp(self, ref):
         self._recipes.update_timestamp(ref)
 
