@@ -50,13 +50,10 @@ class Requirement:
     def files(self):  # require needs some files in dependency package
         return self.headers or self.libs or self.run or self.build
 
-    @staticmethod
-    def _default_if_none(field, default_value):
-        return field if field is not None else default_value
-
     @property
     def headers(self):
-        return self._default_if_none(self._headers, True)
+        headers = self._headers
+        return True if headers is None else headers
 
     @headers.setter
     def headers(self, value):
@@ -64,7 +61,8 @@ class Requirement:
 
     @property
     def libs(self):
-        return self._default_if_none(self._libs, True)
+        libs = self._libs
+        return True if libs is None else libs
 
     @libs.setter
     def libs(self, value):
@@ -72,7 +70,8 @@ class Requirement:
 
     @property
     def visible(self):
-        return self._default_if_none(self._visible, True)
+        visible = self._visible
+        return True if visible is None else visible
 
     @visible.setter
     def visible(self, value):
@@ -80,7 +79,8 @@ class Requirement:
 
     @property
     def test(self):
-        return self._default_if_none(self._test, False)
+        test = self._test
+        return False if test is None else test
 
     @test.setter
     def test(self, value):
@@ -88,7 +88,8 @@ class Requirement:
 
     @property
     def force(self):
-        return self._default_if_none(self._force, False)
+        force = self._force
+        return False if force is None else force
 
     @force.setter
     def force(self, value):
@@ -96,7 +97,8 @@ class Requirement:
 
     @property
     def override(self):
-        return self._default_if_none(self._override, False)
+        override = self._override
+        return False if override is None else override
 
     @override.setter
     def override(self, value):
@@ -104,7 +106,8 @@ class Requirement:
 
     @property
     def direct(self):
-        return self._default_if_none(self._direct, True)
+        direct = self._direct
+        return True if direct is None else direct
 
     @direct.setter
     def direct(self, value):
@@ -112,12 +115,13 @@ class Requirement:
 
     @property
     def consistent(self):
+        consistent = self._consistent
+        if consistent is not None:
+            return consistent
         # Host by default has to be consistent too
         if self.consistent_policy_new:
-            default_consistent = self.visible or self.test or not self.build
-        else:
-            default_consistent = self.visible or self.test
-        return self._default_if_none(self._consistent, default_consistent)
+            return self.visible or self.test or not self.build
+        return self.visible or self.test
 
     @consistent.setter
     def consistent(self, value):
@@ -125,7 +129,8 @@ class Requirement:
 
     @property
     def run(self):
-        return self._default_if_none(self._run, False)
+        run = self._run
+        return False if run is None else run
 
     @run.setter
     def run(self, value):
