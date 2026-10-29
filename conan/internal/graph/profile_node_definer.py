@@ -1,3 +1,5 @@
+from functools import partial
+
 from conan.internal.graph.graph import CONTEXT_BUILD
 from conan.errors import ConanException
 from conan.internal.model.recipe_ref import ref_matches
@@ -22,19 +24,22 @@ def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_co
     # build(gcc) -(r)-> build(openssl/zlib) => settings_host=profile_build, settings_target=None
     # build(gcc) -(br)-> build(gcc) => settings_host=profile_build, settings_target=profile_build
     # profile host
-    settings_host = _per_package_settings(conanfile, profile_host, ref)
-    settings_build = _per_package_settings(conanfile, profile_build, ref)
+    is_consumer = conanfile._conan_is_consumer  # noqa
+    settings_host = _per_package_settings(is_consumer, profile_host, ref)
     if is_build_require or base_context == CONTEXT_BUILD:
+        settings_build = _per_package_settings(is_consumer, profile_build, ref)
         _initialize_conanfile(conanfile, profile_build, settings_build.copy(), ref)
         conanfile.buildenv_build = None
         conanfile.conf_build = None
+        conanfile.settings_build = settings_build
     else:
         _initialize_conanfile(conanfile, profile_host, settings_host, ref)
         # Host profile with some build profile information
-        is_consumer = conanfile._conan_is_consumer  # noqa
         conanfile.buildenv_build = profile_build.buildenv.get_profile_env(ref, is_consumer)
         conanfile.conf_build = profile_build.conf.get_conanfile_conf(ref, is_consumer)
-    conanfile.settings_build = settings_build
+        # Most recipes never read the settings_build, so they are not cloned until they do
+        conanfile._conan_settings_build_factory = partial(_per_package_settings, is_consumer,
+                                                          profile_build, ref)
     conanfile.settings_target = None
 
     if is_build_require:
@@ -51,7 +56,7 @@ def initialize_conanfile_profile(conanfile, profile_build, profile_host, base_co
                 conanfile.settings_target = parent.settings_target.copy()
 
 
-def _per_package_settings(conanfile, profile, ref):
+def _per_package_settings(is_consumer, profile, ref):
     # Prepare the settings for the loaded conanfile
     # Mixing the global settings with the specified for that name if exist
     tmp_settings = profile.processed_settings.copy()
@@ -61,7 +66,7 @@ def _per_package_settings(conanfile, profile, ref):
         pkg_settings = []
 
         for pattern, settings in package_settings_values.items():
-            if ref_matches(ref, pattern, conanfile._conan_is_consumer):  # noqa
+            if ref_matches(ref, pattern, is_consumer):
                 pkg_settings.extend(settings)
 
         if pkg_settings:
