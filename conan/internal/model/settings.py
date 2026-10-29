@@ -23,19 +23,38 @@ def undefined_field(name, field, fields=None, value=None):
     return ConanException("\n".join(result))
 
 
+class _Owner:
+    """ The nodes of a Settings tree are copy-on-write: the copies of a tree share the nodes, and a
+    node can only be modified in place while its owner is not ``shared``. Copying a tree marks its
+    owner as shared (O(1)), then each of the copies clones, on demand, the nodes it modifies, for
+    a new owner. Most of the copies, like the one of every package for the profile settings, are
+    only partially read or not modified at all.
+    """
+    __slots__ = ("shared",)
+
+    def __init__(self):
+        self.shared = False
+
+
+_SHARED = _Owner()  # for the nodes that are never modified in place, always cloned first
+_SHARED.shared = True
+
+
 class SettingsItem:
     """ represents a setting value and its child info, which could be:
     - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
     - List [None, "ANY"] to accept None or any value
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
-    def __init__(self, definition, name, value):
+    def __init__(self, definition, name, value, owner):
         self._definition = definition  # range of possible values
         self._name = name  # settings.compiler
         self._value = value  # gcc
+        self._owner = owner
+        self._conaninfo = None  # the item for the ConanInfo settings, once it is shared (immutable)
 
     @staticmethod
-    def new(definition, name):
+    def new(definition, name, owner):
         if definition is None:
             raise ConanException(f"Definition of settings.yml '{name}' cannot be null")
         if isinstance(definition, dict):
@@ -44,26 +63,25 @@ class SettingsItem:
             for k, v in definition.items():
                 # None string from yaml definition maps to python None, means not-defined value
                 k = str(k) if k is not None else None
-                parsed_definitions[k] = Settings(v, name, k)
+                parsed_definitions[k] = Settings(v, name, k, owner)
         else:
             # list or tuple of possible values, it can include "ANY"
             parsed_definitions = [str(v) if v is not None else None for v in definition]
-        return SettingsItem(parsed_definitions, name, None)
+        return SettingsItem(parsed_definitions, name, None, owner)
 
     def __contains__(self, value):
         return value in (self._value or "")
 
-    def copy(self):
-        """ deepcopy, recursive
+    def _clone(self, owner):
+        """ shallow copy to be modified in place, the subsettings are still shared
         """
-        if not isinstance(self._definition, dict):
-            definition = self._definition  # Not necessary to copy this, not mutable
-        else:
-            definition = {k: v.copy() for k, v in self._definition.items()}
-        return SettingsItem(definition, self._name, self._value)
+        definition = self._definition
+        if isinstance(definition, dict):
+            definition = dict(definition)
+        return SettingsItem(definition, self._name, self._value, owner)
 
-    def copy_conaninfo_settings(self):
-        """ deepcopy, recursive
+    def conaninfo_item(self):
+        """ copy for the ConanInfo settings, recursive
         This function adds "ANY" to lists, to allow the ``package_id()`` method to modify some of
         values, but not all, just the "final" values without subsettings.
         We cannot let users manipulate to random strings
@@ -75,13 +93,17 @@ class SettingsItem:
         that you want for it.
         - Settings that are "final" (lists), like build_type, or arch or compiler.version they
         can get any value without issues.
+        The item is shared, so it doesn't change, and it is computed only once for all the copies of
+        the settings.
         """
-        if not isinstance(self._definition, dict):
-            definition = self._definition[:] + ["ANY"]
-        else:
-            definition = {k: v.copy_conaninfo_settings() for k, v in self._definition.items()}
-            definition["ANY"] = Settings()
-        return SettingsItem(definition, self._name, self._value)
+        if self._conaninfo is None:
+            if not isinstance(self._definition, dict):
+                definition = self._definition[:] + ["ANY"]
+            else:
+                definition = {k: v.conaninfo_node() for k, v in self._definition.items()}
+                definition["ANY"] = Settings(owner=_SHARED)
+            self._conaninfo = SettingsItem(definition, self._name, self._value, _SHARED)
+        return self._conaninfo
 
     def __bool__(self):
         if not self._value:
@@ -101,7 +123,7 @@ class SettingsItem:
         """ This is necessary to remove libcxx subsetting from compiler in config()
            del self.settings.compiler.stdlib
         """
-        child_setting = self._get_child(self._value)
+        child_setting = self._get_child(self._value, write=True)
         delattr(child_setting, item)
 
     def _validate(self, value):
@@ -111,17 +133,36 @@ class SettingsItem:
             raise ConanException(bad_value_msg(self._name, value, self._definition))
         return value
 
-    def _get_child(self, item):
+    def _get_child(self, item, write=False):
+        """ the subsettings of the current value. It clones them if they are shared, because the
+        caller can modify them, but not when reading from a node that is already shared, as the
+        copies of a tree can keep a reference to its nodes (see _check_owned())"""
         if not isinstance(self._definition, dict):
             raise undefined_field(self._name, item, None, self._value)
         if self._value is None:
             raise ConanException("'%s' value not defined" % self._name)
-        return self._get_definition()
+        key = self._definition_key()
+        child = self._definition[key]
+        if self._owner.shared:
+            self._check_owned(write)
+        elif child._owner.shared:
+            child = self._definition[key] = child._clone(self._owner)
+        return child
+
+    def _check_owned(self, write):
+        # A reference to a setting obtained before copying the settings still reads from the
+        # shared nodes, but it can't modify them, that would modify all the copies
+        if write:
+            raise ConanException(f"Cannot modify '{self._name}': the settings it belongs to have "
+                                 "been copied after getting it. Get it again from the settings")
+
+    def _definition_key(self):
+        if self._value not in self._definition and "ANY" in self._definition:
+            return "ANY"
+        return self._value
 
     def _get_definition(self):
-        if self._value not in self._definition and "ANY" in self._definition:
-            return self._definition["ANY"]
-        return self._definition[self._value]
+        return self._definition[self._definition_key()]
 
     def __getattr__(self, item):
         item = str(item)
@@ -133,7 +174,7 @@ class SettingsItem:
             return super(SettingsItem, self).__setattr__(item, value)
 
         item = str(item)
-        sub_config_dict = self._get_child(item)
+        sub_config_dict = self._get_child(item, write=True)
         return setattr(sub_config_dict, item, value)
 
     @property
@@ -142,7 +183,10 @@ class SettingsItem:
 
     @value.setter
     def value(self, v):
-        self._value = self._validate(v)
+        v = self._validate(v)
+        if self._owner.shared:
+            self._check_owned(write=True)
+        self._value = v
 
     @property
     def values_range(self):
@@ -175,18 +219,29 @@ class SettingsItem:
             ret[key] = value.possible_values()
         return ret
 
+    def _removes(self, name):
+        """ If rm_safe(name) would remove something, to avoid cloning the subsettings if not """
+        if isinstance(self._definition, list):
+            return False
+        return any(subsetting._removes(name) for subsetting in self._definition.values())
+
     def rm_safe(self, name):
         """ Iterates all possible subsettings, calling rm_safe() for all of them. If removing
         "compiler.cppstd", this will iterate msvc, gcc, clang, etc, calling rm_safe(cppstd) for
         all of them"""
         if isinstance(self._definition, list):
             return
-        for subsetting in self._definition.values():
-            subsetting.rm_safe(name)
+        if self._owner.shared:
+            self._check_owned(write=True)
+        for key, subsetting in self._definition.items():
+            if subsetting._removes(name):
+                if subsetting._owner.shared:
+                    subsetting = self._definition[key] = subsetting._clone(self._owner)
+                subsetting.rm_safe(name)
 
 
 class Settings:
-    def __init__(self, definition=None, name="settings", parent_value="settings"):
+    def __init__(self, definition=None, name="settings", parent_value="settings", owner=None):
         if parent_value is None and definition:
             raise ConanException("settings.yml: null setting can't have subsettings")
         definition = definition or {}
@@ -195,7 +250,11 @@ class Settings:
             raise ConanException(f"Invalid settings.yml format: '{name}{val}' is not a dictionary")
         self._name = name  # settings, settings.compiler
         self._parent_value = parent_value  # gcc, x86
-        self._data = {k: SettingsItem.new(v, f"{name}.{k}") for k, v in definition.items()}
+        self._root = owner is None  # the root of the tree is the one that is copied, see _Owner
+        self._owner = _Owner() if owner is None else owner
+        self._conaninfo = None  # the node for the ConanInfo settings, once it is shared (immutable)
+        self._data = {k: SettingsItem.new(v, f"{name}.{k}", self._owner)
+                      for k, v in definition.items()}
         self._frozen = False
 
     def serialize(self):
@@ -225,33 +284,83 @@ class Settings:
             return tmp.value
         return default
 
+    def _removes(self, name):
+        """ If rm_safe(name) would remove something, to avoid cloning the nodes if not """
+        if "." in name:
+            setting, remainder = name.split(".", 1)
+            item = self._data.get(setting)
+            return item is not None and item._removes(remainder)
+        return bool(self._data) if name == "*" else name in self._data
+
     def rm_safe(self, name):
         """ Removes the setting or subsetting from the definition. For example,
         rm_safe("compiler.cppstd") remove all "cppstd" subsetting from all compilers, irrespective
         of the current value of the "compiler"
         """
+        if not self._removes(name):
+            return
         if "." in name:
             setting, remainder = name.split(".", 1)  # setting=compiler, remainder = cppstd
-            try:
-                self._data[setting].rm_safe(remainder)  # call rm_safe("cppstd") for the "compiler"
-            except KeyError:
-                pass
+            # call rm_safe("cppstd") for the "compiler"
+            self._get_owned_item(setting).rm_safe(remainder)
+        elif name == "*":
+            self.clear()
         else:
-            if name == "*":
-                self.clear()
-            else:
-                self._data.pop(name, None)
+            self._own()
+            del self._data[name]
 
     def copy(self):
-        """ deepcopy, recursive
+        """ Copy on write: the nodes are shared with the copy, until one of them modifies it.
+        Only the root of a tree is copied (not its subsettings)
         """
+        self._owner.shared = True
         result = Settings({}, name=self._name, parent_value=self._parent_value)
-        result._data = {k: v.copy() for k, v in self._data.items()}
+        result._owner = self._owner
+        result._data = self._data
         return result
 
     def copy_conaninfo_settings(self):
+        # the items are shared (and computed once for all the copies), that is what makes them
+        # immutable, so the nodes of this tree have to be too
+        self._owner.shared = True
         result = Settings({}, name=self._name, parent_value=self._parent_value)
-        result._data = {k: v.copy_conaninfo_settings() for k, v in self._data.items()}
+        result._data = {k: v.conaninfo_item() for k, v in self._data.items()}
+        return result
+
+    def conaninfo_node(self):
+        """ the shared node of the ConanInfo settings, see SettingsItem.conaninfo_item() """
+        if self._conaninfo is None:
+            result = Settings({}, name=self._name, parent_value=self._parent_value, owner=_SHARED)
+            result._data = {k: v.conaninfo_item() for k, v in self._data.items()}
+            self._conaninfo = result
+        return self._conaninfo
+
+    def _own(self):
+        """ Has to be called before modifying ``_data`` in place. The nodes are shared if their
+        owner is, and then the root of the tree gets its own ``_data``, with a new owner for the
+        nodes that it clones
+        """
+        if self._owner.shared:
+            if not self._root:  # a reference obtained before the settings were copied
+                raise ConanException(f"Cannot modify '{self._name}': the settings it belongs to "
+                                     "have been copied after getting it. Get it again from the "
+                                     "settings")
+            self._data = dict(self._data)
+            self._owner = _Owner()
+
+    def _get_owned_item(self, field):
+        """ The item to modify in place, or to hand out to someone that could modify it """
+        self._own()
+        item = self._data[field]
+        if item._owner.shared:
+            item = self._data[field] = item._clone(self._owner)
+        return item
+
+    def _clone(self, owner):
+        """ shallow copy to be modified in place, the items are still shared
+        """
+        result = Settings({}, name=self._name, parent_value=self._parent_value, owner=owner)
+        result._data = dict(self._data)
         return result
 
     @staticmethod
@@ -270,6 +379,7 @@ class Settings:
         return sorted(list(self._data.keys()))
 
     def clear(self):
+        self._own()
         self._data = {}
 
     def _check_field(self, field):
@@ -279,11 +389,14 @@ class Settings:
     def __getattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
         self._check_field(field)
-        return self._data[field]
+        if self._owner.shared and not self._root:  # reading from a stale reference, see _own()
+            return self._data[field]
+        return self._get_owned_item(field)
 
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
         self._check_field(field)
+        self._own()
         del self._data[field]
 
     def __setattr__(self, field, value):
@@ -293,7 +406,7 @@ class Settings:
         self._check_field(field)
         if self._frozen:
             raise ConanException(f"Tried to define '{field}' setting inside recipe")
-        self._data[field].value = value
+        self._get_owned_item(field).value = value
 
     @property
     def values_list(self):
@@ -340,8 +453,10 @@ class Settings:
             self._check_field(field)
 
         to_remove = [k for k in self._data if k not in constraint_def]
-        for k in to_remove:
-            del self._data[k]
+        if to_remove:
+            self._own()
+            for k in to_remove:
+                del self._data[k]
 
     def dumps(self):
         """ produces a text string with lines containing a flattened version:

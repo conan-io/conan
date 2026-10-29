@@ -488,3 +488,179 @@ def test_set_value_non_existing_values():
     # it does not raise any error
     settings.update_values([("foo", "A")], raise_undefined=False)
     settings.update_values([("foo.bar", "A")], raise_undefined=False)
+
+
+class TestSettingsCopyOnWrite:
+    """ the copies share their nodes, but they must behave as independent deep copies """
+
+    @staticmethod
+    def _settings():
+        data = {
+            "os": {"Windows": {"subsystem": ["msys2", "cygwin"]}, "Linux": None},
+            "compiler": {"gcc": {"version": ["4.8", "4.9"], "cppstd": ["11", "14"],
+                                 "libcxx": ["libstdc++", "libstdc++11"]},
+                         "clang": {"version": ["3", "4"], "cppstd": ["11", "14"]}},
+            "build_type": ["Debug", "Release"],
+        }
+        settings = Settings(data)
+        settings.update_values([("os", "Windows"), ("compiler", "gcc"),
+                                ("compiler.version", "4.8"), ("compiler.cppstd", "11"),
+                                ("build_type", "Release")])
+        return settings
+
+    @pytest.mark.parametrize("modify_first", [True, False])
+    def test_set_value(self, modify_first):
+        original = self._settings()
+        copy = original.copy()
+        modified, other = (copy, original) if modify_first else (original, copy)
+        modified.compiler.version = "4.9"
+        modified.os.subsystem = "msys2"
+        modified.build_type = "Debug"
+        assert modified.compiler.version == "4.9"
+        assert other.compiler.version == "4.8"
+        assert modified.os.subsystem == "msys2"
+        assert other.os.subsystem == None
+        assert modified.build_type == "Debug"
+        assert other.build_type == "Release"
+        # and the other way around, from the already modified ones
+        other.compiler.cppstd = "14"
+        assert other.compiler.cppstd == "14"
+        assert modified.compiler.cppstd == "11"
+
+    def test_set_inactive_subsettings(self):
+        original = self._settings()
+        copy = original.copy()
+        copy.compiler = "clang"
+        copy.compiler.version = "3"
+        assert original.compiler == "gcc"
+        assert original.compiler.version == "4.8"
+        assert copy.compiler.version == "3"
+        copy.compiler = "gcc"  # recovers the value that it had, as it always did
+        assert copy.compiler.version == "4.8"
+
+    def test_copy_of_copy(self):
+        original = self._settings()
+        copy1 = original.copy()
+        copy2 = copy1.copy()
+        copy1.compiler.version = "4.9"
+        copy3 = copy1.copy()
+        copy2.build_type = "Debug"
+        copy3.compiler.cppstd = "14"
+        assert original.dumps() == self._settings().dumps()
+        assert copy1.serialize()["compiler.version"] == "4.9"
+        assert copy1.serialize()["compiler.cppstd"] == "11"
+        assert copy2.serialize()["compiler.version"] == "4.8"
+        assert copy2.serialize()["build_type"] == "Debug"
+        assert copy3.serialize()["compiler.version"] == "4.9"
+        assert copy3.serialize()["compiler.cppstd"] == "14"
+        assert copy3.serialize()["build_type"] == "Release"
+
+    @pytest.mark.parametrize("modify_first", [True, False])
+    def test_delete_and_rm_safe(self, modify_first):
+        original = self._settings()
+        copy = original.copy()
+        modified, other = (copy, original) if modify_first else (original, copy)
+        del modified.compiler.libcxx
+        modified.rm_safe("compiler.cppstd")
+        modified.rm_safe("os")
+        assert modified.fields == ["build_type", "compiler"]
+        assert not modified.get_safe("compiler.cppstd")
+        assert other.fields == ["build_type", "compiler", "os"]
+        assert other.get_safe("compiler.cppstd") == "11"
+        assert other.compiler.libcxx == None
+        other.compiler = "clang"
+        assert other.compiler.cppstd == None
+        assert "cppstd" in other.possible_values()["compiler"]["clang"]
+        assert "libcxx" in other.possible_values()["compiler"]["gcc"]
+        assert "libcxx" not in modified.possible_values()["compiler"]["gcc"]
+        assert "cppstd" not in modified.possible_values()["compiler"]["clang"]
+
+    def test_rm_safe_wildcard_and_constrained(self):
+        original = self._settings()
+        wildcard = original.copy()
+        wildcard.rm_safe("*")
+        constrained = original.copy()
+        constrained.constrained(["os", "compiler"])
+        assert wildcard.fields == []
+        assert constrained.fields == ["compiler", "os"]
+        assert original.fields == ["build_type", "compiler", "os"]
+        assert original.build_type == "Release"
+
+    def test_update_values(self):
+        original = self._settings()
+        copy = original.copy()
+        copy.update_values([("compiler.version", "4.9"), ("build_type", "Debug")])
+        assert original.dumps() == self._settings().dumps()
+        assert copy.compiler.version == "4.9"
+
+    def test_frozen_is_not_copied(self):
+        original = self._settings()
+        original._frozen = True
+        copy = original.copy()
+        copy.build_type = "Debug"  # as it always did
+        with pytest.raises(ConanException, match="Tried to define 'build_type' setting"):
+            original.build_type = "Debug"
+
+    def test_conaninfo(self):
+        original = self._settings()
+        info = original.copy().copy_conaninfo_settings()
+        info.compiler.version = "whatever"  # ANY is allowed
+        info.build_type = "whatever"
+        assert info.compiler.version == "whatever"
+        assert original.compiler.version == "4.8"
+        assert original.build_type == "Release"
+        with pytest.raises(ConanException, match="Invalid setting 'whatever'"):
+            original.build_type = "whatever"
+        clone = info.copy()
+        clone.build_type = "other"
+        assert info.build_type == "whatever"
+        assert clone.build_type == "other"
+
+    def test_stale_references(self):
+        original = self._settings()
+        compiler = original.compiler
+        version = original.compiler.version == "4.8"  # no problem reading
+        assert version
+        copy = original.copy()
+        # It still reads, but it can't modify the nodes, that would modify the copy too
+        assert compiler.version == "4.8"
+        with pytest.raises(ConanException, match="have been copied after getting it"):
+            compiler.version = "4.9"
+        with pytest.raises(ConanException, match="have been copied after getting it"):
+            compiler.value = "clang"
+        with pytest.raises(ConanException, match="have been copied after getting it"):
+            del compiler.libcxx
+        assert copy.compiler == "gcc"
+        assert copy.compiler.version == "4.8"
+        # getting it again works
+        original.compiler.version = "4.9"
+        assert copy.compiler.version == "4.8"
+
+    def test_conaninfo_copies_are_independent(self):
+        original = self._settings()
+        info1 = original.copy_conaninfo_settings()
+        info2 = original.copy().copy_conaninfo_settings()
+        info1.compiler.version = "whatever"
+        info1.os.subsystem = "other"
+        info1.rm_safe("compiler.cppstd")
+        assert info2.compiler.version == "4.8"
+        assert info2.os.subsystem == None
+        assert info2.compiler.cppstd == "11"
+        # modifying the original after copying it does not change the already created infos
+        original.compiler.version = "4.9"
+        original.build_type = "Debug"
+        info3 = original.copy_conaninfo_settings()
+        assert info2.compiler.version == "4.8"
+        assert info2.build_type == "Release"
+        assert info3.compiler.version == "4.9"
+        assert info3.build_type == "Debug"
+        assert info3.dumps() == original.dumps()
+        # the ANY values (not in the original definition) are only accepted by the info
+        info2.compiler.version = "something"
+        info2.build_type = "something"
+        assert info2.build_type == "something"
+        assert original.compiler.version == "4.9"
+        # the info of an info
+        info4 = info2.copy_conaninfo_settings()
+        info4.build_type = "else"
+        assert info2.build_type == "something"
