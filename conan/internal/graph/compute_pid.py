@@ -9,10 +9,26 @@ from conan.internal.model.pkg_type import PackageType
 from conan.internal.model.version_range import required_conan_version_policy
 
 
-def compute_package_id(node, modes, config_version, hook_manager):
+class _OriginalInfo:
+    """ The ConanInfo as it was before validate(), package_id() or the hooks could modify it. Only
+    compatibility() needs it, and only for the nodes whose binary is missing, so instead of cloning
+    it for every node it is built on demand, from the same inputs as the node ConanInfo.
     """
-    Compute the binary package ID of this node
-    """
+    def __init__(self, node, modes, config_version):
+        self._node = node
+        self._modes = modes
+        self._config_version = config_version
+        self._info = None
+        self.settings_target = None  # copied from the node info after package_id()
+
+    def clone(self):
+        if self._info is None:
+            self._info = _build_conan_info(self._node, self._modes, self._config_version)
+            self._info.settings_target = self.settings_target
+        return self._info.clone()
+
+
+def _build_conan_info(node, modes, config_version):
     conanfile = node.conanfile
     unknown_mode, non_embed_mode, embed_mode, python_mode, build_mode = modes
     python_requires = getattr(conanfile, "python_requires", None)
@@ -48,14 +64,22 @@ def compute_package_id(node, modes, config_version, hook_manager):
     except ConanException as e:
         raise ConanException(f"{conanfile}: {e}")
 
-    conanfile.info = ConanInfo(settings=conanfile.settings.copy_conaninfo_settings(),
-                               options=copied_options,
-                               reqs_info=reqs_info,
-                               build_requires_info=build_requires_info,
-                               python_requires=python_requires,
-                               conf=conanfile.conf.copy_conaninfo_conf(),
-                               config_version=config_version.copy() if config_version else None)
-    conanfile.original_info = conanfile.info.clone()
+    return ConanInfo(settings=conanfile.settings.copy_conaninfo_settings(),
+                     options=copied_options,
+                     reqs_info=reqs_info,
+                     build_requires_info=build_requires_info,
+                     python_requires=python_requires,
+                     conf=conanfile.conf.copy_conaninfo_conf(),
+                     config_version=config_version.copy() if config_version else None)
+
+
+def compute_package_id(node, modes, config_version, hook_manager):
+    """
+    Compute the binary package ID of this node
+    """
+    conanfile = node.conanfile
+    conanfile.info = _build_conan_info(node, modes, config_version)
+    conanfile.original_info = _OriginalInfo(node, modes, config_version)
 
     # To account for effect of headers into consumers, like shared/static variability
     # It affects to both embed and not embed, that would imply some "repetition" of the information
