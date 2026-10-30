@@ -122,7 +122,7 @@ class Node:
                           and require.visible != existing.require.visible)
             if ill_formed and not (require.test or existing.require.test):
                 visibility_conflicts.setdefault(require.ref, set()).add(self.ref)
-            require.aggregate(existing.require)
+            require.aggregate(existing.require, other_pkgtype_known=existing.node is not None)
             # An override can be overriden by a downstream force/override
             if existing.require.override and existing.require.ref != require.ref:
                 # If it is an override, but other value, it has been overriden too
