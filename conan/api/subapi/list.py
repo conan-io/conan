@@ -92,15 +92,19 @@ class ListAPI:
             results = self._api_helpers.cache.get_package_revisions(pref)
         return results
 
-    def _packages_configurations(self, ref: RecipeReference,
-                                 remote=None) -> Dict[PkgReference, dict]:
+    def _packages_configurations(self, ref: RecipeReference, remote=None,
+                                 package_id=None) -> Dict[PkgReference, dict]:
         assert ref.revision is not None and ref.revision != "latest", \
             "packages: ref should have a revision. Check latest if needed."
         if not remote:
             prefs = self._api_helpers.cache.get_package_references(ref)
+            if package_id is not None:  # Avoid reading the conaninfo of unrelated packages
+                prefs = [p for p in prefs if p.package_id == package_id]
             packages = _get_cache_packages_binary_info(self._api_helpers.cache, prefs)
         else:
             packages = self._api_helpers.remote_manager.search_packages(remote, ref)
+            if package_id is not None:
+                packages = {p: info for p, info in packages.items() if p.package_id == package_id}
         return packages
 
     @staticmethod
@@ -224,7 +228,7 @@ class ListAPI:
                 prefs = []
                 if "*" not in pattern.package_id and pattern.prev is not None:
                     prefs.append(PkgReference(rrev, package_id=pattern.package_id))
-                    packages = {}
+                    packages = self._packages_configurations(rrev, remote, pattern.package_id)
                 else:
                     packages = self._packages_configurations(rrev, remote)
                     if package_query is not None:

@@ -578,6 +578,11 @@ class TestListPrefs:
                         "timestamp": "2023-01-10 22:45:49 UTC",
                         "packages": {
                             "ebec3dc6d7f6b907b3ada0c3d3cdc83613a2b715": {
+                                "info": {
+                                    "settings": {
+                                        "os": "Windows"
+                                    }
+                                },
                                 "revisions": {
                                     "d9b1e9044ee265092e81db7028ae10e0": {
                                         "timestamp": "2023-01-10 22:45:49 UTC"
@@ -603,6 +608,9 @@ class TestListPrefs:
                       revisions
                         24532a030b4fcdfed699511f6bfe35d3 (2023-01-10 22:41:09 UTC)
                         d9b1e9044ee265092e81db7028ae10e0 (2023-01-10 22:41:10 UTC)
+                      info
+                        settings
+                          os: Windows
           """)
         self.check(client, pattern, remote, expected)
 
@@ -643,6 +651,33 @@ class TestListPrefs:
                           os: Linux
           """)
         self.check(client, pattern, remote, expected)
+
+
+@pytest.mark.parametrize("remote", [True, False])
+def test_list_full_pref_shows_info(remote):
+    """
+    A fully qualified reference rrev:pkgid#prev must show the package info, like rrev:*#*
+    """
+    c = TestClient(default_server_user=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_settings("os")})
+    c.run("create . -s os=Linux")
+    c.run("create . -s os=Windows")
+    c.run("upload * -r=default -c")
+    r = "-r=default" if remote else ""
+    c.run(f"list pkg/1.0:*#* {r} --format=json")
+    rrev, rev_data = next(iter(json.loads(c.stdout)["default" if remote else "Local Cache"]
+                               ["pkg/1.0"]["revisions"].items()))
+    pkgs = rev_data["packages"]
+    for pkgid, data in pkgs.items():
+        prev = next(iter(data["revisions"]))
+        c.run(f"list pkg/1.0#{rrev}:{pkgid}#{prev} {r} --format=json")
+        listed = json.loads(c.stdout)["default" if remote else "Local Cache"]
+        listed = listed["pkg/1.0"]["revisions"][rrev]["packages"]
+        assert list(listed) == [pkgid]
+        assert listed[pkgid]["info"] == data["info"]
+        assert listed[pkgid]["info"]["settings"]["os"] in ("Linux", "Windows")
+    c.run(f"list pkg/1.0#{rrev}:{pkgid}#{prev} {r}")
+    assert "os: Windows" in c.out or "os: Linux" in c.out
 
 
 def test_list_prefs_query_custom_settings():
