@@ -33,6 +33,8 @@ CONTEXT_BUILD = "build"
 
 
 class TransitiveRequirement:
+    __slots__ = ("require", "node")
+
     def __init__(self, require, node):
         self.require = require
         self.node = node
@@ -307,6 +309,8 @@ class Node:
 
 
 class Edge:
+    __slots__ = ("src", "dst", "require")
+
     def __init__(self, src, dst, require):
         self.src = src
         self.dst = dst
