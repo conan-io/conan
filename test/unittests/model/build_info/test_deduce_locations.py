@@ -289,6 +289,35 @@ def test_multiple_matches_exact_match_mingw_dll_a(conanfile):
     assert result.type == "static-library"
 
 
+@pytest.mark.parametrize("lib, files, expected", [
+    ("wx_gtk3u_xrc-3.3", ["libwx_gtk3u_xrc-3.3.so", "libwx_gtk3u_xrc-3.3.so.4",
+                          "libwx_gtk3u_xrc-3.3.so.4.0.0"], "libwx_gtk3u_xrc-3.3.so"),
+    ("wx_gtk3u_xrc-3.3.so", ["libwx_gtk3u_xrc-3.3.so", "libwx_gtk3u_xrc-3.3.so.4"],
+     "libwx_gtk3u_xrc-3.3.so"),
+    ("mylib-1.2", ["libmylib-1.2.dylib", "libmylib-1.2.1.dylib"], "libmylib-1.2.dylib"),
+    ("mylib-1.2", ["libmylib-1.2.a", "libmylib-1.2.1.a"], "libmylib-1.2.a"),
+])
+def test_lib_name_with_dots_no_ambiguity_warning(lib, files, expected, conanfile):
+    """
+    A dot in the library name (like the version in "mylib-1.2") is not a file extension,
+    so it must not be stripped, otherwise there are spurious "several matches" warnings
+    """
+    folder = temp_folder()
+    for f in files:
+        save(os.path.join(folder, "libdir", f), "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.libs = [lib]
+    cppinfo.set_relative_base_folder(folder)
+    folder = folder.replace("\\", "/")
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert "several matches" not in output
+    assert result.location == f"{folder}/libdir/{expected}"
+
+
 @pytest.mark.parametrize("lib_name, libs", [
     ("harfbuzz", ["harfbuzz-icu.lib", "harfbuzz.lib"]),
 ])
