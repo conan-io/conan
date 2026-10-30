@@ -74,14 +74,15 @@ class Node:
 
     def subgraph(self):
         nodes = [self]
+        visited = {self}
         opened = [self]
         while opened:
             new_opened = []
             for o in opened:
                 for n in o.neighbors():
-                    if n not in nodes:
+                    if n not in visited:
+                        visited.add(n)
                         nodes.append(n)
-                    if n not in opened:
                         new_opened.append(n)
             opened = new_opened
 
