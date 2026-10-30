@@ -594,7 +594,10 @@ class _Component:
         libname = self.libs[0]
         dll_location = None
         deduced_type = None
-        libname, ext = os.path.splitext(libname)
+        stripped, ext = os.path.splitext(libname)
+        # Only strip real library extensions, "mylib-1.2" is the name of a library, not "mylib-1" + ".2"
+        if ext in (".a", ".lib", ".so", ".dylib", ".dll"):
+            libname = stripped
         lib_sanitized = re.escape(libname)
         component_sanitized = re.escape(library_name)
         # At first, exact match
