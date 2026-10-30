@@ -29,6 +29,8 @@ class SettingsItem:
     - List [None, "ANY"] to accept None or any value
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
+    __slots__ = ("_definition", "_name", "_value")
+
     def __init__(self, definition, name, value):
         self._definition = definition  # range of possible values
         self._name = name  # settings.compiler
@@ -186,6 +188,8 @@ class SettingsItem:
 
 
 class Settings:
+    __slots__ = ("_name", "_parent_value", "_data", "_frozen")
+
     def __init__(self, definition=None, name="settings", parent_value="settings"):
         if parent_value is None and definition:
             raise ConanException("settings.yml: null setting can't have subsettings")
