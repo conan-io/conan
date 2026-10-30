@@ -275,7 +275,7 @@ class BinaryInstaller:
                         ConanOutput().highlight(f"Building from source {pref}")
                         compact_dumps = package.nodes[0].conanfile.info.summarize_compact()
                         for line in compact_dumps:
-                            ConanOutput(scope=str(pref.ref)).info(line, fg=Color.BRIGHT_GREEN)
+                            ConanOutput().info(line, fg=Color.BRIGHT_GREEN)
                     recipe_layout = self._install_source(package.nodes[0], remotes)
                     self._handle_package(recipe_layout, package, install_reference, handled_count,
                                          package_count)
