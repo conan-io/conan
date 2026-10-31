@@ -65,7 +65,7 @@ class RangeResolver:
         local_found = self._cached_cache.get(pattern)
         if local_found is None:
             # This local_found is weird, it contains multiple revisions, not just latest
-            local_found = self._cache.search_recipes(pattern)
+            local_found = self._cache.search_recipes(pattern, name=search_ref.name)
             # TODO: This is still necessary to filter user/channel, until search_recipes is fixed
             local_found = [ref for ref in local_found if ref.user == search_ref.user
                            and ref.channel == search_ref.channel]
