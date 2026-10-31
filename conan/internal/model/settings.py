@@ -133,9 +133,6 @@ class SettingsItem:
         return getattr(sub_config_dict, item)
 
     def __setattr__(self, item, value):
-        if item[0] == "_" or item.startswith("value"):
-            return super(SettingsItem, self).__setattr__(item, value)
-
         item = str(item)
         sub_config_dict = self._get_child(item)
         return setattr(sub_config_dict, item, value)
@@ -144,9 +141,8 @@ class SettingsItem:
     def value(self):
         return self._value
 
-    @value.setter
-    def value(self, v):
-        self._value = self._validate(v)
+    def _set_value(self, v):
+        _setattr(self, "_value", self._validate(v))
 
     @property
     def values_range(self):
@@ -298,7 +294,7 @@ class Settings:
         self._check_field(field)
         if self._frozen:
             raise ConanException(f"Tried to define '{field}' setting inside recipe")
-        self._data[field].value = value
+        self._data[field]._set_value(value)
 
     @property
     def values_list(self):
