@@ -157,6 +157,10 @@ class VCVars:
             @echo off
             set __VSCMD_ARG_NO_LOGO=1
             set VSCMD_SKIP_SENDTELEMETRY=1
+            if defined VSCMD_VER (
+                echo conanvcvars.bat: Visual Studio environment already active, skipping activation
+                goto :eof
+            )
             echo conanvcvars.bat: Activating environment Visual Studio {vs_version} - {vcvarsarch} - winsdk_version={winsdk_version} - vcvars_ver={vcvars_ver}
             {vcvars}
             """)
@@ -168,7 +172,9 @@ class VCVars:
         from conan.tools.env.environment import generate_ps1
         if generate_ps1(conanfile):
             content_ps1 = textwrap.dedent(rf"""
-            if (-not $env:VSCMD_ARG_VCVARS_VER){{
+            if ($env:VSCMD_VER) {{
+                Write-Host "conanvcvars.ps1: Visual Studio environment already active, skipping activation"
+            }} elseif (-not $env:VSCMD_ARG_VCVARS_VER) {{
                 Push-Location "$PSScriptRoot"
                 cmd /c "conanvcvars.bat&set" |
                 foreach {{
