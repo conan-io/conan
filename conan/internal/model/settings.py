@@ -8,6 +8,10 @@ from conan.internal.internal_tools import is_universal_arch
 from conan.errors import ConanException
 from conan.internal.util.files import save, load
 
+# Settings and SettingsItem override __setattr__ for the "settings.os = value" syntax, the
+# internal attributes skip that Python call, a lot of these objects are created per graph
+_setattr = object.__setattr__
+
 
 def bad_value_msg(name, value, value_range):
     return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s\n"
@@ -30,9 +34,9 @@ class SettingsItem:
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
     def __init__(self, definition, name, value):
-        self._definition = definition  # range of possible values
-        self._name = name  # settings.compiler
-        self._value = value  # gcc
+        _setattr(self, "_definition", definition)  # range of possible values
+        _setattr(self, "_name", name)  # settings.compiler
+        _setattr(self, "_value", value)  # gcc
 
     @staticmethod
     def new(definition, name):
@@ -129,9 +133,6 @@ class SettingsItem:
         return getattr(sub_config_dict, item)
 
     def __setattr__(self, item, value):
-        if item[0] == "_" or item.startswith("value"):
-            return super(SettingsItem, self).__setattr__(item, value)
-
         item = str(item)
         sub_config_dict = self._get_child(item)
         return setattr(sub_config_dict, item, value)
@@ -140,9 +141,8 @@ class SettingsItem:
     def value(self):
         return self._value
 
-    @value.setter
-    def value(self, v):
-        self._value = self._validate(v)
+    def _set_value(self, v):
+        _setattr(self, "_value", self._validate(v))
 
     @property
     def values_range(self):
@@ -193,10 +193,11 @@ class Settings:
         if not isinstance(definition, dict):
             val = "" if parent_value == "settings" else f"={parent_value}"
             raise ConanException(f"Invalid settings.yml format: '{name}{val}' is not a dictionary")
-        self._name = name  # settings, settings.compiler
-        self._parent_value = parent_value  # gcc, x86
-        self._data = {k: SettingsItem.new(v, f"{name}.{k}") for k, v in definition.items()}
-        self._frozen = False
+        _setattr(self, "_name", name)  # settings, settings.compiler
+        _setattr(self, "_parent_value", parent_value)  # gcc, x86
+        _setattr(self, "_data",
+                 {k: SettingsItem.new(v, f"{name}.{k}") for k, v in definition.items()})
+        _setattr(self, "_frozen", False)
 
     def serialize(self):
         """
@@ -246,12 +247,12 @@ class Settings:
         """ deepcopy, recursive
         """
         result = Settings({}, name=self._name, parent_value=self._parent_value)
-        result._data = {k: v.copy() for k, v in self._data.items()}
+        _setattr(result, "_data", {k: v.copy() for k, v in self._data.items()})
         return result
 
     def copy_conaninfo_settings(self):
         result = Settings({}, name=self._name, parent_value=self._parent_value)
-        result._data = {k: v.copy_conaninfo_settings() for k, v in self._data.items()}
+        _setattr(result, "_data", {k: v.copy_conaninfo_settings() for k, v in self._data.items()})
         return result
 
     @staticmethod
@@ -293,7 +294,7 @@ class Settings:
         self._check_field(field)
         if self._frozen:
             raise ConanException(f"Tried to define '{field}' setting inside recipe")
-        self._data[field].value = value
+        self._data[field]._set_value(value)
 
     @property
     def values_list(self):
