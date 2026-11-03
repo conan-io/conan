@@ -82,3 +82,44 @@ class TestInit:
         assert "myopt1: 1" in client.out
         assert "myopt2: potato" in client.out
         assert "myopt3: whatever" in client.out
+
+    def test_init_default_options_update_host_and_build_context(self):
+        # https://github.com/conan-io/conan/issues/20468
+        # The same recipe in the host and build contexts is loaded twice by the same loader
+        client = TestClient(light=True)
+        base = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class BaseConan:
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+
+            class PyReq(ConanFile):
+                name = "base"
+                version = "1.0"
+                package_type = "python-require"
+            """)
+        pkg = textwrap.dedent("""\
+            from conan import ConanFile
+
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                python_requires = "base/1.0"
+                python_requires_extend = "base.BaseConan"
+                options = {"example_option": [True, False]}
+                default_options = {"example_option": False}
+
+                def init(self):
+                    base = self.python_requires["base"].module.BaseConan
+                    self.options.update(base.options, base.default_options)
+                    self.default_options = {**self.default_options, **base.default_options}
+            """)
+        client.save({"base/conanfile.py": base,
+                     "pkg/conanfile.py": pkg})
+        client.run("export base")
+        client.run("export pkg")
+        client.run("graph info --requires=pkg/1.0 --tool-requires=pkg/1.0 --filter=default_options")
+        assert client.out.count("example_option: False") == 2
+        assert client.out.count("shared: False") == 2
+        assert "Error while initializing options" not in client.out
