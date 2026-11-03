@@ -163,6 +163,31 @@ def test_windows_several_shared_link_locations(lib_info, conanfile):
         assert result.components[f"_{lib_name}"].type == "shared-library"
 
 
+@pytest.mark.parametrize("lib", ["mimalloc.DLL", "mimalloc.Dll", "mimalloc.LIB", "mimalloc.dll"])
+def test_lib_extension_case_insensitive(lib, conanfile):
+    """
+    The extension declared in cpp_info.libs is stripped regardless of its case, as some
+    libraries are declared with upper case extensions like "mylib.DLL"
+    """
+    folder = temp_folder()
+    imp_location = os.path.join(folder, "libdir", "mimalloc.lib")
+    save(imp_location, "")
+    location = os.path.join(folder, "bindir", "mimalloc.dll")
+    save(location, "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.bindirs = ["bindir"]
+    cppinfo.libs = [lib]
+    cppinfo.set_relative_base_folder(folder)
+
+    conanfile._conan_node.ref = RecipeReference(name="mimalloc")
+    result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert result.location == location.replace("\\", "/")
+    assert result.link_location == imp_location.replace("\\", "/")
+    assert result.type == "shared-library"
+
+
 @pytest.mark.parametrize("lib, symlinks", [
     # symlinks == "real_file <- symlink1 <- symlink2 <- ... <- symlinkN"
     # Issue related: https://github.com/conan-io/conan/issues/17417

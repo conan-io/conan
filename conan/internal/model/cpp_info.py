@@ -596,7 +596,7 @@ class _Component:
         deduced_type = None
         stripped, ext = os.path.splitext(libname)
         # Only strip real library extensions, "mylib-1.2" is the name of a library, not "mylib-1" + ".2"
-        if ext in (".a", ".lib", ".so", ".dylib", ".dll"):
+        if ext.lower() in (".a", ".lib", ".so", ".dylib", ".dll"):
             libname = stripped
         lib_sanitized = re.escape(libname)
         component_sanitized = re.escape(library_name)
