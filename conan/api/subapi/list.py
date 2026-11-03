@@ -156,7 +156,7 @@ class ListAPI:
         return result
 
     def select(self, pattern: ListPattern, package_query=None, remote: Remote = None, lru=None,
-               profile=None) -> PackagesList:
+               profile=None, load_info=False) -> PackagesList:
         """For a given pattern, return a list of recipes and packages matching the provided filters.
 
         :parameter ListPattern pattern: Search criteria
@@ -169,6 +169,10 @@ class ListAPI:
             packages/binaries that have **not** been used in the last 'lru' time.
             It can be a string like ``"2d"`` (2 days) or ``"3h"`` (3 hours).
         :parameter Profile profile: Profile to filter the packages by settings and options.
+        :parameter bool load_info: When the pattern is a fully qualified package reference, load
+            the binary information (settings, options...) of the package. It requires reading
+            ``conaninfo.txt`` in the cache or querying the remote for it, so it is skipped by
+            default. For any other pattern the information is always loaded.
         """
         # TODO: Implement better error forwarding for "list" command that captures Exceptions
         if package_query and pattern.package_id and "*" not in pattern.package_id:
@@ -228,7 +232,8 @@ class ListAPI:
                 prefs = []
                 if "*" not in pattern.package_id and pattern.prev is not None:
                     prefs.append(PkgReference(rrev, package_id=pattern.package_id))
-                    packages = self._packages_configurations(rrev, remote, pattern.package_id)
+                    packages = self._packages_configurations(rrev, remote, pattern.package_id) \
+                        if load_info else {}
                 else:
                     packages = self._packages_configurations(rrev, remote)
                     if package_query is not None:

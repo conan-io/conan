@@ -293,7 +293,8 @@ def list(conan_api: ConanAPI, parser, *args):
         if args.cache or not args.remote:
             try:
                 cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None,
-                                                   lru=args.lru, profile=profile)
+                                                   lru=args.lru, profile=profile,
+                                                   load_info=True)
             except Exception as e:
                 pkglist.add_error("Local Cache", str(e))
             else:
@@ -303,7 +304,7 @@ def list(conan_api: ConanAPI, parser, *args):
             for remote in remotes:
                 try:
                     remote_list = conan_api.list.select(ref_pattern, args.package_query, remote,
-                                                        profile=profile)
+                                                        profile=profile, load_info=True)
                 except Exception as e:
                     pkglist.add_error(remote.name, str(e))
                 else:
