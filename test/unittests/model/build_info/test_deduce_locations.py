@@ -163,6 +163,31 @@ def test_windows_several_shared_link_locations(lib_info, conanfile):
         assert result.components[f"_{lib_name}"].type == "shared-library"
 
 
+@pytest.mark.parametrize("lib", ["mimalloc.DLL", "mimalloc.Dll", "mimalloc.LIB", "mimalloc.dll"])
+def test_lib_extension_case_insensitive(lib, conanfile):
+    """
+    The extension declared in cpp_info.libs is stripped regardless of its case, as some
+    libraries are declared with upper case extensions like "mylib.DLL"
+    """
+    folder = temp_folder()
+    imp_location = os.path.join(folder, "libdir", "mimalloc.lib")
+    save(imp_location, "")
+    location = os.path.join(folder, "bindir", "mimalloc.dll")
+    save(location, "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.bindirs = ["bindir"]
+    cppinfo.libs = [lib]
+    cppinfo.set_relative_base_folder(folder)
+
+    conanfile._conan_node.ref = RecipeReference(name="mimalloc")
+    result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert result.location == location.replace("\\", "/")
+    assert result.link_location == imp_location.replace("\\", "/")
+    assert result.type == "shared-library"
+
+
 @pytest.mark.parametrize("lib, symlinks", [
     # symlinks == "real_file <- symlink1 <- symlink2 <- ... <- symlinkN"
     # Issue related: https://github.com/conan-io/conan/issues/17417
@@ -287,6 +312,35 @@ def test_multiple_matches_exact_match_mingw_dll_a(conanfile):
     assert "WARN: There were several matches for Lib mylib" not in output
     assert result.location == f"{folder}/libdir/libmylib.dll.a"
     assert result.type == "static-library"
+
+
+@pytest.mark.parametrize("lib, files, expected", [
+    ("wx_gtk3u_xrc-3.3", ["libwx_gtk3u_xrc-3.3.so", "libwx_gtk3u_xrc-3.3.so.4",
+                          "libwx_gtk3u_xrc-3.3.so.4.0.0"], "libwx_gtk3u_xrc-3.3.so"),
+    ("wx_gtk3u_xrc-3.3.so", ["libwx_gtk3u_xrc-3.3.so", "libwx_gtk3u_xrc-3.3.so.4"],
+     "libwx_gtk3u_xrc-3.3.so"),
+    ("mylib-1.2", ["libmylib-1.2.dylib", "libmylib-1.2.1.dylib"], "libmylib-1.2.dylib"),
+    ("mylib-1.2", ["libmylib-1.2.a", "libmylib-1.2.1.a"], "libmylib-1.2.a"),
+])
+def test_lib_name_with_dots_no_ambiguity_warning(lib, files, expected, conanfile):
+    """
+    A dot in the library name (like the version in "mylib-1.2") is not a file extension,
+    so it must not be stripped, otherwise there are spurious "several matches" warnings
+    """
+    folder = temp_folder()
+    for f in files:
+        save(os.path.join(folder, "libdir", f), "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.libs = [lib]
+    cppinfo.set_relative_base_folder(folder)
+    folder = folder.replace("\\", "/")
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert "several matches" not in output
+    assert result.location == f"{folder}/libdir/{expected}"
 
 
 @pytest.mark.parametrize("lib_name, libs", [
