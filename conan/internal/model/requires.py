@@ -23,11 +23,11 @@ class Requirement:
         self.transitive_headers = transitive_headers
         self._fixed_transitive_headers = transitive_headers
         self.transitive_libs = transitive_libs
-        self._test = test
+        self.test = False if test is None else test
         self.package_id_mode = package_id_mode
-        self._force = force
-        self._override = override
-        self._direct = direct
+        self.force = False if force is None else force
+        self.override = False if override is None else override
+        self.direct = True if direct is None else direct
         self._consistent = consistent
         self.options = options
         # Meta and auxiliary information
@@ -42,7 +42,8 @@ class Requirement:
         self.no_skip = no_skip
         # computed ones, not default ones
         self.consistent_policy_new = False
-        if self.visible and not self.consistent:
+        # the default consistent is True for a visible require, only an explicit one can conflict
+        if consistent is not None and not consistent and (visible is None or visible):
             raise ConanException(f"Requirement {ref} with visible=True and consistent=False is not"
                                  f" supported. Please open a Github ticket to report it")
 
@@ -76,42 +77,6 @@ class Requirement:
     @visible.setter
     def visible(self, value):
         self._visible = value
-
-    @property
-    def test(self):
-        test = self._test
-        return False if test is None else test
-
-    @test.setter
-    def test(self, value):
-        self._test = value
-
-    @property
-    def force(self):
-        force = self._force
-        return False if force is None else force
-
-    @force.setter
-    def force(self, value):
-        self._force = value
-
-    @property
-    def override(self):
-        override = self._override
-        return False if override is None else override
-
-    @override.setter
-    def override(self, value):
-        self._override = value
-
-    @property
-    def direct(self):
-        direct = self._direct
-        return True if direct is None else direct
-
-    @direct.setter
-    def direct(self, value):
-        self._direct = value
 
     @property
     def consistent(self):
@@ -227,12 +192,14 @@ class Requirement:
                  (self.consistent and other.consistent) or
                  (self.ref == other.ref and self.options == other.options)))
 
-    def aggregate(self, other):
+    def aggregate(self, other, other_pkgtype_known=True):
         """ when closing loop and finding the same dependency on a node, the information needs
         to be aggregated
+        :type other: Requirement
         :param other: is the existing Require that the current node has, which information has to be
         appended to "self", which is the requires that is being propagated to the current node
         from upstream
+        :param other_pkgtype_known: If the other require knows the package type yet or not
         """
         assert self.build == other.build
         if other.override:
@@ -241,8 +208,15 @@ class Requirement:
             # the propagated one.
             self.force = True
             return
-        self.headers |= other.headers
-        self.libs |= other.libs
+        # Traits of a requirement not yet expanded are not inferred from package_type yet.
+        if other_pkgtype_known:
+            # They will be aggregated when it is expanded and closes the diamond
+            self.headers |= other.headers
+            self.libs |= other.libs
+        else:
+            # Only the traits explicitly defined in the requires() are known
+            self.headers |= other._headers is True
+            self.libs |= other._libs is True
         self.run = self.run or other.run
         self.visible |= other.visible
         self.consistent |= other.consistent

@@ -8,6 +8,10 @@ from conan.internal.internal_tools import is_universal_arch
 from conan.errors import ConanException
 from conan.internal.util.files import save, load
 
+# Settings and SettingsItem override __setattr__ for the "settings.os = value" syntax, the
+# internal attributes skip that Python call, a lot of these objects are created per graph
+_setattr = object.__setattr__
+
 
 def bad_value_msg(name, value, value_range):
     return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s\n"
@@ -47,11 +51,11 @@ class SettingsItem:
     - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
     """
     def __init__(self, definition, name, value, owner):
-        self._definition = definition  # range of possible values
-        self._name = name  # settings.compiler
-        self._value = value  # gcc
-        self._owner = owner
-        self._conaninfo = None  # the item for the ConanInfo settings, once it is shared (immutable)
+        _setattr(self, "_definition", definition)  # range of possible values
+        _setattr(self, "_name", name)  # settings.compiler
+        _setattr(self, "_value", value)  # gcc
+        _setattr(self, "_owner", owner)
+        _setattr(self, "_conaninfo", None)  # the item for the ConanInfo settings, once it is shared (immutable)
 
     @staticmethod
     def new(definition, name, owner):
@@ -102,7 +106,7 @@ class SettingsItem:
             else:
                 definition = {k: v.conaninfo_node() for k, v in self._definition.items()}
                 definition["ANY"] = Settings(owner=_SHARED)
-            self._conaninfo = SettingsItem(definition, self._name, self._value, _SHARED)
+            _setattr(self, "_conaninfo", SettingsItem(definition, self._name, self._value, _SHARED))
         return self._conaninfo
 
     def __bool__(self):
@@ -170,9 +174,6 @@ class SettingsItem:
         return getattr(sub_config_dict, item)
 
     def __setattr__(self, item, value):
-        if item[0] == "_" or item.startswith("value"):
-            return super(SettingsItem, self).__setattr__(item, value)
-
         item = str(item)
         sub_config_dict = self._get_child(item, write=True)
         return setattr(sub_config_dict, item, value)
@@ -181,12 +182,11 @@ class SettingsItem:
     def value(self):
         return self._value
 
-    @value.setter
-    def value(self, v):
+    def _set_value(self, v):
         v = self._validate(v)
         if self._owner.shared:
             self._check_owned(write=True)
-        self._value = v
+        _setattr(self, "_value", v)
 
     @property
     def values_range(self):
@@ -248,14 +248,14 @@ class Settings:
         if not isinstance(definition, dict):
             val = "" if parent_value == "settings" else f"={parent_value}"
             raise ConanException(f"Invalid settings.yml format: '{name}{val}' is not a dictionary")
-        self._name = name  # settings, settings.compiler
-        self._parent_value = parent_value  # gcc, x86
-        self._root = owner is None  # the root of the tree is the one that is copied, see _Owner
-        self._owner = _Owner() if owner is None else owner
-        self._conaninfo = None  # the node for the ConanInfo settings, once it is shared (immutable)
-        self._data = {k: SettingsItem.new(v, f"{name}.{k}", self._owner)
-                      for k, v in definition.items()}
-        self._frozen = False
+        _setattr(self, "_name", name)  # settings, settings.compiler
+        _setattr(self, "_parent_value", parent_value)  # gcc, x86
+        _setattr(self, "_root", owner is None)  # the root of the tree is the one that is copied, see _Owner
+        _setattr(self, "_owner", _Owner() if owner is None else owner)
+        _setattr(self, "_conaninfo", None)  # the node for the ConanInfo settings, once it is shared (immutable)
+        _setattr(self, "_data", {k: SettingsItem.new(v, f"{name}.{k}", self._owner)
+                                 for k, v in definition.items()})
+        _setattr(self, "_frozen", False)
 
     def serialize(self):
         """
@@ -315,8 +315,8 @@ class Settings:
         """
         self._owner.shared = True
         result = Settings({}, name=self._name, parent_value=self._parent_value)
-        result._owner = self._owner
-        result._data = self._data
+        _setattr(result, "_owner", self._owner)
+        _setattr(result, "_data", self._data)
         return result
 
     def copy_conaninfo_settings(self):
@@ -324,15 +324,15 @@ class Settings:
         # immutable, so the nodes of this tree have to be too
         self._owner.shared = True
         result = Settings({}, name=self._name, parent_value=self._parent_value)
-        result._data = {k: v.conaninfo_item() for k, v in self._data.items()}
+        _setattr(result, "_data", {k: v.conaninfo_item() for k, v in self._data.items()})
         return result
 
     def conaninfo_node(self):
         """ the shared node of the ConanInfo settings, see SettingsItem.conaninfo_item() """
         if self._conaninfo is None:
             result = Settings({}, name=self._name, parent_value=self._parent_value, owner=_SHARED)
-            result._data = {k: v.conaninfo_item() for k, v in self._data.items()}
-            self._conaninfo = result
+            _setattr(result, "_data", {k: v.conaninfo_item() for k, v in self._data.items()})
+            _setattr(self, "_conaninfo", result)
         return self._conaninfo
 
     def _own(self):
@@ -345,8 +345,8 @@ class Settings:
                 raise ConanException(f"Cannot modify '{self._name}': the settings it belongs to "
                                      "have been copied after getting it. Get it again from the "
                                      "settings")
-            self._data = dict(self._data)
-            self._owner = _Owner()
+            _setattr(self, "_data", dict(self._data))
+            _setattr(self, "_owner", _Owner())
 
     def _get_owned_item(self, field):
         """ The item to modify in place, or to hand out to someone that could modify it """
@@ -360,7 +360,7 @@ class Settings:
         """ shallow copy to be modified in place, the items are still shared
         """
         result = Settings({}, name=self._name, parent_value=self._parent_value, owner=owner)
-        result._data = dict(self._data)
+        _setattr(result, "_data", dict(self._data))
         return result
 
     @staticmethod
@@ -406,7 +406,7 @@ class Settings:
         self._check_field(field)
         if self._frozen:
             raise ConanException(f"Tried to define '{field}' setting inside recipe")
-        self._get_owned_item(field).value = value
+        self._get_owned_item(field)._set_value(value)
 
     @property
     def values_list(self):
