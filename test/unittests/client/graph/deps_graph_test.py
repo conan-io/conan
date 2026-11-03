@@ -109,3 +109,50 @@ class TestDepsGraph:
         deps.add_edge(n2, n32, None)
         deps.add_edge(n32, n5, None)
         assert [[n31, n5], [n32], [n2], [n1]] == deps.by_levels()
+
+
+class TestSubgraph:
+
+    def test_subgraph_order(self):
+        # diamond: a -> (b, c) -> d
+        a, b, c, d = self._nodes("a", "b", "c", "d")
+        self._link(a, b)
+        self._link(a, c)
+        self._link(b, d)
+        self._link(c, d)
+        assert d.subgraph().nodes == [d]
+        assert b.subgraph().nodes == [b, d]
+        assert c.subgraph().nodes == [c, d]
+        assert a.subgraph().nodes == [a, b, c, d]
+
+    def test_subgraph_many_paths(self, monkeypatch):
+        """ https://github.com/conan-io/conan/issues/20457
+        """
+        layers, width = 6, 3
+        grid = [self._nodes(*[f"l{layer}w{w}" for w in range(width)]) for layer in range(layers)]
+        top, = self._nodes("top")
+        for node in grid[0]:
+            self._link(top, node)
+        for layer, next_layer in zip(grid, grid[1:]):
+            for src in layer:
+                for dst in next_layer:
+                    self._link(src, dst)
+
+        # We count the number of neighbors calls, which should be 1 per node
+        expansions = []
+        neighbors = Node.neighbors
+        monkeypatch.setattr(Node, "neighbors", lambda x: expansions.append(x) or neighbors(x))
+
+        nodes = top.subgraph().nodes
+        assert len(nodes) == layers * width + 1
+        assert len(set(nodes)) == len(nodes)
+        assert len(expansions) == len(nodes)
+
+    @staticmethod
+    def _nodes(*names):
+        return [Node(RecipeReference.loads(f"{name}/1.0"), Mock(), context=CONTEXT_HOST)
+                for name in names]
+
+    @staticmethod
+    def _link(src, dst):
+        DepsGraph.add_edge(src, dst, None)
