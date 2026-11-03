@@ -9,6 +9,8 @@ class _VersionItem:
     """ a single "digit" in a version, like X.Y.Z all X and Y and Z are VersionItems
     They can be int or strings
     """
+    __slots__ = ("_v",)
+
     def __init__(self, item):
         try:
             self._v = int(item)
@@ -52,6 +54,8 @@ class Version:
     This is NOT an implementation of semver, as users may use any pattern in their versions.
     It is just a helper to parse "." or "-" and compare taking into account integers when possible
     """
+    __slots__ = ("_value", "_build", "_pre", "_qualifier", "_items", "_nonzero_items")
+
     def __init__(self, value, qualifier=False):
         value = str(value)
         self._value = value

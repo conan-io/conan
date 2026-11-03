@@ -31,6 +31,8 @@ def required_conan_version_policy(conanfile, limit_version):
 
 @total_ordering
 class _Condition:
+    __slots__ = ("operator", "display_version", "version")
+
     def __init__(self, operator, version):
         self.operator = operator
         self.display_version = version
