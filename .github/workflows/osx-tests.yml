@@ -21,8 +21,8 @@ on:
 
 jobs:
   osx_setup:
-    # The functional stage always runs after the unit-integration one, which already
-    # filled the caches
+    # Only the functional tests need these tools. This job runs in parallel with the unit and
+    # integration tests, so the caches are ready when the functional stage starts.
     if: inputs.test-stage == 'unit-integration'
     runs-on: macos-26
     name: Setup and Cache Dependencies
@@ -122,22 +122,18 @@ jobs:
           done
 
   osx_tests:
-    needs: osx_setup
-    if: ${{ !cancelled() && !failure() }}
     runs-on: macos-26
     strategy:
       fail-fast: true
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}
-        # The display name is computed in "name" below and not with "include", because an
-        # "include" entry for a test-type missing from this list would add an extra job
-        test-type: ${{ fromJson(inputs.test-stage == 'functional' && '["functional"]' || '["unittests", "integration"]') }}
-    name: ${{ matrix.test-type == 'unittests' && 'Unit' || matrix.test-type == 'integration' && 'Integration' || 'Functional' }} Tests (${{ matrix.python-version }})
+    name: ${{ inputs.test-stage == 'functional' && 'Functional' || 'Unit & Integration' }} Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Restore tools cache
+        if: inputs.test-stage == 'functional'
         uses: actions/cache@v4
         with:
           path: |
@@ -159,6 +155,7 @@ jobs:
           clang --version
 
       - name: Install homebrew dependencies
+        if: inputs.test-stage == 'functional'
         run: |
           brew update
           brew install xcodegen make libtool zlib autoconf automake ninja
@@ -183,7 +180,7 @@ jobs:
         id: determine_tests
         uses: ./.github/actions/determine-tests
         with:
-          test-types: ${{ matrix.test-type }}
+          test-types: ${{ inputs.test-stage == 'functional' && 'functional' || 'unittests integration' }}
           run-slow-tests: ${{ inputs.run-slow-tests }}
           run-covtest: ${{ inputs.run-covtest }}
 
@@ -191,5 +188,5 @@ jobs:
         uses: ./.github/actions/test-coverage
         with:
           python-version: ${{ matrix.python-version }}
-          test-type: ${{ matrix.test-type }}
+          test-type: ${{ inputs.test-stage }}
           tests: ${{ steps.determine_tests.outputs.tests }}
