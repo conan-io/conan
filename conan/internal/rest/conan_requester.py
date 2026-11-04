@@ -1,10 +1,12 @@
 import fnmatch
 import json
 import logging
+import netrc
 import os
 import platform
 import ssl
 import sys
+from urllib.parse import urlparse
 
 import requests
 import urllib3
@@ -146,12 +148,23 @@ class ConanRequester:
             _trust_adapter = _TrustStoreHTTPAdapter(ctx, max_retries=self._get_retries(_max_retries))
             self._http_requester.mount("https://", _trust_adapter)
         self._client_certificates = config.get("core.net.http:client_cert")
+        self._netrc = None
         self._clean_system_proxy = config.get("core.net.http:clean_system_proxy", default=False,
                                               check_type=bool)
         if self._clean_system_proxy:
             # Do not read proxies (nor .netrc, REQUESTS_CA_BUNDLE) from os.environ, also in
             # redirects. Never mutate os.environ, as it is process-global and not thread-safe
             self._http_requester.trust_env = False
+            # trust_env=False also disables .netrc, load it once, assuming it doesn't change
+            netrc_file = os.environ.get("NETRC")
+            for loc in (netrc_file,) if netrc_file else (f"~/{f}" for f in (".netrc", "_netrc")):
+                path = os.path.expanduser(loc)
+                if os.path.exists(path):
+                    try:
+                        self._netrc = netrc.netrc(path)
+                        break
+                    except (netrc.NetrcParseError, OSError):
+                        pass
         platform_info = "; ".join([" ".join([platform.system(), platform.release()]),
                                    "Python " + platform.python_version(),
                                    platform.machine()])
@@ -207,6 +220,12 @@ class ConanRequester:
 
         if source_credentials:
             self._url_creds.add_auth(url, kwargs)
+
+        if self._netrc is not None and not kwargs.get("auth") \
+                and "Authorization" not in kwargs["headers"]:
+            entry = self._netrc.authenticators(urlparse(url).hostname or "")
+            if entry:  # same as requests: use password-only entries' account as login
+                kwargs["auth"] = (entry[0] or entry[1], entry[2])
 
         # Only set User-Agent if none was provided
         if not kwargs["headers"].get("User-Agent"):
