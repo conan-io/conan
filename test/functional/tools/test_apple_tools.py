@@ -171,3 +171,54 @@ def test_xcrun_in_required_by_tool_requires():
     client.run("create consumer.py --name=consumer --version=1.0 -pr:h=./profile_ios -pr:b=default --build='*'")
 
     assert re.search("sdk for building openssl:.*MacOSX", str(client.out))
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Apple install names")
+def test_fix_shared_install_name_prefix_library():
+    """liba is a prefix of libab, so the executable is retargeted at libab."""
+    conanfile = textwrap.dedent("""
+        import os
+        from conan import ConanFile
+        from conan.tools.apple import XCRun, fix_apple_shared_install_name
+        from conan.tools.files import save
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "compiler", "build_type", "arch"
+
+            def package(self):
+                xcrun = XCRun(self)
+                cc, sdk = xcrun.cc, xcrun.sdk_path
+
+                lib = os.path.join(self.package_folder, "lib")
+                exe = os.path.join(self.package_folder, "bin", "app")
+
+                os.makedirs(lib)
+                os.makedirs(os.path.dirname(exe))
+
+                save(self, "lib.c", "int a(void){return 0;}")
+                save(self, "main.c", "int a(void);int main(void){return a();}")
+
+                cmd = f'"{cc}" -isysroot "{sdk}"'
+
+                for name in ("liba", "libab"):
+                    self.run(f'{cmd} -dynamiclib lib.c -o "{lib}/{name}.dylib" '
+                             f'-install_name @rpath/{name}.dylib')
+
+                self.run(f'{cmd} main.c -L "{lib}" -la -o "{exe}" '
+                         f'-Wl,-headerpad_max_install_names')
+                listed = os.listdir
+                os.listdir = lambda p: sorted(listed(p), key=lambda n: not n.startswith("libab"))
+                try:
+                    fix_apple_shared_install_name(self)
+                finally:
+                    os.listdir = listed
+        """)
+    client = TestClient(path_with_spaces=False)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -tf=")
+    exe = os.path.join(client.created_layout().package(), "bin", "app")
+    client.run_command(f'otool -L "{exe}"')
+    assert "@rpath/liba.dylib" in client.out
+    assert "@rpath/libab.dylib" not in client.out
