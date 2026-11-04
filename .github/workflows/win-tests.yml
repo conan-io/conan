@@ -3,6 +3,10 @@ name: Windows Tests
 on:
   workflow_call:
     inputs:
+      test-stage:
+        description: '"unit-integration" runs the unit and integration tests, "functional" the functional tests'
+        required: true
+        type: string
       python-versions:
         required: true
         type: string
@@ -17,6 +21,7 @@ on:
 
 jobs:
   unit_integration_tests:
+    if: inputs.test-stage == 'unit-integration'
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}
@@ -74,6 +79,7 @@ jobs:
           tests: ${{ steps.determine_tests.outputs.tests }}
 
   functional_tests:
+    if: inputs.test-stage == 'functional'
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}

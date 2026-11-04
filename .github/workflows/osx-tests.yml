@@ -3,6 +3,10 @@ name: OSX Tests
 on:
   workflow_call:
     inputs:
+      test-stage:
+        description: '"unit-integration" runs the unit and integration tests, "functional" the functional tests'
+        required: true
+        type: string
       python-versions:
         required: true
         type: string
@@ -17,6 +21,9 @@ on:
 
 jobs:
   osx_setup:
+    # The functional stage always runs after the unit-integration one, which already
+    # filled the caches
+    if: inputs.test-stage == 'unit-integration'
     runs-on: macos-26
     name: Setup and Cache Dependencies
     steps:
@@ -116,20 +123,16 @@ jobs:
 
   osx_tests:
     needs: osx_setup
+    if: ${{ !cancelled() && !failure() }}
     runs-on: macos-26
     strategy:
       fail-fast: true
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}
-        test-type: [unittests, integration, functional]
-        include:
-        - test-type: unittests
-          test-name: Unit
-        - test-type: integration
-          test-name: Integration
-        - test-type: functional
-          test-name: Functional
-    name: ${{ matrix.test-name }} Tests (${{ matrix.python-version }})
+        # The display name is computed in "name" below and not with "include", because an
+        # "include" entry for a test-type missing from this list would add an extra job
+        test-type: ${{ fromJson(inputs.test-stage == 'functional' && '["functional"]' || '["unittests", "integration"]') }}
+    name: ${{ matrix.test-type == 'unittests' && 'Unit' || matrix.test-type == 'integration' && 'Integration' || 'Functional' }} Tests (${{ matrix.python-version }})
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
