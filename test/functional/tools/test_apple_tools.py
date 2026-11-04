@@ -175,7 +175,7 @@ def test_xcrun_in_required_by_tool_requires():
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Apple install names")
 def test_fix_shared_install_name_prefix_library():
-    """liba is a prefix of libab, so the executable is retargeted at libab."""
+    """libabc is a prefix of libabcrt, so the executable is retargeted at libabcrt."""
     conanfile = textwrap.dedent("""
         import os
         from conan import ConanFile
@@ -202,23 +202,18 @@ def test_fix_shared_install_name_prefix_library():
 
                 cmd = f'"{cc}" -isysroot "{sdk}"'
 
-                for name in ("liba", "libab"):
+                for name in ("libabc", "libabcrt"):
                     self.run(f'{cmd} -dynamiclib lib.c -o "{lib}/{name}.dylib" '
                              f'-install_name @rpath/{name}.dylib')
 
-                self.run(f'{cmd} main.c -L "{lib}" -la -o "{exe}" '
+                self.run(f'{cmd} main.c -L "{lib}" -labc -o "{exe}" '
                          f'-Wl,-headerpad_max_install_names')
-                listed = os.listdir
-                os.listdir = lambda p: sorted(listed(p), key=lambda n: not n.startswith("libab"))
-                try:
-                    fix_apple_shared_install_name(self)
-                finally:
-                    os.listdir = listed
+                fix_apple_shared_install_name(self)
         """)
     client = TestClient(path_with_spaces=False)
     client.save({"conanfile.py": conanfile})
     client.run("create . -tf=")
     exe = os.path.join(client.created_layout().package(), "bin", "app")
     client.run_command(f'otool -L "{exe}"')
-    assert "@rpath/liba.dylib" in client.out
-    assert "@rpath/libab.dylib" not in client.out
+    assert "@rpath/libabc.dylib" in client.out
+    assert "@rpath/libabcrt.dylib" not in client.out
