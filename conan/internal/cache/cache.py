@@ -215,7 +215,9 @@ class PkgCache:
         assert pref.timestamp
         self._db.update_package_timestamp(pref, path=path, build_id=build_id)
 
-    def search_recipes(self, pattern=None):
+    def search_recipes(self, pattern=None, name=None):
+        """ ``name`` is an optimization, only to be used if the pattern can only match references
+        of that recipe name, like ``name/*``: only that name will be loaded from the DB """
         # Conan references in main storage
         if pattern:
             if isinstance(pattern, RecipeReference):
@@ -223,7 +225,7 @@ class PkgCache:
             pattern = translate(pattern)
             pattern = re.compile(pattern)
 
-        return self._db.list_references(pattern)
+        return self._db.list_references(pattern, name)
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache

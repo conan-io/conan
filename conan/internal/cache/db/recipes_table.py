@@ -68,11 +68,18 @@ class RecipesDBTable(BaseDbTable):
             conn.execute(query)
 
     # returns all different conan references (name/version@user/channel)
-    def all_references(self):
+    def all_references(self, name=None):
         query = f'SELECT DISTINCT {self.columns.reference} FROM {self.table_name}'
+        params = ()
+        if name:
+            # References starting with "name/", as a range, so the unique (reference, rrev) index
+            # can be searched instead of scanning all the table (LIKE is case-insensitive, it
+            # cannot use the index). "0" is the char after "/", the upper bound of the range
+            query += f' WHERE {self.columns.reference} >= ? AND {self.columns.reference} < ?'
+            params = (f"{name}/", f"{name}0")
 
         with self.db_connection() as conn:
-            r = conn.execute(query)
+            r = conn.execute(query, params)
             rows = r.fetchall()
         return [RecipeReference.loads(row[0]) for row in rows]
 
