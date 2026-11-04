@@ -1,4 +1,5 @@
 import textwrap
+from unittest import mock
 
 import pytest
 
@@ -30,6 +31,21 @@ def test_meson_build():
     meson.build()
 
     assert '-j10' in str(conanfile.command)
+
+
+@pytest.mark.parametrize("host_os, expected_prefix", [("Android", "/"), ("Linux", "/"),
+                                                      ("Windows", "C:/")])
+def test_meson_configure_prefix_cross_from_windows(host_os, expected_prefix):
+    """Meson>=1.10 checks --prefix with the host machine path rules, so when cross-building from
+    Windows to a POSIX host, ``C:/`` is rejected as not absolute (#20470)"""
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": host_os})
+    conanfile.folders.set_base_generators(temp_folder())
+    conanfile.folders.generators = "."
+    with (mock.patch("platform.system", return_value="Windows"),
+          mock.patch("os.path.abspath", return_value="C:\\")):
+        Meson(conanfile).configure()
+    assert f"--prefix={expected_prefix}" in str(conanfile.command)
 
 
 @pytest.mark.parametrize("apple_sdk, subsystem", [
