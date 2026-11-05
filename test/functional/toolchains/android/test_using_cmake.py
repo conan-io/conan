@@ -46,8 +46,8 @@ def test_use_cmake_toolchain():
     assert "Running CMake.build()" in c.out
 
 
-@pytest.mark.tool("cmake", "3.23")  # CMP0126 exists since CMake 3.21
 @pytest.mark.tool("ninja")
+@pytest.mark.tool("cmake", "3.23")  # CMP0126 exists since CMake 3.21
 @pytest.mark.parametrize("cmake_min_version", ["3.15", "3.21"])
 def test_android_abi_cache_variable(cmake_min_version):
     """
