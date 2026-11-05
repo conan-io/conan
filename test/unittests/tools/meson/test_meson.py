@@ -42,8 +42,8 @@ def test_meson_configure_prefix_cross_from_windows(host_os, expected_prefix):
     conanfile.settings = MockSettings({"os": host_os})
     conanfile.folders.set_base_generators(temp_folder())
     conanfile.folders.generators = "."
-    with (mock.patch("platform.system", return_value="Windows"),
-          mock.patch("os.path.abspath", return_value="C:\\")):
+    with mock.patch("platform.system", return_value="Windows"), \
+            mock.patch("os.path.abspath", return_value="C:\\"):
         Meson(conanfile).configure()
     assert f"--prefix={expected_prefix}" in str(conanfile.command)
 
