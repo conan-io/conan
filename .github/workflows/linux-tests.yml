@@ -114,7 +114,7 @@ jobs:
         # Use modern versions due to docker incompatibility with python <3.8
         python-version: ${{ github.event_name != 'pull_request' && fromJson('["3.13", "3.10"]') || fromJson('["3.10"]') }}
 
-    name: Runner Tests (${{ matrix.python-version }})
+    name: Runner Tests
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
