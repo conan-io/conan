@@ -93,18 +93,18 @@ class ListAPI:
         return results
 
     def _packages_configurations(self, ref: RecipeReference, remote=None,
-                                 package_id=None) -> Dict[PkgReference, dict]:
+                                 package_ids=None) -> Dict[PkgReference, dict]:
         assert ref.revision is not None and ref.revision != "latest", \
             "packages: ref should have a revision. Check latest if needed."
         if not remote:
             prefs = self._api_helpers.cache.get_package_references(ref)
-            if package_id is not None:  # Avoid reading the conaninfo of unrelated packages
-                prefs = [p for p in prefs if p.package_id == package_id]
+            if package_ids is not None:  # Avoid reading the conaninfo of unrelated packages
+                prefs = [p for p in prefs if p.package_id in package_ids]
             packages = _get_cache_packages_binary_info(self._api_helpers.cache, prefs)
         else:
             packages = self._api_helpers.remote_manager.search_packages(remote, ref)
-            if package_id is not None:
-                packages = {p: info for p, info in packages.items() if p.package_id == package_id}
+            if package_ids is not None:
+                packages = {p: info for p, info in packages.items() if p.package_id in package_ids}
         return packages
 
     @staticmethod
@@ -156,7 +156,7 @@ class ListAPI:
         return result
 
     def select(self, pattern: ListPattern, package_query=None, remote: Remote = None, lru=None,
-               profile=None, load_info=False) -> PackagesList:
+               profile=None) -> PackagesList:
         """For a given pattern, return a list of recipes and packages matching the provided filters.
 
         :parameter ListPattern pattern: Search criteria
@@ -169,10 +169,6 @@ class ListAPI:
             packages/binaries that have **not** been used in the last 'lru' time.
             It can be a string like ``"2d"`` (2 days) or ``"3h"`` (3 hours).
         :parameter Profile profile: Profile to filter the packages by settings and options.
-        :parameter bool load_info: When the pattern is a fully qualified package reference, load
-            the binary information (settings, options...) of the package. It requires reading
-            ``conaninfo.txt`` in the cache or querying the remote for it, so it is skipped by
-            default. For any other pattern the information is always loaded.
         """
         # TODO: Implement better error forwarding for "list" command that captures Exceptions
         if package_query and pattern.package_id and "*" not in pattern.package_id:
@@ -232,8 +228,7 @@ class ListAPI:
                 prefs = []
                 if "*" not in pattern.package_id and pattern.prev is not None:
                     prefs.append(PkgReference(rrev, package_id=pattern.package_id))
-                    packages = self._packages_configurations(rrev, remote, pattern.package_id) \
-                        if load_info else {}
+                    packages = {}
                 else:
                     packages = self._packages_configurations(rrev, remote)
                     if package_query is not None:
@@ -267,6 +262,31 @@ class ListAPI:
                     pkg_info = packages.get(PkgReference(p.ref, p.package_id))
                     select_bundle.add_pref(p, pkg_info)
         return select_bundle
+
+    def load_info(self, package_list: PackagesList, remote: Remote = None) -> None:
+        """ For a given package list, load in place the binary information (settings, options...)
+        of its packages, skipping the ones that already have it. It requires reading
+        ``conaninfo.txt`` in the cache or querying the remote for it.
+
+        :parameter PackagesList package_list: Packages to load the information for
+        :parameter Remote remote: Remote to query, if ``None``, it will read from the local cache.
+        """
+        for ref, ref_contents in package_list.serialize().items():
+            ref = RecipeReference.loads(ref)
+            for revision, rev_content in ref_contents.get("revisions", {}).items():
+                # Packages that already have their info (e.g. from "pkg:*") are not reloaded
+                packages = [pkgid for pkgid, content in rev_content.get("packages", {}).items()
+                            if "info" not in content]
+                if not packages:
+                    continue
+                ref.revision = revision
+                infos = self._packages_configurations(ref, remote, set(packages))
+                for pkgid in packages:
+                    pref = PkgReference(ref, pkgid)
+                    if pref not in infos:
+                        ConanOutput().error(f"Could not load the info of '{pref}'")
+                        continue
+                    package_list.add_pref(pref, infos[pref])
 
     def explain_missing_binaries(self, ref, conaninfo, remotes):
         """ (Experimental) Explain why a binary is missing in the cache

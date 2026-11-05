@@ -290,11 +290,15 @@ def list(conan_api: ConanAPI, parser, *args):
                                                  args.filter_settings,
                                                  args.filter_options) \
             if args.filter_profile or args.filter_settings or args.filter_options else None
+        # A fully qualified package reference is not listed with its info, load it
+        is_pref = ref_pattern.package_id and "*" not in ref_pattern.package_id \
+            and ref_pattern.prev is not None
         if args.cache or not args.remote:
             try:
                 cache_list = conan_api.list.select(ref_pattern, args.package_query, remote=None,
-                                                   lru=args.lru, profile=profile,
-                                                   load_info=True)
+                                                   lru=args.lru, profile=profile)
+                if is_pref:
+                    conan_api.list.load_info(cache_list)
             except Exception as e:
                 pkglist.add_error("Local Cache", str(e))
             else:
@@ -304,7 +308,9 @@ def list(conan_api: ConanAPI, parser, *args):
             for remote in remotes:
                 try:
                     remote_list = conan_api.list.select(ref_pattern, args.package_query, remote,
-                                                        profile=profile, load_info=True)
+                                                        profile=profile)
+                    if is_pref:
+                        conan_api.list.load_info(remote_list, remote)
                 except Exception as e:
                     pkglist.add_error(remote.name, str(e))
                 else:
