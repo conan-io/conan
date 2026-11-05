@@ -416,6 +416,8 @@ class AndroidSystemBlock(Block):
         set(ANDROID_STL {{ android_stl }})
         {% endif %}
         message(STATUS "Conan toolchain: Setting Android abi: {{ android_abi }}")
+        set(ANDROID_ABI {{ android_abi }})
+        # Also stored in the cache, as IDEs like QtCreator read it from CMakeCache.txt
         set(ANDROID_ABI {{ android_abi }} CACHE STRING "" FORCE)
         {% if android_use_legacy_toolchain_file %}
         set(ANDROID_USE_LEGACY_TOOLCHAIN_FILE {{ android_use_legacy_toolchain_file }})
