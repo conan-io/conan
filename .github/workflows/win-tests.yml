@@ -3,6 +3,10 @@ name: Windows Tests
 on:
   workflow_call:
     inputs:
+      test-stage:
+        description: '"unit-integration" runs the unit and integration tests, "functional" the functional tests'
+        required: true
+        type: string
       python-versions:
         required: true
         type: string
@@ -17,12 +21,13 @@ on:
 
 jobs:
   unit_integration_tests:
+    if: inputs.test-stage == 'unit-integration'
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}
         runner: [windows-2025]
     runs-on: ${{ matrix.runner }}
-    name: Unit & Integration Tests (${{ matrix.python-version }} ${{ matrix.runner }})
+    name: Unit & Integration Tests
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -74,12 +79,13 @@ jobs:
           tests: ${{ steps.determine_tests.outputs.tests }}
 
   functional_tests:
+    if: inputs.test-stage == 'functional'
     strategy:
       matrix:
         python-version: ${{ fromJson(inputs.python-versions) }}
         runner: [windows-2022, windows-2025-vs2026]
     runs-on: ${{ matrix.runner }}
-    name: Functional Tests (${{ matrix.python-version }} ${{ matrix.runner }})
+    name: Functional Tests
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
