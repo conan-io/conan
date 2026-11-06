@@ -92,15 +92,19 @@ class ListAPI:
             results = self._api_helpers.cache.get_package_revisions(pref)
         return results
 
-    def _packages_configurations(self, ref: RecipeReference,
-                                 remote=None) -> Dict[PkgReference, dict]:
+    def _packages_configurations(self, ref: RecipeReference, remote=None,
+                                 package_ids=None) -> Dict[PkgReference, dict]:
         assert ref.revision is not None and ref.revision != "latest", \
             "packages: ref should have a revision. Check latest if needed."
         if not remote:
             prefs = self._api_helpers.cache.get_package_references(ref)
+            if package_ids is not None:  # Avoid reading the conaninfo of unrelated packages
+                prefs = [p for p in prefs if p.package_id in package_ids]
             packages = _get_cache_packages_binary_info(self._api_helpers.cache, prefs)
         else:
             packages = self._api_helpers.remote_manager.search_packages(remote, ref)
+            if package_ids is not None:
+                packages = {p: info for p, info in packages.items() if p.package_id in package_ids}
         return packages
 
     @staticmethod
@@ -258,6 +262,31 @@ class ListAPI:
                     pkg_info = packages.get(PkgReference(p.ref, p.package_id))
                     select_bundle.add_pref(p, pkg_info)
         return select_bundle
+
+    def load_info(self, package_list: PackagesList, remote: Remote = None) -> None:
+        """ For a given package list, load in place the binary information (settings, options...)
+        of its packages, skipping the ones that already have it. It requires reading
+        ``conaninfo.txt`` in the cache or querying the remote for it.
+
+        :parameter PackagesList package_list: Packages to load the information for
+        :parameter Remote remote: Remote to query, if ``None``, it will read from the local cache.
+        """
+        for ref, ref_contents in package_list.serialize().items():
+            ref = RecipeReference.loads(ref)
+            for revision, rev_content in ref_contents.get("revisions", {}).items():
+                # Packages that already have their info (e.g. from "pkg:*") are not reloaded
+                packages = [pkgid for pkgid, content in rev_content.get("packages", {}).items()
+                            if "info" not in content]
+                if not packages:
+                    continue
+                ref.revision = revision
+                infos = self._packages_configurations(ref, remote, set(packages))
+                for pkgid in packages:
+                    pref = PkgReference(ref, pkgid)
+                    if pref not in infos:
+                        ConanOutput().error(f"Could not load the info of '{pref}'")
+                        continue
+                    package_list.add_pref(pref, infos[pref])
 
     def explain_missing_binaries(self, ref, conaninfo, remotes):
         """ (Experimental) Explain why a binary is missing in the cache
