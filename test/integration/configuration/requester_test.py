@@ -47,6 +47,39 @@ class TestConanRequesterCacertPath:
         assert requester._http_requester.verify == file_path
 
 
+class MockRequesterKwargs(Mock):
+    kwargs = None
+
+    def get(self, _, **kwargs):
+        self.kwargs = kwargs
+
+
+class TestConanRequesterCleanSystemProxyNetrc:
+    @staticmethod
+    def _get(clean, **kwargs):
+        netrc = os.path.join(temp_folder(), "netrc")
+        save(netrc, "machine myhost login myuser password mypass\n")
+        config = ConfDefinition()
+        if clean:
+            config.update("core.net.http:clean_system_proxy", True)
+        with mock.patch.dict(os.environ, {"NETRC": netrc}):
+            requester = ConanRequester(config)  # .netrc is loaded once in the constructor
+        requester._http_requester = MockRequesterKwargs()
+        requester.get("http://myhost/file", **kwargs)
+        return requester._http_requester.kwargs
+
+    def test_netrc_kept(self):
+        assert self._get(clean=True)["auth"] == ("myuser", "mypass")
+
+    def test_netrc_not_overriding_explicit_auth(self):
+        assert "auth" not in self._get(clean=True, headers={"Authorization": "Bearer x"})
+        assert self._get(clean=True, auth="myauth")["auth"] == "myauth"
+
+    def test_netrc_untouched_without_clean(self):
+        # requests itself handles .netrc when trust_env=True
+        assert "auth" not in self._get(clean=False)
+
+
 class TestConanRequesterTrustStore:
     def test_requires_python310(self):
         config = ConfDefinition()
