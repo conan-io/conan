@@ -45,6 +45,21 @@ def test_get_gnu_triplet_for_cross_building():
     assert autotoolschain._build == "i686-solaris"
 
 
+def test_get_gnu_triplet_for_cross_building_musl():
+    settings = MockSettings({"build_type": "Release",
+                             "compiler": "gcc",
+                             "compiler.version": "13",
+                             "os": "Linux",
+                             "os.libc": "musl",
+                             "arch": "armv8"})
+    conanfile = ConanFileMock()
+    conanfile.settings = settings
+    conanfile.settings_build = MockSettings({"os": "Linux", "os.libc": "glibc", "arch": "x86_64"})
+    autotoolschain = AutotoolsToolchain(conanfile)
+    assert autotoolschain._host == "aarch64-linux-musl"
+    assert autotoolschain._build == "x86_64-linux-gnu"
+
+
 def test_get_toolchain_cppstd():
     settings = MockSettings({"build_type": "Release",
                              "compiler": "gcc",

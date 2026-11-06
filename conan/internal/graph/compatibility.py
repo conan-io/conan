@@ -17,6 +17,7 @@ _default_compat = """\
 # will destroy your changes.
 
 from conan.tools.build import supported_cppstd, supported_cstd
+from conan.tools.scm import Version
 from conan.errors import ConanException
 
 
@@ -46,10 +47,47 @@ def cppstd_compat(conanfile):
     return factors
 
 
+def os_libc_compat(conanfile):
+    # Binaries built against an older libc version can run with a newer one of the same libc
+    extension_properties = getattr(conanfile, "extension_properties", {})
+    if conanfile.settings.get_safe("os") != "Linux" or \
+            extension_properties.get("compatibility_libc") is False:
+        return []
+    os_definitions = conanfile.settings.os.possible_values()
+    if not isinstance(os_definitions, dict) or not os_definitions.get("Linux", {}).get("libc"):
+        return []  # settings.yml without os.libc
+    libc_definitions = os_definitions["Linux"]["libc"]
+    libc = conanfile.settings.get_safe("os.libc")
+    libc_version = conanfile.settings.get_safe("os.libc.version")
+    allow_unset = conanfile.conf.get("tools.graph:compatibility_libc_unset", check_type=bool,
+                                     default=True)
+    factor = []
+    if libc is not None and libc_version is not None:
+        versions = libc_definitions[libc]["version"]
+        older_versions = [v for v in versions if v is not None and Version(v) < libc_version]
+        older_versions.sort(key=Version, reverse=True)  # Closest version first
+        factor.extend({"os.libc.version": v} for v in older_versions)
+        # Binaries created before os.libc existed, or without defining it
+        if allow_unset:
+            factor.append({"os.libc.version": None})
+            factor.append({"os.libc": None})
+    elif allow_unset:
+        # The libc version of the consumer is unknown, most portable binaries first. Without
+        # os.libc, glibc is assumed, as it is the libc of most Linux distributions
+        assumed_libc = libc or "glibc"
+        versions = [v for v in libc_definitions[assumed_libc]["version"] if v is not None]
+        versions.sort(key=Version)
+        factor.extend({"os.libc": assumed_libc, "os.libc.version": v} for v in versions)
+        factor.append({"os.libc": None} if libc else {"os.libc": assumed_libc})
+    return [factor] if factor else []
+
+
 def compatibility(conanfile):
     # By default, different compiler.cppstd are compatible
     # factors is a list of lists
     factors = cppstd_compat(conanfile)
+    # By default, older libc versions and undefined libc are compatible in both directions
+    factors.extend(os_libc_compat(conanfile))
 
     # MSVC 194->193 fallback compatibility
     compiler = conanfile.settings.get_safe("compiler")
