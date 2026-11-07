@@ -86,6 +86,11 @@ class MSBuildDeps:
             <ExecutablePath>$(Conan{{name}}BinaryDirectories)$(ExecutablePath)</ExecutablePath>
           </PropertyGroup>
           {% endif %}
+          <ImportGroup Label="PropertySheets">
+            {% for mod in build_modules %}
+            <Import Condition="Exists('$(Conan{{name}}RootFolder)\{{mod}}')" Project="$(Conan{{name}}RootFolder)\{{mod}}"/>
+            {% endfor %}
+          </ImportGroup>
         </Project>
         """)
 
@@ -148,6 +153,16 @@ class MSBuildDeps:
     @staticmethod
     def _get_valid_xml_format(name):
         return re.compile(r"[.+]").sub("_", name)
+
+    @staticmethod
+    def _module_path(path, name):
+        """
+        Returns a valid path to the module.
+        """
+        if os.path.isabs(path):
+          return path
+
+        return f"$(Conan{name}RootFolder)\\{path}"
 
     def _vars_props_file(self, require, dep, name, cpp_info, build):
         """
@@ -237,12 +252,13 @@ class MSBuildDeps:
                                       lstrip_blocks=True).render(**fields)
         return formatted_template
 
-    def _activate_props_file(self, dep_name, vars_filename, deps, build):
+    def _activate_props_file(self, dep_name, vars_filename, deps, build_modules, build):
         """
         Actual activation of the VS variables, per configuration
             - conan_pkgname_x86_release.props / conan_pkgname_compname_x86_release.props
         :param dep_name: pkgname / pkgname_compname
         :param deps: the name of other things to be included: [dep1, dep2:compA, ...]
+        :param build_modules: list of additional build modules to include
         :param build: if it is a build require or not
         """
 
@@ -251,7 +267,7 @@ class MSBuildDeps:
         ca_exclude = any(fnmatch.fnmatch(dep_name, p) for p in self.exclude_code_analysis or ())
         template = Template(self._conf_props, trim_blocks=True, lstrip_blocks=True)
         content_multi = template.render(host_context=not build, name=dep_name, ca_exclude=ca_exclude,
-                                        vars_filename=vars_filename, deps=deps)
+                                        vars_filename=vars_filename, deps=deps, build_modules=build_modules)
         return content_multi
 
     @staticmethod
@@ -399,10 +415,12 @@ class MSBuildDeps:
                     else:  # Points to a component of same package
                         public_deps.append("{}_{}".format(dep_name, required_comp))
                 public_deps = [self._get_valid_xml_format(d) for d in public_deps]
+                build_modules = comp_info.get_property("msbuild_import_props", check_type=list) or []
+
                 result[vars_filename] = self._vars_props_file(require, dep, full_comp_name,
                                                               comp_info, build=build)
                 result[activate_filename] = self._activate_props_file(full_comp_name, vars_filename,
-                                                                      public_deps, build=build)
+                                                                      public_deps, build=build, build_modules=build_modules)
                 result[comp_filename] = self._dep_props_file(full_comp_name, comp_filename,
                                                              activate_filename, condition)
                 comp_condition = "'$(conan_%s_props_imported)' != 'True'" % full_comp_name
@@ -416,11 +434,12 @@ class MSBuildDeps:
             activate_filename = "conan_%s%s.props" % (dep_name, conf_name)
             pkg_filename = "conan_%s.props" % dep_name
             public_deps = [self._dep_name(d, build) for d in pkg_deps.values()]
+            build_modules = cpp_info.get_property("msbuild_import_props", check_type=list) or []
 
             result[vars_filename] = self._vars_props_file(require, dep, dep_name, cpp_info,
                                                           build=build)
             result[activate_filename] = self._activate_props_file(dep_name, vars_filename,
-                                                                  public_deps, build=build)
+                                                                  public_deps, build=build, build_modules=build_modules)
             result[pkg_filename] = self._dep_props_file(dep_name, pkg_filename, activate_filename,
                                                         condition=condition)
         return result
