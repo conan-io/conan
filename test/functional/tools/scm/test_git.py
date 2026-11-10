@@ -698,8 +698,8 @@ class TestGitBasicSCMFlow:
         # local flow
         c.run("install .")
         c.run("build .")
-        assert "conanfile.py (pkg/0.1): MYCMAKE-BUILD: mycmake" in c.out
-        assert "conanfile.py (pkg/0.1): MYFILE-BUILD: myheader!" in c.out
+        assert "MYCMAKE-BUILD: mycmake" in c.out
+        assert "MYFILE-BUILD: myheader!" in c.out
 
     @pytest.mark.parametrize("conanfile_scm", [False, True])
     def test_branch_flow(self, conanfile_scm):
@@ -852,8 +852,8 @@ class TestGitBasicSCMFlowSubfolder:
         # local flow
         c.run("install conan")
         c.run("build conan")
-        assert "conanfile.py (pkg/0.1): MYCMAKE-BUILD: mycmake" in c.out
-        assert "conanfile.py (pkg/0.1): MYFILE-BUILD: myheader!" in c.out
+        assert "MYCMAKE-BUILD: mycmake" in c.out
+        assert "MYFILE-BUILD: myheader!" in c.out
 
 
 @pytest.mark.tool("git")
@@ -917,14 +917,14 @@ class TestGitMonorepoSCMFlow:
         c.run_command('git clone "{}" .'.format(url))
         c.run("create sub1")
         commit = re.search(r"CAPTURING COMMIT: (\S+)!!!", str(c.out)).group(1)
-        assert "pkg1/0.1: MYCMAKE-BUILD: mycmake1!" in c.out
-        assert "pkg1/0.1: MYFILE-BUILD: myheader1!" in c.out
+        assert "MYCMAKE-BUILD: mycmake1!" in c.out
+        assert "MYFILE-BUILD: myheader1!" in c.out
 
         c.save({"sub2/src/myfile.h": "my2header!"})
         git_add_changes_commit(folder=c.current_folder)
         c.run("create sub2")
-        assert "pkg2/0.1: MYCMAKE-BUILD: mycmake2!" in c.out
-        assert "pkg2/0.1: MYFILE-BUILD: my2header!" in c.out
+        assert "MYCMAKE-BUILD: mycmake2!" in c.out
+        assert "MYFILE-BUILD: my2header!" in c.out
 
         # Exporting again sub1, gives us exactly the same revision as before
         c.run("export sub1")
@@ -935,10 +935,10 @@ class TestGitMonorepoSCMFlow:
         c2 = TestClient(servers=c.servers)
         c2.run("install --requires=pkg2/0.1@ --build=*")
         assert "Checkout: {}".format(commit) in c2.out
-        assert "pkg1/0.1: MYCMAKE-BUILD: mycmake1!" in c2.out
-        assert "pkg1/0.1: MYFILE-BUILD: myheader1!" in c2.out
-        assert "pkg2/0.1: MYCMAKE-BUILD: mycmake2!" in c2.out
-        assert "pkg2/0.1: MYFILE-BUILD: my2header!" in c2.out
+        assert "MYCMAKE-BUILD: mycmake1!" in c2.out
+        assert "MYFILE-BUILD: myheader1!" in c2.out
+        assert "MYCMAKE-BUILD: mycmake2!" in c2.out
+        assert "MYFILE-BUILD: my2header!" in c2.out
 
     @pytest.mark.tool("cmake")
     def test_exports_sources_common_code_layout(self):

@@ -22,7 +22,10 @@ class NewAPI:
         Save the ``template`` files in the ``output_folder``, replacing the template variables
         with the ``defines``
 
-        :param template: The name of the template to use, either built-in ones or those available under ``<conan_home>/templates/command/new/<template>``
+        :param template: The template to use: a path to a folder containing the template files
+            (absolute or relative to the current working directory), or the name of a template,
+            either those available under ``<conan_home>/templates/command/new/<template>``
+            or the built-in ones
         :param defines: A list with the ``k=v`` variables to replace in the template
         :param output_folder: The folder where the template files will be saved, cwd if ``None``
         :param force: If ``True``, overwrite the files if they already exist, otherwise raise an error
@@ -91,8 +94,6 @@ class NewAPI:
         from conan.internal.api.new.meson_exe import meson_exe_files
         from conan.internal.api.new.msbuild_lib import msbuild_lib_files
         from conan.internal.api.new.msbuild_exe import msbuild_exe_files
-        from conan.internal.api.new.bazel_lib import bazel_lib_files
-        from conan.internal.api.new.bazel_exe import bazel_exe_files
         from conan.internal.api.new.bazel_7_lib import bazel_lib_files_7
         from conan.internal.api.new.bazel_7_exe import bazel_exe_files_7
         from conan.internal.api.new.autotools_lib import autotools_lib_files
@@ -112,9 +113,9 @@ class NewAPI:
                          "meson_exe": meson_exe_files,
                          "msbuild_lib": msbuild_lib_files,
                          "msbuild_exe": msbuild_exe_files,
-                         # TODO: Rename xxx_7 to xxx when dropped Bazel 6.x compatibility
-                         "bazel_lib": bazel_lib_files,
-                         "bazel_exe": bazel_exe_files,
+                         "bazel_lib": bazel_lib_files_7,
+                         "bazel_exe": bazel_exe_files_7,
+                         # Backward compatibility aliases, to be removed with Bazel 6 support
                          "bazel_7_lib": bazel_lib_files_7,
                          "bazel_7_exe": bazel_exe_files_7,
                          "autotools_lib": autotools_lib_files,

@@ -28,7 +28,7 @@ class TargetsTemplate2:
         return textwrap.dedent("""\
             include_guard()
             if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
-                message(STATUS "Conan: Configuring Targets for {{ ref }}")
+                message(STATUS "Conan: Configuring Targets for {{ filename }}")
             endif()
 
             # Load information for each installed configuration.

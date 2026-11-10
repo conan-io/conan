@@ -106,7 +106,7 @@ def test_pkg_sign_manifest_signatures():
     c.run("cache verify *")
     assert "Manifest content:\n {'files': [{'file': 'conan_export.tgz'" in c.out
     assert "Checksum verified for file conanfile.py" in c.out
-    assert "Provider: conan-client, Method: openssl-dgst, Signature: pkgsign-manifest.json.sig"
+    assert "Provider: conan-client, Method: openssl-dgst, Signature: pkgsign-manifest.json.sig" in c.out
     assert "Manifest content:\n {'files': [{'file': 'conan_package.tgz'" in c.out
     assert "Checksum verified for file conan_package.tgz" in c.out
 

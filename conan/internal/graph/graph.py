@@ -33,6 +33,8 @@ CONTEXT_BUILD = "build"
 
 
 class TransitiveRequirement:
+    __slots__ = ("require", "node")
+
     def __init__(self, require, node):
         self.require = require
         self.node = node
@@ -74,14 +76,15 @@ class Node:
 
     def subgraph(self):
         nodes = [self]
+        visited = {self}
         opened = [self]
         while opened:
             new_opened = []
             for o in opened:
                 for n in o.neighbors():
-                    if n not in nodes:
+                    if n not in visited:
+                        visited.add(n)
                         nodes.append(n)
-                    if n not in opened:
                         new_opened.append(n)
             opened = new_opened
 
@@ -122,7 +125,7 @@ class Node:
                           and require.visible != existing.require.visible)
             if ill_formed and not (require.test or existing.require.test):
                 visibility_conflicts.setdefault(require.ref, set()).add(self.ref)
-            require.aggregate(existing.require)
+            require.aggregate(existing.require, other_pkgtype_known=existing.node is not None)
             # An override can be overriden by a downstream force/override
             if existing.require.override and existing.require.ref != require.ref:
                 # If it is an override, but other value, it has been overriden too
@@ -307,6 +310,8 @@ class Node:
 
 
 class Edge:
+    __slots__ = ("src", "dst", "require")
+
     def __init__(self, src, dst, require):
         self.src = src
         self.dst = dst

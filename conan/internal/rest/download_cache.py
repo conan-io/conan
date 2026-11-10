@@ -66,7 +66,8 @@ class DownloadCache:
 
         @param excluded_urls: a list of URLs to exclude backup sources files if they come from any of these URLs
         @param package_list: a PackagesList object to filter backup files from (The files should have been downloaded form any of the references in the package_list)
-        @param only_upload: if True, only return the files for packages that are set to be uploaded"""
+        @param only_upload: if True, only take into account the package_list references that are
+                            set to be uploaded"""
         path_backups = os.path.join(self._path, self._SOURCE_BACKUP)
 
         if not os.path.exists(path_backups):
@@ -112,9 +113,7 @@ class DownloadCache:
             metadata = json.loads(load(metadata_path))
             refs = metadata["references"]
             for ref, urls in refs.items():
-                if not has_excluded_urls(urls) and (not only_upload
-                                                    or package_list is None
-                                                    or ref in all_refs):
+                if not has_excluded_urls(urls) and (package_list is None or ref in all_refs):
                     files_to_upload.append(metadata_path)
                     files_to_upload.append(blob_path)
                     break

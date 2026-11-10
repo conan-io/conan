@@ -44,8 +44,8 @@ def test_exports_sources_patch():
             "CMakeLists.txt": "mycmake!"})
     c.run("create .")
     assert "MYPATCH-SOURCE mypatch!" in c.out
-    assert "pkg/0.1: MYCMAKE-BUILD: mycmake!" in c.out
-    assert "pkg/0.1: MYPATCH-BUILD: mypatch!" in c.out
+    assert "MYCMAKE-BUILD: mycmake!" in c.out
+    assert "MYPATCH-BUILD: mypatch!" in c.out
 
     # Local flow
     c.run("install .")
@@ -54,5 +54,5 @@ def test_exports_sources_patch():
     assert c.load("CMakeLists.txt") == "mycmake!"  # My original one
     assert c.load("src/CMakeLists.txt") == "mycmake!"  # The one patched by "source()"
     c.run("build .")
-    assert "conanfile.py (pkg/0.1): MYCMAKE-BUILD: mycmake!" in c.out
-    assert "conanfile.py (pkg/0.1): MYPATCH-BUILD: mypatch!" in c.out
+    assert "MYCMAKE-BUILD: mycmake!" in c.out
+    assert "MYPATCH-BUILD: mypatch!" in c.out

@@ -66,20 +66,20 @@ class TestTestPackage:
               " --profile:host=profile_host --profile:build=profile_build")
 
         # Build requires are built in the 'build' context:
-        assert "br1/version: >> settings.os: Build" in t.out
-        assert "br1/version: >> settings_build.os: Build" in t.out
+        assert ">> settings.os: Build" in t.out
+        assert ">> settings_build.os: Build" in t.out
 
         # Package 'name' is built for the 'host' context (br1 as build_requirement)
-        assert "name/version: >> settings.os: Host" in t.out
-        assert "name/version: >> settings_build.os: Build" in t.out
+        assert ">> settings.os: Host" in t.out
+        assert ">> settings_build.os: Build" in t.out
 
         # Test_package is executed with the same profiles as the package itself
-        assert "name/version (test package): >> settings.os: Host" in t.out
-        assert "name/version (test package): >> settings_build.os: Build" in t.out
+        assert ">> settings.os: Host" in t.out
+        assert ">> settings_build.os: Build" in t.out
 
         t.run("test test_package/conanfile.py name/version@ "
               "--profile:host=profile_host --profile:build=profile_build")
 
-        assert "name/version (test package): >> settings.os: Host" in t.out
-        assert "name/version (test package): >> settings_build.os: Build" in t.out
-        assert "name/version (test package): >> tools.get_env('INFO'): br2-Build" in t.out
+        assert ">> settings.os: Host" in t.out
+        assert ">> settings_build.os: Build" in t.out
+        assert ">> tools.get_env('INFO'): br2-Build" in t.out

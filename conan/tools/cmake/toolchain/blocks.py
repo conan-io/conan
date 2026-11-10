@@ -392,10 +392,9 @@ class ParallelBlock(Block):
         """)
 
     def context(self):
-        # TODO: Check this conf
-
         compiler = self._conanfile.settings.get_safe("compiler")
-        if compiler != "msvc" or "Visual" not in self._toolchain.generator:
+        # MSVC or toolset == ClangCL -> Visual + clang
+        if "Visual" not in self._toolchain.generator or compiler not in ("msvc", "clang"):
             return
 
         jobs = build_jobs(self._conanfile)
@@ -417,7 +416,7 @@ class AndroidSystemBlock(Block):
         set(ANDROID_STL {{ android_stl }})
         {% endif %}
         message(STATUS "Conan toolchain: Setting Android abi: {{ android_abi }}")
-        set(ANDROID_ABI {{ android_abi }})
+        set(ANDROID_ABI {{ android_abi }} CACHE STRING "" FORCE)
         {% if android_use_legacy_toolchain_file %}
         set(ANDROID_USE_LEGACY_TOOLCHAIN_FILE {{ android_use_legacy_toolchain_file }})
         {% endif %}

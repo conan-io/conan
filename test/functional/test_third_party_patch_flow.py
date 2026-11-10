@@ -102,7 +102,7 @@ def test_third_party_patch_flow():
     client.save({"conandata.yml": conandata})
     client.run("source .")
     client.run("build .")
-    assert "conanfile.py (mypkg/1.0): Calling build()" in client.out
+    assert "Calling build()" in client.out
 
     # of course create should work too
     client.run("create .")
@@ -148,7 +148,7 @@ def test_third_party_overwrite_build_file():
     client.run("install .")
     client.run("source .")
     client.run("build .")
-    assert "conanfile.py (mypkg/1.0): Calling build()" in client.out
+    assert "Calling build()" in client.out
 
     # of course create should work too
     client.run("create .")
@@ -197,7 +197,7 @@ def test_third_party_git_overwrite_build_file():
     client.run("source .")
     assert "FILES: []!" in client.out
     client.run("build .")
-    assert "conanfile.py (mypkg/1.0): Calling build()" in client.out
+    assert "Calling build()" in client.out
 
     # of course create should work too
     client.run("create .")

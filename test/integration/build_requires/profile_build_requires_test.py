@@ -138,13 +138,13 @@ class TestBuildRequires:
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("build . -o mylib*:coverage=True --build missing")
         client.assert_listed_require({"mytool/0.1@lasote/stable": "Cache"}, build=True)
-        assert "conanfile.py (mylib/0.1): Coverage True" in client.out
+        assert "Coverage True" in client.out
 
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("build . -o coverage=True")
         client.assert_listed_require({"mytool/0.1@lasote/stable": "Cache"}, build=True)
         assert "mytool/0.1@lasote/stable: Already installed!" in client.out
-        assert "conanfile.py (mylib/0.1): Coverage True" in client.out
+        assert "Coverage True" in client.out
 
 
 def test_consumer_patterns_loop_error():

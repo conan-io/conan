@@ -224,8 +224,8 @@ class TestDefaultCompat:
               f"-s compiler={compiler} "
               f"-s compiler.version={version} -s compiler.cppstd=14 "
               f"-s compiler.runtime={runtime} -pr:b=profile_build")
-        assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
-               f"Using compatible package '{package_id1}'"
+        assert re.search(r"mylib/1.0: Main binary package '\w+' missing", c.out)
+        assert f"Found compatible package '{package_id1}'" in c.out
 
     def test_fail_with_options_deleted(self):
         """
@@ -435,15 +435,15 @@ class TestDefaultCompat:
               "-s compiler=msvc "
               "-s compiler.version=194 -s compiler.cppstd=14 "
               "-s compiler.runtime=dynamic -pr:b=profile_build")
-        assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing."\
-               f"Using compatible package '{package_id1}'"
+        assert re.search(r"mylib/1.0: Main binary package '\w+' missing", c.out)
+        assert f"Found compatible package '{package_id1}'" in c.out
 
         c.run("install --requires=mylib/1.0@ -s os=Windows -s arch=x86_64 -s build_type=Release "
               "-s compiler=msvc "
               "-s compiler.version=194 -s compiler.cppstd=17 "
               "-s compiler.runtime=dynamic -pr:b=profile_build")
-        assert "mylib/1.0: Main binary package 'e340edd75790e7156c595edebd3d98b10a2e091e' missing." \
-               f"Using compatible package '{package_id1}'"
+        assert re.search(r"mylib/1.0: Main binary package '\w+' missing", c.out)
+        assert f"Found compatible package '{package_id1}'" in c.out
 
 
 class TestErrorsCompatibility:

@@ -70,7 +70,7 @@ class TestOtherCommands:
         t.assert_listed_require({"lib/0.1": "Editable"})
         t.assert_listed_binary({"lib/0.1": (package_id,
                                             "EditableBuild")})
-        assert f"lib/0.1: MYBUILDFOLDER: {t.current_folder}" in t.out
+        assert f"MYBUILDFOLDER: {t.current_folder}" in t.out
         t.run("list *")
         assert "lib/0.1" in t.out  # Because the create actually exports, TODO: avoid exporting?
 
@@ -78,10 +78,10 @@ class TestOtherCommands:
         t.assert_listed_require({"lib/0.1": "Editable"})
         t.assert_listed_binary({"lib/0.1": (package_id,
                                             "EditableBuild")})
-        assert f"lib/0.1: MYBUILDFOLDER: {t.current_folder}" in t.out
+        assert f"MYBUILDFOLDER: {t.current_folder}" in t.out
 
         t.run("install consumer --build=editable")
         t.assert_listed_require({"lib/0.1": "Editable"})
         t.assert_listed_binary({"lib/0.1": (package_id,
                                             "EditableBuild")})
-        assert f"lib/0.1: MYBUILDFOLDER: {t.current_folder}" in t.out
+        assert f"MYBUILDFOLDER: {t.current_folder}" in t.out

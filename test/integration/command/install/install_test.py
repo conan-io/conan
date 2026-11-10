@@ -598,4 +598,4 @@ def test_install_json_format_not_visible():
     assert pkg_folder is not None
 
     c.run("create app")
-    assert "pkg/0.0.1: LOADED! contents!!!" in c.out
+    assert "LOADED! contents!!!" in c.out

@@ -14,85 +14,6 @@ from conan.internal.util.files import save
 from test.conftest import tools_locations
 
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-@pytest.mark.parametrize("compiler, version, update, runtime",
-                         [("msvc", "192", None, "dynamic"),
-                          ("msvc", "192", "6", "static"),
-                          ("msvc", "192", "8", "static")])
-def test_cmake_toolchain_win_toolset(compiler, version, update, runtime):
-    client = TestClient(path_with_spaces=False)
-    settings = {"compiler": compiler,
-                "compiler.version": version,
-                "compiler.update": update,
-                "compiler.cppstd": "17",
-                "compiler.runtime": runtime,
-                "build_type": "Release",
-                "arch": "x86_64"}
-
-    # Build the profile according to the settings provided
-    settings = " ".join('-s %s="%s"' % (k, v) for k, v in settings.items() if v)
-
-    conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch").\
-        with_generator("CMakeToolchain")
-
-    client.save({"conanfile.py": conanfile})
-    client.run("install . {}".format(settings))
-    toolchain = client.load("conan_toolchain.cmake")
-    value = "v14{}".format(version[-1])
-    if update is not None:  # Fullversion
-        value += f",version=14.{version[-1]}{update}"
-    assert 'set(CMAKE_GENERATOR_TOOLSET "{}" CACHE STRING "" FORCE)'.format(value) in toolchain
-
-
-def test_cmake_toolchain_user_toolchain():
-    client = TestClient(path_with_spaces=False)
-    conanfile = GenConanfile().with_settings("os", "compiler", "build_type", "arch").\
-        with_generator("CMakeToolchain")
-    client.save_home({"global.conf": "tools.cmake.cmaketoolchain:user_toolchain+=mytoolchain.cmake"})
-
-    client.save({"conanfile.py": conanfile})
-    client.run("install .")
-    toolchain = client.load("conan_toolchain.cmake")
-    assert 'include("mytoolchain.cmake")' in toolchain
-
-
-def test_cmake_toolchain_user_toolchain_from_dep():
-    client = TestClient()
-    conanfile = textwrap.dedent("""
-        import os
-        from conan import ConanFile
-        from conan.tools.files import copy
-        class Pkg(ConanFile):
-            exports_sources = "*"
-            def package(self):
-                copy(self, "*", self.build_folder, self.package_folder)
-            def package_info(self):
-                f = os.path.join(self.package_folder, "mytoolchain.cmake")
-                self.conf_info.append("tools.cmake.cmaketoolchain:user_toolchain", f)
-        """)
-    client.save({"conanfile.py": conanfile,
-                 "mytoolchain.cmake": 'message(STATUS "mytoolchain.cmake !!!running!!!")'})
-    client.run("create . --name=toolchain --version=0.1")
-
-    conanfile = textwrap.dedent("""
-        from conan import ConanFile
-        from conan.tools.cmake import CMake
-        class Pkg(ConanFile):
-            settings = "os", "compiler", "arch", "build_type"
-            exports_sources = "CMakeLists.txt"
-            build_requires = "toolchain/0.1"
-            generators = "CMakeToolchain"
-            def build(self):
-                cmake = CMake(self)
-                cmake.configure()
-        """)
-
-    client.save({"conanfile.py": conanfile,
-                 "CMakeLists.txt": gen_cmakelists()}, clean_first=True)
-    client.run("create . --name=pkg --version=0.1")
-    assert "mytoolchain.cmake !!!running!!!" in client.out
-
-
 def test_cmake_toolchain_without_build_type():
     # If "build_type" is not defined, toolchain will still be generated, it will not crash
     # Main effect is CMAKE_MSVC_RUNTIME_LIBRARY not being defined
@@ -713,8 +634,7 @@ def test_cmake_toolchain_vars_when_option_declared():
 
 
 @pytest.mark.tool("cmake")
-@pytest.mark.parametrize("single_profile", [True, False])
-def test_find_program_for_tool_requires(single_profile):
+def test_find_program_for_tool_requires():
     """Test that the same reference can be both a tool_requires and a regular requires,
     and that find_program (executables) and find_package (libraries) find the correct ones
     when cross building.

@@ -228,7 +228,7 @@ def test_project_xcodebuild_cli_args(client, no_copy_source):
 
         build_folder = re.search(r"Building your package in (/.+)", client.out).group(1)
 
-        assert f"OBJROOT = {build_folder}"
-        assert f"SYMROOT = {build_folder}"
+        assert f"OBJROOT={build_folder}" in client.out
+        assert f"SYMROOT={build_folder}" in client.out
         assert "-xcconfig" in client.out
         assert f"App {build_type}!" in client.out

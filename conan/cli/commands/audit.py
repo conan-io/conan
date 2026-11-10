@@ -156,9 +156,9 @@ def _text_provider_formatter(providers_action):
     if action == "remove":
         cli_out_write("Provider removed successfully.")
     elif action == "add":
-        cli_out_write("Provider added successfully.")
+        cli_out_write(f"Provider '{providers[0].name}' added successfully.")
     elif action == "auth":
-        cli_out_write("Provider authentication added.")
+        cli_out_write(f"Provider '{providers[0].name}' authenticated successfully.")
     elif action == "list":
         if not providers:
             cli_out_write("No providers found.")
@@ -205,9 +205,11 @@ def audit_provider(conan_api, parser, subparser, *args):
         else:
             token = args.token
 
-        provider = conan_api.audit.get_provider(args.name)
         if token:
-            conan_api.audit.auth_provider(provider, token)
+            provider = conan_api.audit.auth_provider(args.name, token)
+        else:
+            provider = conan_api.audit.get_provider(args.name)
+
 
         return [provider], args.action
     elif args.action == "remove":
@@ -228,8 +230,7 @@ def audit_provider(conan_api, parser, subparser, *args):
         else:
             token = args.token
 
-        provider = conan_api.audit.get_provider(args.name)
-        conan_api.audit.auth_provider(provider, token)
+        provider = conan_api.audit.auth_provider(args.name, token)
         return [provider], args.action
 
 

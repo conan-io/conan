@@ -96,4 +96,4 @@ def test_conditional_build_type(matrix_client_debug):
     c.run("build . -s build_type=Debug")
     c.run("build . -s build_type=Release")
     # This used to crash because "matrix::matrix"
-    assert "conanfile.py (pkgc/0.1): Running CMake.build()" in c.out
+    assert "Running CMake.build()" in c.out

@@ -40,9 +40,9 @@ def test_layout_generate():
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create . ")
-    assert "pkg/1.0: mybin!!!" in c.out
-    assert "pkg/1.0: mylib!!!" in c.out
-    assert "pkg/1.0: myinclude!!!" in c.out
+    assert "mybin!!!" in c.out
+    assert "mylib!!!" in c.out
+    assert "myinclude!!!" in c.out
     c.run("install .")
     assert os.path.exists(os.path.join(c.current_folder, "mybuild", "bin", "myfile.txt"))
     assert os.path.exists(os.path.join(c.current_folder, "mybuild", "lib", "myfile.txt"))

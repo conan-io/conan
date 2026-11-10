@@ -24,8 +24,8 @@ def test_profile_template():
         client.run("install . -pr=profile1")
 
     current_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
-    assert "os={}".format(current_os)
-    assert "build_type=Debug"
+    assert "os={}".format(current_os) in client.out
+    assert "build_type=Debug" in client.out
 
 
 def test_profile_template_variables():

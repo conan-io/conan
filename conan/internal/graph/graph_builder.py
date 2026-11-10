@@ -190,7 +190,13 @@ class DepsGraphBuilder:
         # Apply build_tools_requires from profile, overriding the declared ones
         profile = profile_host if node.context == CONTEXT_HOST else profile_build
 
-        for pattern, tool_requires in profile.tool_requires.items():
+        # "conan install --tool-requires=pkg" only has a virtual root aggregating the requested tools
+        # The host profile [tool_requires] must not be added to it, as they could depend on them
+        # https://github.com/conan-io/conan/issues/20413
+        only_tool_requires = (node.recipe == RECIPE_VIRTUAL and conanfile.requires
+                              and all(r.build for r in conanfile.requires.values()))
+        profile_tool_requires = {} if only_tool_requires else profile.tool_requires
+        for pattern, tool_requires in profile_tool_requires.items():
             is_consumer = conanfile._conan_is_consumer  # noqa
             if pattern[0] in "!~" and pattern[1] == "(":  # This is a negated OR operation
                 assert pattern[-1] == ")", (f"Malformed profile OR expression without"

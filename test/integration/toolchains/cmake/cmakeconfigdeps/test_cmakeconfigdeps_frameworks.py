@@ -3,6 +3,7 @@ import textwrap
 
 import pytest
 
+from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
 
 
@@ -118,5 +119,8 @@ def test_framework_raises_error_if_libs():
     tc = TestClient()
     tc.save({"conanfile.py": conanfile})
     tc.run("create")
-    tc.run(f"install --requires=frame/1.0 -g CMakeConfigDeps", assert_error=True)
+    tc.save({"conanfile.py": GenConanfile()
+            .with_setting("build_type")
+            .with_requirement("frame/1.0", libs=False, headers=False)})
+    tc.run(f"install -g CMakeConfigDeps", assert_error=True)
     assert "Can't define .libs and .package_framework for the same component" in tc.out

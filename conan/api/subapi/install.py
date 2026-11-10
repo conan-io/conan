@@ -103,10 +103,12 @@ class InstallAPI:
         :param generators: List of generators to be used in addition to the ones defined in the root conanfile, if any
         :param source_folder: Source folder of the consumer
         :param output_folder: Output folder of the consumer
-        :param deploy: Deployer or list of deployers to be used for deployment
-        :param deploy_package: Only deploy the packages matching these patterns (``None`` or empty for all)
+        :param deploy: List of deployers to be used for deployment
+        :param deploy_package: Only execute the ``deploy()`` method of the packages matching
+            these patterns (``None`` or empty to not execute any)
         :param deploy_folder: Folder where to deploy, by default the build folder
-        :param envs_generation: Anything other than ``None`` will activate the generation of virtual environment files for the root conanfile
+        :param envs_generation: If ``None`` (default), the virtual environment files of the root
+            conanfile are generated. Any other value disables their generation.
         """
         root_node = deps_graph.root
         conanfile = root_node.conanfile
@@ -152,8 +154,9 @@ class InstallAPI:
 
         :param graph: The dependency graph to deploy
         :param deployer: List of deployers to be used
-        :param deploy_package: Only deploy the packages matching these patterns (``None`` or empty for all)
-        :param deploy_folder: Folder where to deploy, by default the build folder
+        :param deploy_package: Only execute the ``deploy()`` method of the packages matching
+            these patterns (``None`` or empty to not execute any)
+        :param deploy_folder: Folder where to deploy. It must be provided
         """
         return do_deploys(self._conan_api.home_folder, graph, deployer,
                           deploy_package=deploy_package, deploy_folder=deploy_folder)

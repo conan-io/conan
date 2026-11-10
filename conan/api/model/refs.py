@@ -10,7 +10,7 @@ from conan.internal.util.dates import timestamp_to_str
 
 @total_ordering
 class RecipeReference:
-    """ An exact (no version-range, no alias) reference of a recipe,
+    """ An exact (no version-range) reference of a recipe,
     it represents a reference of the form ``name/version[@user/channel][#revision][%timestamp]``.
     Should be enough to locate a recipe in the cache or in a server, and
     validation will be external to this class, at specific points (export, api, etc).
@@ -214,15 +214,25 @@ class RecipeReference:
 
 
 class PkgReference:
+    """ An exact (no version-range) reference of a package binary,
+    it represents a reference of the form
+    ``name/version[@user/channel][#revision][%timestamp]:package_id[#revision][%timestamp]``.
+    Should be enough to locate a package binary in the cache or in a server
+    """
 
     def __init__(self, ref=None, package_id=None, revision=None, timestamp=None):
+        """ The attributes should be regarded as immutable, and should not be modified by the user."""
+        #: The base RecipeReference for this package reference
         self.ref = ref
+        #: The unique identifier within this RecipeReference of a package binary
         self.package_id = package_id
+        #: The package revision of this binary for this specific package_id
         self.revision = revision
-        self.timestamp = timestamp  # float, Unix seconds UTC
+        #: The timestamp of the current package revision, float in Unix seconds UTC
+        self.timestamp = timestamp
 
     def __repr__(self):
-        """ long repr like pkg/0.1@user/channel#rrev%timestamp """
+        """ long repr like pkg/0.1@user/channel#rrev%timestamp:package_id#revision%timestamp """
         if self.ref is None:
             return ""
         result = repr(self.ref)
@@ -251,7 +261,7 @@ class PkgReference:
         return result
 
     def __str__(self):
-        """ shorter representation, excluding the revision and timestamp """
+        """ shorter representation, excluding the revisions and timestamp """
         if self.ref is None:
             return ""
         result = str(self.ref)
@@ -279,7 +289,10 @@ class PkgReference:
         return hash((self.ref, self.package_id, self.revision))
 
     @staticmethod
-    def loads(pkg_ref):  # TODO: change this default to validate only on end points
+    def loads(pkg_ref):
+        """ Instantiates a PkgReference object from a string.
+        Does not implement validation of the members.
+        """
         try:
             tokens = pkg_ref.split(":", 1)
             assert len(tokens) == 2

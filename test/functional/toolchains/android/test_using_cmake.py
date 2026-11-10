@@ -42,4 +42,4 @@ def test_use_cmake_toolchain():
 
     # Build locally
     c.run('build . --profile:host=android')
-    assert "conanfile.py (hello/0.1): Running CMake.build()" in c.out
+    assert "Running CMake.build()" in c.out

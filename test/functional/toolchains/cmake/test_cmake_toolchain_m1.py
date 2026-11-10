@@ -70,7 +70,7 @@ def test_m1(op_system):
     client.run_command(f"vtool -show-build {main_path}")
 
     if op_system == "Macos":
-        assert "platform MACOS"
+        assert "platform MACOS" in client.out
     elif op_system == "iOS":
-        assert "platform IOS"
-        assert "minos 12.0"
+        assert "platform IOS" in client.out
+        assert "minos 12.0" in client.out

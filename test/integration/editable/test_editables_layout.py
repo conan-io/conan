@@ -276,7 +276,8 @@ def test_editable_package_folder():
     c.run("create .")
     c.run("editable add .")
     c.run("install --requires=pkg/0.1@")
-    assert "pkg/0.1: PKG FOLDER=None!!!"
+    # The package_folder of an editable is its base folder (the recipe folder)
+    assert f"pkg/0.1: PKG FOLDER={c.current_folder}!!!" in c.out
 
 
 def test_editable_components_absolute_paths():

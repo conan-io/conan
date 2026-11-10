@@ -276,10 +276,10 @@ class TestLibs:
         c.run("new cmake_exe -d name=game -d version=0.1 -d requires=gamelib/0.1")
         c.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
-        assert "matrix/0.1: Hello World Release!"
-        assert "engine/0.1: Hello World Release!"
-        assert "gamelib/0.1: Hello World Release!"
-        assert "game/0.1: Hello World Release!"
+        assert "matrix/0.1: Hello World Release!" in c.out
+        assert "engine/0.1: Hello World Release!" in c.out
+        assert "gamelib/0.1: Hello World Release!" in c.out
+        assert "game/0.1: Hello World Release!" in c.out
 
         # Make sure that transitive headers are private, fails to include, traits work
         game_cpp = c.load("src/game.cpp")
@@ -298,10 +298,10 @@ class TestLibs:
         c2.run("new cmake_exe -d name=game -d version=0.1 -d requires=gamelib/0.1")
         c2.run(f"create . -o *:shared={shared} -c tools.cmake.cmakedeps:new={new_value}")
 
-        assert "matrix/0.1: Hello World Release!"
-        assert "engine/0.1: Hello World Release!"
-        assert "gamelib/0.1: Hello World Release!"
-        assert "game/0.1: Hello World Release!"
+        assert "matrix/0.1: Hello World Release!" in c2.out
+        assert "engine/0.1: Hello World Release!" in c2.out
+        assert "gamelib/0.1: Hello World Release!" in c2.out
+        assert "game/0.1: Hello World Release!" in c2.out
 
 
 class TestLibsIntegration:
@@ -374,9 +374,9 @@ class TestLibsLinkageTraits:
         c.run(f"create . -o engine/*:shared=True -c tools.cmake.cmakedeps:new={new_value} "
               "-c tools.compilation:verbosity=verbose")
         assert re.search(r"Skipped host binaries(\s*)matrix/0.1", c.out)
-        assert "matrix/0.1: Hello World Release!"
-        assert "engine/0.1: Hello World Release!"
-        assert "game/0.1: Hello World Release!"
+        assert "matrix/0.1: Hello World Release!" in c.out
+        assert "engine/0.1: Hello World Release!" in c.out
+        assert "game/0.1: Hello World Release!" in c.out
 
     @pytest.mark.tool("cmake", "3.27")
     @pytest.mark.parametrize("shared", [False, True])
@@ -1689,14 +1689,11 @@ def test_multiple_find_package_subfolder():
 
 
 @pytest.mark.tool("cmake", "3.27")
-def test_find_package_casing_non_fallback():
+def test_find_package_casing_yes_fallback():
     """ CMakeConfigDeps creates hello_DIR by default, but CMake looks for
     the package name as given in find_package, so casing matters,
     and it won't look for hello_DIR, but to HellO_DIR.
-
-    Note that this would work without the layout, because CMake would fallback
-    to find the lowercase hello-config.cmake file in the CMAKE_INSTALL_PREFIX,
-    which happens to be the same folder the generated config file ends up without the layout."""
+    But the CMAKE_PREFIX_PATH fallback works"""
     cmakelists = textwrap.dedent("""
         cmake_minimum_required(VERSION 3.15)
         project(test NONE)
@@ -1723,8 +1720,9 @@ def test_find_package_casing_non_fallback():
     client.run(f"create .")
 
     client.save({"conanfile.py": consumer, "CMakeLists.txt": cmakelists})
-    client.run(f"build .", assert_error=True)
-    assert 'Could not find a package configuration file provided by "HellO"' in client.out
+    client.run("build .")
+    # Now it works, thanks to the fallback
+    assert "Conan: Target declared imported INTERFACE library 'hello::hello'" in client.out
 
 
 @pytest.mark.tool("cmake", "3.27")

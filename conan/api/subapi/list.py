@@ -23,7 +23,7 @@ def _timelimit(expression):
     time_value = expression[:-1]
     try:
         time_value = int(time_value)
-    except TypeError:
+    except ValueError:
         raise ConanException(f"Time value '{time_value}' must be an integer")
     time_units = expression[-1]
     units = {"y": 365 * 24 * 60 * 60,
@@ -52,7 +52,9 @@ class ListAPI:
 
     def latest_recipe_revision(self, ref: RecipeReference, remote: Remote = None):
         """ For a given recipe reference, return the latest revision of the recipe in the remote,
-        or in the local cache if no remote is specified, or ``None`` if the recipe does not exist."""
+        or in the local cache if no remote is specified.
+
+        Raises if the reference is not found in the remote or cache."""
         assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
         if remote:
             ret = self._api_helpers.remote_manager.get_latest_recipe_revision(ref, remote=remote)
@@ -73,9 +75,6 @@ class ListAPI:
         return results
 
     def latest_package_revision(self, pref: PkgReference, remote=None):
-        # TODO: This returns None if the given package_id is not existing. It should probably
-        #  raise NotFound, but to keep aligned with the above ``latest_recipe_revision`` which
-        #  is used as an "exists" check too in other places, lets respect the None return
         assert pref.revision is None, "latest_package_revision: ref already have a revision"
         assert pref.package_id is not None, "package_id must be defined"
         if remote:
@@ -163,7 +162,7 @@ class ListAPI:
         :parameter Remote remote: Remote to search in,
             if ``None``, it will search in the local cache.
         :parameter str lru: If set, it will filter the results to only include
-            packages/binaries that have been used in the last 'lru' time.
+            packages/binaries that have **not** been used in the last 'lru' time.
             It can be a string like ``"2d"`` (2 days) or ``"3h"`` (3 hours).
         :parameter Profile profile: Profile to filter the packages by settings and options.
         """
@@ -204,10 +203,7 @@ class ListAPI:
         for r in refs:  # Older versions first
             trefs.info(f"Listing revisions of {r} in {remote_name}", r, refs)
             if pattern.is_latest_rrev or pattern.rrev is None:
-                rrev = self.latest_recipe_revision(r, remote)
-                if rrev is None:
-                    raise NotFoundException(f"Recipe '{r}' not found")
-                rrevs = [rrev]
+                rrevs = [self.latest_recipe_revision(r, remote)]
             else:
                 rrevs = self.recipe_revisions(r, remote)
                 rrevs = pattern.filter_rrevs(rrevs)
@@ -243,11 +239,8 @@ class ListAPI:
                     new_prefs = []
                     for pref in prefs:
                         # Maybe the package_configurations returned timestamp
-                        if pattern.is_latest_prev or pattern.prev is None:
-                            prev = self.latest_package_revision(pref, remote)
-                            if prev is None:
-                                raise NotFoundException(f"Binary package not found: '{pref}")
-                            new_prefs.append(prev)
+                        if pattern.is_latest_prev:
+                            new_prefs.append(self.latest_package_revision(pref, remote))
                         else:
                             prevs = self.package_revisions(pref, remote)
                             prevs = pattern.filter_prevs(prevs)

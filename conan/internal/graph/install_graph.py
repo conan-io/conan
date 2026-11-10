@@ -89,9 +89,9 @@ class _InstallPackageReference:
         # to cross compile, there will be a dependency from the current "self" (host context)
         # to that "build" package_id.
         self.depends = []  # List of package_ids of dependencies to other binaries of the same ref
-        self.overrides = Overrides()
+        self._overrides = None  # lazy, see ``overrides``
         self.ref = None
-        self.info = None
+        self._info = None  # lazy, see ``info``
 
     @property
     def pref(self):
@@ -108,6 +108,28 @@ class _InstallPackageReference:
             self._options = _reproducible_options(self.nodes[0])
         return self._options
 
+    @property
+    def overrides(self):
+        # Lazy, it traverses the subgraph of the node and only "conan graph build-order" needs it
+        if self._overrides is None:
+            self._overrides = self.nodes[0].overrides() if self.nodes else Overrides()
+        return self._overrides
+
+    @overrides.setter
+    def overrides(self, value):
+        self._overrides = value
+
+    @property
+    def info(self):
+        # Lazy, only "conan graph build-order" needs it
+        if self._info is None and self.nodes:
+            self._info = self.nodes[0].conanfile.info.serialize()  # ConanInfo has no deserialize
+        return self._info
+
+    @info.setter
+    def info(self, value):
+        self._info = value
+
     @staticmethod
     def create(node):
         result = _InstallPackageReference()
@@ -117,8 +139,6 @@ class _InstallPackageReference:
         result.binary = node.binary
         result.context = node.context
         result.nodes.append(node)
-        result.overrides = node.overrides()
-        result.info = node.conanfile.info.serialize()  # ConanInfo doesn't have deserialize
         return result
 
     def add(self, node):
@@ -299,8 +319,8 @@ class _InstallConfiguration:
         self._options = None  # to be able to fire a build, the options will be necessary
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         self.depends = []  # List of full prefs
-        self.overrides = Overrides()
-        self.info = None
+        self._overrides = None  # lazy, see ``overrides``
+        self._info = None  # lazy, see ``info``
 
     def __str__(self):
         return f"{self.ref}:{self.package_id} ({self.binary}) -> {[str(d) for d in self.depends]}"
@@ -327,6 +347,28 @@ class _InstallConfiguration:
             self._options = _reproducible_options(self.nodes[0])
         return self._options
 
+    @property
+    def overrides(self):
+        # Lazy, it traverses the subgraph of the node and only "conan graph build-order" needs it
+        if self._overrides is None:
+            self._overrides = self.nodes[0].overrides() if self.nodes else Overrides()
+        return self._overrides
+
+    @overrides.setter
+    def overrides(self, value):
+        self._overrides = value
+
+    @property
+    def info(self):
+        # Lazy, only "conan graph build-order" needs it
+        if self._info is None and self.nodes:
+            self._info = self.nodes[0].conanfile.info.serialize()  # ConanInfo has no deserialize
+        return self._info
+
+    @info.setter
+    def info(self, value):
+        self._info = value
+
     @staticmethod
     def create(node):
         result = _InstallConfiguration()
@@ -335,8 +377,6 @@ class _InstallConfiguration:
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
-        result.overrides = node.overrides()
-        result.info = node.conanfile.info.serialize()
 
         result.nodes.append(node)
         for dep in node.edges:

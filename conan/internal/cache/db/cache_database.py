@@ -6,6 +6,7 @@ from conan.internal.cache.db.packages_table import PackagesDBTable
 from conan.internal.cache.db.recipes_table import RecipesDBTable
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.internal.errors import ConanReferenceDoesNotExistInDB
 from conan.internal.model.version import Version
 
 
@@ -26,7 +27,9 @@ class CacheDatabase:
 
     def get_latest_package_reference(self, pref):
         prevs = list(self._packages.get_package_revisions_references(pref, only_latest_prev=True))
-        return prevs[0]["pref"] if prevs else None
+        if not prevs:
+            raise ConanReferenceDoesNotExistInDB(f"Package '{pref.repr_notime()}' not found")
+        return prevs[0]["pref"]
 
     def get_latest_package_reference_data(self, pref):
         # Used just for PkgCache.pkg_layout_latest()
@@ -80,10 +83,12 @@ class CacheDatabase:
     def create_package(self, path, ref: PkgReference, build_id):
         self._packages.create(path, ref, build_id=build_id)
 
-    def list_references(self, pattern=None):
+    def list_references(self, pattern=None, name=None):
         """Returns a list of all RecipeReference in the cache, optionally filtering by pattern.
-         The references have their revision and timestamp attributes unset"""
-        return [ref for ref in self._recipes.all_references()
+         The references have their revision and timestamp attributes unset.
+         The ``name`` is an optimization: only references of that recipe name are loaded from the
+         DB, the pattern must not match references of other names"""
+        return [ref for ref in self._recipes.all_references(name)
                 if pattern is None or ref.partial_match(pattern)]
 
     def get_package_revisions_references(self, pref: PkgReference):

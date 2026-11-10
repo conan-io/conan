@@ -73,16 +73,16 @@ class HelloConan(ConanFile):
 
     def test_create(self):
         self.client.run("create . --user=lasote --channel=stable")
-        assert "say/0.1@lasote/stable: Building lasote/stable" in self.client.out
-        assert "hello/0.1@lasote/stable: Building lasote/stable" in self.client.out
+        assert "Building lasote/stable" in self.client.out
+        assert "Building lasote/stable" in self.client.out
         assert "other/testing" not in self.client.out
 
         self.client.save({"conanfile.py": self.conanfile,
                           "test/conanfile.py": self.test_conanfile.replace("lasote/stable",
                                                                            "other/testing")})
         self.client.run("create . --user=other --channel=testing")
-        assert "say/0.1@other/testing: Building other/testing" in self.client.out
-        assert "hello/0.1@other/testing: Building other/testing" in self.client.out
+        assert "Building other/testing" in self.client.out
+        assert "Building other/testing" in self.client.out
         assert "lasote/stable" not in self.client.out
 
     def test_local_commands(self):
@@ -90,11 +90,11 @@ class HelloConan(ConanFile):
         assert "ERROR: Package 'say/0.1' not resolved: No remote defined" in self.client.out
 
         self.client.run("install . --user=lasote --channel=stable")
-        assert "say/0.1@lasote/stable: Building lasote/stable" in self.client.out
+        assert "Building lasote/stable" in self.client.out
         assert "other/testing" not in self.client.out
 
         self.client.run("install . --user=other --channel=testing")
-        assert "say/0.1@other/testing: Building other/testing" in self.client.out
+        assert "Building other/testing" in self.client.out
         assert "lasote/stable" not in self.client.out
 
         # Now use the default_ methods to declare user and channel

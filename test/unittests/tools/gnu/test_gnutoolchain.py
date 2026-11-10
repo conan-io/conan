@@ -253,6 +253,46 @@ def test_crossbuild_to_android(build_env_mock):
     assert env_vars["STRIP"] == os.path.join(ndk_bin, "llvm-strip")  # does not exist but appears
 
 
+@pytest.mark.parametrize("arch, android_target", [("armv7", "armv7a-linux-androideabi"),
+                                                  ("armv8", "aarch64-linux-android"),
+                                                  ("x86", "i686-linux-android"),
+                                                  ("x86_64", "x86_64-linux-android")])
+@pytest.mark.parametrize("os_build, ndk_os_folder, ext", [("Macos", "darwin", ""),
+                                                          ("Linux", "linux", ""),
+                                                          ("Windows", "windows", ".cmd")])
+@patch("conan.tools.gnu.gnutoolchain.VirtualBuildEnv")
+def test_crossbuild_to_android_ndk_compilers(build_env_mock, arch, android_target, os_build,
+                                             ndk_os_folder, ext):
+    """ With the NDK path defined, the compilers are the ones of the NDK for the target of the arch,
+    with the api_level, and the folder of the OS of the build machine
+    """
+    build_env_mock.return_value.vars.return_value = {}  # No user defined variables
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Android", "arch": arch, "os.api_level": "21",
+                                       "compiler": "clang"})
+    conanfile.settings_build = MockSettings({"os": os_build, "arch": "x86_64"})
+    ndk_path = temp_folder()
+    conanfile.conf.define("tools.android:ndk_path", ndk_path)
+    gnutc = GnuToolchain(conanfile)
+    env_vars = gnutc.extra_env.vars(conanfile)
+    ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt", f"{ndk_os_folder}-x86_64",
+                           "bin")
+    expected = {"CC": f"{android_target}21-clang{ext}", "CXX": f"{android_target}21-clang++{ext}",
+                "AS": f"{android_target}21-clang{ext}", "LD": "ld", "STRIP": "llvm-strip",
+                "RANLIB": "llvm-ranlib", "AR": "llvm-ar", "ADDR2LINE": "llvm-addr2line",
+                "NM": "llvm-nm", "OBJCOPY": "llvm-objcopy", "OBJDUMP": "llvm-objdump",
+                "READELF": "llvm-readelf", "ELFEDIT": "llvm-elfedit"}
+    for var, tool in expected.items():
+        assert env_vars[var] == os.path.join(ndk_bin, tool)
+
+
+def test_gnu_toolchain_autoreconf_args_default():
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    gnutc = GnuToolchain(conanfile)
+    assert gnutc.autoreconf_args == {"--force": None, "--install": None}
+
+
 def test_gnu_toolchain_conf_extra_configure_args():
     """ Validate that tools.gnu:extra_configure_args are passed to the configure_args when
         building with GnuToolchain.
@@ -266,3 +306,42 @@ def test_gnu_toolchain_conf_extra_configure_args():
     tc = GnuToolchain(conanfile)
     assert tc.configure_args["--foo"] is None
     assert tc.configure_args["--bar"] is None
+
+
+def test_gnu_toolchain_environment_not_accumulated():
+    """ GnuToolchain._environment must not modify tc.extra_env, so calling it several times
+        (or modifying the toolchain between calls) doesn't accumulate values
+    """
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    conanfile.conf = Conf()
+    tc = GnuToolchain(conanfile)
+    tc.extra_env.append("CFLAGS", "-Ouser")
+    tc.extra_env.define("MYVAR", "myvalue")
+    extra_env_before = tc.extra_env.dumps()
+    tc.extra_cflags.append("-Ofoo")
+
+    for _ in range(3):
+        env_vars = tc._environment.vars(conanfile)
+        assert env_vars["CFLAGS"] == "-Ofoo -Ouser"
+        assert env_vars["MYVAR"] == "myvalue"
+        # extra_env is left untouched
+        assert tc.extra_env.dumps() == extra_env_before
+
+    # Changes in the toolchain are reflected, without the previous ones lingering
+    tc.extra_cflags.remove("-Ofoo")
+    tc.extra_cflags.append("-Obar")
+    assert tc._environment.vars(conanfile)["CFLAGS"] == "-Obar -Ouser"
+
+
+def test_gnu_toolchain_environment_extra_env_precedence():
+    """ User extra_env definitions have precedence, and that is stable across calls """
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    conanfile.conf = Conf()
+    tc = GnuToolchain(conanfile)
+    tc.extra_cflags.append("-Ofoo")
+    tc.extra_env.define("CFLAGS", "-Odefined")
+    for _ in range(2):
+        assert tc._environment.vars(conanfile)["CFLAGS"] == "-Odefined"
+

@@ -101,7 +101,7 @@ class TestExportsMethod:
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1")
-        assert "pkg/0.1: MYOPT: myval" in client.out
+        assert "MYOPT: myval" in client.out
 
     def test_export_folders(self):
         client = TestClient(light=True)
@@ -238,4 +238,4 @@ class TestExportsSourcesMethod:
         client.run("remove * -c")
         client.run("install --requires=pkg/0.1@ --build='*'")
         assert "pkg/0.1: Sources downloaded from 'default'" in client.out
-        assert "pkg/0.1: CONTENT: mycontent" in client.out
+        assert "CONTENT: mycontent" in client.out

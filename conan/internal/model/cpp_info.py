@@ -594,7 +594,10 @@ class _Component:
         libname = self.libs[0]
         dll_location = None
         deduced_type = None
-        libname, ext = os.path.splitext(libname)
+        stripped, ext = os.path.splitext(libname)
+        # Only strip real library extensions, "mylib-1.2" is the name of a library, not "mylib-1" + ".2"
+        if ext.lower() in (".a", ".lib", ".so", ".dylib", ".dll"):
+            libname = stripped
         lib_sanitized = re.escape(libname)
         component_sanitized = re.escape(library_name)
         # At first, exact match
@@ -797,9 +800,13 @@ class CppInfo:
             opened = new_open
         return result
 
-    def aggregated_components(self):
+    def aggregated_components(self, components=None):
         """Aggregates all the components as global values, returning a new CppInfo
         Used by many generators to obtain a unified, aggregated view of all components
+
+        :param components: if not ``None``, restrict the aggregation to only these
+         component names (used to compute the aggregated view of a subset of components,
+         e.g. the ones grouped in a single CMake config file).
         """
         # This method had caching before, but after a ``--deployer``, the package changes
         # location, and this caching was invalid, still pointing to the Conan cache instead of
@@ -807,7 +814,9 @@ class CppInfo:
         if self.has_components:
             result = _Component()
             # Reversed to make more dependant first
-            for component in reversed(self.get_sorted_components().values()):
+            for cmp_name, component in reversed(self.get_sorted_components().items()):
+                if components is not None and cmp_name not in components:
+                    continue
                 result.merge(component)
             # NOTE: The properties are not aggregated because they might refer only to the
             # component like "cmake_target_name" describing the target name FOR THE component

@@ -104,3 +104,33 @@ def test_nowinbash(client):
     assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     run_contents = client.load("conanrunenv.sh")
     assert 'export RUNTIME_VAR="/c/path/to/exe"' in run_contents
+
+
+def test_win_bash_cross_build_from_linux_no_subsystem():
+    # https://github.com/conan-io/conan/issues/20406
+    # win_bash=True when cross-building Linux->Windows, without a configured subsystem,
+    # should not fail while generating the environment: the build machine is not Windows
+    c = TestClient(light=True)
+    c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")
+                                                      .with_class_attribute("win_bash = True")})
+    c.run("install . -s:b os=Linux -s:h os=Windows")
+    assert "win_bash=True but tools.microsoft.bash:subsystem" not in c.out
+
+
+def test_win_bash_run_build_scope_no_subsystem():
+    # win_bash_run only applies to the "run" scope, it must not fail the "build" env generation
+    # Windows build machine (no subsystem configured), Linux host
+    c = TestClient(light=True)
+    c.save({"conanfile.py": GenConanfile().with_settings("os")
+                                          .with_class_attribute("win_bash_run = True")})
+    c.run("install . -s:b os=Windows -s:h os=Linux")
+    assert "win_bash_run=True but tools.microsoft.bash:subsystem" not in c.out
+
+
+def test_win_bash_run_scope_still_validated():
+    # The validation is kept in the scope where the attributes apply
+    c = TestClient(light=True)
+    c.save({"conanfile.py": GenConanfile().with_settings("os")
+                                          .with_class_attribute("win_bash_run = True")})
+    c.run("install . -s:b os=Linux -s:h os=Windows", assert_error=True)
+    assert "win_bash_run=True but tools.microsoft.bash:subsystem" in c.out

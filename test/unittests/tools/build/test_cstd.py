@@ -77,4 +77,4 @@ def test_check_cstd_type():
     with pytest.raises(ConanException) as exc:
         check_min_cstd(conanfile, "gnu17", False)
 
-    assert "cstd parameter must be a number", str(exc)
+    assert "cstd parameter must be a number" in str(exc)

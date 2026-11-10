@@ -36,17 +36,20 @@ def run_build_method(conanfile, hook_manager):
                              f"named: {conanfile.build_folder}")
     mkdir(conanfile.build_folder)
     mkdir(conanfile.package_metadata_folder)
+    old_display = conanfile.display_name
+    conanfile.display_name = ""
     with chdir(conanfile.build_folder):
         hook_manager.execute("pre_build", conanfile=conanfile)
         if hasattr(conanfile, "build"):
             conanfile.output.highlight("Calling build()")
-            with conanfile_exception_formatter(conanfile, "build"):
+            with conanfile_exception_formatter(conanfile, "build", ref=old_display):
                 try:
                     conanfile.build()
                 except Exception:
                     hook_manager.execute("post_build_fail", conanfile=conanfile)
                     raise
         hook_manager.execute("post_build", conanfile=conanfile)
+    conanfile.display_name = old_display
 
 
 def run_package_method(conanfile, package_id, hook_manager, ref):

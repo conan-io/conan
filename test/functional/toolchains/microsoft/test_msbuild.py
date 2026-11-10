@@ -301,44 +301,6 @@ myapp_vcxproj = r"""<?xml version="1.0" encoding="utf-8"?>
 """
 
 
-@pytest.mark.tool("visual_studio", "15")
-@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-def test_msvc_runtime_flag_vs2017():
-    check_msvc_runtime_flag("191")
-
-
-@pytest.mark.tool("visual_studio", "17")
-@pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
-def test_msvc_runtime_flag_vs2022():
-    check_msvc_runtime_flag("193")
-
-
-def check_msvc_runtime_flag(msvc_version):
-    client = TestClient()
-    conanfile = textwrap.dedent("""
-       from conan import ConanFile
-       from conan.tools.microsoft import msvc_runtime_flag
-       class App(ConanFile):
-           settings = "os", "arch", "compiler", "build_type"
-
-           def generate(self):
-               self.output.info("MSVC FLAG={}!!".format(msvc_runtime_flag(self)))
-        """)
-    client.save({"conanfile.py": conanfile})
-    client.run('install . -s compiler=msvc -s compiler.version={vs_version} '
-               '-s compiler.runtime=dynamic'.format(vs_version=msvc_version))
-    assert "MSVC FLAG=MD!!" in client.out
-    client.run('install . -s compiler=msvc -s compiler.version={msvc_version} '
-               '-s compiler.runtime=static '
-               '-s compiler.runtime_type=Debug '
-               '-s compiler.cppstd=14'.format(msvc_version=msvc_version))
-    assert "MSVC FLAG=MTd!!" in client.out
-    client.run('install . -s compiler=msvc -s compiler.version={msvc_version} '
-               '-s compiler.runtime=dynamic '
-               '-s compiler.cppstd=14'.format(msvc_version=msvc_version))
-    assert "MSVC FLAG=MD!!" in client.out
-
-
 @pytest.mark.skipif(platform.system() != "Windows", reason="Only for windows")
 @pytest.mark.tool("visual_studio")
 class TestWin:

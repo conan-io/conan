@@ -4,7 +4,7 @@ import shutil
 import tarfile
 import tempfile
 
-from conan.api.model import PackagesList
+from conan.api.model import PackagesList, ListPattern
 from conan.api.output import ConanOutput
 from conan.internal.api.uploader import compress_files, get_compress_level
 from conan.internal.cache.cache import PkgCache
@@ -150,6 +150,10 @@ class CacheAPI:
     def package_path(self, pref: PkgReference):
         """Returns the path of the package folder in the Conan cache
 
+        If the recipe implements the :ref:`finalize() <reference_conanfile_methods_finalize>`
+        method and it has already been executed, the path of the finalized folder is returned
+        instead.
+
         This folder is exclusively for **read-only** access, typically for debugging purposes,
         it is completely forbidden to modify any of its contents.
 
@@ -253,18 +257,21 @@ class CacheAPI:
                         pkg_bundle["pkgsign_error"] = str(e)
         return package_list
 
-    def clean(self, package_list, source=True, build=True, download=True, temp=True,
+    def clean(self, package_list=None, source=True, build=True, download=True, temp=True,
               backup_sources=False) -> None:
         """
         Remove non critical folders from the cache, like source, build and download (.tgz store)
         folders.
 
-        :param package_list: the package lists that should be cleaned
+        :param package_list: the package list that should be cleaned. If ``None``, the whole cache
+            is cleaned, and with ``backup_sources`` all the backup sources files are removed,
+            including the ones that do not belong to any recipe in the cache
         :param source: boolean, remove the "source" folder if True
         :param build: boolean, remove the "build" folder if True
         :param download: boolean, remove the "download (.tgz)" folder if True
         :param temp: boolean, remove the temporary folders
-        :param backup_sources: boolean, remove the "source" folder if True
+        :param backup_sources: boolean, remove the backup sources files if True. If a
+            ``package_list`` is given, only the ones downloaded by its recipes
         :return:
         """
 
@@ -283,12 +290,16 @@ class CacheAPI:
                         rmdir(folder)
 
         if backup_sources:
+            # Without package_list, there is no filtering: all the backup sources are removed
             backup_files = self._conan_api.cache.get_backup_sources(package_list, exclude=False,
                                                                     only_upload=False)
             ConanOutput().verbose(f"Cleaning {len(backup_files)} backup sources")
             for f in backup_files:
                 remove(f)
 
+        if package_list is None:
+            package_list = self._conan_api.list.select(ListPattern("*", rrev="*", package_id="*",
+                                                                   prev="*"))
         for ref, packages in package_list.items():
             ConanOutput(ref.repr_notime()).verbose("Cleaning recipe cache contents")
             ref_layout = cache.recipe_layout(ref)
@@ -463,8 +474,9 @@ class CacheAPI:
           have been downloaded form any of the references in the package_list)
         :param exclude: if True, exclude the sources that come from URLs present the
           core.sources:exclude_urls global conf
-        :param only_upload: if True, only return the files for packages that are set to be uploaded
-        :return: A list of files that need to be uploaded
+        :param only_upload: if True, only take into account the recipes and packages of the
+          package_list that are set to be uploaded. Not used if no package_list is given
+        :return: A list with the paths of the backup source files and their associated json files
         """
         config = self._api_helpers.global_conf
         download_cache_path = config.get("core.sources:download_cache")
@@ -489,10 +501,7 @@ class CacheAPI:
 def _resolve_latest_ref(cache, ref):
     if ref.revision is None or ref.revision == "latest":
         ref.revision = None
-        result = cache.get_latest_recipe_revision(ref)
-        if result is None:
-            raise ConanException(f"'{ref}' not found in cache")
-        ref = result
+        ref = cache.get_latest_recipe_revision(ref)
     return ref
 
 
@@ -500,10 +509,7 @@ def _resolve_latest_pref(cache, pref):
     pref.ref = _resolve_latest_ref(cache, pref.ref)
     if pref.revision is None or pref.revision == "latest":
         pref.revision = None
-        result = cache.get_latest_package_revision(pref)
-        if result is None:
-            raise ConanException(f"'{pref.repr_notime()}' not found in cache")
-        pref = result
+        pref = cache.get_latest_package_revision(pref)
     return pref
 
 

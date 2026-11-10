@@ -281,3 +281,25 @@ def test_build_requires_transitives_with_components():
     tool_b = c.load("conan_tool_build_b_release_x64.props")
     assert "conan_dep_build.props" in tool_b
     assert "conan_dep.props" not in tool_b
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="MSBuildDeps files names for Windows x64")
+def test_build_requires_transitives():
+    """ The tool-requires should not bring transitive dependencies, they will conflict and
+    are useless for linking
+    """
+    # https://github.com/conan-io/conan/issues/10222
+    c = TestClient()
+    c.save({"dep/conanfile.py": GenConanfile("dep", "0.1").with_package_type("shared-library"),
+            "tool/conanfile.py": GenConanfile("tool", "0.1").with_requires("dep/0.1"),
+            "consumer/conanfile.py":
+                GenConanfile().with_settings("os", "compiler", "build_type", "arch")
+                              .with_build_requires("tool/0.1")})
+    c.run("create dep")
+    c.run("create tool")
+    c.run("install consumer -g MSBuildDeps -of=.")
+    tool = c.load("conan_tool_build_release_x64.props")
+    assert "conan_dep_build.props" in tool
+    assert "conan_dep.props" not in tool
+    tool_vars = c.load("conan_tool_build_vars_release_x64.props")
+    assert "<Conantool_buildRootFolder>" in tool_vars

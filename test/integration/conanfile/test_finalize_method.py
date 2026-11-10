@@ -295,7 +295,7 @@ class TestToolRequiresFlows:
         tc.run("create app")
         # This fails. cpp_info is using the original package folder to construct the final path
         assert f"Dep bindir: {dep_layout.finalize()}" in tc.out
-        assert "app/1.0: Is finalized? True" in tc.out
+        assert "Is finalized? True" in tc.out
 
     def test_test_package_uses_created_tool_which_modifies_pkgfolder(self):
         tc = TestClient(light=True)
@@ -378,7 +378,7 @@ class TestRemoteFlows:
 
         client.run("remove * -c")
         client.run("install --requires=dep/1.0 -r=default")
-        assert "dep/1.0: Calling finalize()"
+        assert "dep/1.0: Calling finalize()" in client.out
         assert f"Running finalize method in {downloaded_pref_layout.finalize()}" in client.out
 
     def test_upload_verify_integrity(self, client):

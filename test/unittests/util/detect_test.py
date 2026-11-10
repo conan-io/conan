@@ -11,7 +11,16 @@ from conan.test.utils.tools import redirect_output
 from conan.test.utils.env import environment_update
 
 
+@pytest.fixture
+def no_compiler_detection():
+    # Some tests only check the detected os and arch, avoid the (slow) real compilers detection
+    with mock.patch("conan.internal.api.profile.detect.detect_default_compiler",
+                    return_value=(None, None, None)):
+        yield
+
+
 class TestDetect:
+    @pytest.mark.usefixtures("no_compiler_detection")
     @mock.patch("platform.machine", return_value="")
     def test_detect_empty_arch(self, _):
         result = detect_defaults_settings()
@@ -23,6 +32,7 @@ class TestDetect:
         ['powerpc', '32', '7.1.0.0', 'ppc32'],
         ['rs6000', None, '4.2.1.0', 'ppc32']
     ])
+    @pytest.mark.usefixtures("no_compiler_detection")
     def test_detect_aix(self, processor, bitness, version, expected_arch):
         with mock.patch("platform.machine", mock.MagicMock(return_value='XXXXXXXXXXXX')), \
                 mock.patch("platform.processor", mock.MagicMock(return_value=processor)), \
@@ -44,6 +54,7 @@ class TestDetect:
         ['aarch64', 'armv8'],
         ['sun4v', 'sparc']
     ])
+    @pytest.mark.usefixtures("no_compiler_detection")
     def test_detect_arch(self, machine, expected_arch):
         with mock.patch("platform.machine", mock.MagicMock(return_value=machine)):
             result = detect_defaults_settings()
