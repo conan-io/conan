@@ -29,7 +29,14 @@ class PkgCache:
 
         try:
             mkdir(self._store_folder)
-            db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
+            db_folder = self._store_folder
+            db_root = global_conf.get("core.cache:root_database_folder", check_type=str)
+            if db_root:
+                storage = os.path.normcase(os.path.realpath(self._store_folder))
+                storage_hash = hashlib.sha256(storage.encode("utf-8")).hexdigest()
+                db_folder = os.path.join(db_root, storage_hash)
+                mkdir(db_folder)
+            db_filename = os.path.join(db_folder, 'cache.sqlite3')
             self._base_folder = os.path.abspath(self._store_folder)
             self._db = CacheDatabase(filename=db_filename)
             # path of the packages already read from DB by pkg_layout_latest(), to avoid querying
