@@ -42,8 +42,6 @@ def test_default_bazel_toolchain(conanfile):
     content = load(c, os.path.join(c.current_folder, "conan", BazelToolchain.bazelrc_name))
     assert "cc_toolchain(" not in c.load("conan/conan_toolchain/BUILD.bazel")
     assert os.path.exists(os.path.join(c.current_folder, "conan", "BUILD.bazel"))
-    assert "try-import %workspace%/conan/conan_bzl.rc" in c.out
-    assert "bazel --bazelrc=conan/conan_bzl.rc build --config=conan-config //..." in c.out
     assert "build:conan-config --cxxopt=-std=gnu++17" in content
     assert "build:conan-config --force_pic=True" in content
     assert "build:conan-config --dynamic_mode=off" in content
@@ -110,7 +108,7 @@ def test_bazel_toolchain_and_cross_compilation(conanfile):
             "profile_host": profile_host})
     c.run("install . -pr:b profile -pr:h profile_host")
     content = load(c, os.path.join(c.current_folder, "conan", BazelToolchain.bazelrc_name))
-    assert "--cpu" not in content
+    assert "build:conan-config --cpu=darwin_arm64" in content
     assert "build:conan-config --platforms=//conan/conan_toolchain:target" in content
 
 
@@ -206,6 +204,7 @@ def test_native_build_generates_platforms(conanfile):
     assert "build:conan-config --host_platform=//conan/conan_toolchain:host" in content
     assert "-m64" not in content
     build = c.load("conan/conan_toolchain/BUILD.bazel")
+    assert 'load("@rules_cc//cc:defs.bzl", "cc_toolchain")' in build
     assert '"gcc": "/opt/bin/gcc"' in build
     assert '"ar": "/opt/bin/ar"' in build
     assert '"-m64"' in build
@@ -257,6 +256,7 @@ def test_msvc_cross_arm64(conanfile):
     assert 'msvc_cl_path = "C:/VS/arm64/cl.exe"' in build
     assert 'msvc_link_path = "C:/VS/arm64/link.exe"' in build
     assert '"/MACHINE:ARM64"' in build
+    assert "archiver_flags" not in build
     assert 'msvc_cl_path = "C:/VS/x64/cl.exe"' in build
     assert '"/MACHINE:X64"' in build
     assert 'name = "cc_for_host"' in build
@@ -282,7 +282,7 @@ def test_cross_build_generates_platforms(conanfile):
 
 @pytest.mark.parametrize("setting, value", [("os", "Linux"), ("arch", "x86_64")])
 def test_missing_os_or_arch_skips_platforms(setting, value):
-    """Unset os or arch omits the platforms. The bazelrc is still written."""
+    """Unset os or arch omits the platforms. The bazelrc and the module are still written."""
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
         class Consumer(ConanFile):
@@ -295,7 +295,11 @@ def test_missing_os_or_arch_skips_platforms(setting, value):
     content = load(c, os.path.join(c.current_folder, BazelToolchain.bazelrc_name))
     assert "build:conan-config --dynamic_mode=off" in content
     assert "--platforms" not in content
-    assert not os.path.exists(os.path.join(c.current_folder, "conan_toolchain.MODULE.bazel"))
+    module = c.load("conan_toolchain.MODULE.bazel")
+    assert 'bazel_dep(name = "platforms"' in module
+    assert "register_toolchains" not in module
+    assert os.path.exists(os.path.join(c.current_folder, "BUILD.bazel"))
+    assert not os.path.exists(os.path.join(c.current_folder, "conan_toolchain"))
 
 
 def test_unmapped_arch_fails(conanfile):

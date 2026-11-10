@@ -30,15 +30,15 @@ import textwrap
 
 from jinja2 import Environment, Template
 
-from conan.api.output import Color
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
 from conan.internal.util.runners import check_output_runner, detect_runner
+from conan.tools.apple import to_apple_arch, is_apple_os
 from conan.tools.build import stdcpp_library
+from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import (architecture_flag, architecture_link_flag, cppstd_flag,
                                      libcxx_flags)
-from conan.tools.cmake.layout import is_consumer
 from conan.tools.files import save
 from conan.tools.microsoft import is_msvc_static_runtime
 from conan.tools.microsoft.visual import _vcvars_call
@@ -77,7 +77,7 @@ _ARCH_CONSTRAINTS = {
 _PLATFORMS_VERSION = "1.1.0"
 _TOOLCHAIN_PACKAGE = "conan_toolchain"
 _MODULE_FILENAME = "conan_toolchain.MODULE.bazel"
-# The rules_cc copy of the windows config is the one with archiver_flags and default_link_flags.
+# The rules_cc copy of the windows config is the one with default_link_flags.
 _CONFIG_RULES = {
     "unix_cc_toolchain_config": "@bazel_tools//tools/cpp:unix_cc_toolchain_config.bzl",
     "windows_cc_toolchain_config":
@@ -120,6 +120,16 @@ class _ProfileView:
         self.settings_build = settings_build
 
 
+def _get_cpu_name(conanfile):
+    host_os = conanfile.settings.get_safe('os').lower()
+    host_arch = conanfile.settings.get_safe('arch')
+    if is_apple_os(conanfile):
+        host_os = "darwin" if host_os == "macos" else host_os
+        host_arch = to_apple_arch(conanfile)
+    # FIXME: Probably it's going to fail, but let's try it because it normally follows this syntax
+    return f"{host_os}_{host_arch}"
+
+
 def _slash(path):
     return path.replace("\\", "/")
 
@@ -141,14 +151,14 @@ def _platform_constraints(settings):
             f"@platforms//cpu:{_ARCH_CONSTRAINTS[arch]}"]
 
 
-def _tool_path(name):
-    """Keep a path. Resolve a bare name on PATH.
+def _tool_path(name, path=None):
+    """Keep a path. Resolve a bare name on ``path``, or on PATH when it is None.
 
     Bazel uses the string as a path. It does not search PATH.
     """
     if "/" in _slash(name) or os.path.isabs(name):
         return _slash(name)
-    found = shutil.which(name)
+    found = shutil.which(name, path=path)
     return _slash(found) if found else None
 
 
@@ -247,13 +257,17 @@ def _msvc_config(conanfile, settings, conf):
         conanfile.output.warning(f"BazelToolchain skips the MSVC compiler for arch={arch!r}. "
                                  f"Supported architectures are {sorted(_MSVC_MACHINE)}.")
         return None
+    env = _vcvars_env(conanfile, settings, conf)
+    if not env:
+        conanfile.output.warning(f"BazelToolchain could not get the vcvars environment for "
+                                 f"arch={arch!r}. The MSVC toolchain uses the current environment.")
+        env = os.environ
     executables = _compiler_executables(conf)
-    cl = _tool_path(executables.get("c") or executables.get("cpp") or "cl")
+    cl = _tool_path(executables.get("c") or executables.get("cpp") or "cl", env.get("PATH"))
     if not cl:
         conanfile.output.warning("BazelToolchain could not find cl.exe. Set "
                                  "tools.build:compiler_executables or make cl available on PATH.")
         return None
-    env = _vcvars_env(conanfile, settings, conf) or os.environ
     include, lib_env = env.get("INCLUDE", ""), env.get("LIB", "")
     if not include or not lib_env:
         conanfile.output.warning(f"BazelToolchain MSVC toolchain has no INCLUDE or LIB for "
@@ -262,7 +276,6 @@ def _msvc_config(conanfile, settings, conf):
     folder = posixpath.dirname(cl)
     link, lib = posixpath.join(folder, "link.exe"), posixpath.join(folder, "lib.exe")
     assembler = _MSVC_ASSEMBLER.get(machine)
-    machine_flags = [f"/MACHINE:{machine}"]
     return "windows_cc_toolchain_config", {
         "cpu": "x64_windows",
         "compiler": "msvc-cl",
@@ -276,8 +289,8 @@ def _msvc_config(conanfile, settings, conf):
         "msvc_env_lib": lib_env,
         "msvc_env_path": env.get("PATH"),
         "msvc_env_tmp": env.get("TMP") or env.get("TEMP"),
-        "archiver_flags": machine_flags,
-        "default_link_flags": machine_flags,
+        # Bazel 6 rules_cc has no archiver_flags. lib.exe takes the machine from the objects.
+        "default_link_flags": [f"/MACHINE:{machine}"],
     }
 
 
@@ -295,12 +308,14 @@ def _starlark(value):
 _env = Environment(trim_blocks=True, lstrip_blocks=True)
 _env.filters["starlark"] = _starlark
 
+# Bazel 6 loads this file through --platforms or //... with its bundled rules_cc. Only load
+# symbols and pass attributes that the rules_cc copy in Bazel 6 also has.
 _BUILD_TEMPLATE = _env.from_string(textwrap.dedent("""\
     {% for rule in toolchains|map(attribute="rule")|unique %}
     load("{{ config_rules[rule] }}", {{ rule }} = "cc_toolchain_config")
     {% endfor %}
     {% if toolchains %}
-    load("@rules_cc//cc/toolchains:cc_toolchain.bzl", "cc_toolchain")
+    load("@rules_cc//cc:defs.bzl", "cc_toolchain")
 
     {% endif %}
     package(default_visibility = ["//visibility:public"])
@@ -423,8 +438,14 @@ class BazelToolchain:
         # If you want to add it, you will have to use a specific Bazel toolchain
         #: String used to add --compiler=xxxx.
         self.compiler = None
-        #: String used to add --cpu=xxxxx. Left unset. Bazel 6 was the last release that needed it.
+        # cpu is the target architecture, and it's a bit tricky. If it's not a cross-compilation,
+        # let Bazel guess it.
+        #: String used to add --cpu=xxxxx. At the moment, it's only added if cross-building.
         self.cpu = None
+        if cross_building(self._conanfile):
+            # Bazel is using those toolchains/platforms by default.
+            # It's better to let it configure the project in that case
+            self.cpu = _get_cpu_name(conanfile)
         # This is itself a toolchain but just in case
         #: String used to add --crosstool_top.
         self.crosstool_top = None
@@ -497,22 +518,24 @@ class BazelToolchain:
         return toolchains
 
     def _write_platforms(self, exec_constraints, target_constraints):
-        """Writes the platforms, the toolchains and the module snippet. Returns the package."""
-        folder = self._generators_folder()
-        package = f"//{posixpath.join(folder, _TOOLCHAIN_PACKAGE)}"
+        """Writes the platforms and the toolchains. Returns the toolchains."""
         toolchains = self._toolchains(exec_constraints, target_constraints)
         build = _BUILD_TEMPLATE.render(
             config_rules=_CONFIG_RULES, toolchains=toolchains,
             platforms={"host": exec_constraints, "target": target_constraints},
         )
+        save(self._conanfile, os.path.join(_TOOLCHAIN_PACKAGE, "BUILD.bazel"), build)
+        return toolchains
+
+    def _write_module(self, package, toolchains):
+        """Writes the module snippet, also without platforms, so its include() never fails."""
+        folder = self._generators_folder()
         module = _MODULE_TEMPLATE.render(
             include=f"//{folder}:{_MODULE_FILENAME}", package=package, toolchains=toolchains,
             platforms_version=_PLATFORMS_VERSION,
         )
-        save(self._conanfile, os.path.join(_TOOLCHAIN_PACKAGE, "BUILD.bazel"), build)
         save(self._conanfile, _MODULE_FILENAME, module)
         save(self._conanfile, "BUILD.bazel", "# This is an empty BUILD file.")
-        return package
 
     def generate(self):
         """
@@ -520,10 +543,12 @@ class BazelToolchain:
         ``--config=conan-config`` to use it. The build type is ``--compilation_mode`` inside
         that config. A later install overwrites the file.
 
-        Also writes host and target ``platform()`` rules and a ``conan_toolchain.MODULE.bazel``
-        snippet when both profiles define ``os`` and ``arch``. For gcc and clang on Linux, and for
-        msvc on Windows, it writes the ``cc_toolchain`` that Bazel uses for that profile. An msvc
-        cross build writes one toolchain per profile, with that profile's vcvars environment.
+        Also writes a ``conan_toolchain.MODULE.bazel`` snippet. With Bazel 7.2 or newer, the
+        ``MODULE.bazel`` has to ``include()`` it. A Bazel 6 ``WORKSPACE`` build does not use it,
+        and keeps selecting the compiler with ``--cpu``. When both profiles define ``os`` and
+        ``arch``, it writes host and target ``platform()`` rules. For gcc and clang on Linux, and
+        for msvc on Windows, it writes the ``cc_toolchain`` that Bazel uses for that profile. An
+        msvc cross build writes one toolchain per profile, with that profile's vcvars environment.
         Those toolchains load ``rules_cc``, so the ``MODULE.bazel`` needs
         ``bazel_dep(name = "rules_cc")``. The BazelDeps module snippet already declares it.
         """
@@ -535,17 +560,11 @@ class BazelToolchain:
             lines.append(f"build:{config} --features=static_link_msvcrt")
         exec_constraints = _platform_constraints(self._conanfile.settings_build)
         target_constraints = _platform_constraints(self._conanfile.settings)
+        package = f"//{posixpath.join(self._generators_folder(), _TOOLCHAIN_PACKAGE)}"
+        toolchains = []
         if exec_constraints and target_constraints:
-            package = self._write_platforms(exec_constraints, target_constraints)
+            toolchains = self._write_platforms(exec_constraints, target_constraints)
             lines.append(f"build:{config} --platforms={package}:target")
             lines.append(f"build:{config} --host_platform={package}:host")
+        self._write_module(package, toolchains)
         save(self._conanfile, self.bazelrc_name, "\n".join(lines) + "\n")
-        self._conanfile.output.info(f"BazelToolchain generated: {self.bazelrc_name}")
-        if is_consumer(self._conanfile):
-            rc_path = posixpath.join(self._generators_folder(), self.bazelrc_name)
-            msg = textwrap.dedent(f"""\
-                BazelToolchain: Config '{config}' added to {rc_path}.
-                    bazel --bazelrc={rc_path} build --config={config} //...
-                    Or add to .bazelrc: try-import %workspace%/{rc_path}
-                    bazel build --config={config} //...""")
-            self._conanfile.output.info(msg, fg=Color.CYAN)
