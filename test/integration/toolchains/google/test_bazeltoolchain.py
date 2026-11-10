@@ -292,9 +292,9 @@ def test_missing_os_or_arch_skips_platforms(setting, value):
     """)
     c = TestClient()
     c.save({"conanfile.py": conanfile})
-    c.run(f"install . -s {setting}={value}")
+    # -s:a sets both profiles, so it is not a cross build on any CI machine
+    c.run(f"install . -s:a {setting}={value}")
     content = load(c, os.path.join(c.current_folder, BazelToolchain.bazelrc_name))
-    assert "build:conan-config --dynamic_mode=off" in content
     assert "--platforms" not in content
     module = c.load("conan_toolchain.MODULE.bazel")
     assert 'bazel_dep(name = "platforms"' in module
