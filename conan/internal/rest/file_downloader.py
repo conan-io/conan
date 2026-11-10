@@ -129,10 +129,12 @@ class FileDownloader:
                     if is_large_file:
                         timed_output.info("Downloaded", total_downloaded_size)
 
-            gzip = (response.headers.get("content-encoding") == "gzip")
+            encoding = response.headers.get("content-encoding")
+            encoded = encoding and encoding != "identity"
             response.close()
-            # it seems that if gzip we don't know the size, cannot resume and shouldn't raise
-            if total_downloaded_size != total_length and not gzip:
+            # With a non-identity encoding, Content-Length indicates the encoded size, not the raw
+            # size, so skip the check
+            if total_downloaded_size != total_length and not encoded:
                 if (total_length > total_downloaded_size > range_start
                         and response.headers.get("Accept-Ranges") == "bytes"):
                     self._download_file(url, auth, headers, file_path, verify_ssl, try_resume=True)
