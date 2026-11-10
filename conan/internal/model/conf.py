@@ -69,8 +69,7 @@ BUILT_IN_CONFS = {
     "core.net.http:proxies": "Dictionary containing the proxy configuration",
     "core.net.http:cacert_path": "Path containing a custom Cacert file",
     "core.net.http:client_cert": "Path or tuple of files containing a client cert (and key)",
-    "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be ignored "
-                                        "(REQUESTS_CA_BUNDLE/CURL_CA_BUNDLE are still honored)",
+    "core.net.http:clean_system_proxy": "If defined, the proxies system env-vars will be discarded",
     "core.net.http:trust_store": "(Experimental) If True, additionally verify HTTPS certificates "
                                   "against the OS-native trust store via the 'truststore' "
                                   "(needs Python>=3.10) package "
