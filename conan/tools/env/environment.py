@@ -416,14 +416,19 @@ class EnvVars:
         the original environment when the context ends.
 
         """
-        apply_vars = self.items()
-        old_env = dict(os.environ)
+        apply_vars = dict(self.items())
+        # Only restore the modified variables, never clear() the whole os.environ, because it is
+        # process-global and other threads could observe it empty (not atomic)
+        old_values = {k: os.environ.get(k) for k in apply_vars}
         os.environ.update(apply_vars)
         try:
             yield
         finally:
-            os.environ.clear()
-            os.environ.update(old_env)
+            for k, v in old_values.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
 
     def save_dotenv(self, file_location):
         result = []
