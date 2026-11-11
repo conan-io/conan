@@ -12,8 +12,8 @@ from conan.errors import ConanException
 class BaseDbTable:
     table_name: str = None
     columns_description: List[Tuple[str, type]] = None
-    row_type: namedtuple = None
-    columns: namedtuple = None
+    row_type = None
+    columns = None
     unique_together: tuple = None
     _lock: threading.Lock = None
     _lock_storage = defaultdict(threading.Lock)
@@ -27,18 +27,20 @@ class BaseDbTable:
 
     @contextmanager
     def db_connection(self):
-        if not self._lock.acquire(timeout=20):
+        if not self._lock.acquire(timeout=180):
             m = "".join(traceback.format_stack()) + "\n"
             ConanOutput().error("Error while acquiring lock for DB: " + m)
-            raise ConanException("Conan failed to acquire database lock in 20s. Maybe the system is "
-                                 "under very heavy load. Please report it to Github tickets")
-        # isolation_level=None, puts it in regular SQLITE autocommit mode, every
-        # connection.execute() will autocommit
-        connection = sqlite3.connect(self.filename, isolation_level=None, timeout=20)
+            raise ConanException("Conan failed to acquire database lock in 180s. Maybe the system "
+                                 "is under very heavy load. Please report it to Github tickets")
         try:
-            yield connection
+            # isolation_level=None, puts it in regular SQLITE autocommit mode, every
+            # connection.execute() will autocommit
+            connection = sqlite3.connect(self.filename, isolation_level=None, timeout=180)
+            try:
+                yield connection
+            finally:
+                connection.close()
         finally:
-            connection.close()
             self._lock.release()
 
     def create_table(self):
