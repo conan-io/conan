@@ -43,7 +43,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
     nodes = [node for node in graph.nodes if should_add_node(node, add_build, add_tests)]
     if has_special_root_node:
         nodes = nodes[1:]
-    # visible=False repeats a recipe in the graph. One node per bom-ref.
+    # visible=False can repeat a recipe. bom-ref includes package_id, so this keeps one node per binary.
     nodes = list({_calculate_bomref(node): node for node in nodes}.values())
 
     dependencies = []
@@ -145,7 +145,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
     nodes = [node for node in graph.nodes if should_add_node(node, add_build, add_tests)]
     if has_special_root_node:
         nodes = nodes[1:]
-    # visible=False repeats a recipe in the graph. One node per bom-ref.
+    # visible=False can repeat a recipe. bom-ref includes package_id, so this keeps one node per binary.
     nodes = list({_calculate_bomref(node): node for node in nodes}.values())
 
     dependencies = []
@@ -254,7 +254,14 @@ def _component_extra_info(extra_info, node):
 def _calculate_bomref(component):
     user = f"&user={component.ref.user}" if component.ref.user else ""
     channel = f"&channel={component.ref.channel}" if component.ref.channel else ""
-    return f"pkg:conan/{component.name}@{component.ref.version}?rrev={component.ref.revision}{user}{channel}"
+    package_id = getattr(component, "package_id", None)
+
+    if not isinstance(package_id, str):
+        node = getattr(component, "_conan_node", None)
+        package_id = node.package_id if node is not None else None
+    package_id = f"&package_id={package_id}" if package_id else ""
+    return (f"pkg:conan/{component.name}@{component.ref.version}"
+            f"?rrev={component.ref.revision}{package_id}{user}{channel}")
 
 
 def should_add_node(node, add_build, add_tests):
