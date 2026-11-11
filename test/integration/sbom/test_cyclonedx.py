@@ -396,6 +396,23 @@ class TestCyclonedx:
         assert bar["supplier"] == {"name": "Acme"}
         assert bar["cpe"] == "cpe:2.3:a:acme:bar:1.0:*:*:*:*:*:*:*"
 
+    def test_visible_false_duplicate_bomref(self, cyclone_version):
+        # https://github.com/conan-io/conan/issues/20489
+        tc = TestClient(light=True)
+        tc.save({"liba/conanfile.py": GenConanfile("liba", "1.0"),
+                 "libb/conanfile.py": GenConanfile("libb", "1.0")
+                .with_requirement("liba/1.0", visible=False),
+                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("libb/1.0", "liba/1.0")})
+        tc.run("export liba")
+        tc.run("export libb")
+        method = {"cyclonedx_1_4": "1.4", "cyclonedx_1_6": "1.6"}[cyclone_version]
+        tc.run(f"graph info app --deployer=cyclone_{method} --deployer-folder=out")
+        sbom = json.loads(tc.load(os.path.join("out", f"sbom-cyclonedx-{method}.json")))
+        liba_components = [c["bom-ref"] for c in sbom["components"] if "/liba@" in c["bom-ref"]]
+        liba_deps = [d["ref"] for d in sbom["dependencies"] if "/liba@" in d["ref"]]
+        assert len(liba_components) == 1
+        assert len(liba_deps) == 1
+
 
 class TestCyclonedx2:
     # Using the sbom tool with "conan create"

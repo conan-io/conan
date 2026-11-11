@@ -43,6 +43,8 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
     nodes = [node for node in graph.nodes if should_add_node(node, add_build, add_tests)]
     if has_special_root_node:
         nodes = nodes[1:]
+    # visible=False repeats a recipe in the graph. One node per bom-ref.
+    nodes = list({_calculate_bomref(node): node for node in nodes}.values())
 
     dependencies = []
     if has_special_root_node:
@@ -143,6 +145,8 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
     nodes = [node for node in graph.nodes if should_add_node(node, add_build, add_tests)]
     if has_special_root_node:
         nodes = nodes[1:]
+    # visible=False repeats a recipe in the graph. One node per bom-ref.
+    nodes = list({_calculate_bomref(node): node for node in nodes}.values())
 
     dependencies = []
     if has_special_root_node:
