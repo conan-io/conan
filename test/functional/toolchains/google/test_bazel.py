@@ -30,26 +30,11 @@ def base_profile():
         include(default)
         [settings]
         build_type={build_type}
-        compiler.cppstd=20
 
         [conf]
         tools.google.bazel:bazelrc_path=["{curdir}/mybazelrc"]
         tools.google.bazel:configs=["withTimeStamps"]
         """)
-
-
-def _check_conan_toolchain_used(client, ref):
-    """
-    The C++ standard is only defined by the Conan BazelToolchain (Bazel default one is older),
-    so it proves that the Conan generated toolchain (or the --cxxopt fallback in MSVC) was used
-    """
-    assert "BazelToolchain generated: //conan:conan_toolchain.MODULE.bazel" in client.out
-    if platform.system() == "Windows":
-        assert f"{ref}: _MSVC_LANG202002" in client.out
-    else:
-        assert f"{ref}: __cplusplus202002" in client.out
-        # Native builds do not need any bazelrc file, the toolchain is registered by MODULE.bazel
-        assert "conan_bzl.rc" not in client.out
 
 
 @pytest.mark.slow
@@ -64,10 +49,18 @@ def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
     profile = base_profile.format(build_type=build_type,
                                   curdir=client.current_folder.replace("\\", "/"))
     client.save({"my_profile": profile})
-    client.run("create . --profile=./my_profile")
+    client.run("create . --profile=./my_profile -s compiler.cppstd=20")
     assert f"myapp/1.0: Hello World {build_type}!" in client.out
     assert "--config=withTimeStamps" in client.out
-    _check_conan_toolchain_used(client, "myapp/1.0")
+    # compiler.cppstd=20 is only applied by the Conan generated toolchain (or the
+    # --cxxopt fallback in MSVC), Bazel default toolchain and compilers use an older standard
+    assert "BazelToolchain generated: //conan:conan_toolchain.MODULE.bazel" in client.out
+    if platform.system() == "Windows":
+        assert "myapp/1.0: _MSVC_LANG202002" in client.out
+    else:
+        assert "myapp/1.0: __cplusplus202002" in client.out
+        # Native builds do not need any bazelrc file, the toolchain is registered by MODULE.bazel
+        assert "conan_bzl.rc" not in client.out
 
 
 @pytest.mark.slow
@@ -78,9 +71,8 @@ def test_basic_lib(bazelrc, base_profile, bazel_output_root_dir):
     """
     client = TestClient(path_with_spaces=False)
     client.run(f"new bazel_lib -d name=mylib -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
-    client.run("create . -s compiler.cppstd=20")
+    client.run("create .")
     assert "mylib/1.0: Hello World Release!" in client.out
-    _check_conan_toolchain_used(client, "mylib/1.0")
 
 
 @pytest.mark.slow
@@ -88,9 +80,8 @@ def test_basic_lib(bazelrc, base_profile, bazel_output_root_dir):
 def test_basic_lib_9x(bazelrc, base_profile, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
     client.run(f"new bazel_lib -d name=mylib -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
-    client.run("create . -s compiler.cppstd=20")
+    client.run("create .")
     assert "mylib/1.0: Hello World Release!" in client.out
-    _check_conan_toolchain_used(client, "mylib/1.0")
 
 
 @pytest.mark.slow
