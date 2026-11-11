@@ -15,11 +15,10 @@ def bazel_output_root_dir():
 
 @pytest.fixture(scope="module")
 def bazelrc():
+    # BazelToolchain already injects the Conan build_type flags (-O3, -g, -DNDEBUG...) in the
+    # generated cc_toolchain, so no "-c opt/dbg" configurations are needed anymore. These ones
+    # only check that the user bazelrc files and configs are still passed by the Bazel helper
     return textwrap.dedent("""
-        build:Debug -c dbg --copt=-g
-        build:Release -c opt
-        build:RelWithDebInfo -c opt --copt=-O3 --copt=-DNDEBUG
-        build:MinSizeRel  -c opt --copt=-Os --copt=-DNDEBUG
         build --color=yes
         build:withTimeStamps --show_timestamps
         """)
@@ -31,11 +30,26 @@ def base_profile():
         include(default)
         [settings]
         build_type={build_type}
+        compiler.cppstd=20
 
         [conf]
         tools.google.bazel:bazelrc_path=["{curdir}/mybazelrc"]
-        tools.google.bazel:configs=["{build_type}", "withTimeStamps"]
+        tools.google.bazel:configs=["withTimeStamps"]
         """)
+
+
+def _check_conan_toolchain_used(client, ref):
+    """
+    The C++ standard is only defined by the Conan BazelToolchain (Bazel default one is older),
+    so it proves that the Conan generated toolchain (or the --cxxopt fallback in MSVC) was used
+    """
+    assert "BazelToolchain generated: //conan:conan_toolchain.MODULE.bazel" in client.out
+    if platform.system() == "Windows":
+        assert f"{ref}: _MSVC_LANG202002" in client.out
+    else:
+        assert f"{ref}: __cplusplus202002" in client.out
+        # Native builds do not need any bazelrc file, the toolchain is registered by MODULE.bazel
+        assert "conan_bzl.rc" not in client.out
 
 
 @pytest.mark.slow
@@ -51,10 +65,9 @@ def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
                                   curdir=client.current_folder.replace("\\", "/"))
     client.save({"my_profile": profile})
     client.run("create . --profile=./my_profile")
-    if build_type != "Debug":
-        assert "myapp/1.0: Hello World Release!" in client.out
-    else:
-        assert "myapp/1.0: Hello World Debug!" in client.out
+    assert f"myapp/1.0: Hello World {build_type}!" in client.out
+    assert "--config=withTimeStamps" in client.out
+    _check_conan_toolchain_used(client, "myapp/1.0")
 
 
 @pytest.mark.slow
@@ -65,8 +78,9 @@ def test_basic_lib(bazelrc, base_profile, bazel_output_root_dir):
     """
     client = TestClient(path_with_spaces=False)
     client.run(f"new bazel_lib -d name=mylib -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
-    client.run("create .")
+    client.run("create . -s compiler.cppstd=20")
     assert "mylib/1.0: Hello World Release!" in client.out
+    _check_conan_toolchain_used(client, "mylib/1.0")
 
 
 @pytest.mark.slow
@@ -74,8 +88,9 @@ def test_basic_lib(bazelrc, base_profile, bazel_output_root_dir):
 def test_basic_lib_9x(bazelrc, base_profile, bazel_output_root_dir):
     client = TestClient(path_with_spaces=False)
     client.run(f"new bazel_lib -d name=mylib -d version=1.0 -d output_root_dir={bazel_output_root_dir}")
-    client.run("create .")
+    client.run("create . -s compiler.cppstd=20")
     assert "mylib/1.0: Hello World Release!" in client.out
+    _check_conan_toolchain_used(client, "mylib/1.0")
 
 
 @pytest.mark.slow
@@ -140,6 +155,9 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
                                       'generators = "BazelToolchain", "BazelDeps"\n'
                                       '    requires = "myfirstlib/1.2.11"')
         module = textwrap.dedent("""
+        bazel_dep(name = "rules_cc", version = "0.2.17")
+        bazel_dep(name = "platforms", version = "1.1.0")
+        include("//conan:conan_toolchain.MODULE.bazel")
         load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "conan_extension")
         use_repo(load_conan_dependencies, "myfirstlib")
         """)
