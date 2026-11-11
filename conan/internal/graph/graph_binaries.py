@@ -19,6 +19,57 @@ from conan.internal.model.info import RequirementInfo, RequirementsInfo
 from conan.internal.model.pkg_type import PackageType
 
 
+class _IntermediateNodes:
+    """ Computes, for a node and one of its transitive dependencies, which intermediate nodes
+    (between both) are also necessary if that dependency is necessary. E.g. for:
+        app -> libc (static) -> libb (header) -> liba (static)
+    if app needs liba (to link it), it also needs libb and libc (for the link order and the
+    transitivity of build systems integrations like CMakeDeps find_package()).
+
+    It follows the same propagation as the graph expansion, but evaluated only once at the end,
+    lazily and only for the dependencies that are needed:
+        nodes(P, X) = Union for every direct dependency C of P that propagates X to P:
+                          {C} + (nodes(C, X) if the C->P propagation carries X files)
+    """
+    def __init__(self):
+        self._cache = {}  # {(node, dep): set(intermediate nodes)}
+        self._deps = {}  # {node: {dep_node: [require]}}, the transitive_deps indexed by node
+
+    def _transitive_requires(self, node, dep):
+        deps = self._deps.get(node)
+        if deps is None:
+            deps = {}
+            for t in node.transitive_deps.values():
+                deps.setdefault(t.node, []).append(t.require)
+            self._deps[node] = deps
+        return deps.get(dep, ())
+
+    def nodes(self, node, dep):
+        if dep is None:  # unresolved transitive_deps, like an override of a non-existing dep
+            return ()
+        key = node, dep
+        result = self._cache.get(key)
+        if result is not None:
+            return result
+        result = set()
+        self._cache[key] = result  # before recursion, to protect against cycles
+        for edge in node.edges:
+            child = edge.dst
+            if child is dep or child.conanfile.vendor:  # vendor packages do not propagate
+                continue
+            for require in self._transitive_requires(child, dep):
+                down_require = edge.require.transform_downstream(child.conanfile.package_type,
+                                                                 require,
+                                                                 dep.conanfile.package_type,
+                                                                 node.conanfile)
+                if down_require is None:  # It is not propagated to node through child
+                    continue
+                result.add(child)
+                if down_require.files:  # dep files go through child, its chain is necessary too
+                    result.update(self.nodes(child, dep))
+        return result
+
+
 class GraphBinariesAnalyzer:
 
     def __init__(self, cache, remote_manager, home_folder, global_conf, hook_manager):
@@ -546,6 +597,7 @@ class GraphBinariesAnalyzer:
                     required_nodes.add(node)
 
         root_nodes = required_nodes.copy()
+        intermediate_nodes = _IntermediateNodes()
         while root_nodes:
             new_root_nodes = set()
             for node in root_nodes:
@@ -557,7 +609,7 @@ class GraphBinariesAnalyzer:
                 for req, t in node.transitive_deps.items():
                     if req.files or (req.direct and is_consumer):
                         deps_required.add(t.node)
-                        deps_required.update(req.required_nodes)
+                        deps_required.update(intermediate_nodes.nodes(node, t.node))
 
                 # Third pass, mark requires as skippeable
                 for dep in node.transitive_deps.values():
