@@ -259,9 +259,9 @@ class BinaryInstaller:
 
         ConanOutput().title("Installing packages")
 
-        package_count = sum(sum(len(install_reference.packages.values())
-                                for level in install_order
-                                for install_reference in level))
+        package_count = sum(len(install_reference.packages.values())
+                                 for level in install_order
+                                 for install_reference in level)
         handled_count = 1
 
         self._download_bulk(install_order)

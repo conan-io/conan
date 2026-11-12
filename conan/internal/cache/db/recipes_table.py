@@ -40,7 +40,7 @@ class RecipesDBTable(BaseDbTable):
         assert ref is not None
         assert ref.revision is not None
         assert ref.timestamp is not None
-        placeholders = ', '.jon(['?' for _ in range(len(self.columns)))
+        placeholders = ', '.join('?' for _ in range(len(self.columns)))
         lru = timestamp_now()
         with self.db_connection() as conn:
             try:
