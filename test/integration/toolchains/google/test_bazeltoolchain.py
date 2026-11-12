@@ -376,6 +376,9 @@ def test_toolchain_msvc():
     assert "build:conan-config --compilation_mode=dbg" in bazelrc
     assert "build:conan-config --features=static_link_msvcrt" in bazelrc
     assert "MT" not in bazelrc
+    # /Zi shares one .pdb between the parallel cl.exe of Bazel (C1041), /Z7 does not
+    assert "build:conan-config --copt=-Z7" in bazelrc
+    assert "-Zi" not in bazelrc
 
 
 def test_toolchain_msvc_bazelrc_quoting():

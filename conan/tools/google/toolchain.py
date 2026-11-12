@@ -317,6 +317,10 @@ class BazelToolchain:
         self.threads_flags = threads_flags(conanfile)
         #: Build type flags deduced by Conan (``-O3``, ``-g``...)
         self.build_type_flags = build_type_flags(conanfile)
+        if msvc_like:
+            # Bazel runs several cl.exe at the same time and /Zi makes them share one .pdb file
+            # (error C1041). Bazel itself uses /Z7, which embeds the debug info in each object
+            self.build_type_flags = ["-Z7" if f == "-Zi" else f for f in self.build_type_flags]
         #: Disable asserts (``-DNDEBUG``) if not Debug
         self.ndebug = build_type not in (None, "Debug")
         #: C++ standard flag
