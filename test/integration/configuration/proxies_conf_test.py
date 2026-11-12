@@ -5,6 +5,7 @@ from requests import Response
 
 from conan.test.utils.tools import TestClient, TestRequester
 from conan.test.utils.env import environment_update
+from conan.internal.util.files import save
 
 
 class TestProxiesConfTest:
@@ -121,15 +122,23 @@ class TestProxiesConfTest:
                 # resp._content = b'{"results": []}'
                 resp.status_code = 200
                 resp._content = b''
-                assert "HTTP_PROXY" not in os.environ
-                assert "http_proxy" not in os.environ
+                # os.environ is never mutated, the session just ignores it
+                assert os.environ["http_proxy"] == "my_system_proxy"
+                assert self.trust_env is False
+                assert kwargs["verify"] == "mybundle.pem"
                 print("My requester!")
                 return resp
 
         client = TestClient(requester_class=MyHttpRequester)
         client.save_home({"global.conf": 'core.net.http:clean_system_proxy = True'})
 
-        with environment_update({"http_proxy": "my_system_proxy"}):
+        netrc = os.path.join(client.current_folder, "my_netrc")
+        save(netrc, "machine myhost login myuser password mypass")
+        with environment_update({"http_proxy": "my_system_proxy",
+                                 "REQUESTS_CA_BUNDLE": "mybundle.pem",
+                                 "NETRC": netrc}):
             client.save({"conanfile.py": conanfile})
             client.run("create . --name=foo --version=1.0")
             assert "My requester!" in client.out
+            # .netrc is not supported with this conf, user is warned
+            assert f"Found '{netrc}', but it will be ignored" in client.out
