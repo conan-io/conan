@@ -1,4 +1,5 @@
 import os
+import platform
 import textwrap
 
 import pytest
@@ -371,6 +372,61 @@ def test_toolchain_msvc():
     assert "build:conan-config --compilation_mode=dbg" in bazelrc
     assert "build:conan-config --features=static_link_msvcrt" in bazelrc
     assert "MT" not in bazelrc
+
+
+def test_toolchain_msvc_bazelrc_quoting():
+    """
+    Bazel splits each bazelrc line by spaces, so the flags that contain them have to be quoted
+    """
+    profile = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=msvc
+    compiler.cppstd=17
+    compiler.runtime=dynamic
+    compiler.version=194
+    os=Windows
+    [conf]
+    tools.build:defines=["GREETING=hello world", "PLAIN=1"]
+    """)
+    conanfile = GenConanfile().with_settings("os", "arch", "build_type", "compiler")\
+        .with_generator("BazelToolchain")
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile": profile})
+    c.run("install . -pr:a profile")
+    bazelrc = c.load("conan_bzl.rc")
+    assert 'build:conan-config "--copt=-DGREETING=hello world"' in bazelrc
+    assert "build:conan-config --copt=-DPLAIN=1" in bazelrc
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="MSVC repo_env is only for Windows")
+def test_toolchain_msvc_repo_env_path_with_spaces():
+    """
+    The Visual Studio installation path has spaces by default (C:/Program Files/...)
+    """
+    profile = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=msvc
+    compiler.cppstd=17
+    compiler.runtime=dynamic
+    compiler.version=194
+    os=Windows
+    [conf]
+    tools.microsoft.msbuild:installation_path=C:/Program Files/Microsoft Visual Studio/2022/Community
+    """)
+    conanfile = GenConanfile().with_settings("os", "arch", "build_type", "compiler")\
+        .with_generator("BazelToolchain")
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile": profile})
+    c.run("install . -pr:a profile")
+    bazelrc = c.load("conan_bzl.rc")
+    assert ('build:conan-config "--repo_env=BAZEL_VC=C:/Program Files/Microsoft Visual Studio/'
+            '2022/Community/VC"') in bazelrc
 
 
 def test_toolchain_clang_cl():

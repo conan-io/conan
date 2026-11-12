@@ -81,6 +81,17 @@ from conan.tools.microsoft import msvc_runtime_flag, is_msvc
 from conan.tools.microsoft.visual import _vcvars_versions
 
 
+def _bazelrc_quote(flag):
+    """
+    Bazel splits every bazelrc line into tokens like a shell does, so a flag with spaces (e.g.,
+    ``--repo_env=BAZEL_VC=C:/Program Files/Microsoft Visual Studio/2022/VC``) has to be quoted
+    """
+    if not any(c.isspace() or c in "\"'\\" for c in flag):
+        return flag
+    escaped = flag.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
 class BazelToolchain:
     """
     BazelToolchain generator (platforms + C/C++ toolchain)
@@ -638,7 +649,7 @@ class BazelToolchain:
             save(self.bazelrc_name, self._render(self._bazelrc_template, {
                 "package": package,
                 "cross_building": self._is_cross_building,
-                "rc_flags": rc_flags,
+                "rc_flags": [_bazelrc_quote(flag) for flag in rc_flags],
             }))
             rc_msg = f" and {self.bazelrc_name} (--config={self.bazelrc_config})"
         else:
