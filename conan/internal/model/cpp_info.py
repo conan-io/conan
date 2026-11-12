@@ -3,7 +3,7 @@ import glob
 import json
 import os
 import re
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
@@ -782,10 +782,10 @@ class CppInfo:
 
         :return: ``OrderedDict`` {component_name: component}
         """
-        result = OrderedDict()
+        result = {}
         opened = self.components.copy()
         while opened:
-            new_open = OrderedDict()
+            new_open = {}
             for name, c in opened.items():
                 if not any(n in opened for n in c.required_component_names):
                     result[name] = c

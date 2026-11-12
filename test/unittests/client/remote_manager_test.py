@@ -44,7 +44,7 @@ class TestRemoteManager:
         extract_dir = os.path.join(folder, "extracted")
         uncompress_file(path, extract_dir)
 
-        extract_files = list(sorted(os.listdir(extract_dir)))
+        extract_files = sorted(os.listdir(extract_dir))
         expected_files = sorted(files.keys())
         assert extract_files == expected_files
 
@@ -72,7 +72,7 @@ class TestRemoteManager:
         extract_dir = os.path.join(folder, "extracted")
         uncompress_file(path, extract_dir)
 
-        extract_files = list(sorted(os.listdir(extract_dir)))
+        extract_files = sorted(os.listdir(extract_dir))
         expected_files = sorted(files.keys())
         assert extract_files == expected_files
 

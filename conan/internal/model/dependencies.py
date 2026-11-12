@@ -51,7 +51,7 @@ class UserRequirementsDict:
                     ret.append((require, value))
         if len(ret) > 1:
             current_filters = data._require_filter or "{}"
-            requires = "\n".join(["- {}".format(require) for require, _ in ret])
+            requires = "\n".join("- {}".format(require) for require, _ in ret)
             raise ConanException("There are more than one requires matching the specified filters:"
                                  " {}\n{}".format(current_filters, requires))
         if not ret:

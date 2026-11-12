@@ -702,7 +702,7 @@ class _CMakeContextGenerator:
                 target["objects"] = ";".join(objects)
             # System frameworks (only Apple OS)
             if info.frameworks:
-                target['frameworks'] = " ".join([f"-framework {frw}" for frw in info.frameworks])
+                target['frameworks'] = " ".join(f"-framework {frw}" for frw in info.frameworks)
             # FIXME: Ignoring this value for now. Relies on cmake_target_name or lib name.
             #        Revisit when cpp.exe value is used too.
             if info.package_framework:
@@ -852,7 +852,7 @@ class _CMakeContextGenerator:
 def _join_paths(conanfile, paths):
     paths = [p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"') for p in paths]
     paths = [relativize_path(p, conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
-    return " ".join([f'"{p}"' for p in paths])
+    return " ".join(f'"{p}"' for p in paths)
 
 
 class _PathGenerator:

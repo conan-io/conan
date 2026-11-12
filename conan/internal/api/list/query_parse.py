@@ -1,9 +1,6 @@
-from collections import OrderedDict
-
-
 def filter_package_configs(pkg_configurations, query):
     postfix = _infix_to_postfix(query) if query else []
-    result = OrderedDict()
+    result = {}
     for pref, data in pkg_configurations.items():
         if _evaluate_postfix_with_info(postfix, data):
             result[pref] = data
@@ -100,7 +97,8 @@ def _evaluate_postfix(postfix, evaluator):
 
             if el == "|":
                 res = o1 or o2
-            elif el == "&":
+            else:
+                assert el == "&", "package filter operand is neither | nor &"
                 res = o1 and o2
             stack.append(res)
     if len(stack) != 1:

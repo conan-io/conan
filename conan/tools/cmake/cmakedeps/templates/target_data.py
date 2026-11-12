@@ -42,8 +42,7 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
         components = self._get_required_components_cpp()
         # using the target names to name components, may change in the future?
-        components_names = " ".join([components_target_name for components_target_name, _ in
-                                    reversed(components)])
+        components_names = " ".join(components_target_name for components_target_name, _ in reversed(components))
 
         components_cpp = [(cmake_target_name.replace("::", "_"), cmake_target_name, cpp)
                           for cmake_target_name, cpp in components]

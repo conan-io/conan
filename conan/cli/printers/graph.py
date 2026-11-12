@@ -1,5 +1,4 @@
 from conan.api.output import ConanOutput, Color, LEVEL_VERBOSE, LEVEL_DEBUG
-from conan.errors import ConanException
 
 
 def print_graph_basic(graph):
@@ -124,7 +123,7 @@ def print_graph_packages(graph):
         if existing[0] == "Skip":
             existing[0] = node.binary
 
-    def _format_requires(title, reqs_to_print, header):
+    def _format_requires(title, reqs_to_print, header_):
         if not reqs_to_print:
             return
         output.info(title, Color.BRIGHT_YELLOW)
@@ -132,7 +131,7 @@ def print_graph_packages(graph):
             name = pref.repr_notime() if status != "Platform" else str(pref.ref)
             msg = f"{tab}{name} - "
             if status == "Skip":
-                skipped_requires.setdefault(header, []).append(str(pref.ref))
+                skipped_requires.setdefault(header_, []).append(str(pref.ref))
                 output.verbose(f"{msg}{status}", Color.BRIGHT_CYAN)
             elif status == "Missing" or status == "Invalid":
                 output.write(msg, Color.BRIGHT_CYAN)

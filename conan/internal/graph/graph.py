@@ -225,7 +225,7 @@ class Node:
                 return self
             count += 1
         if not self.dependants:
-            return
+            return None
         assert len(self.dependants) == 1
         dependant = self.dependants[0]
         source_node = dependant.src
@@ -249,12 +249,6 @@ class Node:
         assert self.ref is not None and self.package_id is not None, "Node %s" % self.recipe
         return PkgReference(self.ref, self.package_id, self.prev, self.pref_timestamp)
 
-    def add_edge(self, edge):
-        if edge.src == self:
-            self.edges.append(edge)
-        else:
-            self.dependants.append(edge)
-
     def neighbors(self):
         return [edge.dst for edge in self.edges]
 
@@ -265,17 +259,16 @@ class Node:
         return repr(self.conanfile)
 
     def serialize(self):
-        result = OrderedDict()
-        result["ref"] = self.ref.repr_notime() if self.ref is not None else "conanfile"
-        result["id"] = getattr(self, "id")  # Must be assigned by graph.serialize()
-        result["recipe"] = self.recipe
-        result["package_id"] = self.package_id
-        result["prev"] = self.prev
-        result["rrev"] = self.ref.revision if self.ref is not None else None
-        result["rrev_timestamp"] = self.ref.timestamp if self.ref is not None else None
-        result["prev_timestamp"] = self.pref_timestamp
-        result["remote"] = self.remote.name if self.remote else None
-        result["binary_remote"] = self.binary_remote.name if self.binary_remote else None
+        result = {"ref": self.ref.repr_notime() if self.ref is not None else "conanfile",
+                  "id": getattr(self, "id"),
+                  "recipe": self.recipe,
+                  "package_id": self.package_id,
+                  "prev": self.prev,
+                  "rrev": self.ref.revision if self.ref is not None else None,
+                  "rrev_timestamp": self.ref.timestamp if self.ref is not None else None,
+                  "prev_timestamp": self.pref_timestamp,
+                  "remote": self.remote.name if self.remote else None,
+                  "binary_remote": self.binary_remote.name if self.binary_remote else None}
         from conan.internal.graph.installer import build_id
         result["build_id"] = build_id(self.conanfile)
         result["binary"] = self.binary
@@ -370,7 +363,7 @@ class Overrides:
     def deserialize(data):
         result = Overrides()
         result._overrides = {RecipeReference.loads(k):
-                             set([RecipeReference.loads(e) if e else None for e in v])
+                             set(RecipeReference.loads(e) if e else None for e in v)
                              for k, v in data.items()}
         return result
 
@@ -404,8 +397,8 @@ class DepsGraph:
     @staticmethod
     def add_edge(src, dst, require):
         edge = Edge(src, dst, require)
-        src.add_edge(edge)
-        dst.add_edge(edge)
+        src.edges.append(edge)
+        dst.dependants.append(edge)
 
     def ordered_iterate(self):
         ordered = self.by_levels()
@@ -446,12 +439,11 @@ class DepsGraph:
     def serialize(self):
         for i, n in enumerate(self.nodes):
             n.id = str(i)
-        result = OrderedDict()
-        result["nodes"] = {n.id: n.serialize() for n in self.nodes}
-        result["root"] = {self.root.id: repr(self.root.ref)}  # TODO: ref of consumer/virtual
-        result["overrides"] = self.overrides().serialize()
-        result["resolved_ranges"] = {repr(r): s.repr_notime()
-                                     for r, s in self.resolved_ranges.items()}
-        result["replaced_requires"] = {k: v for k, v in self.replaced_requires.items()}
-        result["error"] = self.error.serialize() if isinstance(self.error, GraphError) else None
+        result = {"nodes": {n.id: n.serialize() for n in self.nodes},
+                  "root": {self.root.id: repr(self.root.ref)},
+                  "overrides": self.overrides().serialize(),
+                  "resolved_ranges": {repr(r): s.repr_notime()
+                                      for r, s in self.resolved_ranges.items()},
+                  "replaced_requires": {k: v for k, v in self.replaced_requires.items()},
+                  "error": self.error.serialize() if isinstance(self.error, GraphError) else None}
         return result

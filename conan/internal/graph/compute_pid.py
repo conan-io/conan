@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.internal.methods import auto_header_only_package_id
@@ -19,8 +17,8 @@ def compute_package_id(node, modes, config_version, hook_manager):
     if python_requires:
         python_requires = python_requires.info_requires()
 
-    data = OrderedDict()
-    build_data = OrderedDict()
+    data = {}
+    build_data = {}
 
     fix_transitive_static = required_conan_version_policy(conanfile, "2.27.9")
 
@@ -38,7 +36,7 @@ def compute_package_id(node, modes, config_version, hook_manager):
                 data[require] = req_info
 
     if conanfile.vendor:  # Make the package_id fully independent of dependencies versions
-        data, build_data = OrderedDict(), OrderedDict()  # TODO, cleaner, now minimal diff
+        data, build_data = {}, {}  # TODO, cleaner, now minimal diff
 
     reqs_info = RequirementsInfo(data)
     build_requires_info = RequirementsInfo(build_data)

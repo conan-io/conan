@@ -289,7 +289,7 @@ class RpathLinkFlagsBlock(Block):
                 runtime_dirs.extend(cppinfo.libdirs)
 
             # surround each dir with escaped quotes, to avoid problems with spaces in paths
-            rpath_link_flags = " ".join([f'-Wl,-rpath-link=\\"{d}\\"' for d in runtime_dirs]) if runtime_dirs else None
+            rpath_link_flags = " ".join(f'-Wl,-rpath-link=\\"{d}\\"' for d in runtime_dirs) if runtime_dirs else None
         else:
             rpath_link_flags = None
         return {"rpath_link_flags": rpath_link_flags}
@@ -530,8 +530,8 @@ class AppleSystemBlock(Block):
             separated by '{universal_arch_separator}'"""
             arch_ = conanfile.settings.get_safe("arch") if conanfile else None
             if arch_ is not None:
-                return ";".join([_to_apple_arch(arch, default=arch) for arch in
-                                 arch_.split(universal_arch_separator)])
+                return ";".join(_to_apple_arch(arch, default=arch) for arch in
+                                arch_.split(universal_arch_separator))
 
         # check valid combinations of architecture - os ?
         # for iOS a FAT library valid for simulator and device can be generated
@@ -681,7 +681,7 @@ class FindFiles(Block):
     def _join_paths(self, paths):
         paths = [p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"') for p in paths]
         paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
-        return " ".join([f'"{p}"' for p in paths])
+        return " ".join(f'"{p}"' for p in paths)
 
     def context(self):
         # To find the generated cmake_find_package finders

@@ -375,12 +375,13 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
     output = conanfile.output
     extract_filter = conanfile.conf.get("tools.files.unzip:filter") or extract_filter
     output.info(f"Uncompressing {filename} to {destination}")
-    if (filename.endswith((".tar.gz", ".tgz", ".tbz2", ".tar.bz2", ".tar", ".tar.xz", ".txz", ".tar.zst", ".tzst"))):
+    if filename.endswith((".tar.gz", ".tgz", ".tbz2", ".tar.bz2", ".tar", ".tar.xz", ".txz",
+                          ".tar.zst", ".tzst")):
         if filename.endswith((".tar.zst", ".tzst")) and sys.version_info.minor < 14:
             raise ConanException(f"File {os.path.basename(filename)} compressed with 'zst', "
                                  f"unsupported for Python<3.14 ")
-        return untargz(filename, destination, pattern, strip_root, extract_filter,
-                       excludes=excludes)
+        untargz(filename, destination, pattern, strip_root, extract_filter, excludes=excludes)
+        return
     if filename.endswith(".gz"):
         target_name = filename[:-3] if destination == "." else destination
         target_dir = os.path.dirname(target_name)
@@ -420,18 +421,15 @@ def unzip(conanfile, filename, destination=".", keep_permissions=False, pattern=
             output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
         else:
             output.info("Unzipping %s" % human_size(uncompress_size))
-        extracted_size = 0
 
         if platform.system() == "Windows":
             for file_ in zip_info:
-                extracted_size += file_.file_size
                 try:
                     z.extract(file_, full_path)
                 except Exception as e:
                     output.error(f"Error extract {file_.filename}\n{str(e)}", error_type="exception")
         else:  # duplicated for, to avoid a platform check for each zipped file
             for file_ in zip_info:
-                extracted_size += file_.file_size
                 try:
                     z.extract(file_, full_path)
                     if keep_permissions:

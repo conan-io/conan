@@ -660,7 +660,7 @@ class InstallGraph:
                 errors.append(f"{tab}- {package.pref}: Invalid configuration")
         if missing:
             missing_prefs = set(n.pref for n in missing)  # avoid duplicated
-            for pref in list(sorted([str(pref) for pref in missing_prefs])):
+            for pref in sorted(str(pref) for pref in missing_prefs):
                 errors.append(f"{tab}- {pref}: Missing binary")
         if errors:
             return "\n".join(errors)
@@ -682,7 +682,7 @@ class InstallGraph:
         # TODO: Remove out argument
         # TODO: A bit dirty access to .pref
         missing_prefs = set(n.nodes[0].pref for n in missing)  # avoid duplicated
-        missing_prefs_str = list(sorted([str(pref) for pref in missing_prefs]))
+        missing_prefs_str = sorted(str(pref) for pref in missing_prefs)
         out = ConanOutput()
         for pref_str in missing_prefs_str:
             out.error(f"Missing binary: {pref_str}", error_type="exception")
@@ -697,7 +697,7 @@ class InstallGraph:
         msg = f"Can't find a '{ref}' package binary '{package_id}' for the configuration:\n"\
               f"{conanfile.info.dumps()}"
         conanfile.output.warning(msg)
-        missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
+        missing_pkgs = "', '".join(sorted(str(pref.ref) for pref in missing_prefs))
         if self._is_test_package:
             build_msg = "This is a **test_package** missing binary. You can use --build (for " \
                         "all dependencies) or --build-test (exclusive for 'conan create' building " \
@@ -706,8 +706,7 @@ class InstallGraph:
             if len(missing_prefs) >= 5:
                 build_str = "--build=missing"
             else:
-                build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref)
-                                                  for pref in missing_prefs])))
+                build_str = " ".join(sorted("--build=%s" % str(pref.ref) for pref in missing_prefs))
             build_msg = f"Try to build locally from sources using the '{build_str}' argument"
 
         raise ConanException(textwrap.dedent(f'''\

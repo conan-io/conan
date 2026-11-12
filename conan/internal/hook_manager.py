@@ -46,7 +46,7 @@ class HookManager:
 
     def _load_hooks(self):
         hooks = {}
-        for root, dirs, files in os.walk(self._hooks_folder):
+        for root, _, files in os.walk(self._hooks_folder):
             for f in files:
                 if f.startswith("hook_") and f.endswith(".py"):
                     hook_path = os.path.join(root, f)
