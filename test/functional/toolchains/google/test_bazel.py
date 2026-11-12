@@ -1,3 +1,4 @@
+import json
 import platform
 import textwrap
 
@@ -49,20 +50,22 @@ def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
     profile = base_profile.format(build_type=build_type,
                                   curdir=client.current_folder.replace("\\", "/"))
     client.save({"my_profile": profile})
-    # The default Windows profile is msvc 191, which only admits up to C++17
-    cppstd = "17" if platform.system() == "Windows" else "20"
-    client.run(f"create . --profile=./my_profile -s compiler.cppstd={cppstd}")
+    # C++17: the highest standard admitted by the default msvc 191 profile of Windows
+    client.run("create . --profile=./my_profile -s compiler.cppstd=17")
     assert f"myapp/1.0: Hello World {build_type}!" in client.out
     assert "--config=withTimeStamps" in client.out
     # compiler.cppstd is only applied by the Conan generated toolchain (or the
     # --cxxopt fallback in MSVC), Bazel default toolchain and compilers use an older standard
     assert "BazelToolchain generated: //conan:conan_toolchain.MODULE.bazel" in client.out
-    if platform.system() == "Windows":
-        assert "myapp/1.0: _MSVC_LANG201703" in client.out
+    create_out = client.out
+    client.run("profile show --profile=./my_profile --format=json")
+    compiler = json.loads(client.stdout)["host"]["settings"]["compiler"]
+    if compiler == "msvc":
+        assert "myapp/1.0: _MSVC_LANG201703" in create_out
     else:
-        assert "myapp/1.0: __cplusplus202002" in client.out
+        assert "myapp/1.0: __cplusplus201703" in create_out
         # Native builds do not need any bazelrc file, the toolchain is registered by MODULE.bazel
-        assert "conan_bzl.rc" not in client.out
+        assert "conan_bzl.rc" not in create_out
 
 
 @pytest.mark.slow

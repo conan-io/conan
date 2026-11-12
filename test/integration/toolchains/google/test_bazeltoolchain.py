@@ -1,14 +1,10 @@
 import os
-import platform
 import textwrap
 
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
-
-# Absolute paths in the tests: "/opt/gcc" is not absolute in Windows, it needs a drive
-_ROOT = "C:" if platform.system() == "Windows" else ""
 
 
 @pytest.fixture(scope="module")
@@ -37,7 +33,7 @@ _macos_x86_64 = textwrap.dedent("""
     os=Macos
     """)
 
-_linux_x86_64 = textwrap.dedent(f"""
+_linux_x86_64 = textwrap.dedent("""
     [settings]
     arch=x86_64
     build_type=Release
@@ -47,7 +43,7 @@ _linux_x86_64 = textwrap.dedent(f"""
     compiler.version=11
     os=Linux
     [conf]
-    tools.build:compiler_executables={{"c": "{_ROOT}/opt/gcc/bin/gcc", "cpp": "{_ROOT}/opt/gcc/bin/g++"}}
+    tools.build:compiler_executables={"c": "/opt/gcc/bin/gcc", "cpp": "/opt/gcc/bin/g++"}
     """)
 
 
@@ -92,8 +88,8 @@ def test_default_bazel_toolchain(conanfile):
     assert 'compiler = "gcc"' in build
     assert 'cpu = "x86_64"' in build
     assert 'target_libc = "unknown"' in build
-    assert f'"gcc": "{_ROOT}/opt/gcc/bin/gcc"' in build
-    assert f'"{_ROOT}/opt/gcc",' in build  # compiler installation, cxx_builtin_include_directories
+    assert '"gcc": "/opt/gcc/bin/gcc"' in build
+    assert '"/opt/gcc",' in build  # compiler installation, cxx_builtin_include_directories
     compile_flags = ('    compile_flags = [\n'
                      '        "-m64",\n'
                      '        "-O3",\n'
@@ -218,7 +214,7 @@ def test_bazel_toolchain_and_cross_compilation(conanfile):
 
 
 def test_bazel_toolchain_android_cross_compilation(conanfile):
-    profile_host = textwrap.dedent(f"""
+    profile_host = textwrap.dedent("""
     [settings]
     arch=armv8
     build_type=Release
@@ -229,7 +225,7 @@ def test_bazel_toolchain_android_cross_compilation(conanfile):
     os=Android
     os.api_level=24
     [conf]
-    tools.android:ndk_path={_ROOT}/my/ndk
+    tools.android:ndk_path=/my/ndk
     """)
     c = TestClient()
     c.save({"conanfile.py": conanfile,
@@ -237,10 +233,10 @@ def test_bazel_toolchain_android_cross_compilation(conanfile):
             "profile_host": profile_host})
     c.run("install . -pr:b profile -pr:h profile_host")
     build = _build_file(c)
-    ndk_bin = f"{_ROOT}/my/ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
+    ndk_bin = "/my/ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
     assert f'"gcc": "{ndk_bin}/aarch64-linux-android24-clang"' in build
     assert f'"ar": "{ndk_bin}/llvm-ar"' in build
-    assert f'"{_ROOT}/my/ndk",' in build
+    assert '"/my/ndk",' in build
     assert "@platforms//os:android" in build
     assert "@platforms//cpu:aarch64" in build
 
@@ -284,10 +280,10 @@ def test_toolchain_attributes():
             bz.extra_ldflags = ["-ldflag1"]
             bz.extra_defines = ["MYDEF"]
             bz.host_constraints.append("//my:constraint")
-            bz.tool_paths = {"ar": "<ROOT>/my/ar"}
-            bz.cxx_builtin_include_directories = ["<ROOT>/my/include"]
+            bz.tool_paths = {"ar": "/my/ar"}
+            bz.cxx_builtin_include_directories = ["/my/include"]
             bz.generate()
-    """).replace("<ROOT>", _ROOT)
+    """)
     c = TestClient()
     c.save({"conanfile.py": conanfile,
             "profile": _linux_x86_64})
@@ -298,8 +294,8 @@ def test_toolchain_attributes():
     assert '"-ldflag1",' in build
     assert '"-DMYDEF",' in build
     assert '"//my:constraint",' in build
-    assert f'"ar": "{_ROOT}/my/ar"' in build
-    assert f'"{_ROOT}/my/include",' in build
+    assert '"ar": "/my/ar"' in build
+    assert '"/my/include",' in build
 
 
 def test_toolchain_no_cc_toolchain():
@@ -408,7 +404,6 @@ def test_toolchain_msvc_bazelrc_quoting():
     assert "build:conan-config --copt=-DPLAIN=1" in bazelrc
 
 
-@pytest.mark.skipif(platform.system() != "Windows", reason="MSVC repo_env is only for Windows")
 def test_toolchain_msvc_repo_env_path_with_spaces():
     """
     The Visual Studio installation path has spaces by default (C:/Program Files/...)

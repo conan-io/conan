@@ -56,8 +56,9 @@ More information:
     * C++ toolchain configuration: https://bazel.build/docs/cc-toolchain-config-reference
     * Tutorial: https://bazel.build/tutorials/ccp-toolchain-config
 """
+import ntpath
 import os
-import platform
+import posixpath
 import shutil
 import textwrap
 
@@ -357,21 +358,21 @@ class BazelToolchain:
                                  "configuration field.")
         os_build = self._conanfile.settings_build.get_safe("os")
         host_tag = {"Macos": "darwin", "Windows": "windows"}.get(os_build, "linux")
-        ndk_bin = os.path.join(ndk_path, "toolchains", "llvm", "prebuilt",
-                               f"{host_tag}-x86_64", "bin")
+        ndk_bin = self._path.join(ndk_path, "toolchains", "llvm", "prebuilt",
+                                  f"{host_tag}-x86_64", "bin")
         api_level = self._conanfile.settings.get_safe("os.api_level")
         target = {"armv7": "armv7a-linux-androideabi",
                   "armv8": "aarch64-linux-android",
                   "x86": "i686-linux-android",
                   "x86_64": "x86_64-linux-android"}.get(self._arch)
         ext = ".cmd" if os_build == "Windows" else ""
-        self.c = os.path.join(ndk_bin, f"{target}{api_level}-clang{ext}")
-        self.cpp = os.path.join(ndk_bin, f"{target}{api_level}-clang++{ext}")
-        self.ar = os.path.join(ndk_bin, "llvm-ar")
-        self.strip = os.path.join(ndk_bin, "llvm-strip")
-        self.nm = os.path.join(ndk_bin, "llvm-nm")
-        self.objdump = os.path.join(ndk_bin, "llvm-objdump")
-        self.objcopy = os.path.join(ndk_bin, "llvm-objcopy")
+        self.c = self._path.join(ndk_bin, f"{target}{api_level}-clang{ext}")
+        self.cpp = self._path.join(ndk_bin, f"{target}{api_level}-clang++{ext}")
+        self.ar = self._path.join(ndk_bin, "llvm-ar")
+        self.strip = self._path.join(ndk_bin, "llvm-strip")
+        self.nm = self._path.join(ndk_bin, "llvm-nm")
+        self.objdump = self._path.join(ndk_bin, "llvm-objdump")
+        self.objcopy = self._path.join(ndk_bin, "llvm-objcopy")
         self.cxx_builtin_include_directories.append(ndk_path)
 
     # -------------------------------------------------------------------------------------------
@@ -381,8 +382,13 @@ class BazelToolchain:
     def _filter(v):
         return [f for f in v if f]
 
-    @staticmethod
-    def _to_abs_tool(tool):
+    @property
+    def _path(self):
+        """ Path flavor of the build machine (settings_build), where the tools are located """
+        os_build = self._conanfile.settings_build.get_safe("os")
+        return ntpath if os_build in ("Windows", "WindowsStore", "WindowsCE") else posixpath
+
+    def _to_abs_tool(self, tool):
         """
         Bazel resolves relative ``tool_paths`` against the toolchain package, so every tool
         has to be an absolute path. Unknown tools point to a failing binary, as Bazel suggests.
@@ -391,12 +397,12 @@ class BazelToolchain:
             raise ConanException(f"BazelToolchain: '{tool}' is not a single executable. Bazel "
                                  "tool_paths do not admit wrappers/arguments (e.g., ccache), "
                                  "use a wrapper script instead.")
-        if tool and os.path.isabs(tool):
+        if tool and self._path.isabs(tool):
             return tool.replace("\\", "/")
         found = shutil.which(tool) if tool else None
         if found:
             return found.replace("\\", "/")
-        return "C:/Windows/System32/false.exe" if platform.system() == "Windows" else "/bin/false"
+        return "C:/Windows/System32/false.exe" if self._path is ntpath else "/bin/false"
 
     def _get_tool_paths(self):
         ret = {
@@ -417,13 +423,14 @@ class BazelToolchain:
         dirs = list(self.cxx_builtin_include_directories)
         # The compiler installation prefix, e.g., /usr for /usr/bin/gcc
         for tool in (tool_paths["gcc"], self._to_abs_tool(self.cpp)):
-            prefix = os.path.dirname(os.path.dirname(os.path.realpath(tool)))
+            real = os.path.realpath(tool) if os.path.exists(tool) else tool  # resolve symlinks
+            prefix = self._path.dirname(self._path.dirname(real))
             if prefix not in ("/", "") and not tool.endswith("false"):
                 dirs.append(prefix.replace("\\", "/"))
         if self._is_apple_system:
             # Same defaults as Bazel's auto-configured Apple toolchain
             dirs += ["/Applications/", "/Library/"]
-            dirs += [f for f in self.apple_isysroot_flag if os.path.isabs(f)]
+            dirs += [f for f in self.apple_isysroot_flag if self._path.isabs(f)]
         else:
             dirs += ["/usr/include", "/usr/local/include", "/usr/lib"]
         if self.sysroot:
@@ -510,8 +517,6 @@ class BazelToolchain:
         (https://bazel.build/configure/windows) to pick the Conan defined Visual Studio, MSVC
         toolset, Windows SDK and LLVM (clang-cl) installations.
         """
-        if platform.system() != "Windows":
-            return {}
         ret = {}
         vs_version, vcvars_ver = _vcvars_versions(self._conanfile)
         vs_path = (self._conf.get("tools.microsoft.msbuild:installation_path") or
