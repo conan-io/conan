@@ -6,16 +6,19 @@ Instead of filling a bazelrc file with loose CLI flags (``--cpu``, ``--crosstool
 
 * ``platform()`` targets for the host (``settings``) and build (``settings_build``) machines,
   built from ``@platforms//os`` and ``@platforms//cpu`` constraints.
-* A real C/C++ toolchain: a ``cc_toolchain_config`` rule (Starlark, ``cc_common``) with
-  absolute ``tool_paths`` and all the Conan flags expressed as Bazel *features*, a
-  ``cc_toolchain`` and a ``toolchain()`` registered for the ``@bazel_tools//tools/cpp:toolchain_type``.
+* A real C/C++ toolchain: the official rules_cc Unix ``cc_toolchain_config`` rule (the same one
+  used by Bazel's auto-configured ``@local_config_cc``) with absolute ``tool_paths`` and all the
+  Conan flags, a ``cc_toolchain`` and a ``toolchain()`` registered for the
+  ``@bazel_tools//tools/cpp:toolchain_type``. Flags without an equivalent attribute (exe/shared
+  link flags, ObjC flags) are injected as rules_cc rule-based ``cc_feature``.
 * A ``conan_toolchain.MODULE.bazel`` snippet that registers the toolchain. Toolchains
   registered by the root module have priority over Bazel's auto-configured
   ``@local_config_cc``, so native builds need no extra flags at all: Bazel's auto-detected
   host platform matches the toolchain ``os``/``cpu`` constraints.
 * Everything that used to be a CLI flag lives in the toolchain itself: PIC (``-fPIC`` in the
-  compile flags), optimization/debug flags (Conan ``build_type`` flags) and an override of
-  ``strip_debug_symbols`` so Bazel's default ``fastbuild`` mode never strips the binaries.
+  compile flags) and optimization/debug flags (Conan ``build_type`` flags). Notice that Bazel
+  default ``fastbuild`` mode strips the debug symbols (``--strip=sometimes``), use
+  ``-c dbg`` or ``--strip=never`` if you need them.
 * A minimal ``conan_bzl.rc`` (``conan-config``), **only when cross-building**, with
   ``--platforms`` and ``--host_platform``. Bazel only admits the target platform from the
   command line/bazelrc. The ``Bazel`` helper uses it automatically if it exists.
@@ -27,23 +30,25 @@ Generated files (with ``bazel_layout``, inside ``<build>/conan``)::
     ├── conan_toolchain.MODULE.bazel        # register_toolchains(...)
     ├── conan_bzl.rc                        # only if cross-building (or MSVC fallback)
     └── conan_toolchain/
-        ├── BUILD.bazel                     # platforms, cc_toolchain, toolchain
-        └── conan_cc_toolchain_config.bzl   # generic cc_toolchain_config rule (static)
+        └── BUILD.bazel                     # platforms, cc_toolchain_config, toolchain
 
 Requirements in the consumer ``MODULE.bazel`` (Bazel >= 7.2 for ``include()``)::
 
     bazel_dep(name = "platforms", version = "1.1.0")
-    bazel_dep(name = "rules_cc", version = "0.2.17")   # already added by BazelDeps include
+    bazel_dep(name = "rules_cc", version = "0.2.17")   # >= 0.2.17 (cc_toolchain_config)
     include("//conan:conan_toolchain.MODULE.bazel")
 
 Notice that the registered toolchain is selected for any target platform with the same
 ``os``/``cpu`` constraints, not only for the Conan generated ones.
 
-MSVC/clang-cl: writing a full MSVC ``cc_toolchain_config`` is out of the scope of this first
-iteration. For them (or when ``generate_cc_toolchain = False``), only the platforms are
-generated and Bazel keeps using its auto-configured ``@local_config_cc`` toolchain, with the
-Conan flags passed as ``--copt/--cxxopt/--conlyopt/--linkopt`` in the bazelrc file (legacy
-behavior). In that case, the ``conan_bzl.rc`` is generated even for native builds.
+MSVC/clang-cl: the rules_cc Windows ``cc_toolchain_config`` needs the whole ``vcvars``
+environment (``PATH``, ``INCLUDE``, ``LIB``), so for them (or when
+``generate_cc_toolchain = False``), only the platforms are generated and Bazel keeps using its
+auto-configured ``@local_config_cc`` toolchain. Conan points it to the right installation
+(``--repo_env=BAZEL_VC/BAZEL_VC_FULL_VERSION/BAZEL_WINSDK_FULL_VERSION/BAZEL_LLVM``), selects the
+runtime with the ``static_link_msvcrt`` feature, registers the clang-cl toolchain if needed, and
+passes the Conan flags as ``--copt/--cxxopt/--conlyopt/--linkopt`` in the bazelrc file. In that
+case, the ``conan_bzl.rc`` is generated even for native builds.
 
 More information:
     * Platforms: https://bazel.build/extending/platforms
@@ -71,7 +76,9 @@ from conan.tools.build.flags import architecture_flag, architecture_link_flag, t
 from conan.tools.env import VirtualBuildEnv
 from conan.tools.google.helpers import to_bazel_os_constraint, to_bazel_cpu_constraint, \
     to_bazel_compiler, to_starlark
+from conan.internal.api.detect.detect_vs import vs_installation_path
 from conan.tools.microsoft import msvc_runtime_flag, is_msvc
+from conan.tools.microsoft.visual import _vcvars_versions
 
 
 class BazelToolchain:
@@ -84,7 +91,6 @@ class BazelToolchain:
     bazelrc_config = "conan-config"
     #: Bazel package (sub-folder of the generators folder) where the toolchain is generated
     toolchain_folder = "conan_toolchain"
-    toolchain_config_filename = "conan_cc_toolchain_config.bzl"
     #: MODULE.bazel snippet to be included by the consumer's MODULE.bazel
     module_filename = "conan_toolchain.MODULE.bazel"
 
@@ -104,6 +110,10 @@ class BazelToolchain:
         # include("{{ module_label }}")
         {% if generate_cc_toolchain %}
         register_toolchains("{{ package }}:cc_toolchain")
+        {% elif clang_cl_toolchain %}
+        conan_cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension")
+        use_repo(conan_cc_configure, "local_config_cc")
+        register_toolchains("@local_config_cc//:{{ clang_cl_toolchain }}")
         {% endif %}
         """)
 
@@ -111,7 +121,11 @@ class BazelToolchain:
         # Automatically generated by Conan BazelToolchain. Do not edit it.
         {% if generate_cc_toolchain %}
         load("@rules_cc//cc:defs.bzl", "cc_toolchain")
-        load(":{{ config_filename }}", "conan_cc_toolchain_config")
+        load("@rules_cc//cc/private/toolchain:unix_cc_toolchain_config.bzl", "cc_toolchain_config")
+        {% if extra_features %}
+        load("@rules_cc//cc/toolchains:args.bzl", "cc_args")
+        load("@rules_cc//cc/toolchains:feature.bzl", "cc_feature")
+        {% endif %}
         {% endif %}
 
         package(default_visibility = ["//visibility:public"])
@@ -130,27 +144,43 @@ class BazelToolchain:
         {% if generate_cc_toolchain %}
 
         filegroup(name = "empty")
+        {% for name, feature in extra_features.items() %}
 
-        conan_cc_toolchain_config(
+        cc_args(
+            name = "{{ name }}_args",
+            actions = {{ feature.actions }},
+            args = {{ feature.flags }},
+        )
+
+        cc_feature(
+            name = "{{ name }}",
+            feature_name = "{{ name }}",
+            args = [":{{ name }}_args"],
+        )
+        {% endfor %}
+
+        # Same rule used by the Bazel auto-configured toolchain (@local_config_cc)
+        cc_toolchain_config(
             name = "cc_toolchain_config",
             toolchain_identifier = "{{ toolchain_identifier }}",
             compiler = "{{ compiler }}",
-            target_cpu = "{{ target_cpu }}",
+            cpu = "{{ target_cpu }}",
+            host_system_name = "local",
             target_system_name = "{{ target_system_name }}",
             target_libc = "{{ target_libc }}",
+            abi_version = "local",
+            abi_libc_version = "local",
             tool_paths = {{ tool_paths }},
             cxx_builtin_include_directories = {{ cxx_builtin_include_directories }},
             builtin_sysroot = "{{ builtin_sysroot }}",
-            archiver = "{{ archiver }}",
-            supports_dynamic_linker = {{ supports_dynamic_linker }},
             compile_flags = {{ compile_flags }},
-            c_flags = {{ c_flags }},
+            conly_flags = {{ c_flags }},
             cxx_flags = {{ cxx_flags }},
-            objc_flags = {{ objc_flags }},
             link_flags = {{ link_flags }},
-            exe_link_flags = {{ exe_link_flags }},
-            shared_link_flags = {{ shared_link_flags }},
             link_libs = {{ link_libs }},
+            {% if extra_features %}
+            extra_enabled_features = {{ extra_features_labels }},
+            {% endif %}
         )
 
         cc_toolchain(
@@ -174,159 +204,6 @@ class BazelToolchain:
             toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
         )
         {% endif %}
-        """)
-
-    # Static file: the rule is generic, every Conan value is passed as attribute from BUILD.bazel
-    _toolchain_config_content = textwrap.dedent("""\
-        # Automatically generated by Conan BazelToolchain. Do not edit it.
-        # Generic cc_toolchain_config rule. All the values are injected from BUILD.bazel
-        load("@rules_cc//cc:action_names.bzl", "ACTION_NAMES")
-        load(
-            "@rules_cc//cc:cc_toolchain_config_lib.bzl",
-            "feature",
-            "flag_group",
-            "flag_set",
-            "tool_path",
-            "variable_with_value",
-        )
-        load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
-        load("@rules_cc//cc/toolchains:cc_toolchain_config_info.bzl", "CcToolchainConfigInfo")
-
-        _C_COMPILE = [ACTION_NAMES.c_compile]
-        _CXX_COMPILE = [
-            ACTION_NAMES.cpp_compile,
-            ACTION_NAMES.cpp_header_parsing,
-            ACTION_NAMES.cpp_module_compile,
-            ACTION_NAMES.cpp_module_codegen,
-            ACTION_NAMES.linkstamp_compile,
-            ACTION_NAMES.lto_backend,
-            ACTION_NAMES.clif_match,
-        ]
-        _OBJC_COMPILE = [ACTION_NAMES.objc_compile, ACTION_NAMES.objcpp_compile]
-        _ASM = [ACTION_NAMES.assemble, ACTION_NAMES.preprocess_assemble]
-        _ALL_COMPILE = _C_COMPILE + _CXX_COMPILE + _OBJC_COMPILE + _ASM
-        _LINK_EXE = [ACTION_NAMES.cpp_link_executable]
-        _LINK_SHARED = [
-            ACTION_NAMES.cpp_link_dynamic_library,
-            ACTION_NAMES.cpp_link_nodeps_dynamic_library,
-        ]
-        _ALL_LINK = _LINK_EXE + _LINK_SHARED
-
-        def _flags_feature(name, actions, flags):
-            if not flags:
-                return None
-            return feature(
-                name = name,
-                enabled = True,
-                flag_sets = [flag_set(actions = actions, flag_groups = [flag_group(flags = flags)])],
-            )
-
-        def _libtool_archiver_feature():
-            # Apple "ar" does not understand Bazel's default "rcsD", use "libtool -static" instead
-            return feature(
-                name = "archiver_flags",
-                flag_sets = [
-                    flag_set(
-                        actions = [ACTION_NAMES.cpp_link_static_library],
-                        flag_groups = [
-                            flag_group(flags = ["-static", "-no_warning_for_no_symbols"]),
-                            flag_group(
-                                flags = ["-o", "%{output_execpath}"],
-                                expand_if_available = "output_execpath",
-                            ),
-                        ],
-                    ),
-                    flag_set(
-                        actions = [ACTION_NAMES.cpp_link_static_library],
-                        flag_groups = [
-                            flag_group(
-                                iterate_over = "libraries_to_link",
-                                expand_if_available = "libraries_to_link",
-                                flag_groups = [
-                                    flag_group(
-                                        flags = ["%{libraries_to_link.name}"],
-                                        expand_if_equal = variable_with_value(
-                                            name = "libraries_to_link.type",
-                                            value = "object_file",
-                                        ),
-                                    ),
-                                    flag_group(
-                                        flags = ["%{libraries_to_link.object_files}"],
-                                        iterate_over = "libraries_to_link.object_files",
-                                        expand_if_equal = variable_with_value(
-                                            name = "libraries_to_link.type",
-                                            value = "object_file_group",
-                                        ),
-                                    ),
-                                ],
-                            ),
-                        ],
-                    ),
-                ],
-            )
-
-        def _impl(ctx):
-            attr = ctx.attr
-            features = [
-                feature(name = "supports_pic", enabled = True),
-                feature(name = "supports_dynamic_linker", enabled = attr.supports_dynamic_linker),
-                # Overrides the legacy feature (-Wl,-S) applied with the default "fastbuild"
-                # compilation mode. Conan build_type flags decide about debug information.
-                feature(name = "strip_debug_symbols"),
-            ]
-            if attr.archiver == "libtool":
-                features.append(_libtool_archiver_feature())
-            features += [f for f in [
-                _flags_feature("conan_compile_flags", _ALL_COMPILE, attr.compile_flags),
-                _flags_feature("conan_c_flags", _C_COMPILE, attr.c_flags),
-                _flags_feature("conan_cxx_flags", _CXX_COMPILE, attr.cxx_flags),
-                _flags_feature("conan_objc_flags", _OBJC_COMPILE, attr.objc_flags),
-                _flags_feature("conan_link_flags", _ALL_LINK, attr.link_flags),
-                _flags_feature("conan_exe_link_flags", _LINK_EXE, attr.exe_link_flags),
-                _flags_feature("conan_shared_link_flags", _LINK_SHARED, attr.shared_link_flags),
-                _flags_feature("conan_link_libs", _ALL_LINK, attr.link_libs),
-            ] if f]
-
-            return cc_common.create_cc_toolchain_config_info(
-                ctx = ctx,
-                toolchain_identifier = attr.toolchain_identifier,
-                compiler = attr.compiler,
-                target_cpu = attr.target_cpu,
-                target_system_name = attr.target_system_name,
-                target_libc = attr.target_libc,
-                abi_version = "local",
-                abi_libc_version = "local",
-                host_system_name = "local",
-                builtin_sysroot = attr.builtin_sysroot or None,
-                cxx_builtin_include_directories = attr.cxx_builtin_include_directories,
-                tool_paths = [tool_path(name = k, path = v) for k, v in attr.tool_paths.items()],
-                features = features,
-            )
-
-        conan_cc_toolchain_config = rule(
-            implementation = _impl,
-            attrs = {
-                "toolchain_identifier": attr.string(mandatory = True),
-                "compiler": attr.string(mandatory = True),
-                "target_cpu": attr.string(mandatory = True),
-                "target_system_name": attr.string(mandatory = True),
-                "target_libc": attr.string(default = "unknown"),
-                "tool_paths": attr.string_dict(mandatory = True),
-                "cxx_builtin_include_directories": attr.string_list(),
-                "builtin_sysroot": attr.string(),
-                "archiver": attr.string(default = "ar", values = ["ar", "libtool"]),
-                "supports_dynamic_linker": attr.bool(default = True),
-                "compile_flags": attr.string_list(),
-                "c_flags": attr.string_list(),
-                "cxx_flags": attr.string_list(),
-                "objc_flags": attr.string_list(),
-                "link_flags": attr.string_list(),
-                "exe_link_flags": attr.string_list(),
-                "shared_link_flags": attr.string_list(),
-                "link_libs": attr.string_list(),
-            },
-            provides = [CcToolchainConfigInfo],
-        )
         """)
 
     def __init__(self, conanfile):
@@ -379,6 +256,7 @@ class BazelToolchain:
         #: If ``False``, Bazel's auto-configured toolchain is used and the Conan flags are passed
         #: as ``--copt/--cxxopt/--conlyopt/--linkopt``. ``False`` by default for MSVC/clang-cl.
         self.generate_cc_toolchain = not msvc_like
+        self._is_clang_cl = msvc_like and compiler == "clang"
 
         build_env = VirtualBuildEnv(conanfile, auto_generate=True).vars()
         compilers_by_conf = self._conf.get("tools.build:compiler_executables", default={},
@@ -435,9 +313,9 @@ class BazelToolchain:
         #: C standard flag
         self.cstd = cstd_flag(conanfile)
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(conanfile)
-        #: MSVC runtime flag (only used if not ``generate_cc_toolchain``)
-        self.msvc_runtime_flag = f"-{msvc_runtime_flag(conanfile)}" if msvc_like and \
-            msvc_runtime_flag(conanfile) else None
+        #: Static MSVC runtime (``static_link_msvcrt`` Bazel feature). Only used if
+        #: not ``generate_cc_toolchain``
+        self.msvc_static_runtime = msvc_like and "MT" in msvc_runtime_flag(conanfile)
         #: Apple flags
         self.apple_arch_flag = []
         self.apple_isysroot_flag = []
@@ -558,8 +436,6 @@ class BazelToolchain:
                       [f"-T{s}" for s in linker_scripts] + self.extra_ldflags)
         exe_link_flags = conf.get("tools.build:exelinkflags", default=[], check_type=list)
         shared_link_flags = conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
-        if self.msvc_runtime_flag:
-            compile_flags.append(self.msvc_runtime_flag)
         if self.fpic and not self._is_windows:
             compile_flags.append("-fPIC")
         return {
@@ -590,19 +466,68 @@ class BazelToolchain:
 
     @property
     def _rc_flags(self):
-        """ Flags passed via bazelrc when Bazel's auto-configured toolchain is used """
+        """ Flags passed via bazelrc (only used by Conan if cross-building or MSVC) """
         if self.generate_cc_toolchain:
+            if self._is_apple_system and self._os != "Macos":
+                # rules_cc adds -mmacosx-version-min for any "macosx" libc, it collides with
+                # the Conan -mios-version-min, -mtvos-version-min, etc.
+                return ["--features=-macos_minimum_os"]
             return []
+        # Bazel's auto-configured toolchain (@local_config_cc)
         flags = self._get_flags()
         compilation_mode = {"Release": "opt", "Debug": "dbg", "RelWithDebInfo": "opt",
                             "MinSizeRel": "opt"}.get(self._conanfile.settings.get_safe("build_type"))
         ret = [f"--compilation_mode={compilation_mode}"] if compilation_mode else []
+        # The MSVC runtime is managed by Bazel features: /MD (/MDd if "dbg") by default
+        if self.msvc_static_runtime:
+            ret.append("--features=static_link_msvcrt")
+        ret += [f"--repo_env={k}={v}" for k, v in self._msvc_repo_env().items()]
         ret += [f"--copt={f}" for f in flags["compile_flags"]]
         ret += [f"--conlyopt={f}" for f in flags["c_flags"]]
         ret += [f"--cxxopt={f}" for f in flags["cxx_flags"]]
         ret += [f"--linkopt={f}" for f in flags["link_flags"] + flags["exe_link_flags"] +
                 flags["shared_link_flags"]]
         return ret
+
+    def _msvc_repo_env(self):
+        """
+        Environment variables used by the Bazel MSVC auto-configuration
+        (https://bazel.build/configure/windows) to pick the Conan defined Visual Studio, MSVC
+        toolset, Windows SDK and LLVM (clang-cl) installations.
+        """
+        if platform.system() != "Windows":
+            return {}
+        ret = {}
+        vs_version, vcvars_ver = _vcvars_versions(self._conanfile)
+        vs_path = (self._conf.get("tools.microsoft.msbuild:installation_path") or
+                   (vs_installation_path(vs_version) if vs_version else None))
+        if vs_path:
+            vc_path = os.path.join(vs_path, "VC")
+            ret["BAZEL_VC"] = vc_path.replace("\\", "/")
+            # Bazel needs the full toolset version (14.38.33130), Conan only knows the prefix
+            msvc_tools = os.path.join(vc_path, "Tools", "MSVC")
+            if vcvars_ver and os.path.isdir(msvc_tools):
+                versions = [v for v in os.listdir(msvc_tools) if v.startswith(vcvars_ver)]
+                if versions:
+                    ret["BAZEL_VC_FULL_VERSION"] = max(
+                        versions, key=lambda v: [int(i) for i in v.split(".") if i.isdigit()])
+        winsdk_version = self._conf.get("tools.microsoft:winsdk_version")
+        if winsdk_version:
+            ret["BAZEL_WINSDK_FULL_VERSION"] = winsdk_version
+        if self._is_clang_cl:
+            clang_cl = shutil.which(self.c) if self.c else None
+            if clang_cl:
+                llvm_path = os.path.dirname(os.path.dirname(clang_cl))
+                ret["BAZEL_LLVM"] = llvm_path.replace("\\", "/")
+        return ret
+
+    @property
+    def _clang_cl_toolchain(self):
+        """ Name of the @local_config_cc clang-cl toolchain. Bazel selects MSVC by default """
+        if not self._is_clang_cl:
+            return None
+        return "cc-toolchain-arm64_windows-clang-cl" if self._arch == "armv8" else \
+            "cc-toolchain-x64_windows-clang-cl"
 
     @property
     def _package_label(self):
@@ -633,7 +558,6 @@ class BazelToolchain:
                                  "'tc.host_constraints' in your generate() method.")
         ctx = {
             "generate_cc_toolchain": self.generate_cc_toolchain,
-            "config_filename": self.toolchain_config_filename,
             "host_constraints": to_starlark(self.host_constraints),
             "build_constraints": to_starlark(self.build_constraints),
             "exec_compatible_with": to_starlark(self.build_constraints),
@@ -641,6 +565,19 @@ class BazelToolchain:
         if self.generate_cc_toolchain:
             tool_paths = self._get_tool_paths()
             flags = self._get_flags()
+            # Flags without an equivalent attribute in rules_cc "cc_toolchain_config", injected
+            # as rule-based "cc_feature"s
+            actions = "@rules_cc//cc/toolchains/actions"
+            extra_features = {name: {"actions": to_starlark([f"{actions}:{a}" for a in acts]),
+                                     "flags": to_starlark(flags[key])}
+                              for name, key, acts in (
+                                  ("conan_exe_link_flags", "exe_link_flags",
+                                   ["cpp_link_executable"]),
+                                  ("conan_shared_link_flags", "shared_link_flags",
+                                   ["dynamic_library_link_actions"]),
+                                  ("conan_objc_flags", "objc_flags",
+                                   ["objc_compile", "objcpp_compile"]))
+                              if flags[key]}
             ctx.update({
                 "toolchain_identifier": "_".join(str(v) for v in (
                     "conan", self._os, self._arch, self._compiler,
@@ -649,16 +586,20 @@ class BazelToolchain:
                 "target_cpu": (to_bazel_cpu_constraint(self._arch) or
                                f":{self._arch}").split(":")[-1],
                 "target_system_name": str(self._os).lower(),
-                "target_libc": "macosx" if self._os == "Macos" else "unknown",
+                # rules_cc uses "libtool" as archiver (from tool_paths "ar") if "macosx"
+                "target_libc": "macosx" if self._is_apple_system else "unknown",
                 "tool_paths": to_starlark(tool_paths),
                 "cxx_builtin_include_directories": to_starlark(
                     self._get_builtin_include_directories(tool_paths)),
                 "builtin_sysroot": (self.sysroot or "").replace("\\", "/"),
-                "archiver": "libtool" if os.path.basename(tool_paths["ar"]) == "libtool" else "ar",
-                "supports_dynamic_linker": to_starlark(self._os not in ("baremetal", "Arduino")),
+                "compile_flags": to_starlark(flags["compile_flags"]),
+                "c_flags": to_starlark(flags["c_flags"]),
+                "cxx_flags": to_starlark(flags["cxx_flags"]),
+                "link_flags": to_starlark(flags["link_flags"]),
                 "link_libs": to_starlark(self._link_libs),
+                "extra_features": extra_features,
+                "extra_features_labels": to_starlark([f":{n}" for n in extra_features]),
             })
-            ctx.update({k: to_starlark(v) for k, v in flags.items()})
         return ctx
 
     def _render(self, template, context):
@@ -680,9 +621,6 @@ class BazelToolchain:
         folder = self.toolchain_folder
         save(os.path.join(folder, "BUILD.bazel"), self._render(self._build_template,
                                                                self._context))
-        if self.generate_cc_toolchain:
-            save(os.path.join(folder, self.toolchain_config_filename),
-                 self._toolchain_config_content)
         # The generators folder has to be a Bazel package to include() the module snippet.
         # BazelDeps creates the same empty file, do not overwrite it.
         if not os.path.exists("BUILD.bazel"):
@@ -692,6 +630,7 @@ class BazelToolchain:
             "module_label": module_label,
             "package": package,
             "generate_cc_toolchain": self.generate_cc_toolchain,
+            "clang_cl_toolchain": self._clang_cl_toolchain,
         }))
 
         rc_flags = self._rc_flags

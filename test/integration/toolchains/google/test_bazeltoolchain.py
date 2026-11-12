@@ -63,8 +63,9 @@ def test_default_bazel_toolchain(conanfile):
     assert "BazelToolchain generated: //conan:conan_toolchain.MODULE.bazel" in c.out
     assert not os.path.exists(os.path.join(c.current_folder, "conan", "conan_bzl.rc"))
     assert os.path.exists(os.path.join(c.current_folder, "conan", "BUILD.bazel"))
-    assert os.path.exists(os.path.join(c.current_folder, "conan", "conan_toolchain",
-                                       "conan_cc_toolchain_config.bzl"))
+    # The official rules_cc toolchain config rule is used, no custom Starlark rules
+    assert os.listdir(os.path.join(c.current_folder, "conan", "conan_toolchain")) == \
+        ["BUILD.bazel"]
     module = c.load("conan/conan_toolchain.MODULE.bazel")
     assert 'include("//conan:conan_toolchain.MODULE.bazel")' in module
     assert 'register_toolchains("//conan/conan_toolchain:cc_toolchain")' in module
@@ -80,8 +81,13 @@ def test_default_bazel_toolchain(conanfile):
         )""")
     assert host_platform in build
     assert 'toolchain_identifier = "conan_linux_x86_64_gcc_11"' in build
+    assert ('load("@rules_cc//cc/private/toolchain:unix_cc_toolchain_config.bzl", '
+            '"cc_toolchain_config")') in build
+    assert "cc_args" not in build  # No extra rule-based features needed
+    assert "extra_enabled_features" not in build
     assert 'compiler = "gcc"' in build
-    assert 'target_cpu = "x86_64"' in build
+    assert 'cpu = "x86_64"' in build
+    assert 'target_libc = "unknown"' in build
     assert '"gcc": "/opt/gcc/bin/gcc"' in build
     assert '"/opt/gcc",' in build  # compiler installation, cxx_builtin_include_directories
     compile_flags = ('    compile_flags = [\n'
@@ -117,7 +123,7 @@ def test_bazel_toolchain_and_flags(conanfile):
     build = _build_file(c)
     assert '"-fPIC"' not in build  # shared library, Bazel manages PIC
     assert '"-DMYDEFINE=1",' in build
-    assert ('    c_flags = [\n'
+    assert ('    conly_flags = [\n'
             '        "--flag3",\n'
             '        "--flag4",\n'
             '    ],') in build
@@ -128,16 +134,35 @@ def test_bazel_toolchain_and_flags(conanfile):
             '        "--flag2",\n'
             '    ],') in build
     assert '"-Tmyscript.sh",' in build
-    assert ('    exe_link_flags = [\n'
-            '        "--flag6",\n'
+    # Exe and shared link flags are injected as rules_cc rule-based features
+    assert textwrap.dedent("""\
+        cc_args(
+            name = "conan_exe_link_flags_args",
+            actions = [
+                "@rules_cc//cc/toolchains/actions:cpp_link_executable",
+            ],
+            args = [
+                "--flag6",
+            ],
+        )""") in build
+    assert textwrap.dedent("""\
+        cc_args(
+            name = "conan_shared_link_flags_args",
+            actions = [
+                "@rules_cc//cc/toolchains/actions:dynamic_library_link_actions",
+            ],
+            args = [
+                "--flag5",
+            ],
+        )""") in build
+    assert ('    extra_enabled_features = [\n'
+            '        ":conan_exe_link_flags",\n'
+            '        ":conan_shared_link_flags",\n'
             '    ],') in build
-    assert ('    shared_link_flags = [\n'
-            '        "--flag5",\n'
-            '    ],') in build
+    assert "conan_objc_flags" not in build
     assert 'builtin_sysroot = "/my/sysroot"' in build
     assert '"%sysroot%",' in build
-    assert 'archiver = "libtool"' in build
-    assert 'target_libc = "macosx"' in build
+    assert 'target_libc = "macosx"' in build  # rules_cc uses libtool as archiver
     assert '"-lc++",' in build
 
 
@@ -178,7 +203,8 @@ def test_bazel_toolchain_and_cross_compilation(conanfile):
                 "@platforms//os:macos",
                 "@platforms//cpu:aarch64",
             ],""") in build
-    assert 'target_cpu = "aarch64"' in build
+    assert 'cpu = "aarch64"' in build
+    assert "macos_minimum_os" not in bazelrc
     assert '"-arch",\n        "arm64",' in build
 
     # A later native install removes the stale conan_bzl.rc, the Bazel helper would use it
@@ -334,8 +360,76 @@ def test_toolchain_msvc():
     assert "@platforms//os:windows" in build
     bazelrc = c.load("conan_bzl.rc")
     assert "build:conan-config --cxxopt=/std:c++17" in bazelrc
-    assert "build:conan-config --copt=-MD" in bazelrc
+    # The runtime is managed by Bazel features, /MD (/MDd if "dbg") by default
+    assert "MD" not in bazelrc
+    assert "static_link_msvcrt" not in bazelrc
     assert "--platforms" not in bazelrc
+    assert "register_toolchains" not in c.load("conan_toolchain.MODULE.bazel")
+
+    c.run("install . -pr:a profile -s compiler.runtime=static -s build_type=Debug")
+    bazelrc = c.load("conan_bzl.rc")
+    assert "build:conan-config --compilation_mode=dbg" in bazelrc
+    assert "build:conan-config --features=static_link_msvcrt" in bazelrc
+    assert "MT" not in bazelrc
+
+
+def test_toolchain_clang_cl():
+    """
+    clang-cl uses the Bazel auto-configured clang-cl toolchain, registered by the MODULE.bazel
+    snippet, as Bazel selects the MSVC one by default
+    """
+    profile = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    build_type=Release
+    compiler=clang
+    compiler.version=19
+    compiler.cppstd=17
+    compiler.runtime=dynamic
+    compiler.runtime_version=v143
+    os=Windows
+    """)
+    conanfile = GenConanfile().with_settings("os", "arch", "build_type", "compiler")\
+        .with_generator("BazelToolchain")
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile": profile})
+    c.run("install . -pr:a profile")
+    assert "cc_toolchain" not in c.load("conan_toolchain/BUILD.bazel")
+    module = c.load("conan_toolchain.MODULE.bazel")
+    assert textwrap.dedent("""\
+        conan_cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension")
+        use_repo(conan_cc_configure, "local_config_cc")
+        register_toolchains("@local_config_cc//:cc-toolchain-x64_windows-clang-cl")
+        """) in module
+
+
+def test_toolchain_ios_cross_compilation(conanfile):
+    """
+    rules_cc adds -mmacosx-version-min to every "macosx" libc toolchain, which collides with the
+    Conan -mios-version-min flag
+    """
+    profile_host = textwrap.dedent("""
+    [settings]
+    arch=armv8
+    build_type=Release
+    compiler=apple-clang
+    compiler.version=17
+    compiler.libcxx=libc++
+    os=iOS
+    os.version=15.0
+    os.sdk=iphoneos
+    """)
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile": _macos_x86_64,
+            "profile_host": profile_host})
+    c.run("install . -pr:b profile -pr:h profile_host -c tools.apple:sdk_path=/my/sdk")
+    build = _build_file(c)
+    assert 'target_libc = "macosx"' in build
+    assert '"-mios-version-min=15.0",' in build
+    bazelrc = c.load("conan/conan_bzl.rc")
+    assert "build:conan-config --features=-macos_minimum_os" in bazelrc
 
 
 def test_recipe_without_shared_option():
