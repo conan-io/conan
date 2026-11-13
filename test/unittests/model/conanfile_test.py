@@ -16,6 +16,23 @@ class TestConanFile:
             if member.startswith('_') and not member.startswith("__"):
                 assert member.startswith('_conan')
 
+    def test_layouts_are_created_on_first_access(self):
+        conanfile, other = ConanFile(None), ConanFile(None)
+        assert not vars(conanfile.layouts)  # nothing is allocated until it is used
+        for name in ("source", "build", "package"):
+            layout = getattr(conanfile.layouts, name)
+            assert layout is getattr(conanfile.layouts, name)
+            assert not layout.buildenv_info and not layout.runenv_info and not layout.conf_info
+            assert layout is not getattr(other.layouts, name)
+
+        conanfile.layouts.build.buildenv_info.define("MYVAR", "myvalue")
+        conanfile.layouts.package.conf_info.define("user.my:conf", "myvalue")
+        assert conanfile.layouts.build.buildenv_info
+        assert conanfile.layouts.package.conf_info
+        assert not other.layouts.build.buildenv_info
+        assert not other.layouts.package.conf_info
+        assert not conanfile.layouts.source.buildenv_info
+
     def test_conanfile_naming_complete(self):
         client = TestClient()
         conanfile = """from conan import ConanFile

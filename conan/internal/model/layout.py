@@ -1,4 +1,5 @@
 import os
+from functools import cached_property
 
 from conan.internal.model.cpp_info import CppInfo
 from conan.internal.model.conf import Conf
@@ -26,10 +27,20 @@ class PartialLayout:
 
 
 class Layouts:
-    def __init__(self):
-        self.source = PartialLayout()
-        self.build = PartialLayout()
-        self.package = PartialLayout()
+    # Created on first access: only recipes using layouts and editable packages read them,
+    # but every node of a graph used to allocate 3 PartialLayout (6 Environment and 3 Conf)
+
+    @cached_property
+    def source(self):
+        return PartialLayout()
+
+    @cached_property
+    def build(self):
+        return PartialLayout()
+
+    @cached_property
+    def package(self):
+        return PartialLayout()
 
 
 class Folders:
