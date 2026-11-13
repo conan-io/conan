@@ -380,9 +380,8 @@ class _InstallConfiguration:
 
         result.nodes.append(node)
         for dep in node.edges:
-            if dep.dst.binary != BINARY_SKIP:
-                if dep.dst.pref not in result.depends:
-                    result.depends.append(dep.dst.pref)
+            if dep.dst.binary != BINARY_SKIP and dep.dst.pref not in result.depends:
+                result.depends.append(dep.dst.pref)
         return result
 
     def add(self, node):
@@ -394,9 +393,8 @@ class _InstallConfiguration:
         self.nodes.append(node)
 
         for edge in node.edges:
-            if edge.dst.binary != BINARY_SKIP:
-                if edge.dst.pref not in self.depends:
-                    self.depends.append(edge.dst.pref)
+            if edge.dst.binary != BINARY_SKIP and edge.dst.pref not in self.depends:
+                self.depends.append(edge.dst.pref)
 
     def _build_args(self):
         if self.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD):

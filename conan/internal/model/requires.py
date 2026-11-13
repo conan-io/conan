@@ -245,7 +245,7 @@ class Requirement:
         """
         if require.visible is False:
             # TODO: We could implement checks in case private is violated (e.g shared libs)
-            return
+            return None
 
         if require.build:  # public!
             # TODO: To discuss if this way of conflicting build_requires is actually useful or not
@@ -266,7 +266,7 @@ class Requirement:
                                                  # require.visible=True => require.consistent=True
                                                  consistent=self.consistent)
                 return downstream_require
-            return
+            return None
 
         # Regular and test requires
         if dep_pkg_type is PackageType.SHARED or dep_pkg_type is PackageType.STATIC:

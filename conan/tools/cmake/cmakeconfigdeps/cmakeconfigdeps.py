@@ -659,7 +659,7 @@ class _CMakeContextGenerator:
             if info.exe or not (info.package_framework or info.frameworks or info.includedirs
                                 or info.libs or info.system_libs or info.defines or info.requires
                                 or info.sources or info.objects):
-                return
+                return None
 
             includedirs = ";".join(self._cmake_pkg_path(i)
                                    for i in info.includedirs) if info.includedirs else ""

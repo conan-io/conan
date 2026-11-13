@@ -104,7 +104,7 @@ class WorkspaceAPI:
         @return: Returns {RecipeReference: {"path": full abs-path, "output_folder": abs-path}}
         """
         if not self._folder or not self._enabled:
-            return
+            return None
         packages = {}
         for editable_info in self._ws.packages():
             rel_path = editable_info["path"]

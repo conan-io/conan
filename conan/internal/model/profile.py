@@ -191,11 +191,10 @@ class Profile:
             # Example: new_settings declare a different "compiler",
             # so invalidate the current "compiler.XXX"
             for name, value in new_settings.items():
-                if "." not in name:
-                    if name in self.settings and self.settings[name] != value:
-                        for cur_name, _ in self.settings.items():
-                            if cur_name.startswith("%s." % name):
-                                del res[cur_name]
+                if "." not in name and name in self.settings and self.settings[name] != value:
+                    for cur_name, _ in self.settings.items():
+                        if cur_name.startswith("%s." % name):
+                            del res[cur_name]
             # Now merge the new values
             res.update(new_settings)
             self.settings = res

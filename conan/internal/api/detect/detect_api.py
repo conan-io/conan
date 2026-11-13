@@ -263,7 +263,7 @@ def detect_libcxx(compiler, version, compiler_exe=None):
         elif platform.system() == "Darwin":
             return "libc++"
         elif platform.system() == "Windows":
-            return  # by default windows will assume LLVM/Clang with VS backend
+            return None  # by default windows will assume LLVM/Clang with VS backend
         else:  # Linux
             libcxx = _detect_gcc_libcxx(version, compiler_exe or "clang++")
             return libcxx
@@ -659,7 +659,7 @@ def default_compiler_version(compiler, version):
 
 def detect_sdk_version(sdk):
     if platform.system() != "Darwin":
-        return
+        return None
     cmd = f'xcrun -sdk {sdk} --show-sdk-version'
     _, result = detect_runner(cmd)
     result = result.strip()
