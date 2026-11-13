@@ -6,11 +6,19 @@ from conan.internal.model.conf import Conf
 
 
 class Infos:
+    # Created on first access: most graph nodes never read them
 
-    def __init__(self):
-        self.source = CppInfo()
-        self.build = CppInfo()
-        self.package = CppInfo(set_defaults=True)
+    @cached_property
+    def source(self):
+        return CppInfo()
+
+    @cached_property
+    def build(self):
+        return CppInfo()
+
+    @cached_property
+    def package(self):
+        return CppInfo(set_defaults=True)
 
 
 class PartialLayout:
