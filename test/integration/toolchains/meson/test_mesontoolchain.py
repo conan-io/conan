@@ -977,15 +977,19 @@ def test_new_public_attributes():
 
 
 @pytest.mark.parametrize(
-    "package_type, shared_option, default_library, has_fpic",
+    "package_type, shared_option, default_library, fpic, staticpic",
     [
-        ("shared-library", None, "shared", False),
-        ("static-library", None, "static", True),
-        ("library", True, "shared", False),
-        ("library", False, "static", True),
+        ("shared-library", None, "shared", None, None),
+        ("shared-library", None, "shared", True, None),
+        ("static-library", None, "static", True, "true"),
+        ("static-library", None, "static", False, "false"),
+        ("static-library", None, "static", "unset", None),
+        ("library", True, "shared", None, None),
+        ("library", False, "static", True, "true"),
+        ("library", False, "static", False, "false"),
     ],
 )
-def test_package_type(package_type, shared_option, default_library, has_fpic):
+def test_package_type(package_type, shared_option, default_library, fpic, staticpic):
     client = TestClient()
 
     conanfile = (GenConanfile("pkg", "1.0")
@@ -995,18 +999,21 @@ def test_package_type(package_type, shared_option, default_library, has_fpic):
 
     if shared_option is not None:
         conanfile = conanfile.with_option("shared", [True, False], shared_option)
-    if has_fpic:
-        conanfile = conanfile.with_option("fPIC", [True, False], True)
+    if fpic == "unset":
+        conanfile = conanfile.with_option("fPIC", [True, False, None], None)
+    elif fpic is not None:
+        conanfile = conanfile.with_option("fPIC", [True, False], fpic)
 
     client.save({"conanfile.py": conanfile})
     client.run("install")
     content = client.load(MesonToolchain.native_filename)
     assert "buildtype = 'release'" in content
     assert f"default_library = '{default_library}'" in content
-    if has_fpic:
-        assert "b_staticpic = True" in content
+    if staticpic is not None:
+        assert f"b_staticpic = {staticpic}" in content
     else:
         assert "b_staticpic" not in content
+    assert "do not use a Conan option value directly" not in client.out
 
 
 def test_needs_exe_wrapper():
