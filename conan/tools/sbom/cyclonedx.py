@@ -82,7 +82,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
         "metadata": {
             "component": {
                 "author": conanfile.author or "Unknown",
-                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile),
+                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile._conan_node),
                 "name": name if name else name_default,
                 "type": "application" if conanfile.package_type == "application" else "library",
             },
@@ -185,7 +185,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
         "metadata": {
             "component": {
                 **({"authors": [{"name": conanfile.author}]} if conanfile.author else {}),
-                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile),
+                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile._conan_node),
                 "name": name if name else name_default,
                 "type": "application" if conanfile.package_type == "application" else "library"
             },
@@ -256,9 +256,6 @@ def _calculate_bomref(component):
     channel = f"&channel={component.ref.channel}" if component.ref.channel else ""
     package_id = getattr(component, "package_id", None)
 
-    if not isinstance(package_id, str):
-        node = getattr(component, "_conan_node", None)
-        package_id = node.package_id if node is not None else None
     package_id = f"&package_id={package_id}" if package_id else ""
     return (f"pkg:conan/{component.name}@{component.ref.version}"
             f"?rrev={component.ref.revision}{package_id}{user}{channel}")

@@ -402,9 +402,10 @@ class TestCyclonedx:
         tc = hook_setup_post_package
         tc.save({"conanfile.py": GenConanfile("pkg", "1.0")})
         tc.run("create .")
+        package_id = tc.created_package_id("pkg/1.0")
         sbom = json.loads(tc.load(os.path.join(tc.created_layout().metadata(), "sbom.cdx.json")))
         metadata_ref = sbom["metadata"]["component"]["bom-ref"]
-        assert "&package_id=" in metadata_ref
+        assert f"&package_id={package_id}" in metadata_ref
         assert metadata_ref == sbom["components"][0]["bom-ref"]
 
     def test_visible_false_duplicate_bomref(self, cyclone_version):
