@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from conan.internal.graph.graph_error import GraphError, GraphConflictError
+from conan.internal.model.requires import required_node, required_nodes_union
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 
@@ -71,7 +72,7 @@ class Node:
         self.replaced_requires = {}  # To track the replaced requires for self.edges[old-ref]
         self.skipped_build_requires = False
         self.editable_output_folder = None  # In case this node is editable
-        self.bit = None  # its bitmask in the DepsGraph.nodes_by_bit registry, for required_nodes
+        self.bit = None  # required_nodes with only this node, its index in DepsGraph.nodes_by_bit
 
     def subgraph(self):
         nodes = [self]
@@ -163,7 +164,7 @@ class Node:
         # If the requirement propagates .files downstream, cannot be skipped
         # But if the files are not needed in this graph branch, can be marked "Skip"
         if down_require.files:
-            down_require.required_nodes = require.required_nodes | self.bit
+            down_require.required_nodes = required_nodes_union(require.required_nodes, self.bit)
         else:
             down_require.required_nodes = self.bit
         d.src.propagate_downstream(down_require, node, visibility_conflicts)
@@ -400,7 +401,7 @@ class DepsGraph:
     def add_node(self, node):
         if node.bit is None:  # sticky: a node moved to a derived graph (workspaces) keeps it
             # append-only registry (orphans leave self.nodes, but can stay in required_nodes)
-            node.bit = 1 << len(self.nodes_by_bit)
+            node.bit = required_node(len(self.nodes_by_bit))
             self.nodes_by_bit.append(node)
         self.nodes.append(node)
 
