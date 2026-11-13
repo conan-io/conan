@@ -43,6 +43,8 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
     nodes = [node for node in graph.nodes if should_add_node(node, add_build, add_tests)]
     if has_special_root_node:
         nodes = nodes[1:]
+    # visible=False can repeat a recipe. bom-ref includes package_id, so this keeps one node per binary.
+    nodes = list({_calculate_bomref(node): node for node in nodes}.values())
 
     dependencies = []
     if has_special_root_node:
@@ -80,7 +82,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
         "metadata": {
             "component": {
                 "author": conanfile.author or "Unknown",
-                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile),
+                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile._conan_node),
                 "name": name if name else name_default,
                 "type": "application" if conanfile.package_type == "application" else "library",
             },
@@ -143,6 +145,8 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
     nodes = [node for node in graph.nodes if should_add_node(node, add_build, add_tests)]
     if has_special_root_node:
         nodes = nodes[1:]
+    # visible=False can repeat a recipe. bom-ref includes package_id, so this keeps one node per binary.
+    nodes = list({_calculate_bomref(node): node for node in nodes}.values())
 
     dependencies = []
     if has_special_root_node:
@@ -181,7 +185,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
         "metadata": {
             "component": {
                 **({"authors": [{"name": conanfile.author}]} if conanfile.author else {}),
-                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile),
+                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile._conan_node),
                 "name": name if name else name_default,
                 "type": "application" if conanfile.package_type == "application" else "library"
             },
@@ -250,7 +254,11 @@ def _component_extra_info(extra_info, node):
 def _calculate_bomref(component):
     user = f"&user={component.ref.user}" if component.ref.user else ""
     channel = f"&channel={component.ref.channel}" if component.ref.channel else ""
-    return f"pkg:conan/{component.name}@{component.ref.version}?rrev={component.ref.revision}{user}{channel}"
+    package_id = getattr(component, "package_id", None)
+
+    package_id = f"&package_id={package_id}" if package_id else ""
+    return (f"pkg:conan/{component.name}@{component.ref.version}"
+            f"?rrev={component.ref.revision}{package_id}{user}{channel}")
 
 
 def should_add_node(node, add_build, add_tests):
