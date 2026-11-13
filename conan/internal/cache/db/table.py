@@ -62,7 +62,7 @@ class BaseDbTable:
 
             return field_str
 
-        fields = ', '.join([field(*it) for it in self.columns_description])
+        fields = ', '.join(field(*it) for it in self.columns_description)
         guard = 'IF NOT EXISTS'
         table_checks = f", UNIQUE({', '.join(self.unique_together)})" if self.unique_together else ''
         with self.db_connection() as conn:
