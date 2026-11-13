@@ -107,3 +107,28 @@ class TestDownloaderUnit:
         downloader.download("fake_url", file_path=self.target)
         actual_content = open(self.target, "rb").read()
         assert expected_content == actual_content
+
+    def test_download_with_non_gzip_compression_and_different_content_length(self):
+        expected_content = b"some data"
+        echo_header = {"Content-Encoding": "make_it_smaller", "Content-Length": len(expected_content) - 1}
+        requester = MockRequester(expected_content, echo_header=echo_header)
+        downloader = FileDownloader(requester=requester)
+        downloader.download("fake_url", file_path=self.target)
+        actual_content = open(self.target, "rb").read()
+        assert expected_content == actual_content
+
+    def test_download_with_no_encoding_and_different_content_length(self):
+        expected_content = b"some data"
+        echo_header = {"Content-Length": len(expected_content) - 1}
+        requester = MockRequester(expected_content, echo_header=echo_header)
+        downloader = FileDownloader(requester=requester)
+        with pytest.raises(ConanException, match=r"Transfer interrupted before complete"):
+            downloader.download("fake_url", file_path=self.target)
+
+    def test_download_with_identity_encoding_and_different_content_length(self):
+        expected_content = b"some data"
+        echo_header = {"Content-Encoding": "identity", "Content-Length": len(expected_content) - 1}
+        requester = MockRequester(expected_content, echo_header=echo_header)
+        downloader = FileDownloader(requester=requester)
+        with pytest.raises(ConanException, match=r"Transfer interrupted before complete"):
+            downloader.download("fake_url", file_path=self.target)
