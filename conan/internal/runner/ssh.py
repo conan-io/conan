@@ -176,7 +176,7 @@ class SSHRunner:
         }
         if is_windows:
             # Wrapper script with environment variables preset
-            env_lines = "\n".join([f"set {k}={v}" for k,v in remote_env.items()])
+            env_lines = "\n".join(f"set {k}={v}" for k,v in remote_env.items())
             conan_bat_contents = f"""@echo off\n{env_lines}\n{conan_cmd} %*\n"""
             conan_bat = remote_folder + "/conan.bat"
             try:

@@ -44,7 +44,7 @@ class BasicLayout(LayoutBase):
 
     def metadata(self):
         if self._base_folder is None:
-            return
+            return None
         return os.path.join(os.path.dirname(self._base_folder), METADATA)
 
 

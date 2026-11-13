@@ -202,13 +202,12 @@ class ConanRequester:
         # verify is the kwargs that comes from caller, RestAPI, it is defined in
         # Conan remote "verify_ssl"
         source_credentials = kwargs.pop("source_credentials", None)
-        if kwargs.get("verify", None) is not False:  # False means de-activate
-            if self._cacert_path is not None:
-                kwargs["verify"] = self._cacert_path
+        # verify=False means de-activate
+        if kwargs.get("verify", None) is not False and self._cacert_path is not None:
+            kwargs["verify"] = self._cacert_path
         kwargs["cert"] = self._client_certificates
-        if self._proxies:
-            if not self._should_skip_proxy(url):
-                kwargs["proxies"] = self._proxies
+        if self._proxies and not self._should_skip_proxy(url):
+            kwargs["proxies"] = self._proxies
         if self._timeout and self._timeout != INFINITE_TIMEOUT:
             kwargs["timeout"] = self._timeout
         # Copy, the caller headers can be reused for other urls, they must not get these urls auth

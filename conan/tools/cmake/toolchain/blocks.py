@@ -43,7 +43,7 @@ class Block:
     def get_rendered_content(self):
         context = self.values
         if context is None:
-            return
+            return None
 
         template = f"########## '{self._name}' block #############\n" + self.template + "\n\n"
         template = Template(template, trim_blocks=True, lstrip_blocks=True)
@@ -79,15 +79,15 @@ class VSRuntimeBlock(Block):
         # Parsing existing toolchain file to get existing configured runtimes
         settings = self._conanfile.settings
         if settings.get_safe("os") != "Windows":
-            return
+            return None
 
         compiler = settings.get_safe("compiler")
         if compiler not in ("msvc", "clang", "intel-cc"):
-            return
+            return None
 
         runtime = settings.get_safe("compiler.runtime")
         if runtime is None:
-            return
+            return None
 
         config_dict = {}
         if os.path.exists(CONAN_TOOLCHAIN_FILENAME):
@@ -112,10 +112,9 @@ class VSRuntimeBlock(Block):
 
             # If clang is being used the CMake check of compiler will try to create a simple
             # test application, and will fail because the Debug runtime is not there
-            if compiler == "clang":
-                if config_dict.get("Debug") is None:
-                    clang_rt = "MultiThreadedDebug" + ("DLL" if runtime != "static" else "")
-                    config_dict["Debug"] = clang_rt
+            if compiler == "clang" and config_dict.get("Debug") is None:
+                clang_rt = "MultiThreadedDebug" + ("DLL" if runtime != "static" else "")
+                config_dict["Debug"] = clang_rt
 
         return {"vs_runtimes": config_dict}
 
@@ -265,7 +264,7 @@ class ArchitectureBlock(Block):
         arch_link_flag = architecture_link_flag(self._conanfile)
         thread_flags_list = " ".join(threads_flags(self._conanfile))
         if not arch_flag and not arch_link_flag and not thread_flags_list:
-            return
+            return None
         return {"arch_flag": arch_flag, "arch_link_flag": arch_link_flag,
                 "thread_flags_list": thread_flags_list}
 
@@ -289,7 +288,7 @@ class RpathLinkFlagsBlock(Block):
                 runtime_dirs.extend(cppinfo.libdirs)
 
             # surround each dir with escaped quotes, to avoid problems with spaces in paths
-            rpath_link_flags = " ".join([f'-Wl,-rpath-link=\\"{d}\\"' for d in runtime_dirs]) if runtime_dirs else None
+            rpath_link_flags = " ".join(f'-Wl,-rpath-link=\\"{d}\\"' for d in runtime_dirs) if runtime_dirs else None
         else:
             rpath_link_flags = None
         return {"rpath_link_flags": rpath_link_flags}
@@ -307,7 +306,7 @@ class LinkerScriptsBlock(Block):
         linker_scripts = self._conanfile.conf.get(
             "tools.build:linker_scripts", check_type=list, default=[])
         if not linker_scripts:
-            return
+            return None
         linker_scripts = [linker_script.replace('\\', '/') for linker_script in linker_scripts]
         linker_scripts = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}")
                           for p in linker_scripts]
@@ -395,7 +394,7 @@ class ParallelBlock(Block):
         compiler = self._conanfile.settings.get_safe("compiler")
         # MSVC or toolset == ClangCL -> Visual + clang
         if "Visual" not in self._toolchain.generator or compiler not in ("msvc", "clang"):
-            return
+            return None
 
         jobs = build_jobs(self._conanfile)
         if jobs:
@@ -426,7 +425,7 @@ class AndroidSystemBlock(Block):
     def context(self):
         os_ = self._conanfile.settings.get_safe("os")
         if os_ != "Android":
-            return
+            return None
 
         # TODO: only 'c++_shared' y 'c++_static' supported?
         #  https://developer.android.com/ndk/guides/cpp-support
@@ -530,8 +529,8 @@ class AppleSystemBlock(Block):
             separated by '{universal_arch_separator}'"""
             arch_ = conanfile.settings.get_safe("arch") if conanfile else None
             if arch_ is not None:
-                return ";".join([_to_apple_arch(arch, default=arch) for arch in
-                                 arch_.split(universal_arch_separator)])
+                return ";".join(_to_apple_arch(arch, default=arch) for arch in
+                                arch_.split(universal_arch_separator))
 
         # check valid combinations of architecture - os ?
         # for iOS a FAT library valid for simulator and device can be generated
@@ -681,7 +680,7 @@ class FindFiles(Block):
     def _join_paths(self, paths):
         paths = [p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"') for p in paths]
         paths = [relativize_path(p, self._conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
-        return " ".join([f'"{p}"' for p in paths])
+        return " ".join(f'"{p}"' for p in paths)
 
     def context(self):
         # To find the generated cmake_find_package finders

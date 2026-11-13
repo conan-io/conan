@@ -312,5 +312,5 @@ def list(conan_api: ConanAPI, parser, *args):
     return {
         "results": pkglist.serialize(),
         "conan_api": conan_api,
-        "cli_args": " ".join([f"{arg}={getattr(args, arg)}" for arg in vars(args) if getattr(args, arg)])
+        "cli_args": " ".join(f"{arg}={getattr(args, arg)}" for arg in vars(args) if getattr(args, arg))
     }
