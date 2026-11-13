@@ -983,6 +983,7 @@ def test_new_public_attributes():
         ("shared-library", None, "shared", True, None),
         ("static-library", None, "static", True, "true"),
         ("static-library", None, "static", False, "false"),
+        ("static-library", None, "static", "unset", None),
         ("library", True, "shared", None, None),
         ("library", False, "static", True, "true"),
         ("library", False, "static", False, "false"),
@@ -998,7 +999,9 @@ def test_package_type(package_type, shared_option, default_library, fpic, static
 
     if shared_option is not None:
         conanfile = conanfile.with_option("shared", [True, False], shared_option)
-    if fpic is not None:
+    if fpic == "unset":
+        conanfile = conanfile.with_option("fPIC", [True, False, None], None)
+    elif fpic is not None:
         conanfile = conanfile.with_option("fPIC", [True, False], fpic)
 
     client.save({"conanfile.py": conanfile})
