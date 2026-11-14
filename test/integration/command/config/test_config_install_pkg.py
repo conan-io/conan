@@ -37,6 +37,8 @@ class TestInstallLockfileConfigRequires:
         c.run("install . --lockfile=conan.lock", assert_error=True)
         assert ("ERROR: There are config packages in lockfile 'config_requires' "
                 "not installed: [myconf/1.0#aabbcc, other/2.1#rev2]") in c.out
+        assert "conan config install-pkg myconf/1.0#aabbcc" in c.out
+        assert "conan config install-pkg other/2.1#rev2" in c.out
 
     def test_install_missing_installed_config_error_same(self):
         """Same as above but with multiple versions of same package"""
@@ -49,6 +51,9 @@ class TestInstallLockfileConfigRequires:
         c.run("install . --lockfile=conan.lock", assert_error=True)
         assert ("ERROR: There are config packages in lockfile 'config_requires' "
                 "not installed: [myconf/2.0#aabbcc, myconf/1.0#aabbcc]") in c.out
+        # Only one hint per package name is needed
+        assert "conan config install-pkg myconf/2.0#aabbcc" in c.out
+        assert "conan config install-pkg myconf/1.0#aabbcc" not in c.out
 
     def test_install_lockfile_config_match(self):
         """Installed config matches lockfile entry -> passes."""
@@ -88,6 +93,7 @@ class TestInstallLockfileConfigRequires:
             {"config_version": ["myconf/1.0#rev"]})})
         c.run("install . --lockfile=conan.lock", assert_error=True)
         assert "ERROR: Installed config packages [myconf/1.0#rev] not in the lockfile" in c.out
+        assert "conan config install-pkg myconf/1.0#rev_in_lockfile" in c.out
 
     def test_install_lockfile_config_version_mismatch(self):
         """Installed config has different version than lockfile entry -> error."""
@@ -101,3 +107,4 @@ class TestInstallLockfileConfigRequires:
             {"config_version": ["myconf/1.0#aabbcc"]})})
         c.run("install . --lockfile=conan.lock", assert_error=True)
         assert "ERROR: Installed config packages [myconf/1.0#aabbcc] not in the lockfile" in c.out
+        assert "conan config install-pkg myconf/2.0#aabbcc" in c.out
