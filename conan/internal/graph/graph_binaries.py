@@ -19,6 +19,7 @@ from conan.internal.model.info import RequirementInfo, RequirementsInfo
 from conan.internal.model.pkg_type import PackageType
 
 
+
 class GraphBinariesAnalyzer:
 
     def __init__(self, cache, remote_manager, home_folder, global_conf, hook_manager):
@@ -530,6 +531,47 @@ class GraphBinariesAnalyzer:
         self._skip_binaries(deps_graph)
 
     @staticmethod
+    def _intermediate_nodes(graph):
+        """ For every node P and each one of its transitive dependencies X, computes which
+        intermediate nodes (between P and X) are also necessary when X is necessary. E.g. for:
+            app -> libc (static) -> libb (header) -> liba (static)
+        if app needs liba (to link it), it also needs libb and libc (for the link order and the
+        transitivity of build systems integrations like CMakeDeps find_package()).
+
+        Nodes are processed upstream first (dependencies before their consumers), so when processing
+        P, the result of all its direct dependencies D is already known:
+            result[P][X] = Union for every direct dependency D of P that propagates X to P:
+                               {D} + (result[D][X] if X files are propagated through D)
+
+        :return: {node: {transitive_node: set(intermediate nodes)}}
+        """
+        result = {}
+        for level in graph.by_levels():
+            for node in level:
+                node_result = result[node] = {}
+                for edge in node.edges:
+                    dep_node = edge.dst
+                    if dep_node.conanfile.vendor:  # vendor packages don't propagate their deps
+                        continue
+                    dep_result = result.get(dep_node, {})
+                    dep_pkg_type = dep_node.conanfile.package_type
+                    for t in dep_node.transitive_deps.values():
+                        transitive_node = t.node
+                        if transitive_node is None:  # unresolved, like an override of a missing dep
+                            continue
+                        transitive_pkg_type = transitive_node.conanfile.package_type
+                        down_require = edge.require.transform_downstream(dep_pkg_type, t.require,
+                                                                         transitive_pkg_type,
+                                                                         node.conanfile)
+                        if down_require is None:  # transitive_node isn't propagated through dep_node
+                            continue
+                        intermediate = node_result.setdefault(transitive_node, set())
+                        intermediate.add(dep_node)
+                        if down_require.files:  # files go through dep_node, its chain is needed too
+                            intermediate.update(dep_result.get(transitive_node, ()))
+        return result
+
+    @staticmethod
     def _skip_binaries(graph):
         required_nodes = set()
         # Aggregate all necessary starting nodes
@@ -546,6 +588,7 @@ class GraphBinariesAnalyzer:
                     required_nodes.add(node)
 
         root_nodes = required_nodes.copy()
+        intermediate_nodes = GraphBinariesAnalyzer._intermediate_nodes(graph)
         while root_nodes:
             new_root_nodes = set()
             for node in root_nodes:
@@ -557,7 +600,7 @@ class GraphBinariesAnalyzer:
                 for req, t in node.transitive_deps.items():
                     if req.files or (req.direct and is_consumer):
                         deps_required.add(t.node)
-                        deps_required.update(req.required_nodes)
+                        deps_required.update(intermediate_nodes.get(node, {}).get(t.node, ()))
 
                 # Third pass, mark requires as skippeable
                 for dep in node.transitive_deps.values():
