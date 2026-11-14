@@ -3,6 +3,7 @@ import re
 import textwrap
 import os
 import pytest
+from unittest import mock
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
@@ -171,3 +172,100 @@ def test_xcrun_in_required_by_tool_requires():
     client.run("create consumer.py --name=consumer --version=1.0 -pr:h=./profile_ios -pr:b=default --build='*'")
 
     assert re.search("sdk for building openssl:.*MacOSX", str(client.out))
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Apple install names")
+@pytest.mark.parametrize("install_dir", ["@rpath", "/lib"])
+def test_fix_shared_install_name_prefix_library(install_dir):
+    """libabc is a prefix of libabcrt (like flatcc / flatccrt): the executable must keep
+    pointing at each library, not at whichever matching one is listed first"""
+    conanfile = textwrap.dedent(f"""
+        import os
+        from conan import ConanFile
+        from conan.tools.apple import XCRun, fix_apple_shared_install_name
+        from conan.tools.files import save
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "compiler", "build_type", "arch"
+
+            def package(self):
+                xcrun = XCRun(self)
+                cmd = f'"{{xcrun.cc}}" -isysroot "{{xcrun.sdk_path}}"'
+                lib = os.path.join(self.package_folder, "lib")
+                exe = os.path.join(self.package_folder, "bin", "app")
+                os.makedirs(lib)
+                os.makedirs(os.path.dirname(exe))
+                # each library exports its own symbol, so a wrong reference fails at runtime
+                for name in ("abc", "abcrt"):
+                    save(self, f"{{name}}.c", f"int {{name}}(void){{{{return 1;}}}}")
+                    self.run(f'{{cmd}} -dynamiclib {{name}}.c -o "{{lib}}/lib{{name}}.dylib" '
+                             f'-install_name {install_dir}/lib{{name}}.dylib')
+                save(self, "main.c", "int abc(void);int abcrt(void);"
+                                     "int main(void){{return abc()+abcrt()==2?0:1;}}")
+                # links against both, like flatcc does
+                self.run(f'{{cmd}} main.c -L "{{lib}}" -labc -labcrt -o "{{exe}}" '
+                         f'-Wl,-headerpad_max_install_names')
+                fix_apple_shared_install_name(self)
+        """)
+    client = TestClient(path_with_spaces=False)
+    client.save({"conanfile.py": conanfile})
+
+    # The bug only shows if the longer name is listed first, which depends on the
+    # filesystem (APFS hashes names), so force that order
+    real_listdir = os.listdir
+    with mock.patch("conan.tools.apple.apple.os.listdir",
+                    side_effect=lambda p: sorted(real_listdir(p), reverse=True)):
+        client.run("create . -tf=")
+
+    exe = os.path.join(client.created_layout().package(), "bin", "app")
+    client.run_command(f'otool -L "{exe}"')
+    assert client.out.count("@rpath/libabc.dylib") == 1
+    assert client.out.count("@rpath/libabcrt.dylib") == 1
+    client.run_command(f'"{exe}"')  # dyld would fail if a reference points to the wrong lib
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Apple install names")
+@pytest.mark.parametrize("install_dir", ["@rpath", "/lib"])
+def test_fix_shared_install_name_prefix_external_library(install_dir):
+    """The executable links libabc, which is not part of the package, and libabcrt, which is.
+    The reference to libabc is not ours to fix, even if it is a prefix of a packaged library"""
+    conanfile = textwrap.dedent(f"""
+        import os
+        from conan import ConanFile
+        from conan.tools.apple import XCRun, fix_apple_shared_install_name
+        from conan.tools.files import save
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "compiler", "build_type", "arch"
+
+            def package(self):
+                xcrun = XCRun(self)
+                cmd = f'"{{xcrun.cc}}" -isysroot "{{xcrun.sdk_path}}"'
+                external = os.path.join(self.build_folder, "external")
+                lib = os.path.join(self.package_folder, "lib")
+                exe = os.path.join(self.package_folder, "bin", "app")
+                os.makedirs(external)
+                os.makedirs(lib)
+                os.makedirs(os.path.dirname(exe))
+                for name, folder in (("abc", external), ("abcrt", lib)):
+                    save(self, f"{{name}}.c", f"int {{name}}(void){{{{return 1;}}}}")
+                    self.run(f'{{cmd}} -dynamiclib {{name}}.c -o "{{folder}}/lib{{name}}.dylib" '
+                             f'-install_name {install_dir}/lib{{name}}.dylib')
+                save(self, "main.c", "int abc(void);int abcrt(void);"
+                                     "int main(void){{return abc()+abcrt()==2?0:1;}}")
+                self.run(f'{{cmd}} main.c -L "{{external}}" -labc -L "{{lib}}" -labcrt '
+                         f'-o "{{exe}}" -Wl,-headerpad_max_install_names')
+                fix_apple_shared_install_name(self)
+        """)
+    client = TestClient(path_with_spaces=False)
+    client.save({"conanfile.py": conanfile})
+    client.run("create . -tf=")
+
+    exe = os.path.join(client.created_layout().package(), "bin", "app")
+    client.run_command(f'otool -L "{exe}"')
+    assert client.out.count(f"{install_dir}/libabc.dylib") == 1
+    assert client.out.count("@rpath/libabcrt.dylib") == 1
