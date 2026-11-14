@@ -207,6 +207,29 @@ class PkgCache:
         self._create_path(package_path, remove_contents=False)
         return PackageLayout(pref, os.path.join(self._base_folder, package_path))
 
+    def copy_pkg_layout(self, src_layout: PackageLayout, dst_ref: RecipeReference) -> PkgReference:
+        """ For the cache_reuse_binaries command
+
+        :param src_layout: the layout of the existing package
+        :param dst_ref: the recipe reference (with revision) that will own the copy
+        :return: the PkgReference of the new copy
+        """
+        src_pref = src_layout.reference
+        assert dst_ref.revision, "Recipe revision must be known to copy the package layout"
+        assert src_pref.revision, "Package revision must be known to copy the package layout"
+        dst_pref = PkgReference(dst_ref, src_pref.package_id, src_pref.revision,
+                                revision_timestamp_now())
+        layout = self.create_pkg_layout(dst_pref)
+        try:
+            with layout.set_dirty_context_manager():
+                shutil.copytree(src_layout.package(), layout.package(), symlinks=True)
+                if os.path.isdir(src_layout.metadata()):
+                    shutil.copytree(src_layout.metadata(), layout.metadata(), symlinks=True)
+        except BaseException:  # So KeyboardInterrupt also cleans things
+            self.remove_package_layout(layout)
+            raise
+        return dst_pref
+
     def update_recipe_timestamp(self, ref: RecipeReference):
         """ when the recipe already exists in cache, but we get a new timestamp from a server
         that would affect its order in our cache """

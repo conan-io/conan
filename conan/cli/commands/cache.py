@@ -336,6 +336,26 @@ def cache_restore(conan_api: ConanAPI, parser, subparser, *args):
     return {"results": {"Local Cache": package_list.serialize()}}
 
 
+@conan_subcommand(formatters={"text": print_list_text,
+                              "json": print_list_json})
+def cache_reuse_binaries(conan_api: ConanAPI, parser, subparser, *args):
+    """
+    Copy the binaries of a previous recipe revision to a new recipe revision, in the cache
+    """
+    subparser.add_argument("reference",
+                           help="Recipe reference to copy the binaries to, like "
+                                "'pkg/1.0' or 'pkg/1.0#revision'. If the revision is not "
+                                "specified, the latest revision in the cache is used")
+    subparser.add_argument("--from-revision", action=OnceArgument,
+                           help="Recipe revision to copy the binaries from. If not specified, "
+                                "the revision immediately before the target one in the cache")
+    args = parser.parse_args(*args)
+
+    ref = RecipeReference.loads(args.reference)
+    package_list = conan_api.cache.reuse_binaries(ref, args.from_revision)
+    return {"results": {"Local Cache": package_list.serialize()}}
+
+
 @conan_subcommand()
 def cache_backup_upload(conan_api: ConanAPI, parser, subparser, *args):
     """
