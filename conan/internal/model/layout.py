@@ -35,8 +35,8 @@ class PartialLayout:
 
 
 class Layouts:
-    # Created on first access: only recipes using layouts and editable packages read them,
-    # but every node of a graph used to allocate 3 PartialLayout (6 Environment and 3 Conf)
+    # Created on first access: package is only used by installed packages (package_info()), source
+    # and build only by editables. Every node used to allocate 3 PartialLayout (6 Environment, 3 Conf)
 
     @cached_property
     def source(self):
