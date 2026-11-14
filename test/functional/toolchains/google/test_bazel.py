@@ -1,3 +1,4 @@
+import json
 import platform
 import textwrap
 
@@ -15,11 +16,10 @@ def bazel_output_root_dir():
 
 @pytest.fixture(scope="module")
 def bazelrc():
+    # BazelToolchain already injects the Conan build_type flags (-O3, -g, -DNDEBUG...) in the
+    # generated cc_toolchain, so no "-c opt/dbg" configurations are needed anymore. These ones
+    # only check that the user bazelrc files and configs are still passed by the Bazel helper
     return textwrap.dedent("""
-        build:Debug -c dbg --copt=-g
-        build:Release -c opt
-        build:RelWithDebInfo -c opt --copt=-O3 --copt=-DNDEBUG
-        build:MinSizeRel  -c opt --copt=-Os --copt=-DNDEBUG
         build --color=yes
         build:withTimeStamps --show_timestamps
         """)
@@ -34,7 +34,7 @@ def base_profile():
 
         [conf]
         tools.google.bazel:bazelrc_path=["{curdir}/mybazelrc"]
-        tools.google.bazel:configs=["{build_type}", "withTimeStamps"]
+        tools.google.bazel:configs=["withTimeStamps"]
         """)
 
 
@@ -50,11 +50,22 @@ def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
     profile = base_profile.format(build_type=build_type,
                                   curdir=client.current_folder.replace("\\", "/"))
     client.save({"my_profile": profile})
-    client.run("create . --profile=./my_profile")
-    if build_type != "Debug":
-        assert "myapp/1.0: Hello World Release!" in client.out
+    # C++17: the highest standard admitted by the default msvc 191 profile of Windows
+    client.run("create . --profile=./my_profile -s compiler.cppstd=17")
+    assert f"myapp/1.0: Hello World {build_type}!" in client.out
+    assert "--config=withTimeStamps" in client.out
+    # compiler.cppstd is only applied by the Conan generated toolchain (or the
+    # --cxxopt fallback in MSVC), Bazel default toolchain and compilers use an older standard
+    assert "BazelToolchain generated: //conan:conan_toolchain.MODULE.bazel" in client.out
+    create_out = client.out
+    client.run("profile show --profile=./my_profile --format=json")
+    compiler = json.loads(client.stdout)["host"]["settings"]["compiler"]
+    if compiler == "msvc":
+        assert "myapp/1.0: _MSVC_LANG201703" in create_out
     else:
-        assert "myapp/1.0: Hello World Debug!" in client.out
+        assert "myapp/1.0: __cplusplus201703" in create_out
+        # Native builds do not need any bazelrc file, the toolchain is registered by MODULE.bazel
+        assert "conan_bzl.rc" not in create_out
 
 
 @pytest.mark.slow
@@ -140,6 +151,9 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
                                       'generators = "BazelToolchain", "BazelDeps"\n'
                                       '    requires = "myfirstlib/1.2.11"')
         module = textwrap.dedent("""
+        bazel_dep(name = "rules_cc", version = "0.2.17")
+        bazel_dep(name = "platforms", version = "1.1.0")
+        include("//conan:conan_toolchain.MODULE.bazel")
         load_conan_dependencies = use_extension("//conan:conan_deps_module_extension.bzl", "conan_extension")
         use_repo(load_conan_dependencies, "myfirstlib")
         """)
