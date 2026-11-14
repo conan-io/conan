@@ -323,33 +323,38 @@ class Lockfile:
         for r in self._conf_requires.refs():
             lockfile_refs_by_name.setdefault(r.name, []).append(r)
 
-        def install_hint(refs_by_name):
-            if not refs_by_name:
+        def install_hint(refs):
+            if not refs:
                 return ""
-            hints = "\n".join(f"  conan config install-pkg {refs[0].repr_notime()}"
-                              for refs in refs_by_name.values())
-            return ("\nInstall configuration package(s) with 'conan config install-pkg' "
-                    f"command(s):\n{hints}")
+            hints = "\n".join(f"  conan config install-pkg {r.repr_notime()}" for r in refs)
+            return ("\n\nIf the configuration packages are listed in a conanconfig.yml file, "
+                    "install them all at once:\n"
+                    "  conan config install-pkg <path to conanconfig.yml>\n"
+                    "\nOtherwise, install the packages from the lockfile one by one:\n"
+                    f"{hints}")
 
         # Existing installed config packages must exist in the lockfile
         not_locked = [r for r in installed_refs if r not in lockfile_refs]
         if not_locked:
-            mismatched = {r.name: lockfile_refs_by_name[r.name] for r in not_locked
-                          if r.name in lockfile_refs_by_name}
+            # Lockfile entries of the same package names that are not installed yet
+            to_install = []
+            for name in dict.fromkeys(r.name for r in not_locked):
+                for ref in lockfile_refs_by_name.get(name, []):
+                    if ref not in installed_refs and ref not in to_install:
+                        to_install.append(ref)
             raise ConanException(f"Installed config packages {not_locked} not in the lockfile"
-                                 f"{install_hint(mismatched)}")
+                                 f"{install_hint(to_install)}")
 
         # Config-requires in the lockfile must be installed, at least 1 per package name
         not_installed = []
-        missing_by_name = {}
-        for name, refs in lockfile_refs_by_name.items():
+        for refs in lockfile_refs_by_name.values():
             if not any(r in installed_refs for r in refs):
                 not_installed.extend(refs)
-                missing_by_name[name] = refs
         if not_installed:
+            not_installed_str = ", ".join(r.repr_notime() for r in not_installed)
             raise ConanException("There are config packages in lockfile "
-                                 f"'config_requires' not installed: {not_installed}"
-                                 f"{install_hint(missing_by_name)}")
+                                 f"'config_requires' not installed: [{not_installed_str}]"
+                                 f"{install_hint(not_installed)}")
 
     def _resolve(self, require, locked_refs, resolve_prereleases, kind):
         version_range = require.version_range
