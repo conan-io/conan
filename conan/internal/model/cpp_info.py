@@ -59,7 +59,9 @@ class MockInfoProperty:
 class _Component:
     # LEGACY 1.X fields, can be removed in 2.X. Class attributes, as MockInfoProperty has no state:
     # CPython stops sharing the keys of the instance __dict__ above 29 attributes (30 in 3.14),
-    # which makes every instance ~5x bigger, so keep the attributes in __init__ below that
+    # which makes every instance ~5x bigger. __init__ sets 28, so if this ever gets more attributes,
+    # look into __slots__ plus a "__dict__" slot instead. Not strict __slots__: recipes set attributes
+    # that are not defined here (e.g. cpp_info.version), and that would raise
     names = MockInfoProperty("cpp_info.names")
     filenames = MockInfoProperty("cpp_info.filenames")
     build_modules = MockInfoProperty("cpp_info.build_modules")
