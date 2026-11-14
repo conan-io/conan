@@ -6,7 +6,8 @@ from conan.internal.model.conf import Conf
 
 
 class Infos:
-    # Created on first access: most graph nodes never read them
+    # Created on first access: package is only used by installed packages (package_info()) and
+    # serialization, source and build only when layout() fills them (cmake_layout() and similar)
 
     @cached_property
     def source(self):
