@@ -440,7 +440,10 @@ class BinaryInstaller:
                     with conanfile_remove_attr(conanfile, ['info', "source_folder", "build_folder"],
                                                "package_info"):
                         MockInfoProperty.package = str(conanfile)
-                        conanfile.package_info()
+                        try:
+                            conanfile.package_info()
+                        finally:
+                            MockInfoProperty.package = None
 
                 # TODO: Check this package_folder usage for editable when not defined
                 conanfile.cpp.package.set_relative_base_folder(package_folder)
