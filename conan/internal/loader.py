@@ -4,6 +4,7 @@ import inspect
 import os
 import re
 import sys
+import time
 import types
 import uuid
 from threading import Lock
@@ -33,9 +34,7 @@ class ConanFileLoader:
         self._pyreq_loader = pyreq_loader
         self._cached_conanfile_classes = {}
         self._conanfile_helpers = conanfile_helpers
-        # invalidate_caches() iterates sys.path_importer_cache, which loading Python files modifies
-        with _load_python_lock:
-            invalidate_caches()
+        _invalidate_import_caches()
 
     def load_basic(self, conanfile_path, graph_lock=None, display="", remotes=None,
                    update=None, check_update=None):
@@ -312,6 +311,20 @@ def _parse_module(conanfile_module, module_id):
 
 
 _load_python_lock = Lock()  # Loading our Python files is not thread-safe (modifies sys)
+
+
+def _invalidate_import_caches():
+    # invalidate_caches() copies and modifies sys.path_importer_cache, which imports done by code
+    # outside this module can also modify. The lock only serializes our own loading, so retry if
+    # the dict changed meanwhile ("dictionary changed size during iteration" seen in CI)
+    for _ in range(10):
+        try:
+            with _load_python_lock:
+                invalidate_caches()
+            return
+        except (RuntimeError, KeyError):  # "dictionary changed size during iteration"
+            time.sleep(0.01)
+    invalidate_caches()
 
 
 def _parse_conanfile(conanfile_path):
