@@ -328,12 +328,18 @@ class Lockfile:
         for r in self._conf_requires.refs():
             lockfile_refs_by_name.setdefault(r.name, []).append(r)
         not_installed = []
-        for refs in lockfile_refs_by_name.values():
+        missing_by_name = {}
+        for name, refs in lockfile_refs_by_name.items():
             if not any(r in installed_refs for r in refs):
                 not_installed.extend(refs)
+                missing_by_name[name] = refs
         if not_installed:
+            hints = "\n".join(f"  conan config install-pkg {refs[0].repr_notime()}"
+                              for refs in missing_by_name.values())
             raise ConanException("There are config packages in lockfile "
-                                 f"'config_requires' not installed: {not_installed}")
+                                 f"'config_requires' not installed: {not_installed}\n"
+                                 "Install one package per name with 'conan config install-pkg', "
+                                 f"for example:\n{hints}")
 
     def _resolve(self, require, locked_refs, resolve_prereleases, kind):
         version_range = require.version_range
