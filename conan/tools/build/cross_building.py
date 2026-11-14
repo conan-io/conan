@@ -45,6 +45,17 @@ def can_run(conanfile):
     """
     # Issue related: https://github.com/conan-io/conan/issues/11035
     allowed = conanfile.conf.get("tools.build.cross_building:can_run", check_type=bool)
+    compiler_executables = conanfile.conf.get("tools.build:compiler_executables", default={},
+                                               check_type=dict)
+    if not isinstance(compiler_executables, dict):
+        compiler_executables = {}
+    # ``tools.build:compiler_executables['emulator']`` (e.g. qemu-user) means host binaries can be
+    # executed via the emulator (see ``ConanFile.run`` during ``test_package`` ``test()``).
+    if compiler_executables.get("emulator"):
+        if allowed is None:
+            return True
+        return allowed
+
     if allowed is None:
         return not cross_building(conanfile)
     return allowed

@@ -19,6 +19,13 @@ class CmdWrapper:
             self._wrapper = None
 
     def wrap(self, cmd, conanfile, **kwargs):
+        # Prepend emulator when run() is invoked from test_package test() only
+        if getattr(conanfile, "_conan_in_test_package_test", False):
+            compilers = conanfile.conf.get("tools.build:compiler_executables", default={}, check_type=dict)
+            emulator = compilers.get("emulator")
+            if emulator:
+                cmd = f"{emulator} {cmd}"
+
         if self._wrapper is None:
             return cmd
         return self._wrapper(cmd, conanfile=conanfile, **kwargs)
