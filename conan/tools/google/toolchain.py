@@ -414,10 +414,21 @@ class BazelToolchain:
                 f"'tool_paths[\"{name}\"]'")
         return "C:/Windows/System32/false.exe" if self._path is ntpath else "/bin/false"
 
+    def _cpp_tool(self):
+        """
+        C preprocessor (Bazel barely uses it). GCC provides it next to the compiler with the
+        same cross prefix and version: ``/bin/aarch64-linux-gnu-gcc-12`` is
+        ``/bin/aarch64-linux-gnu-cpp-12``. Otherwise, the one in the ``PATH``.
+        """
+        folder, name = self._path.split(self.c or "")
+        if self._compiler == "gcc" and "gcc" in name:
+            return self._path.join(folder, name.replace("gcc", "cpp"))
+        return "cpp"
+
     def _get_tool_paths(self):
         ret = {
             "gcc": self.c,
-            "cpp": "cpp",  # C preprocessor, Bazel barely uses it
+            "cpp": self._cpp_tool(),
             "ar": self.ar,
             "ld": self.ld,
             "strip": self.strip,

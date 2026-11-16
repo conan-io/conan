@@ -90,6 +90,7 @@ def test_default_bazel_toolchain(conanfile):
     assert 'cpu = "x86_64"' in build
     assert 'target_libc = "unknown"' in build
     assert '"gcc": "/opt/gcc/bin/gcc"' in build
+    assert '"cpp": "/opt/gcc/bin/cpp"' in build
     assert '"/opt/gcc",' in build  # compiler installation, cxx_builtin_include_directories
     compile_flags = ('    compile_flags = [\n'
                      '        "-m64",\n'
@@ -297,6 +298,19 @@ def test_toolchain_attributes():
     assert '"//my:constraint",' in build
     assert '"ar": "/my/ar"' in build
     assert '"/my/include",' in build
+
+
+def test_toolchain_cpp_tool_follows_gcc(conanfile):
+    """
+    The C preprocessor is the one of the profile compiler (cross prefix and version), not the
+    one in the PATH of the machine
+    """
+    profile = _linux_x86_64.replace("/opt/gcc/bin/gcc", "/opt/gcc/bin/aarch64-linux-gnu-gcc-12")
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile": profile})
+    c.run("install . -pr:a profile")
+    assert '"cpp": "/opt/gcc/bin/aarch64-linux-gnu-cpp-12"' in _build_file(c)
 
 
 def test_toolchain_tool_not_found(conanfile):
