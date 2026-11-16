@@ -61,6 +61,7 @@ def test_default_bazel_toolchain(conanfile):
             "profile": _linux_x86_64})
     c.run("install . -pr:a profile")
     assert "BazelToolchain generated: //conan:conan_toolchain.MODULE.bazel" in c.out
+    assert "the 'gcc' tool" not in c.out  # defined with an absolute path
     assert not os.path.exists(os.path.join(c.current_folder, "conan", "conan_bzl.rc"))
     assert os.path.exists(os.path.join(c.current_folder, "conan", "BUILD.bazel"))
     # The official rules_cc toolchain config rule is used, no custom Starlark rules
@@ -296,6 +297,19 @@ def test_toolchain_attributes():
     assert '"//my:constraint",' in build
     assert '"ar": "/my/ar"' in build
     assert '"/my/include",' in build
+
+
+def test_toolchain_tool_not_found(conanfile):
+    """
+    A required tool that is not found points to a failing binary, so the user is warned
+    """
+    profile = _linux_x86_64.replace('"c": "/opt/gcc/bin/gcc"', '"c": "my-missing-cc"')
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile": profile})
+    c.run("install . -pr:a profile")
+    assert "WARN: BazelToolchain: the 'gcc' tool ('my-missing-cc') was not found" in c.out
+    assert '"gcc": "/bin/false"' in _build_file(c)
 
 
 def test_toolchain_no_cc_toolchain():

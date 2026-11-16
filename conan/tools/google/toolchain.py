@@ -378,6 +378,9 @@ class BazelToolchain:
     # -------------------------------------------------------------------------------------------
     # Context
     # -------------------------------------------------------------------------------------------
+    # Tools that every build needs (compile/link and static libraries). The rest are optional
+    _required_tools = ("gcc", "ar")
+
     @staticmethod
     def _filter(v):
         return [f for f in v if f]
@@ -388,10 +391,11 @@ class BazelToolchain:
         os_build = self._conanfile.settings_build.get_safe("os")
         return ntpath if os_build in ("Windows", "WindowsStore", "WindowsCE") else posixpath
 
-    def _to_abs_tool(self, tool):
+    def _to_abs_tool(self, tool, name=None):
         """
         Bazel resolves relative ``tool_paths`` against the toolchain package, so every tool
         has to be an absolute path. Unknown tools point to a failing binary, as Bazel suggests.
+        A warning is raised if ``name`` is one of the tools needed by any build.
         """
         if isinstance(tool, list) or (tool and len(tool.split()) > 1):
             raise ConanException(f"BazelToolchain: '{tool}' is not a single executable. Bazel "
@@ -402,6 +406,12 @@ class BazelToolchain:
         found = shutil.which(tool) if tool else None
         if found:
             return found.replace("\\", "/")
+        if name in self._required_tools:
+            self._conanfile.output.warning(
+                f"BazelToolchain: the '{name}' tool ('{tool}') was not found, the Bazel build "
+                "will fail when using it. Define its absolute path with "
+                "'tools.build:compiler_executables', the build environment or "
+                f"'tool_paths[\"{name}\"]'")
         return "C:/Windows/System32/false.exe" if self._path is ntpath else "/bin/false"
 
     def _get_tool_paths(self):
@@ -417,7 +427,7 @@ class BazelToolchain:
             "gcov": self.gcov,
         }
         ret.update(self.tool_paths)
-        return {k: self._to_abs_tool(v) for k, v in ret.items()}
+        return {k: self._to_abs_tool(v, name=k) for k, v in ret.items()}
 
     def _get_builtin_include_directories(self, tool_paths):
         dirs = list(self.cxx_builtin_include_directories)
