@@ -115,8 +115,8 @@ jobs:
               Microsoft.VisualStudio.Component.VC.v141.x86.x64 `
             }
           }
-          Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "$env:RUNNER_TEMP\vs_buildtools15.exe"
-          Start-Process -FilePath "$env:RUNNER_TEMP\vs_buildtools15.exe" -ArgumentList `
+          Invoke-WebRequest -Uri "https://aka.ms/vs/15/release/vs_buildtools.exe" -OutFile "$PSScriptRoot\vs_buildtools15.exe"
+          Start-Process -FilePath "$PSScriptRoot\vs_buildtools15.exe" -ArgumentList `
               "--quiet",  "--wait", "--norestart", "--nocache", `
               "--add", "Microsoft.VisualStudio.Component.VCTools", `
               "--add", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", `
@@ -125,12 +125,14 @@ jobs:
               "--add", "Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core", `
               "--add", "Microsoft.Component.MSBuild", `
               "--add", "Microsoft.VisualStudio.Component.VC.140" -WindowStyle Hidden -Wait
-          New-Item -ItemType File -Path "$env:RUNNER_TEMP\install_vs.done"
+          New-Item -ItemType File -Path "$PSScriptRoot\install_vs.done"
           '@
-          $process = Start-Process pwsh -ArgumentList "-NoProfile", "-File", $script -PassThru `
-              -RedirectStandardOutput "$env:RUNNER_TEMP\install_vs.log" `
-              -RedirectStandardError "$env:RUNNER_TEMP\install_vs.err"
-          echo "VS_INSTALL_PID=$($process.Id)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          # The runner kills the processes started by a step when the step ends, so the script is
+          # started through WMI, outside of this step. It does not get the step environment variables
+          $command = "cmd /c pwsh -NoProfile -File $script > $env:RUNNER_TEMP\install_vs.log 2>&1"
+          $result = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine = $command}
+          if ($result.ReturnValue -ne 0) { throw "Could not start the Visual Studio installations: $($result.ReturnValue)" }
+          echo "VS_INSTALL_PID=$($result.ProcessId)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Determine pip cache directory
         id: pip-cache-dir
@@ -255,7 +257,7 @@ jobs:
       - name: Wait for Visual Studio installations
         run: |
           Get-Process -Id $env:VS_INSTALL_PID -ErrorAction SilentlyContinue | Wait-Process -Timeout 1800
-          Get-Content "$env:RUNNER_TEMP\install_vs.log", "$env:RUNNER_TEMP\install_vs.err"
+          Get-Content "$env:RUNNER_TEMP\install_vs.log"
           if (-not (Test-Path "$env:RUNNER_TEMP\install_vs.done")) { throw "Visual Studio installations failed" }
 
       - name: Verify MSVC v14.38 toolset, v141 toolset and Windows 10 SDK installation
