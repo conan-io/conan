@@ -312,6 +312,36 @@ def test_toolchain_tool_not_found(conanfile):
     assert '"gcc": "/bin/false"' in _build_file(c)
 
 
+def test_toolchain_generates_in_generators_folder_not_in_cwd():
+    conanfile = textwrap.dedent("""
+    import os
+    import tempfile
+    from conan import ConanFile
+    from conan.tools.google import BazelToolchain, bazel_layout
+    class ExampleConanIntegration(ConanFile):
+        settings = "os", "arch", "build_type", "compiler"
+
+        def layout(self):
+            bazel_layout(self)
+
+        def generate(self):
+            cwd = os.getcwd()
+            os.chdir(tempfile.mkdtemp())
+            try:
+                BazelToolchain(self).generate()
+            finally:
+                os.chdir(cwd)
+    """)
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile": _linux_x86_64})
+    c.run("install . -pr:a profile")
+    assert os.path.exists(os.path.join(c.current_folder, "conan", "BUILD.bazel"))
+    assert os.path.exists(os.path.join(c.current_folder, "conan", "conan_toolchain.MODULE.bazel"))
+    assert os.path.exists(os.path.join(c.current_folder, "conan", "conan_toolchain",
+                                       "BUILD.bazel"))
+
+
 def test_toolchain_no_cc_toolchain():
     """
     With generate_cc_toolchain = False, Bazel uses its auto-configured toolchain and the Conan

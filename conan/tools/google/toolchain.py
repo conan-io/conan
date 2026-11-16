@@ -648,24 +648,28 @@ class BazelToolchain:
         """
         check_duplicated_generator(self, self._conanfile)
         package = self._package_label
-        folder = self.toolchain_folder
-        save(os.path.join(folder, "BUILD.bazel"), self._render(self._build_template,
-                                                               self._context))
+        # Do not depend on the current working directory
+        generators_folder = self._conanfile.generators_folder
+        save(os.path.join(generators_folder, self.toolchain_folder, "BUILD.bazel"),
+             self._render(self._build_template, self._context))
         # The generators folder has to be a Bazel package to include() the module snippet.
         # BazelDeps creates the same empty file, do not overwrite it.
-        if not os.path.exists("BUILD.bazel"):
-            save("BUILD.bazel", "# This is an empty BUILD file.")
+        build_file = os.path.join(generators_folder, "BUILD.bazel")
+        if not os.path.exists(build_file):
+            save(build_file, "# This is an empty BUILD file.")
         module_label = f"{self._generators_package}:{self.module_filename}"
-        save(self.module_filename, self._render(self._module_template, {
-            "module_label": module_label,
-            "package": package,
-            "generate_cc_toolchain": self.generate_cc_toolchain,
-            "clang_cl_toolchain": self._clang_cl_toolchain,
-        }))
+        save(os.path.join(generators_folder, self.module_filename),
+             self._render(self._module_template, {
+                 "module_label": module_label,
+                 "package": package,
+                 "generate_cc_toolchain": self.generate_cc_toolchain,
+                 "clang_cl_toolchain": self._clang_cl_toolchain,
+             }))
 
         rc_flags = self._rc_flags
+        bazelrc = os.path.join(generators_folder, self.bazelrc_name)
         if self._is_cross_building or rc_flags:
-            save(self.bazelrc_name, self._render(self._bazelrc_template, {
+            save(bazelrc, self._render(self._bazelrc_template, {
                 "package": package,
                 "cross_building": self._is_cross_building,
                 "rc_flags": [_bazelrc_quote(flag) for flag in rc_flags],
@@ -673,7 +677,7 @@ class BazelToolchain:
             rc_msg = f" and {self.bazelrc_name} (--config={self.bazelrc_config})"
         else:
             # A stale one (e.g., previous cross-build install) would be used by the Bazel helper
-            if os.path.exists(self.bazelrc_name):
-                os.remove(self.bazelrc_name)
+            if os.path.exists(bazelrc):
+                os.remove(bazelrc)
             rc_msg = ""
         self._conanfile.output.info(f"BazelToolchain generated: {module_label}{rc_msg}")
