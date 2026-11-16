@@ -60,7 +60,8 @@ def test_default_bazel_toolchain(conanfile):
     c.save({"conanfile.py": conanfile,
             "profile": _linux_x86_64})
     c.run("install . -pr:a profile")
-    assert "BazelToolchain generated: //conan:conan_toolchain.MODULE.bazel and conan_bzl.rc "            "(--config=conan-config)" in c.out
+    assert ("BazelToolchain generated: //conan:conan_toolchain.MODULE.bazel and conan_bzl.rc "
+            "(--config=conan-config)") in c.out
     # The bazelrc is always generated: Bazel strips the debug symbols in its default "fastbuild"
     bazelrc = c.load("conan/conan_bzl.rc")
     assert "build:conan-config --strip=never" in bazelrc
@@ -93,6 +94,7 @@ def test_default_bazel_toolchain(conanfile):
     assert 'cpu = "x86_64"' in build
     assert 'target_libc = "unknown"' in build
     assert '"gcc": "/opt/gcc/bin/gcc"' in build
+    assert '"cpp": "/opt/gcc/bin/cpp"' in build
     assert '"/opt/gcc",' in build  # compiler installation, cxx_builtin_include_directories
     compile_flags = ('    compile_flags = [\n'
                      '        "-m64",\n'
@@ -305,6 +307,63 @@ def test_toolchain_attributes():
     assert '"/my/include",' in build
 
 
+def test_toolchain_cpp_tool_follows_gcc(conanfile):
+    """
+    The C preprocessor is the one of the profile compiler (cross prefix and version), not the
+    one in the PATH of the machine
+    """
+    profile = _linux_x86_64.replace("/opt/gcc/bin/gcc", "/opt/gcc/bin/aarch64-linux-gnu-gcc-12")
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile": profile})
+    c.run("install . -pr:a profile")
+    assert '"cpp": "/opt/gcc/bin/aarch64-linux-gnu-cpp-12"' in _build_file(c)
+
+
+def test_toolchain_tool_not_found(conanfile):
+    """
+    A required tool that is not found points to a failing binary, so the user is warned
+    """
+    profile = _linux_x86_64.replace('"c": "/opt/gcc/bin/gcc"', '"c": "my-missing-cc"')
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile": profile})
+    c.run("install . -pr:a profile")
+    assert "WARN: BazelToolchain: the 'gcc' tool ('my-missing-cc') was not found" in c.out
+    assert '"gcc": "/bin/false"' in _build_file(c)
+
+
+def test_toolchain_generates_in_generators_folder_not_in_cwd():
+    conanfile = textwrap.dedent("""
+    import os
+    import tempfile
+    from conan import ConanFile
+    from conan.tools.google import BazelToolchain, bazel_layout
+    class ExampleConanIntegration(ConanFile):
+        settings = "os", "arch", "build_type", "compiler"
+
+        def layout(self):
+            bazel_layout(self)
+
+        def generate(self):
+            cwd = os.getcwd()
+            os.chdir(tempfile.mkdtemp())
+            try:
+                BazelToolchain(self).generate()
+            finally:
+                os.chdir(cwd)
+    """)
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile": _linux_x86_64})
+    c.run("install . -pr:a profile")
+    assert os.path.exists(os.path.join(c.current_folder, "conan", "BUILD.bazel"))
+    assert os.path.exists(os.path.join(c.current_folder, "conan", "conan_toolchain.MODULE.bazel"))
+    assert os.path.exists(os.path.join(c.current_folder, "conan", "conan_toolchain",
+                                       "BUILD.bazel"))
+    assert os.path.exists(os.path.join(c.current_folder, "conan", "conan_bzl.rc"))
+
+
 def test_toolchain_no_cc_toolchain():
     """
     With generate_cc_toolchain = False, Bazel uses its auto-configured toolchain and the Conan
@@ -328,8 +387,8 @@ def test_toolchain_no_cc_toolchain():
     c.save({"conanfile.py": conanfile,
             "profile": _linux_x86_64 + 'tools.build:cxxflags=["--flag1"]\n'})
     c.run("install . -pr:a profile")
-    assert not os.path.exists(os.path.join(c.current_folder, "conan", "conan_toolchain",
-                                           "conan_cc_toolchain_config.bzl"))
+    assert os.listdir(os.path.join(c.current_folder, "conan", "conan_toolchain")) == \
+        ["BUILD.bazel"]
     build = _build_file(c)
     assert "cc_toolchain" not in build
     assert "host_platform" in build
@@ -438,11 +497,7 @@ def test_toolchain_msvc_repo_env_path_with_spaces():
             '2022/Community/VC"') in bazelrc
 
 
-def test_toolchain_clang_cl():
-    """
-    clang-cl uses the Bazel auto-configured clang-cl toolchain, registered by the MODULE.bazel
-    snippet, as Bazel selects the MSVC one by default
-    """
+def test_toolchain_clang_cl_not_supported():
     profile = textwrap.dedent("""
     [settings]
     arch=x86_64
@@ -454,19 +509,12 @@ def test_toolchain_clang_cl():
     compiler.runtime_version=v143
     os=Windows
     """)
-    conanfile = GenConanfile().with_settings("os", "arch", "build_type", "compiler")\
-        .with_generator("BazelToolchain")
+    conanfile = GenConanfile().with_settings("os", "arch", "build_type", "compiler")        .with_generator("BazelToolchain")
     c = TestClient()
     c.save({"conanfile.py": conanfile,
             "profile": profile})
-    c.run("install . -pr:a profile")
-    assert "cc_toolchain" not in c.load("conan_toolchain/BUILD.bazel")
-    module = c.load("conan_toolchain.MODULE.bazel")
-    assert textwrap.dedent("""\
-        conan_cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension")
-        use_repo(conan_cc_configure, "local_config_cc")
-        register_toolchains("@local_config_cc//:cc-toolchain-x64_windows-clang-cl")
-        """) in module
+    c.run("install . -pr:a profile", assert_error=True)
+    assert "BazelToolchain: clang-cl is not supported yet" in c.out
 
 
 def test_toolchain_ios_cross_compilation(conanfile):
