@@ -16,19 +16,19 @@ Instead of filling a bazelrc file with loose CLI flags (``--cpu``, ``--crosstool
   ``@local_config_cc``, so native builds need no extra flags at all: Bazel's auto-detected
   host platform matches the toolchain ``os``/``cpu`` constraints.
 * Everything that used to be a CLI flag lives in the toolchain itself: PIC (``-fPIC`` in the
-  compile flags) and optimization/debug flags (Conan ``build_type`` flags). Notice that Bazel
-  default ``fastbuild`` mode strips the debug symbols (``--strip=sometimes``), use
-  ``-c dbg`` or ``--strip=never`` if you need them.
-* A minimal ``conan_bzl.rc`` (``conan-config``), **only when cross-building**, with
-  ``--platforms`` and ``--host_platform``. Bazel only admits the target platform from the
-  command line/bazelrc. The ``Bazel`` helper uses it automatically if it exists.
+  compile flags) and optimization/debug flags (Conan ``build_type`` flags).
+* A minimal ``conan_bzl.rc`` (``conan-config``), always generated, with what Bazel only admits
+  from the command line/bazelrc: ``--strip=never`` (Bazel default ``fastbuild`` mode strips the
+  debug symbols with ``--strip=sometimes``, the Conan flags decide them), and, **only when
+  cross-building**, ``--platforms`` and ``--host_platform``. The ``Bazel`` helper uses it
+  automatically. Add ``--config=conan-config`` if you call Bazel directly.
 
 Generated files (with ``bazel_layout``, inside ``<build>/conan``)::
 
     conan/
     ├── BUILD.bazel                         # empty, makes //conan a package
     ├── conan_toolchain.MODULE.bazel        # register_toolchains(...)
-    ├── conan_bzl.rc                        # only if cross-building (or MSVC fallback)
+    ├── conan_bzl.rc                        # --config=conan-config
     └── conan_toolchain/
         └── BUILD.bazel                     # platforms, cc_toolchain_config, toolchain
 
@@ -508,13 +508,16 @@ class BazelToolchain:
 
     @property
     def _rc_flags(self):
-        """ Flags passed via bazelrc (only used by Conan if cross-building or MSVC) """
+        """ Flags passed via bazelrc, only the ones that cannot be defined in the toolchain """
         if self.generate_cc_toolchain:
+            # Bazel strips the debug symbols in the default "fastbuild" mode (--strip=sometimes)
+            # and it cannot be avoided from the toolchain. The Conan flags (-g) decide them
+            ret = ["--strip=never"]
             if self._is_apple_system and self._os != "Macos":
                 # rules_cc adds -mmacosx-version-min for any "macosx" libc, it collides with
                 # the Conan -mios-version-min, -mtvos-version-min, etc.
-                return ["--features=-macos_minimum_os"]
-            return []
+                ret.append("--features=-macos_minimum_os")
+            return ret
         # Bazel's auto-configured toolchain (@local_config_cc)
         flags = self._get_flags()
         compilation_mode = {"Release": "opt", "Debug": "dbg", "RelWithDebInfo": "opt",
@@ -640,8 +643,10 @@ class BazelToolchain:
         * ``conan_toolchain/`` Bazel package (platforms + C/C++ toolchain).
         * ``conan_toolchain.MODULE.bazel`` to be included by your MODULE.bazel file:
           ``include("//conan:conan_toolchain.MODULE.bazel")``.
-        * ``conan_bzl.rc`` only if cross-building (``--platforms`` and ``--host_platform``) or if
-          the Bazel auto-configured toolchain is used (Conan flags as ``--copt``, etc.).
+        * ``conan_bzl.rc`` (``--config=conan-config``) always. It defines the flags that
+          cannot be part of the toolchain: ``--strip=never``, ``--platforms`` and
+          ``--host_platform`` if cross-building, or the Conan flags as ``--copt``, etc. if the
+          Bazel auto-configured toolchain is used.
         """
         check_duplicated_generator(self, self._conanfile)
         package = self._package_label
@@ -662,18 +667,11 @@ class BazelToolchain:
                  "generate_cc_toolchain": self.generate_cc_toolchain,
              }))
 
-        rc_flags = self._rc_flags
-        bazelrc = os.path.join(generators_folder, self.bazelrc_name)
-        if self._is_cross_building or rc_flags:
-            save(bazelrc, self._render(self._bazelrc_template, {
-                "package": package,
-                "cross_building": self._is_cross_building,
-                "rc_flags": [_bazelrc_quote(flag) for flag in rc_flags],
-            }))
-            rc_msg = f" and {self.bazelrc_name} (--config={self.bazelrc_config})"
-        else:
-            # A stale one (e.g., previous cross-build install) would be used by the Bazel helper
-            if os.path.exists(bazelrc):
-                os.remove(bazelrc)
-            rc_msg = ""
-        self._conanfile.output.info(f"BazelToolchain generated: {module_label}{rc_msg}")
+        save(os.path.join(generators_folder, self.bazelrc_name),
+             self._render(self._bazelrc_template, {
+                 "package": package,
+                 "cross_building": self._is_cross_building,
+                 "rc_flags": [_bazelrc_quote(flag) for flag in self._rc_flags],
+             }))
+        self._conanfile.output.info(f"BazelToolchain generated: {module_label} and "
+                                    f"{self.bazelrc_name} (--config={self.bazelrc_config})")

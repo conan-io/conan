@@ -64,8 +64,8 @@ def test_basic_exe(bazelrc, build_type, base_profile, bazel_output_root_dir):
         assert "myapp/1.0: _MSVC_LANG201703" in create_out
     else:
         assert "myapp/1.0: __cplusplus201703" in create_out
-        # Native builds do not need any bazelrc file, the toolchain is registered by MODULE.bazel
-        assert "conan_bzl.rc" not in create_out
+    # The Bazel helper uses the Conan bazelrc (--strip=never keeps the Debug symbols)
+    assert "--config=conan-config" in create_out
 
 
 @pytest.mark.slow
