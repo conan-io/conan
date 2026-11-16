@@ -645,11 +645,11 @@ class _Component:
                                  f"or report in github.com/conan-io/conan/issues if you think it "
                                  f"should have been deduced correctly.")
         if self._type is not None and self._type != deduced_type:
-            ConanException(f"{conanfile}: Incorrect deduced type '{deduced_type}' for library"
-                           f" '{libname}' that declared .type='{self._type}'")
+            raise ConanException(f"{conanfile}: Incorrect deduced type '{deduced_type}' for library"
+                                 f" '{libname}' that declared .type='{self._type}'")
+        if self._type is None and deduced_type != pkg_type:
+            out.warning(f"Lib {libname} deduced as '{deduced_type}', but 'package_type={pkg_type}'")
         self._type = deduced_type
-        if self._type != pkg_type:
-            out.warning(f"Lib {libname} deduced as '{self._type}', but 'package_type={pkg_type}'")
 
     def deduce_locations(self, conanfile, component_name=""):
         name = f'{conanfile} cpp_info.components["{component_name}"]' if component_name \
