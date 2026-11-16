@@ -41,14 +41,13 @@ Requirements in the consumer ``MODULE.bazel`` (Bazel >= 7.2 for ``include()``)::
 Notice that the registered toolchain is selected for any target platform with the same
 ``os``/``cpu`` constraints, not only for the Conan generated ones.
 
-MSVC/clang-cl: the rules_cc Windows ``cc_toolchain_config`` needs the whole ``vcvars``
-environment (``PATH``, ``INCLUDE``, ``LIB``), so for them (or when
-``generate_cc_toolchain = False``), only the platforms are generated and Bazel keeps using its
-auto-configured ``@local_config_cc`` toolchain. Conan points it to the right installation
-(``--repo_env=BAZEL_VC/BAZEL_VC_FULL_VERSION/BAZEL_WINSDK_FULL_VERSION/BAZEL_LLVM``), selects the
-runtime with the ``static_link_msvcrt`` feature, registers the clang-cl toolchain if needed, and
-passes the Conan flags as ``--copt/--cxxopt/--conlyopt/--linkopt`` in the bazelrc file. In that
-case, the ``conan_bzl.rc`` is generated even for native builds.
+MSVC: the rules_cc Windows ``cc_toolchain_config`` needs the whole ``vcvars`` environment
+(``PATH``, ``INCLUDE``, ``LIB``), so for it (or when ``generate_cc_toolchain = False``), only the
+platforms are generated and Bazel keeps using its auto-configured ``@local_config_cc`` toolchain.
+Conan points it to the right installation
+(``--repo_env=BAZEL_VC/BAZEL_VC_FULL_VERSION/BAZEL_WINSDK_FULL_VERSION``), selects the runtime
+with the ``static_link_msvcrt`` feature, and passes the Conan flags as
+``--copt/--cxxopt/--conlyopt/--linkopt`` in the bazelrc file. clang-cl is not supported yet.
 
 More information:
     * Platforms: https://bazel.build/extending/platforms
@@ -121,10 +120,6 @@ class BazelToolchain:
         # include("{{ module_label }}")
         {% if generate_cc_toolchain %}
         register_toolchains("{{ package }}:cc_toolchain")
-        {% elif clang_cl_toolchain %}
-        conan_cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension")
-        use_repo(conan_cc_configure, "local_config_cc")
-        register_toolchains("@local_config_cc//:{{ clang_cl_toolchain }}")
         {% endif %}
         """)
 
@@ -261,13 +256,13 @@ class BazelToolchain:
         # ---------------------------------------------------------------------------------------
         # C/C++ toolchain
         # ---------------------------------------------------------------------------------------
-        msvc_like = is_msvc(conanfile) or (compiler == "clang" and
-                                           settings.get_safe("compiler.runtime") is not None)
+        if compiler == "clang" and settings.get_safe("compiler.runtime") is not None:
+            raise ConanException("BazelToolchain: clang-cl is not supported yet")
+        is_msvc_compiler = is_msvc(conanfile)
         #: Generate the ``cc_toolchain`` (and register it with ``--extra_toolchains``).
         #: If ``False``, Bazel's auto-configured toolchain is used and the Conan flags are passed
-        #: as ``--copt/--cxxopt/--conlyopt/--linkopt``. ``False`` by default for MSVC/clang-cl.
-        self.generate_cc_toolchain = not msvc_like
-        self._is_clang_cl = msvc_like and compiler == "clang"
+        #: as ``--copt/--cxxopt/--conlyopt/--linkopt``. ``False`` by default for MSVC.
+        self.generate_cc_toolchain = not is_msvc_compiler
 
         build_env = VirtualBuildEnv(conanfile, auto_generate=True).vars()
         compilers_by_conf = self._conf.get("tools.build:compiler_executables", default={},
@@ -317,7 +312,7 @@ class BazelToolchain:
         self.threads_flags = threads_flags(conanfile)
         #: Build type flags deduced by Conan (``-O3``, ``-g``...)
         self.build_type_flags = build_type_flags(conanfile)
-        if msvc_like:
+        if is_msvc_compiler:
             # Bazel runs several cl.exe at the same time and /Zi makes them share one .pdb file
             # (error C1041). Bazel itself uses /Z7, which embeds the debug info in each object
             self.build_type_flags = ["-Z7" if f == "-Zi" else f for f in self.build_type_flags]
@@ -330,7 +325,7 @@ class BazelToolchain:
         self.libcxx, self.gcc_cxx11_abi = libcxx_flags(conanfile)
         #: Static MSVC runtime (``static_link_msvcrt`` Bazel feature). Only used if
         #: not ``generate_cc_toolchain``
-        self.msvc_static_runtime = msvc_like and "MT" in msvc_runtime_flag(conanfile)
+        self.msvc_static_runtime = is_msvc_compiler and "MT" in msvc_runtime_flag(conanfile)
         #: Apple flags
         self.apple_arch_flag = []
         self.apple_isysroot_flag = []
@@ -540,7 +535,7 @@ class BazelToolchain:
         """
         Environment variables used by the Bazel MSVC auto-configuration
         (https://bazel.build/configure/windows) to pick the Conan defined Visual Studio, MSVC
-        toolset, Windows SDK and LLVM (clang-cl) installations.
+        toolset and Windows SDK installations.
         """
         ret = {}
         vs_version, vcvars_ver = _vcvars_versions(self._conanfile)
@@ -559,20 +554,7 @@ class BazelToolchain:
         winsdk_version = self._conf.get("tools.microsoft:winsdk_version")
         if winsdk_version:
             ret["BAZEL_WINSDK_FULL_VERSION"] = winsdk_version
-        if self._is_clang_cl:
-            clang_cl = shutil.which(self.c) if self.c else None
-            if clang_cl:
-                llvm_path = os.path.dirname(os.path.dirname(clang_cl))
-                ret["BAZEL_LLVM"] = llvm_path.replace("\\", "/")
         return ret
-
-    @property
-    def _clang_cl_toolchain(self):
-        """ Name of the @local_config_cc clang-cl toolchain. Bazel selects MSVC by default """
-        if not self._is_clang_cl:
-            return None
-        return "cc-toolchain-arm64_windows-clang-cl" if self._arch == "armv8" else \
-            "cc-toolchain-x64_windows-clang-cl"
 
     @property
     def _package_label(self):
@@ -678,7 +660,6 @@ class BazelToolchain:
                  "module_label": module_label,
                  "package": package,
                  "generate_cc_toolchain": self.generate_cc_toolchain,
-                 "clang_cl_toolchain": self._clang_cl_toolchain,
              }))
 
         rc_flags = self._rc_flags

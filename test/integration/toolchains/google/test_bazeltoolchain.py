@@ -489,11 +489,7 @@ def test_toolchain_msvc_repo_env_path_with_spaces():
             '2022/Community/VC"') in bazelrc
 
 
-def test_toolchain_clang_cl():
-    """
-    clang-cl uses the Bazel auto-configured clang-cl toolchain, registered by the MODULE.bazel
-    snippet, as Bazel selects the MSVC one by default
-    """
+def test_toolchain_clang_cl_not_supported():
     profile = textwrap.dedent("""
     [settings]
     arch=x86_64
@@ -505,19 +501,12 @@ def test_toolchain_clang_cl():
     compiler.runtime_version=v143
     os=Windows
     """)
-    conanfile = GenConanfile().with_settings("os", "arch", "build_type", "compiler")\
-        .with_generator("BazelToolchain")
+    conanfile = GenConanfile().with_settings("os", "arch", "build_type", "compiler")        .with_generator("BazelToolchain")
     c = TestClient()
     c.save({"conanfile.py": conanfile,
             "profile": profile})
-    c.run("install . -pr:a profile")
-    assert "cc_toolchain" not in c.load("conan_toolchain/BUILD.bazel")
-    module = c.load("conan_toolchain.MODULE.bazel")
-    assert textwrap.dedent("""\
-        conan_cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure_extension")
-        use_repo(conan_cc_configure, "local_config_cc")
-        register_toolchains("@local_config_cc//:cc-toolchain-x64_windows-clang-cl")
-        """) in module
+    c.run("install . -pr:a profile", assert_error=True)
+    assert "BazelToolchain: clang-cl is not supported yet" in c.out
 
 
 def test_toolchain_ios_cross_compilation(conanfile):
