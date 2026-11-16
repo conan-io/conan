@@ -321,8 +321,8 @@ def test_toolchain_no_cc_toolchain():
     c.save({"conanfile.py": conanfile,
             "profile": _linux_x86_64 + 'tools.build:cxxflags=["--flag1"]\n'})
     c.run("install . -pr:a profile")
-    assert not os.path.exists(os.path.join(c.current_folder, "conan", "conan_toolchain",
-                                           "conan_cc_toolchain_config.bzl"))
+    assert os.listdir(os.path.join(c.current_folder, "conan", "conan_toolchain")) == \
+        ["BUILD.bazel"]
     build = _build_file(c)
     assert "cc_toolchain" not in build
     assert "host_platform" in build
