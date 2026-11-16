@@ -272,6 +272,11 @@ class BazelToolchain:
         if compiler == "clang" and settings.get_safe("compiler.runtime") is not None:
             raise ConanException("BazelToolchain: clang-cl is not supported yet")
         is_msvc_compiler = is_msvc(conanfile)
+        if is_msvc_compiler and self._arch not in ("x86_64", "armv8"):
+            # Bazel does not provide a toolchain for other targets (e.g., x86) in Windows
+            raise ConanException(f"BazelToolchain: MSVC with arch={self._arch} is not supported, "
+                                 "the Bazel auto-configured MSVC toolchain only builds for "
+                                 "x86_64 and armv8")
         #: Generate the ``cc_toolchain`` (and register it with ``--extra_toolchains``).
         #: If ``False``, Bazel's auto-configured toolchain is used and the Conan flags are passed
         #: as ``--copt/--cxxopt/--conlyopt/--linkopt``. ``False`` by default for MSVC.
