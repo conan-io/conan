@@ -726,5 +726,17 @@ class BazelToolchain:
                  "cross_building": self._is_cross_building,
                  "rc_flags": [_bazelrc_quote(flag) for flag in self._rc_flags],
              }))
-        self._conanfile.output.info(f"BazelToolchain generated: {module_label} and "
-                                    f"{self.bazelrc_name} (--config={self.bazelrc_config})")
+        output = self._conanfile.output
+        output.info(f"BazelToolchain generated: {module_label} and "
+                    f"{self.bazelrc_name} (--config={self.bazelrc_config})")
+        # The "Bazel" helper adds the rc and the config, but not a direct call to Bazel
+        rc_path = os.path.join(generators_folder, self.bazelrc_name).replace("\\", "/")
+        command = cmd_args_to_string(["bazel", f"--bazelrc={rc_path}", "build",
+                                      f"--config={self.bazelrc_config}"]) + " <targets>"
+        if self.generate_cc_toolchain:
+            output.info("Calling Bazel without the Conan 'Bazel' helper applies the toolchain, but "
+                        "not the flags of the rc file (--strip=never, target platform if "
+                        f"cross-building). Use: {command}")
+        else:
+            output.info("The Conan flags of the MSVC build are only defined in the rc file, so "
+                        f"call Bazel with it: {command}")
