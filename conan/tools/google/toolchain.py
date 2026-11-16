@@ -240,8 +240,8 @@ class BazelToolchain:
         # ---------------------------------------------------------------------------------------
         # Platforms
         # ---------------------------------------------------------------------------------------
-        #: List of constraint labels of the host platform (``settings``). The private
-        #: ``:conan_toolchain`` constraint is always added at generation time.
+        #: List of constraint labels of the host platform (``settings``). The registered
+        #: toolchain is selected for any platform that satisfies them.
         self.host_constraints = [c for c in (to_bazel_os_constraint(self._os),
                                              to_bazel_cpu_constraint(self._arch)) if c]
         #: List of constraint labels of the build platform (``settings_build``)
