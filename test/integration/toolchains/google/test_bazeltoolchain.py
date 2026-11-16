@@ -60,8 +60,12 @@ def test_default_bazel_toolchain(conanfile):
     c.save({"conanfile.py": conanfile,
             "profile": _linux_x86_64})
     c.run("install . -pr:a profile")
-    assert "BazelToolchain generated: //conan:conan_toolchain.MODULE.bazel" in c.out
-    assert not os.path.exists(os.path.join(c.current_folder, "conan", "conan_bzl.rc"))
+    assert "BazelToolchain generated: //conan:conan_toolchain.MODULE.bazel and conan_bzl.rc "            "(--config=conan-config)" in c.out
+    # The bazelrc is always generated: Bazel strips the debug symbols in its default "fastbuild"
+    bazelrc = c.load("conan/conan_bzl.rc")
+    assert "build:conan-config --strip=never" in bazelrc
+    assert "--platforms" not in bazelrc
+    assert "--compilation_mode" not in bazelrc
     assert os.path.exists(os.path.join(c.current_folder, "conan", "BUILD.bazel"))
     # The official rules_cc toolchain config rule is used, no custom Starlark rules
     assert os.listdir(os.path.join(c.current_folder, "conan", "conan_toolchain")) == \
@@ -192,6 +196,7 @@ def test_bazel_toolchain_and_cross_compilation(conanfile):
     bazelrc = c.load("conan/conan_bzl.rc")
     assert "build:conan-config --platforms=//conan/conan_toolchain:host_platform" in bazelrc
     assert "build:conan-config --host_platform=//conan/conan_toolchain:build_platform" in bazelrc
+    assert "build:conan-config --strip=never" in bazelrc
     build = _build_file(c)
     assert textwrap.dedent("""\
         toolchain(
@@ -208,9 +213,11 @@ def test_bazel_toolchain_and_cross_compilation(conanfile):
     assert "macos_minimum_os" not in bazelrc
     assert '"-arch",\n        "arm64",' in build
 
-    # A later native install removes the stale conan_bzl.rc, the Bazel helper would use it
+    # A later native install overwrites the cross-building bazelrc, the Bazel helper would use it
     c.run("install . -pr:a profile")
-    assert not os.path.exists(os.path.join(c.current_folder, "conan", "conan_bzl.rc"))
+    bazelrc = c.load("conan/conan_bzl.rc")
+    assert "--platforms" not in bazelrc
+    assert "--host_platform" not in bazelrc
 
 
 def test_bazel_toolchain_android_cross_compilation(conanfile):
@@ -301,7 +308,7 @@ def test_toolchain_attributes():
 def test_toolchain_no_cc_toolchain():
     """
     With generate_cc_toolchain = False, Bazel uses its auto-configured toolchain and the Conan
-    flags are passed in the conan_bzl.rc file (always generated, even for native builds)
+    flags are passed in the conan_bzl.rc file
     """
     conanfile = textwrap.dedent("""
     from conan import ConanFile
