@@ -69,8 +69,7 @@ from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.util.files import save
-from conan.tools.apple.apple import is_apple_os, apple_min_version_flag, resolve_apple_flags, \
-    apple_extra_flags
+from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, threads_flags, \
     libcxx_flags, cppstd_flag, cstd_flag, build_type_flags
@@ -343,11 +342,16 @@ class BazelToolchain:
     def _resolve_apple_flags(self):
         if not self._is_apple_system:
             return
-        min_flag, arch_flag, isysroot_flag = resolve_apple_flags(
-            self._conanfile, is_cross_building=self._is_cross_building)
+        try:
+            min_flag, arch_flag, isysroot_flag = resolve_apple_flags(
+                self._conanfile, is_cross_building=self._is_cross_building)
+        except ConanException as e:
+            # Cross-building to Apple needs the SDK path: "xcrun" only exists in macOS
+            raise ConanException(f"BazelToolchain: could not get the Apple SDK path ({e}). "
+                                 "Define it with the 'tools.apple:sdk_path' conf") from e
         self.apple_arch_flag = arch_flag.split() if arch_flag else []
         self.apple_isysroot_flag = isysroot_flag.split() if isysroot_flag else []
-        self.apple_min_version_flag = [apple_min_version_flag(self._conanfile)]
+        self.apple_min_version_flag = [min_flag]
 
     def _resolve_android_cross_compilation(self):
         if not self._is_cross_building or self._os != "Android":
