@@ -1,5 +1,6 @@
 import os
 import textwrap
+from unittest import mock
 
 import pytest
 
@@ -307,6 +308,39 @@ def test_toolchain_attributes():
     assert '"/my/include",' in build
 
 
+def test_toolchain_include_directories_from_compiler(conanfile):
+    """
+    The system include directories are the ones reported by the compiler (gcc -E -v)
+    """
+    output = textwrap.dedent("""        #include <...> search starts here:
+         /usr/include/c++/13
+         /opt/gcc/lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12
+         /usr/include
+        End of search list.
+        """)
+    commands = []
+    isfile = os.path.isfile
+
+    def fake_run(conanfile, command, stdout=None, stderr=None, **kwargs):
+        commands.append(command)
+        stderr.write(output)
+        return 0
+
+    c = TestClient()
+    c.save({"conanfile.py": conanfile,
+            "profile": _linux_x86_64})
+    # The compiler path "exists" and it reports the include directories
+    with mock.patch("conan.tools.google.toolchain.os.path.isfile",
+                    side_effect=lambda p: p == "/opt/gcc/bin/gcc" or isfile(p)),             mock.patch("conan.internal.model.conan_file.ConanFile.run", autospec=True,
+                       side_effect=fake_run):
+        c.run("install . -pr:a profile")
+    assert "-m64" in commands[0]
+    build = _build_file(c)
+    assert '"/usr/include/c++/13",' in build
+    assert '"/opt/gcc/include/c++/12",' in build  # normalized
+    assert '"/usr/lib",' not in build  # default ones are not needed
+
+
 def test_toolchain_cpp_tool_follows_gcc(conanfile):
     """
     The C preprocessor is the one of the profile compiler (cross prefix and version), not the
@@ -361,10 +395,7 @@ def test_toolchain_generates_in_generators_folder_not_in_cwd():
     assert os.path.exists(os.path.join(c.current_folder, "conan", "conan_toolchain.MODULE.bazel"))
     assert os.path.exists(os.path.join(c.current_folder, "conan", "conan_toolchain",
                                        "BUILD.bazel"))
-<<<<<<< HEAD
-=======
     assert os.path.exists(os.path.join(c.current_folder, "conan", "conan_bzl.rc"))
->>>>>>> danimtb/bazeltoolchain_2-1
 
 
 def test_toolchain_no_cc_toolchain():

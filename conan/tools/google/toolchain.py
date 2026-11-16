@@ -60,6 +60,7 @@ import os
 import posixpath
 import shutil
 import textwrap
+from io import StringIO
 
 from jinja2 import Template, StrictUndefined
 
@@ -69,6 +70,7 @@ from conan.internal.internal_tools import raise_on_universal_arch
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.util.files import save
 from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
+from conan.tools.build import cmd_args_to_string
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import architecture_flag, architecture_link_flag, threads_flags, \
     libcxx_flags, cppstd_flag, cstd_flag, build_type_flags
@@ -89,6 +91,17 @@ def _bazelrc_quote(flag):
         return flag
     escaped = flag.replace("\\", "\\\\").replace('"', '\\"')
     return f'"{escaped}"'
+
+
+def _parse_include_dirs(output):
+    """
+    Directories of the ``#include <...>`` search list printed by ``gcc/clang -E -v``. The macOS
+    frameworks ones are marked with `` (framework directory)``.
+    """
+    listing = output.partition("#include <...> search starts here:")[2]
+    listing = listing.partition("End of search list.")[0]
+    return [line.strip().replace(" (framework directory)", "").replace("\\", "/")
+            for line in listing.splitlines() if line.strip()]
 
 
 class BazelToolchain:
@@ -265,6 +278,7 @@ class BazelToolchain:
         self.generate_cc_toolchain = not is_msvc_compiler
 
         build_env = VirtualBuildEnv(conanfile, auto_generate=True).vars()
+        self._build_env = build_env
         compilers_by_conf = self._conf.get("tools.build:compiler_executables", default={},
                                            check_type=dict)
         default_c, default_cpp = {"gcc": ("gcc", "g++"),
@@ -291,8 +305,9 @@ class BazelToolchain:
 
         #: Sysroot. Defined by ``tools.build:sysroot``. Passed as ``builtin_sysroot``.
         self.sysroot = self._conf.get("tools.build:sysroot", check_type=str)
-        #: List of absolute directories where the compiler looks for system headers. Bazel
-        #: fails with "undeclared inclusion" errors if a used header is outside them.
+        #: List of extra absolute directories where the compiler looks for system headers, added
+        #: to the ones reported by the compiler (``-E -v``). Bazel fails with "undeclared
+        #: inclusion" errors if a used header is outside them.
         self.cxx_builtin_include_directories = []
 
         # Flags (same naming/semantics as MesonToolchain)
@@ -439,20 +454,53 @@ class BazelToolchain:
         ret.update(self.tool_paths)
         return {k: self._to_abs_tool(v, name=k) for k, v in ret.items()}
 
+    def _compiler_include_directories(self, compiler):
+        """
+        System include directories reported by the compiler (``-E -v``) with the flags that
+        change them, as Bazel's auto-configured toolchain does. Empty if the compiler cannot
+        be run in this machine.
+        """
+        if not os.path.isfile(compiler):
+            return []
+        flags = ([self.arch_flag, self.libcxx] + self.apple_arch_flag + self.apple_isysroot_flag +
+                 ([f"--sysroot={self.sysroot}"] if self.sysroot else []))
+        args = [compiler] + [f for f in flags if f] + ["-E", "-v", "-x", "c++", os.devnull]
+        command = cmd_args_to_string(args)
+        stderr = StringIO()
+        with self._build_env.apply():
+            code = self._conanfile.run(command, stdout=StringIO(), stderr=stderr, quiet=True,
+                                       ignore_errors=True, env=None)
+        dirs = _parse_include_dirs(stderr.getvalue()) if code == 0 else []
+        if not dirs:
+            self._conanfile.output.warning(f"BazelToolchain: could not get the system include "
+                                           f"directories from '{compiler}', using default ones")
+        return dirs
+
     def _get_builtin_include_directories(self, tool_paths):
         dirs = list(self.cxx_builtin_include_directories)
-        # The compiler installation prefix, e.g., /usr for /usr/bin/gcc
-        for tool in (tool_paths["gcc"], self._to_abs_tool(self.cpp)):
-            real = os.path.realpath(tool) if os.path.exists(tool) else tool  # resolve symlinks
-            prefix = self._path.dirname(self._path.dirname(real))
-            if prefix not in ("/", "") and not tool.endswith("false"):
-                dirs.append(prefix.replace("\\", "/"))
+        compiler = tool_paths["gcc"]
+        reported = []
+        if not compiler.endswith("false"):
+            reported = self._compiler_include_directories(compiler)
+        if reported:
+            for d in reported:
+                d = self._path.normpath(d).replace("\\", "/")  # e.g., /lib/gcc/../../include
+                # Bazel compares them with the real path of the included headers
+                real = os.path.realpath(d).replace("\\", "/") if os.path.isdir(d) else d
+                dirs += [d, real]
+        else:
+            # The compiler installation prefix, e.g., /usr for /usr/bin/gcc
+            for tool in (compiler, self._to_abs_tool(self.cpp)):
+                real = os.path.realpath(tool) if os.path.exists(tool) else tool  # symlinks
+                prefix = self._path.dirname(self._path.dirname(real))
+                if prefix not in ("/", "") and not tool.endswith("false"):
+                    dirs.append(prefix.replace("\\", "/"))
+            if not self._is_apple_system:
+                dirs += ["/usr/include", "/usr/local/include", "/usr/lib"]
         if self._is_apple_system:
             # Same defaults as Bazel's auto-configured Apple toolchain
             dirs += ["/Applications/", "/Library/"]
             dirs += [f for f in self.apple_isysroot_flag if self._path.isabs(f)]
-        else:
-            dirs += ["/usr/include", "/usr/local/include", "/usr/lib"]
         if self.sysroot:
             dirs.append("%sysroot%")
         return list(dict.fromkeys(dirs))  # remove duplicates keeping order
