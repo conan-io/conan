@@ -246,16 +246,26 @@ class VersionRange:
         prerelease = True
         for lhs_conditions in self.condition_sets:
             for rhs_conditions in other.condition_sets:
-                lower_limit = _calculate_limits(">", lhs_conditions, rhs_conditions)
-                upper_limit = _calculate_limits("<", lhs_conditions, rhs_conditions)
+                all_conditions = lhs_conditions.conditions + rhs_conditions.conditions
+                exact = next((c for c in all_conditions if c.operator == "="), None)
+                if exact is not None:
+                    # The only possible version is the exact one, as long as every other condition
+                    # (other "=" ones included) accepts it. Prereleases are decided for the whole
+                    # range below, so don't filter them here
+                    all_set = _ConditionSet.from_conditions(all_conditions, prerelease=True)
+                    if all_set.valid(exact.version, conf_resolve_prepreleases=True):
+                        conditions.append([exact])
+                else:
+                    lower_limit = _calculate_limits(">", lhs_conditions, rhs_conditions)
+                    upper_limit = _calculate_limits("<", lhs_conditions, rhs_conditions)
 
-                if lower_limit and upper_limit:
-                    if lower_limit <= upper_limit:
-                        conditions.append([lower_limit, upper_limit])
-                elif lower_limit:
-                    conditions.append([lower_limit])
-                elif upper_limit:
-                    conditions.append([upper_limit])
+                    if lower_limit and upper_limit:
+                        if lower_limit <= upper_limit:
+                            conditions.append([lower_limit, upper_limit])
+                    elif lower_limit:
+                        conditions.append([lower_limit])
+                    elif upper_limit:
+                        conditions.append([upper_limit])
 
                 # conservative approach: if any of the conditions forbid prereleases, forbid them in the result
                 if not lhs_conditions.prerelease or not rhs_conditions.prerelease:
