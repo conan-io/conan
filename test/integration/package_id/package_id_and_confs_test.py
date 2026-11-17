@@ -104,7 +104,7 @@ def test_package_id_confs_header_only():
 
 
 def test_conf_pkg_id_user_pattern_not_defined():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"lib/conanfile.py": GenConanfile("lib", "1.0")})
     tc.save_home({"global.conf": "tools.info.package_id:confs=['user.*']"})
 
@@ -121,7 +121,7 @@ def test_conf_pkg_id_user_pattern_not_defined():
 ])
 def test_package_id_order(conf, pkgconf):
     """Ensure the order of the definitions in the conf file does not affect the package_id"""
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"profile": f"[conf]\ntools.info.package_id:confs={pkgconf}\n" +
                         conf,
              "conanfile.py": GenConanfile("pkg", "1.0")})

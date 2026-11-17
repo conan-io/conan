@@ -17,10 +17,10 @@ class TestSearch:
     def remotes(self):
         self.servers = {"remote1": TestServer(server_capabilities=[]),
                         "remote2": TestServer(server_capabilities=[])}
-        self.client = TestClient(light=True, servers=self.servers)
+        self.client = TestClient(servers=self.servers)
 
     def test_search_no_params(self):
-        client = TestClient(light=True, servers={})
+        client = TestClient(servers={})
         client.run("search", assert_error=True)
         assert "error: the following arguments are required: reference" in client.out
 
@@ -36,7 +36,7 @@ class TestSearch:
         assert expected_output == self.client.out
 
     def test_search_no_configured_remotes(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("search whatever", assert_error=True)
         assert "There are no remotes to search from" in client.out
 
@@ -53,12 +53,12 @@ class TestRemotes:
     def _setup(self):
         self.users = {}
         self.servers = {}
-        self.client = TestClient(light=True)
+        self.client = TestClient()
 
     def _add_remote(self, remote_name):
         self.servers[remote_name] = TestServer(users={"user": "passwd"})
         self.users[remote_name] = [("user", "passwd")]
-        self.client = TestClient(light=True, servers=self.servers, inputs=["user", "passwd"])
+        self.client = TestClient(servers=self.servers, inputs=["user", "passwd"])
 
     def _add_recipe(self, remote, reference):
         self.client.save({'conanfile.py': GenConanfile()})
@@ -232,7 +232,7 @@ class TestRemotes:
 
 def test_no_user_channel_error():
     # https://github.com/conan-io/conan/issues/13170
-    c = TestClient(light=True, default_server_user=True)
+    c = TestClient(default_server_user=True)
     c.save({"conanfile.py": GenConanfile("pkg")})
     c.run("export . --version=1.0")
     c.run("export . --version=1.0 --user=user --channel=channel")

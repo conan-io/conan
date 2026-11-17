@@ -32,7 +32,7 @@ class TestUpload:
 
     @pytest.mark.artifactory_ready
     def test_upload_dirty(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("hello", "0.1")})
         client.run("create .")
 
@@ -51,7 +51,7 @@ class TestUpload:
 
     @pytest.mark.artifactory_ready
     def test_upload_force(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         conanfile_ = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import copy
@@ -97,7 +97,7 @@ class TestUpload:
 
     @pytest.mark.artifactory_ready
     def test_pattern_upload(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile})
         client.run("create . --user=user --channel=testing")
         client.run("upload hello0/*@user/testing --confirm -r default")
@@ -105,13 +105,13 @@ class TestUpload:
         assert "Uploading package 'hello0/1.2.1@" in client.out
 
     def test_pattern_upload_no_recipes(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         client.run("upload bogus/*@dummy/testing --confirm -r default")
         assert "WARN: No packages were uploaded because the selection is empty." in client.out
 
     def test_broken_sources_tgz(self):
         # https://github.com/conan-io/conan/issues/2854
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . --user=user --channel=testing")
@@ -137,7 +137,7 @@ class TestUpload:
 
     def test_broken_package_tgz(self):
         # https://github.com/conan-io/conan/issues/2854
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile,
                      "source.h": "my source"})
         client.run("create . --user=user --channel=testing")
@@ -162,7 +162,7 @@ class TestUpload:
         assert not is_dirty(tgz)
 
     def test_corrupt_upload(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
 
         c.save({"conanfile.py": conanfile,
                 "include/hello.h": ""})
@@ -180,7 +180,7 @@ class TestUpload:
 
     @pytest.mark.artifactory_ready
     def test_upload_modified_recipe(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": "int i=0"})
@@ -207,7 +207,7 @@ class TestUpload:
 
     @pytest.mark.artifactory_ready
     def test_upload_unmodified_recipe(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
         client.save(files)
         client.run("export . --user=frodo --channel=stable")
@@ -233,7 +233,7 @@ class TestUpload:
 
     @pytest.mark.artifactory_ready
     def test_upload_unmodified_package(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
@@ -263,7 +263,7 @@ class TestUpload:
             with_exports_sources(["*"]).\
             with_package('copy(self, "*", self.source_folder, self.package_folder)')
 
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": conanfile_new,
                      "hello.h": ""})
         client.run("create . --user=frodo --channel=stable")
@@ -281,7 +281,7 @@ class TestUpload:
     def test_skip_upload(self):
         """ Check that the option --skip does not upload anything
         """
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("hello0", "1.2.1").with_exports("*"),
                      "file.txt": ""})
         client.run("create .")
@@ -301,7 +301,7 @@ class TestUpload:
         assert "hello0/1.2.1" in client.out
 
     def test_upload_without_sources(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile()})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
@@ -323,7 +323,7 @@ class TestUpload:
         """ Without user info, uploads should fail when login prompt has been disabled.
         """
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         client.save(files)
         conan_conf = "core:non_interactive=True"
         client.save_home({"global.conf": conan_conf})
@@ -340,7 +340,7 @@ class TestUpload:
     def test_upload_login_prompt_disabled_user_not_authenticated(self):
         # When a user is not authenticated, uploads should fail when login prompt has been disabled.
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         client.save(files)
         conan_conf = "core:non_interactive=True"
         client.save_home({"global.conf": conan_conf})
@@ -356,7 +356,7 @@ class TestUpload:
 
     def test_upload_login_prompt_disabled_user_authenticated(self):
         #  When user is authenticated, uploads should work even when login prompt has been disabled.
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile("hello0", "1.2.1")})
         conan_conf = "core:non_interactive=True"
         client.save_home({"global.conf": conan_conf})
@@ -372,7 +372,7 @@ class TestUpload:
         files = {"conanfile.py": GenConanfile("hello0", "1.2.1")}
         server1 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
         server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")], users={"lasote": "mypass"})
-        client = TestClient(servers={"server1": server1, "server2": server2}, light=True)
+        client = TestClient(servers={"server1": server1, "server2": server2})
         client.save(files)
         client.run("create . --user=user --channel=testing")
         client.run("remote login server1 lasote -p mypass")
@@ -469,7 +469,7 @@ def test_upload_only_without_user_channel():
     check that we can upload only the packages without user and channel
     https://github.com/conan-io/conan/issues/10579
     """
-    c = TestClient(default_server_user=True, light=True)
+    c = TestClient(default_server_user=True)
 
     c.save({"conanfile.py": GenConanfile("lib", "1.0")})
     c.run('create .')
@@ -493,7 +493,7 @@ def test_upload_only_without_user_channel():
 
 def test_upload_with_python_requires():
     # https://github.com/conan-io/conan/issues/14503
-    c = TestClient(default_server_user=True, light=True)
+    c = TestClient(default_server_user=True)
     c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
             "dep/conanfile.py": GenConanfile("dep", "0.1").with_python_requires("tool/[>=0.1]")})
     c.run("create tool")
@@ -506,7 +506,7 @@ def test_upload_with_python_requires():
 
 
 def test_upload_list_only_recipe():
-    c = TestClient(default_server_user=True, light=True)
+    c = TestClient(default_server_user=True)
     c.save({"conanfile.py": GenConanfile("liba", "0.1")})
     c.run("create .")
     c.run("install --requires=liba/0.1 --format=json", redirect_stdout="graph.json")
@@ -517,7 +517,7 @@ def test_upload_list_only_recipe():
 
 @pytest.mark.parametrize("dry_run", [True, False])
 def test_upload_json_output(dry_run):
-    c = TestClient(default_server_user=True, light=True)
+    c = TestClient(default_server_user=True)
     c.save({"conanfile.py": GenConanfile("liba", "0.1").with_settings("os")
                                                        .with_shared_option(False)})
     c.run("create . -s os=Linux")
@@ -564,7 +564,7 @@ def test_upload_json_output(dry_run):
 
 
 def test_upload_to_disabled():
-    c = TestClient(default_server_user=True, light=True)
+    c = TestClient(default_server_user=True)
     c.run("remote disable *")
     c.save({"conanfile.py": GenConanfile("tool", "0.1")})
     c.run("create")

@@ -115,7 +115,7 @@ class TestPackageIDABIOptions:
       that necessary and mostly a linking optimization, so not that frequent
     """
     def test_package_id_abi_options(self):
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -197,7 +197,7 @@ class TestPackageIDABIOptions:
         assert "pkg/*:shared: True" in c.out
 
     def test_package_id_abi_options_transitive(self):
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):

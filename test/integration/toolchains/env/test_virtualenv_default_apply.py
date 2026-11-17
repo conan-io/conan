@@ -65,7 +65,7 @@ def test_deactivate_virtualxxxenv_attr():
             virtualbuildenv = False
             virtualrunenv = False
         """)
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": conanfile})
     c.run(f"install ")
     assert os.listdir(c.current_folder) == ["conanfile.py"]

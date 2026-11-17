@@ -38,7 +38,7 @@ class TestVirtualRunEnvRuntimeCopy:
         """)
 
     def test_win_copy_folder(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"dep/conanfile.py": self.dep_conanfile,
                 "consumer/conanfile.py": self.consumer_conanfile})
 
@@ -55,7 +55,7 @@ class TestVirtualRunEnvRuntimeCopy:
         assert "myruntime" in runenv
 
     def test_win_copy_folder_absolute_path_error(self):
-        c = TestClient(light=True)
+        c = TestClient()
         abs_path = os.path.abspath("myruntime").replace("\\", "/")
         consumer = self.consumer_conanfile.replace('"myruntime"', f'r"{abs_path}"')
         c.save({"dep/conanfile.py": self.dep_conanfile,
@@ -68,7 +68,7 @@ class TestVirtualRunEnvRuntimeCopy:
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
     def test_win_copy_folder_with_full_deploy(self):
         # Files must be copied from the deployed location, not the cache
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"dep/conanfile.py": self.dep_conanfile,
                 "consumer/conanfile.py": self.consumer_conanfile})
 

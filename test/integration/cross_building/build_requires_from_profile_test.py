@@ -265,7 +265,7 @@ class TestBuildRequiresBothContexts:
 def test_consumer_get_profile_tool_requires():
     # [tool_requires] defined in a profile will result in applying them in the
     # consumer, both if using a conanfile.txt of using a --requires
-    t = TestClient(light=True)
+    t = TestClient()
     tool = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):

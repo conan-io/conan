@@ -24,7 +24,7 @@ def servers():
             def package(self):
                 copy(self, "*.conf", src=self.build_folder, dst=self.package_folder)
         """)
-    c = TestClient(default_server_user=True, light=True)
+    c = TestClient(default_server_user=True)
     c.save({"conanfile.py": conanfile})
     for pkg in ("myconf_a", "myconf_b", "myconf_c"):
         for version in ("0.1", "0.2"):
@@ -49,7 +49,7 @@ def _check_conf_file(c, refs):
 class TestConfigInstallPkg:
 
     def test_install_pkg(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         c.run("config install-pkg myconf_a/0.1")
         assert "Installing new or updating configuration packages" in c.out
         _check_conf(c, "myconf_a/0.1")
@@ -73,7 +73,7 @@ class TestConfigInstallPkg:
         _check_conf_file(c, ["myconf_a/0.1"])
 
     def test_with_url(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         url = servers["default"].fake_url
         c.run("remote remove default")
         c.run(f"config install-pkg myconf_a/0.1 --url={url}")
@@ -82,7 +82,7 @@ class TestConfigInstallPkg:
         _check_conf_file(c, ["myconf_a/0.1"])
 
     def test_update(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         c.run("config install-pkg myconf_a/0.1")
         c.run("config install-pkg myconf_a/0.2")
         assert "Installing new or updating configuration packages" in c.out
@@ -90,7 +90,7 @@ class TestConfigInstallPkg:
         _check_conf_file(c, ["myconf_a/0.2"])
 
     def test_addition(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         c.run("config install-pkg myconf_a/0.1")
         c.run("config install-pkg myconf_b/0.1")
         assert "Installing new or updating configuration packages" in c.out
@@ -98,7 +98,7 @@ class TestConfigInstallPkg:
         _check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
 
     def test_update_first(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         c.run("config install-pkg myconf_a/0.1")
         c.run("config install-pkg myconf_b/0.1")
 
@@ -117,7 +117,7 @@ class TestConfigInstallPkg:
         _check_conf_file(c, ["myconf_b/0.1", "myconf_a/0.2"])
 
     def test_update_second(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         c.run("config install-pkg myconf_a/0.1")
         c.run("config install-pkg myconf_b/0.1")
 
@@ -128,7 +128,7 @@ class TestConfigInstallPkg:
         _check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.2"])
 
     def test_error_cant_use_as_dependency(self):
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = GenConanfile("myconf", "0.1").with_package_type("configuration")
         c.save({"myconf/conanfile.py": conanfile,
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("myconf/0.1")})
@@ -138,7 +138,7 @@ class TestConfigInstallPkg:
                "but pkg/0.1 is requiring it" in c.out
 
     def test_error_cant_use_without_type(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"myconf/conanfile.py": GenConanfile("myconf", "0.1")})
         c.run("create myconf")
         c.run("config install-pkg myconf/[*]", assert_error=True)
@@ -157,7 +157,7 @@ class TestConfigInstallPkg:
                    copy(self, "*.conf", src=self.build_folder, dst=self.package_folder)
                """)
 
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"conanfile.py": conanfile,
                 "global.conf": "user.myteam:myconf=my_myconf/0.1_value"})
         c.run("create .")
@@ -171,7 +171,7 @@ class TestConfigInstallPkg:
     def test_lockfile(self, servers):
         """ it should be able to install the config older version using a lockfile
         """
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         c.run("config install-pkg myconf_a/0.1 --lockfile-out=config.lock")
         c.run("config install-pkg myconf_a/[*] --lockfile=config.lock")
         assert ("The requested configurations are identical to the already installed ones, "
@@ -188,7 +188,7 @@ class TestConfigInstallPkg:
         assert "myconf_a/0.2" in result["config_requires"][0]
 
     def test_lockfile_multiple(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         c.run("config install-pkg myconf_a/0.1 --lockfile-out=config.lock")
         c.run("config install-pkg myconf_a/0.2 --lockfile=config.lock --lockfile-out=config.lock "
               "--lockfile-partial")
@@ -202,7 +202,7 @@ class TestConfigInstallPkg:
 
     def test_package_id_effect(self):
         # full integration, as "test_config_package_id.py" tests from hardcoded cache json files
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import copy
@@ -231,7 +231,7 @@ class TestConfigInstallPkg:
 
 class TestConfigInstallPkgFromFile:
     def test_install_from_file(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         # To make explicit the format of the conanconfig file
         conanconfig = textwrap.dedent("""\
             packages:
@@ -259,7 +259,7 @@ class TestConfigInstallPkgFromFile:
         _check_conf_file(c, ["myconf_a/0.1", "myconf_b/0.1"])
 
     def test_install_from_file_with_url(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         c.run("remote remove default")
         server_url = servers["default"].fake_url
         conanconfig = yaml.dump({"packages": ["myconf_a/0.1"], "urls": [server_url]})
@@ -269,7 +269,7 @@ class TestConfigInstallPkgFromFile:
         _check_conf_file(c, ["myconf_a/0.1"])
 
     def test_update_with_file(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         conanconfig = yaml.dump({"packages": ["myconf_a/0.1", "myconf_b/0.1"]})
         c.save({"conanconfig.yml": conanconfig})
         c.run("config install-pkg .")
@@ -307,7 +307,7 @@ class TestConfigInstallPkgFromFile:
         _check_conf_file(c, ["myconf_a/0.2", "myconf_b/0.1", "myconf_c/0.2"])
 
     def test_failed_update_force(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         conanconfig = yaml.dump({"packages": ["myconf_a/0.1", "myconf_b/0.1"]})
         c.save({"conanconfig.yml": conanconfig})
         c.run("config install-pkg .")
@@ -615,7 +615,7 @@ class TestConfigInstallPkgInsecure:
     """Integration tests for --insecure and per-URL insecure in conanconfig.yml"""
 
     def test_with_url_insecure(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         url = servers["default"].fake_url
         c.run("remote remove default")
         c.run(f"config install-pkg myconf_a/0.1 --url={url} --insecure")
@@ -624,7 +624,7 @@ class TestConfigInstallPkgInsecure:
         _check_conf_file(c, ["myconf_a/0.1"])
 
     def test_with_url_insecure_error(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         c.run("remote remove default")
         server_url = servers["default"].fake_url
         conanconfig = yaml.dump({"packages": ["myconf_a/0.1"],
@@ -634,7 +634,7 @@ class TestConfigInstallPkgInsecure:
         assert "'--insecure' argument requires '--url' argument" in c.out
 
     def test_install_from_file_with_url_dict_form(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         c.run("remote remove default")
         server_url = servers["default"].fake_url
         conanconfig = yaml.dump({"packages": ["myconf_a/0.1"],
@@ -645,7 +645,7 @@ class TestConfigInstallPkgInsecure:
         _check_conf_file(c, ["myconf_a/0.1"])
 
     def test_install_from_file_with_url_dict_verify_ssl_false(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         c.run("remote remove default")
         server_url = servers["default"].fake_url
         conanconfig = yaml.dump({"packages": ["myconf_a/0.1"],
@@ -656,7 +656,7 @@ class TestConfigInstallPkgInsecure:
         _check_conf_file(c, ["myconf_a/0.1"])
 
     def test_install_from_file_mixed_url_forms(self, servers):
-        c = TestClient(servers=servers, light=True)
+        c = TestClient(servers=servers)
         c.run("remote remove default")
         server_url = servers["default"].fake_url
         conanconfig = yaml.dump({"packages": ["myconf_a/0.1", "myconf_b/0.1"],

@@ -56,7 +56,7 @@ def test_upload_parallel_loader_not_created_in_threads():
     The race itself can't be reproduced deterministically, so check that the loader is created
     only by the calling thread and shared by all the upload threads
     """
-    client = TestClient(default_server_user=True, light=True)
+    client = TestClient(default_server_user=True)
     client.save_home({"global.conf": "core.upload:parallel=4"})
     client.save({"tool/conanfile.py": GenConanfile("tool", "1.0"),
                  "lib/conanfile.py": GenConanfile().with_python_requires("tool/1.0")})

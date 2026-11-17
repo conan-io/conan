@@ -110,7 +110,7 @@ def test_win_bash_cross_build_from_linux_no_subsystem():
     # https://github.com/conan-io/conan/issues/20406
     # win_bash=True when cross-building Linux->Windows, without a configured subsystem,
     # should not fail while generating the environment: the build machine is not Windows
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_settings("os")
                                                       .with_class_attribute("win_bash = True")})
     c.run("install . -s:b os=Linux -s:h os=Windows")
@@ -120,7 +120,7 @@ def test_win_bash_cross_build_from_linux_no_subsystem():
 def test_win_bash_run_build_scope_no_subsystem():
     # win_bash_run only applies to the "run" scope, it must not fail the "build" env generation
     # Windows build machine (no subsystem configured), Linux host
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile().with_settings("os")
                                           .with_class_attribute("win_bash_run = True")})
     c.run("install . -s:b os=Windows -s:h os=Linux")
@@ -129,7 +129,7 @@ def test_win_bash_run_build_scope_no_subsystem():
 
 def test_win_bash_run_scope_still_validated():
     # The validation is kept in the scope where the attributes apply
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile().with_settings("os")
                                           .with_class_attribute("win_bash_run = True")})
     c.run("install . -s:b os=Linux -s:h os=Windows", assert_error=True)

@@ -241,8 +241,7 @@ class TestRemoveWithRevisions:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.server = TestServer()
-        self.c_v2 = TestClient(light=True,
-                               servers={"default": self.server}, inputs=["admin", "password"])
+        self.c_v2 = TestClient(servers={"default": self.server}, inputs=["admin", "password"])
         self.ref = RecipeReference.loads("lib/1.0@conan/testing")
 
     def test_remove_local_recipe(self):
@@ -498,8 +497,7 @@ class TestServerRevisionsIndexes:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.server = TestServer()
-        self.c_v2 = TestClient(light=True,
-                               servers={"default": self.server}, inputs=["admin", "password"])
+        self.c_v2 = TestClient(servers={"default": self.server}, inputs=["admin", "password"])
         self.ref = RecipeReference.loads("lib/1.0@conan/testing")
 
     def test_rotation_deleting_recipe_revisions(self):

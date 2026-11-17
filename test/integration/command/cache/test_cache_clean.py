@@ -15,7 +15,7 @@ from conan.internal.util.files import save, load
 
 @pytest.mark.parametrize("use_pkglist", [True, False])
 def test_cache_clean(use_pkglist):
-    c = TestClient(default_server_user=True, light=True)
+    c = TestClient(default_server_user=True)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("*").with_exports_sources("*"),
             "sorces/file.txt": ""})
     c.run("create .")
@@ -73,7 +73,7 @@ def test_cache_clean_backup_sources_only_selected(use_pkglist):
     downloaded by a local conanfile (conan source), or if the download cache is shared with other
     Conan homes. Only a clean without pattern nor list removes them
     """
-    c = TestClient(light=True)
+    c = TestClient()
     file_server = TestFileServer()
     c.servers["file_server"] = file_server
     download_cache = temp_folder()
@@ -114,7 +114,7 @@ def test_cache_clean_backup_sources_only_selected(use_pkglist):
 
 
 def test_cache_clean_all():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"pkg1/conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("revision_mode='scm'"),
             "pkg2/conanfile.py": GenConanfile("pkg", "0.2").with_package("error"),
             "pkg3/conanfile.py": GenConanfile("pkg", "0.3")})
@@ -148,7 +148,7 @@ def test_cache_multiple_builds_same_prev_clean():
     Different consecutive builds will create exactly the same folder, for the
     same exact prev, not leaving trailing non-referenced folders
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     create_out = c.out
@@ -175,7 +175,7 @@ def test_cache_multiple_builds_diff_prev_clean():
     Different consecutive builds will create different folders, even if for the
     same exact prev, leaving trailing non-referenced folders
     """
-    c = TestClient(light=True)
+    c = TestClient()
     package_lines = 'save(self, os.path.join(self.package_folder, "foo.txt"), str(time.time()))'
     gen = GenConanfile("pkg", "0.1").with_package(package_lines).with_import("import os, time") \
                                     .with_import("from conan.tools.files import save")

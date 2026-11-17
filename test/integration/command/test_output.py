@@ -9,7 +9,7 @@ from conan.test.utils.env import environment_update
 
 class TestOutputLevel:
     def test_invalid_output_level(self):
-        t = TestClient(light=True)
+        t = TestClient()
         t.save({"conanfile.py": GenConanfile("foo", "1.0")})
         t.run("create . -vfooling", assert_error=True)
         assert "argument -v: invalid choice: 'fooling'" in t.out
@@ -30,7 +30,7 @@ class TestOutputLevel:
                  "self.output.error('This is a error')",
                  )
 
-        t = TestClient(light=True)
+        t = TestClient()
         t.save({"conanfile.py": GenConanfile("foo", "1.0").with_package(*lines)})
 
         # By default, it prints > info
@@ -162,7 +162,7 @@ def test_output_level_envvar():
              "self.output.error('This is a error')",
              )
 
-    t = TestClient(light=True)
+    t = TestClient()
     t.save({"conanfile.py": GenConanfile().with_package(*lines)})
 
     # Check if -v argument is equal to VERBOSE level
@@ -197,7 +197,7 @@ class TestWarningHandling:
                    "self.output.error('Untagged error')")
 
     def test_warning_as_error_deprecated_syntax(self):
-        t = TestClient(light=True)
+        t = TestClient()
         t.save({"conanfile.py": GenConanfile("foo", "1.0").with_package(*self.warning_lines)})
 
         t.save_home({"global.conf": "core:warnings_as_errors=[]"})
@@ -222,7 +222,7 @@ class TestWarningHandling:
         assert "ERROR: tag: Tagged warning" not in t.out
 
     def test_skip_warnings(self):
-        t = TestClient(light=True)
+        t = TestClient()
         t.save({"conanfile.py": GenConanfile("foo", "1.0").with_package(*self.warning_lines)})
 
         t.save_home({"global.conf": "core:skip_warnings=[]"})
@@ -246,7 +246,7 @@ class TestWarningHandling:
         assert "WARN: tag: Tagged warning" not in t.out
 
     def test_exception_errors(self):
-        t = TestClient(light=True)
+        t = TestClient()
         t.save({"conanfile.py": GenConanfile("foo", "1.0").with_package(*self.error_lines)})
 
         t.save_home({"global.conf": "core:warnings_as_errors=[]"})
@@ -265,7 +265,7 @@ class TestWarningHandling:
 
 
 def test_formatter_redirection_to_file():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py":  GenConanfile("pkg", "0.1")})
 
     c.run("config home --out-file=cmd_out.txt")
@@ -294,14 +294,14 @@ def test_formatter_redirection_to_file():
 
 
 def test_redirect_to_file_create_dir():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("config home --out-file=subdir/cmd_out.txt")
     cmd_out = c.load("subdir/cmd_out.txt")
     assert f"{c.cache_folder}" in cmd_out
 
     base = temp_folder()
-    c = TestClient(light=True, current_folder=os.path.join(base, "sub1"))
+    c = TestClient(current_folder=os.path.join(base, "sub1"))
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("config home --out-file=../subdir/cmd_out.txt")
     cmd_out = c.load("../subdir/cmd_out.txt")

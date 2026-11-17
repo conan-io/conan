@@ -3,7 +3,7 @@ from conan.test.utils.tools import TestClient
 
 
 def test_build_policies_in_conanfile():
-    client = TestClient(default_server_user=True, light=True)
+    client = TestClient(default_server_user=True)
     base = GenConanfile("hello0", "1.0").with_exports("*")
     conanfile = str(base) + "\n    build_policy = 'missing'"
     client.save({"conanfile.py": conanfile})
@@ -31,7 +31,7 @@ def test_build_policies_in_conanfile():
 
 
 def test_build_policy_missing():
-    c = TestClient(default_server_user=True, light=True)
+    c = TestClient(default_server_user=True)
     conanfile = GenConanfile("pkg", "1.0").with_class_attribute('build_policy = "missing"')\
                                           .with_class_attribute('upload_policy = "skip"')
     c.save({"conanfile.py": conanfile})

@@ -8,7 +8,7 @@ from conan.test.utils.tools import TestClient
 def test_repackage():
     # consumer -> repackager -> liba
     #                  \------> libb
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_package_file("liba.txt", "HelloA!")})
     client.run("create . --name=liba --version=1.0")
     client.save({"conanfile.py": GenConanfile().with_package_file("libb.txt", "HelloB!")})

@@ -86,7 +86,7 @@ class TestInit:
     def test_init_default_options_update_host_and_build_context(self):
         # https://github.com/conan-io/conan/issues/20468
         # The same recipe in the host and build contexts is loaded twice by the same loader
-        client = TestClient(light=True)
+        client = TestClient()
         base = textwrap.dedent("""\
             from conan import ConanFile
 

@@ -11,7 +11,7 @@ from conan.test.utils.tools import TestClient
 class TestPlatformRequires:
     @pytest.mark.parametrize("revision", ["", "#myrev"])
     def test_platform_requires(self, revision):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                      "profile": f"[platform_requires]\ndep/1.0{revision}"})
         client.run("create . -pr=profile")
@@ -21,7 +21,7 @@ class TestPlatformRequires:
         """ if what is specified in [platform_requires] doesn't match what the recipe requires, then
         the platform_requires will not be used, and the recipe will use its declared version
         """
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
                      "conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.1"})
@@ -31,7 +31,7 @@ class TestPlatformRequires:
 
     @pytest.mark.parametrize("revision", ["", "#myrev"])
     def test_platform_requires_range(self, revision):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
                      "profile": f"[platform_requires]\ndep/1.1{revision}"})
         client.run("create . -pr=profile")
@@ -41,7 +41,7 @@ class TestPlatformRequires:
         """ if what is specified in [platform_requires] doesn't match what the recipe requires, then
         the platform_requires will not be used, and the recipe will use its declared version
         """
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"dep/conanfile.py": GenConanfile("dep", "1.1"),
                      "conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
                      "profile": "[platform_requires]\ndep/0.1"})
@@ -53,7 +53,7 @@ class TestPlatformRequires:
         """
         platform_requires must not affect tool-requires
         """
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.0"})
         client.run("create . -pr=profile", assert_error=True)
@@ -63,7 +63,7 @@ class TestPlatformRequires:
         """
         platform_requires must work in the build context too
         """
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"tool/conanfile.py": GenConanfile("tool", "1.0").with_requires("dep/1.0"),
                      "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_tool_requires("tool/1.0"),
                      "profile": "[settings]\nos=Linux\n[platform_requires]\ndep/1.0"})
@@ -76,14 +76,14 @@ class TestPlatformRequires:
         """
         graph info doesn't crash
         """
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
                      "profile": "[platform_requires]\ndep/1.1"})
         client.run("graph info . -pr=profile")
         assert "dep/1.1#platform - Platform" in client.out
 
     def test_consumer_resolved_version(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -101,7 +101,7 @@ class TestPlatformRequires:
 
     @pytest.mark.parametrize("revision", ["", "#rev1"])
     def test_consumer_resolved_revision(self, revision):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -135,7 +135,7 @@ class TestPlatformRequires:
         """ if a recipe specifies an exact revision and so does the profile
         and it doesn't match, it is an error
         """
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -153,7 +153,7 @@ class TestPlatformRequires:
     def test_platform_requires_with_options(self):
         """ https://github.com/conan-io/conan/issues/15685
         """
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.0"})
         client.run("create . -pr=profile -o *:myoption=True")
@@ -169,7 +169,7 @@ class TestPlatformRequires:
 
 class TestPlatformTestRequires:
     def test_platform_requires(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_test_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.0"})
         client.run("create . -pr=profile")
@@ -180,7 +180,7 @@ class TestPlatformRequiresLock:
 
     @pytest.mark.parametrize("revision", ["", "#rev1"])
     def test_platform_requires_range(self, revision):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/[>=1.0]"),
                 "profile": f"[platform_requires]\ndep/1.1{revision}"})
         c.run("lock create . -pr=profile")
@@ -201,7 +201,7 @@ class TestPlatformRequiresLock:
     @pytest.mark.parametrize("platform_rev", [None, "myrev"])
     @pytest.mark.parametrize("is_tool_platform", [True, False])
     def test_platform_requires_lockfile(self, platform_rev, is_tool_platform):
-        tc = TestClient(light=True)
+        tc = TestClient()
         profile_rev = f"#{platform_rev}" if platform_rev else ""
         expected_rev = platform_rev if platform_rev else "platform"
         conanfile = GenConanfile("pkg", "1.0")
@@ -282,7 +282,7 @@ class TestPackageID:
         """ this test validates that the computation of the downstream consumers package_id
         doesn't break even if it depends on fields not existing in upstream platform_requires, like package_id
         """
-        client = TestClient(light=True)
+        client = TestClient()
         client.save_home({"global.conf": f"core.package_id:default_unknown_mode={package_id_mode}"})
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                      "profile": "[platform_requires]\ndep/1.0"})
@@ -293,7 +293,7 @@ class TestPackageID:
         """
         Changing the platform_requires revision affects consumers if package_revision_mode=recipe_revision
         """
-        client = TestClient(light=True)
+        client = TestClient()
         client.save_home({"global.conf":
                           "core.package_id:default_unknown_mode=recipe_revision_mode"})
         client.save({"conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
