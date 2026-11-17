@@ -167,7 +167,6 @@ jobs:
       - name: Install Chocolatey packages
         run: |
           choco install pkgconfiglite --version 0.28
-          choco install mingw
           # mirrors.kernel.org/sourceware/cygwin returns 404; use alternative mirror from this list: https://cygwin.com/mirrors.html
           choco install cygwin --execution-timeout=300 --package-parameters="'/Site:https://mirror.clarkson.edu/cygwin/'"
           choco install cyg-get
@@ -182,12 +181,13 @@ jobs:
             # It's important that the default environment that is used is MSYS
             # we check this default in a test
             msystem: MSYS
-            # The *-toolchain groups no longer include make and pkgconf
+            # The compilers instead of the *-toolchain groups, which also install gdb, lldb, Python
+            # and extra LLVM tools that the tests do not use
             install: >-
-                mingw-w64-x86_64-toolchain
-                mingw-w64-i686-toolchain
-                mingw-w64-ucrt-x86_64-toolchain
-                mingw-w64-clang-x86_64-toolchain
+                mingw-w64-x86_64-gcc
+                mingw-w64-i686-gcc
+                mingw-w64-ucrt-x86_64-gcc
+                mingw-w64-clang-x86_64-clang
                 mingw-w64-x86_64-clang
                 mingw-w64-x86_64-make
                 mingw-w64-ucrt-x86_64-make
