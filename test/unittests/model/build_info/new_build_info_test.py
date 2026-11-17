@@ -1,6 +1,6 @@
 import pytest
 
-from conan.internal.model.cpp_info import CppInfo, _DIRS_VAR_NAMES, _FIELD_VAR_NAMES
+from conan.internal.model.cpp_info import CppInfo, _Component, _DIRS_VAR_NAMES, _FIELD_VAR_NAMES
 
 
 def test_components_order():
@@ -137,3 +137,10 @@ def test_cpp_info_merge_aggregating_components_first(aggregate_first):
             assert getattr(cppinfo.components["boo2"], n) == ["jar2_{}_1".format(n),
                                                               "jar2_{}_2".format(n)]
             assert getattr(cppinfo, n) is None
+
+
+@pytest.mark.parametrize("set_defaults", [False, True])
+def test_component_instance_attributes_below_shared_keys_limit(set_defaults):
+    # CPython stops sharing the keys of the instance __dict__ above 29 attributes (30 in 3.14),
+    # which makes every _Component (3 per graph node, plus the components) ~5x bigger
+    assert len(vars(_Component(set_defaults))) <= 29
