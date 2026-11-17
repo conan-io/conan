@@ -101,6 +101,14 @@ class _ConditionSet:
             e = e.strip()
             self.conditions.extend(self._parse_expression(e))
 
+    @classmethod
+    def from_conditions(cls, conditions, prerelease):
+        """ Build a condition set from already parsed conditions, without reparsing """
+        result = cls.__new__(cls)
+        result.prerelease = prerelease
+        result.conditions = conditions
+        return result
+
     @staticmethod
     def _parse_expression(expression):
         if expression in ("", "*"):
@@ -260,7 +268,7 @@ class VersionRange:
         # Don't use __init__ because it will parse the expression again, we already have the conditions
         result = VersionRange.__new__(VersionRange)
         result._expression = ' || '.join(' '.join(str(c) for c in cs) for cs in conditions) + (', include_prerelease' if prerelease else '')
-        result.condition_sets = [_ConditionSet(str(cs), prerelease) for cs in conditions]
+        result.condition_sets = [_ConditionSet.from_conditions(cs, prerelease) for cs in conditions]
         return result
 
     def version(self):
