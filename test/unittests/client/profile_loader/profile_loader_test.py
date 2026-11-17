@@ -109,6 +109,24 @@ def test_profiles_includes():
                                            RecipeReference.loads("two/1.2@lasote/stable")]}
 
 
+@pytest.mark.parametrize("line, expected", [
+    ("tool/[~0.18, include_prerelease]", ["tool/[~0.18, include_prerelease]"]),
+    ("tool/[>=1 <2, include_prerelease]", ["tool/[>=1 <2, include_prerelease]"]),
+    # commas between references must still separate them
+    ("tool/[~0.18, include_prerelease], other/1.0", ["tool/[~0.18, include_prerelease]", "other/1.0"]),
+    ("other/1.0, tool/[~0.18, include_prerelease]", ["other/1.0", "tool/[~0.18, include_prerelease]"]),
+    ("a/[>1, include_prerelease], b/[<2, include_prerelease]",
+     ["a/[>1, include_prerelease]", "b/[<2, include_prerelease]"]),
+    ("a/[>1],b/2.0", ["a/[>1]", "b/2.0"]),
+])
+def test_profile_tool_requires_version_range_with_comma(line, expected):
+    # https://github.com/conan-io/conan/issues/20503
+    tmp = temp_folder()
+    save(os.path.join(tmp, "profile"), f"[tool_requires]\n*: {line}\n")
+    profile = ProfileLoader(cache_folder=temp_folder()).load_profile("./profile", tmp)
+    assert profile.tool_requires == {"*": [RecipeReference.loads(r) for r in expected]}
+
+
 def test_profile_compose_platform_tool_requires():
     tmp = temp_folder()
     save(os.path.join(tmp, "profile0"), "[platform_tool_requires]\ntool1/1.0")

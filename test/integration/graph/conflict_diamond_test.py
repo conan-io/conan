@@ -106,6 +106,31 @@ def test_conflict_user_order():
     assert "ERROR: Version conflict: Conflict between dep/1.0@user1 and dep/[>=1.0]@user2" in c.out
 
 
+@pytest.mark.parametrize("exact_range", ["[=0.1.0]", "[0.1.0]", "[0.1.0 || ^0.2.0]"])
+def test_conflict_exact_version_range(exact_range):
+    # https://github.com/conan-io/conan/issues/20513
+    c = TestClient(light=True)
+    c.save({"libb/conanfile.py": GenConanfile("libb"),
+            "libc/conanfile.py": GenConanfile("libc", "1.0.0").with_requires(f"libb/{exact_range}")})
+    c.run("export libb --version=0.1.0")
+    c.run("export libb --version=1.2.0")
+    c.run("export libc")
+    c.run('graph info --requires="libc/[>=1.0.0]" --requires="libb/[>=1.0]"', assert_error=True)
+    assert f"Version conflict: Conflict between libb/{exact_range} and libb/[>=1.0]" in c.out
+
+
+def test_no_conflict_exact_version_ranges():
+    # https://github.com/conan-io/conan/issues/20513
+    c = TestClient(light=True)
+    c.save({"libb/conanfile.py": GenConanfile("libb"),
+            "libc/conanfile.py": GenConanfile("libc", "1.0.0").with_requires("libb/[0.1.0 || 0.2.0]")})
+    c.run("export libb --version=0.1.0")
+    c.run("export libb --version=0.2.0")
+    c.run("export libc")
+    c.run('graph info --requires="libc/[>=1.0.0]" --requires="libb/[0.1.0]"')
+    c.assert_listed_require({"libb/0.1.0": "Cache"})
+
+
 @pytest.mark.parametrize("test", [True, False])
 @pytest.mark.parametrize("order", [True, False])
 class TestErrorVisibleFalse:

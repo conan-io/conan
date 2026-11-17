@@ -82,29 +82,59 @@ jobs:
             echo "run_slow_tests=false" >> $GITHUB_OUTPUT
           fi
 
-  linux_suite:
+  linux_unit_integration:
     needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
     uses: ./.github/workflows/linux-tests.yml
-    name: Linux test suite
+    name: Linux unit & integration
     with:
+      test-stage: unit-integration
+      python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
+      run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
+
+  osx_unit_integration:
+    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
+    uses: ./.github/workflows/osx-tests.yml
+    name: OSX unit & integration
+    with:
+      test-stage: unit-integration
+      python-versions: ${{ needs.set_python_versions.outputs.python_versions_macos }}
+      run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
+
+  windows_unit_integration:
+    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
+    uses: ./.github/workflows/win-tests.yml
+    name: Windows unit & integration
+    with:
+      test-stage: unit-integration
+      python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
+      run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
+
+  linux_functional:
+    needs: [set_python_versions, linux_unit_integration, osx_unit_integration, windows_unit_integration]
+    uses: ./.github/workflows/linux-tests.yml
+    name: Linux functional
+    with:
+      test-stage: functional
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
       run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
       run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
-  osx_suite:
-    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
+  osx_functional:
+    needs: [set_python_versions, linux_unit_integration, osx_unit_integration, windows_unit_integration]
     uses: ./.github/workflows/osx-tests.yml
-    name: OSX test suite
+    name: OSX functional
     with:
+      test-stage: functional
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_macos }}
       run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
       run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
 
-  windows_suite:
-    needs: [ensure_latest_tag_merged, set_python_versions, covtest_predict]
+  windows_functional:
+    needs: [set_python_versions, linux_unit_integration, osx_unit_integration, windows_unit_integration]
     uses: ./.github/workflows/win-tests.yml
-    name: Windows test suite
+    name: Windows functional
     with:
+      test-stage: functional
       python-versions: ${{ needs.set_python_versions.outputs.python_versions_linux_windows }}
       run-slow-tests: ${{ needs.set_python_versions.outputs.run_slow_tests }}
       run-covtest: ${{ needs.set_python_versions.outputs.run_covtest }}
@@ -173,7 +203,8 @@ jobs:
     runs-on: ubuntu-26.04
     name: CovTest Validation
     if: always() && github.event_name == 'pull_request'
-    needs: [linux_suite, osx_suite, windows_suite, covtest_predict]
+    needs: [linux_unit_integration, osx_unit_integration, windows_unit_integration,
+            linux_functional, osx_functional, windows_functional, covtest_predict]
     steps:
       - uses: actions/checkout@v4
 
@@ -210,7 +241,8 @@ jobs:
     runs-on: ubuntu-26.04
     name: Code coverage
     if: github.ref == 'refs/heads/develop2'         # Only measure code coverage on main branch
-    needs: [linux_suite, osx_suite, windows_suite]
+    needs: [linux_unit_integration, osx_unit_integration, windows_unit_integration,
+            linux_functional, osx_functional, windows_functional]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -254,7 +286,8 @@ jobs:
     runs-on: ubuntu-26.04
     name: Deploy to TestPyPI
     if: github.ref == 'refs/heads/develop2'
-    needs: [linux_suite, osx_suite, windows_suite]
+    needs: [linux_unit_integration, osx_unit_integration, windows_unit_integration,
+            linux_functional, osx_functional, windows_functional]
     outputs:
       version: ${{ steps.bump.outputs.version }}
     steps:

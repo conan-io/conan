@@ -242,7 +242,7 @@ class Environment:
         :return: A string with a profile-like original definition, not the full environment
                  values
         """
-        return "\n".join([v.dumps() for v in reversed(self._values.values())])
+        return "\n".join(v.dumps() for v in reversed(self._values.values()))
 
     def define(self, name, value, separator=" "):
         """
@@ -416,14 +416,19 @@ class EnvVars:
         the original environment when the context ends.
 
         """
-        apply_vars = self.items()
-        old_env = dict(os.environ)
+        apply_vars = dict(self.items())
+        # Only restore the modified variables, never clear() the whole os.environ, because it is
+        # process-global and other threads could observe it empty (not atomic)
+        old_values = {k: os.environ.get(k) for k in apply_vars}
         os.environ.update(apply_vars)
         try:
             yield
         finally:
-            os.environ.clear()
-            os.environ.update(old_env)
+            for k, v in old_values.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
 
     def save_dotenv(self, file_location):
         result = []
@@ -954,7 +959,7 @@ def generate_aggregated_env(conanfile):
 
         if ps1s:
             def ps1_content(files):
-                content = "\r\n".join(['& "{}"'.format(b) for b in files])
+                content = "\r\n".join('& "{}"'.format(b) for b in files)
                 if deactivation_mode == "function":
                     content += f"\n\nfunction global:deactivate_conan{group} {{\n"
                     for deactivate_name in deactivate_function_names(ps1s):

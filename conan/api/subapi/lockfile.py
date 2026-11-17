@@ -44,7 +44,7 @@ class LockfileAPI:
         """
         if lockfile == "":
             # Allow a way with ``--lockfile=""`` to optout automatic usage of conan.lock
-            return
+            return None
 
         cwd = cwd or os.getcwd()
         if lockfile is None:  # Look for a default "conan.lock"
@@ -54,7 +54,7 @@ class LockfileAPI:
             if not os.path.isfile(lockfile_path):
                 if overrides:
                     raise ConanException("Cannot define overrides without a lockfile")
-                return
+                return None
         else:  # explicit lockfile given
             lockfile_path = make_abs_path(lockfile, cwd)
             if not os.path.isfile(lockfile_path):

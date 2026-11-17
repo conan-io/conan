@@ -1,5 +1,4 @@
 import os
-from collections import OrderedDict
 
 from conan.api.output import ConanOutput
 from conan.internal.cache.home_paths import HomePaths
@@ -8,8 +7,6 @@ from conan.internal.loader import load_python_file
 from conan.internal.errors import conanfile_exception_formatter, scoped_traceback
 from conan.errors import ConanException
 from conan.internal.api.migrations import CONAN_GENERATED_COMMENT
-
-# TODO: Define other compatibility besides applications
 from conan.internal.util.files import load, save
 
 _default_compat = """\
@@ -170,7 +167,7 @@ class BinaryCompatibility:
                     compat_info.settings.update_values(settings, raise_undefined=False)
                 options = elem.get("options")
                 if options:
-                    compat_info.options.update(options_values=OrderedDict(options))
+                    compat_info.options.update(options_values=dict(options))
                 result.append(compat_info)
                 settings_target = elem.get("settings_target")
                 if settings_target and compat_info.settings_target:

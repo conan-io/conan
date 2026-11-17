@@ -189,7 +189,7 @@ class _CMakePresets:
         # only for consumer that is not a "test_package"
         if is_consumer(conanfile) and conanfile.tested_reference_str is None:
             # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
-            vars_tip = " ".join([f"-D{k}={_format_val(v)}" for k, v in cache_variables.items()])
+            vars_tip = " ".join(f"-D{k}={_format_val(v)}" for k, v in cache_variables.items())
             tc_tip = f"-DCMAKE_TOOLCHAIN_FILE=<output_folder>/{toolchain_file} " \
                 if "CMAKE_TOOLCHAIN_FILE" not in vars_tip else ""
 
