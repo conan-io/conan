@@ -40,6 +40,11 @@ values = [
     ['>=1.0 <=5.0', ">2 <2.5", ">2 <2.5"],
     # equal limits
     ['>=1.0 <3.0', ">0.0 <=1.0", ">=1.0 <=1.0"],
+    # Empty ranges
+    ['>1.0 <2.0', ">2.0 <3.0", None],
+    ['>1.0 <2.0', ">2.0 <=3.0", None],
+    ['>1.0 <2.0', ">=2.0.1 <3.0", None],
+    ['>1.0 <2.0', ">3.0", None],
     # prereleases
     ['>1.0', ">1.0-", ">1.0"],
     ['>=1.0- <3.0', ">=1.0 <3.0-", ">=1.0 <3.0-"],
@@ -55,11 +60,19 @@ values = [
 def test_range_intersection(range1, range2, result):
     r1 = VersionRange(range1)
     r2 = VersionRange(range2)
+
     inter = r1.intersection(r2)
-    result = f"[{result}]"
-    assert inter.version() == result
+    if inter is None:
+        assert result is None
+    else:
+        result = f"[{result}]"
+        assert inter.version() == result
+
     inter = r2.intersection(r1)  # Test reverse order, result should be the same
-    assert inter.version() == result
+    if inter is None:
+        assert result is None
+    else:
+        assert inter.version() == result
 
 
 incompatible_values = [
