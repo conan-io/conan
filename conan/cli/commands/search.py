@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from conan.api.conan_api import ConanAPI
 from conan.api.model import ListPattern
 from conan.cli.command import conan_command
@@ -27,7 +25,7 @@ def search(conan_api: ConanAPI, parser, *args):
     if not remotes:
         raise ConanException("There are no remotes to search from")
 
-    results = OrderedDict()
+    results = {}
     for remote in remotes:
         try:
             pkglist = conan_api.list.select(ref_pattern, package_query=None, remote=remote)

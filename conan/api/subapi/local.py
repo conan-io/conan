@@ -25,7 +25,8 @@ class LocalAPI:
         """ Obtain the full path to a conanfile file, either .txt or .py, from the current
         working directory.
 
-        If both ``conanfile.py`` and a ``conanfile.txt`` are present, it will raise an error.
+        If ``path`` is a folder containing both ``conanfile.py`` and ``conanfile.txt``, and
+        ``py`` is ``False``, it will raise an error.
 
         :param path: Relative path to look for the file. Can be a folder or a file.
         :param cwd: The current working directory.
@@ -56,7 +57,7 @@ class LocalAPI:
                      output_folder=None, remotes: List[Remote] = None) -> RecipeReference:
         """ Add the conanfile in the given path as an editable package
 
-        Note that for automation over editables it might be recommended to use the ``WorkspacesAPI``
+        Note that for automation over editables it might be recommended to use the ``WorkspaceAPI``
         instead of this API.
 
         :param path: Relative path to look for it. Can be a folder or a file.
@@ -83,15 +84,16 @@ class LocalAPI:
         return ref
 
     def editable_remove(self, path=None, requires=None, cwd=None):
-        """ Remove an editable package from the given path
+        """ Remove the editable packages matching the given path or requirements
 
-        Note that for automation over editables it might be recommended to use the ``WorkspacesAPI``
+        Note that for automation over editables it might be recommended to use the ``WorkspaceAPI``
         instead of this API.
 
-        :param path: Relative path to look for it. Can be a folder or a file.
-        :param requires: Remove these requirements from editables (instead of by path)
+        :param path: Relative path to the folder containing the conanfile.py of the editable
+            package to remove
+        :param requires: Remove the editables matching these reference patterns (instead of by path)
         :param cwd: The current working directory
-        :return: RecipeReference of the added package
+        :return: A dict whose keys are the RecipeReference of the removed packages
         """
         if path:
             path = make_abs_path(path, cwd)
@@ -108,7 +110,8 @@ class LocalAPI:
         This method does not require computing a dependency graph, because the ``source()``
         method is assumed to be invariant with respect to settings, options and dependencies.
 
-        :param path: Relative path to look for the conanfile. Can be a folder or a file.
+        :param path: Path to the conanfile.py file, like the one returned by
+            ``get_conanfile_path()``
         :param name: The name of the package. If not defined, it is taken from conanfile
         :param version: The version of the package. If not defined, it is taken from conanfile
         :param user: The user of the package. If not defined, it is taken from conanfile

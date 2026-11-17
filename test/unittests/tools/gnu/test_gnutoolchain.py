@@ -306,3 +306,42 @@ def test_gnu_toolchain_conf_extra_configure_args():
     tc = GnuToolchain(conanfile)
     assert tc.configure_args["--foo"] is None
     assert tc.configure_args["--bar"] is None
+
+
+def test_gnu_toolchain_environment_not_accumulated():
+    """ GnuToolchain._environment must not modify tc.extra_env, so calling it several times
+        (or modifying the toolchain between calls) doesn't accumulate values
+    """
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    conanfile.conf = Conf()
+    tc = GnuToolchain(conanfile)
+    tc.extra_env.append("CFLAGS", "-Ouser")
+    tc.extra_env.define("MYVAR", "myvalue")
+    extra_env_before = tc.extra_env.dumps()
+    tc.extra_cflags.append("-Ofoo")
+
+    for _ in range(3):
+        env_vars = tc._environment.vars(conanfile)
+        assert env_vars["CFLAGS"] == "-Ofoo -Ouser"
+        assert env_vars["MYVAR"] == "myvalue"
+        # extra_env is left untouched
+        assert tc.extra_env.dumps() == extra_env_before
+
+    # Changes in the toolchain are reflected, without the previous ones lingering
+    tc.extra_cflags.remove("-Ofoo")
+    tc.extra_cflags.append("-Obar")
+    assert tc._environment.vars(conanfile)["CFLAGS"] == "-Obar -Ouser"
+
+
+def test_gnu_toolchain_environment_extra_env_precedence():
+    """ User extra_env definitions have precedence, and that is stable across calls """
+    conanfile = ConanFileMock()
+    conanfile.settings = MockSettings({"os": "Linux", "arch": "x86_64"})
+    conanfile.conf = Conf()
+    tc = GnuToolchain(conanfile)
+    tc.extra_cflags.append("-Ofoo")
+    tc.extra_env.define("CFLAGS", "-Odefined")
+    for _ in range(2):
+        assert tc._environment.vars(conanfile)["CFLAGS"] == "-Odefined"
+

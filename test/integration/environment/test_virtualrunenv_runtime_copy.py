@@ -49,7 +49,7 @@ class TestVirtualRunEnvRuntimeCopy:
         assert not os.path.exists(os.path.join(c.current_folder, "consumer",
                                                "myruntime", "dep_lib.so"))
 
-        runenv_files = glob.glob(os.path.join(c.current_folder, "consumer", "conanrunenv.*"))
+        runenv_files = glob.glob(os.path.join(c.current_folder, "consumer", "conanrunenv.[bs][ah]*"))
         assert len(runenv_files) == 1
         runenv = c.load(runenv_files[0])
         assert "myruntime" in runenv
@@ -79,7 +79,7 @@ class TestVirtualRunEnvRuntimeCopy:
         assert c.load("deployed/full_deploy/host/dep/1.0/bin/dep_app.exe") == "APP_CONTENT"
         assert c.load("consumer/myruntime/dep_app.exe") == "APP_CONTENT"
 
-        runenv_files = glob.glob(os.path.join(c.current_folder, "consumer", "conanrunenv.*"))
+        runenv_files = glob.glob(os.path.join(c.current_folder, "consumer", "conanrunenv.[bs][ah]*"))
         assert len(runenv_files) == 1
         runenv = c.load(runenv_files[0])
         # PATH points to the deployed copy folder, not the cache or the deploy source

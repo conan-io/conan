@@ -180,11 +180,11 @@ class BinaryInstaller:
         download_source = conanfile.conf.get("tools.build:download_source", check_type=bool)
 
         if not download_source and (need_conf or node.binary != BINARY_BUILD):
-            return
+            return None
 
         conanfile = node.conanfile
         if node.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
-            return
+            return None
 
         ConanOutput().step(f"Source step")
 
@@ -259,9 +259,9 @@ class BinaryInstaller:
 
         ConanOutput().title("Installing packages")
 
-        package_count = sum([sum(len(install_reference.packages.values())
-                                 for level in install_order
-                                 for install_reference in level)])
+        package_count = sum(len(install_reference.packages)
+                            for level in install_order
+                            for install_reference in level)
         handled_count = 1
 
         self._download_bulk(install_order)
@@ -275,7 +275,7 @@ class BinaryInstaller:
                         ConanOutput().highlight(f"Building from source {pref}")
                         compact_dumps = package.nodes[0].conanfile.info.summarize_compact()
                         for line in compact_dumps:
-                            ConanOutput(scope=str(pref.ref)).info(line, fg=Color.BRIGHT_GREEN)
+                            ConanOutput().info(line, fg=Color.BRIGHT_GREEN)
                     recipe_layout = self._install_source(package.nodes[0], remotes)
                     self._handle_package(recipe_layout, package, install_reference, handled_count,
                                          package_count)

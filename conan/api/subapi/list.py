@@ -1,5 +1,4 @@
 import os
-from collections import OrderedDict
 from typing import Dict
 
 from conan.api.model import PackagesList, MultiPackagesList, ListPattern, Remote
@@ -52,7 +51,9 @@ class ListAPI:
 
     def latest_recipe_revision(self, ref: RecipeReference, remote: Remote = None):
         """ For a given recipe reference, return the latest revision of the recipe in the remote,
-        or in the local cache if no remote is specified, or ``None`` if the recipe does not exist."""
+        or in the local cache if no remote is specified.
+
+        Raises if the reference is not found in the remote or cache."""
         assert ref.revision is None, "latest_recipe_revision: ref already have a revision"
         if remote:
             ret = self._api_helpers.remote_manager.get_latest_recipe_revision(ref, remote=remote)
@@ -160,7 +161,7 @@ class ListAPI:
         :parameter Remote remote: Remote to search in,
             if ``None``, it will search in the local cache.
         :parameter str lru: If set, it will filter the results to only include
-            packages/binaries that have been used in the last 'lru' time.
+            packages/binaries that have **not** been used in the last 'lru' time.
             It can be a string like ``"2d"`` (2 days) or ``"3h"`` (3 hours).
         :parameter Profile profile: Profile to filter the packages by settings and options.
         """
@@ -339,7 +340,7 @@ class ListAPI:
                             if remote_prefs:
                                 result_pkg_list.add_pref(pref, pkgcontent.get("info"))
                             continue
-                        for pkg_revision, prev_content in pkg_revisions.items():
+                        for pkg_revision in pkg_revisions.keys():
                             pref.revision = pkg_revision
                             # We look for the value of revision in server, to return timestamp too
                             pfound = next((r for r in remote_prefs if r == pref), None)
@@ -389,7 +390,7 @@ class ListAPI:
         # Filter nodes with no outdated versions
         filtered_nodes = {}
         for node_name, node in dict_nodes.items():
-            if node['latest_remote'] is not None and sorted(list(node['cache_refs']))[0] < \
+            if node['latest_remote'] is not None and sorted(node['cache_refs'])[0] < \
                     node['latest_remote']['ref']:
                 filtered_nodes[node_name] = node
 
@@ -514,7 +515,7 @@ def _get_cache_packages_binary_info(cache, prefs) -> Dict[PkgReference, dict]:
     param package_layout: Layout for the given reference
     """
 
-    result = OrderedDict()
+    result = {}
 
     for pref in prefs:
         latest_prev = cache.get_latest_package_revision(pref)

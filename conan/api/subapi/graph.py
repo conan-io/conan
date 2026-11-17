@@ -170,7 +170,8 @@ class GraphAPI:
         still possible to inspect it. Only trying to install such graph will fail
 
         :param root_node: the starting point, an already initialized Node structure, as
-            returned by the "load_root_node" api
+            returned by :meth:`load_root_test_conanfile()
+            <conan.api.subapi.graph.GraphAPI.load_root_test_conanfile>`
         :param profile_host: The host profile
         :param profile_build: The build profile
         :param lockfile: A valid lockfile (None by default, means no locked)

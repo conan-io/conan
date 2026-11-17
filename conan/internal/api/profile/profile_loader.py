@@ -1,5 +1,6 @@
 import os
 import platform
+import re
 import subprocess
 from collections import OrderedDict, defaultdict
 
@@ -346,7 +347,9 @@ class _ProfileValueParser:
                         f"Tool requires pattern {pattern} contains a version range, which has no effect. "
                         f"Only '&' for consumer and '*' as wildcard are supported in this context.",
                         warn_tag="risk")
-                refs = [RecipeReference.loads(r.strip()) for r in req_list.split(",")]
+                # Commas inside a version range (e.g. [~1.0, include_prerelease]) are not separators
+                refs = [RecipeReference.loads(r.strip())
+                        for r in re.split(r",(?![^\[]*])", req_list)]
                 result.setdefault(pattern, []).extend(refs)
         return result
 

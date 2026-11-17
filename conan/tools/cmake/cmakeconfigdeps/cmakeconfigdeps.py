@@ -288,8 +288,7 @@ class CMakeConfigDeps:
                                      f"CMake config file. Check the 'cmake_file_names' "
                                      f"property definition.")
         else:  # Read cmake_file_name as usual
-            cmake_file_name = self.get_property("cmake_file_name", dep)
-            root_filename = cmake_file_name or dep.ref.name
+            root_filename = self.get_property("cmake_file_name", dep) or dep.ref.name
             full_cpp_info = self._get_full_cpp_info(dep)
             ret[root_filename] = {"components": list(full_cpp_info.components.keys()),
                                   "is_root": True}
@@ -302,7 +301,7 @@ class _CMakeContextGenerator:
 
     def __init__(self, cmakedeps, require, dep, full_cpp_info, cmake_filename, cmake_file_info):
         self.cmakedeps = cmakedeps
-        self.consumer_conanfile = cmakedeps._conanfile
+        self.consumer_conanfile = cmakedeps._conanfile # noqa
         self.require = require
         self.dep = dep
         self.full_cpp_info = full_cpp_info
@@ -343,36 +342,24 @@ class _CMakeContextGenerator:
         return target_name or default
 
     def get_config_version_info(self):
-        return self._ConfigVersion(self).info()
+        f = self.base_filename
+        filename = f"{f}-config-version.cmake" if f == f.lower() else f"{f}ConfigVersion.cmake"
+        policy = self.get_property("cmake_config_version_compat")
+        policy = "SameMajorVersion" if policy is None else policy
+        if policy not in ("AnyNewerVersion", "SameMajorVersion", "SameMinorVersion", "ExactVersion"):
+            raise ConanException(f"Unknown cmake_config_version_compat={policy} in {self.dep.ref}")
+        version = self.get_property("system_package_version") or self.dep.ref.version
+        return filename, {"version": version, "policy": policy}
 
     def get_config_info(self):
         return self._Config(self).info()
 
     def get_targets_info(self):
-        return self._Targets(self).info()
+        f = self.base_filename
+        return f"{f}Targets.cmake", {"filename": f}
 
     def get_target_configuration_info(self):
         return self._TargetConfiguration(self).info()
-
-    class _ConfigVersion:
-        """Filename + context for ConfigVersionTemplate2."""
-
-        def __init__(self, ctx):
-            self._ctx = ctx
-
-        def info(self):
-            f = self._ctx.base_filename
-            filename = f"{f}-config-version.cmake" if f == f.lower() else f"{f}ConfigVersion.cmake"
-            policy = self._ctx.get_property("cmake_config_version_compat")
-            if policy is None:
-                policy = "SameMajorVersion"
-            if policy not in ("AnyNewerVersion", "SameMajorVersion", "SameMinorVersion",
-                              "ExactVersion"):
-                raise ConanException(
-                    f"Unknown cmake_config_version_compat={policy} in {self._ctx.dep.ref}")
-            version = (self._ctx.get_property("system_package_version")
-                       or self._ctx.dep.ref.version)
-            return filename, {"version": version, "policy": policy}
 
     class _Config:
         """Filename + context for ConfigTemplate2."""
@@ -385,18 +372,13 @@ class _CMakeContextGenerator:
             filename = f"{f}-config.cmake" if f == f.lower() else f"{f}Config.cmake"
             dep = self._ctx.dep
 
-            conf_extra_variables = dep.conf.get("tools.cmake.cmaketoolchain:extra_variables",
-                                                default={}, check_type=dict)
-            dep_extra_variables = self._ctx.get_property("cmake_extra_variables",
-                                                         check_type=dict) or {}
+            conf_extra_vars = dep.conf.get("tools.cmake.cmaketoolchain:extra_variables",
+                                           default={}, check_type=dict)
+            dep_extra_vars = self._ctx.get_property("cmake_extra_variables", check_type=dict) or {}
             # The configuration variables have precedence over the dependency ones
             # (those already appear on the toolchain files)
-            cmake_extra_variables = {k: v for k, v in dep_extra_variables.items()
-                                     if k not in conf_extra_variables}
-            parsed_extra_variables = {}
-            for key, value in cmake_extra_variables.items():
-                parsed_extra_variables[key] = parse_extra_variable("cmake_extra_variables",
-                                                                   key, value)
+            parsed_extra_variables = {k: parse_extra_variable("cmake_extra_variables", k, v)
+                                      for k, v in dep_extra_vars.items() if k not in conf_extra_vars}
 
             cmake_components = self._ctx.get_property("cmake_components", check_type=list)
             if cmake_components is None:
@@ -467,15 +449,6 @@ class _CMakeContextGenerator:
                     "definitions": definitions,
                     "libraries": libraries}
 
-    class _Targets:
-        """Filename + context for TargetsTemplate2."""
-
-        def __init__(self, ctx):
-            self._ctx = ctx
-
-        def info(self):
-            f = self._ctx.base_filename
-            return f"{f}Targets.cmake", {"filename": f}
 
     class _TargetConfiguration:
         """Filename + context for TargetConfigurationTemplate2."""
@@ -513,12 +486,6 @@ class _CMakeContextGenerator:
             filename = f"{self._ctx.base_filename}-Targets{build}-{config_name}.cmake"
             return filename, context
 
-        def _get_dep_find_mode(self, d):
-            find_mode = self._ctx.get_property("cmake_find_mode", d)
-            if find_mode is None:
-                find_mode = FIND_MODE_CONFIG
-            return "" if find_mode.lower() in (FIND_MODE_NONE, FIND_MODE_BOTH) else find_mode.upper()
-
         def _resolve_dependency_filenames(self, dep, comp):
             """
             The cmake filename(s) of ``dep`` that need a find_dependency() call to satisfy a
@@ -547,6 +514,10 @@ class _CMakeContextGenerator:
             else:
                 requires[None] = self._get_component_requires(full_cpp_info, None)
 
+            def _get_dep_find_mode(d_):
+                mode = (self._ctx.get_property("cmake_find_mode", d_) or FIND_MODE_CONFIG).lower()
+                return mode.upper() if mode == FIND_MODE_CONFIG else ""
+
             dependencies = {}
             if self._ctx.is_root:
                 # Preserve the historic behavior: the root config file gets a find_dependency()
@@ -554,14 +525,14 @@ class _CMakeContextGenerator:
                 # component links to it or not.
                 for d in self._ctx.transitive_reqs.values():
                     for cmake_filename in self._resolve_dependency_filenames(d, None):
-                        dependencies[cmake_filename] = self._get_dep_find_mode(d)
+                        dependencies[cmake_filename] = _get_dep_find_mode(d)
             for comp_requires in requires.values():
                 for info in comp_requires.values():
                     dep, comp = info["dependency"]
                     if dep is self._ctx.dep and comp is not None and comp in components_per_file:
                         continue  # Requirement resolved within this same CMake config file
                     for cmake_filename in self._resolve_dependency_filenames(dep, comp):
-                        dependencies[cmake_filename] = self._get_dep_find_mode(dep)
+                        dependencies[cmake_filename] = _get_dep_find_mode(dep)
 
             extra_mods = self._ctx.get_property("cmake_extra_dependencies", check_type=list) or []
             dependencies.update({extra_mod: "" for extra_mod in extra_mods})
@@ -688,18 +659,26 @@ class _CMakeContextGenerator:
             if info.exe or not (info.package_framework or info.frameworks or info.includedirs
                                 or info.libs or info.system_libs or info.defines or info.requires
                                 or info.sources or info.objects):
-                return
+                return None
 
             includedirs = ";".join(self._cmake_pkg_path(i)
                                    for i in info.includedirs) if info.includedirs else ""
             requires = cpp_info_requires[comp_name]
             assert isinstance(requires, dict)
             defines = ";".join(cmake_escape_value(f) for f in info.defines)
-            # FIXME: Filter by lib traits!!!!!
-            if not self._ctx.require.headers:  # If not depending on headers, paths and
+            # If not depending on headers, header-only info (paths, defines) is not injected
+            if not self._ctx.require.headers:
                 includedirs = defines = None
             extra_libs = self._ctx.get_property("cmake_extra_interface_libs", comp_name=comp_name,
                                            check_type=list) or []
+            system_libs = " ".join(info.system_libs + extra_libs)
+            cxxflags = ";".join(cmake_escape_value(f) for f in info.cxxflags)
+            cflags = ";".join(cmake_escape_value(f) for f in info.cflags)
+            sharedlinkflags = ";".join(cmake_escape_value(v) for v in info.sharedlinkflags)
+            exelinkflags = ";".join(cmake_escape_value(v) for v in info.exelinkflags)
+            if not self._ctx.require.libs and not self._ctx.require.headers:
+                # Neither compiling against it nor linking it: no compile/link flags
+                system_libs = cxxflags = cflags = sharedlinkflags = exelinkflags = ""
             sources = []
             if self._ctx.require.direct:
                 sources = [self._cmake_pkg_path(source) for source in info.sources]
@@ -709,12 +688,11 @@ class _CMakeContextGenerator:
                       "includedirs": includedirs,
                       "defines": defines,
                       "requires": requires,
-                      "cxxflags": ";".join(cmake_escape_value(f) for f in info.cxxflags),
-                      "cflags": ";".join(cmake_escape_value(f) for f in info.cflags),
-                      "sharedlinkflags": ";".join(cmake_escape_value(v)
-                                                  for v in info.sharedlinkflags),
-                      "exelinkflags": ";".join(cmake_escape_value(v) for v in info.exelinkflags),
-                      "system_libs": " ".join(info.system_libs + extra_libs),
+                      "cxxflags": cxxflags,
+                      "cflags": cflags,
+                      "sharedlinkflags": sharedlinkflags,
+                      "exelinkflags": exelinkflags,
+                      "system_libs": system_libs,
                       "sources": " ".join(sources)
                       }
             if objects:
@@ -724,31 +702,45 @@ class _CMakeContextGenerator:
                 target["objects"] = ";".join(objects)
             # System frameworks (only Apple OS)
             if info.frameworks:
-                target['frameworks'] = " ".join([f"-framework {frw}" for frw in info.frameworks])
+                target['frameworks'] = " ".join(f"-framework {frw}" for frw in info.frameworks)
             # FIXME: Ignoring this value for now. Relies on cmake_target_name or lib name.
             #        Revisit when cpp.exe value is used too.
             if info.package_framework:
                 assert isinstance(info.package_framework, str), \
                     f"package_framework should be a str"
+                # This validates the recipe itself, regardless of whether this particular
+                # requirement links libs: it is invalid independently of who consumes it.
                 if info.libs:
                     raise ConanException("Can't define .libs and .package_framework for the same "
                                          "component")
-                target["package_framework"] = {}
-                lib_type = "SHARED" if info.type is PackageType.SHARED else \
-                    "STATIC" if info.type is PackageType.STATIC else "STATIC"
-                assert lib_type, f"Unknown package type {info.type}"
-                assert info.location, \
-                    f"cpp_info.location missing for framework {info.package_framework}"
-                target["type"] = lib_type
-                target["package_framework"]["location"] = self._cmake_pkg_path(info.location)
-                # empty as frameworks have their own way to inject headers
-                target["includedirs"] = []
-                # FIXME: Not needed for CMake < 3.24. Remove when Conan requires CMake >= 3.24
-                target["package_framework"]["frameworkdir"] = self._cmake_pkg_path(self._ctx.pkg_folder)
+                if self._ctx.require.libs or self._ctx.require.headers:
+                    target["package_framework"] = {}
+                    lib_type = "SHARED" if info.type is PackageType.SHARED else \
+                        "STATIC" if info.type is PackageType.STATIC else "STATIC"
+                    assert lib_type, f"Unknown package type {info.type}"
+                    assert info.location, \
+                        f"cpp_info.location missing for framework {info.package_framework}"
+                    target["type"] = lib_type
+                    target["package_framework"]["location"] = self._cmake_pkg_path(info.location)
+                    # empty as frameworks have their own way to inject headers
+                    target["includedirs"] = []
+                    # FIXME: Not needed for CMake < 3.24. Remove when Conan requires CMake >= 3.24
+                    target["package_framework"]["frameworkdir"] = \
+                        self._cmake_pkg_path(self._ctx.pkg_folder)
             if info.libs:
+                # Same as above: this validates the recipe itself (a structural invariant of the
+                # dependency), so it must not depend on how this particular requirement is used.
                 if len(info.libs) != 1:
                     raise ConanException(f"New CMakeDeps only allows 1 lib per component:\n"
                                          f"{self._ctx.dep}: {info.libs}")
+                # IMPORTANT! LINKERS IN LINUX FOR SHARED MIGHT NEED THE LOCATION EVEN IF NOT
+                # REALLY LINKING THIS LIB: e.g. "engine" privately links "matrix" (matrix is
+                # not required directly by the consumer, so require.libs=False here), but
+                # libengine.so still has a DT_NEEDED entry for libmatrix.so, and on Linux `ld`
+                # must resolve that transitively at link time (via -rpath-link, which CMake
+                # derives from IMPORTED_LOCATION). So do NOT gate this on self._ctx.require.libs.
+                # Whether this target actually gets linked anywhere is a separate, per-edge
+                # decision already made above, in "requires".
                 assert info.location, "info.location missing for .libs, it should have been deduced"
                 location = self._cmake_pkg_path(info.location)
                 link_location = (self._cmake_pkg_path(info.link_location)
@@ -860,7 +852,7 @@ class _CMakeContextGenerator:
 def _join_paths(conanfile, paths):
     paths = [p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"') for p in paths]
     paths = [relativize_path(p, conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
-    return " ".join([f'"{p}"' for p in paths])
+    return " ".join(f'"{p}"' for p in paths)
 
 
 class _PathGenerator:

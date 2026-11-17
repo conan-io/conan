@@ -29,7 +29,14 @@ class PkgCache:
 
         try:
             mkdir(self._store_folder)
-            db_filename = os.path.join(self._store_folder, 'cache.sqlite3')
+            db_folder = self._store_folder
+            db_root = global_conf.get("core.cache:root_database_folder", check_type=str)
+            if db_root:
+                storage = os.path.normcase(os.path.realpath(self._store_folder))
+                storage_hash = hashlib.sha256(storage.encode("utf-8")).hexdigest()
+                db_folder = os.path.join(db_root, storage_hash)
+                mkdir(db_folder)
+            db_filename = os.path.join(db_folder, 'cache.sqlite3')
             self._base_folder = os.path.abspath(self._store_folder)
             self._db = CacheDatabase(filename=db_filename)
             # path of the packages already read from DB by pkg_layout_latest(), to avoid querying
@@ -215,7 +222,9 @@ class PkgCache:
         assert pref.timestamp
         self._db.update_package_timestamp(pref, path=path, build_id=build_id)
 
-    def search_recipes(self, pattern=None):
+    def search_recipes(self, pattern=None, name=None):
+        """ ``name`` is an optimization, only to be used if the pattern can only match references
+        of that recipe name, like ``name/*``: only that name will be loaded from the DB """
         # Conan references in main storage
         if pattern:
             if isinstance(pattern, RecipeReference):
@@ -223,7 +232,7 @@ class PkgCache:
             pattern = translate(pattern)
             pattern = re.compile(pattern)
 
-        return self._db.list_references(pattern)
+        return self._db.list_references(pattern, name)
 
     def exists_prev(self, pref):
         # Used just by download to skip downloads if prev already exists in cache

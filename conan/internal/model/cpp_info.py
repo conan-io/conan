@@ -3,7 +3,7 @@ import glob
 import json
 import os
 import re
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
@@ -57,6 +57,14 @@ class MockInfoProperty:
 
 
 class _Component:
+    # LEGACY 1.X fields, can be removed in 2.X. Class attributes, as MockInfoProperty has no state:
+    # CPython stops sharing the keys of the instance __dict__ above 29 attributes (30 in 3.14),
+    # which makes every instance ~5x bigger. __init__ sets 28, so if this ever gets more attributes,
+    # look into __slots__ plus a "__dict__" slot instead. Not strict __slots__: recipes set attributes
+    # that are not defined here (e.g. cpp_info.version), and that would raise
+    names = MockInfoProperty("cpp_info.names")
+    filenames = MockInfoProperty("cpp_info.filenames")
+    build_modules = MockInfoProperty("cpp_info.build_modules")
 
     def __init__(self, set_defaults=False):
         # ###### PROPERTIES
@@ -91,11 +99,6 @@ class _Component:
         self.ignored_requires = []
 
         self._consumer_conanfile = None
-
-        # LEGACY 1.X fields, can be removed in 2.X
-        self.names = MockInfoProperty("cpp_info.names")
-        self.filenames = MockInfoProperty("cpp_info.filenames")
-        self.build_modules = MockInfoProperty("cpp_info.build_modules")
 
         if set_defaults:
             self.includedirs = ["include"]
@@ -594,7 +597,10 @@ class _Component:
         libname = self.libs[0]
         dll_location = None
         deduced_type = None
-        libname, ext = os.path.splitext(libname)
+        stripped, ext = os.path.splitext(libname)
+        # Only strip real library extensions, "mylib-1.2" is the name of a library, not "mylib-1" + ".2"
+        if ext.lower() in (".a", ".lib", ".so", ".dylib", ".dll"):
+            libname = stripped
         lib_sanitized = re.escape(libname)
         component_sanitized = re.escape(library_name)
         # At first, exact match
@@ -642,11 +648,11 @@ class _Component:
                                  f"or report in github.com/conan-io/conan/issues if you think it "
                                  f"should have been deduced correctly.")
         if self._type is not None and self._type != deduced_type:
-            ConanException(f"{conanfile}: Incorrect deduced type '{deduced_type}' for library"
-                           f" '{libname}' that declared .type='{self._type}'")
+            raise ConanException(f"{conanfile}: Incorrect deduced type '{deduced_type}' for library"
+                                 f" '{libname}' that declared .type='{self._type}'")
+        if self._type is None and deduced_type != pkg_type:
+            out.warning(f"Lib {libname} deduced as '{deduced_type}', but 'package_type={pkg_type}'")
         self._type = deduced_type
-        if self._type != pkg_type:
-            out.warning(f"Lib {libname} deduced as '{self._type}', but 'package_type={pkg_type}'")
 
     def deduce_locations(self, conanfile, component_name=""):
         name = f'{conanfile} cpp_info.components["{component_name}"]' if component_name \
@@ -779,10 +785,10 @@ class CppInfo:
 
         :return: ``OrderedDict`` {component_name: component}
         """
-        result = OrderedDict()
+        result = {}
         opened = self.components.copy()
         while opened:
-            new_open = OrderedDict()
+            new_open = {}
             for name, c in opened.items():
                 if not any(n in opened for n in c.required_component_names):
                     result[name] = c

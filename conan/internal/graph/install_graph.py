@@ -89,9 +89,9 @@ class _InstallPackageReference:
         # to cross compile, there will be a dependency from the current "self" (host context)
         # to that "build" package_id.
         self.depends = []  # List of package_ids of dependencies to other binaries of the same ref
-        self.overrides = Overrides()
+        self._overrides = None  # lazy, see ``overrides``
         self.ref = None
-        self.info = None
+        self._info = None  # lazy, see ``info``
 
     @property
     def pref(self):
@@ -108,6 +108,28 @@ class _InstallPackageReference:
             self._options = _reproducible_options(self.nodes[0])
         return self._options
 
+    @property
+    def overrides(self):
+        # Lazy, it traverses the subgraph of the node and only "conan graph build-order" needs it
+        if self._overrides is None:
+            self._overrides = self.nodes[0].overrides() if self.nodes else Overrides()
+        return self._overrides
+
+    @overrides.setter
+    def overrides(self, value):
+        self._overrides = value
+
+    @property
+    def info(self):
+        # Lazy, only "conan graph build-order" needs it
+        if self._info is None and self.nodes:
+            self._info = self.nodes[0].conanfile.info.serialize()  # ConanInfo has no deserialize
+        return self._info
+
+    @info.setter
+    def info(self, value):
+        self._info = value
+
     @staticmethod
     def create(node):
         result = _InstallPackageReference()
@@ -117,8 +139,6 @@ class _InstallPackageReference:
         result.binary = node.binary
         result.context = node.context
         result.nodes.append(node)
-        result.overrides = node.overrides()
-        result.info = node.conanfile.info.serialize()  # ConanInfo doesn't have deserialize
         return result
 
     def add(self, node):
@@ -299,8 +319,8 @@ class _InstallConfiguration:
         self._options = None  # to be able to fire a build, the options will be necessary
         self.filenames = []  # The build_order.json filenames e.g. "windows_build_order"
         self.depends = []  # List of full prefs
-        self.overrides = Overrides()
-        self.info = None
+        self._overrides = None  # lazy, see ``overrides``
+        self._info = None  # lazy, see ``info``
 
     def __str__(self):
         return f"{self.ref}:{self.package_id} ({self.binary}) -> {[str(d) for d in self.depends]}"
@@ -327,6 +347,28 @@ class _InstallConfiguration:
             self._options = _reproducible_options(self.nodes[0])
         return self._options
 
+    @property
+    def overrides(self):
+        # Lazy, it traverses the subgraph of the node and only "conan graph build-order" needs it
+        if self._overrides is None:
+            self._overrides = self.nodes[0].overrides() if self.nodes else Overrides()
+        return self._overrides
+
+    @overrides.setter
+    def overrides(self, value):
+        self._overrides = value
+
+    @property
+    def info(self):
+        # Lazy, only "conan graph build-order" needs it
+        if self._info is None and self.nodes:
+            self._info = self.nodes[0].conanfile.info.serialize()  # ConanInfo has no deserialize
+        return self._info
+
+    @info.setter
+    def info(self, value):
+        self._info = value
+
     @staticmethod
     def create(node):
         result = _InstallConfiguration()
@@ -335,14 +377,11 @@ class _InstallConfiguration:
         result.prev = node.pref.revision
         result.binary = node.binary
         result.context = node.context
-        result.overrides = node.overrides()
-        result.info = node.conanfile.info.serialize()
 
         result.nodes.append(node)
         for dep in node.edges:
-            if dep.dst.binary != BINARY_SKIP:
-                if dep.dst.pref not in result.depends:
-                    result.depends.append(dep.dst.pref)
+            if dep.dst.binary != BINARY_SKIP and dep.dst.pref not in result.depends:
+                result.depends.append(dep.dst.pref)
         return result
 
     def add(self, node):
@@ -354,9 +393,8 @@ class _InstallConfiguration:
         self.nodes.append(node)
 
         for edge in node.edges:
-            if edge.dst.binary != BINARY_SKIP:
-                if edge.dst.pref not in self.depends:
-                    self.depends.append(edge.dst.pref)
+            if edge.dst.binary != BINARY_SKIP and edge.dst.pref not in self.depends:
+                self.depends.append(edge.dst.pref)
 
     def _build_args(self):
         if self.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD):
@@ -620,7 +658,7 @@ class InstallGraph:
                 errors.append(f"{tab}- {package.pref}: Invalid configuration")
         if missing:
             missing_prefs = set(n.pref for n in missing)  # avoid duplicated
-            for pref in list(sorted([str(pref) for pref in missing_prefs])):
+            for pref in sorted(str(pref) for pref in missing_prefs):
                 errors.append(f"{tab}- {pref}: Missing binary")
         if errors:
             return "\n".join(errors)
@@ -642,7 +680,7 @@ class InstallGraph:
         # TODO: Remove out argument
         # TODO: A bit dirty access to .pref
         missing_prefs = set(n.nodes[0].pref for n in missing)  # avoid duplicated
-        missing_prefs_str = list(sorted([str(pref) for pref in missing_prefs]))
+        missing_prefs_str = sorted(str(pref) for pref in missing_prefs)
         out = ConanOutput()
         for pref_str in missing_prefs_str:
             out.error(f"Missing binary: {pref_str}", error_type="exception")
@@ -657,7 +695,7 @@ class InstallGraph:
         msg = f"Can't find a '{ref}' package binary '{package_id}' for the configuration:\n"\
               f"{conanfile.info.dumps()}"
         conanfile.output.warning(msg)
-        missing_pkgs = "', '".join(list(sorted([str(pref.ref) for pref in missing_prefs])))
+        missing_pkgs = "', '".join(sorted(str(pref.ref) for pref in missing_prefs))
         if self._is_test_package:
             build_msg = "This is a **test_package** missing binary. You can use --build (for " \
                         "all dependencies) or --build-test (exclusive for 'conan create' building " \
@@ -666,8 +704,7 @@ class InstallGraph:
             if len(missing_prefs) >= 5:
                 build_str = "--build=missing"
             else:
-                build_str = " ".join(list(sorted(["--build=%s" % str(pref.ref)
-                                                  for pref in missing_prefs])))
+                build_str = " ".join(sorted("--build=%s" % str(pref.ref) for pref in missing_prefs))
             build_msg = f"Try to build locally from sources using the '{build_str}' argument"
 
         raise ConanException(textwrap.dedent(f'''\

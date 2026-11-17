@@ -221,7 +221,7 @@ class TestConfigInstallPkg:
 
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")}, clean_first=True)
         c.run("create .")
-        assert f"pkg/0.1: config_version: myconf/0.1.Z" in c.out
+        assert "config_version: myconf/0.1.Z" in c.out
         c.run("list pkg/0.1:* --format=json")
         info = json.loads(c.stdout)
         rrev = info["Local Cache"]["pkg/0.1"]["revisions"]["485dad6cb11e2fa99d9afbe44a57a164"]

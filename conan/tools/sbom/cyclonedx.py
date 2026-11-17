@@ -202,9 +202,26 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
     return sbom_cyclonedx_1_6
 
 
+_SPDX_OPERATORS = ("AND", "OR", "WITH", "and", "or", "with")
+
+
 def _is_expr(license_value):
-     v = license_value.upper()
-     return " AND " in v or " OR " in v or " WITH " in v
+    """ An SPDX expression has at least one operator (case-sensitive, all upper or all lower),
+    and everything else in it is a known SPDX license id (optionally with a ``+`` suffix) or a
+    LicenseRef. The exception after WITH is not checked, as there is no list of exceptions.
+    """
+    from conan.tools.sbom.spdx_licenses import NORMALIZED_VALID_SPDX_LICENSES
+
+    tokens = license_value.replace("(", " ").replace(")", " ").split()
+    if not any(t in _SPDX_OPERATORS for t in tokens):
+        return False
+    for i, token in enumerate(tokens):
+        if token in _SPDX_OPERATORS or (i and tokens[i - 1] in ("WITH", "with")):
+            continue
+        if not (token.startswith(("LicenseRef-", "DocumentRef-"))
+                or token.rstrip("+").lower() in NORMALIZED_VALID_SPDX_LICENSES):
+            return False
+    return True
 
 
 def _calculate_licenses(component):

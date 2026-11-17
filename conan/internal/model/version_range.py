@@ -31,6 +31,8 @@ def required_conan_version_policy(conanfile, limit_version):
 
 @total_ordering
 class _Condition:
+    __slots__ = ("operator", "display_version", "version")
+
     def __init__(self, operator, version):
         self.operator = operator
         self.display_version = version
@@ -41,6 +43,8 @@ class _Condition:
         self.version = Version(value)
 
     def __str__(self):
+        if self.operator == "*":  # Patterns like "1.2.*" are stored as the "1.2." prefix
+            return f"{self.display_version}*"
         return f"{self.operator}{self.display_version}"
 
     def __repr__(self):
@@ -99,6 +103,14 @@ class _ConditionSet:
             e = e.strip()
             self.conditions.extend(self._parse_expression(e))
 
+    @classmethod
+    def from_conditions(cls, conditions, prerelease):
+        """ Build a condition set from already parsed conditions, without reparsing """
+        result = cls.__new__(cls)
+        result.prerelease = prerelease
+        result.conditions = conditions
+        return result
+
     @staticmethod
     def _parse_expression(expression):
         if expression in ("", "*"):
@@ -138,7 +150,7 @@ class _ConditionSet:
                 for i, m in enumerate(main):
                     if m != 0:
                         return i
-                return len(main)
+                return len(main) - 1
 
             initial_index = first_non_zero(v.main)
             return [_Condition(">=", v), _Condition("<", v.upper_bound(initial_index))]
@@ -229,31 +241,42 @@ class VersionRange:
         def _calculate_limits(operator, lhs, rhs):
             limits = ([c for c in lhs.conditions if operator in c.operator]
                       + [c for c in rhs.conditions if operator in c.operator])
-            if limits:
-                return sorted(limits, reverse=operator == ">")[0]
+            return sorted(limits, reverse=operator == ">")[0] if limits else None
 
         prerelease = True
         for lhs_conditions in self.condition_sets:
             for rhs_conditions in other.condition_sets:
-                internal_conditions = []
-                lower_limit = _calculate_limits(">", lhs_conditions, rhs_conditions)
-                upper_limit = _calculate_limits("<", lhs_conditions, rhs_conditions)
-                if lower_limit:
-                    internal_conditions.append(lower_limit)
-                if upper_limit:
-                    internal_conditions.append(upper_limit)
-                if internal_conditions and (not lower_limit or not upper_limit or lower_limit <= upper_limit):
-                    conditions.append(internal_conditions)
+                all_conditions = lhs_conditions.conditions + rhs_conditions.conditions
+                exact = next((c for c in all_conditions if c.operator == "="), None)
+                if exact is not None:
+                    # The only possible version is the exact one, as long as every other condition
+                    # (other "=" ones included) accepts it. Prereleases are decided for the whole
+                    # range below, so don't filter them here
+                    all_set = _ConditionSet.from_conditions(all_conditions, prerelease=True)
+                    if all_set.valid(exact.version, conf_resolve_prepreleases=True):
+                        conditions.append([exact])
+                else:
+                    lower_limit = _calculate_limits(">", lhs_conditions, rhs_conditions)
+                    upper_limit = _calculate_limits("<", lhs_conditions, rhs_conditions)
+
+                    if lower_limit and upper_limit:
+                        if lower_limit <= upper_limit:
+                            conditions.append([lower_limit, upper_limit])
+                    elif lower_limit:
+                        conditions.append([lower_limit])
+                    elif upper_limit:
+                        conditions.append([upper_limit])
+
                 # conservative approach: if any of the conditions forbid prereleases, forbid them in the result
                 if not lhs_conditions.prerelease or not rhs_conditions.prerelease:
                     prerelease = False
 
         if not conditions:
             return None
-        expression = ' || '.join(' '.join(str(c) for c in cs) for cs in conditions) + (', include_prerelease' if prerelease else '')
-        result = VersionRange(expression)
-        # TODO: Direct definition of conditions not reparsing
-        # result.condition_sets = self.condition_sets + other.condition_sets
+        # Don't use __init__ because it will parse the expression again, we already have the conditions
+        result = VersionRange.__new__(VersionRange)
+        result._expression = ' || '.join(' '.join(str(c) for c in cs) for cs in conditions) + (', include_prerelease' if prerelease else '')
+        result.condition_sets = [_ConditionSet.from_conditions(cs, prerelease) for cs in conditions]
         return result
 
     def version(self):

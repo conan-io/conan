@@ -367,6 +367,28 @@ class TestMSVCToolset:
         assert 'CMAKE_GENERATOR_TOOLSET "ClangCL"' in content
         assert 'CMAKE_CXX_STANDARD 14' in content
 
+    @pytest.mark.parametrize("compiler, generator, expected_mp", [
+        ("msvc", "Visual Studio 17", True),
+        ("clang", "Visual Studio 17", True),  # clang-cl via the ClangCL toolset
+        ("msvc", "Ninja", False),
+        ("clang", "Ninja", False),
+    ])
+    def test_parallel_mp_flag(self, conanfile_msvc, compiler, generator, expected_mp):
+        # https://github.com/conan-io/conan/issues/20409
+        c = conanfile_msvc
+        c.settings.arch = "x86_64"
+        c.settings.compiler = compiler
+        if compiler == "clang":
+            c.settings.compiler.runtime_version = "v143"
+            c.settings.compiler.version = "18"
+        else:
+            c.settings.compiler.version = "194"
+        c.conf.define("tools.cmake.cmaketoolchain:generator", generator)
+        c.conf.define("tools.build:jobs", 8)
+        content = CMakeToolchain(c).content
+        assert ('string(APPEND CONAN_CXX_FLAGS " /MP8")' in content) == expected_mp
+        assert ('string(APPEND CONAN_C_FLAGS " /MP8")' in content) == expected_mp
+
     def test_older_msvc_toolset_update(self, conanfile_msvc):
         # https://github.com/conan-io/conan/issues/15787
         c = conanfile_msvc

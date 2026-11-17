@@ -150,6 +150,10 @@ class CacheAPI:
     def package_path(self, pref: PkgReference):
         """Returns the path of the package folder in the Conan cache
 
+        If the recipe implements the :ref:`finalize() <reference_conanfile_methods_finalize>`
+        method and it has already been executed, the path of the finalized folder is returned
+        instead.
+
         This folder is exclusively for **read-only** access, typically for debugging purposes,
         it is completely forbidden to modify any of its contents.
 

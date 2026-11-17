@@ -35,6 +35,19 @@ def test_vcvars_generator(scope):
         assert "conanvcvars.bat" in bat_contents
 
 
+@pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
+def test_vcvars_generator_ps1():
+    client = TestClient(path_with_spaces=False)
+    client.save({"conanfile.txt": ""})
+    client.run('install . -g VCVars -s os=Windows -s compiler="msvc" -s compiler.version=191 '
+               '-s compiler.cppstd=14 -s compiler.runtime=static')
+
+    # The .bat is always generated and used by Conan
+    assert "conanvcvars.bat" in client.load("conanbuild.bat")
+    assert "conanvcvars.bat&set" in client.load("conanvcvars.ps1")
+    assert "conanvcvars.ps1" in client.load("conanbuild.ps1")
+
+
 @pytest.mark.skipif(platform.system() not in ["Windows"], reason="Requires Windows")
 def test_vcvars_generator_skip():
     """

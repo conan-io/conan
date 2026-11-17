@@ -1,6 +1,5 @@
 import json
 import os
-from collections import OrderedDict
 
 from conan.api.conan_api import ConanAPI
 from conan.api.model import Remote, LOCAL_RECIPES_INDEX
@@ -199,7 +198,7 @@ def remote_list_users(conan_api, parser, subparser, *args):  # noqa
     """
     parser.parse_args(*args)
     remotes = conan_api.remotes.list()
-    ret = OrderedDict()
+    ret = {}
     if not remotes:
         raise ConanException("No remotes defined")
     for r in remotes:
@@ -242,7 +241,7 @@ def remote_set_user(conan_api, parser, subparser, *args):
     if not remotes:
         raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
 
-    ret = OrderedDict()
+    ret = {}
     for r in remotes:
         previous_info = conan_api.remotes.user_info(r)
         if previous_info["user_name"] != args.username:
@@ -264,7 +263,7 @@ def remote_logout(conan_api, parser, subparser, *args):
     if not remotes:
         raise ConanException("There are no remotes matching the '{}' pattern".format(args.remote))
 
-    ret = OrderedDict()
+    ret = {}
     for r in remotes:
         previous_info = conan_api.remotes.user_info(r)
         conan_api.remotes.user_logout(r)

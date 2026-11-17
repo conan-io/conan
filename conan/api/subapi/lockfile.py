@@ -44,7 +44,7 @@ class LockfileAPI:
         """
         if lockfile == "":
             # Allow a way with ``--lockfile=""`` to optout automatic usage of conan.lock
-            return
+            return None
 
         cwd = cwd or os.getcwd()
         if lockfile is None:  # Look for a default "conan.lock"
@@ -54,7 +54,7 @@ class LockfileAPI:
             if not os.path.isfile(lockfile_path):
                 if overrides:
                     raise ConanException("Cannot define overrides without a lockfile")
-                return
+                return None
         else:  # explicit lockfile given
             lockfile_path = make_abs_path(lockfile, cwd)
             if not os.path.isfile(lockfile_path):
@@ -125,7 +125,7 @@ class LockfileAPI:
     def merge_lockfiles(lockfiles) -> Lockfile:
         """ Merge multiple lockfiles into a single lockfile.
 
-        :param lockfiles: list of lockfiles to merge
+        :param lockfiles: list of paths to the lockfile files to merge
         :return: the merged lockfile
         """
         result = Lockfile()
@@ -174,8 +174,8 @@ class LockfileAPI:
     def save_lockfile(lockfile: Lockfile, lockfile_out, path=None):
         """ Save lockfile to disk
 
-        :param lockfile: The lockfile object to save. If None, nothing will be saved
-        :param lockfile_out: The output lockfile filename
+        :param lockfile: The lockfile object to save
+        :param lockfile_out: The output lockfile filename. If None, nothing will be saved
         :param path: The path of the output lockfile, if None, it will be cwd
         """
         if lockfile_out is not None:

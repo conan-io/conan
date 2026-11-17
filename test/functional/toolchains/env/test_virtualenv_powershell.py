@@ -53,10 +53,6 @@ def test_virtualenv(client):
     client.save({"conanfile.py": conanfile})
     client.run("install . -s:b os=Windows -s:h os=Windows")
 
-    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.sh"))
-    assert not os.path.exists(os.path.join(client.current_folder, "conanbuildenv.bat"))
-    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.sh"))
-    assert not os.path.exists(os.path.join(client.current_folder, "conanrunenv.bat"))
     with open(os.path.join(client.current_folder, "conanbuildenv.ps1"), "r", encoding="utf-16") as f:
         buildenv = f.read()
     assert '$env:MYPATH1="c:/path/to/ar"' in buildenv
@@ -99,23 +95,26 @@ def test_virtualenv_test_package(powershell):
                 self.run('mkdir "hello world"')
                 self.run("dir")
                 self.run('cd "hello world"')
-                self.run("set MYVC_CUSTOMVAR1")
-                self.run("set MYVC_CUSTOMVAR2")
+                if self.conf.get("tools.env.virtualenv:powershell"):
+                    self.run("set MYVC_CUSTOMVAR2")
+                else:
+                    self.run("set MYVC_CUSTOMVAR1")
             """)
     client.save({"conanfile.py": GenConanfile("pkg", "1.0"),
                  "test_package/conanfile.py": test_package})
     client.run("create .")
     assert "hello world" in client.out
     assert "MYENV!!!" in client.out
-    assert "MYPS1!!!!" in client.out
+    # The .ps1 is not used by default, only with the powershell conf
+    assert "MYPS1!!!!" not in client.out
     assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
-    assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
+    assert "MYVC_CUSTOMVAR2" not in client.out
     # This was crashing because the .ps1 of test_package was not being cleaned
     client.run(f"create . -c tools.env.virtualenv:powershell={powershell}")
     assert "hello world" in client.out
-    assert "MYENV!!!" in client.out
+    # Only the .ps1 are used, the .bat are not
+    assert "MYENV!!!" not in client.out
     assert "MYPS1!!!!" in client.out
-    assert "MYVC_CUSTOMVAR1=PATATA1" in client.out
     assert "MYVC_CUSTOMVAR2=PATATA2" in client.out
 
 @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows powershell")
@@ -247,7 +246,7 @@ def test_powershell_deactivation():
     c.save({"conanfile.txt": ""})
     c.run('install . -c tools.env.virtualenv:powershell=!')
     files = os.listdir(c.current_folder)
-    assert "conanrun.ps1" not in files
-    assert "conanbuild.ps1" not in files
-    assert "conanrunenv.ps1" not in files
-    assert "conanbuildenv.ps1" not in files
+    # The .ps1 are always generated, but the unset conf must not break the .bat/.sh being used
+    ext = ".bat" if platform.system() == "Windows" else ".sh"
+    assert "conanrun" + ext in files
+    assert "conanbuild" + ext in files
