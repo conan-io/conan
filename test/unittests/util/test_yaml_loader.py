@@ -11,6 +11,7 @@ from unittest import mock
 import pytest
 import yaml
 
+from conan.errors import ConanException
 from conan.internal.default_settings import default_settings_yml
 from conan.internal.loader import ConanFileLoader
 from conan.internal.model.settings import Settings
@@ -152,3 +153,34 @@ def test_trim_conandata(version):
     expected_trimmed, expected_data = trim(yaml.SafeLoader)
     assert trimmed == expected_trimmed
     assert _typed(data) == _typed(expected_data)
+
+
+@pytest.mark.parametrize("text", [
+    # A block scalar whose first line starts with a tab after the indentation ("|2" loads it)
+    "description: |\n  \tfirst line\n  second\n",
+    # The escapes of the two halves of a UTF-16 surrogate pair
+    'description: "\\ud83d\\ude00"\n',
+])
+def test_only_pure_python_loads(text):
+    """ The pure-Python loader loads it, libyaml doesn't. None in conan-center-index. Conan reports
+    it as any other invalid conandata.yml
+    """
+    yaml.safe_load(text)
+    folder = temp_folder()
+    save(os.path.join(folder, "conandata.yml"), text)
+    with pytest.raises(ConanException, match="Invalid yml format at conandata.yml"):
+        ConanFileLoader._load_data(os.path.join(folder, "conanfile.py"))  # noqa
+
+
+@pytest.mark.parametrize("text", [
+    "url:\thttps://example.com\n",  # A tab after the ":"
+    "description: a\tb\n",  # A tab in a plain scalar
+    "urls: [https://example.com/a?b=c]\n",  # A "?" in a plain scalar of a flow sequence
+])
+def test_only_libyaml_loads(text):
+    """ libyaml loads it, the pure-Python loader doesn't, so trim_conandata() and
+    update_conandata(), that still use yaml.safe_load(), raise an error with it
+    """
+    yaml.load(text, Loader=YamlSafeLoader)
+    with pytest.raises(yaml.YAMLError):
+        yaml.safe_load(text)

@@ -15,7 +15,10 @@ import yaml
 from conan.errors import ConanException
 
 # The libyaml based loader is ~5-10x faster (settings.yml is parsed in every command, conandata.yml
-# for every recipe), but it is not always available, PyYAML can be built without it
+# for every recipe), but it is not always available, PyYAML can be built without it.
+# It loads the same data as the pure-Python loader, only some unusual YAML loads with just one of
+# them, mostly tabs, like at the start of a block scalar (pure-Python only) or after a ":" (libyaml
+# only): see test_yaml_loader.py
 YamlSafeLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 _DIRTY_FOLDER = ".dirty"
