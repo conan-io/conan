@@ -38,7 +38,10 @@ class RemoteCredentials:
         # First get the auth_remote_plugin
         if self._auth_remote_plugin is not None:
             try:
-                plugin_user, plugin_password = self._auth_remote_plugin(remote, user=user)
+                plugin_result = self._auth_remote_plugin(remote, user=user)
+                # A plain None means "no credentials", same as (None, None)
+                plugin_user, plugin_password = plugin_result if plugin_result is not None \
+                    else (None, None)
             except Exception as e:
                 msg = f"Error while processing 'auth_remote.py' plugin"
                 msg = scoped_traceback(msg, e, scope="/extensions/plugins")
@@ -86,3 +89,4 @@ def _load_auth_remote_plugin(auth_remote_plugin_path):
     if os.path.exists(auth_remote_plugin_path):
         mod, _ = load_python_file(auth_remote_plugin_path)
         return getattr(mod, "auth_remote_plugin", None)
+    return None
