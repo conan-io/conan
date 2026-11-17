@@ -43,6 +43,8 @@ class _Condition:
         self.version = Version(value)
 
     def __str__(self):
+        if self.operator == "*":  # Patterns like "1.2.*" are stored as the "1.2." prefix
+            return f"{self.display_version}*"
         return f"{self.operator}{self.display_version}"
 
     def __repr__(self):
@@ -100,6 +102,14 @@ class _ConditionSet:
         for e in expressions:
             e = e.strip()
             self.conditions.extend(self._parse_expression(e))
+
+    @classmethod
+    def from_conditions(cls, conditions, prerelease):
+        """ Build a condition set from already parsed conditions, without reparsing """
+        result = cls.__new__(cls)
+        result.prerelease = prerelease
+        result.conditions = conditions
+        return result
 
     @staticmethod
     def _parse_expression(expression):
@@ -231,31 +241,32 @@ class VersionRange:
         def _calculate_limits(operator, lhs, rhs):
             limits = ([c for c in lhs.conditions if operator in c.operator]
                       + [c for c in rhs.conditions if operator in c.operator])
-            if limits:
-                return sorted(limits, reverse=operator == ">")[0]
+            return sorted(limits, reverse=operator == ">")[0] if limits else None
 
         prerelease = True
         for lhs_conditions in self.condition_sets:
             for rhs_conditions in other.condition_sets:
-                internal_conditions = []
                 lower_limit = _calculate_limits(">", lhs_conditions, rhs_conditions)
                 upper_limit = _calculate_limits("<", lhs_conditions, rhs_conditions)
-                if lower_limit:
-                    internal_conditions.append(lower_limit)
-                if upper_limit:
-                    internal_conditions.append(upper_limit)
-                if internal_conditions and (not lower_limit or not upper_limit or lower_limit <= upper_limit):
-                    conditions.append(internal_conditions)
+
+                if lower_limit and upper_limit:
+                    if lower_limit <= upper_limit:
+                        conditions.append([lower_limit, upper_limit])
+                elif lower_limit:
+                    conditions.append([lower_limit])
+                elif upper_limit:
+                    conditions.append([upper_limit])
+
                 # conservative approach: if any of the conditions forbid prereleases, forbid them in the result
                 if not lhs_conditions.prerelease or not rhs_conditions.prerelease:
                     prerelease = False
 
         if not conditions:
             return None
-        expression = ' || '.join(' '.join(str(c) for c in cs) for cs in conditions) + (', include_prerelease' if prerelease else '')
-        result = VersionRange(expression)
-        # TODO: Direct definition of conditions not reparsing
-        # result.condition_sets = self.condition_sets + other.condition_sets
+        # Don't use __init__ because it will parse the expression again, we already have the conditions
+        result = VersionRange.__new__(VersionRange)
+        result._expression = ' || '.join(' '.join(str(c) for c in cs) for cs in conditions) + (', include_prerelease' if prerelease else '')
+        result.condition_sets = [_ConditionSet.from_conditions(cs, prerelease) for cs in conditions]
         return result
 
     def version(self):
