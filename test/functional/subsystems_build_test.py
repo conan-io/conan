@@ -269,12 +269,7 @@ class TestSubsystemsBuild:
         check_vs_runtime("app.exe", client, "15", "Debug", static_runtime=static,
                          subsystem="ucrt64")
 
-    # Cygwin GCC always links with -lintl, and the libintl-devel 0.26 package (gettext update of
-    # 2026-11-15) no longer ships the static libintl.a, so static links fail with
-    # "cannot find -lintl". Enable it again when Cygwin ships libintl.a again
-    @pytest.mark.parametrize("static", [pytest.param(True, marks=pytest.mark.skip(
-                                            reason="Cygwin libintl-devel 0.26 has no libintl.a")),
-                                        False])
+    @pytest.mark.parametrize("static", [True, False])
     @pytest.mark.tool("cygwin")
     def test_cygwin(self, static):
         """

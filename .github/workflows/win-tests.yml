@@ -171,7 +171,9 @@ jobs:
           # mirrors.kernel.org/sourceware/cygwin returns 404; use alternative mirror from this list: https://cygwin.com/mirrors.html
           choco install cygwin --execution-timeout=300 --package-parameters="'/Site:https://mirror.clarkson.edu/cygwin/'"
           choco install cyg-get
-          cyg-get automake gcc-g++ make binutils --verbose
+          # libintl-devel 0.26 has no static libintl.a, which Cygwin GCC needs for -static links.
+          # Remove the pin when Cygwin ships it again: https://github.com/conan-io/conan/issues/20509
+          cyg-get automake gcc-g++ make binutils libintl-devel=0.22.5-1 --verbose
 
       - uses: msys2/setup-msys2@v2
         id: msys2-setup
