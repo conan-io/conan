@@ -24,7 +24,7 @@ from conan.api.model import RecipeReference
 from conan.internal.paths import DATA_YML
 from conan.internal.model.version_range import validate_conan_version
 from conan.internal.util.config_parser import TextINIParse
-from conan.internal.util.files import load, chdir, load_user_encoded
+from conan.internal.util.files import load, chdir, load_user_encoded, YamlSafeLoader
 
 
 class ConanFileLoader:
@@ -109,7 +109,7 @@ class ConanFileLoader:
             return None
 
         try:
-            data = yaml.safe_load(load(data_path))
+            data = yaml.load(load(data_path), Loader=YamlSafeLoader)
         except Exception as e:
             raise ConanException("Invalid yml format at {}: {}".format(DATA_YML, e))
 

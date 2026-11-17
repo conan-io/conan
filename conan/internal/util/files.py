@@ -10,7 +10,13 @@ import time
 
 from contextlib import contextmanager
 
+import yaml
+
 from conan.errors import ConanException
+
+# The libyaml based loader is ~5-10x faster (settings.yml is parsed in every command, conandata.yml
+# for every recipe), but it is not always available, PyYAML can be built without it
+YamlSafeLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 _DIRTY_FOLDER = ".dirty"
 

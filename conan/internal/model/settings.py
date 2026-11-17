@@ -6,15 +6,11 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.default_settings import default_settings_yml
 from conan.internal.internal_tools import is_universal_arch
 from conan.errors import ConanException
-from conan.internal.util.files import save, load
+from conan.internal.util.files import save, load, YamlSafeLoader
 
 # Settings and SettingsItem override __setattr__ for the "settings.os = value" syntax, the
 # internal attributes skip that Python call, a lot of these objects are created per graph
 _setattr = object.__setattr__
-
-# settings.yml is parsed in every command. The libyaml based loader is ~10x faster, but not always
-# available (PyYAML can be built without it)
-_YamlSafeLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
 
 def bad_value_msg(name, value, value_range):
@@ -266,7 +262,7 @@ class Settings:
     @staticmethod
     def loads(text):
         try:
-            return Settings(yaml.load(text, Loader=_YamlSafeLoader) or {})
+            return Settings(yaml.load(text, Loader=YamlSafeLoader) or {})
         except (yaml.YAMLError, AttributeError) as ye:
             raise ConanException("Invalid settings.yml format: {}".format(ye))
 
@@ -386,7 +382,7 @@ def load_settings_yml(home_folder):
 
     def _load_settings(path):
         try:
-            return yaml.load(load(path), Loader=_YamlSafeLoader) or {}
+            return yaml.load(load(path), Loader=YamlSafeLoader) or {}
         except yaml.YAMLError as ye:
             raise ConanException("Invalid settings.yml format: {}".format(ye))
 
