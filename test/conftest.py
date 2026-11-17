@@ -397,25 +397,21 @@ def _memoize_settings_yml_parsing():
     pure-Python one (PyYAML built without libyaml)
     """
     import copy
-    import yaml
     from conan.internal.model import settings
+    from conan.internal.util.files import yaml_load
 
     parsed = {}
 
-    class _CachedSafeLoadYaml:
-        YAMLError = yaml.YAMLError
+    def _cached_yaml_load(text):
+        if not isinstance(text, str):
+            return yaml_load(text)
+        try:
+            result = parsed[text]
+        except KeyError:
+            result = parsed[text] = yaml_load(text)
+        return copy.deepcopy(result)
 
-        @staticmethod
-        def load(text, Loader):
-            if not isinstance(text, str):
-                return yaml.load(text, Loader=Loader)
-            try:
-                result = parsed[text]
-            except KeyError:
-                result = parsed[text] = yaml.load(text, Loader=Loader)
-            return copy.deepcopy(result)
-
-    settings.yaml = _CachedSafeLoadYaml
+    settings.yaml_load = _cached_yaml_load
 
 
 _memoize_settings_yml_parsing()

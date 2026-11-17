@@ -21,6 +21,12 @@ from conan.errors import ConanException
 # only): see test_yaml_loader.py
 YamlSafeLoader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
+
+def yaml_load(text):
+    """ The same as yaml.safe_load(), with the libyaml based loader when available """
+    return yaml.load(text, Loader=YamlSafeLoader)
+
+
 _DIRTY_FOLDER = ".dirty"
 
 

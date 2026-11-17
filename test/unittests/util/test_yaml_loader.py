@@ -15,7 +15,7 @@ from conan.errors import ConanException
 from conan.internal.default_settings import default_settings_yml
 from conan.internal.loader import ConanFileLoader
 from conan.internal.model.settings import Settings
-from conan.internal.util.files import YamlSafeLoader, load, save
+from conan.internal.util.files import YamlSafeLoader, load, save, yaml_load
 from conan.test.utils.mocks import ConanFileMock
 from conan.test.utils.test_files import temp_folder
 from conan.tools.files import trim_conandata
@@ -51,7 +51,7 @@ _SETTINGS_USER_YML = textwrap.dedent("""\
                          ids=["settings.yml", "settings_user.yml"])
 def test_settings_yml(text):
     expected = yaml.safe_load(text)
-    data = yaml.load(text, Loader=YamlSafeLoader)
+    data = yaml_load(text)
     assert _typed(data) == _typed(expected)
     assert Settings(data).possible_values() == Settings(expected).possible_values()
 
@@ -181,6 +181,6 @@ def test_only_libyaml_loads(text):
     """ libyaml loads it, the pure-Python loader doesn't, so trim_conandata() and
     update_conandata(), that still use yaml.safe_load(), raise an error with it
     """
-    yaml.load(text, Loader=YamlSafeLoader)
+    yaml_load(text)
     with pytest.raises(yaml.YAMLError):
         yaml.safe_load(text)
