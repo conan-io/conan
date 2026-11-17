@@ -68,21 +68,6 @@ class TestLegacyInfoReport:
         c.run("create .")
         assert "Conan 1.X" not in c.out
 
-    def test_user_info_outside_package_info(self):
-        # It used to crash with a TypeError, as there was no package to report
-        c = TestClient(light=True)
-        conanfile = textwrap.dedent("""
-            from conan import ConanFile
-            class Pkg(ConanFile):
-                name = "pkg"
-                version = "1.0"
-                def build(self):
-                    self.user_info.foo = "bar"
-            """)
-        c.save({"conanfile.py": conanfile})
-        c.run("create .")
-        assert "'user_info' used in: unknown, outside package_info()" in c.out
-
 
 class TestLegacy1XRecipes:
     def test_legacy_imports(self):

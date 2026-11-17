@@ -26,14 +26,15 @@ class MockInfoProperty:
     TODO: Remove in the next major version
     """
     counter = {}
-    package = None  # The package whose package_info() is running
+    package = None
 
     def __init__(self, name):
         self._name = name
 
     @staticmethod
     def message():
-        # Reset first, so nothing is reported again if the warning is raised as an error
+        # Reset first, so if core:warnings_as_errors raises below, API usage running more installs
+        # in the same process doesn't get this same usage reported again
         counter, MockInfoProperty.counter = MockInfoProperty.counter, {}
         if not counter:
             return
@@ -41,8 +42,7 @@ class MockInfoProperty:
         msg = ["Usage of Conan 1.X features, they have no effect in Conan 2 and will be removed "
                "in the next major version:"]
         for k, v in counter.items():
-            used_in = ", ".join(sorted(p or "unknown, outside package_info()" for p in v))
-            msg.append(f"    '{k}' used in: {used_in}")
+            msg.append(f"    '{k}' used in: {', '.join(sorted(v))}")
         ConanOutput().warning("\n".join(msg), warn_tag="deprecated")
 
     def __getitem__(self, key):
