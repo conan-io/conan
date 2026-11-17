@@ -22,21 +22,21 @@ class RequiredNodes:
 
     def __init__(self):
         self._nodes = []  # index -> node
-        self._index_of = {}  # node -> index
+        self._single = {}  # node -> the set with only that node (computed once, for the hot paths)
 
     def add(self, node):
         """ register a node, nothing happens if it was already registered """
-        if node not in self._index_of:
-            self._index_of[node] = len(self._nodes)
+        if node not in self._single:
+            self._single[node] = (1 << RequiredNodes._BASE_BITS) | len(self._nodes)
             self._nodes.append(node)
 
     def single(self, node):
         """ the set containing only this node """
-        return (1 << RequiredNodes._BASE_BITS) | self._index_of[node]
+        return self._single[node]
 
     def include(self, required_nodes, node):
         """ the set of the given one plus this node """
-        return RequiredNodes.union(required_nodes, self.single(node))
+        return RequiredNodes.union(required_nodes, self._single[node])
 
     def nodes(self, required_nodes):
         """ the nodes contained in a set """
