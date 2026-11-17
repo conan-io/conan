@@ -390,10 +390,11 @@ def pytest_runtest_setup(item):
 def _memoize_settings_yml_parsing():
     """
     Every ``TestClient.run()`` creates a new ``ConanAPI``, which parses again the whole
-    ``settings.yml`` with the YAML loader. That parse is the most expensive part of
-    most Conan commands in the test suite, and the text is almost always the same one, so for
-    the test suite only, cache the parsed data by its text. A deep copy is returned, because
-    the caller can modify it (e.g. merging ``settings_user.yml``)
+    ``settings.yml``, ~7,700 times in the unit and integration tests, and the text is almost
+    always the same one, so for the test suite only, cache the parsed data by its text. A deep
+    copy is returned, because the caller can modify it (e.g. merging ``settings_user.yml``).
+    The copy takes ~0.1 ms, the parse ~1.3 ms with the libyaml loader, and ~12 ms with the
+    pure-Python one (PyYAML built without libyaml)
     """
     import copy
     import yaml
