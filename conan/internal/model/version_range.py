@@ -140,7 +140,7 @@ class _ConditionSet:
                 for i, m in enumerate(main):
                     if m != 0:
                         return i
-                return len(main)
+                return len(main) - 1
 
             initial_index = first_non_zero(v.main)
             return [_Condition(">=", v), _Condition("<", v.upper_bound(initial_index))]
