@@ -246,21 +246,17 @@ class VersionRange:
         prerelease = True
         for lhs_conditions in self.condition_sets:
             for rhs_conditions in other.condition_sets:
-                internal_conditions = []
                 lower_limit = _calculate_limits(">", lhs_conditions, rhs_conditions)
                 upper_limit = _calculate_limits("<", lhs_conditions, rhs_conditions)
 
                 if lower_limit and upper_limit:
                     if lower_limit <= upper_limit:
-                        internal_conditions.append(lower_limit)
-                        internal_conditions.append(upper_limit)
+                        conditions.append([lower_limit, upper_limit])
                 elif lower_limit:
-                    internal_conditions.append(lower_limit)
+                    conditions.append([lower_limit])
                 elif upper_limit:
-                    internal_conditions.append(upper_limit)
+                    conditions.append([upper_limit])
 
-                if internal_conditions:
-                    conditions.append(internal_conditions)
                 # conservative approach: if any of the conditions forbid prereleases, forbid them in the result
                 if not lhs_conditions.prerelease or not rhs_conditions.prerelease:
                     prerelease = False
