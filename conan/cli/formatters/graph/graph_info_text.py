@@ -46,15 +46,18 @@ def format_graph_info(result):
     serial = graph.serialize()
     serial = filter_graph(serial, package_filter, field_filter)
     for n in serial["nodes"].values():
-        cli_out_write(f"{n['ref']}:")  # FIXME: This can be empty for consumers and it is ugly ":"
-        _serial_pretty_printer(n, indent="  ")
+        # A write per node, not per line: every cli_out_write() call checks isatty() (and resets
+        # colorama in a terminal), and large graphs print hundreds of thousands of lines
+        lines = [f"{n['ref']}:"]  # FIXME: This can be empty for consumers and it is ugly ":"
+        _serial_pretty_printer(n, lines, indent="  ")
+        cli_out_write("\n".join(lines))
 
 
-def _serial_pretty_printer(data, indent=""):
+def _serial_pretty_printer(data, lines, indent=""):
     for k, v in data.items():
         if isinstance(v, dict):
-            cli_out_write(f"{indent}{k}:")
+            lines.append(f"{indent}{k}:")
             # TODO: increment color too
-            _serial_pretty_printer(v, indent=indent+"  ")
+            _serial_pretty_printer(v, lines, indent=indent+"  ")
         else:
-            cli_out_write(f"{indent}{k}: {v}")
+            lines.append(f"{indent}{k}: {v}")
