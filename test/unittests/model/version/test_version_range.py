@@ -130,6 +130,13 @@ def test_range_prereleases_conf(version_range, resolve_prereleases, versions_in,
         assert not r.contains(Version(v), resolve_prereleases), f"Expected '{version_range}' NOT to contain '{v}' (conf.ranges_resolve_prereleases={resolve_prereleases})"
 
 
+@pytest.mark.parametrize("expression", ["=1.0", ">1.0", ">=1.0", "<1.0", "<=1.0", "1.2.*", "1.2*",
+                                        "1.2.3+4.5.*"])
+def test_condition_str_can_be_parsed_back(expression):
+    condition = VersionRange(expression).condition_sets[0].conditions[0]
+    assert str(condition) == expression
+
+
 @pytest.mark.parametrize("version_range", [
     ">= 1.0",  # https://github.com/conan-io/conan/issues/12692
     ">=0.0.1 < 1.0",  # https://github.com/conan-io/conan/issues/14612

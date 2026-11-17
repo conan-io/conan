@@ -43,6 +43,8 @@ class _Condition:
         self.version = Version(value)
 
     def __str__(self):
+        if self.operator == "*":  # Patterns like "1.2.*" are stored as the "1.2." prefix
+            return f"{self.display_version}*"
         return f"{self.operator}{self.display_version}"
 
     def __repr__(self):
