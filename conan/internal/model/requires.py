@@ -32,8 +32,15 @@ def required_nodes_union(a, b):
 
 def required_nodes_indexes(required_nodes):
     base, bits = required_nodes & _BASE_MASK, required_nodes >> _BASE_BITS
-    # the reversed binary string has a "1" at position i if the index base + i is in the set
-    return [base + i for i, flag in enumerate(bin(bits)[:1:-1]) if flag == "1"]
+    # the reversed binary string has a "1" at position i if the index base + i is in the set.
+    # Jump between the "1" with find(), a set can have a few nodes far apart
+    flags = bin(bits)[:1:-1]
+    result = []
+    i = flags.find("1")
+    while i != -1:
+        result.append(base + i)
+        i = flags.find("1", i + 1)
+    return result
 
 
 class Requirement:
