@@ -331,3 +331,27 @@ def test_skip_intermediate_static_complex():
         assert f"lib{lib}/0.1: Already installed!" in c.out
     for lib in ("c", "d"):
         assert f"lib{lib}/0.1: Already installed!" not in c.out
+
+
+def test_skip_no_layout():
+    # The layout() of a skipped binary is not called, it is never installed
+    c = TestClient(light=True)
+    gtest = textwrap.dedent("""
+        from conan import ConanFile
+
+        class Pkg(ConanFile):
+            name = "gtest"
+            version = "0.1"
+
+            def layout(self):
+                self.output.info("Running layout()")
+        """)
+    c.save({"gtest/conanfile.py": gtest,
+            "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_test_requires("gtest/0.1")})
+    c.run("create gtest")
+    c.run("create pkg")
+    c.run("install --requires=pkg/0.1")
+    assert re.search(r"Skipped test binaries(\s*)gtest/0.1", c.out)
+    assert "gtest/0.1: Running layout()" not in c.out
+    c.run("install --requires=gtest/0.1")
+    assert "gtest/0.1: Running layout()" in c.out

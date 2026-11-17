@@ -453,17 +453,6 @@ class GraphBinariesAnalyzer:
                                  f" file in cache: {self._home_folder}: {e}")
         return RequirementsInfo(result)
 
-    def _evaluate_package_id(self, node, config_version):
-        compute_package_id(node, self._modes, config_version, self._hook_manager)
-
-        # TODO: layout() execution don't need to be evaluated at GraphBuilder time.
-        # it could even be delayed until installation time, but if we got enough info here for
-        # package_id, we can run it
-        conanfile = node.conanfile
-        if hasattr(conanfile, "layout"):
-            with conanfile_exception_formatter(conanfile, "layout"):
-                conanfile.layout()
-
     def evaluate_graph(self, deps_graph, build_mode, lockfile, remotes, update, build_mode_test=None,
                        tested_graph=None):
         if tested_graph is None:
@@ -492,7 +481,7 @@ class GraphBinariesAnalyzer:
         config_version = self._config_version() if root_pkg_type is not PackageType.CONF else None
         for level in levels[:-1]:  # all levels but the last one, which is the single consumer
             for node in level:
-                self._evaluate_package_id(node, config_version)
+                compute_package_id(node, self._modes, config_version, self._hook_manager)
             # group by pref to paralelize, so evaluation is done only 1 per pref
             nodes = {}
             for node in level:
@@ -518,16 +507,23 @@ class GraphBinariesAnalyzer:
         assert len(levels[-1]) == 1
         node = levels[-1][0]
         assert node.recipe in (RECIPE_CONSUMER, RECIPE_VIRTUAL)
-        if node.path is not None:
-            if node.path.endswith(".py"):
-                # For .py we keep evaluating the package_id, validate(), etc
-                compute_package_id(node, self._modes, config_version, self._hook_manager)
-            # To support the ``[layout]`` in conanfile.txt
-            if hasattr(node.conanfile, "layout"):
-                with conanfile_exception_formatter(node.conanfile, "layout"):
-                    node.conanfile.layout()
+        if node.path is not None and node.path.endswith(".py"):
+            # For .py we keep evaluating the package_id, validate(), etc
+            compute_package_id(node, self._modes, config_version, self._hook_manager)
 
         self._skip_binaries(deps_graph)
+
+        # layout() only for the packages whose binaries are used: the skipped ones are never
+        # installed, and they can be most of the graph (test_requires, private requires)
+        for level in levels[:-1]:
+            for n in level:
+                if n.binary != BINARY_SKIP and hasattr(n.conanfile, "layout"):
+                    with conanfile_exception_formatter(n.conanfile, "layout"):
+                        n.conanfile.layout()
+        # To support the ``[layout]`` in conanfile.txt
+        if node.path is not None and hasattr(node.conanfile, "layout"):
+            with conanfile_exception_formatter(node.conanfile, "layout"):
+                node.conanfile.layout()
 
     @staticmethod
     def _skip_binaries(graph):
