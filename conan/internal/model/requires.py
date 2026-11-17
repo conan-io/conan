@@ -3,37 +3,63 @@ from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
 from conan.internal.model.version_range import VersionRange, required_conan_version_policy
 
-# Requirement.required_nodes is a set of node indexes stored in a single int: the bitset of the indexes
-# relative to the lowest one, shifted _BASE_BITS, plus that lowest index. The nodes of a set are usually
-# close together (depth-first numbering), so the int grows with the span of the set, not with the
-# size of the graph. A plain int is immutable (copies are free) and not tracked by the cyclic GC
-_BASE_BITS = 32
-_BASE_MASK = (1 << _BASE_BITS) - 1
 
+class RequiredNodes:
+    """ The ``Requirement.required_nodes`` are sets of graph nodes, stored as a single int to make
+    their copy and merge cheap: the bitset of the node indexes relative to the lowest one, shifted
+    _BASE_BITS, plus that lowest index. The nodes of a set are usually close together (depth-first
+    numbering), so the int grows with the span of the set, not with the size of the graph. A plain
+    int is immutable (copies are free) and not tracked by the cyclic GC.
 
-def required_node(index):
-    return (1 << _BASE_BITS) | index
+    - The instances (one per graph) map the nodes to those indexes and back. They are append-only:
+      orphan nodes leave ``DepsGraph.nodes``, but can stay in some required_nodes. A derived graph
+      (workspaces) shares the index of the original one, so the nodes keep their index.
+    - The static members operate over the int values, without needing the nodes.
+    """
+    EMPTY = 0  # the empty set
+    _BASE_BITS = 32
+    _BASE_MASK = (1 << _BASE_BITS) - 1
 
+    def __init__(self):
+        self._nodes = []  # index -> node
+        self._index_of = {}  # node -> index
 
-def required_nodes_union(a, b):
-    # 32 is _BASE_BITS and 0xFFFFFFFF is _BASE_MASK, literals are faster in this hot path
-    if not a or a == b:
-        return b
-    if not b:
-        return a
-    a_base = a & 0xFFFFFFFF
-    b_base = b & 0xFFFFFFFF
-    if a_base == b_base:
-        return a | b
-    if a_base < b_base:  # the result keeps the lowest base, the other bits are moved up
-        return a | (b >> 32) << (b_base - a_base + 32)
-    return b | (a >> 32) << (a_base - b_base + 32)
+    def add(self, node):
+        """ register a node, nothing happens if it was already registered """
+        if node not in self._index_of:
+            self._index_of[node] = len(self._nodes)
+            self._nodes.append(node)
 
+    def single(self, node):
+        """ the set containing only this node """
+        return (1 << RequiredNodes._BASE_BITS) | self._index_of[node]
 
-def required_nodes_indexes(required_nodes):
-    base, bits = required_nodes & _BASE_MASK, required_nodes >> _BASE_BITS
-    # the reversed binary string has a "1" at position i if the index base + i is in the set
-    return [base + i for i, flag in enumerate(bin(bits)[:1:-1]) if flag == "1"]
+    def include(self, required_nodes, node):
+        """ the set of the given one plus this node """
+        return RequiredNodes.union(required_nodes, self.single(node))
+
+    def nodes(self, required_nodes):
+        """ the nodes contained in a set """
+        base = required_nodes & RequiredNodes._BASE_MASK
+        bits = required_nodes >> RequiredNodes._BASE_BITS
+        # the reversed binary string has a "1" at position i if the index base + i is in the set
+        return {self._nodes[base + i] for i, flag in enumerate(bin(bits)[:1:-1]) if flag == "1"}
+
+    @staticmethod
+    def union(a, b):
+        """ the union of 2 sets, the inputs are not modified """
+        # 32 is _BASE_BITS and 0xFFFFFFFF is _BASE_MASK, literals are faster in this hot path
+        if not a or a == b:
+            return b
+        if not b:
+            return a
+        a_base = a & 0xFFFFFFFF
+        b_base = b & 0xFFFFFFFF
+        if a_base == b_base:
+            return a | b
+        if a_base < b_base:  # the result keeps the lowest base, the other bits are moved up
+            return a | (b >> 32) << (b_base - a_base + 32)
+        return b | (a >> 32) << (a_base - b_base + 32)
 
 
 class Requirement:
@@ -70,9 +96,9 @@ class Requirement:
         self.override_ref = None  # to store if the requirement has been overriden (store new ref)
         self.is_test = test  # to store that it was a test, even if used as regular requires too
         self.skip = False
-        # intermediate nodes that are required, to compute "Skip", see required_nodes_union(). Copying
+        # intermediate nodes that are required, to compute "Skip", see RequiredNodes. Copying
         # and merging sets at every propagation step is super-linear
-        self.required_nodes = 0
+        self.required_nodes = RequiredNodes.EMPTY
         self.no_skip = no_skip
         # computed ones, not default ones
         self.consistent_policy_new = False
@@ -267,7 +293,7 @@ class Requirement:
         # current require already defined it or not
         if self.package_id_mode is None:
             self.package_id_mode = other.package_id_mode
-        self.required_nodes = required_nodes_union(self.required_nodes, other.required_nodes)
+        self.required_nodes = RequiredNodes.union(self.required_nodes, other.required_nodes)
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type, source):
         """

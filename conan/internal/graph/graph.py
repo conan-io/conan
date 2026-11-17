@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from conan.internal.graph.graph_error import GraphError, GraphConflictError
-from conan.internal.model.requires import required_node, required_nodes_union
+from conan.internal.model.requires import RequiredNodes
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
 
@@ -74,7 +74,6 @@ class Node:
         self.replaced_requires = {}  # To track the replaced requires for self.edges[old-ref]
         self.skipped_build_requires = False
         self.editable_output_folder = None  # In case this node is editable
-        self.bit = None  # required_nodes with only this node, its index in DepsGraph.nodes_by_bit
 
     def subgraph(self):
         nodes = [self]
@@ -101,17 +100,18 @@ class Node:
         # TODO: Remove this order, shouldn't be necessary
         return (str(self.ref), self._package_id) < (str(other.ref), other._package_id)
 
-    def propagate_closing_loop(self, require, prev_node, visibility_conflicts):
-        self.propagate_downstream(require, prev_node, visibility_conflicts)
+    def propagate_closing_loop(self, require, prev_node, visibility_conflicts, required_nodes):
+        self.propagate_downstream(require, prev_node, visibility_conflicts, required_nodes)
         # List to avoid mutating the dict
         for transitive in list(prev_node.transitive_deps.values()):
             # TODO: possibly optimize in a bulk propagate
             if transitive.require.override:
                 continue
             prev_node.propagate_downstream(transitive.require, transitive.node, visibility_conflicts,
-                                           self)
+                                           required_nodes, self)
 
-    def propagate_downstream(self, require, node, visibility_conflicts, src_node=None):
+    def propagate_downstream(self, require, node, visibility_conflicts, required_nodes,
+                             src_node=None):
         # print("  Propagating downstream ", self, "<-", require)
         assert node is not None
         # This sets the transitive_deps node if it was None (overrides)
@@ -166,10 +166,10 @@ class Node:
         # If the requirement propagates .files downstream, cannot be skipped
         # But if the files are not needed in this graph branch, can be marked "Skip"
         if down_require.files:
-            down_require.required_nodes = required_nodes_union(require.required_nodes, self.bit)
+            down_require.required_nodes = required_nodes.include(require.required_nodes, self)
         else:
-            down_require.required_nodes = self.bit
-        d.src.propagate_downstream(down_require, node, visibility_conflicts)
+            down_require.required_nodes = required_nodes.single(self)
+        d.src.propagate_downstream(down_require, node, visibility_conflicts, required_nodes)
 
     def check_downstream_exists(self, require):
         # First, a check against self, could be a loop-conflict
@@ -374,7 +374,7 @@ class Overrides:
 class DepsGraph:
     def __init__(self):
         self.nodes = []
-        self.nodes_by_bit = []
+        self.required_nodes = RequiredNodes()
         self.resolved_ranges = {}
         self.replaced_requires = {}
         self.options_conflicts = {}
@@ -396,10 +396,7 @@ class DepsGraph:
         return self.nodes[0] if self.nodes else None
 
     def add_node(self, node):
-        if node.bit is None:  # sticky: a node moved to a derived graph (workspaces) keeps it
-            # append-only registry (orphans leave self.nodes, but can stay in required_nodes)
-            node.bit = required_node(len(self.nodes_by_bit))
-            self.nodes_by_bit.append(node)
+        self.required_nodes.add(node)
         self.nodes.append(node)
 
     @staticmethod
