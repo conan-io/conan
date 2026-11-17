@@ -821,13 +821,13 @@ def test_files_always_created():
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
             "consumer/conanfile.txt": "[requires]\ndep/0.1"})
     c.run("create dep")
-    c.run("install consumer -g VirtualBuildEnv -g VirtualRunEnv -of=.")
+    c.run("install consumer -g VirtualBuildEnv -g VirtualRunEnv -of=. -s arch=x86_64")
     ext = "bat" if platform.system() == "Windows" else "sh"
 
     assert os.path.isfile(os.path.join(c.current_folder, f"conanbuild.{ext}"))
     assert os.path.isfile(os.path.join(c.current_folder, f"conanrun.{ext}"))
-    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuildenv.{ext}"))
-    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuildenv.{ext}"))
+    assert os.path.isfile(os.path.join(c.current_folder, f"conanbuildenv-release-x86_64.{ext}"))
+    assert os.path.isfile(os.path.join(c.current_folder, f"conanrunenv-release-x86_64.{ext}"))
 
 
 def test_error_with_dots_virtualenv():
