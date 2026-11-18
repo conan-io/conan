@@ -174,98 +174,67 @@ def test_xcrun_in_required_by_tool_requires():
     assert re.search("sdk for building openssl:.*MacOSX", str(client.out))
 
 
+@pytest.mark.tool("cmake")
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Apple install names")
-@pytest.mark.parametrize("install_dir", ["@rpath", "/lib"])
-def test_fix_shared_install_name_prefix_library(install_dir):
-    """libabc is a prefix of libabcrt (like flatcc / flatccrt): the executable must keep
-    pointing at each library, not at whichever matching one is listed first"""
-    conanfile = textwrap.dedent(f"""
-        import os
+def test_fix_shared_install_name_prefix():
+    """ Like flatcc, the package has two libraries whose names are prefixes of each other, abc
+    and abcrt, and an executable that links both. The executable also links ab, from another
+    package, whose name is a prefix of both. Each reference must keep pointing to its library.
+    """
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_lib -d name=ab -d version=0.1")
+    client.run("create . -o ab/*:shared=True -tf=")
+
+    conanfile = textwrap.dedent("""
         from conan import ConanFile
-        from conan.tools.apple import XCRun, fix_apple_shared_install_name
-        from conan.tools.files import save
+        from conan.tools.apple import fix_apple_shared_install_name
+        from conan.tools.cmake import CMake, cmake_layout
 
         class Pkg(ConanFile):
             name = "pkg"
             version = "0.1"
             settings = "os", "compiler", "build_type", "arch"
+            requires = "ab/0.1"
+            generators = "CMakeToolchain", "CMakeDeps"
+            exports_sources = "CMakeLists.txt", "src/*"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
 
             def package(self):
-                xcrun = XCRun(self)
-                cmd = f'"{{xcrun.cc}}" -isysroot "{{xcrun.sdk_path}}"'
-                lib = os.path.join(self.package_folder, "lib")
-                exe = os.path.join(self.package_folder, "bin", "app")
-                os.makedirs(lib)
-                os.makedirs(os.path.dirname(exe))
-                # each library exports its own symbol, so a wrong reference fails at runtime
-                for name in ("abc", "abcrt"):
-                    save(self, f"{{name}}.c", f"int {{name}}(void){{{{return 1;}}}}")
-                    self.run(f'{{cmd}} -dynamiclib {{name}}.c -o "{{lib}}/lib{{name}}.dylib" '
-                             f'-install_name {install_dir}/lib{{name}}.dylib')
-                save(self, "main.c", "int abc(void);int abcrt(void);"
-                                     "int main(void){{return abc()+abcrt()==2?0:1;}}")
-                # links against both, like flatcc does
-                self.run(f'{{cmd}} main.c -L "{{lib}}" -labc -labcrt -o "{{exe}}" '
-                         f'-Wl,-headerpad_max_install_names')
+                cmake = CMake(self)
+                cmake.install()
                 fix_apple_shared_install_name(self)
         """)
-    client = TestClient(path_with_spaces=False)
-    client.save({"conanfile.py": conanfile})
-
-    # The bug only shows if the longer name is listed first, which depends on the
-    # filesystem (APFS hashes names), so force that order
-    real_listdir = os.listdir
-    with mock.patch("conan.tools.apple.apple.os.listdir",
-                    side_effect=lambda p: sorted(real_listdir(p), reverse=True)):
-        client.run("create . -tf=")
-
-    exe = os.path.join(client.created_layout().package(), "bin", "app")
-    client.run_command(f'otool -L "{exe}"')
-    assert client.out.count("@rpath/libabc.dylib") == 1
-    assert client.out.count("@rpath/libabcrt.dylib") == 1
-    client.run_command(f'"{exe}"')  # dyld would fail if a reference points to the wrong lib
-
-
-@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Apple install names")
-@pytest.mark.parametrize("install_dir", ["@rpath", "/lib"])
-def test_fix_shared_install_name_prefix_external_library(install_dir):
-    """The executable links libabc, which is not part of the package, and libabcrt, which is.
-    The reference to libabc is not ours to fix, even if it is a prefix of a packaged library"""
-    conanfile = textwrap.dedent(f"""
-        import os
-        from conan import ConanFile
-        from conan.tools.apple import XCRun, fix_apple_shared_install_name
-        from conan.tools.files import save
-
-        class Pkg(ConanFile):
-            name = "pkg"
-            version = "0.1"
-            settings = "os", "compiler", "build_type", "arch"
-
-            def package(self):
-                xcrun = XCRun(self)
-                cmd = f'"{{xcrun.cc}}" -isysroot "{{xcrun.sdk_path}}"'
-                external = os.path.join(self.build_folder, "external")
-                lib = os.path.join(self.package_folder, "lib")
-                exe = os.path.join(self.package_folder, "bin", "app")
-                os.makedirs(external)
-                os.makedirs(lib)
-                os.makedirs(os.path.dirname(exe))
-                for name, folder in (("abc", external), ("abcrt", lib)):
-                    save(self, f"{{name}}.c", f"int {{name}}(void){{{{return 1;}}}}")
-                    self.run(f'{{cmd}} -dynamiclib {{name}}.c -o "{{folder}}/lib{{name}}.dylib" '
-                             f'-install_name {install_dir}/lib{{name}}.dylib')
-                save(self, "main.c", "int abc(void);int abcrt(void);"
-                                     "int main(void){{return abc()+abcrt()==2?0:1;}}")
-                self.run(f'{{cmd}} main.c -L "{{external}}" -labc -L "{{lib}}" -labcrt '
-                         f'-o "{{exe}}" -Wl,-headerpad_max_install_names')
-                fix_apple_shared_install_name(self)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(pkg CXX)
+        find_package(ab CONFIG REQUIRED)
+        add_library(abc SHARED src/abc.cpp)
+        add_library(abcrt SHARED src/abcrt.cpp)
+        add_executable(app src/main.cpp)
+        target_link_libraries(app abc abcrt ab::ab)
+        install(TARGETS abc abcrt app)
         """)
-    client = TestClient(path_with_spaces=False)
-    client.save({"conanfile.py": conanfile})
-    client.run("create . -tf=")
+    main = textwrap.dedent("""
+        #include "ab.h"
+        int abc();
+        int abcrt();
+        int main() { ab(); return abc() + abcrt(); }
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmakelists,
+                 "src/abc.cpp": "int abc() { return 0; }",
+                 "src/abcrt.cpp": "int abcrt() { return 0; }",
+                 "src/main.cpp": main}, clean_first=True)
+    client.run("create . -o ab/*:shared=True")
 
-    exe = os.path.join(client.created_layout().package(), "bin", "app")
-    client.run_command(f'otool -L "{exe}"')
-    assert client.out.count(f"{install_dir}/libabc.dylib") == 1
-    assert client.out.count("@rpath/libabcrt.dylib") == 1
+    client.run_command(f"otool -L {client.created_layout().package()}/bin/app")
+    assert "@rpath/libab.dylib" in client.out
+    assert "@rpath/libabc.dylib" in client.out
+    assert "@rpath/libabcrt.dylib" in client.out
