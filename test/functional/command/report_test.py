@@ -9,7 +9,7 @@ from conan.test.utils.tools import TestClient
 
 @pytest.fixture
 def fixture_client():
-    tc = TestClient(light=True, default_server_user=True)
+    tc = TestClient(default_server_user=True)
 
     patch_file = textwrap.dedent("""
         diff --git a/foo.txt b/foo.txt

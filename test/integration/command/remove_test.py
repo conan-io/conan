@@ -75,7 +75,7 @@ class TestRemovePackageRevisions:
         ref = RecipeReference.loads("foobar/0.1@user/testing#4d670581ccb765839f2239cc8dff8fbd")
         pref_arg = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
         pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "0ba8627bd47edc3a501e8f0eb9a79e5e")
-        c = TestClient(light=True, default_server_user=True)
+        c = TestClient(default_server_user=True)
         c.save({"conanfile.py": GenConanfile()})
         c.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         assert c.package_exists(pref)

@@ -371,7 +371,7 @@ def test_create_no_user_channel():
 
 
 def test_create_build_missing_negation():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
              "lib/conanfile.py": GenConanfile("lib", "1.0").with_requires("dep/1.0"),
              "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("lib/1.0")})

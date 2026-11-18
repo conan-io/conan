@@ -120,7 +120,7 @@ def test_python_requires_for_build_requires():
 
 class TestPythonRequiresHeaderOnly:
     def test_header_only(self):
-        c = TestClient(light=True)
+        c = TestClient()
         pkg = textwrap.dedent("""\
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -140,7 +140,7 @@ class TestPythonRequiresHeaderOnly:
         c.assert_listed_binary({"pkg/0.1": (pkgid, "Cache")})
 
     def test_header_only_implements(self):
-        c = TestClient(light=True)
+        c = TestClient()
         pkg = textwrap.dedent("""\
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -173,7 +173,7 @@ class TestPythonRequiresHeaderOnly:
                           ("revision_mode", "0071dd0296afa0db533e21f924273485c87f0d32"),
                           ("full_mode", "0071dd0296afa0db533e21f924273485c87f0d32")])
 def test_modes(mode, pkg_id):
-    c = TestClient(light=True)
+    c = TestClient()
     c.save_home({"global.conf": f"core.package_id:default_python_mode={mode}"})
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1.1.1"),
             "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("dep/[*]")})
@@ -194,7 +194,7 @@ def test_modes(mode, pkg_id):
                           ("revision_mode", "0071dd0296afa0db533e21f924273485c87f0d32"),
                           ("full_mode", "0071dd0296afa0db533e21f924273485c87f0d32")])
 def test_modes_recipe(mode, pkg_id):
-    c = TestClient(light=True)
+    c = TestClient()
 
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile

@@ -8,7 +8,7 @@ def test_add_require():
     Testing the "conan dep add" command which should always use the highest version
     found in the first remote server or the local cache
     """
-    client = TestClient(default_server_user=True, light=True)
+    client = TestClient(default_server_user=True)
     # No conanfile is present - error
     client.run("require add hello", assert_error=True)
     assert "ERROR: Conanfile not found at" in client.out
@@ -65,7 +65,7 @@ def test_add_require():
 
 
 def test_remove_require():
-    client = TestClient(light=True)
+    client = TestClient()
     # No conanfile is present - error
     client.run("require remove hello", assert_error=True)
     assert "ERROR: Conanfile not found at" in client.out

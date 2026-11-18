@@ -917,7 +917,7 @@ class TestLoops(GraphManagerTest):
 
     def test_infinite_recursion_test(self):
         """Ensure that direct conflicts in a node are properly reported and Conan does not loop"""
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"conanfile.py": GenConanfile("app").with_package_type("application")})
         tc.run("create . --version=1.0 --build-require")
         tc.run("create . --version=1.1 --build-require")
@@ -930,7 +930,7 @@ def test_tool_requires():
     introduced to provide a compatible recipe with 2.0. At 2.0, the meaning of a build require being
     a 'tool' will be a tool_require."""
 
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=tool1 --version=1.0")
     client.run("create . --name=tool2 --version=1.0")

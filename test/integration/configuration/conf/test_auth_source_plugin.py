@@ -18,7 +18,7 @@ from conan.internal.util.files import save
 class TestAuthSourcePlugin:
     @pytest.fixture
     def setup_test_client(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         file_server = TestFileServer()
         client.servers["file_server"] = file_server
         client.save_home({"global.conf": "tools.files.download:retry=0"})

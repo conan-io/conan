@@ -16,7 +16,7 @@ class TestConflictDiamondTest:
         game -> engine/1.0 -> math/1.0
           |---> ai/1.0 -----> math/1.0.1 (conflict)
         """
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"math/conanfile.py": GenConanfile("math"),
                 "engine/conanfile.py": GenConanfile("engine", "1.0").with_requires("math/1.0"),
                 "ai/conanfile.py": GenConanfile("ai", "1.0").with_requires("math/1.0.1"),
@@ -80,7 +80,7 @@ class TestConflictDiamondTest:
 def test_conflict_user(version_range):
     # https://github.com/conan-io/conan/issues/17875
     v = "[^1.0]" if version_range else "1.0"
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
             "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires(f"dep/{v}@user1"),
             "app/conanfile.py": GenConanfile("app", "1.0").with_requires(f"pkg/{v}@user1",
@@ -94,7 +94,7 @@ def test_conflict_user(version_range):
 
 def test_conflict_user_order():
     # https://github.com/conan-io/conan/issues/17875
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
             "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0@user1"),
             "app/conanfile.py": GenConanfile("app", "1.0").with_requires("pkg/1.0@user1",
@@ -109,7 +109,7 @@ def test_conflict_user_order():
 @pytest.mark.parametrize("exact_range", ["[=0.1.0]", "[0.1.0]", "[0.1.0 || ^0.2.0]"])
 def test_conflict_exact_version_range(exact_range):
     # https://github.com/conan-io/conan/issues/20513
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"libb/conanfile.py": GenConanfile("libb"),
             "libc/conanfile.py": GenConanfile("libc", "1.0.0").with_requires(f"libb/{exact_range}")})
     c.run("export libb --version=0.1.0")
@@ -121,7 +121,7 @@ def test_conflict_exact_version_range(exact_range):
 
 def test_no_conflict_exact_version_ranges():
     # https://github.com/conan-io/conan/issues/20513
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"libb/conanfile.py": GenConanfile("libb"),
             "libc/conanfile.py": GenConanfile("libc", "1.0.0").with_requires("libb/[0.1.0 || 0.2.0]")})
     c.run("export libb --version=0.1.0")
@@ -139,7 +139,7 @@ class TestErrorVisibleFalse:
         #  cli--> pkg1/1.0 -(visible=False) --------------> pkg3/1.0 (conflict)
         #             \----> pkg2/1.0 --------------------> pkg3/1.1 (conflict)
         # This conflict is good, the default dependencies are incompatible in definition
-        tc = TestClient(light=True)
+        tc = TestClient()
         pkg1 = GenConanfile("pkg1", "1.0")
         if order:
             pkg1.with_requirement("pkg3/1.0", visible=False, test=test).with_requirement("pkg2/1.0")
@@ -160,7 +160,7 @@ class TestErrorVisibleFalse:
         #  cli--> pkg1/1.0 -(visible=False) ---> gtest/1.0 -> zlib/1.0
         #             \----> boost/1.0 ---------------------> zlib/1.1 (conflict)
         # This conflict is good, the default dependencies are incompatible in definition
-        tc = TestClient(light=True)
+        tc = TestClient()
         pkg = GenConanfile("pkg1", "1.0")
         if order:
             pkg.with_requirement("gtest/1.0", visible=False, test=test).with_requirement("boost/1.0")
@@ -191,7 +191,7 @@ class TestErrorVisibleFalse:
         # of a visible one
         #  cli--> pkg1/1.0 -(visible=True) --------------> pkg3/1.0 (no conflict)
         #             \----> pkg2/1.0 ----------------------/
-        tc = TestClient(light=True)
+        tc = TestClient()
         pkg1 = GenConanfile("pkg1", "1.0")
         if order:
             pkg1.with_requirement("pkg3/1.0", visible=False, test=test).with_requirement("pkg2/1.0")
@@ -230,7 +230,7 @@ class TestErrorVisibleFalse:
     def test_subgraph_no_conflict_second_level(self, order, test):
         #  cli--> pkg1/1.0 -(visible=False) ---> gtest/1.0 -> zlib/1.0
         #             \----> boost/1.0 ---------------------> zlib/1.0 (noconflict)
-        tc = TestClient(light=True)
+        tc = TestClient()
         pkg = GenConanfile("pkg1", "1.0")
         if order:
             pkg.with_requirement("gtest/1.0", visible=False, test=test).with_requirement("boost/1.0")
@@ -260,7 +260,7 @@ class TestErrorVisibleFalse:
         # cli --------------------------------------------> pkg3/1.1
         #   \--> pkg1/1.0 -(visible=False) -> pkg3/1.0 (conflict)
         #             \----> pkg2/1.0 --------------------> pkg3/1.1 (no conflict)
-        tc = TestClient(light=True)
+        tc = TestClient()
         pkg1 = GenConanfile("pkg1", "1.0")
         if order:
             pkg1.with_requirement("pkg3/1.0", visible=False, test=test).with_requirement("pkg2/1.0")
@@ -287,7 +287,7 @@ class TestErrorVisibleFalse:
         # cli --------------------------------------------> zlib/1.1
         #   \--> pkg1/1.0 -(visible=False) -gtest---------> zlib/1.0 (conflict)
         #             \----> boost/1.0 -------------------> zlib/1.1 (no conflict)
-        tc = TestClient(light=True)
+        tc = TestClient()
         pkg = GenConanfile("pkg1", "1.0")
         if order:
             pkg.with_requirement("gtest/1.0", visible=False, test=test).with_requirement("boost/1.0")
@@ -315,7 +315,7 @@ class TestErrorVisibleFalse:
 
     def test_transitive_version_range_no_conflict(self, order, test):
         # if in the case above, we use a version-range, we can avoid the conflict
-        tc = TestClient(light=True)
+        tc = TestClient()
         pkg1 = GenConanfile("pkg1", "1.0")
         if order:
             pkg1.with_requirement("pkg3/[*]", visible=False, test=test).with_requirement("pkg2/1.0")
@@ -352,7 +352,7 @@ class TestErrorVisibleFalse:
         # cli --------------------------------------------> zlib/1.1
         #   \--> pkg1/1.0 -(visible=False) -gtest---------> zlib/[*] (no conflict, range)
         #             \----> boost/1.0 -------------------> zlib/1.1 (no conflict)
-        tc = TestClient(light=True)
+        tc = TestClient()
         pkg = GenConanfile("pkg1", "1.0")
         if order:
             pkg.with_requirement("gtest/1.0", visible=False, test=test).with_requirement("boost/1.0")
@@ -376,7 +376,7 @@ class TestErrorVisibleFalse:
         # In both cases, it seems that zlib is not Skipped when it is necessary to build gtest
 
     def test_transitive_orphans(self, order, test):
-        tc = TestClient(light=True)
+        tc = TestClient()
         pkg1 = GenConanfile("pkg1", "1.0")
         if order:
             pkg1.with_requirement("pkg3/[*]", visible=False, test=test).with_requirement("pkg2/1.0")
@@ -423,7 +423,7 @@ class TestConsistentTrait:
         # Order doesn't matter
         #  libc3 ---------------------> liba/1.1 (header)
         #   \----> libb/1.0 (static) -> liba/1.2 (header)
-        c = TestClient(light=True)
+        c = TestClient()
         c.save_home({"global.conf": 'core:policies=["required_conan_version>=2.28"]'})
         c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
                 "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
@@ -477,7 +477,7 @@ class TestConsistentTrait:
         # If not consistent, no conflcit
         #  libc --(v=F, c=T)-> libb/1.0 (static) -(range)--> liba/1.2(header)
         #   \----------------> libd/1.0 (static)-----------> liba/1.1 (header)
-        c = TestClient(light=True)
+        c = TestClient()
         c.save_home({"global.conf": 'core:policies=["required_conan_version>=2.28"]'})
         c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
                 "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
@@ -518,7 +518,7 @@ class TestConsistentTrait:
         assert len(graph["graph"]["nodes"]) == 5
 
     def test_visible_consistent(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"liba/conanfile.py": GenConanfile("liba").with_package_type("header-library"),
                 "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("static-library")
                                                                 .with_requirement("liba/[>=1]",

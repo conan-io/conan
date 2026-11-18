@@ -743,7 +743,7 @@ class TestBuildOrderReduce:
         assert "ERROR: Cannot merge build-orders of configuration!=recipe" in c.out
 
     def test_merge_missing_error(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0")})
         tc.run("export dep")
         tc.run("graph build-order --order=recipe --requires=dep/1.0 --format=json", assert_error=True, redirect_stdout="order.json")
@@ -752,7 +752,7 @@ class TestBuildOrderReduce:
         assert "IndexError: list index out of range" not in tc.out
 
     def test_merge_invalid_error(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.errors import ConanInvalidConfiguration
@@ -806,7 +806,7 @@ def test_multi_configuration_profile_args():
 
 
 def test_build_order_space_in_options():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0").with_option("flags", ["ANY", None])
                                                            .with_option("extras", ["ANY", None]),
              "conanfile.txt": textwrap.dedent("""
@@ -908,7 +908,7 @@ def test_info_build_order_editable():
 def test_build_order_path_reqs_mixed_args():
     # This used not to crash in previous versions
     # Also make sure we can properly used them separately
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.run("graph build-order . --requires=foo/1.0 --order-by=recipe", assert_error=True)
     assert "ERROR: --requires and --tool-requires arguments are incompatible with [path] '.' argument" in tc.out
 
@@ -921,7 +921,7 @@ def test_build_order_path_reqs_mixed_args():
 
 def test_build_order_options():
     # Reproduces https://github.com/conan-io/conan/issues/19948
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({
         "hello/conanfile.py": GenConanfile("hello", "1.0").with_shared_option(False),
         "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_test_requires("hello/1.0"),
@@ -955,7 +955,7 @@ class TestBuildOrderOptions:
     @pytest.mark.parametrize("order_by", ["recipe", "configuration"])
     def test_build_order_transitive_options(self, order_by):
         # Reproduces https://github.com/conan-io/conan/issues/20314
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({
             "leaf/conanfile.py": GenConanfile("leaf", "1.0").with_shared_option(False),
             "middle/conanfile.py": GenConanfile("middle", "1.0").with_shared_option(False)
@@ -996,7 +996,7 @@ class TestBuildOrderOptions:
     def test_build_order_options_diamond_precedence(self):
         # "leaf" is a diamond of "midb" (first, no request) and "mida" (second,
         # wants shared=True): "midb" wins, so "mida" must force "leaf" back to False.
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({
             "leaf/conanfile.py": GenConanfile("leaf", "1.0").with_shared_option(False),
             "midb/conanfile.py": GenConanfile("midb", "1.0").with_requires("leaf/1.0"),
@@ -1029,7 +1029,7 @@ class TestBuildOrderOptions:
     def test_build_order_options_diamond_unaware(self):
         # Opposite of the previous test: "midb" (first) forces shared=True on "leaf",
         # "mida" (second) asks nothing at all, yet must still force it to reproduce it.
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({
             "leaf/conanfile.py": GenConanfile("leaf", "1.0").with_shared_option(False),
             "midb/conanfile.py": GenConanfile("midb", "1.0").with_requires("leaf/1.0")
@@ -1062,7 +1062,7 @@ class TestBuildOrderOptions:
         # "leaf" drops its own "fPIC" once shared=True (like auto_shared_fpic). "mid"
         # wants both shared=True and fPIC=False on "leaf"; fPIC must not end up forced
         # to the literal "None".
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({
             "leaf/conanfile.py": textwrap.dedent("""
                 from conan import ConanFile
@@ -1111,7 +1111,7 @@ class TestBuildOrderOptions:
         # "pkgc" and "pkge" must both force "pkga" back to False. "pkgf" doesn't need
         # to, since rebuilding it alone naturally re-expands "pkgd" first too, but
         # forcing it there redundantly (inherited from "pkge") is harmless.
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({
             "pkga/conanfile.py": GenConanfile("pkga", "1.0").with_shared_option(False),
             "pkgb/conanfile.py": GenConanfile("pkgb", "1.0").with_requires("pkga/1.0"),
@@ -1156,7 +1156,7 @@ class TestBuildOrderOptions:
         # binary BINARY_SKIP (embedded in libcurl.so, no need to download/build it). It
         # never gets its own install reference, but its options still need to be forced
         # correctly on "libcurl"'s build_args, since they determine openssl's package_id.
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({
             "openssl/conanfile.py": GenConanfile("openssl", "1.0").with_shared_option(False)
                                                                   .with_option("fPIC",
@@ -1192,7 +1192,7 @@ class TestBuildOrderOptions:
         # is the one that would freeze "leaf", and "top" must force it back to the real value.
         # The recipes asking for a dependency options must be aggregated respecting the graph
         # order, taking the first one that reaches it, not the last one
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({
             "leaf/conanfile.py": GenConanfile("leaf", "1.0").with_shared_option(False),
             "mid1/conanfile.py": GenConanfile("mid1", "1.0").with_requires("leaf/1.0")
@@ -1239,7 +1239,7 @@ class TestBuildOrderOptions:
         # "sib" and "leaf" are siblings under "top", so whatever "sib" asks for "leaf" never
         # applies to it. It still has to be taken into account, as it would be applied again
         # when "top" is expanded again, but it cannot be assumed to be a usable value
-        c = TestClient(light=True)
+        c = TestClient()
         sib = GenConanfile("sib", "1.0").with_default_option(f"leaf/*:{option}",
                                                              f'"{sib_value}"')
         c.save({

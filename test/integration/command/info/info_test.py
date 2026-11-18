@@ -480,7 +480,7 @@ def test_graph_info_user():
 
 
 def test_graph_info_bundle():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"subfolder/conanfile.py": GenConanfile("liba", "1.0")})
     c.run("create ./subfolder")
     conanfile = textwrap.dedent("""
@@ -505,7 +505,7 @@ def test_graph_info_bundle():
 
 def test_graph_info_provides_conflict_html():
     """ This test also makes sure that the serialization of the GraphProvidesConflict works"""
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"bar/conanfile.py": GenConanfile("bar", "1.0"),
              "foo/conanfile.py": GenConanfile("foo", "1.0").with_provides("bar")})
 

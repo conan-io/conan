@@ -13,7 +13,7 @@ class TestConanMetadataSubfolder:
     @pytest.fixture()
     def uploaded_pkg(self):
         """Create and upload pkg/0.1 with metadata/.conan/info.txt, no --metadata flag."""
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("create .")
         c.run("cache path pkg/0.1 --folder=metadata")
@@ -24,7 +24,7 @@ class TestConanMetadataSubfolder:
 
     def test_create_upload_install(self, uploaded_pkg):
         """metadata/.conan is always uploaded with recipe and always downloaded on install."""
-        c2 = TestClient(servers=uploaded_pkg.servers, light=True)
+        c2 = TestClient(servers=uploaded_pkg.servers)
         c2.run("install --requires=pkg/0.1")
         c2.run("cache path pkg/0.1 --folder=metadata")
         metadata_path = str(c2.stdout).strip()
@@ -32,7 +32,7 @@ class TestConanMetadataSubfolder:
 
     def test_download_irrespective_of_metadata_filter(self, uploaded_pkg):
         """conan download always gets metadata/.conan regardless of --metadata filter."""
-        c2 = TestClient(servers=uploaded_pkg.servers, light=True)
+        c2 = TestClient(servers=uploaded_pkg.servers)
 
         # Without --metadata flag: .conan subfolder is still fetched
         c2.run("download pkg/0.1 -r=default")
@@ -54,7 +54,7 @@ class TestConanMetadataSubfolder:
         Scenario: first upload has no .conan files; later .conan files are written and a
         second upload should send them so that other clients receive the updated data.
         """
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("create .")
 
@@ -70,7 +70,7 @@ class TestConanMetadataSubfolder:
         c.run("upload * -c -r=default")
 
         # Fresh client must receive the .conan/ file
-        c2 = TestClient(servers=c.servers, light=True)
+        c2 = TestClient(servers=c.servers)
         c2.run("install --requires=pkg/0.1")
         c2.run("cache path pkg/0.1 --folder=metadata")
         metadata_path2 = str(c2.stdout).strip()
@@ -82,7 +82,7 @@ class TestConanMetadataSubfolder:
         Scenario: first upload includes .conan files; those files are later modified and
         re-uploaded (recipe revision still the same); a third client must see the new content.
         """
-        c1 = TestClient(default_server_user=True, light=True)
+        c1 = TestClient(default_server_user=True)
         c1.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c1.run("create .")
         c1.run("cache path pkg/0.1 --folder=metadata")
@@ -91,7 +91,7 @@ class TestConanMetadataSubfolder:
         c1.run("upload * -c -r=default")
 
         # Second client installs and gets v1
-        c2 = TestClient(servers=c1.servers, inputs=["admin", "password"], light=True)
+        c2 = TestClient(servers=c1.servers, inputs=["admin", "password"])
         c2.run("install --requires=pkg/0.1")
         c2.run("cache path pkg/0.1 --folder=metadata")
         metadata_path2 = str(c2.stdout).strip()
@@ -102,7 +102,7 @@ class TestConanMetadataSubfolder:
         c2.run("upload * -c -r=default")
 
         # Third client must see v2
-        c3 = TestClient(servers=c1.servers, inputs=["admin", "password"], light=True)
+        c3 = TestClient(servers=c1.servers, inputs=["admin", "password"])
         c3.run("install --requires=pkg/0.1")
         c3.run("cache path pkg/0.1 --folder=metadata")
         metadata_path3 = str(c3.stdout).strip()
@@ -123,7 +123,7 @@ class TestConanMetadataSubfolder:
         To explicitly re-sync the metadata of an already cached revision, ``conan download``
         with a ``--metadata`` pattern can also be used.
         """
-        c1 = TestClient(default_server_user=True, light=True)
+        c1 = TestClient(default_server_user=True)
         c1.save({"conanfile.py": GenConanfile("mylib", "0.1")})
         c1.run("create .")
         c1.run("cache path mylib/0.1 --folder=metadata")
@@ -133,7 +133,7 @@ class TestConanMetadataSubfolder:
         c1.run("upload * -c -r=default")
 
         # client2 with a clean cache gets the metadata of that revision
-        c2 = TestClient(servers=c1.servers, inputs=["admin", "password"], light=True)
+        c2 = TestClient(servers=c1.servers, inputs=["admin", "password"])
         c2.run("install --requires=mylib/0.1")
         c2.run("cache path mylib/0.1 --folder=metadata")
         metadata_path2 = str(c2.stdout).strip()
@@ -156,7 +156,7 @@ class TestConanMetadataSubfolder:
         assert load(time_txt2) == "t2"
 
         # And a fresh cache also gets the new contents of the same revision
-        c3 = TestClient(servers=c1.servers, inputs=["admin", "password"], light=True)
+        c3 = TestClient(servers=c1.servers, inputs=["admin", "password"])
         c3.run("install --requires=mylib/0.1")
         c3.run("cache path mylib/0.1 --folder=metadata")
         metadata_path3 = str(c3.stdout).strip()
@@ -168,7 +168,7 @@ class TestConanMetadataSubfolder:
         Same rationale as the regular metadata: it can be re-uploaded for an existing revision,
         so the same url can return different contents and it cannot be cached by url.
         """
-        c1 = TestClient(default_server_user=True, light=True)
+        c1 = TestClient(default_server_user=True)
         c1.save({"conanfile.py": GenConanfile("mylib", "0.1")})
         c1.run("create .")
         c1.run("cache path mylib/0.1 --folder=metadata")
@@ -177,7 +177,7 @@ class TestConanMetadataSubfolder:
         save(time_txt1, "t1")
         c1.run("upload * -c -r=default")
 
-        c2 = TestClient(servers=c1.servers, inputs=["admin", "password"], light=True)
+        c2 = TestClient(servers=c1.servers, inputs=["admin", "password"])
         # MOST important part: activate the download cache
         c2.save_home({"global.conf": f"core.download:download_cache={temp_folder()}\n"})
         c2.run("install --requires=mylib/0.1")
@@ -200,7 +200,7 @@ class TestConanMetadataSubfolder:
         as long as some of it was already present locally (see
         ``test_update_skips_refresh_of_never_downloaded_metadata`` for the opposite case).
         """
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"conanfile.py": GenConanfile("mylib", "0.1")})
         c.run("create .")
         c.run("cache path mylib/0.1 --folder=metadata")
@@ -208,7 +208,7 @@ class TestConanMetadataSubfolder:
         save(os.path.join(metadata_path, CONAN_METADATA_SUBFOLDER, "time.txt"), "t1")
         c.run("upload * -c -r=default")
 
-        c2 = TestClient(servers=c.servers, inputs=["admin", "password"], light=True)
+        c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
         c2.run("install --requires=mylib/0.1")
         c2.run("cache path mylib/0.1 --folder=metadata")
         metadata_path2 = str(c2.stdout).strip()
@@ -246,12 +246,12 @@ class TestConanMetadataSubfolder:
         - ``--update`` still does NOT pick it up, because there was nothing locally to refresh
         - only a fresh install (clean cache) gets it, same as an explicit ``--metadata`` download
         """
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("create .")
         c.run("upload * -c -r=default")  # no metadata/.conan/ content yet
 
-        c2 = TestClient(servers=c.servers, inputs=["admin", "password"], light=True)
+        c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
         c2.run("install --requires=pkg/0.1")
         c2.run("cache path pkg/0.1 --folder=metadata")
         metadata_path2 = str(c2.stdout).strip()

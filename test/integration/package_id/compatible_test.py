@@ -826,7 +826,7 @@ class TestListOnlyCompatibilityOptimization:
 
     @pytest.fixture()
     def client(self):
-        tc = TestClient(default_server_user=True, light=True)
+        tc = TestClient(default_server_user=True)
         compiler_settings = textwrap.dedent("""
                 compiler:
                     foo:

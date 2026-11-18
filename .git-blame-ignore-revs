@@ -1,0 +1,6 @@
+# Commits that "git blame" skips: mechanical changes to many files.
+# GitHub uses this file by default; for the local git blame:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Remove the light argument of TestClient (1,017 calls in the tests)
+6a1db3e7b8a5a79446294d094e426b402cb155b5

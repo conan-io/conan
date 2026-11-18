@@ -16,7 +16,7 @@ class TestSystemReqs:
         """)
 
     def test_force_system_reqs_rerun(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({'conanfile.py': self.base_conanfile})
         client.run("create . ")
         assert "*+Running system requirements+*" in client.out
@@ -24,7 +24,7 @@ class TestSystemReqs:
         assert "*+Running system requirements+*" in client.out
 
     def test_local_system_requirements(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({'conanfile.py': self.base_conanfile})
         client.run("install .")
         assert "*+Running system requirements+*" in client.out
@@ -34,7 +34,7 @@ class TestBuildSystemRequirements:
 
     def test_called_when_building_from_source(self):
         """build_system_requirements is called when the package binary is built from source."""
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -61,7 +61,7 @@ class TestBuildSystemRequirements:
 
     def test_local_conanfile_build_system_requirements(self):
         """build_system_requirements is called for the root conanfile during conan install ."""
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
