@@ -33,8 +33,8 @@ def test_legacy_names_filenames():
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
-    assert ("WARN: deprecated: Usage of Conan 1.X features, they have no effect in Conan 2 and "
-            "will be removed in the next major version:") in c.out
+    assert ("WARN: deprecated: Usage of deprecated Conan 1.X features that will be removed in "
+            "Conan 2.X:") in c.out
     for name in ["cpp_info.names", "cpp_info.filenames", "env_info", "user_info", "cpp_info.build_modules"]:
         assert f"    '{name}' used in: pkg/1.0" in c.out
 
@@ -62,7 +62,7 @@ class TestLegacyInfoReport:
         c.save({"conanfile.py": self.conanfile})
         c.save_home({"global.conf": 'core:warnings_as_errors=["deprecated"]'})
         c.run("create .", assert_error=True)
-        assert "ERROR: deprecated: Usage of Conan 1.X features" in c.out
+        assert "ERROR: deprecated: Usage of deprecated Conan 1.X features" in c.out
         assert "'cpp_info.names' used in: pkg/1.0" in c.out
         c.save({"conanfile.py": GenConanfile("other", "1.0")})
         c.run("create .")
