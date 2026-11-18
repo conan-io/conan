@@ -6,7 +6,6 @@ from conan.internal.model.recipe_ref import ref_matches
 from conan.internal.graph.graph import DepsGraph, Node, CONTEXT_HOST, \
     CONTEXT_BUILD, TransitiveRequirement, RECIPE_VIRTUAL, RECIPE_EDITABLE, RECIPE_CONSUMER
 from conan.internal.graph.graph import RECIPE_PLATFORM
-from conan.internal.graph import graph_gc
 from conan.internal.graph.graph_error import (GraphLoopError, GraphConflictError, GraphMissingError,
                                               GraphError)
 from conan.internal.graph.profile_node_definer import initialize_conanfile_profile
@@ -39,7 +38,6 @@ class DepsGraphBuilder:
         assert isinstance(profile_build.options, Options)
         # print("Loading graph")
         dep_graph = DepsGraph()
-        graph_gc.new_graph(dep_graph)
 
         is_test_package = getattr(root_node.conanfile, "tested_reference_str", None)
         define_consumers = root_node.recipe == RECIPE_VIRTUAL or is_test_package

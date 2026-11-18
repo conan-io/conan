@@ -8,7 +8,6 @@ from conan.internal.api.install.generators import write_generators
 from conan.internal.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD,
                                         BINARY_EDITABLE, BINARY_UPDATE, BINARY_EDITABLE_BUILD,
                                         BINARY_SKIP)
-from conan.internal.graph import graph_gc
 from conan.internal.graph.install_graph import InstallGraph
 from conan.internal.source import retrieve_exports_sources, config_source
 from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
@@ -265,24 +264,22 @@ class BinaryInstaller:
                             for install_reference in level)
         handled_count = 1
 
-        with graph_gc.enabled_for_builds():
-            self._download_bulk(install_order)
-            for level in install_order:
-                for install_reference in level:
-                    for package in install_reference.packages.values():
-                        pref = PkgReference(install_reference.ref, package.package_id,
-                                            package.prev)
-                        if package.binary == BINARY_BUILD:
-                            ConanOutput().subtitle(f"Installing package {pref.ref} "
-                                                   f"({handled_count} of {package_count})")
-                            ConanOutput().highlight(f"Building from source {pref}")
-                            compact_dumps = package.nodes[0].conanfile.info.summarize_compact()
-                            for line in compact_dumps:
-                                ConanOutput().info(line, fg=Color.BRIGHT_GREEN)
-                        recipe_layout = self._install_source(package.nodes[0], remotes)
-                        self._handle_package(recipe_layout, package, install_reference,
-                                             handled_count, package_count)
-                        handled_count += 1
+        self._download_bulk(install_order)
+        for level in install_order:
+            for install_reference in level:
+                for package in install_reference.packages.values():
+                    pref = PkgReference(install_reference.ref, package.package_id, package.prev)
+                    if package.binary == BINARY_BUILD:
+                        ConanOutput().subtitle(f"Installing package {pref.ref} "
+                                               f"({handled_count} of {package_count})")
+                        ConanOutput().highlight(f"Building from source {pref}")
+                        compact_dumps = package.nodes[0].conanfile.info.summarize_compact()
+                        for line in compact_dumps:
+                            ConanOutput().info(line, fg=Color.BRIGHT_GREEN)
+                    recipe_layout = self._install_source(package.nodes[0], remotes)
+                    self._handle_package(recipe_layout, package, install_reference, handled_count,
+                                         package_count)
+                    handled_count += 1
 
         MockInfoProperty.message()
 

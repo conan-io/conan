@@ -29,42 +29,16 @@ def _run_entry_point(args, cwd, home):
 
 
 def test_entry_point_disables_gc():
-    """ The entry point disables the cyclic garbage collector """
+    """ The entry point disables the cyclic garbage collector, and freezes the objects at the end,
+    so the collection of the interpreter shutdown doesn't traverse them """
     result = _run_entry_point(["--version"], cwd=temp_folder(), home=temp_folder())
     assert "Conan version" in result.stdout
-    assert "gc enabled: False frozen: False" in result.stdout
-
-
-def test_entry_point_enables_gc_for_builds():
-    """ The installer enables it again while installing the packages, with the graph frozen """
-    conanfile = textwrap.dedent("""
-        import gc
-        from conan import ConanFile
-
-        class Pkg(ConanFile):
-            name = "pkg"
-            version = "0.1"
-
-            def requirements(self):
-                self.output.info(f"gc in requirements(): {gc.isenabled()}")
-
-            def build(self):
-                self.output.info(f"gc in build(): {gc.isenabled()}")
-        """)
-    home = temp_folder()
-    save(os.path.join(home, "profiles", "default"), "[settings]\nos=Linux")
-    cwd = temp_folder()
-    save(os.path.join(cwd, "conanfile.py"), conanfile)
-    result = _run_entry_point(["create", "."], cwd=cwd, home=home)
-    assert "pkg/0.1: gc in requirements(): False" in result.stderr
-    assert "gc in build(): True" in result.stderr
     assert "gc enabled: False frozen: True" in result.stdout
 
 
 def test_entry_point_frees_previous_graphs():
-    """ A command can compute several graphs (test_package, workspace commands, custom commands
-    running other commands): the ones no longer used are freed before computing a new one, also
-    if they were frozen by the installer or had an error """
+    """ The commands that run other commands (workspace commands, custom commands) collect the
+    garbage of the previous ones before running each one, like their graphs """
     command = textwrap.dedent('''
         import weakref
         from conan.cli.command import conan_command
