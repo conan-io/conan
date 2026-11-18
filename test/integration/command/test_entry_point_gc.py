@@ -61,6 +61,33 @@ def test_entry_point_enables_gc_for_builds():
     assert "gc enabled: False frozen: True" in result.stdout
 
 
+def test_entry_point_frees_previous_graphs():
+    """ A command can compute several graphs (test_package, workspace commands, custom commands
+    running other commands): the ones no longer used are freed before computing a new one, also
+    if they were frozen by the installer or had an error """
+    command = textwrap.dedent('''
+        import weakref
+        from conan.cli.command import conan_command
+
+        @conan_command(group="custom")
+        def loop(conan_api, parser, *args):
+            """ Runs some commands, are the nodes of their graphs still alive? """
+            nodes = []
+            for cmd in ("install .", "graph info --requires=missing/0.1", "install ."):
+                result = conan_api.command.run(cmd, raise_on_errors=False)
+                nodes.append(weakref.ref(result["graph"].root))
+                del result
+            print("alive:", [n() is not None for n in nodes])
+        ''')
+    home = temp_folder()
+    save(os.path.join(home, "profiles", "default"), "[settings]\nos=Linux")
+    save(os.path.join(home, "extensions", "commands", "cmd_loop.py"), command)
+    cwd = temp_folder()
+    save(os.path.join(cwd, "conanfile.txt"), "")
+    result = _run_entry_point(["loop"], cwd=cwd, home=home)
+    assert "alive: [False, False, True]" in result.stdout
+
+
 def test_python_api_keeps_gc():
     """ The Python API, that TestClient uses in this process, doesn't disable the GC """
     assert gc.isenabled()

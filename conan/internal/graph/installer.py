@@ -1,7 +1,5 @@
-import gc
 import os
 import shutil
-from contextlib import contextmanager
 from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput, Color
@@ -10,6 +8,7 @@ from conan.internal.api.install.generators import write_generators
 from conan.internal.graph.graph import (BINARY_BUILD, BINARY_CACHE, BINARY_DOWNLOAD,
                                         BINARY_EDITABLE, BINARY_UPDATE, BINARY_EDITABLE_BUILD,
                                         BINARY_SKIP)
+from conan.internal.graph import graph_gc
 from conan.internal.graph.install_graph import InstallGraph
 from conan.internal.source import retrieve_exports_sources, config_source
 from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
@@ -19,28 +18,6 @@ from conan.api.model import PkgReference
 from conan.internal.paths import CONANINFO
 from conan.internal.util import cpu_count
 from conan.internal.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
-
-# Set by the "conan" command (conans/conan.py), that disables the cyclic garbage collector
-ENABLE_GC_FOR_BUILDS = False
-
-
-@contextmanager
-def _gc_enabled_for_builds():
-    """ The "conan" command disables the cyclic garbage collector, because the graph lives until
-    the end, but the builds (generators, recipes, hooks) create garbage with reference cycles, more
-    than 100 KB per package with CMakeToolchain. Enable it while installing, after freezing the
-    objects that exist (the graph), so it doesn't traverse them again, not even in the collection
-    that the interpreter shutdown runs although the collector is disabled
-    """
-    if not ENABLE_GC_FOR_BUILDS or gc.isenabled():
-        yield
-        return
-    gc.freeze()
-    gc.enable()
-    try:
-        yield
-    finally:
-        gc.disable()
 
 
 def build_id(conan_file):
@@ -288,7 +265,7 @@ class BinaryInstaller:
                             for install_reference in level)
         handled_count = 1
 
-        with _gc_enabled_for_builds():
+        with graph_gc.enabled_for_builds():
             self._download_bulk(install_order)
             for level in install_order:
                 for install_reference in level:
