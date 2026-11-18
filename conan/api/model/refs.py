@@ -8,6 +8,22 @@ from conan.internal.model.version import Version
 from conan.internal.util.dates import timestamp_to_str
 
 
+def _format_reference(name, version, user, channel, revision=None):
+    """ name/version[@user[/channel]][#revision], the format of the RecipeReference representations,
+    also used by the package_id computation, which does not create the references """
+    result = ""
+    if name is not None:
+        result = f"{name}/{version}"
+        if user:
+            result += f"@{user}"
+        if channel:
+            assert user
+            result += f"/{channel}"
+    if revision is not None:
+        result += f"#{revision}"
+    return result
+
+
 @total_ordering
 class RecipeReference:
     """ An exact (no version-range) reference of a recipe,
@@ -47,10 +63,7 @@ class RecipeReference:
         return result
 
     def repr_notime(self):
-        result = self.__str__()
-        if self.revision is not None:
-            result += "#{}".format(self.revision)
-        return result
+        return _format_reference(self.name, self.version, self.user, self.channel, self.revision)
 
     def repr_humantime(self):
         result = self.repr_notime()
@@ -60,15 +73,7 @@ class RecipeReference:
 
     def __str__(self):
         """ shorter representation, excluding the revision and timestamp """
-        if self.name is None:
-            return ""
-        result = "/".join([self.name, str(self.version)])
-        if self.user:
-            result += "@{}".format(self.user)
-        if self.channel:
-            assert self.user
-            result += "/{}".format(self.channel)
-        return result
+        return _format_reference(self.name, self.version, self.user, self.channel)
 
     def __lt__(self, ref):
         # The timestamp goes before the revision for ordering revisions chronologically
