@@ -1,5 +1,7 @@
+import gc
 import os
 import shutil
+from contextlib import contextmanager
 from multiprocessing.pool import ThreadPool
 
 from conan.api.output import ConanOutput, Color
@@ -17,6 +19,28 @@ from conan.api.model import PkgReference
 from conan.internal.paths import CONANINFO
 from conan.internal.util import cpu_count
 from conan.internal.util.files import clean_dirty, is_dirty, mkdir, rmdir, save, set_dirty, chdir
+
+# Set by the "conan" command (conans/conan.py), that disables the cyclic garbage collector
+ENABLE_GC_FOR_BUILDS = False
+
+
+@contextmanager
+def _gc_enabled_for_builds():
+    """ The "conan" command disables the cyclic garbage collector, because the graph lives until
+    the end, but the builds (generators, recipes, hooks) create garbage with reference cycles, more
+    than 100 KB per package with CMakeToolchain. Enable it while installing, after freezing the
+    objects that exist (the graph), so it doesn't traverse them again, not even in the collection
+    that the interpreter shutdown runs although the collector is disabled
+    """
+    if not ENABLE_GC_FOR_BUILDS or gc.isenabled():
+        yield
+        return
+    gc.freeze()
+    gc.enable()
+    try:
+        yield
+    finally:
+        gc.disable()
 
 
 def build_id(conan_file):
@@ -264,22 +288,24 @@ class BinaryInstaller:
                             for install_reference in level)
         handled_count = 1
 
-        self._download_bulk(install_order)
-        for level in install_order:
-            for install_reference in level:
-                for package in install_reference.packages.values():
-                    pref = PkgReference(install_reference.ref, package.package_id, package.prev)
-                    if package.binary == BINARY_BUILD:
-                        ConanOutput().subtitle(f"Installing package {pref.ref} "
-                                               f"({handled_count} of {package_count})")
-                        ConanOutput().highlight(f"Building from source {pref}")
-                        compact_dumps = package.nodes[0].conanfile.info.summarize_compact()
-                        for line in compact_dumps:
-                            ConanOutput().info(line, fg=Color.BRIGHT_GREEN)
-                    recipe_layout = self._install_source(package.nodes[0], remotes)
-                    self._handle_package(recipe_layout, package, install_reference, handled_count,
-                                         package_count)
-                    handled_count += 1
+        with _gc_enabled_for_builds():
+            self._download_bulk(install_order)
+            for level in install_order:
+                for install_reference in level:
+                    for package in install_reference.packages.values():
+                        pref = PkgReference(install_reference.ref, package.package_id,
+                                            package.prev)
+                        if package.binary == BINARY_BUILD:
+                            ConanOutput().subtitle(f"Installing package {pref.ref} "
+                                                   f"({handled_count} of {package_count})")
+                            ConanOutput().highlight(f"Building from source {pref}")
+                            compact_dumps = package.nodes[0].conanfile.info.summarize_compact()
+                            for line in compact_dumps:
+                                ConanOutput().info(line, fg=Color.BRIGHT_GREEN)
+                        recipe_layout = self._install_source(package.nodes[0], remotes)
+                        self._handle_package(recipe_layout, package, install_reference,
+                                             handled_count, package_count)
+                        handled_count += 1
 
         MockInfoProperty.message()
 
