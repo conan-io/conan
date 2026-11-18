@@ -39,8 +39,8 @@ class MockInfoProperty:
         if not counter:
             return
         # A single message, so core:warnings_as_errors=["deprecated"] reports all of it
-        msg = ["Usage of Conan 1.X features, they have no effect in Conan 2 and will be removed "
-               "in the next major version:"]
+        msg = ["Usage of deprecated Conan 1.X features that will be removed in "
+               "Conan 2.X:"]
         for k, v in counter.items():
             msg.append(f"    '{k}' used in: {', '.join(sorted(v))}")
         ConanOutput().warning("\n".join(msg), warn_tag="deprecated")
