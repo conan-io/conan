@@ -73,7 +73,8 @@ def test_entry_point_frees_previous_graphs():
         def loop(conan_api, parser, *args):
             """ Runs some commands, are the nodes of their graphs still alive? """
             nodes = []
-            for cmd in ("install .", "graph info --requires=missing/0.1", "install ."):
+            for cmd in ("install .", "graph info --requires=missing/0.1 --no-remote",
+                        "install ."):
                 result = conan_api.command.run(cmd, raise_on_errors=False)
                 nodes.append(weakref.ref(result["graph"].root))
                 del result
