@@ -3,4 +3,4 @@
 #   git config blame.ignoreRevsFile .git-blame-ignore-revs
 
 # Remove the light argument of TestClient (1,017 calls in the tests)
-6a1db3e7b8a5a79446294d094e426b402cb155b5
+43dd55d49d3df63a56d11859cfb0136df1a6cb5a
