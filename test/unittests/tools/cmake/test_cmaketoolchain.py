@@ -6,7 +6,7 @@ from unittest.mock import Mock
 from conan import ConanFile
 from conan.internal.default_settings import default_settings_yml
 from conan.tools.cmake import CMakeToolchain
-from conan.tools.cmake.toolchain.blocks import Block
+from conan.tools.cmake.toolchain.blocks import Block, compiled_template
 from conan.errors import ConanException
 from conan.internal.model.conf import Conf
 from conan.internal.model.options import Options
@@ -194,6 +194,45 @@ class TestGenericBlocks:
         content = toolchain.content
         assert 'Hello World!!!' in content
         assert 'set(CMAKE_SYSTEM_NAME potato)' in content
+
+    def test_compiled_templates_cache(self, conanfile):
+        """ The compiled jinja2 templates are cached by their full text, so customized
+        templates and user blocks don't leak into other CMakeToolchain instances
+        """
+        def custom_toolchain(block_template, myvar):
+            class MyBlock(Block):
+                template = block_template
+
+                def context(self):
+                    return {"myvar": myvar}
+
+            tc = CMakeToolchain(conanfile)
+            tmp = tc.blocks["generic_system"].template
+            tc.blocks["generic_system"].template = tmp.replace("CMAKE_SYSTEM_NAME", "OTHER_THING")
+            tc.blocks["mynewblock"] = MyBlock
+            return tc.content
+
+        custom = custom_toolchain("Hello {{myvar}}!!!", "World")
+        assert 'set(OTHER_THING potato)' in custom
+        assert 'set(CMAKE_SYSTEM_NAME potato)' not in custom
+        assert 'Hello World!!!' in custom
+
+        default = CMakeToolchain(conanfile).content
+        assert 'set(CMAKE_SYSTEM_NAME potato)' in default
+        assert 'OTHER_THING' not in default
+        assert "mynewblock" not in default
+
+        # Same templates with a different context, and a different user block with the same name
+        assert 'Hello Mars!!!' in custom_toolchain("Hello {{myvar}}!!!", "Mars")
+        other = custom_toolchain("Bye {{myvar}}!!!", "Moon")
+        assert 'Bye Moon!!!' in other
+        assert 'Hello' not in other
+
+        # The same toolchain doesn't compile any template again and renders the same content
+        misses = compiled_template.cache_info().misses
+        assert custom_toolchain("Hello {{myvar}}!!!", "World") == custom
+        assert CMakeToolchain(conanfile).content == default
+        assert compiled_template.cache_info().misses == misses
 
     def test_user_toolchain(self, conanfile):
         toolchain = CMakeToolchain(conanfile)

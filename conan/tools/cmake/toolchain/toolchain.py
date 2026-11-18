@@ -2,14 +2,13 @@ import os
 import textwrap
 from collections import OrderedDict
 
-from jinja2 import Template
-
 from conan.internal import check_duplicated_generator
 from conan.tools.build import use_win_mingw
 from conan.tools.cmake.layout import is_consumer
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import (ExtraVariablesBlock, ToolchainBlocks,
+                                                compiled_template,
                                                 UserToolchain, GenericSystemBlock,
                                                 AndroidSystemBlock, AppleSystemBlock, FPicBlock,
                                                 ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock,
@@ -151,8 +150,7 @@ class CMakeToolchain:
     @property
     def content(self):
         context = self._context()
-        content = Template(self._template, trim_blocks=True, lstrip_blocks=True,
-                           keep_trailing_newline=True).render(**context)
+        content = compiled_template(self._template, keep_trailing_newline=True).render(**context)
         return content
 
     @property

@@ -1,6 +1,7 @@
 import os
 import re
 import textwrap
+from functools import lru_cache
 
 from jinja2 import Template
 
@@ -21,6 +22,15 @@ from conan.internal.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException
 from conan.internal.model.version import Version
 from conan.internal.util.files import load
+
+
+@lru_cache(maxsize=256)
+def compiled_template(text, keep_trailing_newline=False):
+    # Compiling a jinja2 Template is expensive, and each one creates reference cycles that only
+    # the cyclic GC can free. The key is the full template text, so blocks whose ``template``
+    # is replaced per instance, and user-defined blocks, still get their own compiled template
+    return Template(text, trim_blocks=True, lstrip_blocks=True,
+                    keep_trailing_newline=keep_trailing_newline)
 
 
 class Block:
@@ -46,8 +56,7 @@ class Block:
             return None
 
         template = f"########## '{self._name}' block #############\n" + self.template + "\n\n"
-        template = Template(template, trim_blocks=True, lstrip_blocks=True)
-        return template.render(**context)
+        return compiled_template(template).render(**context)
 
     def context(self):
         return {}
