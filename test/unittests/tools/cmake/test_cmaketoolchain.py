@@ -6,11 +6,12 @@ from unittest.mock import Mock
 from conan import ConanFile
 from conan.internal.default_settings import default_settings_yml
 from conan.tools.cmake import CMakeToolchain
-from conan.tools.cmake.toolchain.blocks import Block, compiled_template
+from conan.tools.cmake.toolchain.blocks import Block
 from conan.errors import ConanException
 from conan.internal.model.conf import Conf
 from conan.internal.model.options import Options
 from conan.internal.model.settings import Settings
+from conan.internal.util.templates import compiled_template
 
 
 @pytest.fixture

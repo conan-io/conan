@@ -1,9 +1,6 @@
 import os
 import re
 import textwrap
-from functools import lru_cache
-
-from jinja2 import Template
 
 from conan.internal.internal_tools import universal_arch_separator, is_universal_arch
 from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
@@ -22,15 +19,7 @@ from conan.internal.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException
 from conan.internal.model.version import Version
 from conan.internal.util.files import load
-
-
-@lru_cache(maxsize=256)
-def compiled_template(text, keep_trailing_newline=False):
-    # Compiling a jinja2 Template is expensive, and each one creates reference cycles that only
-    # the cyclic GC can free. The key is the full template text, so blocks whose ``template``
-    # is replaced per instance, and user-defined blocks, still get their own compiled template
-    return Template(text, trim_blocks=True, lstrip_blocks=True,
-                    keep_trailing_newline=keep_trailing_newline)
+from conan.internal.util.templates import compiled_template
 
 
 class Block:

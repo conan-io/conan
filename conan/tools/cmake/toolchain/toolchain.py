@@ -8,7 +8,6 @@ from conan.tools.cmake.layout import is_consumer
 from conan.tools.cmake.presets import write_cmake_presets
 from conan.tools.cmake.toolchain import CONAN_TOOLCHAIN_FILENAME
 from conan.tools.cmake.toolchain.blocks import (ExtraVariablesBlock, ToolchainBlocks,
-                                                compiled_template,
                                                 UserToolchain, GenericSystemBlock,
                                                 AndroidSystemBlock, AppleSystemBlock, FPicBlock,
                                                 ArchitectureBlock, GLibCXXBlock, VSRuntimeBlock,
@@ -26,6 +25,7 @@ from conan.tools.microsoft.visual import vs_ide_version
 from conan.errors import ConanException
 from conan.internal.model.options import _PackageOption
 from conan.internal.util.files import save
+from conan.internal.util.templates import compiled_template
 
 
 class Variables(OrderedDict):
