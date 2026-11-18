@@ -58,7 +58,7 @@ class TestLegacyInfoReport:
 
     def test_warnings_as_errors(self):
         # The error contains the details, and they are not reported again by the next command
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": self.conanfile})
         c.save_home({"global.conf": 'core:warnings_as_errors=["deprecated"]'})
         c.run("create .", assert_error=True)
