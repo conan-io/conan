@@ -48,7 +48,7 @@ def test_xcode_ios_generator():
         [settings]
         os=iOS
         os.sdk=iphoneos
-        os.version=12.0
+        os.version=15.0
         arch=armv8
         compiler=apple-clang
         compiler.version=12.0
