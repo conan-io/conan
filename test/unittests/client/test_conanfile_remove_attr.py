@@ -48,7 +48,15 @@ def test_subclass_created_once():
         with pytest.raises(ConanException, match="'self.options' access"):
             b.options  # noqa
 
-    # Kept in the recipe class itself, not inherited by the ones derived from it
+    # Kept in the recipe class itself, not inherited by the ones derived from it, like the recipes
+    # that python_requires_extend makes derive from a python_requires class
     base = _Base(None)
     with conanfile_remove_attr(base, ["settings"], "package_id"):
         assert type(base).__bases__ == (_Base, )
+
+    class _Derived(_Base):
+        pass
+
+    derived = _Derived(None)
+    with conanfile_remove_attr(derived, ["settings"], "package_id"):
+        assert type(derived).__bases__ == (_Derived, )
