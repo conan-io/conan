@@ -83,7 +83,8 @@ jobs:
             tar -xzf cmake-${version}.tar.gz
             cd cmake-${version}
             mkdir build && cd build
-            ../bootstrap --prefix=${HOME}/Applications/CMake/${version} -- -DCMAKE_USE_OPENSSL=ON
+            # No OpenSSL: the curl bundled in CMake 3.15 doesn't build with OpenSSL 4 (Homebrew)
+            ../bootstrap --prefix=${HOME}/Applications/CMake/${version} -- -DCMAKE_USE_OPENSSL=OFF
             make -j$(sysctl -n hw.ncpu)
             make install
             ${HOME}/Applications/CMake/${version}/bin/cmake --version
