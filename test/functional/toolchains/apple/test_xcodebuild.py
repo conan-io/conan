@@ -1,13 +1,11 @@
 import os
 import platform
 import re
-import subprocess
 import textwrap
 
 import pytest
 
 from conan.test.utils.tools import TestClient
-from conan.tools.scm import Version
 from test.conftest import tools_locations
 
 xcode_project = textwrap.dedent("""
@@ -75,10 +73,6 @@ def client():
 @pytest.mark.tool("xcodegen")
 @pytest.mark.parametrize("project_format", ["pbxproj", "xcproj"])
 def test_project_xcodebuild(client, project_format):
-    # Xcode 27.2 introduced the JSON project format (project.xcproj)
-    xcode_version = subprocess.check_output(["xcodebuild", "-version"], text=True).split()[1]
-    if project_format == "xcproj" and Version(xcode_version) < "27.2":
-        pytest.skip(f"Xcode {xcode_version} does not support the xcproj project format")
 
     conanfile = textwrap.dedent("""
         import os
