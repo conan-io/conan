@@ -33,14 +33,40 @@ def test_legacy_names_filenames():
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .")
+    assert ("WARN: deprecated: Usage of deprecated Conan 1.X features that will be removed in "
+            "Conan 2.X:") in c.out
     for name in ["cpp_info.names", "cpp_info.filenames", "env_info", "user_info", "cpp_info.build_modules"]:
-        assert f"WARN: deprecated:     '{name}' used in: pkg/1.0" in c.out
+        assert f"    '{name}' used in: pkg/1.0" in c.out
 
     c.save_home({"global.conf": 'core:skip_warnings=["deprecated"]'})
     c.run("create .")
     for name in ["cpp_info.names", "cpp_info.filenames", "env_info", "user_info",
                  "cpp_info.build_modules"]:
         assert f"'{name}' used in: pkg/1.0" not in c.out
+
+
+class TestLegacyInfoReport:
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            def package_info(self):
+                self.cpp_info.set_property("cmake_file_name", "Absl")
+                self.cpp_info.components["comp"].names["cmake_find_package"] = "hello"
+        """)
+
+    def test_warnings_as_errors(self):
+        # The error contains the details, and they are not reported again by the next command
+        c = TestClient()
+        c.save({"conanfile.py": self.conanfile})
+        c.save_home({"global.conf": 'core:warnings_as_errors=["deprecated"]'})
+        c.run("create .", assert_error=True)
+        assert "ERROR: deprecated: Usage of deprecated Conan 1.X features" in c.out
+        assert "'cpp_info.names' used in: pkg/1.0" in c.out
+        c.save({"conanfile.py": GenConanfile("other", "1.0")})
+        c.run("create .")
+        assert "Conan 1.X" not in c.out
 
 
 class TestLegacy1XRecipes:
