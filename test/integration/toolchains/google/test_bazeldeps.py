@@ -27,6 +27,7 @@ def test_bazel():
         from conan.tools.google import BazelToolchain, BazelDeps
 
         class ExampleConanIntegration(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
             generators = 'BazelDeps', 'BazelToolchain'
             requires = 'dep/0.1',
         """)
@@ -45,6 +46,7 @@ def test_bazel_relative_paths():
         from conan.tools.google import BazelToolchain, BazelDeps
 
         class ExampleConanIntegration(ConanFile):
+            settings = "os", "arch", "compiler", "build_type"
             generators = 'BazelDeps', 'BazelToolchain'
             requires = 'dep/0.1'
 
