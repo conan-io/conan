@@ -88,10 +88,8 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
         # to account for all WindowsStore, WindowsCE and Windows OS in settings
         return "Windows" in self.conanfile.settings.get_safe("os", "")
 
-    @property
-    def template(self):
-        # This will be at: XXX-release-data.cmake
-        ret = textwrap.dedent("""\
+    # This will be at: XXX-release-data.cmake
+    template = textwrap.dedent("""\
               {%- macro comp_var(pkg_name, comp_name, var, config_suffix) -%}
                  {{'${'+pkg_name+'_'+comp_name+'_'+var+config_suffix+'}'}}
               {%- endmacro -%}
@@ -212,7 +210,6 @@ class ConfigDataTemplate(CMakeDepsFileTemplate):
 
               {%- endfor %}
           """)
-        return ret
 
     def _get_global_cpp_cmake(self):
         global_cppinfo = self.conanfile.cpp_info.aggregated_components()
