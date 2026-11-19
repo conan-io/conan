@@ -23,9 +23,7 @@ class ConfigTemplate2:
         t = compiled_template(self._template, undefined=jinja2.StrictUndefined)
         return t.render(self._context)
 
-    @property
-    def _template(self):
-        return textwrap.dedent("""\
+    _template = textwrap.dedent("""\
         # Requires CMake > 3.15
         if(${CMAKE_VERSION} VERSION_LESS "3.15")
             message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")

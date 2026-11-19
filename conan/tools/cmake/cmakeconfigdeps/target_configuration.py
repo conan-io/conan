@@ -23,11 +23,9 @@ class TargetConfigurationTemplate2:
         t = compiled_template(self._template, undefined=jinja2.StrictUndefined)
         return t.render(self._context)
 
-    @property
-    def _template(self):
-        # TODO: CMake 3.24: Apple Frameworks: https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html#genex:LINK_LIBRARY
-        # TODO: Check why not set_property instead of target_link_libraries
-        return textwrap.dedent("""\
+    # TODO: CMake 3.24: Apple Frameworks: https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html#genex:LINK_LIBRARY
+    # TODO: Check why not set_property instead of target_link_libraries
+    _template = textwrap.dedent("""\
         {%- macro config_wrapper(config, value) -%}
              {% if config -%}
              $<$<CONFIG:{{config}}>:{{value}}>

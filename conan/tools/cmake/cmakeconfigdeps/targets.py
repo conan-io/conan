@@ -23,9 +23,7 @@ class TargetsTemplate2:
         t = compiled_template(self._template, undefined=jinja2.StrictUndefined)
         return t.render(self._context)
 
-    @property
-    def _template(self):
-        return textwrap.dedent("""\
+    _template = textwrap.dedent("""\
             include_guard()
             if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
                 message(STATUS "Conan: Configuring Targets for {{ filename }}")
