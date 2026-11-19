@@ -66,8 +66,11 @@ def test_entry_point_frees_previous_graphs():
 def test_python_api_keeps_gc():
     """ The Python API, that TestClient uses in this process, doesn't disable the GC """
     assert gc.isenabled()
+    # The interpreter can start with frozen objects already, and freeing them lowers the count,
+    # only check that Conan doesn't freeze more
+    frozen = gc.get_freeze_count()
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     assert gc.isenabled()
-    assert gc.get_freeze_count() == 0
+    assert gc.get_freeze_count() <= frozen
