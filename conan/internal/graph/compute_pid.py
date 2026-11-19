@@ -53,7 +53,6 @@ def compute_package_id(node, modes, config_version, hook_manager):
                                python_requires=python_requires,
                                conf=conanfile.conf.copy_conaninfo_conf(),
                                config_version=config_version.copy() if config_version else None)
-    conanfile.original_info = conanfile.info.clone()
 
     # To account for effect of headers into consumers, like shared/static variability
     # It affects to both embed and not embed, that would imply some "repetition" of the information
@@ -65,8 +64,12 @@ def compute_package_id(node, modes, config_version, hook_manager):
                 header_opts = getattr(transitive.node.conanfile, "package_id_abi_options", ())
                 for pkg_id_option in header_opts:
                     v = getattr(transitive.node.conanfile.options, pkg_id_option)
-                    setattr(conanfile.info.options[f"{transitive.node.name}/*"], pkg_id_option, v)
+                    # Add a full option definition (a copy), not only the value, so it can be
+                    # later cloned (compatibility, build_id) like any other info option
+                    dep_info_options = conanfile.info.options[f"{transitive.node.name}/*"]
+                    dep_info_options._data[pkg_id_option] = v.copy_conaninfo_option()  # noqa
 
+    conanfile.original_info = conanfile.info.clone()
     run_validate_package_id(conanfile, hook_manager)
 
     if conanfile.info.settings_target:

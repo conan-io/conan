@@ -343,11 +343,8 @@ class Options:
         # To generate the package_id info.options copy, that can destroy, change and remove things
         result = Options()
         result._package_options = self._package_options.copy_conaninfo_options()
-        # In most scenarios this should be empty at this stage, because it was cleared
-        if self._deps_package_options:
-            raise ConanException("Dependencies options were defined incorrectly. Maybe you"
-                                 " tried to define options values in 'requirements()' or other"
-                                 " invalid place")
+        result._deps_package_options = {k: v.copy_conaninfo_options()
+                                        for k, v in self._deps_package_options.items()}
         return result
 
     def update(self, options=None, options_values=None):
