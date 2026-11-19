@@ -24,7 +24,7 @@ jobs:
     # Only the functional tests need these tools. This job runs in parallel with the unit and
     # integration tests, so the caches are ready when the functional stage starts.
     if: inputs.test-stage == 'unit-integration'
-    runs-on: macos-26
+    runs-on: xcode-27
     name: Setup and Cache Dependencies
     steps:
       - name: Checkout code
@@ -51,7 +51,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/Library/Caches/Homebrew
-          key: ${{ runner.os }}-macos26-brew
+          key: ${{ runner.os }}-xcode27-brew
 
       - name: Install homebrew dependencies
         run: |
@@ -70,7 +70,7 @@ jobs:
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
             ~/Applications/bazel/9.1.0
-          key: ${{ runner.os }}-macos26-conan-tools-cache
+          key: ${{ runner.os }}-xcode27-conan-tools-cache
 
       - name: Build CMake old versions not available for ARM
         if: steps.cache-tools.outputs.cache-hit != 'true'
@@ -122,7 +122,7 @@ jobs:
           done
 
   osx_tests:
-    runs-on: macos-26
+    runs-on: xcode-27
     strategy:
       fail-fast: true
       matrix:
@@ -145,11 +145,11 @@ jobs:
             ~/Applications/bazel/7.6.2
             ~/Applications/bazel/8.4.2
             ~/Applications/bazel/9.1.0
-          key: ${{ runner.os }}-macos26-conan-tools-cache
+          key: ${{ runner.os }}-xcode27-conan-tools-cache
 
-      - name: Select Xcode 26.4.1
+      - name: Select Xcode 27.2
         run: |
-          sudo xcode-select -s /Applications/Xcode_26.4.1.app
+          sudo xcode-select -s /Applications/Xcode_27.2.app
           xcodebuild -version
           xcrun --sdk macosx --show-sdk-version
           clang --version
