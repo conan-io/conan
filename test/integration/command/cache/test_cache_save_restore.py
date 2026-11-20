@@ -4,11 +4,14 @@ import platform
 import shutil
 import sys
 import tarfile
+import textwrap
 import time
+from unittest.mock import patch
 
 import pytest
 
 from conan.api.model import PkgReference, RecipeReference
+from conan.errors import ConanException
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
@@ -66,6 +69,88 @@ def test_cache_save_restore_with_package_file():
     tree2 = _get_directory_tree(c2.base_folder)
 
     assert tree2 == tree
+
+
+def test_cache_restore_read_only_files():
+    """ restoring over the read-only files of a package already in the cache, in the same cache
+    and twice in another cache, without leaving the archive folders in the cache store
+    https://github.com/conan-io/conan/issues/20241
+    """
+    conanfile = textwrap.dedent("""
+        import os, stat
+        from conan import ConanFile
+        from conan.tools.files import save
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            def package(self):
+                f = os.path.join(self.package_folder, "ro.txt")
+                save(self, f, "content!!")
+                os.chmod(f, stat.S_IREAD)
+        """)
+    c = TestClient()
+    c.save({"conanfile.py": conanfile})
+    c.run("create .")
+    c.run("cache save *:*")
+    c.run("cache restore conan_cache_save.tgz")
+    cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{cache_path}"')
+    c2.run(f'cache restore "{cache_path}"')
+    c2.run(f"cache path pkg/1.0:{NO_SETTINGS_PACKAGE_ID}")
+    assert load(os.path.join(str(c2.stdout).strip(), "ro.txt")) == "content!!"
+    store = os.path.join(c2.cache_folder, "p")
+    assert not os.path.exists(os.path.join(store, "pkglist.json"))
+    assert not os.path.exists(os.path.join(store, "b"))
+
+
+def test_cache_restore_missing_folders():
+    """ contents are restored folder by folder, so an archive can complete a recipe revision
+    already in the cache, like adding the sources that it didn't have """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_exports_sources("*.c"),
+            "mysrc.c": ""})
+    c.run("create .")
+    c.run("cache save *:* --no-source --file=nosource.tgz")
+    c.run("cache save *:* --file=full.tgz")
+    no_source = os.path.join(c.current_folder, "nosource.tgz")
+    full = os.path.join(c.current_folder, "full.tgz")
+
+    c2 = TestClient()
+    c2.run(f'cache restore "{no_source}"')
+    src = c2.get_latest_ref_layout(RecipeReference.loads("pkg/1.0")).source()
+    assert not os.path.exists(os.path.join(src, "mysrc.c"))
+    c2.run(f'cache restore "{full}"')
+    assert os.path.exists(os.path.join(src, "mysrc.c"))
+
+
+def test_cache_restore_interrupted():
+    """ restoring again after an interrupted restore completes the recipes and packages, the
+    incomplete folders are not kept as if they were valid """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_package_file("f.txt", "content!!")})
+    c.run("create .")
+    c.run("cache save *:*")
+    cache_path = os.path.join(c.current_folder, "conan_cache_save.tgz")
+
+    extractall = tarfile.TarFile.extractall
+
+    def interrupted(self, path, members):
+        if "f.txt" in [m.name for m in members]:  # The package folder, without its last file
+            extractall(self, path, members=members[:-1])
+            raise ConanException("Interrupted!")
+        extractall(self, path, members=members)
+
+    c2 = TestClient()
+    with patch.object(tarfile.TarFile, "extractall", interrupted):
+        c2.run(f'cache restore "{cache_path}"', assert_error=True)
+    c2.run(f'cache restore "{cache_path}"')
+    c2.run("cache path pkg/1.0")
+    assert os.path.exists(os.path.join(str(c2.stdout).strip(), "conanfile.py"))
+    c2.run(f"cache path pkg/1.0:{NO_SETTINGS_PACKAGE_ID}")
+    assert load(os.path.join(str(c2.stdout).strip(), "f.txt")) == "content!!"
 
 
 def test_cache_save_downloaded_restore():
