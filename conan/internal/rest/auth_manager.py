@@ -12,7 +12,6 @@ Flow:
 
 from conan.api.output import ConanOutput
 from conan.internal.rest.remote_credentials import RemoteCredentials
-from conan.internal.rest.rest_client import RestApiClient
 from conan.internal.errors import AuthenticationException, ForbiddenException
 from conan.errors import ConanException
 
@@ -52,6 +51,8 @@ class ConanApiAuthManager:
     def call_rest_api_method(self, remote, method_name, *args, **kwargs):
         """Handles AuthenticationException and request user to input a user and a password"""
         user, token = self._creds.get(remote, msg=(method_name != "authenticate"))
+        # Imported here, not at module level: "requests" takes ~50 ms to import
+        from conan.internal.rest.rest_client import RestApiClient
         rest_client = RestApiClient(remote, token, self._requester, self._global_conf)
 
         if method_name == "authenticate":
