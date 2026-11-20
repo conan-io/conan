@@ -4,6 +4,71 @@ from conan.api.model import RecipeReference
 from conan.internal.model.version_range import VersionRange, required_conan_version_policy
 
 
+class RequiredNodes:
+    """ The ``Requirement.required_nodes`` are sets of graph nodes, stored as a single int to make
+    their copy and merge cheap: the bitset of the node indexes relative to the lowest one, shifted
+    _BASE_BITS, plus that lowest index. The nodes of a set are usually close together (depth-first
+    numbering), so the int grows with the span of the set, not with the size of the graph. A plain
+    int is immutable (copies are free) and not tracked by the cyclic GC.
+
+    - The instances (one per graph) map the nodes to those indexes and back. They are append-only:
+      orphan nodes leave ``DepsGraph.nodes``, but can stay in some required_nodes. A derived graph
+      (workspaces) shares the index of the original one, so the nodes keep their index.
+    - The static members operate over the int values, without needing the nodes.
+    """
+    EMPTY = 0  # the empty set
+    _BASE_BITS = 32
+    _BASE_MASK = (1 << _BASE_BITS) - 1
+
+    def __init__(self):
+        self._nodes = []  # index -> node
+        self._single = {}  # node -> the set with only that node (computed once, for the hot paths)
+
+    def add(self, node):
+        """ register a node, nothing happens if it was already registered """
+        if node not in self._single:
+            self._single[node] = (1 << RequiredNodes._BASE_BITS) | len(self._nodes)
+            self._nodes.append(node)
+
+    def single(self, node):
+        """ the set containing only this node """
+        return self._single[node]
+
+    def include(self, required_nodes, node):
+        """ the set of the given one plus this node """
+        return RequiredNodes.union(required_nodes, self._single[node])
+
+    def nodes(self, required_nodes):
+        """ the nodes contained in a set """
+        base = required_nodes & RequiredNodes._BASE_MASK
+        bits = required_nodes >> RequiredNodes._BASE_BITS
+        # the reversed binary string has a "1" at position i if the index base + i is in the set.
+        # Jump between the "1" with find(), a set can have a few nodes far apart
+        flags = bin(bits)[:1:-1]
+        result = []
+        i = flags.find("1")
+        while i != -1:
+            result.append(self._nodes[base + i])
+            i = flags.find("1", i + 1)
+        return result
+
+    @staticmethod
+    def union(a, b):
+        """ the union of 2 sets, the inputs are not modified """
+        # 32 is _BASE_BITS and 0xFFFFFFFF is _BASE_MASK, literals are faster in this hot path
+        if not a or a == b:
+            return b
+        if not b:
+            return a
+        a_base = a & 0xFFFFFFFF
+        b_base = b & 0xFFFFFFFF
+        if a_base == b_base:
+            return a | b
+        if a_base < b_base:  # the result keeps the lowest base, the other bits are moved up
+            return a | (b >> 32) << (b_base - a_base + 32)
+        return b | (a >> 32) << (a_base - b_base + 32)
+
+
 class Requirement:
     """ A user definition of a requires in a conanfile
     """
@@ -38,7 +103,9 @@ class Requirement:
         self.override_ref = None  # to store if the requirement has been overriden (store new ref)
         self.is_test = test  # to store that it was a test, even if used as regular requires too
         self.skip = False
-        self.required_nodes = set()  # store which intermediate nodes are required, to compute "Skip"
+        # intermediate nodes that are required, to compute "Skip", see RequiredNodes. Copying
+        # and merging sets at every propagation step is super-linear
+        self.required_nodes = RequiredNodes.EMPTY
         self.no_skip = no_skip
         # computed ones, not default ones
         self.consistent_policy_new = False
@@ -233,7 +300,7 @@ class Requirement:
         # current require already defined it or not
         if self.package_id_mode is None:
             self.package_id_mode = other.package_id_mode
-        self.required_nodes.update(other.required_nodes)
+        self.required_nodes = RequiredNodes.union(self.required_nodes, other.required_nodes)
 
     def transform_downstream(self, pkg_type, require, dep_pkg_type, source):
         """
