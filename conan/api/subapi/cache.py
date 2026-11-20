@@ -20,7 +20,7 @@ from conan.api.model import RecipeReference
 from conan.internal.api.uploader import PackagePreparator
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, mkdir, remove, save, remove_if_dirty
+from conan.internal.util.files import rmdir, mkdir, remove, save, renamedir
 
 
 class CacheAPI:
@@ -382,7 +382,8 @@ class CacheAPI:
 
         Recipes and packages are immutable, so the folders already in this cache are not
         extracted again, only the missing ones. Metadata is always extracted over the existing one.
-        If the restore fails, this cache can be left with incomplete recipes or packages.
+        If the restore fails, some recipes or packages can be missing. Restoring again completes
+        them.
 
         :param path: The archive file to restore. Based on the extension of the file, different
            compression formats can be used (.tgz, .txz and .tzst, the latter only for Python>=3.14).
@@ -410,7 +411,6 @@ class CacheAPI:
                 ref_bundle["timestamp"] = ref.timestamp
                 try:
                     recipe_layout = cache.recipe_layout(ref)
-                    remove_if_dirty(recipe_layout.source())
                 except ConanException:
                     recipe_layout = cache.create_ref_layout(ref)  # new DB folder entry
                     recipe_layout.remove()  # Not in the DB, existing contents are leftovers
@@ -431,7 +431,6 @@ class CacheAPI:
                     pref_bundle["timestamp"] = pref.timestamp
                     try:
                         pkg_layout = cache.pkg_layout(pref)
-                        remove_if_dirty(pkg_layout.package())
                     except ConanException:
                         pkg_layout = cache.create_pkg_layout(pref)  # DB Folder entry
                         pkg_layout.remove()  # Not in the DB, existing contents are leftovers
@@ -448,11 +447,7 @@ class CacheAPI:
                         db_metadata_folder = os.path.relpath(pkg_layout.metadata(), cache_folder)
                         pref_bundle["metadata_folder"] = db_metadata_folder.replace("\\", "/")
 
-            try:
-                _extract(the_tar, folders)
-            except Exception as e:
-                raise ConanException(f"Error restoring the cache: {e}\nThe restore is incomplete, "
-                                     "this cache is corrupted, remove it and restore it again")
+            _extract(the_tar, folders)
             the_tar.close()
 
         return package_list
@@ -491,8 +486,7 @@ class CacheAPI:
 
 def _extract(the_tar, folders):
     """ Extract every archive folder directly in its destination folder in this cache. Members
-    that don't belong to any of them, like "pkglist.json", or that would be written outside of
-    their destination folder, are not extracted
+    that don't belong to any of them, like "pkglist.json", are not extracted
     """
     groups = {}  # {folder in the archive: [members]}
     for member in the_tar.getmembers():
@@ -500,17 +494,21 @@ def _extract(the_tar, folders):
         for i in range(1, len(parts) + 1):
             folder = "/".join(parts[:i])
             if folder in folders:
-                dest = os.path.normpath(folders[folder])
-                name = "/".join(parts[i:]) or "."
-                target = os.path.normpath(os.path.join(dest, name))
-                if target == dest or target.startswith(dest + os.sep):
-                    if member.islnk() and member.linkname.startswith(folder + "/"):
-                        member.linkname = member.linkname[len(folder) + 1:]
-                    member.name = name
-                    groups.setdefault(folder, []).append(member)
+                if member.islnk() and member.linkname.startswith(folder + "/"):
+                    member.linkname = member.linkname[len(folder) + 1:]
+                member.name = "/".join(parts[i:]) or "."
+                groups.setdefault(folder, []).append(member)
                 break
     for folder, members in groups.items():
-        the_tar.extractall(path=folders[folder], members=members)
+        dest = folders[folder]
+        if os.path.exists(dest):  # Only metadata, it is restored over the existing one
+            the_tar.extractall(path=dest, members=members)
+            continue
+        # Extracted aside and renamed, so a failed restore doesn't leave an incomplete folder
+        tmp = dest + ".restore"
+        rmdir(tmp)
+        the_tar.extractall(path=tmp, members=members)
+        renamedir(tmp, dest)
 
 
 def _resolve_latest_ref(cache, ref):
