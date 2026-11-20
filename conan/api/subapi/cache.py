@@ -465,6 +465,70 @@ class CacheAPI:
 
         return package_list
 
+    def reuse_binaries(self, ref: RecipeReference, from_revision=None) -> PackagesList:
+        """Copy the binaries of another recipe revision of the same reference into the target
+        recipe revision, in the local cache. It is a explicit way to say "this new recipe revision
+        is binary-compatible with the previous one", Conan does not check that assertion.
+
+        The package_id and the package revision are kept, and each copy is a fully independent
+        folder. Package_ids for which the target revision already has any binary are skipped,
+        so existing binaries are never shadowed.
+
+        :param ref: RecipeReference of the target. If it doesn't contain a revision, the
+           latest revision in the cache will be used
+        :param from_revision: Recipe revision to copy the binaries from. If not defined, it will
+           be the revision immediately before the target one in the cache (ordered by the local
+           timestamps, as there is no global ordering of revisions)
+        :return: a PackagesList with the new binaries added to the target revision
+        """
+        cache = PkgCache(self._conan_api.cache_folder, self._api_helpers.global_conf)
+        out = ConanOutput()
+
+        if ref.revision is None:
+            target = cache.get_latest_recipe_revision(ref)
+        else:
+            target = cache.recipe_layout(ref).reference
+
+        if from_revision is None:
+            no_rev = RecipeReference(target.name, target.version, target.user, target.channel)
+            revisions = cache.get_recipe_revisions(no_rev)  # Newest first
+            idx = [r.revision for r in revisions].index(target.revision)
+            if idx + 1 >= len(revisions):
+                raise ConanException(f"There is no previous revision of "
+                                     f"'{target.repr_notime()}' in the cache to copy "
+                                     f"binaries from. Use '--from-revision' to define it")
+            source = revisions[idx + 1]
+        else:
+            if from_revision == target.revision:
+                raise ConanException("The source and target recipe revisions are the same: "
+                                     f"{target.repr_notime()}")
+            source = cache.recipe_layout(RecipeReference(target.name, target.version, target.user,
+                                                         target.channel, from_revision)).reference
+
+        out.info(f"Copying binaries from {source.repr_notime()} to {target.repr_notime()}")
+        result = PackagesList()
+        result.add_ref(target)
+        copied, skipped_existing, skipped_dirty = 0, 0, 0
+        # The latest prev of each package_id in the source revision
+        for src_pref in cache.get_package_references(source, only_latest_prev=True):
+            if cache.exists_prev(PkgReference(target, src_pref.package_id)):
+                out.info(f"Skipped {src_pref.package_id}: {target.repr_notime()} already "
+                         "has a binary for it")
+                skipped_existing += 1
+                continue
+            src_layout = cache.pkg_layout(src_pref)
+            if src_layout.package_is_dirty():
+                out.warning(f"Skipped {src_pref.repr_notime()}: the package is dirty")
+                skipped_dirty += 1
+                continue
+            result.add_pref(cache.copy_pkg_layout(src_layout, target))
+            out.info(f"Copied {src_pref.package_id}#{src_pref.revision}")
+            copied += 1
+        out.success(f"Reused binaries: {copied} copied, {skipped_existing} already existing, "
+                    f"{skipped_dirty} dirty. Conan assumes that the changes from "
+                    f"{source.repr_notime()} to {target.repr_notime()} don't affect the binaries")
+        return result
+
     def get_backup_sources(self, package_list=None, exclude=True, only_upload=True):
         """Get list of backup source files currently present in the cache,
         either all of them if no argument, or filtered by those belonging to the references
