@@ -47,7 +47,7 @@ class TestExportPkg:
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
         client.run("export-pkg --name=hello --version=0.1 --user=lasote --channel=stable")
-        assert "package(): WARN: No files in this package!" in client.out
+        assert "package(): No files in this package!" in client.out
 
     def test_options(self):
         # https://github.com/conan-io/conan/issues/2242
