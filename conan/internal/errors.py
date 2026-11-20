@@ -4,23 +4,39 @@ from contextlib import contextmanager
 from conan.errors import ConanException, ConanInvalidConfiguration
 
 
+def _forbidden_prop(attr_name, method):
+    def _m(_):
+        raise ConanException(f"'self.{attr_name}' access in '{method}()' method is forbidden")
+    return property(_m)
+
+
+def _forbidden_class(original_class, names, method):
+    """ The subclass of a recipe class whose ``names`` attributes raise if used within ``method``.
+    Created once per recipe class, method and names, not in every call: creating a class took
+    ~8 us and left ~3 KB of objects in reference cycles, never freed with the cyclic garbage
+    collector disabled. Kept in the recipe class itself, not inherited, so it lives as long as it
+    """
+    classes = original_class.__dict__.get("_conan_forbidden_classes")
+    if classes is None:
+        classes = {}
+        setattr(original_class, "_conan_forbidden_classes", classes)
+    key = (method, names)
+    new_class = classes.get(key)
+    if new_class is None:
+        attrs = {name: _forbidden_prop(name, method) for name in names}
+        new_class = type(original_class.__name__, (original_class, ), attrs)
+        classes[key] = new_class
+    return new_class
+
+
 @contextmanager
 def conanfile_remove_attr(conanfile, names, method):
     """ remove some self.xxxx attribute from the class, so it raises an exception if used
     within a given conanfile method
     """
     original_class = type(conanfile)
-
-    def _prop(attr_name):
-        def _m(_):
-            raise ConanException(f"'self.{attr_name}' access in '{method}()' method is forbidden")
-        return property(_m)
-
     try:
-        new_class = type(original_class.__name__, (original_class, ), {})
-        conanfile.__class__ = new_class
-        for name in names:
-            setattr(new_class, name, _prop(name))
+        conanfile.__class__ = _forbidden_class(original_class, tuple(names), method)
         yield
     finally:
         conanfile.__class__ = original_class
