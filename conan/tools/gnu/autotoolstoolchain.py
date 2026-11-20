@@ -85,12 +85,16 @@ class AutotoolsToolchain:
             if not self._host:
                 os_host = conanfile.settings.get_safe("os")
                 arch_host = conanfile.settings.get_safe("arch")
-                self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler)["triplet"]
+                libc_host = conanfile.settings.get_safe("os.libc")
+                self._host = _get_gnu_triplet(os_host, arch_host, compiler=compiler,
+                                              libc=libc_host)["triplet"]
             # Build triplet
             if not self._build:
                 os_build = conanfile.settings_build.get_safe('os')
                 arch_build = conanfile.settings_build.get_safe('arch')
-                self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler)["triplet"]
+                libc_build = conanfile.settings_build.get_safe("os.libc")
+                self._build = _get_gnu_triplet(os_build, arch_build, compiler=compiler,
+                                               libc=libc_build)["triplet"]
 
         sysroot = self._conanfile.conf.get("tools.build:sysroot")
         if sysroot:
