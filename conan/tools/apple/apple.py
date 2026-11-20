@@ -353,6 +353,10 @@ def fix_apple_shared_install_name(conanfile):
 
         return substitutions
 
+    def _strip_version(install_name):
+        return os.path.join(os.path.dirname(install_name),
+                            os.path.basename(install_name).split('.')[0])
+
     def _fix_executables(substitutions):
         # Fix the install name for executables inside the package
         # that reference libraries we just patched
@@ -369,9 +373,11 @@ def fix_apple_shared_install_name(conanfile):
                 # Fix install names of libraries from within the same package
                 deps = _get_shared_dependencies(executable)
                 for dep in deps:
-                    dep_base = os.path.join(os.path.dirname(dep),
-                                            os.path.basename(dep).split('.')[0])
-                    match = [k for k in substitutions.keys() if k.startswith(dep_base)]
+                    # Exact install name first, otherwise the same library without version
+                    # (/lib/libfoo.1.dylib -> /lib/libfoo.dylib). Never a prefix: libfoo.dylib
+                    # is not libfoort.dylib, nor a library from another package
+                    match = [dep] if dep in substitutions else \
+                        [k for k in substitutions if _strip_version(k) == _strip_version(dep)]
                     if match:
                         _fix_dep_name(executable, dep, substitutions[match[0]])
 

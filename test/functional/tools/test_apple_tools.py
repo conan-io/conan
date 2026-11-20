@@ -3,6 +3,7 @@ import re
 import textwrap
 import os
 import pytest
+from unittest import mock
 
 from conan.test.assets.genconanfile import GenConanfile
 from conan.test.utils.tools import TestClient
@@ -171,3 +172,69 @@ def test_xcrun_in_required_by_tool_requires():
     client.run("create consumer.py --name=consumer --version=1.0 -pr:h=./profile_ios -pr:b=default --build='*'")
 
     assert re.search("sdk for building openssl:.*MacOSX", str(client.out))
+
+
+@pytest.mark.tool("cmake")
+@pytest.mark.skipif(platform.system() != "Darwin", reason="Requires Apple install names")
+def test_fix_shared_install_name_prefix():
+    """ Like flatcc, the package has two libraries whose names are prefixes of each other, abc
+    and abcrt, and an executable that links both. The executable also links ab, from another
+    package, whose name is a prefix of both. Each reference must keep pointing to its library.
+    """
+    client = TestClient(path_with_spaces=False)
+    client.run("new cmake_lib -d name=ab -d version=0.1")
+    client.run("create . -o ab/*:shared=True -tf=")
+
+    conanfile = textwrap.dedent("""
+        from conan import ConanFile
+        from conan.tools.apple import fix_apple_shared_install_name
+        from conan.tools.cmake import CMake, cmake_layout
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "0.1"
+            settings = "os", "compiler", "build_type", "arch"
+            requires = "ab/0.1"
+            generators = "CMakeToolchain", "CMakeDeps"
+            exports_sources = "CMakeLists.txt", "src/*"
+
+            def layout(self):
+                cmake_layout(self)
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+
+            def package(self):
+                cmake = CMake(self)
+                cmake.install()
+                fix_apple_shared_install_name(self)
+        """)
+    cmakelists = textwrap.dedent("""
+        cmake_minimum_required(VERSION 3.15)
+        project(pkg CXX)
+        find_package(ab CONFIG REQUIRED)
+        add_library(abc SHARED src/abc.cpp)
+        add_library(abcrt SHARED src/abcrt.cpp)
+        add_executable(app src/main.cpp)
+        target_link_libraries(app abc abcrt ab::ab)
+        install(TARGETS abc abcrt app)
+        """)
+    main = textwrap.dedent("""
+        #include "ab.h"
+        int abc();
+        int abcrt();
+        int main() { ab(); return abc() + abcrt(); }
+        """)
+    client.save({"conanfile.py": conanfile,
+                 "CMakeLists.txt": cmakelists,
+                 "src/abc.cpp": "int abc() { return 0; }",
+                 "src/abcrt.cpp": "int abcrt() { return 0; }",
+                 "src/main.cpp": main}, clean_first=True)
+    client.run("create . -o ab/*:shared=True")
+
+    client.run_command(f"otool -L {client.created_layout().package()}/bin/app")
+    assert "@rpath/libab.dylib" in client.out
+    assert "@rpath/libabc.dylib" in client.out
+    assert "@rpath/libabcrt.dylib" in client.out
