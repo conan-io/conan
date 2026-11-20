@@ -1,6 +1,7 @@
 import os
 from collections import defaultdict
 
+from conan.api.output import Color
 from conan.internal.paths import CONAN_MANIFEST, COMPRESSIONS, PACKAGE_FILE_NAME, EXPORT_FILE_NAME, \
     EXPORT_SOURCES_FILE_NAME
 from conan.internal.util.dates import timestamp_now, timestamp_to_str
@@ -19,7 +20,7 @@ class FileTreeManifest:
 
     @property
     def summary_hash(self):
-        s = ["%s: %s" % (f, fmd5) for f, fmd5 in sorted(self.file_sums.items())]
+        s = [f"{f}: {fmd5}" for f, fmd5 in sorted(self.file_sums.items())]
         s.append("")
         return md5("\n".join(s))
 
@@ -43,9 +44,9 @@ class FileTreeManifest:
 
     def __repr__(self):
         # Used for serialization and saving it to disk
-        ret = ["%s" % self.time]
+        ret = [f"{self.time}"]
         for file_path, file_md5 in sorted(self.file_sums.items()):
-            ret.append("%s: %s" % (file_path, file_md5))
+            ret.append(f"{file_path}: {file_md5}")
         ret.append("")
         content = "\n".join(ret)
         return content
@@ -74,16 +75,16 @@ class FileTreeManifest:
             ext_files[ext].append(os.path.basename(f))
         if not ext_files:
             if suffix != "Copied":
-                output.warning("No files in this package!")
+                output.info("No files in this package!", fg=Color.YELLOW)
             return
 
         for ext, files in ext_files.items():
             files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
             file_or_files = "file" if len(files) == 1 else "files"
             if not ext:
-                output.info("%s %d %s%s" % (suffix, len(files), file_or_files, files_str))
+                output.info(f"{suffix} {len(files)} {file_or_files}{files_str}")
             else:
-                output.info("%s %d '%s' %s%s" % (suffix, len(files), ext, file_or_files, files_str))
+                output.info(f"{suffix} {len(files)} '{ext}' {file_or_files}{files_str}")
 
     @classmethod
     def create(cls, folder, exports_sources_folder=None):
@@ -109,7 +110,7 @@ class FileTreeManifest:
             for name, filepath in export_files.items():
                 # For a symlink: md5 of the pointing path, no matter if broken, relative or absolute.
                 value = md5(os.readlink(filepath)) if os.path.islink(filepath) else md5sum(filepath)
-                file_dict["export_source/%s" % name] = value
+                file_dict[f"export_source/{name}"] = value
 
         date = timestamp_now()
 
