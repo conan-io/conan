@@ -20,7 +20,7 @@ from conan.api.model import RecipeReference
 from conan.internal.api.uploader import PackagePreparator
 from conan.internal.rest.pkg_sign import PkgSignaturesPlugin
 from conan.internal.util.dates import revision_timestamp_now
-from conan.internal.util.files import rmdir, mkdir, remove, save, renamedir
+from conan.internal.util.files import rmdir, mkdir, remove, save
 
 
 class CacheAPI:
@@ -380,10 +380,9 @@ class CacheAPI:
         """Restore a compressed archive with recipes and packages previously saved from another
         Conan cache into the currently active Conan cache.
 
-        Recipes and packages are immutable, so the folders already in this cache are not
-        extracted again, only the missing ones. Metadata is always extracted over the existing one.
-        If the restore fails, some recipes or packages can be missing. Restoring again completes
-        them.
+        The recipes and packages already in this cache are replaced by the ones in the archive.
+        Metadata is extracted over the existing one. If the restore fails, some recipes or
+        packages can be incomplete. Restoring again replaces them.
 
         :param path: The archive file to restore. Based on the extension of the file, different
            compression formats can be used (.tgz, .txz and .tzst, the latter only for Python>=3.14).
@@ -405,6 +404,7 @@ class CacheAPI:
             out = ConanOutput()
             package_list = PackagesList.deserialize(json.loads(pkglist))
             folders = {}  # {folder in the archive: destination folder in this cache}
+            metadata = set()  # The folders in the archive that are metadata
             for ref, packages in package_list.items():
                 ref_bundle = package_list.recipe_dict(ref)
                 ref.timestamp = revision_timestamp_now()
@@ -421,10 +421,10 @@ class CacheAPI:
                 assert rel_path == recipe_folder, f"{rel_path}!={recipe_folder}"
                 out.info(f"Restore: {ref} in {recipe_folder}")
                 for f in (EXPORT_FOLDER, EXPORT_SRC_FOLDER, SRC_FOLDER):
-                    if not os.path.exists(os.path.join(recipe_layout.base_folder, f)):
-                        folders[f"{recipe_folder}/{f}"] = os.path.join(recipe_layout.base_folder, f)
+                    folders[f"{recipe_folder}/{f}"] = os.path.join(recipe_layout.base_folder, f)
                 metadata_folder = f"{recipe_folder}/{DOWNLOAD_EXPORT_FOLDER}/{METADATA}"
                 folders[metadata_folder] = recipe_layout.metadata()
+                metadata.add(metadata_folder)
                 for pref in packages:
                     pref.timestamp = revision_timestamp_now()
                     pref_bundle = package_list.package_dict(pref)
@@ -436,18 +436,18 @@ class CacheAPI:
                         pkg_layout.remove()  # Not in the DB, existing contents are leftovers
                     unzipped_pkg_folder = pref_bundle["package_folder"]
                     out.info(f"Restore: {pref} in {unzipped_pkg_folder}")
-                    if not os.path.exists(pkg_layout.package()):
-                        folders[unzipped_pkg_folder] = pkg_layout.package()
+                    folders[unzipped_pkg_folder] = pkg_layout.package()
                     db_pkg_folder = os.path.relpath(pkg_layout.package(), cache_folder)
                     pref_bundle["package_folder"] = db_pkg_folder.replace("\\", "/")
                     unzipped_metadata_folder = pref_bundle.get("metadata_folder")
                     if unzipped_metadata_folder:
                         out.info(f"Restore: {pref} metadata in {unzipped_metadata_folder}")
                         folders[unzipped_metadata_folder] = pkg_layout.metadata()
+                        metadata.add(unzipped_metadata_folder)
                         db_metadata_folder = os.path.relpath(pkg_layout.metadata(), cache_folder)
                         pref_bundle["metadata_folder"] = db_metadata_folder.replace("\\", "/")
 
-            _extract(the_tar, folders)
+            _extract(the_tar, folders, metadata)
             the_tar.close()
 
         return package_list
@@ -484,9 +484,10 @@ class CacheAPI:
         return result
 
 
-def _extract(the_tar, folders):
-    """ Extract every archive folder directly in its destination folder in this cache. Members
-    that don't belong to any of them, like "pkglist.json", are not extracted
+def _extract(the_tar, folders, metadata):
+    """ Extract every archive folder directly in its destination folder in this cache, replacing
+    the existing one, except metadata, which is extracted over it. Members that don't belong to
+    any of them, like "pkglist.json", are not extracted
     """
     groups = {}  # {folder in the archive: [members]}
     for member in the_tar.getmembers():
@@ -500,15 +501,9 @@ def _extract(the_tar, folders):
                 groups.setdefault(folder, []).append(member)
                 break
     for folder, members in groups.items():
-        dest = folders[folder]
-        if os.path.exists(dest):  # Only metadata, it is restored over the existing one
-            the_tar.extractall(path=dest, members=members)
-            continue
-        # Extracted aside and renamed, so a failed restore doesn't leave an incomplete folder
-        tmp = dest + ".restore"
-        rmdir(tmp)
-        the_tar.extractall(path=tmp, members=members)
-        renamedir(tmp, dest)
+        if folder not in metadata:
+            rmdir(folders[folder])  # Removing first, overwriting read-only files would fail
+        the_tar.extractall(path=folders[folder], members=members)
 
 
 def _resolve_latest_ref(cache, ref):

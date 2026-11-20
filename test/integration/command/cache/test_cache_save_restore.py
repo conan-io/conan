@@ -107,7 +107,7 @@ def test_cache_restore_read_only_files():
 
 
 def test_cache_restore_missing_folders():
-    """ contents are skipped folder by folder, so an archive can complete a recipe revision
+    """ contents are restored folder by folder, so an archive can complete a recipe revision
     already in the cache, like adding the sources that it didn't have """
     c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "1.0").with_exports_sources("*.c"),
