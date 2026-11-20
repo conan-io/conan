@@ -1,4 +1,3 @@
-import time
 from datetime import timedelta
 
 import jwt
@@ -9,8 +8,8 @@ from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManag
 
 
 def test_jwt_manager():
-    # Instance the manager to generate tokens that expires in 10 ms
-    manager = JWTCredentialsManager(secret="1234asdf" * 4, expire_time=timedelta(seconds=1))
+    # Instance the manager to generate tokens that expire in 1 minute
+    manager = JWTCredentialsManager(secret="1234asdf" * 4, expire_time=timedelta(minutes=1))
 
     # Encrypt a profile
     token = manager.get_token_for("myuser")
@@ -20,7 +19,9 @@ def test_jwt_manager():
     with pytest.raises(DecodeError):
         manager.get_user("invalid_user")
 
-    # Now wait 2 seconds and check if its valid now
-    time.sleep(2)
+    # A token that expired 2 seconds ago is not valid, without waiting for the above to expire
+    expired_manager = JWTCredentialsManager(secret="1234asdf" * 4,
+                                            expire_time=timedelta(seconds=-2))
+    expired_token = expired_manager.get_token_for("myuser")
     with pytest.raises(jwt.ExpiredSignatureError):
-        manager.get_user(token)
+        manager.get_user(expired_token)

@@ -52,10 +52,10 @@ def test_virtualenv_object_access(client):
     client.save({"conanfile.py": conanfile, "profile": profile})
 
     client.run("create . --name=app --version=1.0 --profile=profile")
-    assert "Foo: *MyVar! MyFooValue*"
-    assert "runFoo:* Value!*"
-    assert "Hello:* MyHelloValue!*"
+    assert "Foo: *MyVar! MyFooValue*" in client.out
+    assert "runFoo: *Value!*" in client.out
+    assert "Hello: *MyHelloValue!*" in client.out
 
-    assert "Applied Foo: *MyVar! MyFooValue*"
-    assert "Applied runFoo: **"
-    assert "Applied Hello: * MyHelloValue!*"
+    assert "Applied Foo: *MyVar! MyFooValue*" in client.out
+    assert "Applied runFoo: *Value!*" in client.out
+    assert "Applied Hello: *MyHelloValue!*" in client.out

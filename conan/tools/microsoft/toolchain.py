@@ -237,15 +237,15 @@ def _get_toolset_props(conanfile):
     msvc_update = conanfile.conf.get("tools.microsoft:msvc_update")
     compiler_update = msvc_update or conanfile.settings.get_safe("compiler.update")
     if compiler_update is None:
-        return
+        return None
 
     vs_version = vs_ide_version(conanfile)
     if int(vs_version) <= 14:
-        return
+        return None
     vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
     vs_path = vs_install_path or vs_installation_path(vs_version)
     if not vs_path or not os.path.isdir(vs_path):
-        return
+        return None
 
     basebuild = os.path.normpath(os.path.join(vs_path, "VC/Auxiliary/Build"))
     # The equivalent of compiler 19.26 is toolset 14.26

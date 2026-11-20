@@ -200,7 +200,7 @@ class TestVSClangCL:
         check_vs_runtime(cmd, client, "17", build_type="Release", static_runtime=False)
 
 
-@pytest.mark.tool("cmake", "4.3")
+@pytest.mark.tool("cmake", "4.4")
 @pytest.mark.skipif(platform.system() != "Windows", reason="requires Win")
 class TestMsysClang:
     @pytest.mark.tool("msys2_clang64")
@@ -215,7 +215,7 @@ class TestMsysClang:
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
         # TODO: Version is still not controlled
-        assert "main __clang_major__22" in client.out
+        assert "main __clang_major__23" in client.out
         # Not using libstdc++
         assert "_GLIBCXX_USE_CXX11_ABI" not in client.out
         assert "main __cplusplus2014" in client.out
@@ -246,7 +246,7 @@ class TestMsysClang:
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
         # TODO: Version is still not controlled
-        assert "main __clang_major__22" in client.out
+        assert "main __clang_major__23" in client.out
         assert "main _GLIBCXX_USE_CXX11_ABI 0" in client.out
         assert "main __cplusplus2014" in client.out
         assert "main __GNUC__" in client.out
@@ -275,7 +275,7 @@ class TestMsysClang:
         client.run(f"create . --name=pkg --version=0.1 -pr=clang")
         # clang compilations in Windows will use MinGW Makefiles by default
         assert 'cmake -G "MinGW Makefiles"' in client.out
-        assert "main __clang_major__22" in client.out
+        assert "main __clang_major__23" in client.out
         assert "GLIBCXX" not in client.out
         assert "cplusplus" not in client.out
         assert "main __GNUC__" in client.out

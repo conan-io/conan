@@ -22,6 +22,7 @@ from conan.test.utils.mocks import MockSettings, ConanFileMock
     ("e2k-v6", "64"),
     ("e2k-v7", "64"),
     ("riscv64", "64"),
+    ("loongarch64", "64"),
     ("x86", "32"),
     ("ppc32be", "32"),
     ("ppc32", "32"),

@@ -250,7 +250,7 @@ def test_conditional():
             def package_info(self):
                 self.info.clear()
     """)
-    t = TestClient(light=True)
+    t = TestClient()
     t.save({'requires.py': GenConanfile("req", "v1").with_provides("libjpeg"),
             'app.py': conanfile})
     t.run("create requires.py")
@@ -284,7 +284,7 @@ def test_self_build_require():
 
 
 def test_name_provide_error_message():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"libjepg/conanfile.py": GenConanfile("libjpeg", "0.1"),
              "mozjpeg/conanfile.py": GenConanfile("mozjpeg", "0.1").with_provides("libjpeg")})
     tc.run("create libjepg")

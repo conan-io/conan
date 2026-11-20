@@ -1,7 +1,6 @@
 import fnmatch
 import json
 import os
-from collections import OrderedDict
 from urllib.parse import urlparse
 
 from conan.api.model import Remote, LOCAL_RECIPES_INDEX
@@ -155,7 +154,7 @@ class RemotesAPI:
         return removed
 
     def update(self, remote_name: str, url=None, secure=None, disabled=None, index=None,
-               allowed_packages=None, recipes_only=None):
+               allowed_packages=None, recipes_only=None, force_auth=None):
         """
         Update an existing remote
 
@@ -167,6 +166,8 @@ class RemotesAPI:
         :param allowed_packages: optional list of packages allowed from this remote
         :param recipes_only: optional boolean to only allow recipe downloads from this remote,
             never package binaries
+        :param force_auth: optional boolean to force Conan to skip anonymous access
+            and go directly for authenticated credentials against this remote
         """
         remotes = _load(self._remotes_file)
         try:
@@ -186,6 +187,8 @@ class RemotesAPI:
             remote.allowed_packages = allowed_packages
         if recipes_only is not None:
             remote.recipes_only = recipes_only
+        if force_auth is not None:
+            remote.force_auth = force_auth
 
         if index is not None:
             remotes = [r for r in remotes if r.name != remote.name]
@@ -232,7 +235,7 @@ class RemotesAPI:
     def login(self, remotes, username=None, password=None):
         creds = RemoteCredentials(self._conan_api.cache_folder, self._api_helpers.global_conf)
 
-        ret = OrderedDict()
+        ret = {}
         for r in remotes:
             previous_info = self.user_info(r)
 
@@ -275,7 +278,7 @@ class RemotesAPI:
                 var_name = f"CONAN_LOGIN_USERNAME_{remote.name.replace('-', '_').upper()}"
                 user = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
             if not user:
-                return
+                return None
         self._api_helpers.remote_manager.check_credentials(remote, force)
         user, token, _ = localdb.get_login(remote.url)
         if not force and user is None:
@@ -305,7 +308,8 @@ def _load(remotes_file):
     for r in data.get("remotes", []):
         remote = Remote(r["name"], r["url"], r["verify_ssl"], r.get("disabled", False),
                         r.get("allowed_packages"), r.get("remote_type"),
-                        r.get("recipes_only", False))
+                        r.get("recipes_only", False),
+                        r.get("force_auth", False))
         result.append(remote)
     return result
 
@@ -322,6 +326,8 @@ def _save(remotes_file, remotes):
             remote["remote_type"] = r.remote_type
         if r.recipes_only:
             remote["recipes_only"] = r.recipes_only
+        if r.force_auth:
+            remote["force_auth"] = True
         remote_list.append(remote)
     # This atomic replace avoids a corrupted remotes.json file if this is killed during the process
     save(remotes_file + ".tmp", json.dumps({"remotes": remote_list}, indent=True))

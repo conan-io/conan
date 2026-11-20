@@ -6,7 +6,28 @@ from shutil import which
 
 import pytest
 
+from conan.internal.api.detect import detect_vs
 from conan.internal.api.detect.detect_vs import vs_installation_path
+
+
+def _cache_vs_installation_path():
+    """
+    Locating a Visual Studio installation runs vswhere twice, and it is done again for every
+    VCVars generation (CMakeToolchain, MSBuildToolchain, etc.), which is slow in Windows. The
+    installed Visual Studio versions do not change during the test session, so cache them
+    """
+    vs_installation = detect_vs._vs_installation_path
+    cached = {}
+
+    def _cached_vs_installation_path(version):
+        if version not in cached:
+            cached[version] = vs_installation(version)
+        return cached[version]
+
+    detect_vs._vs_installation_path = _cached_vs_installation_path
+
+
+_cache_vs_installation_path()
 
 """
 To override these locations with your own in your dev machine:
@@ -88,15 +109,16 @@ tools_locations = {
                      'Darwin': '/Users/runner/Applications/CMake/3.27.9/bin',
                      'Linux': "/usr/share/cmake-3.27.9/bin"}
         },
-        "4.3": {
-            "path": {'Windows': 'C:/tools/cmake/4.3.4/cmake-4.3.4-windows-x86_64/bin',
-                     'Darwin': '/Users/runner/Applications/CMake/4.3.4/bin',
-                     'Linux': "/usr/share/cmake-4.3.4/bin"}
+        "4.4": {
+            "path": {'Windows': 'C:/tools/cmake/4.4.3/cmake-4.4.3-windows-x86_64/bin',
+                     'Darwin': '/Users/runner/Applications/CMake/4.4.3/bin',
+                     'Linux': "/usr/share/cmake-4.4.3/bin"}
         }
     },
     'ninja': {
-        "default": "1.10.2",
-        "1.10.2": {
+        # Whatever version is installed in the CI machines, the runners already provide one
+        "default": "system",
+        "system": {
             "path": {'Windows': f'{windows_choco_root}/ninja/tools'}
         }
     },
@@ -204,8 +226,8 @@ tools_locations = {
         }
     },
     'xcode_sdk': {
-        "26.0": {"path": {"Darwin": "/Applications/Xcode_26.0.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk"}},
-        "26.5": {"path": {"Darwin": "/Applications/Xcode_26.5.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk"}},
+        "27.0": {"path": {"Darwin": "/Applications/Xcode_27.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"}},
+        "27.2": {"path": {"Darwin": "/Applications/Xcode_27.2.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"}},
     }
 }
 
@@ -363,3 +385,59 @@ def pytest_runtest_setup(item):
         item.old_environ = dict(os.environ)
         tools_env_vars['PATH'] = os.pathsep.join(tools_paths + [os.environ["PATH"]])
         os.environ.update(tools_env_vars)
+
+
+def _memoize_settings_yml_parsing():
+    """
+    Every ``TestClient.run()`` creates a new ``ConanAPI``, which parses again the whole
+    ``settings.yml``, ~7,700 times in the unit and integration tests, and the text is almost
+    always the same one, so for the test suite only, cache the parsed data by its text. A deep
+    copy is returned, because the caller can modify it (e.g. merging ``settings_user.yml``).
+    The copy takes ~0.1 ms, the parse ~1.3 ms with the libyaml loader, and ~12 ms with the
+    pure-Python one (PyYAML built without libyaml)
+    """
+    import copy
+    from conan.internal.model import settings
+    from conan.internal.util.files import yaml_load
+
+    parsed = {}
+
+    def _cached_yaml_load(text):
+        if not isinstance(text, str):
+            return yaml_load(text)
+        try:
+            result = parsed[text]
+        except KeyError:
+            result = parsed[text] = yaml_load(text)
+        return copy.deepcopy(result)
+
+    settings.yaml_load = _cached_yaml_load
+
+
+_memoize_settings_yml_parsing()
+
+
+def _no_sync_sqlite_databases():
+    """
+    The Conan cache and the local credentials DB open a new sqlite connection for every operation,
+    and every write is synchronously flushed to disk (journal_mode=DELETE + synchronous=FULL),
+    which is very slow in Windows. Durability does not matter for the test suite caches.
+    """
+    from contextlib import contextmanager
+    from conan.internal.api.remotes.localdb import LocalDB
+    from conan.internal.cache.db.table import BaseDbTable
+
+    def _no_sync(connect):
+        @contextmanager
+        def _connect(self):
+            with connect(self) as connection:
+                connection.execute("PRAGMA journal_mode=MEMORY")
+                connection.execute("PRAGMA synchronous=OFF")
+                yield connection
+        return _connect
+
+    BaseDbTable.db_connection = _no_sync(BaseDbTable.db_connection)
+    LocalDB._connect = _no_sync(LocalDB._connect)
+
+
+_no_sync_sqlite_databases()

@@ -13,7 +13,7 @@ class TestListUpload:
 
     @pytest.fixture()
     def client(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({
             "zlib.py": GenConanfile("zlib"),
             "zli.py": GenConanfile("zli", "1.0.0")
@@ -54,7 +54,7 @@ class TestListUpload:
 
 class TestGraphCreatedUpload:
     def test_create_upload(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
         c.run("create zlib")
@@ -69,7 +69,7 @@ class TestGraphCreatedUpload:
 
 class TestExportUpload:
     def test_export_upload(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
         c.run("export zlib --format=pkglist", redirect_stdout="pkglist.json")
         c.run("upload --list=pkglist.json -r=default -c")
@@ -78,12 +78,12 @@ class TestExportUpload:
 
 class TestCreateGraphToPkgList:
     def test_graph_pkg_nonexistant(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.run("list --graph=non-existent-file.json", assert_error=True)
         assert "ERROR: Graph file not found" in c.out
 
     def test_graph_pkg_list_only_built(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")
                                                               .with_settings("os")
@@ -104,7 +104,7 @@ class TestCreateGraphToPkgList:
         """
         --graph-recipes=* selects all the recipes in the graph
         """
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
         c.run("create zlib")
@@ -119,7 +119,7 @@ class TestCreateGraphToPkgList:
         """
         include python_requires too
         """
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"pytool/conanfile.py": GenConanfile("pytool", "0.1"),
                 "zlib/conanfile.py": GenConanfile("zlib", "1.0").with_python_requires("pytool/0.1"),
                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
@@ -140,7 +140,7 @@ class TestCreateGraphToPkgList:
         """
         include python_requires too
         """
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"conanfile.py": GenConanfile("pytool", "0.1").with_package_type("python-require")})
         c.run("create . --format=json", redirect_stdout="graph.json")
         c.run("list --graph=graph.json --format=json")
@@ -151,7 +151,7 @@ class TestCreateGraphToPkgList:
 
 class TestGraphInfoToPkgList:
     def test_graph_pkg_list_only_built(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
         c.run("create zlib")
@@ -179,7 +179,7 @@ class TestPkgListFindRemote:
     """
     def test_graph_2_pkg_list_remotes(self):
         servers = {"default": TestServer(), "remote2": TestServer()}
-        c = TestClient(servers=servers, inputs=2 * ["admin", "password"], light=True)
+        c = TestClient(servers=servers, inputs=2 * ["admin", "password"])
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires("zlib/1.0")})
         c.run("create zlib")
@@ -215,7 +215,7 @@ class TestPkgListFindRemote:
         assert "app/1.0: Retrieving package metadata" in c.out
 
     def test_input_only_name_version(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
         c.run("create zlib")
         c.run("upload zlib* -c -r=default")
@@ -231,7 +231,7 @@ class TestPkgListFindRemote:
         assert pkglist["default"] == expected
 
     def test_input_recipe_revisions(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0")})
         c.run("create zlib")
         c.run("upload zlib* -c -r=default")
@@ -252,7 +252,7 @@ class TestPkgListFindRemote:
         _check("default")
 
     def test_input_only_package_ids(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("os")})
         c.run("create zlib -s os=Linux")
         c.run("upload zlib* -c -r=default")
@@ -273,7 +273,7 @@ class TestPkgListFindRemote:
         _check("default")
 
     def test_graph_pkg_list_of_recipes_and_binaries(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("os")})
         c.run("create zlib -s os=Linux")
         c.run("upload zlib* -c -r=default")
@@ -298,7 +298,7 @@ class TestPkgListFindRemote:
         _check("default")
 
     def test_graph_pkg_list_counter_example(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"conanfile.py": GenConanfile("zlib", "1.0").with_package_file("file.txt",
                                                                               env_var="MY_VAR")})
 
@@ -370,7 +370,7 @@ class TestPkgListMerge:
 
     def test_pkglist_file_error(self):
         # This can happen when reusing the same file in input and output
-        c = TestClient(light=True)
+        c = TestClient()
         c.run("pkglist merge -l mylist.json", assert_error=True)
         assert "ERROR: Package list file missing or broken:" in c.out
         c.save({"mylist.json": ""})
@@ -391,7 +391,7 @@ class TestPkgListMerge:
 class TestDownloadUpload:
     @pytest.fixture()
     def client(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({
             "zlib.py": GenConanfile("zlib"),
             "zli.py": GenConanfile("zli", "1.0.0")
@@ -423,7 +423,7 @@ class TestDownloadUpload:
         assert "Uploading package 'zli/" not in client.out
 
     def test_download_upload_all_no_removed(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({"zlib.py": GenConanfile("zlib", "0.1")})
         c.run("create zlib.py ")
         c.run("upload * -r=default -c --format=json", redirect_stdout="pkglist.json")
@@ -463,7 +463,7 @@ class TestDownloadUpload:
 class TestListRemove:
     @pytest.fixture()
     def client(self):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({
             "zlib.py": GenConanfile("zlib"),
             "zli.py": GenConanfile("zli", "1.0.0")
@@ -550,7 +550,7 @@ class TestListGraphContext:
         ("host-only", ["zlib/1.0"], ["protobuf/1.0"])
     ])
     def test_list_graph_context(self, context, refs, not_refs):
-        c = TestClient(default_server_user=True, light=True)
+        c = TestClient(default_server_user=True)
         c.save({
             "zlib/conanfile.py": GenConanfile("zlib", "1.0").with_settings("os"),
             "cmake/conanfile.py": GenConanfile("cmake", "1.0").with_settings("os"),
@@ -587,7 +587,7 @@ class TestListGraphContext:
             assert content["default"].get(ref) is None
 
     def test_graph_list(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"conanfile.py": GenConanfile("lib", "1.0")})
 
         tc.run("graph info . -f json --build=never --no-remote --filter=context",
@@ -599,7 +599,7 @@ class TestListGraphContext:
 
     @pytest.mark.parametrize("context", ["build-only", "host-only"])
     def test_context_only_binary_mismatch(self, context):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({
                 "protobuf/conanfile.py": GenConanfile("protobuf", "1.0"),
                 "onnx/conanfile.py": GenConanfile("onnx", "1.0").with_requires("protobuf/1.0")
@@ -617,7 +617,7 @@ class TestListGraphContext:
     # We're building onnx to ensure the build context protobuf binary is not skipped
     @pytest.mark.parametrize("build_onnx", [True, False])
     def test_context_only_binary_different_pkg_id(self, context, build_onnx):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({
             "protobuf/conanfile.py": GenConanfile("protobuf", "1.0")
             .with_shared_option(),

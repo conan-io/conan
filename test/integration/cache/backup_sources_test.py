@@ -26,7 +26,7 @@ class TestDownloadCacheBackupSources:
 
         with mock.patch("conan.internal.rest.file_downloader.FileDownloader.download",
                         custom_download):
-            client = TestClient(default_server_user=True, light=True)
+            client = TestClient(default_server_user=True)
             tmp_folder = temp_folder()
             client.save_home(
                 {"global.conf": f"core.sources:download_cache={tmp_folder}\n"
@@ -82,7 +82,7 @@ class TestDownloadCacheBackupSources:
 
     @pytest.fixture(autouse=True)
     def _setup(self):
-        self.client = TestClient(default_server_user=True, light=True)
+        self.client = TestClient(default_server_user=True)
         self.file_server = TestFileServer()
         self.client.servers["file_server"] = self.file_server
         self.download_cache_folder = temp_folder()
@@ -307,8 +307,9 @@ class TestDownloadCacheBackupSources:
         self.client.run("create . -vv")
         assert (f"WARN: Sources for {self.file_server.fake_url}/internet/myfile.txt not found "
                 f"in remote backup {self.file_server.fake_url}/backup/") in self.client.out
-        assert (f"Downloaded {self.file_server.fake_url}/internet/myfile.txt "
-                f"from {self.file_server.fake_url}/internet/myfile.txt")
+        # Downloaded into the download cache (named with its sha256), from the origin url
+        assert (f"/s/{sha256} from {self.file_server.fake_url}/internet/myfile.txt"
+                in self.client.out.replace("\\", "/"))
         self.client.run("upload * -c -r=default")
 
         rmdir(self.download_cache_folder)
@@ -362,7 +363,7 @@ class TestDownloadCacheBackupSources:
         assert "ConanException: Error downloading file" in self.client.out
 
     def test_upload_sources_backup_creds_needed(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         download_cache_folder = temp_folder()
         http_server_base_folder_backups = temp_folder()
         http_server_base_folder_internet = temp_folder()
@@ -529,7 +530,7 @@ class TestDownloadCacheBackupSources:
 
         with mock.patch("conan.internal.rest.file_downloader.FileDownloader.download",
                         custom_download):
-            client = TestClient(default_server_user=True, light=True)
+            client = TestClient(default_server_user=True)
             download_cache_folder = temp_folder()
 
             sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
@@ -584,7 +585,7 @@ class TestDownloadCacheBackupSources:
                 f"found in remote backup {self.file_server.fake_url}/backup2/") in self.client.out
 
     def test_ok_when_origin_authorization_error(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         download_cache_folder = temp_folder()
         http_server_base_folder_backup1 = temp_folder()
         http_server_base_folder_backup2 = temp_folder()
@@ -901,7 +902,7 @@ class TestDownloadCacheBackupSources:
         assert sha256 + ".dirty" not in os.listdir(os.path.join(self.download_cache_folder, "s"))
 
     def test_absolute_core_sources_conf(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save_home(
             {"global.conf": f"core.sources:download_cache=relative\n"
                             "core.sources:download_urls=['origin']"})
@@ -1020,3 +1021,52 @@ class TestDownloadCacheBackupSources:
         assert warn in self.client.out
         assert "sha256 hash failed" in self.client.out
         assert json.loads(load(summary_json)) == meta_after_first
+
+    def test_backup_sources_origin_urls_header(self):
+        received = []
+
+        @self.file_server.root_app.hook("before_request")
+        def record_origin_urls():
+            received.append((request.path, request.headers.get("X-Conan-Origin-Urls")))
+
+        save(os.path.join(self.file_server.store, "internet", "myfile.txt"), "Hello, world!")
+        sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
+        origin_url = f"{self.file_server.fake_url}/internet/myfile.txt"
+        mirror_url = "http://mirror.other/my file,v1.txt?a=b"
+
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            from conan.tools.files import download
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "1.0"
+                def source(self):
+                    download(self, %s, "myfile.txt", sha256="%s")
+            """)
+        self.client.save_home(
+            {"global.conf": f"core.sources:download_cache={self.download_cache_folder}\n"
+                            f"core.sources:download_urls=['{self.file_server.fake_url}/backups/', "
+                            f"'origin']\n"
+                            f"core.sources:upload_url={self.file_server.fake_url}/backups/"})
+
+        # A None url (e.g. from an unset env-var) is skipped, as the origin download does
+        self.client.save({"conanfile.py": conanfile % ([None, origin_url, mirror_url], sha256)})
+        self.client.run("create .")
+        assert "Could not download from the URL None" in self.client.out
+        # Not in the backup yet: the backup gets all the escaped urls, the origin gets none
+        assert received == [
+            (f"/backups/{sha256}", json.dumps([None, origin_url, mirror_url])),
+            ('/internet/myfile.txt', None)
+        ]
+        self.client.run("upload * -c -r=default")
+        rmdir(self.download_cache_folder)
+        received.clear()
+
+        # A single url (not a list) also works, and the .json metadata download doesn't get it
+        self.client.save({"conanfile.py": conanfile % (repr(origin_url), sha256)})
+        self.client.run("source .")
+        assert f"Sources for {origin_url} found in remote backup" in self.client.out
+        assert received == [
+            (f"/backups/{sha256}", json.dumps([origin_url])),
+            (f"/backups/{sha256}.json", None)
+        ]

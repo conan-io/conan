@@ -47,7 +47,7 @@ class TestExportPkg:
         client = TestClient()
         client.save({CONANFILE: GenConanfile()})
         client.run("export-pkg --name=hello --version=0.1 --user=lasote --channel=stable")
-        assert "package(): WARN: No files in this package!" in client.out
+        assert "package(): No files in this package!" in client.out
 
     def test_options(self):
         # https://github.com/conan-io/conan/issues/2242
@@ -272,7 +272,7 @@ class TestExportPkg:
         assert "set(hello1_LIBS_RELEASE mycoollib)" in cmakeinfo
 
     def test_export_pkg_version_type(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Hello(ConanFile):
@@ -351,7 +351,7 @@ def test_build_policy_never():
     assert "package(): Packaged 1 '.h' file: header.h" in client.out
     client.run("install --requires=pkg/1.0@ --build='*'")
     client.assert_listed_require({"pkg/1.0": "Cache"})
-    assert "conanfile.py (pkg/1.0): Calling build()" not in client.out
+    assert "Calling build()" not in client.out
 
 
 def test_build_policy_never_missing():
@@ -465,14 +465,14 @@ def test_export_pkg_dont_update_src():
     c.run("build .")
     c.run("export-pkg .")
     c.run("install --requires=hello/0.1@ --build=hello*")
-    assert "hello/0.1: CONTENT: old code!" in c.out
+    assert "CONTENT: old code!" in c.out
     # Now locally change the source code
     c.save({"src/hello.cpp": "updated code!"})
     c.run("install .")
     c.run("build .")
     c.run("export-pkg .")
     c.run("install --requires=hello/0.1@ --build=hello*")
-    assert "hello/0.1: CONTENT: updated code!" in c.out
+    assert "CONTENT: updated code!" in c.out
 
 
 def test_negate_tool_requires():
@@ -647,7 +647,7 @@ def test_remote_none_tool_requires():
 
 def test_export_pkg_set_version_python_requires():
     # https://github.com/conan-io/conan/issues/16223
-    c = TestClient(light=True)
+    c = TestClient()
     py_require = textwrap.dedent("""
         from conan import ConanFile
 

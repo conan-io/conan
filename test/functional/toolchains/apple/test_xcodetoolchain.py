@@ -23,9 +23,9 @@ test = textwrap.dedent("""
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool("xcodebuild")
 @pytest.mark.parametrize("cppstd, cppstd_output, min_version", [
-    ("gnu14", "__cplusplus201402", "11.0"),
-    ("gnu17", "__cplusplus201703", "11.0"),
-    ("gnu17", "__cplusplus201703", "10.15")
+    ("gnu14", "__cplusplus201402", "12.0"),
+    pytest.param("gnu17", "__cplusplus201703", "12.0", marks=pytest.mark.slow),
+    ("gnu17", "__cplusplus201703", "13.0")
 ])
 def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
 
@@ -80,7 +80,7 @@ def test_project_xcodetoolchain(cppstd, cppstd_output, min_version):
 
     client.run_command("xcodegen generate")
 
-    sdk_version = "26.4"
+    sdk_version = "27.2"
     settings = "-s arch=x86_64 -s os.sdk_version={} -s compiler.cppstd={} " \
                "-s compiler.libcxx=libc++ -s os.version={} " \
                "-c tools.build.cross_building:can_run=True " \

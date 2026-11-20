@@ -19,7 +19,7 @@ concurrency:
 jobs:
   artifactory_tests:
     name: Artifactory ${{ matrix.artifactory-version }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: false
       matrix:

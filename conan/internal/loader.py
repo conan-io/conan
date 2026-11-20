@@ -8,8 +8,6 @@ import types
 import uuid
 from threading import Lock
 
-import yaml
-
 from pathlib import Path
 
 from conan.api.output import ConanOutput
@@ -24,7 +22,7 @@ from conan.api.model import RecipeReference
 from conan.internal.paths import DATA_YML
 from conan.internal.model.version_range import validate_conan_version
 from conan.internal.util.config_parser import TextINIParse
-from conan.internal.util.files import load, chdir, load_user_encoded
+from conan.internal.util.files import load, chdir, load_user_encoded, yaml_load
 
 
 class ConanFileLoader:
@@ -33,7 +31,9 @@ class ConanFileLoader:
         self._pyreq_loader = pyreq_loader
         self._cached_conanfile_classes = {}
         self._conanfile_helpers = conanfile_helpers
-        invalidate_caches()
+        # invalidate_caches() iterates sys.path_importer_cache, which loading Python files modifies
+        with _load_python_lock:
+            invalidate_caches()
 
     def load_basic(self, conanfile_path, graph_lock=None, display="", remotes=None,
                    update=None, check_update=None):
@@ -107,7 +107,7 @@ class ConanFileLoader:
             return None
 
         try:
-            data = yaml.safe_load(load(data_path))
+            data = yaml_load(load(data_path))
         except Exception as e:
             raise ConanException("Invalid yml format at {}: {}".format(DATA_YML, e))
 

@@ -67,7 +67,7 @@ def c3i_folder():
 
 class TestSearchList:
     def test_basic_search(self, c3i_folder):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run(f"remote add local '{c3i_folder}' --type=local-recipes-index")  # Keep --type test
         assert "WARN" not in client.out  # Make sure it does not complain about url
         client.run("search *")
@@ -85,7 +85,7 @@ class TestSearchList:
             """) in client.out
 
     def test_list_refs(self, c3i_folder):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run(f"remote add local '{c3i_folder}'")
         client.run("list *#* -r=local --format=json")
         listjson = json.loads(client.stdout)
@@ -103,14 +103,14 @@ class TestSearchList:
         assert len(revs) == 1 and "6f5c31bb1219e9393743d1fbf2ee1b52" in revs
 
     def test_list_revisions_notfound(self, c3i_folder):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run(f"remote add local '{c3i_folder}'")
         client.run("list potato/1.0#* -r=local")
         # More like remotes than cache
-        assert "ERROR: Recipe not found: 'potato/1.0'"
+        assert "ERROR: Recipe not found: 'potato/1.0'" in client.out
 
     def test_list_rrevs(self, c3i_folder):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run(f"remote add local '{c3i_folder}'")
         client.run("list libcurl/1.0#* -r=local --format=json")
         listjson = json.loads(client.stdout)
@@ -118,7 +118,7 @@ class TestSearchList:
         assert len(revs) == 1 and "e468388f0e4e098d5b62ad68979aebd5" in revs
 
     def test_list_binaries(self, c3i_folder):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run(f"remote add local '{c3i_folder}'")
         client.run("list libcurl/1.0:* -r=local --format=json")
         listjson = json.loads(client.stdout)
@@ -128,11 +128,11 @@ class TestSearchList:
 
 class TestInstall:
     def test_install(self, c3i_folder):
-        c = TestClient(light=True)
+        c = TestClient()
         c.run(f"remote add local '{c3i_folder}'")
         c.run("install --requires=libcurl/1.0 --build missing")
-        assert "zlib/1.2.11: CONANDATA: {}" in c.out
-        assert "zlib/1.2.11: BUILDING: //myheader" in c.out
+        assert "CONANDATA: {}" in c.out
+        assert "BUILDING: //myheader" in c.out
         bins = {"libcurl/1.0": ("aa69c1e1e39a18fe70001688213dbb7ada95f890", "Build"),
                 "openssl/2.0": ("594ed0eb2e9dfcc60607438924c35871514e6c2a", "Build"),
                 "zlib/1.2.11": ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "Build")}
@@ -188,7 +188,7 @@ class TestInstall:
                    {"boost/config.yml": boost_config,
                     "boost/all/conanfile.py": boost,
                     "boost/all/dependencies/myfile.json": deps_json})
-        c = TestClient(light=True)
+        c = TestClient()
         c.run(f"remote add local '{folder}'")
         c.run("install --requires=boost/[*] --build missing")
         assert '{"potato": 42}' in c.out
@@ -214,7 +214,7 @@ class TestInstall:
                    {"pkg/config.yml": config,
                     "pkg/all/conanfile.py": str(GenConanfile("pkg")),
                     "pkg/all/conandata.yml": conandata})
-        c = TestClient(light=True)
+        c = TestClient()
         c.run(f"remote add local '{folder}'")
         c.run("install --requires=pkg/1.0 --build missing -vvv")
         assert "pkg/1.0#86b609916bbdfe63c579f034ad0edfe7" in c.out
@@ -274,7 +274,7 @@ class TestInstall:
                     "zlib/all/conandata.yml": conandata_yml,
                     "zlib/all/patches/patch1": patch,
                     "zlib/all/main.cpp": "\n"})
-        client = TestClient(light=True)
+        client = TestClient()
         client.run(f"remote add local '{folder}'")
         client.run("install --requires=zlib/0.1 --build=missing -vv")
         assert "Copied 1 file: patch1" in client.out
@@ -310,7 +310,7 @@ class TestRestrictedOperations:
         folder = temp_folder()
         c3i_folder = os.path.join(folder, "recipes")
         mkdir(c3i_folder)
-        c = TestClient(light=True)
+        c = TestClient()
         c.run(f"remote add local '{c3i_folder}'")
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("create .")
@@ -334,7 +334,7 @@ class TestErrorsUx:
         save_files(recipes_folder,
                    {"zlib/config.yml": zlib_config,
                     "zlib/all/conanfile.py": zlib})
-        c = TestClient(light=True)
+        c = TestClient()
         c.run(f"remote add local '{folder}'")
         c.run("install --requires=zlib/[*] --build missing", assert_error=True)
         assert "NameError: name 'ConanFile' is not defined" in c.out
@@ -351,7 +351,7 @@ class TestErrorsUx:
         save_files(recipes_folder,
                    {"zlib/config.yml": zlib_config,
                     "zlib/all/conanfile.py": str(GenConanfile("zlib"))})
-        c = TestClient(light=True)
+        c = TestClient()
         c.run(f"remote add local '{folder}'")
         c.run("install --requires=zlib/1.2.11#rev1", assert_error=True)
         assert "A specific revision 'zlib/1.2.11#rev1' was requested" in c.out
@@ -395,7 +395,7 @@ class TestErrorsUx:
         folder = temp_folder()
         repo = os.path.join(folder, "repo")
         mkdir(repo)
-        c = TestClient(light=True)
+        c = TestClient()
         c.run(f"remote add local '{repo}'")
         # shutil.rmtree(repo)
         c.run("install --requires=zlib/[*] --build missing", assert_error=True)
@@ -405,7 +405,7 @@ class TestErrorsUx:
         folder = temp_folder()
         repo = os.path.join(folder, "repo")
         mkdir(repo)
-        c = TestClient(light=True)
+        c = TestClient()
         c.run(f"remote add local '{repo}'")
         c.run(f"remote add local '{repo}'", assert_error=True)
         assert "already exists in remotes" in c.out
@@ -434,7 +434,7 @@ class TestPythonRequires:
         return folder
 
     def test_install(self, c3i_pyrequires_folder):
-        c = TestClient(light=True)
+        c = TestClient()
         c.run(f"remote add local '{c3i_pyrequires_folder}'")
         c.run("list * -r=local")
         assert "pyreq/1.0" in c.out
@@ -465,7 +465,7 @@ class TestUserChannel:
         return folder
 
     def test_user_channel_requirement(self, c3i_user_channel_folder):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run(f"remote add local '{c3i_user_channel_folder}'")
         tc.run("graph info --requires=pkg/[*]@myuser/mychannel")
         assert "Version range '*' from requirement 'pkg/[*]@myuser/mychannel'" not in tc.out
@@ -474,13 +474,13 @@ class TestUserChannel:
 
     @pytest.mark.parametrize("user_channel", ["@foo/bar", "@foo"])
     def test_user_channel_requirement_no_match(self, c3i_user_channel_folder, user_channel):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run(f"remote add local '{c3i_user_channel_folder}'")
         tc.run(f"graph info --requires=pkg/[*]{user_channel}", assert_error=True)
         assert f"Version range '*' from requirement 'pkg/[*]{user_channel}' required by 'None' could not be resolved." in tc.out
 
     def test_user_channel_requirement_only_at(self, c3i_user_channel_folder):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run(f"remote add local '{c3i_user_channel_folder}'")
         tc.run(f"graph info --requires=pkg/[*]@")
         assert f"pkg/[*]: pkg/2.0" in tc.out
@@ -515,7 +515,7 @@ class TestResetRemote:
                     "zlib/all/conandata.yml": "",
                     "zlib/all/file.h": "//myheader"})
 
-        client = TestClient(light=True)
+        client = TestClient()
         client.run(f"remote add local '{folder}'")
         client.run("graph info --requires=zlib/[*]")
 
@@ -548,7 +548,7 @@ class TestResetRemote:
                     "zlib/all/conandata.yml": "",
                     "zlib/all/file.h": "//myheader"})
 
-        c = TestClient(light=True)
+        c = TestClient()
         c.run(f"remote add local '{folder}'")
         c.run("graph info --requires=zlib/[*]")
         rev1 = "bd69839cb4c933336fceb32302aaf91f"
@@ -587,7 +587,7 @@ class TestResetRemote:
                     "zlib/all/conandata.yml": "",
                     "zlib/all/file.h": "//myheader"})
 
-        c = TestClient(light=True)
+        c = TestClient()
         c.run(f"remote add local '{folder}'")
         c.run("install --requires=zlib/[*] --build=missing")
         rev1 = "169da4321a56b77e8538821613a81f1d"

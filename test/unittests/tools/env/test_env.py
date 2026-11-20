@@ -2,6 +2,7 @@ import os
 import platform
 import subprocess
 import textwrap
+from unittest import mock
 
 import pytest
 
@@ -531,3 +532,19 @@ class TestProfileSeparators:
         with pytest.raises(ConanException) as e:
             ProfileEnvironment.loads(myprofile)
         assert "Cannot use (sep) and (path) qualifiers simultaneously" in str(e.value)
+
+
+def test_apply_restores_only_modified_vars():
+    # os.environ is process-global: it must never be cleared, other threads could see it empty
+    env = Environment()
+    env.define("MyVarOverridden", "new")
+    env.define("MyVarNew", "new")
+    with environment_update({"MyVarOverridden": "old", "MyVarNew": None, "MyVarOther": "old"}):
+        with mock.patch.object(os.environ, "clear", side_effect=AssertionError("clear()")):
+            with env.vars(ConanFileMock()).apply():
+                assert os.environ["MyVarOverridden"] == "new"
+                assert os.environ["MyVarNew"] == "new"
+                os.environ["MyVarOther"] = "changed by others"  # not ours, not reverted
+            assert os.environ["MyVarOverridden"] == "old"
+            assert "MyVarNew" not in os.environ
+            assert os.environ["MyVarOther"] == "changed by others"

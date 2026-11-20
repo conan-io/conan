@@ -216,7 +216,7 @@ class ConanOutput:
         if isinstance(msg, dict):
             # For traces we can receive a dict already, we try to transform then into more natural
             # text
-            msg = ", ".join([f"{k}: {v}" for k, v in msg.items()])
+            msg = ", ".join(f"{k}: {v}" for k, v in msg.items())
             msg = "=> {}".format(msg)
             # msg = json.dumps(msg, sort_keys=True, default=json_encoder)
 

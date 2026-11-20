@@ -75,7 +75,7 @@ class TestRemovePackageRevisions:
         ref = RecipeReference.loads("foobar/0.1@user/testing#4d670581ccb765839f2239cc8dff8fbd")
         pref_arg = PkgReference(ref, NO_SETTINGS_PACKAGE_ID)
         pref = PkgReference(ref, NO_SETTINGS_PACKAGE_ID, "0ba8627bd47edc3a501e8f0eb9a79e5e")
-        c = TestClient(light=True, default_server_user=True)
+        c = TestClient(default_server_user=True)
         c.save({"conanfile.py": GenConanfile()})
         c.run("create . --name=foobar --version=0.1 --user=user --channel=testing")
         assert c.package_exists(pref)
@@ -336,3 +336,61 @@ def _get_revisions_packages(client, pref, with_remote):
             return set([r.repr_notime() for r in api.list.package_revisions(pref, remote=remote)])
         except NotFoundException:
             return set()
+
+
+def test_remove_package_with_readonly_folder():
+    """ removing a package that contains a read-only directory must not fail with a
+    permission error, be it on Windows (the directory's own read-only attribute blocks its
+    removal) or on POSIX (removing an entry needs write permission on its parent directory)
+    https://github.com/conan-io/conan/issues/20241
+    """
+    import textwrap
+    conanfile = textwrap.dedent("""
+        import os, stat
+        from conan import ConanFile
+        from conan.tools.files import save
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            def package(self):
+                d = os.path.join(self.package_folder, "readonlydir")
+                save(self, os.path.join(d, "inside.txt"), "inside!!")
+                os.chmod(d, stat.S_IREAD | stat.S_IEXEC)
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    pkg_layout = client.created_layout()
+    client.run("remove pkg/1.0 -c")
+    assert not os.path.exists(pkg_layout.base_folder)
+
+
+def test_remove_package_with_readonly_folder_and_readonly_file():
+    """ removing a package that contains a read-only directory with read-only files inside.
+    In POSIX, the file removal needs write permission in the parent folder, even if the file
+    itself is read-only too
+    https://github.com/conan-io/conan/issues/20241
+    """
+    import textwrap
+    conanfile = textwrap.dedent("""
+        import os, stat
+        from conan import ConanFile
+        from conan.tools.files import save
+
+        class Pkg(ConanFile):
+            name = "pkg"
+            version = "1.0"
+            def package(self):
+                d = os.path.join(self.package_folder, "readonlydir")
+                f = os.path.join(d, "inside.txt")
+                save(self, f, "inside!!")
+                os.chmod(f, stat.S_IREAD)
+                os.chmod(d, stat.S_IREAD | stat.S_IEXEC)
+        """)
+    client = TestClient()
+    client.save({"conanfile.py": conanfile})
+    client.run("create .")
+    pkg_layout = client.created_layout()
+    client.run("remove pkg/1.0 -c")
+    assert not os.path.exists(pkg_layout.base_folder)

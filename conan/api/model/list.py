@@ -282,8 +282,8 @@ class PackagesList:
             An iterable of tuples where:
 
             - The first element is a ``RecipeReference`` (representing the recipe revision).
-            - The second element is a dictionary mapping a ``PkgReference`` to a nested dictionary of
-              its specific attributes (e.g., settings, options).
+            - The second element is a dictionary mapping a ``PkgReference`` to a dictionary
+              containing the package revision information.
 
         Warning:
             **Missing Revisions Behavior:**

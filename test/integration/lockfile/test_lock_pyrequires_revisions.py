@@ -7,7 +7,7 @@ from conan.test.utils.tools import TestClient
 
 def test_transitive_py_requires_revisions():
     # https://github.com/conan-io/conan/issues/5529
-    client = TestClient(light=True)
+    client = TestClient()
     python_req = textwrap.dedent("""
         from conan import ConanFile
         some_var = {}
@@ -46,7 +46,7 @@ def test_transitive_py_requires_revisions():
 
 
 def test_transitive_matching_revisions():
-    client = TestClient(light=True)
+    client = TestClient()
     dep = textwrap.dedent("""
        from conan import ConanFile
        some_var = {}

@@ -180,11 +180,13 @@ class BinaryInstaller:
         download_source = conanfile.conf.get("tools.build:download_source", check_type=bool)
 
         if not download_source and (need_conf or node.binary != BINARY_BUILD):
-            return
+            return None
 
         conanfile = node.conanfile
         if node.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
-            return
+            return None
+
+        ConanOutput().step(f"Source step")
 
         recipe_layout = self._cache.recipe_layout(node.ref)
         export_source_folder = recipe_layout.export_sources()
@@ -257,9 +259,9 @@ class BinaryInstaller:
 
         ConanOutput().title("Installing packages")
 
-        package_count = sum([sum(len(install_reference.packages.values())
-                                 for level in install_order
-                                 for install_reference in level)])
+        package_count = sum(len(install_reference.packages)
+                            for level in install_order
+                            for install_reference in level)
         handled_count = 1
 
         self._download_bulk(install_order)
@@ -273,8 +275,7 @@ class BinaryInstaller:
                         ConanOutput().highlight(f"Building from source {pref}")
                         compact_dumps = package.nodes[0].conanfile.info.summarize_compact()
                         for line in compact_dumps:
-                            ConanOutput(scope=str(pref.ref)).info(line, fg=Color.BRIGHT_GREEN)
-                    ConanOutput().step("Source step")
+                            ConanOutput().info(line, fg=Color.BRIGHT_GREEN)
                     recipe_layout = self._install_source(package.nodes[0], remotes)
                     self._handle_package(recipe_layout, package, install_reference, handled_count,
                                          package_count)
@@ -290,7 +291,16 @@ class BinaryInstaller:
         for level in install_order:
             for node in level:
                 for package in node.packages.values():
-                    if package.binary in (BINARY_UPDATE, BINARY_DOWNLOAD):
+                    if package.binary == BINARY_UPDATE:
+                        if self._cache.exists_prev(package.pref):
+                            # The server gave us a newer prev, but we already have it in cache
+                            # so we don't need to download it. Update its timestamp to the server's
+                            # InstallNode doesn't have timestamp
+                            pref_with_timestamp = package.nodes[0].pref
+                            self._cache.update_package_timestamp(pref_with_timestamp)
+                        else:
+                            downloads.append(package)
+                    elif package.binary == BINARY_DOWNLOAD:
                         downloads.append(package)
         if not downloads:
             return
@@ -300,9 +310,10 @@ class BinaryInstaller:
         ConanOutput().subtitle(f"Downloading {download_count} package{plural}")
         parallel = self._global_conf.get("core.download:parallel", check_type=int,
                                          default=cpu_count())
-        if parallel:  # User can define core.download:parallel=0 to deactivate parallelism
-            ConanOutput().info("Downloading binary packages in %s parallel threads" % parallel)
-            thread_pool = ThreadPool(parallel)
+        if parallel and download_count:  # User can define core.download:parallel=0 to deactivate parallelism
+            thread_count = min(parallel, download_count)
+            ConanOutput().info(f"Downloading binary packages in {thread_count} parallel threads")
+            thread_pool = ThreadPool(thread_count)
             thread_pool.map(self._download_pkg, downloads)
             thread_pool.close()
             thread_pool.join()

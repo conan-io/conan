@@ -81,15 +81,14 @@ def architecture_flag(conanfile):
                 "e2k-v5": "-march=elbrus-v5",
                 "e2k-v6": "-march=elbrus-v6",
                 "e2k-v7": "-march=elbrus-v7"}.get(arch, "")
-    elif compiler == "emcc":
-        if arch == "wasm64":
-            # Emscripten 6.0.0 added the standard `-m64` flag as an alias for
-            # the legacy `-sMEMORY64` setting and 6.0.1 deprecated `-sMEMORY64`
-            # in favor of it, which makes emcc emit a deprecation warning.
-            compiler_version = settings.get_safe("compiler.version")
-            if compiler_version and Version(compiler_version) >= "6.0.0":
-                return "-m64"
-            return "-sMEMORY64=1"
+    elif compiler == "emcc" and arch == "wasm64":
+        # Emscripten 6.0.0 added the standard `-m64` flag as an alias for
+        # the legacy `-sMEMORY64` setting and 6.0.1 deprecated `-sMEMORY64`
+        # in favor of it, which makes emcc emit a deprecation warning.
+        compiler_version = settings.get_safe("compiler.version")
+        if compiler_version and Version(compiler_version) >= "6.0.0":
+            return "-m64"
+        return "-sMEMORY64=1"
     return ""
 
 
@@ -98,12 +97,12 @@ def architecture_bits(conanfile):
     Detect the architecture bits based on the ``conanfile.settings.arch`` and those known architectures in Conan.
 
     :param conanfile: The current recipe object. Always use ``self``.
-    :return: "64" for 64-bit architectures, "32" for 32-bit architectures, or None if the architecture is unknown.
+    :return: ``"64"`` string for 64-bit architectures, ``"32"`` string for 32-bit architectures, or ``None`` if the architecture is unknown.
     """
     arch = conanfile.settings.get_safe("arch")
     if arch in ["x86_64", "ppc64le", "ppc64", "armv8", "armv8.3", "arm64ec", "sparcv9",
                 "mips64", "s390x", "wasm64", "e2k-v2", "e2k-v3", "e2k-v4", "e2k-v5",
-                "e2k-v6", "e2k-v7", "riscv64"]:
+                "e2k-v6", "e2k-v7", "riscv64", "loongarch64"]:
         return "64"
     elif arch in ["x86", "ppc32be", "ppc32", "armv4", "armv4i", "armv5el", "armv5hf",
                   "armv6", "armv7", "armv7hf", "armv7s", "armv7k", "armv8_32",
@@ -122,11 +121,10 @@ def architecture_link_flag(conanfile):
         return ""
     compiler = conanfile.settings.get_safe("compiler")
     arch = conanfile.settings.get_safe("arch")
-    if compiler == "emcc":
-        # Emscripten default output is WASM since 1.37.x (long time ago)
-        # Deactivate WASM output forcing asm.js output instead
-        if arch == "asm.js":
-            return "-sWASM=0"
+    # Emscripten default output is WASM since 1.37.x (long time ago)
+    # Deactivate WASM output forcing asm.js output instead
+    if compiler == "emcc" and arch == "asm.js":
+        return "-sWASM=0"
     return ""
 
 
@@ -181,9 +179,8 @@ def build_type_link_flags(settings):
 
     # https://github.com/Kitware/CMake/blob/d7af8a34b67026feaee558433db3a835d6007e06/
     # Modules/Platform/Windows-MSVC.cmake
-    if compiler == "msvc":
-        if build_type in ("Debug", "RelWithDebInfo"):
-            return ["-debug"]
+    if compiler == "msvc" and build_type in ("Debug", "RelWithDebInfo"):
+        return ["-debug"]
 
     return []
 
@@ -269,7 +266,7 @@ def llvm_clang_front(conanfile):
     if (conanfile.settings.get_safe("os") != "Windows" or
             conanfile.settings.get_safe("compiler") != "clang" or
             not conanfile.settings.get_safe("compiler.runtime")):
-        return
+        return None
     compilers = conanfile.conf.get("tools.build:compiler_executables", default={})
     if "clang-cl" in compilers.get("c", "") or "clang-cl" in compilers.get("cpp", ""):
         return "clang-cl"  # The MSVC-compatible front

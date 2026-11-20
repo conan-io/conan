@@ -77,15 +77,15 @@ class TestPackageOptionsCreate:
 
         assert "dep/0.1: shared (configure): False" in c.out
         assert "dep/0.1: shared (requirements): False" in c.out
-        assert "dep/0.1: shared (build): False" in c.out
+        assert "shared (build): False" in c.out
 
         assert "pkg/0.1: shared (configure): True" in c.out
         assert "pkg/0.1: shared (requirements): True" in c.out
-        assert "pkg/0.1: shared (build): True" in c.out
+        assert "shared (build): True" in c.out
 
         assert "pkg/0.1 (test package): shared (configure): False" in c.out
         assert "pkg/0.1 (test package): shared (requirements): False" in c.out
-        assert "pkg/0.1 (test package): shared (build): False" in c.out
+        assert "shared (build): False" in c.out
         assert "pkg/0.1 (test package): shared (test): False" in c.out
 
     def test_test_package_all_shared(self):
@@ -101,15 +101,15 @@ class TestPackageOptionsCreate:
 
         assert "dep/0.1: shared (configure): True" in c.out
         assert "dep/0.1: shared (requirements): True" in c.out
-        assert "dep/0.1: shared (build): True" in c.out
+        assert "shared (build): True" in c.out
 
         assert "pkg/0.1: shared (configure): True" in c.out
         assert "pkg/0.1: shared (requirements): True" in c.out
-        assert "pkg/0.1: shared (build): True" in c.out
+        assert "shared (build): True" in c.out
 
         assert "pkg/0.1 (test package): shared (configure): True" in c.out
         assert "pkg/0.1 (test package): shared (requirements): True" in c.out
-        assert "pkg/0.1 (test package): shared (build): True" in c.out
+        assert "shared (build): True" in c.out
         assert "pkg/0.1 (test package): shared (test): True" in c.out
 
     def test_test_package_consumers(self):
@@ -122,21 +122,21 @@ class TestPackageOptionsCreate:
 
         assert "dep/0.1: shared (configure): False" in c.out
         assert "dep/0.1: shared (requirements): False" in c.out
-        assert "dep/0.1: shared (build): False" in c.out
+        assert "shared (build): False" in c.out
 
         assert "pkg/0.1: shared (configure): True" in c.out
         assert "pkg/0.1: shared (requirements): True" in c.out
-        assert "pkg/0.1: shared (build): True" in c.out
+        assert "shared (build): True" in c.out
 
         assert "pkg/0.1 (test package): shared (configure): True" in c.out
         assert "pkg/0.1 (test package): shared (requirements): True" in c.out
-        assert "pkg/0.1 (test package): shared (build): True" in c.out
+        assert "shared (build): True" in c.out
         assert "pkg/0.1 (test package): shared (test): True" in c.out
 
         c.run("install --requires=dep/0.1 -o &:shared=True -b=missing")
         assert "dep/0.1: shared (configure): True" in c.out
         assert "dep/0.1: shared (requirements): True" in c.out
-        assert "dep/0.1: shared (build): True" in c.out
+        assert "shared (build): True" in c.out
 
     def test_test_package_non_consumers(self):
         c = TestClient()
@@ -148,15 +148,15 @@ class TestPackageOptionsCreate:
 
         assert "dep/0.1: shared (configure): True" in c.out
         assert "dep/0.1: shared (requirements): True" in c.out
-        assert "dep/0.1: shared (build): True" in c.out
+        assert "shared (build): True" in c.out
 
         assert "pkg/0.1: shared (configure): False" in c.out
         assert "pkg/0.1: shared (requirements): False" in c.out
-        assert "pkg/0.1: shared (build): False" in c.out
+        assert "shared (build): False" in c.out
 
         assert "pkg/0.1 (test package): shared (configure): False" in c.out
         assert "pkg/0.1 (test package): shared (requirements): False" in c.out
-        assert "pkg/0.1 (test package): shared (build): False" in c.out
+        assert "shared (build): False" in c.out
         assert "pkg/0.1 (test package): shared (test): False" in c.out
 
     def test_test_package_only(self):
@@ -169,15 +169,15 @@ class TestPackageOptionsCreate:
 
         assert "dep/0.1: shared (configure): False" in c.out
         assert "dep/0.1: shared (requirements): False" in c.out
-        assert "dep/0.1: shared (build): False" in c.out
+        assert "shared (build): False" in c.out
 
         assert "pkg/0.1: shared (configure): False" in c.out
         assert "pkg/0.1: shared (requirements): False" in c.out
-        assert "pkg/0.1: shared (build): False" in c.out
+        assert "shared (build): False" in c.out
 
         assert "pkg/0.1 (test package): shared (configure): True" in c.out
         assert "pkg/0.1 (test package): shared (requirements): True" in c.out
-        assert "pkg/0.1 (test package): shared (build): True" in c.out
+        assert "shared (build): True" in c.out
         assert "pkg/0.1 (test package): shared (test): True" in c.out
 
 
@@ -194,8 +194,9 @@ class TestPackageOptionsInstall:
         dep_shared = "False" if "*" not in pattern else "True"
         assert f"dep/0.1: shared (configure): {dep_shared}" in c.out
         assert f"dep/0.1: shared (requirements): {dep_shared}" in c.out
-        assert f"dep/0.1: shared (build): {dep_shared}" in c.out
+        dep_build = str(c.out).split(">>> Build step for dep/0.1")[1].split(">>>")[0]
+        assert f"shared (build): {dep_shared}" in dep_build
 
         assert "conanfile.py (pkg/0.1): shared (configure): True" in c.out
         assert "conanfile.py (pkg/0.1): shared (requirements): True" in c.out
-        assert "conanfile.py (pkg/0.1): shared (build): True" in c.out
+        assert "shared (build): True" in c.out

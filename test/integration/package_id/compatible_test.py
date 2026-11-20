@@ -826,7 +826,7 @@ class TestListOnlyCompatibilityOptimization:
 
     @pytest.fixture()
     def client(self):
-        tc = TestClient(default_server_user=True, light=True)
+        tc = TestClient(default_server_user=True)
         compiler_settings = textwrap.dedent("""
                 compiler:
                     foo:
@@ -904,7 +904,7 @@ class TestListOnlyCompatibilityOptimization:
 
         tc.run(f"install --requires=pkg/0.1 {compiler_args} -s=compiler.cppstd=11 -r=default -u "
                "-cc core.graph:compatibility_mode=optimized")
-        assert "Current package revision is older than the remote one "
+        assert "Current package revision is older than the remote one" in tc.out
         assert f"Found compatible package '{std17_id}'" in tc.out
         assert std17_old_ref.revision not in tc.out
         assert std17_new_ref.revision in tc.out

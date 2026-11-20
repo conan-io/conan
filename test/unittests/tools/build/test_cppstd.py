@@ -161,7 +161,7 @@ def test_check_cppstd_type():
     with pytest.raises(ConanException) as exc:
         check_min_cppstd(conanfile, "gnu17", False)
 
-    assert "cppstd parameter must be a number", str(exc)
+    assert "cppstd parameter must be a number" in str(exc)
 
 
 def _create_conanfile(compiler, version, os, cppstd, libcxx=None):

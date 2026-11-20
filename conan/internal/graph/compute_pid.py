@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from conan.internal.errors import conanfile_remove_attr, conanfile_exception_formatter
 from conan.errors import ConanException, ConanInvalidConfiguration
 from conan.internal.methods import auto_header_only_package_id
@@ -19,8 +17,8 @@ def compute_package_id(node, modes, config_version, hook_manager):
     if python_requires:
         python_requires = python_requires.info_requires()
 
-    data = OrderedDict()
-    build_data = OrderedDict()
+    data = {}
+    build_data = {}
 
     fix_transitive_static = required_conan_version_policy(conanfile, "2.27.9")
 
@@ -38,7 +36,7 @@ def compute_package_id(node, modes, config_version, hook_manager):
                 data[require] = req_info
 
     if conanfile.vendor:  # Make the package_id fully independent of dependencies versions
-        data, build_data = OrderedDict(), OrderedDict()  # TODO, cleaner, now minimal diff
+        data, build_data = {}, {}  # TODO, cleaner, now minimal diff
 
     reqs_info = RequirementsInfo(data)
     build_requires_info = RequirementsInfo(build_data)
@@ -55,7 +53,6 @@ def compute_package_id(node, modes, config_version, hook_manager):
                                python_requires=python_requires,
                                conf=conanfile.conf.copy_conaninfo_conf(),
                                config_version=config_version.copy() if config_version else None)
-    conanfile.original_info = conanfile.info.clone()
 
     # To account for effect of headers into consumers, like shared/static variability
     # It affects to both embed and not embed, that would imply some "repetition" of the information
@@ -67,8 +64,12 @@ def compute_package_id(node, modes, config_version, hook_manager):
                 header_opts = getattr(transitive.node.conanfile, "package_id_abi_options", ())
                 for pkg_id_option in header_opts:
                     v = getattr(transitive.node.conanfile.options, pkg_id_option)
-                    setattr(conanfile.info.options[f"{transitive.node.name}/*"], pkg_id_option, v)
+                    # Add a full option definition (a copy), not only the value, so it can be
+                    # later cloned (compatibility, build_id) like any other info option
+                    dep_info_options = conanfile.info.options[f"{transitive.node.name}/*"]
+                    dep_info_options._data[pkg_id_option] = v.copy_conaninfo_option()  # noqa
 
+    conanfile.original_info = conanfile.info.clone()
     run_validate_package_id(conanfile, hook_manager)
 
     if conanfile.info.settings_target:

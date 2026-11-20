@@ -507,7 +507,7 @@ def test_upload_skip_build_missing():
     c.run("create pkg2")
     c.run("remove pkg1/*:* -c")  # remove binaries
     c.run("create pkg3 --build=missing")
-    assert re.search(r"Skipped binaries(\s*)pkg1/1.0", c.out)
+    assert re.search(r"Skipped host binaries(\s*)pkg1/1.0", c.out)
 
 
 def test_upload_skip_build_compatibles():
@@ -598,4 +598,4 @@ def test_install_json_format_not_visible():
     assert pkg_folder is not None
 
     c.run("create app")
-    assert "pkg/0.0.1: LOADED! contents!!!" in c.out
+    assert "LOADED! contents!!!" in c.out

@@ -149,4 +149,8 @@ class Meson:
         * The issue detailing the erroneous parsing of ``\\``:
             `conan-io/conan#14213 <https://github.com/conan-io/conan/issues/14213>`_
         """
+        if self._conanfile.settings.get_safe("os") != "Windows":
+            # Meson>=1.10 validates the prefix with the *host* path rules: ``C:/`` is not absolute
+            # for a POSIX host (e.g. cross-building from Windows to Android), but ``/`` is.
+            return "/"
         return os.path.abspath("/").replace("\\", "/")

@@ -7,6 +7,7 @@ import pytest
 
 from conan.api.model import RecipeReference
 from conan.cli.exit_codes import ERROR_GENERAL
+from conan.internal.errors import ConanReferenceDoesNotExistInDB
 from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID, GenConanfile
 from conan.internal.util.files import load
 
@@ -59,7 +60,7 @@ def test_create():
     client.save({"conanfile.py": conanfile})
     client.run("create --name=pkg --version=0.1 --user=lasote --channel=testing")
     assert "Profile host:\n[settings]" in client.out
-    assert "Generating the package pkg/0.1@lasote/testing:" in client.out
+    assert "Package step for pkg/0.1@lasote/testing:" in client.out
     assert "Running system requirements!!" in client.out
     client.run('list -c *')
     assert "pkg/0.1@lasote/testing" in client.out
@@ -86,20 +87,20 @@ def test_create_user_channel():
     client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
     client.run("create . --user=lasote --channel=channel")
-    assert "Generating the package pkg/0.1@lasote/channel:" in client.out
+    assert "Package step for pkg/0.1@lasote/channel:" in client.out
     client.run("list * -c")
     assert "pkg/0.1@lasote/channel" in client.out
 
     # test default without user and channel
     client.run("create . ")
-    assert "Generating the package pkg/0.1:" in client.out
+    assert "Package step for pkg/0.1:" in client.out
 
 
 def test_create_in_subfolder():
     client = TestClient()
     client.save({"subfolder/conanfile.py": GenConanfile().with_name("pkg").with_version("0.1")})
     client.run("create subfolder --user=lasote --channel=channel")
-    assert "Generating the package pkg/0.1@lasote/channel:" in client.out
+    assert "Package step for pkg/0.1@lasote/channel:" in client.out
     client.run("list * -c")
     assert "pkg/0.1@lasote/channel" in client.out
 
@@ -109,7 +110,7 @@ def test_create_in_subfolder_with_different_name():
     client = TestClient()
     client.save({"subfolder/Custom.py": GenConanfile().with_name("pkg").with_version("0.1")})
     client.run("create subfolder/Custom.py --user=lasote --channel=channel")
-    assert "Generating the package pkg/0.1@lasote/channel:" in client.out
+    assert "Package step for pkg/0.1@lasote/channel:" in client.out
     client.run("list * -c")
     assert "pkg/0.1@lasote/channel" in client.out
 
@@ -120,7 +121,7 @@ def test_create_test_package():
                  "test_package/conanfile.py":
                      GenConanfile().with_test('self.output.info("TESTING!!!")')})
     client.run("create . --user=lasote --channel=testing")
-    assert "Generating the package pkg/0.1@lasote/testing:" in client.out
+    assert "Package step for pkg/0.1@lasote/testing:" in client.out
     assert "pkg/0.1@lasote/testing (test package): TESTING!!!" in client.out
 
 
@@ -132,7 +133,7 @@ def test_create_skip_test_package():
                  "test_package/conanfile.py":
                      GenConanfile().with_test('self.output.info("TESTING!!!")')})
     client.run("create . --user=lasote --channel=testing --test-folder=\"\"")
-    assert "Generating the package pkg/0.1@lasote/testing:" in client.out
+    assert "Package step for pkg/0.1@lasote/testing:" in client.out
     assert "TESTING!!!" not in client.out
 
 
@@ -165,13 +166,13 @@ def test_create_package_requires():
 
     client.run("create . --name=pkg --version=0.1 --user=lasote --channel=testing -vv")
 
-    assert "pkg/0.1@lasote/testing (test package): build() " \
+    assert "build() " \
            "Requires: other/1.0@user/channel" in client.out
-    assert "pkg/0.1@lasote/testing (test package): build() " \
+    assert "build() " \
            "Requires: pkg/0.1@lasote/testing" in client.out
-    assert "pkg/0.1@lasote/testing (test package): build() cpp_info dep: other" in client.out
-    assert "pkg/0.1@lasote/testing (test package): build() cpp_info dep: dep" in client.out
-    assert "pkg/0.1@lasote/testing (test package): build() cpp_info dep: pkg" in client.out
+    assert "build() cpp_info dep: other" in client.out
+    assert "build() cpp_info dep: dep" in client.out
+    assert "build() cpp_info dep: pkg" in client.out
 
     # Check that the additional info shows up when creating pkg
     # Graph info, package creation, and test package graph info
@@ -198,8 +199,8 @@ def test_package_folder_build_error():
                assert_error=True)
 
     assert "Build error" in client.out
-    pref = client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
-    assert pref is None
+    with pytest.raises(ConanReferenceDoesNotExistInDB):
+        client.get_latest_package_reference(ref, NO_SETTINGS_PACKAGE_ID)
 
 
 def test_create_with_name_and_version():
@@ -370,7 +371,7 @@ def test_create_no_user_channel():
 
 
 def test_create_build_missing_negation():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
              "lib/conanfile.py": GenConanfile("lib", "1.0").with_requires("dep/1.0"),
              "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("lib/1.0")})
@@ -748,7 +749,7 @@ def test_defaults_in_components():
     assert re.search(r"BINDIRS: \['.+bin']", client.out)
     assert re.search(r"LIBDIRS: \['.+lib']", client.out)
     assert re.search(r"INCLUDEDIRS: \['.+include']", client.out)
-    assert "WARN: RES DIRS: []"
+    assert "WARN: RESDIRS: []" in client.out
     assert re.search(r"WARN: FOO LIBDIRS: \['.+lib']", client.out)
     assert re.search(r"WARN: FOO INCLUDEDIRS: \['.+include']", client.out)
     assert "WARN: FOO RESDIRS: []" in client.out
@@ -758,7 +759,7 @@ def test_defaults_in_components():
     assert re.search(r"BINDIRS: \['.+bin']", client.out)
     assert re.search(r"LIBDIRS: \['.+lib']", client.out)
     assert re.search(r"INCLUDEDIRS: \['.+include']", client.out)
-    assert "WARN: RES DIRS: []"
+    assert "WARN: RESDIRS: []" in client.out
     assert bool(re.search(r"WARN: FOO LIBDIRS: \['.+lib']", client.out))
     assert bool(re.search(r"WARN: FOO INCLUDEDIRS: \['.+include']", client.out))
     assert "WARN: FOO RESDIRS: []" in client.out

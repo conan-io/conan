@@ -1,9 +1,11 @@
 from conan.api.conan_api import ConanAPI
+from conan.errors import ConanException
 from conan.test.utils.env import environment_update
-from conan.api.model import PkgReference
+from conan.api.model import PkgReference, ListPattern
 from conan.api.model import RecipeReference
 from conan.test.assets.genconanfile import GenConanfile
-from conan.test.utils.tools import TestClient
+from conan.test.utils.tools import TestClient, TestRequester
+import pytest
 
 
 def test_get_recipe_revisions():
@@ -60,3 +62,38 @@ def test_search_recipes_no_user_channel_only():
     client.run("list foo/1.0@")
     assert "foo/1.0@user/channel" not in client.out
     assert "foo/1.0" in client.out
+
+
+@pytest.mark.parametrize("with_remote", [True, False])
+def test_latest_revision_not_found_returns(with_remote):
+    """
+    The latest revision endpoints should raise when the reference is not found
+    """
+    client = TestClient(default_server_user=with_remote)
+
+    rref = RecipeReference.loads("foo/1.0")
+    pref = PkgReference.loads("foo/1.0#1234567890abcdef1234567890abcdef:1234567890abcdef1234567890abcdef")
+
+    with client.mocked_servers(TestRequester(client.servers)):
+        api = ConanAPI(client.cache_folder)
+        remote = api.remotes.get("default") if with_remote else None
+
+        with pytest.raises(ConanException):
+            api.list.latest_recipe_revision(rref, remote=remote)
+
+        with pytest.raises(ConanException):
+            api.list.latest_package_revision(pref, remote=remote)
+
+
+def test_select_revision_iteration_no_info():
+    client = TestClient()
+    client.save({"conanfile.py": GenConanfile("foo", "1.0").with_settings("os").with_shared_option(True)})
+    client.run("create .")
+
+    api = ConanAPI(client.cache_folder)
+    selection = api.list.select(ListPattern("foo/1.0:*#*"))
+    for ref, packages in selection.items():
+        for package in packages.values():
+            assert "timestamp" in package
+            assert "settings" not in package
+            assert "options" not in package

@@ -1,5 +1,6 @@
 import os
 import shutil
+import json
 
 from urllib.parse import urlparse
 from urllib.request import url2pathname
@@ -87,6 +88,11 @@ class SourcesCachingDownloader:
 
     def _do_download(self, source_origins, urls, download_path, retry, retry_wait, verify_ssl,
                      auth, headers, md5, sha1, sha256):
+        # Backup servers receive the original urls, comma separated. Each url is percent-encoded
+        # (commas included, so it is safe to split by ",") and recovered with a single unquote()
+        # Non-str urls (like None) are skipped, origin download warns about them and continues
+        url_list = urls if isinstance(urls, (list, tuple)) else [urls]
+        origin_urls = json.dumps(url_list)
         # iterates the origins until one works
         for backup_url in source_origins:
             if backup_url == "origin":  # download from the internet
@@ -103,8 +109,10 @@ class SourcesCachingDownloader:
                     self._output.info(f"Checking backup: {backup_url}")
                     backup_url = backup_url if backup_url.endswith("/") else backup_url + "/"
                     # The download happens to the user download folder, not to the download cache
+                    # A new headers dict for each call, the requester adds the auth headers to it
                     self._file_downloader.download(backup_url + sha256, download_path,
-                                                   sha256=sha256, overwrite=True)
+                                                   sha256=sha256, overwrite=True,
+                                                   headers={"X-Conan-Origin-Urls": origin_urls})
                     self._file_downloader.download(backup_url + sha256 + ".json",
                                                    download_path + ".json", overwrite=True)
                     self._output.info(f"Sources for {urls} found in remote backup {backup_url}")

@@ -179,7 +179,7 @@ def test_package_id_validate_settings():
 
 class TestBuildRequiresHeaderOnly:
     def test_header_only(self):
-        c = TestClient(light=True)
+        c = TestClient()
         save(c.paths.global_conf_path, "core.package_id:default_build_mode=minor_mode")
         pkg = textwrap.dedent("""\
             from conan import ConanFile
@@ -200,7 +200,7 @@ class TestBuildRequiresHeaderOnly:
         c.assert_listed_binary({"pkg/0.1": (pkgid, "Cache")})
 
     def test_header_only_implements(self):
-        c = TestClient(light=True)
+        c = TestClient()
         save(c.paths.global_conf_path, "core.package_id:default_build_mode=minor_mode")
         pkg = textwrap.dedent("""\
             from conan import ConanFile

@@ -11,6 +11,7 @@ from conan.tools.files import save
 from conan.internal.model.cpp_info import CppInfo
 from conan.internal.model.pkg_type import PackageType
 from conan.api.model import RecipeReference
+from conan.errors import ConanException
 from conan.internal.util.files import save
 
 
@@ -163,6 +164,31 @@ def test_windows_several_shared_link_locations(lib_info, conanfile):
         assert result.components[f"_{lib_name}"].type == "shared-library"
 
 
+@pytest.mark.parametrize("lib", ["mimalloc.DLL", "mimalloc.Dll", "mimalloc.LIB", "mimalloc.dll"])
+def test_lib_extension_case_insensitive(lib, conanfile):
+    """
+    The extension declared in cpp_info.libs is stripped regardless of its case, as some
+    libraries are declared with upper case extensions like "mylib.DLL"
+    """
+    folder = temp_folder()
+    imp_location = os.path.join(folder, "libdir", "mimalloc.lib")
+    save(imp_location, "")
+    location = os.path.join(folder, "bindir", "mimalloc.dll")
+    save(location, "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.bindirs = ["bindir"]
+    cppinfo.libs = [lib]
+    cppinfo.set_relative_base_folder(folder)
+
+    conanfile._conan_node.ref = RecipeReference(name="mimalloc")
+    result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert result.location == location.replace("\\", "/")
+    assert result.link_location == imp_location.replace("\\", "/")
+    assert result.type == "shared-library"
+
+
 @pytest.mark.parametrize("lib, symlinks", [
     # symlinks == "real_file <- symlink1 <- symlink2 <- ... <- symlinkN"
     # Issue related: https://github.com/conan-io/conan/issues/17417
@@ -226,6 +252,47 @@ def test_error_if_shared_and_static_found(static, conanfile):
     assert result.type == (PackageType.STATIC if static else PackageType.SHARED)
 
 
+def test_no_package_type_warning_if_component_type_declared(conanfile):
+    """
+    A component that explicitly declares its .type must not warn about the deduced type not
+    matching the recipe 'package_type', e.g. a static package with an always-shared component
+
+    Issue related: https://github.com/conan-io/conan/issues/20498
+    """
+    folder = temp_folder()
+    save(os.path.join(folder, "libdir", "libhighs_extras.so"), "")
+
+    cppinfo = CppInfo()
+    cppinfo.components["extras"].libdirs = ["libdir"]
+    cppinfo.components["extras"].libs = ["highs_extras"]
+    cppinfo.components["extras"].type = "shared-library"
+    cppinfo.set_relative_base_folder(folder)
+    conanfile.package_type = PackageType.STATIC
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert result.components["extras"].type == "shared-library"
+    assert "WARN: Lib highs_extras deduced as 'shared-library'" not in output
+
+
+def test_error_if_component_type_declared_mismatch(conanfile):
+    """
+    A declared .type is enforced: if the library found is of a different type, it is an error
+    """
+    folder = temp_folder()
+    save(os.path.join(folder, "libdir", "libmylib.so"), "")
+
+    cppinfo = CppInfo()
+    cppinfo.components["mylib"].libdirs = ["libdir"]
+    cppinfo.components["mylib"].libs = ["mylib"]
+    cppinfo.components["mylib"].type = "static-library"
+    cppinfo.set_relative_base_folder(folder)
+    with pytest.raises(ConanException) as exc:
+        cppinfo.deduce_full_cpp_info(conanfile)
+    assert "Incorrect deduced type 'shared-library' for library 'mylib' that declared " \
+           ".type='static-library'" in str(exc.value)
+
+
 def test_warning_windows_if_more_than_one_dll(conanfile):
     folder = temp_folder()
     save(os.path.join(folder, "libdir", "mylib.a"), "")
@@ -266,6 +333,56 @@ def test_multiple_matches_exact_match(prefix, conanfile):
     assert "WARN: There were several matches for Lib mylib" not in output
     assert result.location == f"{folder}/libdir/{prefix}mylib.a"
     assert result.type == "static-library"
+
+
+def test_multiple_matches_exact_match_mingw_dll_a(conanfile):
+    """
+    Validate .dll.a extension (MingW) used for static import libraries
+    """
+    folder = temp_folder()
+    save(os.path.join(folder, "libdir", "libmylib.dll.a"), "")
+    save(os.path.join(folder, "libdir", "libmylib_setup.dll.a"), "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.libs = ["mylib"]
+    cppinfo.set_relative_base_folder(folder)
+    folder = folder.replace("\\", "/")
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert "WARN: There were several matches for Lib mylib" not in output
+    assert result.location == f"{folder}/libdir/libmylib.dll.a"
+    assert result.type == "static-library"
+
+
+@pytest.mark.parametrize("lib, files, expected", [
+    ("wx_gtk3u_xrc-3.3", ["libwx_gtk3u_xrc-3.3.so", "libwx_gtk3u_xrc-3.3.so.4",
+                          "libwx_gtk3u_xrc-3.3.so.4.0.0"], "libwx_gtk3u_xrc-3.3.so"),
+    ("wx_gtk3u_xrc-3.3.so", ["libwx_gtk3u_xrc-3.3.so", "libwx_gtk3u_xrc-3.3.so.4"],
+     "libwx_gtk3u_xrc-3.3.so"),
+    ("mylib-1.2", ["libmylib-1.2.dylib", "libmylib-1.2.1.dylib"], "libmylib-1.2.dylib"),
+    ("mylib-1.2", ["libmylib-1.2.a", "libmylib-1.2.1.a"], "libmylib-1.2.a"),
+])
+def test_lib_name_with_dots_no_ambiguity_warning(lib, files, expected, conanfile):
+    """
+    A dot in the library name (like the version in "mylib-1.2") is not a file extension,
+    so it must not be stripped, otherwise there are spurious "several matches" warnings
+    """
+    folder = temp_folder()
+    for f in files:
+        save(os.path.join(folder, "libdir", f), "")
+
+    cppinfo = CppInfo()
+    cppinfo.libdirs = ["libdir"]
+    cppinfo.libs = [lib]
+    cppinfo.set_relative_base_folder(folder)
+    folder = folder.replace("\\", "/")
+    output = RedirectedTestOutput()
+    with redirect_output(output):
+        result = cppinfo.deduce_full_cpp_info(conanfile)
+    assert "several matches" not in output
+    assert result.location == f"{folder}/libdir/{expected}"
 
 
 @pytest.mark.parametrize("lib_name, libs", [

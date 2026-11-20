@@ -48,6 +48,8 @@ class ConanFile:
     default_options = None
     default_build_options = None
     package_type = None
+    # For packages that need an override of the inferred requirement traits based on package_type
+    package_type_traits = {}
     vendor = False
     languages = []
     implements = []
@@ -79,6 +81,10 @@ class ConanFile:
     conf = None
     generator_info = None
     conan_data = None
+
+    # user declared variables, 1.x compatibility, will be removed in the future
+    user_info = MockInfoProperty("user_info")
+    env_info = MockInfoProperty("env_info")
 
     def __init__(self, display_name=""):
         self.display_name = display_name
@@ -117,9 +123,6 @@ class ConanFile:
         if isinstance(self.provides, str):
             self.provides = [self.provides]
 
-        # user declared variables
-        self.user_info = MockInfoProperty("user_info")
-        self.env_info = MockInfoProperty("env_info")
         self._conan_dependencies = None
 
         if not hasattr(self, "virtualbuildenv"):  # Allow the user to override it with True or False

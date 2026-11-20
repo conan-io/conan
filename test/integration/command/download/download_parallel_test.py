@@ -2,7 +2,7 @@ from conan.test.utils.tools import GenConanfile, TestClient
 
 
 def test_basic_parallel_download():
-    client = TestClient(light=True, default_server_user=True)
+    client = TestClient(default_server_user=True)
     threads = 2
     packages = 2
     per_package = 4

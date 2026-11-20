@@ -24,8 +24,8 @@ def test_profile_template():
         client.run("install . -pr=profile1")
 
     current_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
-    assert "os={}".format(current_os)
-    assert "build_type=Debug"
+    assert "os={}".format(current_os) in client.out
+    assert "build_type=Debug" in client.out
 
 
 def test_profile_template_variables():
@@ -274,7 +274,7 @@ class TestProfileDetectAPI:
         assert expected in client.out
 
     def test_profile_detect_compiler_missing_error(self):
-        client = TestClient(light=True)
+        client = TestClient()
         tpl1 = textwrap.dedent("""
                     {% set compiler, version, compiler_exe = detect_api.detect_clang_compiler(compiler_exe="not-existing-compiler") %}
                     {% set version = detect_api.default_compiler_version(compiler, version) %}
@@ -286,7 +286,7 @@ class TestProfileDetectAPI:
 
 
 def test_profile_jinja_error():
-    c = TestClient(light=True)
+    c = TestClient()
     profile = textwrap.dedent("""
         {% set arr = [
             {# comment that triggers the error #}

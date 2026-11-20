@@ -210,14 +210,14 @@ class _SystemPackageManagerTool:
         install_pkgs = pkgs.setdefault("install", [])
         install_pkgs.extend(p for p in packages if p not in install_pkgs)
         if self._mode == self.mode_report:
-            return
+            return None
 
         if check or self._mode in (self.mode_check, self.mode_report_installed):
             packages = self.check(packages, host_package=host_package)
             missing_pkgs = pkgs.setdefault("missing", [])
             missing_pkgs.extend(p for p in packages if p not in missing_pkgs)
         if self._mode == self.mode_report_installed:
-            return
+            return None
 
         if self._mode == self.mode_check and packages:
             raise ConanException("System requirements: '{0}' are missing but can't install "
@@ -303,7 +303,8 @@ class Apt(_SystemPackageManagerTool):
                             "armv7hf": "armhf",
                             "armv8": "arm64",
                             "s390x": "s390x",
-                            "riscv64": "riscv64"} if arch_names is None else arch_names
+                            "riscv64": "riscv64",
+                            "loongarch64": "loong64"} if arch_names is None else arch_names
 
         self._arch_separator = ":"
 
@@ -355,7 +356,8 @@ class Yum(_SystemPackageManagerTool):
                             "armv7hf": "armv7hl",
                             "armv8": "aarch64",
                             "s390x": "s390x",
-                            "riscv64": "riscv64"} if arch_names is None else arch_names
+                            "riscv64": "riscv64",
+                            "loongarch64": "loongarch64"} if arch_names is None else arch_names
         self._arch_separator = "."
 
     def _is_valid_explicit_arch(self, explicit_arch):

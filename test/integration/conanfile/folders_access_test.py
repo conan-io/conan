@@ -93,7 +93,7 @@ class TestFoldersAccess:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.client = TestClient(light=True)
+        self.client = TestClient()
         self.client.save({"conanfile.py": conanfile_parent})
         self.client.run("export . --user=conan --channel=stable")
 
@@ -160,7 +160,7 @@ class TestRecipeFolder:
         """)
 
     def test_recipe_folder(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": self.recipe_conanfile,
                      "file.txt": "MYFILE!"})
         client.run("export . --name=pkg --version=0.1 --user=user --channel=testing")
@@ -176,7 +176,7 @@ class TestRecipeFolder:
         assert "pkg/0.1@user/testing: PACKAGE_INFO: MYFILE!" in client.out
 
     def test_local_flow(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": self.recipe_conanfile,
                      "file.txt": "MYFILE!"})
         client.run("install .")
@@ -186,7 +186,7 @@ class TestRecipeFolder:
         assert "conanfile.py: REQUIREMENTS: MYFILE!" in client.out
 
     def test_editable(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"pkg/conanfile.py": self.recipe_conanfile,
                      "pkg/file.txt": "MYFILE!",
                      "consumer/conanfile.py":

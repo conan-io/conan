@@ -84,6 +84,9 @@ def get_build_folder_custom_vars(conanfile):
 
     ret = []
     for s in build_vars:
+        if s.startswith("!"):  # exclusion markers, e.g. "!settings.build_type"
+            assert s == "!settings.build_type", "Only settings.build_type can be excluded"
+            continue
         group, var = s.split(".", 1)
         tmp = None
         if group == "settings":
@@ -107,5 +110,6 @@ def get_build_folder_custom_vars(conanfile):
         if tmp:
             ret.append(tmp.lower())
 
-    user_defined_build = "settings.build_type" in build_vars
+    user_defined_build = ("settings.build_type" in build_vars
+                          or "!settings.build_type" in build_vars)
     return "-".join(ret), user_defined_build

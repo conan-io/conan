@@ -464,7 +464,7 @@ def test_conf_test_package():
 
 
 def test_global_conf_jinja_broken_msg():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save_home({"global.conf": "{{some + error}}"})
     c.run("config list", assert_error=True)
     assert "ERROR: Error loading 'global.conf' in home folder: 'some' is undefined" in c.out

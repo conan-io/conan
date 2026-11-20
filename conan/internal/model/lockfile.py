@@ -118,7 +118,6 @@ class Lockfile:
         self._python_requires = _LockRequires()
         self._build_requires = _LockRequires()
         self._conf_requires = _LockRequires()
-        self._alias = {}
         self._overrides = Overrides()
         self.partial = False
 
@@ -144,7 +143,6 @@ class Lockfile:
             else:
                 self._requires.add(graph_node.ref, pids)
 
-        self._alias.update(deps_graph.aliased)
         self._overrides.update(deps_graph.overrides())
 
         self._requires.sort()
@@ -180,7 +178,6 @@ class Lockfile:
         self._build_requires.merge(other._build_requires)
         self._python_requires.merge(other._python_requires)
         self._conf_requires.merge(other._conf_requires)
-        self._alias.update(other._alias)
         self._overrides.update(other._overrides)
 
     def add(self, requires=None, build_requires=None, python_requires=None, config_requires=None):
@@ -241,9 +238,6 @@ class Lockfile:
             graph_lock._build_requires = _LockRequires.deserialize(data["build_requires"])
         if "python_requires" in data:
             graph_lock._python_requires = _LockRequires.deserialize(data["python_requires"])
-        if "alias" in data:
-            graph_lock._alias = {RecipeReference.loads(k): RecipeReference.loads(v)
-                                 for k, v in data["alias"].items()}
         if "overrides" in data:
             graph_lock._overrides = Overrides.deserialize(data["overrides"])
         if "config_requires" in data:
@@ -261,8 +255,6 @@ class Lockfile:
             result["build_requires"] = self._build_requires.serialize()
         if self._python_requires:
             result["python_requires"] = self._python_requires.serialize()
-        if self._alias:
-            result["alias"] = {repr(k): repr(v) for k, v in self._alias.items()}
         if self._overrides:
             result["overrides"] = self._overrides.serialize()
         if self._conf_requires:
@@ -325,23 +317,44 @@ class Lockfile:
         if not lockfile_refs:
             return  # If lockfile is not locking config_requires, do nothing, would break
 
-        # Existing installed config packages must exist in the lockfile
-        not_locked = [r for r in installed_refs if r not in lockfile_refs]
-        if not_locked:
-            raise ConanException(f"Installed config packages {not_locked} not in the lockfile")
-
-        # Config-requires in the lockfile must be installed, at least 1 per package name
-        # so first, group by package name
+        # Group by package name. Several constraints per name are allowed, but one installed
+        # package per name is enough, and the hint shows the first locked reference.
         lockfile_refs_by_name = {}
         for r in self._conf_requires.refs():
             lockfile_refs_by_name.setdefault(r.name, []).append(r)
+
+        def install_hint(refs):
+            if not refs:
+                return ""
+            hints = "\n".join(f"  conan config install-pkg {r.repr_notime()}" for r in refs)
+            return ("\n\nIf the configuration packages are listed in a conanconfig.yml file, "
+                    "install them all at once:\n"
+                    "  conan config install-pkg <path to conanconfig.yml>\n"
+                    "\nOtherwise, install the packages from the lockfile one by one:\n"
+                    f"{hints}")
+
+        # Existing installed config packages must exist in the lockfile
+        not_locked = [r for r in installed_refs if r not in lockfile_refs]
+        if not_locked:
+            # Lockfile entries of the same package names that are not installed yet
+            to_install = []
+            for name in dict.fromkeys(r.name for r in not_locked):
+                for ref in lockfile_refs_by_name.get(name, []):
+                    if ref not in installed_refs and ref not in to_install:
+                        to_install.append(ref)
+            raise ConanException(f"Installed config packages {not_locked} not in the lockfile"
+                                 f"{install_hint(to_install)}")
+
+        # Config-requires in the lockfile must be installed, at least 1 per package name
         not_installed = []
         for refs in lockfile_refs_by_name.values():
             if not any(r in installed_refs for r in refs):
                 not_installed.extend(refs)
         if not_installed:
+            not_installed_str = ", ".join(r.repr_notime() for r in not_installed)
             raise ConanException("There are config packages in lockfile "
-                                 f"'config_requires' not installed: {not_installed}")
+                                 f"'config_requires' not installed: [{not_installed_str}]"
+                                 f"{install_hint(not_installed)}")
 
     def _resolve(self, require, locked_refs, resolve_prereleases, kind):
         version_range = require.version_range
@@ -369,14 +382,6 @@ class Lockfile:
             else:
                 if ref not in matches and not self.partial:
                     raise ConanException(f"Requirement '{repr(ref)}' not in lockfile '{kind}'")
-
-    def replace_alias(self, require, alias):
-        locked_alias = self._alias.get(alias)
-        if locked_alias is not None:
-            require.ref = locked_alias
-            return True
-        elif not self.partial:
-            raise ConanException(f"Requirement alias '{alias}' not in lockfile")
 
     def resolve_locked_pyrequires(self, require, resolve_prereleases=None):
         locked_refs = self._python_requires.refs()  # CHANGE

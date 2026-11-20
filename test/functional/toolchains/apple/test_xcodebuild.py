@@ -1,3 +1,4 @@
+import os
 import platform
 import re
 import textwrap
@@ -70,7 +71,8 @@ def client():
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
 @pytest.mark.tool("xcodebuild")
 @pytest.mark.tool("xcodegen")
-def test_project_xcodebuild(client):
+@pytest.mark.parametrize("project_format", ["pbxproj", "xcproj"])
+def test_project_xcodebuild(client, project_format):
 
     conanfile = textwrap.dedent("""
         import os
@@ -104,6 +106,11 @@ def test_project_xcodebuild(client):
     client.run("install . --build=missing")
     client.run("install . -s build_type=Debug --build=missing")
     client.run_command("xcodegen generate")
+    if project_format == "xcproj":
+        client.run_command("xcodebuild -project app.xcodeproj -convert-project xcproj")
+        project = os.path.join(client.current_folder, "app.xcodeproj")
+        assert os.path.exists(os.path.join(project, "project.xcproj"))
+        assert not os.path.exists(os.path.join(project, "project.pbxproj"))
     client.run("create . --build=missing -s os.version=15.0 -c tools.build:verbosity=verbose -c tools.compilation:verbosity=verbose")
     assert "MACOSX_DEPLOYMENT_TARGET=15.0" in client.out
     assert "xcodebuild: error: invalid option" not in client.out
@@ -142,12 +149,12 @@ def test_xcodebuild_test_different_sdk(client):
     client.run("install . --build=missing")
     client.run("install . -s build_type=Debug --build=missing")
     client.run_command("xcodegen generate")
-    client.run("create . --build=missing -s os.sdk_version=26.0 "
-               f"-c tools.apple:sdk_path='{tools_locations['xcode_sdk']['26.0']['path']['Darwin']}'")
-    assert "sdk 26.0" in client.out
-    client.run("create . --build=missing -s os.sdk_version=26.5 "
-               f"-c tools.apple:sdk_path='{tools_locations['xcode_sdk']['26.5']['path']['Darwin']}'")
-    assert "sdk 26.5" in client.out
+    client.run("create . --build=missing -s os.sdk_version=27.0 "
+               f"-c tools.apple:sdk_path='{tools_locations['xcode_sdk']['27.0']['path']['Darwin']}'")
+    assert "sdk 27.0" in client.out
+    client.run("create . --build=missing -s os.sdk_version=27.2 "
+               f"-c tools.apple:sdk_path='{tools_locations['xcode_sdk']['27.2']['path']['Darwin']}'")
+    assert "sdk 27.2" in client.out
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only for MacOS")
@@ -228,7 +235,7 @@ def test_project_xcodebuild_cli_args(client, no_copy_source):
 
         build_folder = re.search(r"Building your package in (/.+)", client.out).group(1)
 
-        assert f"OBJROOT = {build_folder}"
-        assert f"SYMROOT = {build_folder}"
+        assert f"OBJROOT={build_folder}" in client.out
+        assert f"SYMROOT={build_folder}" in client.out
         assert "-xcconfig" in client.out
         assert f"App {build_type}!" in client.out

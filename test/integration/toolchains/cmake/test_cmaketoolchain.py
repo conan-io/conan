@@ -429,7 +429,7 @@ def test_runtime_lib_dirs_multiconf(lib_dir_setup):
 
 def test_disable_package_registry():
     # https://github.com/conan-io/conan/issues/19749
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.txt": "[generators]\nCMakeToolchain"})
     client.run("install .")
     toolchain = client.load("conan_toolchain.cmake")
@@ -657,6 +657,93 @@ def test_bitcode_enable_flag():
     client.run("install . --profile:build=profile --profile:host=profile")
     toolchain = client.load("conan_toolchain.cmake")
     assert 'set(BITCODE "-fembed-bitcode")' in toolchain
+
+
+def _apple_toolchain(op_system, os_version, sdk, arch, confs="", build_type="Release"):
+    profile = textwrap.dedent("""
+        [settings]
+        os={}
+        os.version={}
+        {}
+        arch={}
+        compiler=apple-clang
+        compiler.version=17
+        compiler.libcxx=libc++
+        build_type={}
+        [conf]
+        {}
+        """).format(op_system, os_version, f"os.sdk={sdk}" if sdk else "", arch, build_type, confs)
+    client = TestClient(path_with_spaces=False)
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler", "build_type") \
+                              .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile, "profile": profile})
+    client.run("install . --profile:build=profile --profile:host=profile")
+    return client.load("conan_toolchain.cmake")
+
+
+@pytest.mark.parametrize("op_system, os_version, sdk, arch, apple_arch", [
+    ("watchOS", "8.1", "watchos", "armv7k", "armv7k"),
+    ("tvOS", "13.2", "appletvos", "armv8", "arm64"),
+    ("iOS", "10.0", "iphonesimulator", "x86_64", "x86_64"),
+    ("Macos", "11.0", None, "armv8|x86_64", "arm64;x86_64"),  # Universal binary
+])
+def test_apple_toolchain_architectures_sdk_and_deployment_target(op_system, os_version, sdk, arch,
+                                                                 apple_arch):
+    toolchain = _apple_toolchain(op_system, os_version, sdk, arch)
+    assert f'set(CMAKE_OSX_ARCHITECTURES {apple_arch} CACHE STRING "" FORCE)' in toolchain
+    if sdk:
+        assert f'set(CMAKE_OSX_SYSROOT {sdk} CACHE STRING "" FORCE)' in toolchain
+    assert f'set(CMAKE_OSX_DEPLOYMENT_TARGET "{os_version}" CACHE STRING "")' in toolchain
+
+
+@pytest.mark.parametrize("op_system, os_version, sdk, arch", [
+    ("watchOS", "8.1", "watchos", "armv7k"),
+    ("tvOS", "13.2", "appletvos", "armv8"),
+])
+@pytest.mark.parametrize("conf_value, present, absent", [
+    (True,
+     ['set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "YES")',
+      'set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")', 'set(BITCODE "-fembed-bitcode")',
+      'set(FOBJC_ARC "-fobjc-arc")', 'set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "YES")',
+      'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "NO")',
+      'set(VISIBILITY "-fvisibility=default")'],
+     ['set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")', 'set(FOBJC_ARC "-fno-objc-arc")',
+      'set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "NO")',
+      'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "YES")',
+      'set(VISIBILITY "-fvisibility=hidden -fvisibility-inlines-hidden")']),
+    (False,
+     ['set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE "NO")', 'set(FOBJC_ARC "-fno-objc-arc")',
+      'set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "NO")',
+      'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "YES")',
+      'set(VISIBILITY "-fvisibility=hidden -fvisibility-inlines-hidden")'],
+     ['set(CMAKE_XCODE_ATTRIBUTE_BITCODE_GENERATION_MODE "bitcode")', 'set(BITCODE "-fembed-bitcode")',
+      'set(FOBJC_ARC "-fobjc-arc")', 'set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "YES")',
+      'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN "NO")',
+      'set(VISIBILITY "-fvisibility=default")']),
+    (None,  # Not defined: nothing is set
+     [],
+     ['set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE', 'set(BITCODE "-', 'set(FOBJC_ARC "-',
+      'set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC', 'set(CMAKE_XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN',
+      'set(VISIBILITY "-']),
+])
+def test_apple_bitcode_arc_and_visibility_flags(op_system, os_version, sdk, arch, conf_value, present,
+                                                absent):
+    """ Same checks of the toolchain than the functional test_cmake_toolchain_xcode_flags.py,
+    that need the Apple SDKs to build, but they only need to install """
+    confs = "" if conf_value is None else "\n".join(
+        f"tools.apple:enable_{flag}={conf_value}" for flag in ("bitcode", "arc", "visibility"))
+    toolchain = _apple_toolchain(op_system, os_version, sdk, arch, confs)
+    for line in present:
+        assert line in toolchain
+    for line in absent:
+        assert line not in toolchain
+
+
+def test_apple_bitcode_marker_in_debug():
+    toolchain = _apple_toolchain("watchOS", "8.1", "watchos", "armv7k",
+                                 confs="tools.apple:enable_bitcode=True", build_type="Debug")
+    assert 'set(BITCODE "-fembed-bitcode-marker")' in toolchain
+    assert 'set(BITCODE "-fembed-bitcode")' not in toolchain
 
 
 def test_cmake_presets_binary_dir_available():
@@ -998,7 +1085,7 @@ def test_android_c_library():
     client.run("install . " + settings)
     conan_toolchain = client.load(os.path.join(client.current_folder, "conan_toolchain.cmake"))
     assert "set(ANDROID_PLATFORM android-23)" in conan_toolchain
-    assert "set(ANDROID_ABI x86_64)" in conan_toolchain
+    assert 'set(ANDROID_ABI x86_64 CACHE STRING "" FORCE)' in conan_toolchain
     assert 'include("/foo/build/cmake/android.toolchain.cmake")' in conan_toolchain
     client.run("create . --name=foo --version=1.0 " + settings)
 
@@ -1221,6 +1308,92 @@ def test_set_cmake_lang_compilers_and_launchers():
     assert 'set(CMAKE_C_COMPILER "/my/local/gcc")' in toolchain
     assert 'set(CMAKE_CXX_COMPILER "g++")' in toolchain
     assert 'set(CMAKE_RC_COMPILER "C:/local/rc.exe")' in toolchain
+
+
+@pytest.mark.parametrize("os_,mode,expected_c,expected_cxx", [
+    ("Windows", "classic", "icl", "icl"),
+    ("Linux", "classic", "icc", "icpc"),
+    ("Windows", "icx", "icx", "icx"),
+    ("Linux", "icx", "icx", "icpx"),
+])
+def test_cmaketoolchain_intel_cc_default_compilers(os_, mode, expected_c, expected_cxx):
+    # Regression: intel-cc on Windows must default to icl (classic) / icx (icx), not
+    # icc/icpc or icx-cl (which do not exist there for all versions)
+    # https://github.com/conan-io/conan/issues/20232
+    profile = textwrap.dedent(f"""
+        [settings]
+        os={os_}
+        arch=x86_64
+        compiler=intel-cc
+        compiler.version=2022.2
+        compiler.mode={mode}
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja
+        tools.intel:installation_path=
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert f'set(CMAKE_C_COMPILER "{expected_c}")' in toolchain
+    assert f'set(CMAKE_CXX_COMPILER "{expected_cxx}")' in toolchain
+
+
+@pytest.mark.parametrize("os_", ["Windows", "Linux"])
+def test_cmaketoolchain_intel_cc_buildenv_overrides_default(os_):
+    # CC/CXX defined in [buildenv] take precedence over the hard-coded intel-cc defaults
+    # https://github.com/conan-io/conan/issues/20232
+    profile = textwrap.dedent(f"""
+        [settings]
+        os={os_}
+        arch=x86_64
+        compiler=intel-cc
+        compiler.version=2022.2
+        compiler.mode=icx
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja
+        tools.intel:installation_path=
+        [buildenv]
+        CC=icx.exe
+        CXX=icx.exe
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile")
+    toolchain = client.load("conan_toolchain.cmake")
+    assert 'set(CMAKE_C_COMPILER ' not in toolchain
+    assert 'set(CMAKE_CXX_COMPILER ' not in toolchain
+
+
+@pytest.mark.parametrize("os_", ["Windows", "Linux"])
+def test_cmaketoolchain_intel_cc_classic_removed_since_2024(os_):
+    # classic mode was removed from Intel oneAPI 2024.0, installing must raise
+    # https://github.com/conan-io/conan/issues/20232
+    profile = textwrap.dedent(f"""
+        [settings]
+        os={os_}
+        arch=x86_64
+        compiler=intel-cc
+        compiler.version=2024.0
+        compiler.mode=classic
+        [conf]
+        tools.cmake.cmaketoolchain:generator=Ninja
+        tools.intel:installation_path=
+        """)
+    client = TestClient()
+    conanfile = GenConanfile().with_settings("os", "arch", "compiler")\
+        .with_generator("CMakeToolchain")
+    client.save({"conanfile.py": conanfile,
+                 "profile": profile})
+    client.run("install . -pr:b profile -pr:h profile", assert_error=True)
+    assert "compiler.mode=classic" in client.out
+    assert "removed in Intel oneAPI 2024.0" in client.out
 
 
 def test_cmake_layout_toolchain_folder():
@@ -1534,14 +1707,37 @@ def test_avoid_ovewrite_user_cmakepresets():
 def test_presets_njobs():
     c = TestClient()
     c.save({"conanfile.txt": ""})
-    c.run('install . -g CMakeToolchain -c tools.build:jobs=42')
+    generator = "-c tools.cmake.cmaketoolchain:generator=Ninja"
+    c.run(f'install . -g CMakeToolchain {generator} -c tools.build:jobs=42')
     presets = json.loads(c.load("CMakePresets.json"))
     assert presets["buildPresets"][0]["jobs"] == 42
     assert presets["testPresets"][0]["execution"]["jobs"] == 42
-    c.run('install . -g CMakeToolchain -c tools.build:jobs=0')
+    c.run(f'install . -g CMakeToolchain {generator} -c tools.build:jobs=0')
     presets = json.loads(c.load("CMakePresets.json"))
     assert "jobs" not in presets["buildPresets"][0]
     assert "execution" not in presets["testPresets"][0]
+
+
+def test_presets_njobs_visual_studio():
+    # https://github.com/conan-io/conan/issues/19405
+    # tools.build:jobs must not leak into the Visual Studio build preset "jobs" field: CMake
+    # maps that to MSBuild's -maxCpuCount, which stacks with the "/MP" flag that tools.build:jobs
+    # already sets in conan_toolchain.cmake, spawning tools.build:jobs**2 compiler processes.
+    c = TestClient()
+    c.save({"conanfile.txt": ""})
+    generator = "-c tools.cmake.cmaketoolchain:generator='Visual Studio 16 2019'"
+    with mock.patch("platform.system", mock.MagicMock(return_value="Windows")):
+        c.run(f'install . -g CMakeToolchain {generator} -c tools.build:jobs=42')
+    presets = json.loads(c.load("CMakePresets.json"))
+    assert "jobs" not in presets["buildPresets"][0]
+    # ctest parallelism is unrelated to MSBuild and still follows tools.build:jobs
+    assert presets["testPresets"][0]["execution"]["jobs"] == 42
+
+    with mock.patch("platform.system", mock.MagicMock(return_value="Windows")):
+        c.run(f'install . -g CMakeToolchain {generator} -c tools.build:jobs=42 '
+              '-c tools.microsoft.msbuild:max_cpu_count=8')
+    presets = json.loads(c.load("CMakePresets.json"))
+    assert presets["buildPresets"][0]["jobs"] == 8
 
 
 def test_add_cmakeexe_to_presets():

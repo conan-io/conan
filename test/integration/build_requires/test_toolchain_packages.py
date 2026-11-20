@@ -95,12 +95,12 @@ def test_android_ndk():
     c.run("create . -pr:b=windows -s:b arch=x86 -pr:h=android --build-require")
     c.assert_listed_binary({"androidndk/0.1": ("c11e463c49652ba9c5adc62573ee49f966bd8417", "Build")},
                            build=True)
-    assert "androidndk/0.1: Calling build()" in c.out
+    assert "Calling build()" in c.out
     # But a different build OS is a different NDK executable
     c.run("create . -pr:b=linux -pr:h=android  --build-require")
     c.assert_listed_binary({"androidndk/0.1": ("63fead0844576fc02943e16909f08fcdddd6f44b", "Build")},
                            build=True)
-    assert "androidndk/0.1: Calling build()" in c.out
+    assert "Calling build()" in c.out
 
     # IMPORTANT: The consumption via test_package allows specifying the type of requires
     # in this case: None, as this is intended to be injected via profile [tool_requires]
@@ -128,7 +128,7 @@ def test_android_ndk():
     c.run("create . -pr:b=windows -s:b arch=x86 -pr:h=android --build=missing --build-require")
     c.assert_listed_binary({"androidndk/0.1": ("c11e463c49652ba9c5adc62573ee49f966bd8417", "Build")},
                            build=True)
-    assert "androidndk/0.1: Calling build()" in c.out
+    assert "Calling build()" in c.out
     assert "NDK LIBS: ['libndklib-armv7']!!!" in c.out
     assert "MYNDK-Windows-x86 exe!" in c.out
     assert "MY-VAR: android-armv7" in c.out
@@ -137,7 +137,7 @@ def test_android_ndk():
     c.run("create . -pr:b=linux -pr:h=android --build=missing --build-require")
     c.assert_listed_binary({"androidndk/0.1": ("63fead0844576fc02943e16909f08fcdddd6f44b", "Build")},
                            build=True)
-    assert "androidndk/0.1: Calling build()" in c.out
+    assert "Calling build()" in c.out
     assert "NDK LIBS: ['libndklib-armv7']!!!" in c.out
     assert "MYNDK-Linux-x86_64 exe!" in c.out
     assert "MY-VAR: android-armv7" in c.out

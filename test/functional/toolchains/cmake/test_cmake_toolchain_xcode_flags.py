@@ -17,9 +17,11 @@ def _add_message_status_flags(client):
 
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
+# Both OSs follow the same logic, check one of them per test in PRs, alternating, and both
+# in develop2 (slow)
 @pytest.mark.parametrize("op_system,os_version,sdk,arch", [
-    ("watchOS", "8.1", "watchos", "armv7k"),
-    ("tvOS", "13.2", "appletvos", "armv8")
+    ("watchOS", "9.0", "watchos", "armv8_32"),
+    pytest.param("tvOS", "15.0", "appletvos", "armv8", marks=pytest.mark.slow)
 ])
 def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled(op_system, os_version, sdk, arch):
     profile = textwrap.dedent("""
@@ -59,8 +61,8 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled(op_system, os_vers
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.tool("cmake", "3.23")
 @pytest.mark.parametrize("op_system,os_version,sdk,arch", [
-    ("watchOS", "8.1", "watchos", "armv7k"),
-    ("tvOS", "13.2", "appletvos", "armv8")
+    pytest.param("watchOS", "9.0", "watchos", "armv8_32", marks=pytest.mark.slow),
+    ("tvOS", "15.0", "appletvos", "armv8")
 ])
 def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled_and_xcode_generator(op_system, os_version, sdk, arch):
     """
@@ -99,8 +101,8 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_enabled_and_xcode_generato
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("op_system,os_version,sdk,arch", [
-    ("watchOS", "8.1", "watchos", "armv7k"),
-    ("tvOS", "13.2", "appletvos", "armv8")
+    ("watchOS", "9.0", "watchos", "armv8_32"),
+    pytest.param("tvOS", "15.0", "appletvos", "armv8", marks=pytest.mark.slow)
 ])
 def test_cmake_apple_bitcode_arc_and_visibility_flags_disabled(op_system, os_version, sdk, arch):
     profile = textwrap.dedent("""
@@ -144,8 +146,8 @@ def test_cmake_apple_bitcode_arc_and_visibility_flags_disabled(op_system, os_ver
 
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 @pytest.mark.parametrize("op_system,os_version,sdk,arch", [
-    ("watchOS", "8.1", "watchos", "armv7k"),
-    ("tvOS", "13.2", "appletvos", "armv8")
+    pytest.param("watchOS", "9.0", "watchos", "armv8_32", marks=pytest.mark.slow),
+    ("tvOS", "15.0", "appletvos", "armv8")
 ])
 def test_cmake_apple_bitcode_arc_and_visibility_flags_are_none(op_system, os_version, sdk, arch):
     """

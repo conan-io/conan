@@ -130,7 +130,7 @@ def test_require_different_versions_profile_override_build_script():
     """ build-scripts by default do the right thing, because they have run=True
     (they could be runnable shell scripts)
     """
-    c = TestClient(light=True)
+    c = TestClient()
     buildscripts = GenConanfile("buildscripts").with_package_type("build-scripts")
     wine = GenConanfile("wine", "1.0").with_tool_requirement("buildscripts/1.0")
     c.save({"buildscripts/conanfile.py": buildscripts,
@@ -292,7 +292,7 @@ def test_require_different_versions_transitive():
     c.run("upload consumer/1.0 -r=default -c")
     c.run("remove * -c")
     c.run("install --requires=consumer/1.0")
-    assert re.search(r"Skipped binaries(\s*)myqemu/1.0, myqemu/2.0, snippy/1.0, valgrind/1.0", c.out)
+    assert re.search(r"Skipped build binaries(\s*)myqemu/1.0, myqemu/2.0, snippy/1.0, valgrind/1.0", c.out)
 
 
 class TestTransitiveBuild:
@@ -437,7 +437,7 @@ class TestTransitiveBuild:
         assert "MYGCC=2.0!!" in c.out
 
     def test_require_different_versions_transitive_conflict_require(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"abseil/conanfile.py": GenConanfile("abseil")
                     .with_package_type("shared-library"),
                 "protobuf1/conanfile.py": GenConanfile("protobuf", "1.0")
