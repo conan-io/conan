@@ -2,12 +2,13 @@ import os
 import re
 import textwrap
 
-from jinja2 import Template, StrictUndefined
+from jinja2 import StrictUndefined
 
 from conan.internal import check_duplicated_generator
 from conan.internal.model.dependencies import get_transitive_requires
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.util.files import save
+from conan.internal.util.templates import compiled_template
 
 
 def _relativize_path(path, start_folder):
@@ -395,8 +396,7 @@ class _BazelDepBuildGenerator:
         }
 
     def items(self):
-        template = Template(self.dep_build_template, trim_blocks=True, lstrip_blocks=True,
-                            undefined=StrictUndefined)
+        template = compiled_template(self.dep_build_template, undefined=StrictUndefined)
         context = self._get_build_file_context()
         content = template.render({**context, "rules_cc": False})
         content_rules_cc = template.render({**context, "rules_cc": True})
@@ -562,21 +562,18 @@ class _BazelPathsGenerator:
         if not dependencies_context:
             return {}
         # Bazel 6.x, but it'll likely be dropped soon
-        repository_template = Template(cls.repository_template, trim_blocks=True,
-                                       lstrip_blocks=True,
-                                       undefined=StrictUndefined)
+        repository_template = compiled_template(cls.repository_template, undefined=StrictUndefined)
         content_6x = repository_template.render(dependencies=dependencies_context)
         # Bazel 7.x / 8.x files
-        module_template = Template(cls.module_template, trim_blocks=True, lstrip_blocks=True,
-                                   undefined=StrictUndefined)
+        module_template = compiled_template(cls.module_template, undefined=StrictUndefined)
         content = module_template.render(dependencies=dependencies_context)
-        module_include_template = Template(cls.module_include_template, trim_blocks=True,
-                                           lstrip_blocks=True, undefined=StrictUndefined)
+        module_include_template = compiled_template(cls.module_include_template,
+                                                    undefined=StrictUndefined)
         content_module_include = module_include_template.render(
             repository_names=[dep["repository_name"] for dep in dependencies_context])
         # Bazel 9+ files
-        module_template_rules_cc = Template(cls.module_template_rules_cc, trim_blocks=True,
-                                            lstrip_blocks=True, undefined=StrictUndefined)
+        module_template_rules_cc = compiled_template(cls.module_template_rules_cc,
+                                                     undefined=StrictUndefined)
         content_rules_cc = module_template_rules_cc.render(dependencies=dependencies_context)
         return {
             cls.repository_filename: content_6x,  # bazel 6.x compatible

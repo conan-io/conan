@@ -1,7 +1,7 @@
-from jinja2 import Template
 
 from conan.tools import CppInfo
 from conan.internal.util.files import save
+from conan.internal.util.templates import compiled_template
 
 
 class SConsDeps:
@@ -29,7 +29,7 @@ class SConsDeps:
 
     @property
     def _content(self):
-        template = Template("""
+        template = compiled_template("""
         "{{dep_name}}" : {
             "CPPPATH"     : {{info.includedirs or []}},
             "LIBPATH"     : {{info.libdirs or []}},
@@ -44,7 +44,7 @@ class SConsDeps:
             "LINKFLAGS"   : {{info.exelinkflags or []}},
         },
         {% if dep_version is not none %}"{{dep_name}}_version" : "{{dep_version}}",{% endif %}
-        """)
+        """, trim_blocks=False, lstrip_blocks=False)
         sections = ["conandeps = {\n"]
         all_flags = template.render(dep_name="conandeps", dep_version=None,
                                     info=self._get_cpp_info())

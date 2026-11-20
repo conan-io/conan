@@ -23,10 +23,10 @@ Others:
 """
 import textwrap
 
-from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
+from conan.internal.util.templates import compiled_template
 from conan.tools.apple import to_apple_arch, is_apple_os
 from conan.tools.build.cross_building import cross_building
 from conan.tools.build.flags import cppstd_flag
@@ -155,7 +155,8 @@ class BazelToolchain:
     @property
     def _content(self):
         context = self._context()
-        content = Template(self.bazelrc_template).render(context)
+        template = compiled_template(self.bazelrc_template, trim_blocks=False, lstrip_blocks=False)
+        content = template.render(context)
         return content
 
     def generate(self):

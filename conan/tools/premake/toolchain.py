@@ -4,12 +4,12 @@ import textwrap
 from pathlib import Path
 
 from conan.tools.env.virtualbuildenv import VirtualBuildEnv
-from jinja2 import Template
 
 from conan.tools.build.cross_building import cross_building
 from conan.tools.files import save
 from conan.tools.microsoft.visual import VCVars
 from conan.tools.premake.premakedeps import PREMAKE_ROOT_FILE
+from conan.internal.util.templates import compiled_template
 
 
 def _generate_flags(self, conanfile):
@@ -84,7 +84,7 @@ def _generate_flags(self, conanfile):
     extra_rc_flags = format_list(conanfile.conf.get("tools.build:rcflags", default=[], check_type=list))
 
     return (
-        Template(template, trim_blocks=True, lstrip_blocks=True)
+        compiled_template(template)
         .render(
             extra_defines=extra_defines,
             extra_cflags=extra_c_flags,
@@ -122,7 +122,7 @@ class _PremakeProject:
     def _generate(self):
         """Generates project block"""
         flags_content = _generate_flags(self, self._conanfile)  # Generate flags specific to this project
-        return Template(self._premake_project_template, trim_blocks=True, lstrip_blocks=True).render(
+        return compiled_template(self._premake_project_template).render(
             name=self.name,
             kind="None" if self.disable else self.kind,
             flags=flags_content,
@@ -274,7 +274,7 @@ class PremakeToolchain:
             else None
         )
 
-        content = Template(self._premake_file_template, trim_blocks=True, lstrip_blocks=True).render(
+        content = compiled_template(self._premake_file_template).render(
             # Pass posix path for better cross-platform compatibility in Lua
             build_folder=Path(self._conanfile.build_folder).as_posix(),
             has_conan_deps=premake_conan_deps.exists(),
