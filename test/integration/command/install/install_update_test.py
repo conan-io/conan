@@ -171,7 +171,7 @@ def test_install_update_repeated_tool_requires():
 class TestUpdateOldPolicy:
     def test_multi_remote_update_resolution(self):
         c = TestClient(servers={"r1": TestServer(), "r2": TestServer(), "r3": TestServer()},
-                       inputs=["admin", "password"] * 3, light=True)
+                       inputs=["admin", "password"] * 3)
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("export .")
         rev1 = c.exported_recipe_revision()
@@ -206,7 +206,7 @@ class TestUpdateOldPolicy:
 
     def test_multi_remote_update_resolution_2_remotes(self):
         c = TestClient(servers={"r1": TestServer(), "r2": TestServer()},
-                       inputs=["admin", "password"] * 2, light=True)
+                       inputs=["admin", "password"] * 2)
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("export .")
         rev1 = c.exported_recipe_revision()
@@ -237,7 +237,7 @@ class TestUpdateOldPolicy:
 
     def test_lockfile(self):
         # https://github.com/conan-io/conan/issues/18006
-        c = TestClient(default_server_user=True, light=True)  # needs server to fail
+        c = TestClient(default_server_user=True)  # needs server to fail
         c.save_home({"global.conf": "core:update_policy=legacy"})
         c.save({"dep/conanfile.py": GenConanfile("dep", "0.1"),
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("dep/0.1")})
@@ -254,7 +254,7 @@ def test_update_remote_not_latest_in_cache():
     if we now try to install using --update, the newer local cache one should be used,
     not the remote one which is older
     """
-    tc = TestClient(default_server_user=True, light=True)
+    tc = TestClient(default_server_user=True)
 
     # Different revisions for the same recipe
     tc.save({"rrev1/conanfile.py": GenConanfile("pkg", "0.1").with_build_msg("rrev1"),
@@ -291,7 +291,7 @@ def test_package_revision_timestamp_mismatch():
     if the remote's prev was also present in the local cache
     see https://github.com/conan-io/conan/issues/20333
     """
-    tc = TestClient(default_server_user=True, light=True)
+    tc = TestClient(default_server_user=True)
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         import time

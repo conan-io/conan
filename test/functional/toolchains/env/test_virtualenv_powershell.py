@@ -242,7 +242,7 @@ def test_verbosity_flag():
 
 def test_powershell_deactivation():
     # https://github.com/conan-io/conan/issues/19819
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.txt": ""})
     c.run('install . -c tools.env.virtualenv:powershell=!')
     files = os.listdir(c.current_folder)

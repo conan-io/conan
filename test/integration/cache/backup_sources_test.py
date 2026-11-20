@@ -26,7 +26,7 @@ class TestDownloadCacheBackupSources:
 
         with mock.patch("conan.internal.rest.file_downloader.FileDownloader.download",
                         custom_download):
-            client = TestClient(default_server_user=True, light=True)
+            client = TestClient(default_server_user=True)
             tmp_folder = temp_folder()
             client.save_home(
                 {"global.conf": f"core.sources:download_cache={tmp_folder}\n"
@@ -82,7 +82,7 @@ class TestDownloadCacheBackupSources:
 
     @pytest.fixture(autouse=True)
     def _setup(self):
-        self.client = TestClient(default_server_user=True, light=True)
+        self.client = TestClient(default_server_user=True)
         self.file_server = TestFileServer()
         self.client.servers["file_server"] = self.file_server
         self.download_cache_folder = temp_folder()
@@ -363,7 +363,7 @@ class TestDownloadCacheBackupSources:
         assert "ConanException: Error downloading file" in self.client.out
 
     def test_upload_sources_backup_creds_needed(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         download_cache_folder = temp_folder()
         http_server_base_folder_backups = temp_folder()
         http_server_base_folder_internet = temp_folder()
@@ -530,7 +530,7 @@ class TestDownloadCacheBackupSources:
 
         with mock.patch("conan.internal.rest.file_downloader.FileDownloader.download",
                         custom_download):
-            client = TestClient(default_server_user=True, light=True)
+            client = TestClient(default_server_user=True)
             download_cache_folder = temp_folder()
 
             sha256 = "315f5bdb76d078c43b8ac0064e4a0164612b1fce77c869345bfc94c75894edd3"
@@ -585,7 +585,7 @@ class TestDownloadCacheBackupSources:
                 f"found in remote backup {self.file_server.fake_url}/backup2/") in self.client.out
 
     def test_ok_when_origin_authorization_error(self):
-        client = TestClient(default_server_user=True, light=True)
+        client = TestClient(default_server_user=True)
         download_cache_folder = temp_folder()
         http_server_base_folder_backup1 = temp_folder()
         http_server_base_folder_backup2 = temp_folder()
@@ -902,7 +902,7 @@ class TestDownloadCacheBackupSources:
         assert sha256 + ".dirty" not in os.listdir(os.path.join(self.download_cache_folder, "s"))
 
     def test_absolute_core_sources_conf(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save_home(
             {"global.conf": f"core.sources:download_cache=relative\n"
                             "core.sources:download_urls=['origin']"})

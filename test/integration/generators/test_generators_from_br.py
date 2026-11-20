@@ -5,7 +5,7 @@ from conan.test.utils.tools import GenConanfile, TestClient
 
 
 def test_inject_generators_conf():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"tool/conanfile.py": textwrap.dedent("""
         from conan import ConanFile
 
@@ -41,7 +41,7 @@ def test_inject_generators_conf():
 
 
 def test_inject_generators_error():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": textwrap.dedent("""
         from conan import ConanFile
 
@@ -58,7 +58,7 @@ def test_inject_generators_error():
 
 
 def test_inject_vars():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({
         "tool/envars_generator1.sh": textwrap.dedent("""
         export VAR1="value1"

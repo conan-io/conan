@@ -10,7 +10,7 @@ from conan.internal.util.files import save
 @pytest.mark.parametrize("use_pkglist", [True, False])
 @pytest.mark.parametrize("output_pkglist", [True, False])
 def test_cache_integrity(use_pkglist, output_pkglist):
-    t = TestClient(light=True)
+    t = TestClient()
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name pkg1 --version 1.0")
     t.run("create . --name pkg2 --version=2.0")

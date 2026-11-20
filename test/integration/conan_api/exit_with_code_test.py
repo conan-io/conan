@@ -16,7 +16,7 @@ def test_exit_with_code():
                 sys.exit(34)
         """)
 
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": base})
     client.run("install .")
     error_code = client.run("build .", assert_error=True)

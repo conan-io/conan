@@ -17,7 +17,7 @@ from conan.internal.util.files import md5sum, sha1sum, sha256sum, load
 class TestConanData:
 
     def test_conan_exports_kept(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Lib(ConanFile):
@@ -39,7 +39,7 @@ class TestConanData:
         assert os.path.exists(os.path.join(export_folder, "myfile.txt"))
 
     def test_conan_data_everywhere(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = """from conan import ConanFile
 
 class Lib(ConanFile):
@@ -89,7 +89,7 @@ sources:
         assert "My URL:" in client.out
 
     def test_conan_data_as_source_newtools(self):
-        client = TestClient(light=True)
+        client = TestClient()
         file_server = TestFileServer()
         client.servers["file_server"] = file_server
 
@@ -141,7 +141,7 @@ sources:
         assert "foo" == load(downloaded_file)
 
     def test_invalid_yml(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile(),
                      "conandata.yml": ">>>> ::"})
         ref = RecipeReference.loads("lib/0.1")
@@ -150,7 +150,7 @@ sources:
         assert ": Invalid yml format at conandata.yml: while scanning a block scalar" in client.out
 
     def test_conan_data_development_flow(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
 
@@ -188,7 +188,7 @@ sources:
         assert "My URL: this url" in client.out
 
     def test_conan_data_serialize(self):
-        c = TestClient(light=True)
+        c = TestClient()
         conandata = textwrap.dedent("""
             src:
                 url: "this url"
@@ -211,7 +211,7 @@ class TestConanDataUpdate:
     def test_conandata_update(self):
         """ test the update_conandata() helper
         """
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import update_conandata
@@ -248,7 +248,7 @@ class TestConanDataUpdate:
     def test_conandata_update_error(self):
         """ test the update_conandata() helper fails if used outside export()
         """
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import update_conandata
@@ -265,7 +265,7 @@ class TestConanDataUpdate:
     def test_conandata_create_if_not_exist(self):
         """ test the update_conandata() creates the file if it doesn't exist
         """
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import update_conandata
@@ -283,7 +283,7 @@ class TestConanDataUpdate:
 def test_conandata_trim():
     """ test the explict trim_conandata() helper
     """
-    c = TestClient(light=True)
+    c = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         from conan.tools.files import trim_conandata
@@ -384,7 +384,7 @@ def test_conandata_trim():
 
 
 def test_trim_conandata_as_hook():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save_home({"extensions/hooks/hook_trim.py": textwrap.dedent("""
     from conan.tools.files import trim_conandata
 
@@ -437,7 +437,7 @@ def test_trim_conandata_as_hook():
 
 @pytest.mark.parametrize("raise_if_missing", [True, False])
 def test_trim_conandata_as_hook_without_conandata(raise_if_missing):
-    c = TestClient(light=True)
+    c = TestClient()
     c.save_home({"extensions/hooks/hook_trim.py": textwrap.dedent(f"""
     from conan.tools.files import trim_conandata
 
@@ -455,7 +455,7 @@ def test_trim_conandata_as_hook_without_conandata(raise_if_missing):
 
 def test_trim_conandata_anchors():
     """Anchors load correctly, because trim_conandata loads the yaml instead of replacing in place"""
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"conanfile.py": textwrap.dedent("""
      from conan import ConanFile
      from conan.tools.files import trim_conandata

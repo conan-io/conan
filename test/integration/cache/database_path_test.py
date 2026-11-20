@@ -47,7 +47,7 @@ def test_database_path(tmp_path, custom_storage, config_install):
 
 @pytest.mark.parametrize("shared_storage", [False, True])
 def test_database_path_isolation(tmp_path, shared_storage):
-    first = TestClient(light=True)
+    first = TestClient()
     conf = f"core.cache:root_database_folder={tmp_path}"
     first.save_home({"global.conf": conf})
     first.save({"conanfile.py": GenConanfile("pkg", "1.0")})
@@ -68,14 +68,14 @@ def test_database_path_isolation(tmp_path, shared_storage):
 def test_database_path_invalid(tmp_path):
     root = tmp_path / "file"
     root.write_text("file", encoding="utf-8")
-    client = TestClient(light=True)
+    client = TestClient()
     client.save_home({"global.conf": f"core.cache:root_database_folder={root}"})
     client.run("list *", assert_error=True)
     assert "Couldn't initialize storage" in client.out
 
 
 def test_database_path_lost_database(tmp_path):
-    client = TestClient(light=True)
+    client = TestClient()
     client.save_home({"global.conf": f"core.cache:root_database_folder={tmp_path}"})
     client.save({"conanfile.py": GenConanfile("pkg", "1.0")})
     client.run("export .")

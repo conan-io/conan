@@ -1411,7 +1411,7 @@ def test_cmake_linker_scripts():
 
 
 def test_cmake_toolchain_verbosity_propagation():
-    t = TestClient(light=True)
+    t = TestClient()
     t.save({"conanfile.py": GenConanfile("mylib", "1.0")})
     t.run("create .")
     t.run("install --requires=mylib/1.0 -g CMakeToolchain")

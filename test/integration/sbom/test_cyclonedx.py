@@ -49,7 +49,7 @@ class TestCyclonedx:
 
     @pytest.fixture()
     def hook_setup_post_package(self, cyclone_version):
-        tc = TestClient(light=True)
+        tc = TestClient()
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
         save(hook_path, sbom_hook_post_package.format(cyclone_version=cyclone_version,
                                                       add_build=True, add_tests=True))
@@ -57,7 +57,7 @@ class TestCyclonedx:
 
     @pytest.fixture()
     def hook_setup_post_package_no_tool_requires(self, cyclone_version):
-        tc = TestClient(light=True)
+        tc = TestClient()
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
         save(hook_path, sbom_hook_post_package.format(cyclone_version=cyclone_version,
                                                       add_build=False, add_tests=True))
@@ -65,7 +65,7 @@ class TestCyclonedx:
 
     @pytest.fixture()
     def hook_setup_post_package_no_test(self, cyclone_version):
-        tc = TestClient(light=True)
+        tc = TestClient()
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
         save(hook_path, sbom_hook_post_package.format(cyclone_version=cyclone_version,
                                                       add_build=True, add_tests=False))
@@ -178,7 +178,7 @@ class TestCyclonedx:
 
     @pytest.fixture()
     def hook_setup_post_generate(self, cyclone_version):
-        tc = TestClient(light=True)
+        tc = TestClient()
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
         save(hook_path, sbom_hook_post_generate.format(cyclone_version=cyclone_version, name=None))
         return tc
@@ -255,7 +255,7 @@ class TestCyclonedx:
         ('"custom-name"', "custom-name")
     ])
     def test_sbom_generation_custom_name(self, cyclone_version, name, result):
-        tc = TestClient(light=True)
+        tc = TestClient()
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
         save(hook_path, sbom_hook_post_generate.format(cyclone_version=cyclone_version, name=name))
 
@@ -281,7 +281,7 @@ class TestCyclonedx:
                 json.dump(sbom_cyclonedx, f, indent=4)
             ConanOutput().success(f"CYCLONEDX CREATED - {{conanfile.package_metadata_folder}}")
         """)
-        tc = TestClient(light=True)
+        tc = TestClient()
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
         save(hook_path, _sbom_hook_post_package.format(cyclone_version=cyclone_version))
         conanfile_bar = textwrap.dedent("""
@@ -330,7 +330,7 @@ class TestCyclonedx:
             assert content_json["components"][0]["type"] == 'application'
 
     def test_sbom_test_requires_skipped(self, cyclone_version):
-        tc = TestClient(light=True)
+        tc = TestClient()
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
         save(hook_path, sbom_hook_post_generate.format(cyclone_version=cyclone_version, name=None,
                                                        add_build=False, add_tests=False))
@@ -343,7 +343,7 @@ class TestCyclonedx:
 
     @pytest.mark.parametrize("install", ["--requires=foo/1.0", ""])
     def test_sbom_deployer(self, cyclone_version, install):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"dep/conanfile.py": GenConanfile("mydep", "1.0"),
                  "conanfile.py": GenConanfile("foo", "1.0").with_requires("mydep/1.0")})
         tc.run("create dep")
@@ -379,7 +379,7 @@ class TestCyclonedx:
                 with open(os.path.join(conanfile.package_metadata_folder, "sbom.cdx.json"), "w") as f:
                     json.dump(sbom, f, indent=4)
         """)
-        tc = TestClient(light=True)
+        tc = TestClient()
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
         save(hook_path, hook.format(cyclone_version=cyclone_version))
         tc.save({"dep/conanfile.py": GenConanfile("dep", "1.0"),
@@ -417,7 +417,7 @@ class TestCyclonedx2:
 
     @pytest.fixture()
     def sbom_hook_client(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
         save(hook_path, self.sbom_hook_post_package)
         return tc
@@ -441,7 +441,7 @@ class TestCyclonedx2:
                              [("user", None, "user_dep", None),
                               ("user", "channel", "user_dep", "channel_dep")])
     def test_sbom_user_path(self, user, channel, user_dep, channel_dep):
-        tc = TestClient(light=True)
+        tc = TestClient()
         hook_path = os.path.join(tc.paths.hooks_path, "hook_sbom.py")
         save(hook_path, self.sbom_hook_post_package)
         channel_ref = f"/{channel_dep}" if channel_dep else ""

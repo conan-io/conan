@@ -11,7 +11,7 @@ from conan.test.utils.tools import TestClient
 
 class TestNewCommand:
     def test_new_cmake_lib(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("new cmake_lib -d name=pkg -d version=1.3")
         conanfile = client.load("conanfile.py")
         assert "CMakeToolchain" in conanfile
@@ -25,7 +25,7 @@ class TestNewCommand:
         assert "pkg/1.3@myuser/testing" in client.out
 
     def test_new_cmake_exe(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("new cmake_exe -d name=pkg -d version=1.3")
         conanfile = client.load("conanfile.py")
         assert "CMakeToolchain" in conanfile
@@ -37,7 +37,7 @@ class TestNewCommand:
         assert "pkg/1.3@myuser/testing" in client.out
 
     def test_new_basic_template(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run("new basic")
         assert '# self.requires("zlib/1.2.13")' in tc.load("conanfile.py")
 
@@ -48,7 +48,7 @@ class TestNewCommand:
         assert 'name = "mygame"' in conanfile
 
     def test_new_basic_template_multi_arg(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run("new basic -d name=mygame -d requires=d1/1.0 -d requires=d2/1.0 -d requires=d3/1.0")
         conanfile = tc.load("conanfile.py")
         assert 'self.requires("d1/1.0")' in conanfile
@@ -56,7 +56,7 @@ class TestNewCommand:
         assert 'self.requires("d3/1.0")' in conanfile
 
     def test_new_defaults(self):
-        c = TestClient(light=True)
+        c = TestClient()
         for t in ("cmake_lib", "cmake_exe", "meson_lib", "meson_exe", "msbuild_lib",
                   "msbuild_exe", "bazel_lib", "bazel_exe", "autotools_lib", "autotools_exe"):
             c.save({}, clean_first=True)
@@ -82,7 +82,7 @@ class TestNewCommandUserTemplate:
 
     @pytest.mark.parametrize("folder", ("mytemplate", "sub/mytemplate"))
     def test_user_template(self, folder):
-        client = TestClient(light=True)
+        client = TestClient()
         template1 = textwrap.dedent("""
             class Conan(ConanFile):
                 name = "{{name}}"
@@ -99,7 +99,7 @@ class TestNewCommandUserTemplate:
 
     def test_user_template_abs(self):
         tmp_folder = temp_folder()
-        client = TestClient(light=True)
+        client = TestClient()
         template1 = textwrap.dedent("""
             class Conan(ConanFile):
                 name = "{{name}}"
@@ -110,13 +110,13 @@ class TestNewCommandUserTemplate:
         assert 'name = "hello"' in conanfile
 
     def test_user_template_filenames(self):
-        client = TestClient(light=True)
+        client = TestClient()
         save(os.path.join(client.cache_folder, "templates/command/new/mytemplate/{{name}}"), "Hi!")
         client.run(f"new mytemplate -d name=pkg.txt")
         assert "Hi!" == client.load("pkg.txt")
 
     def test_skip_files(self):
-        client = TestClient(light=True)
+        client = TestClient()
         template1 = textwrap.dedent("""
             class Conan(ConanFile):
                 name = "{{name}}"
@@ -137,7 +137,7 @@ class TestNewCommandUserTemplate:
     def test_template_image_files(self):
         """ problematic files that we dont want to render with Jinja, like PNG or other binaries,
         have to be explicitly excluded from render"""
-        client = TestClient(light=True)
+        client = TestClient()
         template_dir = "templates/command/new/t_dir"
         png = "$&(){}{}{{}{}"
         save(os.path.join(client.cache_folder, template_dir, "myimage.png"), png)
@@ -154,13 +154,13 @@ class TestNewCommandUserTemplate:
         assert "File 'myimage.png' already exists, and --force not defined, aborting" in client.out
 
     def test_wrong_argument(self):
-        c = TestClient(light=True)
+        c = TestClient()
         save(os.path.join(c.cache_folder, f"templates/command/new/mytpl/conanfile.py"), "")
         c.run(f"new mytpl -d version", assert_error=True)
         assert "ERROR: Template definitions must be 'key=value', received 'version'" in c.out
 
     def test_missing_argument(self):
-        c = TestClient(light=True)
+        c = TestClient()
         save(os.path.join(c.cache_folder, f"templates/command/new/mytpl/file.txt"), "{{myarg}}")
         c.run(f"new mytpl", assert_error=True)
         assert ("ERROR: Missing definitions for the template. "
@@ -169,12 +169,12 @@ class TestNewCommandUserTemplate:
 
 class TestNewErrors:
     def test_template_errors(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("new mytemplate", assert_error=True)
         assert "ERROR: Template doesn't exist" in client.out
 
     def test_forced(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("new cmake_lib -d name=hello -d version=0.1")
         client.run("new cmake_lib -d name=hello -d version=0.1", assert_error=True)
         assert "ERROR: File 'CMakeLists.txt' already exists, and --force not defined" in client.out
@@ -184,7 +184,7 @@ class TestNewErrors:
         assert 'version = "0.2"' in conanfile
 
     def test_duplicated(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("new cmake_lib -d name=hello -d name=0.1", assert_error=True)
         assert "ERROR: name argument can't be multiple: ['hello', '0.1']" in client.out
 
@@ -193,11 +193,11 @@ class TestNewErrors:
         assert "ERROR: version argument can't be multiple: ['0.1', '0.2']" in client.out
 
     def test_name_uppercase(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("new cmake_lib -d name=Hello", assert_error=True)
         assert "ERROR: name argument must be lowercase: Hello" in client.out
 
     def test_new_change_folder(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("new cmake_lib -d name=hello -d version=0.1 -o=myfolder")
         assert os.path.exists(os.path.join(client.current_folder, "myfolder", "conanfile.py"))

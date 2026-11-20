@@ -70,7 +70,7 @@ def test_config_install():
 def test_config_install_warns_when_config_version_exists():
     """When 'conan config install' runs and config_version.json exists (from a previous
     'conan config install-pkg'), warn the user that this install won't be tracked."""
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({'config/foo': ''})
     # No previous config_version.json -> no warning
     tc.run("config install config")
@@ -183,7 +183,7 @@ def test_config_install_conanignore_ignore_all_allow_specific_workflow():
 @pytest.mark.parametrize("has_conanignore", [True, False])
 @pytest.mark.parametrize("folder", [None, "myfolder", "myfolder/subfolder"])
 def test_config_install_conanignore_walk_directories(has_conanignore, folder):
-    tc = TestClient(light=True)
+    tc = TestClient()
     if has_conanignore:
         conanignore = "*"
         tc.save({"config_folder/.conanignore": conanignore})
@@ -243,7 +243,7 @@ def test_config_show():
 
 @pytest.mark.parametrize("storage_path", [None, "p", "../foo"])
 def test_config_clean(storage_path):
-    tc = TestClient(light=True)
+    tc = TestClient()
     absolut_storage_path = os.path.abspath(os.path.join(tc.current_folder, storage_path)) if storage_path else os.path.join(tc.cache_folder, "p")
 
     storage = f"core.cache:storage_path={storage_path}" if storage_path else ""
@@ -293,7 +293,7 @@ def test_config_reinit():
 
 
 def test_config_reinit_core_conf():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save_home({"extensions/commands/cmd_foo.py": textwrap.dedent("""
         from conan.cli.command import conan_command
         from conan.api.output import ConanOutput

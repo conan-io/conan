@@ -18,7 +18,7 @@ class TestRemoteLogin:
     def test_command_user_no_remotes(self):
         """ Test that proper error is reported when no remotes are defined and conan user is executed
         """
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("remote list-users", assert_error=True)
         assert "ERROR: No remotes defined" in client.out
 
@@ -28,7 +28,7 @@ class TestRemoteLogin:
     def test_command_user_list(self):
         """ Test list of user is reported for all remotes or queried remote
         """
-        client = TestClient(light=True, servers={"default": TestServer(),
+        client = TestClient(servers={"default": TestServer(),
                                                  "test_remote_1": TestServer()})
 
         # Test with wrong remote right error is reported
@@ -45,7 +45,7 @@ class TestRemoteLogin:
 
     def test_with_remote_no_connect(self):
         test_server = TestServer()
-        client = TestClient(light=True, servers={"default": test_server})
+        client = TestClient(servers={"default": test_server})
         client.run('remote list-users')
         assert textwrap.dedent("""
                 default:
@@ -72,7 +72,7 @@ class TestRemoteLogin:
         """
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(light=True, servers=servers, inputs=["admin", "password"])
+        client = TestClient(servers=servers, inputs=["admin", "password"])
         client.run('remote login default dummy -p ping_pong2', assert_error=True)
         assert "ERROR: Wrong user or password" in client.out
         client.run('remote login default admin -p password')
@@ -93,7 +93,7 @@ class TestRemoteLogin:
         """
         test_server = TestServer(users={"lasote": 'my "password'})
         servers = {"default": test_server}
-        client = TestClient(light=True, servers=servers, inputs=["lasote", "mypass"])
+        client = TestClient(servers=servers, inputs=["lasote", "mypass"])
         client.run(r'remote login default lasote -p="my \"password"')
         assert "Connecting to remote" not in client.out
         assert "Changed user of remote 'default' from 'None' (anonymous) to 'lasote'" in client.out
@@ -105,7 +105,7 @@ class TestRemoteLogin:
     def test_clean(self):
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(light=True, servers=servers, inputs=2*["admin", "password"])
+        client = TestClient(servers=servers, inputs=2*["admin", "password"])
         client.save({"conanfile.py": GenConanfile("lib", "0.1")})
         client.run("export . --user=lasote --channel=stable")
         client.run("upload lib/0.1@lasote/stable -r default --only-recipe")
@@ -124,7 +124,7 @@ class TestRemoteLogin:
     def test_command_interactive_only(self):
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(light=True, servers=servers, inputs=["password"])
+        client = TestClient(servers=servers, inputs=["password"])
         client.run('remote login default admin -p')
         assert ("Changed user of remote 'default' from 'None' (anonymous) to 'admin' "
                 "(authenticated)") in client.out
@@ -134,7 +134,7 @@ class TestRemoteLogin:
         """
         test_server = TestServer()
         servers = {"default": test_server}
-        client = TestClient(light=True, servers=servers,  inputs=[])
+        client = TestClient(servers=servers,  inputs=[])
         conan_conf = "core:non_interactive=True"
         client.save_home({"global.conf": conan_conf})
         client.run('remote login default admin -p', assert_error=True)
@@ -146,7 +146,7 @@ class TestRemoteLogin:
     def test_authenticated(self):
         test_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
         servers = {"default": test_server, "other_server": TestServer()}
-        client = TestClient(light=True, servers=servers,
+        client = TestClient(servers=servers,
                             inputs=["lasote", "mypass", "mypass", "mypass"])
         client.run("remote logout default")
         assert ("Changed user of remote 'default' from 'None' (anonymous) to "
@@ -172,7 +172,7 @@ class TestRemoteLogin:
         default_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
         other_server = TestServer()
         servers = {"default": default_server, "other_server": other_server}
-        client = TestClient(light=True, servers=servers,
+        client = TestClient(servers=servers,
                             inputs=["lasote", "mypass", "danimtb", "passpass"])
         client.run("remote list-users -f json")
         info = json.loads(client.stdout)
@@ -291,7 +291,7 @@ class TestRemoteLogin:
     def test_skip_auth(self):
         default_server = TestServer(users={"lasote": "mypass", "danimtb": "passpass"})
         servers = {"default": default_server}
-        client = TestClient(light=True, servers=servers)
+        client = TestClient(servers=servers)
         # Regular auth
         client.run("remote login default lasote -p mypass")
 
@@ -316,7 +316,7 @@ class TestRemoteLogin:
             "default": TestServer(users={"admin": "password"}),
             "other": TestServer(users={"admin": "password"}),
         }
-        c = TestClient(light=True, servers=servers, inputs=["admin", "password", "wrong", "wrong"])
+        c = TestClient(servers=servers, inputs=["admin", "password", "wrong", "wrong"])
         # This must fail, not autthenticate in the next remote
         c.run("remote login *", assert_error=True)
         assert "ERROR: Wrong user or password. [Remote: other]" in c.out
@@ -325,7 +325,7 @@ class TestRemoteLogin:
 def test_user_removed_remote_removed():
     # Make sure that removing a remote clears the credentials
     # https://github.com/conan-io/conan/issues/5562
-    c = TestClient(light=True, default_server_user=True)
+    c = TestClient(default_server_user=True)
     server_url = c.servers["default"].fake_url
     c.run("remote login default admin -p password")
     localdb = LocalDB(c.cache_folder)
@@ -342,7 +342,7 @@ class TestRemoteAuth:
             "default": TestServer(users={"lasote": "mypass", "danimtb": "passpass"}),
             "other_server": TestServer(users={"lasote": "mypass"}),
         }
-        c = TestClient(light=True, servers=servers,
+        c = TestClient(servers=servers,
                        inputs=["lasote", "mypass", "danimtb", "passpass", "lasote", "mypass"])
         c.run("remote auth *")
         text = textwrap.dedent("""\
@@ -361,7 +361,7 @@ class TestRemoteAuth:
             "default": TestServer(users={"lasote": "mypass", "danimtb": "passpass"}),
             "other_server": TestServer(users={"lasote": "mypass"}),
         }
-        c = TestClient(light=True, servers=servers,
+        c = TestClient(servers=servers,
                        inputs=["lasote", "mypass", "danimtb", "passpass", "lasote", "mypass"])
 
         with patch("conan.internal.rest.rest_client_v2.RestV2Methods.check_credentials") \
@@ -374,7 +374,7 @@ class TestRemoteAuth:
             "default": TestServer(users={"lasote": "mypass", "danimtb": "passpass"}),
             "other_server": TestServer(users={"lasote": "mypass"}),
         }
-        c = TestClient(light=True, servers=servers,
+        c = TestClient(servers=servers,
                        inputs=["lasote", "mypass", "danimtb", "passpass", "lasote", "mypass"])
 
         with patch("conan.internal.rest.rest_client_v2.RestV2Methods.check_credentials") \
@@ -384,7 +384,7 @@ class TestRemoteAuth:
 
     def test_remote_auth_with_user(self):
         servers = {"default": TestServer(users={"lasote": "mypass"}), "other_server": TestServer()}
-        c = TestClient(light=True, servers=servers, inputs=["lasote", "mypass"])
+        c = TestClient(servers=servers, inputs=["lasote", "mypass"])
         c.run("remote set-user default lasote")
         c.run("remote auth * --with-user")
         text = textwrap.dedent("""\
@@ -396,7 +396,7 @@ class TestRemoteAuth:
 
     def test_remote_auth_with_user_env_var(self):
         servers = {"default": TestServer(users={"lasote": "mypass"}), "other_server": TestServer()}
-        c = TestClient(light=True, servers=servers)
+        c = TestClient(servers=servers)
         with environment_update({"CONAN_LOGIN_USERNAME_DEFAULT": "lasote",
                                  "CONAN_PASSWORD_DEFAULT": "mypass"}):
             c.run("remote auth * --with-user")
@@ -409,7 +409,7 @@ class TestRemoteAuth:
 
     def test_remote_auth_error(self):
         servers = {"default": TestServer(users={"user": "password"})}
-        c = TestClient(light=True, servers=servers,
+        c = TestClient(servers=servers,
                        inputs=["user1", "pass", "user2", "pass", "user3", "pass"])
         c.run("remote auth *")
         assert "error: Too many failed login attempts, bye!" in c.out
@@ -420,7 +420,7 @@ class TestRemoteAuth:
     ], ids=["different-user", "same-user"])
     def test_remote_auth_error_with_cached_user(self, attempted_user, expected_error):
         servers = {"default": TestServer(users={"myuser": "password"})}
-        c = TestClient(light=True, servers=servers,
+        c = TestClient(servers=servers,
                        inputs=[attempted_user, "pass"] * LOGIN_RETRIES)
         c.run("remote set-user default myuser")
         c.run("remote auth *")
@@ -429,7 +429,7 @@ class TestRemoteAuth:
 
     def test_remote_auth_server_expire_token_secret(self):
         server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
-        c = TestClient(light=True, servers={"default": server},
+        c = TestClient(servers={"default": server},
                        inputs=["myuser", "password",
                                "myotheruser", "otherpass",
                                "user", "pass", "user", "pass",
@@ -451,7 +451,7 @@ class TestRemoteAuth:
 
     def test_remote_auth_server_expire_token(self):
         server = TestServer(users={"myuser": "password", "myotheruser": "otherpass"})
-        c = TestClient(light=True, servers={"default": server},
+        c = TestClient(servers={"default": server},
                        inputs=["myuser", "password",
                                "myotheruser", "otherpass",
                                "user", "pass", "user", "pass",
@@ -483,20 +483,20 @@ class TestRemoteAuth:
             "bad": TestServer(users={"myuser": "mypassword"}),
         }
         # All succeed -> exit 0
-        c = TestClient(light=True, servers=servers,
+        c = TestClient(servers=servers,
                        inputs=["myuser", "mypassword", "myuser", "mypassword"])
         c.run("remote auth * --strict")
         assert "user: myuser" in c.out
 
         # Partial failure without --strict -> exit 0
-        c2 = TestClient(light=True, servers=servers,
+        c2 = TestClient(servers=servers,
                         inputs=["myuser", "mypassword",
                                 "wrong", "wrong", "wrong", "wrong", "wrong", "wrong"])
         c2.run("remote auth *")
         assert "error" in c2.out
 
         # Partial failure with --strict -> exit != 0
-        c3 = TestClient(light=True, servers=servers,
+        c3 = TestClient(servers=servers,
                         inputs=["myuser", "mypassword",
                                 "wrong", "wrong", "wrong", "wrong", "wrong", "wrong"])
         c3.run("remote auth * --strict", assert_error=True)
@@ -504,7 +504,7 @@ class TestRemoteAuth:
 
     def test_auth_after_logout(self):
         server = TestServer(users={"myuser": "password"})
-        c = TestClient(light=True, servers={"default": server}, inputs=["myuser", "password"]*2)
+        c = TestClient(servers={"default": server}, inputs=["myuser", "password"]*2)
         c.run("remote auth *")
         assert "Remote 'default' needs authentication, obtaining credentials" in c.out
         assert "user: myuser" in c.out
@@ -518,7 +518,7 @@ class TestRemoteAuth:
         """https://github.com/conan-io/conan/issues/19807
         Warn when env vars are set but server accepts anonymous access"""
         server = TestServer(users={"admin": "password"})
-        c = TestClient(light=True, servers={"default": server})
+        c = TestClient(servers={"default": server})
 
         # env vars set + anonymous server → warning with var names
         with patch.object(RestV2Methods, "check_credentials", return_value=None):

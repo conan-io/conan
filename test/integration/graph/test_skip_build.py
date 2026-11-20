@@ -8,7 +8,7 @@ from conan.test.utils.tools import TestClient
 def test_graph_skip_build_test():
     # app -> pkg -(test)-> gtest
     #         \---(tool)-> cmake
-    c = TestClient(light=True)
+    c = TestClient()
     pkg = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):

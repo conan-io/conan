@@ -40,7 +40,7 @@ class TestDevInSourceFlow:
         assert load(os.path.join(folder, "subdir/myartifact2.lib")) == "artifact2 contents!"
 
     def test_parallel_folders(self):
-        client = TestClient(light=True)
+        client = TestClient()
         repo_folder = os.path.join(client.current_folder, "recipe")
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(repo_folder)
@@ -61,7 +61,7 @@ class TestDevInSourceFlow:
         self._assert_pkg(cache_package_folder)
 
     def test_insource_build(self):
-        client = TestClient(light=True)
+        client = TestClient()
         repo_folder = client.current_folder
         package_folder = os.path.join(client.current_folder, "pkg")
         mkdir(package_folder)
@@ -78,7 +78,7 @@ class TestDevInSourceFlow:
         self._assert_pkg(cache_package_folder)
 
     def test_child_build(self):
-        client = TestClient(light=True)
+        client = TestClient()
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
         package_folder = os.path.join(build_folder, "package")
@@ -126,7 +126,7 @@ class TestDevOutSourceFlow:
                          sorted(os.listdir(folder))
 
     def test_parallel_folders(self):
-        client = TestClient(light=True)
+        client = TestClient()
         repo_folder = os.path.join(client.current_folder, "recipe")
         src_folder = os.path.join(client.current_folder, "src")
         build_folder = os.path.join(client.current_folder, "build")
@@ -156,7 +156,7 @@ class TestDevOutSourceFlow:
         self._assert_pkg(cache_package_folder)
 
     def test_insource_build(self):
-        client = TestClient(light=True)
+        client = TestClient()
         repo_folder = client.current_folder
         client.save({"conanfile.py": conanfile_out})
 
@@ -172,7 +172,7 @@ class TestDevOutSourceFlow:
         self._assert_pkg(cache_package_folder)
 
     def test_child_build(self):
-        client = TestClient(light=True)
+        client = TestClient()
         repo_folder = client.current_folder
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
@@ -197,7 +197,7 @@ class TestDevOutSourceFlow:
 
 
 def test_error_build_file():
-    c = TestClient(light=True)
+    c = TestClient()
     conanfile_error = textwrap.dedent(r"""
         from conan import ConanFile
         class Test(ConanFile):

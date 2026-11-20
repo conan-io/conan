@@ -49,7 +49,7 @@ class TestPackageIDRequirementsModes:
                           ("revision_mode", "ae5b9eeb74880aeb1cfa3db7f84c007a05ce3a76"),
                           ("full_mode", "d1b2a9538cd69363b4bae7e66c9f900b8f4c58bb")])
 def test_modes(mode, pkg_id):
-    c = TestClient(light=True)
+    c = TestClient()
     package_id_text = f'self.info.requires.{mode}()'
     c.save({"dep/conanfile.py": GenConanfile("dep", "0.1.1.1").with_settings("os"),
             "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_requires("dep/[*]")
@@ -146,7 +146,7 @@ class TestRequirementPackageId:
                               ("minor_mode", "1.2.Z"),
                               ("major_mode",  "1.Y.Z")])
     def test(self, mode, pattern):
-        c = TestClient(light=True)
+        c = TestClient()
         pkg = GenConanfile("pkg", "0.1").with_requirement("dep/1.2.3", package_id_mode=mode)
         c.save({"dep/conanfile.py": GenConanfile("dep", "1.2.3"),
                 "pkg/conanfile.py": pkg})
@@ -156,7 +156,7 @@ class TestRequirementPackageId:
         assert f"dep/{pattern}" in c.out
 
     def test_micro_mode(self):
-        c = TestClient(light=True)
+        c = TestClient()
         pkg = GenConanfile("pkg", "0.1").with_requirement("dep/1.2.3.4",
                                                           package_id_mode="micro_mode")
         c.save({"dep/conanfile.py": GenConanfile("dep", "1.2.3.4"),
@@ -167,7 +167,7 @@ class TestRequirementPackageId:
         assert "dep/1.2.3.4" in c.out
 
     def test_wrong_mode(self):
-        c = TestClient(light=True)
+        c = TestClient()
         pkg = GenConanfile("pkg", "0.1").with_requirement("dep/1.2.3", package_id_mode="nothing")
         c.save({"dep/conanfile.py": GenConanfile("dep", "1.2.3"),
                 "pkg/conanfile.py": pkg})
@@ -184,7 +184,7 @@ class TestRequirementPackageId:
     def test_half_diamond(self, mode, pattern):
         # pkg -> libb -> liba
         #  \----(mode)----/
-        c = TestClient(light=True)
+        c = TestClient()
         pkg = GenConanfile("pkg", "0.1").with_requirement("liba/1.2.3", package_id_mode=mode)\
                                         .with_requirement("libb/1.2.3")
         c.save({"liba/conanfile.py": GenConanfile("liba", "1.2.3"),
@@ -212,7 +212,7 @@ class TestRequirementPackageId:
         # pkg -> libb --(mode)-> liba
         #  \----(mode)-----------/
         # The libb->liba mode is not propagated down to pkg, so it doesn't really conflict
-        c = TestClient(light=True)
+        c = TestClient()
         pkg = GenConanfile("pkg", "0.1").with_requirement("liba/1.2.3", package_id_mode=mode) \
             .with_requirement("libb/1.2.3")
         libb = GenConanfile("libb", "1.2.3").with_requirement("liba/1.2.3",
@@ -247,7 +247,7 @@ class TestTransitiveStatic:
                               ])
     def test_transitive_statics(self, recipe_approach, conf_approach, apply_fix):
         # https://github.com/conan-io/conan/issues/19664
-        c = TestClient(light=True)
+        c = TestClient()
         required_conan_version = ''
         if recipe_approach is not None:
             required_conan_version = f'required_conan_version = ">={recipe_approach}"'
@@ -286,7 +286,7 @@ class TestTransitiveStatic:
         # https://github.com/conan-io/conan/issues/19664
         # This doesn't happen by default because the transitive shared do not propagate .libs
         # linkage requirement trait
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_package_type("shared-library"),
                 "libb/conanfile.py": GenConanfile("libb", "1.0").with_package_type("shared-library")
                .with_requires("liba/1.0"),

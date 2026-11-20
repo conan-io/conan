@@ -272,7 +272,7 @@ class TestExportPkg:
         assert "set(hello1_LIBS_RELEASE mycoollib)" in cmakeinfo
 
     def test_export_pkg_version_type(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Hello(ConanFile):
@@ -647,7 +647,7 @@ def test_remote_none_tool_requires():
 
 def test_export_pkg_set_version_python_requires():
     # https://github.com/conan-io/conan/issues/16223
-    c = TestClient(light=True)
+    c = TestClient()
     py_require = textwrap.dedent("""
         from conan import ConanFile
 
