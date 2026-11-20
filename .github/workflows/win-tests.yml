@@ -321,6 +321,9 @@ jobs:
         env:
           # Use the runner temp disk (D:), faster for small files I/O than C:
           CONAN_TEST_FOLDER: ${{ runner.temp }}
+          # FIXME: The MSVC 14.52 STL requires Clang 22, but windows-2025-vs2026 ships LLVM 20.
+          # Remove when https://github.com/actions/runner-images/pull/15370 reaches the runners
+          CCC_OVERRIDE_OPTIONS: "#^-D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH"
         with:
           python-version: ${{ matrix.python-version }}
           test-type: functional
