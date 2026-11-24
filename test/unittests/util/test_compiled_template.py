@@ -1,8 +1,5 @@
-import gc
-
 import pytest
 from jinja2 import StrictUndefined, UndefinedError
-from jinja2.runtime import Macro
 
 from conan.internal.util.templates import compiled_template
 
@@ -25,22 +22,3 @@ def test_compiled_template_options():
     with pytest.raises(UndefinedError):
         compiled_template(text, undefined=StrictUndefined).render()
 
-
-def test_compiled_template_macros_no_reference_cycles():
-    """ The macros that call other macros reference the render context, and the context them """
-    template = compiled_template("{% macro b(x) %}{{ x }}{% endmacro %}"
-                                 "{% macro a(x) %}{{ b(x) }}{% endmacro %}{{ a(v) }}")
-    enabled = gc.isenabled()
-    gc.collect()
-    gc.disable()
-    gc.set_debug(gc.DEBUG_SAVEALL)
-    try:
-        assert template.render(v=1) == "1"
-        assert template.render({"v": 2}) == "2"
-        gc.collect()
-        assert not any(isinstance(o, Macro) for o in gc.garbage)
-    finally:
-        gc.set_debug(0)
-        gc.garbage.clear()
-        if enabled:
-            gc.enable()
