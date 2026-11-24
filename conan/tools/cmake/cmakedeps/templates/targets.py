@@ -52,9 +52,7 @@ class TargetsTemplate(CMakeDepsFileTemplate):
 
         return ret
 
-    @property
-    def template(self):
-        return textwrap.dedent("""\
+    template = textwrap.dedent("""\
         # Load the debug and release variables
         file(GLOB DATA_FILES "{{data_pattern}}")
 

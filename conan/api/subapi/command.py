@@ -1,3 +1,4 @@
+import gc
 import os
 import shlex
 
@@ -41,6 +42,10 @@ class CommandAPI:
             command = commands[current_cmd]
         except KeyError:
             raise ConanException(f"Command {current_cmd} does not exist")
+        # The "conan" command disables the cyclic garbage collector (conans/conan.py), so the
+        # garbage with reference cycles of the previous commands, like their graphs, is not freed
+        if not gc.isenabled():
+            gc.collect()
         # Conan has some global state in the ConanOutput class that
         # get redefined when running a command and leak to the calling scope
         # if running from a custom command.

@@ -5,8 +5,6 @@ import sys
 from collections import namedtuple
 from typing import List
 
-from requests.exceptions import ConnectionError
-
 from conan.api.model import LOCAL_RECIPES_INDEX
 from conan.internal.paths import CONANINFO, CONAN_MANIFEST, PACKAGE_FILE_NAME, EXPORT_FILE_NAME
 from conan.internal.rest.rest_client_local_recipe_index import RestApiClientLocalRecipesIndex
@@ -318,6 +316,8 @@ class RemoteManager:
             return result
 
     def _call_remote(self, remote, method, *args, **kwargs):
+        # Imported here, not at module level: "requests" takes ~50 ms to import
+        from requests.exceptions import ConnectionError
         assert (isinstance(remote, Remote))
         enforce_disabled = kwargs.pop("enforce_disabled", True)
         if remote.disabled and enforce_disabled:
