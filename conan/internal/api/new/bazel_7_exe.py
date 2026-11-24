@@ -60,6 +60,7 @@ cc_binary(
 """
 
 _bazel_module = """\
+bazel_dep(name = "apple_support", version = "2.5.4")
 bazel_dep(name = "rules_cc", version = "0.2.17")
 """
 _bazel_rc = """\

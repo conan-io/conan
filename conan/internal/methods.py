@@ -146,6 +146,13 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
         with conanfile_exception_formatter(conanfile, "build_requirements"):
             conanfile.build_requirements()
 
+    # get_upstream_options() above consumed the dependencies options definitions, so anything
+    # defined now (like self.options["dep"].opt = value in requirements()) would be silently lost
+    if conanfile.options._deps_package_options:  # noqa
+        raise ConanException(f"{conanfile}: Dependencies options were defined incorrectly. Maybe "
+                             "you tried to define options values in 'requirements()' or other "
+                             "invalid place")
+
     if conanfile.build_requires._called:  # noqa
         conanfile.output.warning(
             "build_requires is deprecated, prefer to use tool_requires with correct traits",
