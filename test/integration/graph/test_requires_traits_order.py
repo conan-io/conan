@@ -10,7 +10,7 @@ from conan.test.utils.tools import TestClient
 @pytest.mark.parametrize("requires", ["lib_b/1.0\nlib_a/1.0", "lib_a/1.0\nlib_b/1.0"])
 def test_diamond_header_library_libs_trait_order(requires):
     # https://github.com/conan-io/conan/issues/20447
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"lib_a/conanfile.py": GenConanfile("lib_a", "1.0").with_package_type("header-library"),
             "lib_b/conanfile.py": GenConanfile("lib_b", "1.0").with_package_type("header-library")
                                                               .with_requires("lib_a/1.0"),
@@ -30,7 +30,7 @@ def test_diamond_header_library_libs_trait_order(requires):
 @pytest.mark.parametrize("b_type", ["static-library", "header-library", "shared-library"])
 def test_diamond_traits_independent_of_order(a_type, b_type):
     # The traits of the direct dependency do not depend on the order of the requires
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"lib_a/conanfile.py": GenConanfile("lib_a", "1.0").with_package_type(a_type),
             "lib_b/conanfile.py": GenConanfile("lib_b", "1.0").with_package_type(b_type)
                                                               .with_requires("lib_a/1.0")})
@@ -51,7 +51,7 @@ def test_diamond_traits_independent_of_order(a_type, b_type):
                                     "headers=False", "libs=False", "run=True"])
 def test_diamond_explicit_traits_independent_of_order(a_type, traits):
     # Traits explicitly defined in the direct requires() do not depend on the order either
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"lib_a/conanfile.py": GenConanfile("lib_a", "1.0").with_package_type(a_type),
             "lib_b/conanfile.py": GenConanfile("lib_b", "1.0").with_package_type("header-library")
                                                               .with_requires("lib_a/1.0")})

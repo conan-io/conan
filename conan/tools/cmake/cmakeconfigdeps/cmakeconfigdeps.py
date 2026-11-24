@@ -3,8 +3,6 @@ import os
 import re
 import textwrap
 
-from jinja2 import Template
-
 from conan.api.output import Color, ConanOutput
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
@@ -18,6 +16,7 @@ from conan.tools.cmake.cmakeconfigdeps.targets import TargetsTemplate2
 from conan.tools.cmake.utils import cmake_escape_value, parse_extra_variable
 from conan.tools.files import save
 from conan.internal.util.files import load
+from conan.internal.util.templates import compiled_template
 
 FIND_MODE_MODULE = "module"
 FIND_MODE_CONFIG = "config"
@@ -1039,7 +1038,7 @@ class _PathGenerator:
                    "cmake_framework_path": _join_paths(self._conanfile, cmake_framework_path),
                    "cmake_module_path": _join_paths(self._conanfile, cmake_module_path)
                    }
-        content = Template(template, trim_blocks=True, lstrip_blocks=True).render(context)
+        content = compiled_template(template).render(context)
         save(self._conanfile, self._conan_cmakedeps_paths, content)
 
     def _get_host_runtime_dirs(self):

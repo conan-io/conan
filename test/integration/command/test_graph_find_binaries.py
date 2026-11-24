@@ -318,7 +318,7 @@ class TestMissingBinaryDeps:
         assert textwrap.indent(expected, "      ") in c.out
 
     def test_different_python_requires(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"tool/conanfile.py": GenConanfile("tool"),
                 "lib/conanfile.py": GenConanfile("lib", "1.0").with_python_requires("tool/[>=1.0]")})
         c.run("create tool --version=1.0")
@@ -351,7 +351,7 @@ class TestMissingBinaryDeps:
                                               "dependencies, but different python_requires"
 
     def test_build_requires(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save_home({"global.conf": "core.package_id:default_build_mode=minor_mode"})
         c.save({"tool/conanfile.py": GenConanfile("tool"),
                 "lib/conanfile.py": GenConanfile("lib", "1.0").with_tool_requires("tool/[>=1.0]")})
@@ -386,7 +386,7 @@ class TestMissingBinaryDeps:
 
 
 def test_change_in_package_type():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({
         "libc/conanfile.py": GenConanfile("libc", "1.0"),
         "libb/conanfile.py": GenConanfile("libb", "1.0")
@@ -414,7 +414,7 @@ def test_change_in_package_type():
 
 
 def test_conf_difference_shown():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({
         "libc/conanfile.py": GenConanfile("libc", "1.0"),
         "libb/conanfile.py": GenConanfile("libb", "1.0").with_requires("libc/1.0"),

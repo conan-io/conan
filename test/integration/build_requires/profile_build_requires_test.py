@@ -209,7 +209,7 @@ def test_tool_requires_revision_profile():
 
 def test_tool_requires_version_range_loop():
     # https://github.com/conan-io/conan/issues/17930
-    c = TestClient(light=True)
+    c = TestClient()
     build_profile = textwrap.dedent("""\
         [settings]
         os=Linux
@@ -227,7 +227,7 @@ def test_tool_requires_version_range_loop():
 def test_profile_tool_requires_negated_or_patterns():
     """Negated [tool_requires] patterns may use | so the rule applies
     if the ref matches none of the branches."""
-    c = TestClient(light=True)
+    c = TestClient()
     profile_build = textwrap.dedent("""\
         [settings]
         os=Linux

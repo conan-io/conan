@@ -94,7 +94,7 @@ class TestProfileDetectAPI:
 @pytest.mark.parametrize("context", [None, "host", "build"])
 @pytest.mark.parametrize("f", ["json", "text"])
 def test_profile_show_aggregate_usecase(context, f):
-    tc = TestClient(light=True)
+    tc = TestClient()
 
     context_arg = f"--context {context}" if context else ""
     tc.run(f'profile show {context_arg} -s:h="os=Windows" -s:b="os=Linux" --format={f}')

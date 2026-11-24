@@ -13,7 +13,7 @@ class TestRemoteServer:
     @pytest.fixture(autouse=True)
     def setup(self):
         self.client = TestClient(servers={f"remote{i}": TestServer() for i in range(3)},
-                                 inputs=3 * ["admin", "password"], light=True)
+                                 inputs=3 * ["admin", "password"])
 
     def test_list_json(self):
         self.client.run("remote list --format=json")
@@ -141,7 +141,7 @@ class TestRemoteServer:
 
 class TestRemoteModification:
     def test_rename(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=hello --version=0.1 --user=user --channel=testing")
         client.run("remote add r1 https://r1")
@@ -159,7 +159,7 @@ class TestRemoteModification:
         assert "Remote 'r1' already exists" in client.out
 
     def test_update_insert(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("remote add r1 https://r1")
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
@@ -181,7 +181,7 @@ class TestRemoteModification:
 
     def test_update_insert_same_url(self):
         # https://github.com/conan-io/conan/issues/5107
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("remote add r1 https://r1")
         client.run("remote add r2 https://r2")
         client.run("remote add r3 https://r3")
@@ -192,7 +192,7 @@ class TestRemoteModification:
         assert str(client.out).find("r1") < str(client.out).find("r3")
 
     def test_verify_ssl(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("remote add my-remote http://someurl")
         client.run("remote add my-remote2 http://someurl2 --insecure")
         client.run("remote add my-remote3 http://someurl3")
@@ -212,7 +212,7 @@ class TestRemoteModification:
         assert data["remotes"][2]["verify_ssl"] is True
 
     def test_remote_disable(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("remote add my-remote0 http://someurl0")
         client.run("remote add my-remote1 http://someurl1")
         client.run("remote add my-remote2 http://someurl2")
@@ -260,7 +260,7 @@ class TestRemoteModification:
         assert "Enabled: False" not in client.out
 
     def test_invalid_remote_disable(self):
-        client = TestClient(light=True)
+        client = TestClient()
 
         client.run("remote disable invalid_remote", assert_error=True)
         msg = "ERROR: Remote 'invalid_remote' can't be found or is disabled"
@@ -275,7 +275,7 @@ class TestRemoteModification:
         """
         Check that we don't raise an error if the remote is already in the required state
         """
-        client = TestClient(light=True)
+        client = TestClient()
 
         client.run("remote add my-remote0 http://someurl0")
         client.run("remote enable my-remote0")
@@ -285,7 +285,7 @@ class TestRemoteModification:
         client.run("remote disable my-remote0")
 
     def test_verify_ssl_error(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run("remote add my-remote http://someurl some_invalid_option=foo", assert_error=True)
 
         assert "unrecognized arguments: some_invalid_option=foo" in client.out
@@ -296,7 +296,7 @@ class TestRemoteModification:
 def test_add_duplicated_url():
     """ allow duplicated URL with --force
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.run("remote add remote1 http://url")
     c.run("remote add remote2 http://url", assert_error=True)
     assert "ERROR: Remote url already existing in remote 'remote1'" in c.out
@@ -320,7 +320,7 @@ def test_add_duplicated_name_url():
     """ do not add extra remote with same name and same url
         # https://github.com/conan-io/conan/issues/13569
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.run("remote add remote1 http://url")
     c.run("remote add remote1 http://url --force")
     assert "WARN: Remote 'remote1' already exists in remotes" in c.out
@@ -331,7 +331,7 @@ def test_add_duplicated_name_url():
 def test_add_wrong_conancenter():
     """ Avoid common error of adding the wrong ConanCenter URL
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.run("remote add whatever https://conan.io/center", assert_error=True)
     assert "Wrong ConanCenter remote URL. You are adding the web https://conan.io/center" in c.out
     assert "the correct remote API is https://center2.conan.io" in c.out
@@ -342,7 +342,7 @@ def test_add_wrong_conancenter():
 
 
 def test_wrong_remotes_json_file():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save_home({"remotes.json": ""})
     c.run("remote list", assert_error=True)
     assert "ERROR: Error loading JSON remotes file" in c.out
@@ -350,7 +350,7 @@ def test_wrong_remotes_json_file():
 
 class TestAllowedPackages:
     def test_allowed_packages_remotes(self):
-        tc = TestClient(light=True, default_server_user=True)
+        tc = TestClient(default_server_user=True)
         tc.save({"conanfile.py": GenConanfile(),
                  "app/conanfile.py": GenConanfile("app", "1.0")
                 .with_requires("liba/1.0")
@@ -403,13 +403,13 @@ class TestAllowedPackages:
     def test_remote_allowed_packages_new(self):
         """Test that the allowed packages are saved in the remotes.json file when adding
         a new remote"""
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run("remote add foo https://foo -ap='liba/*'")
         remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
         assert remotes["remotes"][0]["allowed_packages"] == ["liba/*"]
 
     def test_remote_allowed_negation(self):
-        tc = TestClient(light=True, default_server_user=True)
+        tc = TestClient(default_server_user=True)
         tc.save({"conanfile.py": GenConanfile()})
         tc.run("create . --name=config --version=1.0")
         tc.run("create . --name=lib --version=1.0")
@@ -428,7 +428,7 @@ class TestAllowedPackages:
         """ Several negated patterns are all exclusions, they must not turn the filter off
         https://github.com/conan-io/conan/issues/20411
         """
-        tc = TestClient(light=True, default_server_user=True)
+        tc = TestClient(default_server_user=True)
         tc.save({"conanfile.py": GenConanfile()})
         for name in ("qt", "gtsam", "zlib"):
             tc.run(f"create . --name={name} --version=1.0")
@@ -456,7 +456,7 @@ class TestAllowedPackages:
         still restrict the rest of the packages, regardless of the order they are defined
         https://github.com/conan-io/conan/issues/20411
         """
-        tc = TestClient(light=True, default_server_user=True)
+        tc = TestClient(default_server_user=True)
         tc.save({"conanfile.py": GenConanfile()})
         for name in ("pkga", "pkgb", "zlib"):
             tc.run(f"create . --name={name} --version=1.0")
@@ -483,7 +483,7 @@ class TestAllowedPackages:
         https://github.com/conan-io/conan/issues/20411
         """
         servers = {"ours": TestServer(), "public": TestServer()}
-        tc = TestClient(servers=servers, inputs=2 * ["admin", "password"], light=True)
+        tc = TestClient(servers=servers, inputs=2 * ["admin", "password"])
         tc.save({"conanfile.py": GenConanfile()})
         for name in ("pkga", "pkgb"):
             tc.run(f"create . --name={name} --version=1.0")
@@ -509,7 +509,7 @@ class TestAllowedPackages:
 def test_remote_force_auth_new():
     """Test that --force-auth can be defined in the command line when adding
     a new remote, and it is saved in the remotes.json file"""
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.run("remote add foo https://foo --force-auth")
     remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
     assert remotes["remotes"][0]["force_auth"] is True
@@ -519,7 +519,7 @@ def test_remote_force_auth_new():
 
 def test_remote_force_auth_default():
     """By default, force_auth is False and not stored in remotes.json"""
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.run("remote add foo https://foo")
     remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
     assert "force_auth" not in remotes["remotes"][0]
@@ -530,7 +530,7 @@ def test_remote_force_auth_default():
 def test_remote_force_auth_update():
     """Test that an existing remote can be switched to need authentication, and back,
     via 'conan remote update'"""
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.run("remote add foo https://foo")
     tc.run("remote update foo --force-auth")
     remotes = json.loads(load(os.path.join(tc.cache_folder, "remotes.json")))
@@ -542,7 +542,7 @@ def test_remote_force_auth_update():
 
 
 def test_remote_force_auth_json():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.run("remote add foo https://foo --force-auth")
     tc.run("remote list -f=json")
     data = json.loads(tc.stdout)

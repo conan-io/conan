@@ -2,8 +2,6 @@ import os
 import re
 import textwrap
 
-from jinja2 import Template
-
 from conan.internal.internal_tools import universal_arch_separator, is_universal_arch
 from conan.tools.apple.apple import get_apple_sdk_fullname, _to_apple_arch
 from conan.tools.android.utils import android_abi
@@ -21,6 +19,7 @@ from conan.internal.subsystems import deduce_subsystem, WINDOWS
 from conan.errors import ConanException
 from conan.internal.model.version import Version
 from conan.internal.util.files import load
+from conan.internal.util.templates import compiled_template
 
 
 class Block:
@@ -46,8 +45,7 @@ class Block:
             return None
 
         template = f"########## '{self._name}' block #############\n" + self.template + "\n\n"
-        template = Template(template, trim_blocks=True, lstrip_blocks=True)
-        return template.render(**context)
+        return compiled_template(template).render(**context)
 
     def context(self):
         return {}

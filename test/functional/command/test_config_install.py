@@ -122,7 +122,7 @@ class TestConfigInstall:
         """ should install from a file in current dir
         """
         zippath = self._create_zip()
-        c = TestClient(light=True)
+        c = TestClient()
         for filetype in ["", "--type=file"]:
             c.run('config install "%s" %s' % (zippath, filetype))
             self._check(c)
@@ -144,7 +144,7 @@ class TestConfigInstall:
         shutil.move(src_setting_file, dest_setting_file)
         shutil.move(src_remote_file, dest_remote_file)
 
-        c = TestClient(light=True)
+        c = TestClient()
         c.run('config install "%s"' % profile_folder)
         shutil.move(dest_setting_file, src_setting_file)
         shutil.move(dest_remote_file, src_remote_file)
@@ -160,7 +160,7 @@ class TestConfigInstall:
         """
         folder = self._create_profile_folder()
         assert os.path.isdir(folder)
-        c = TestClient(light=True)
+        c = TestClient()
         for dirtype in ["", "--type=dir"]:
             c.run('config install "%s" %s' % (folder, dirtype))
             self._check(c)
@@ -169,7 +169,7 @@ class TestConfigInstall:
         folder = temp_folder()
         save_files(folder, {"subf/file.txt": "hello",
                             "subf/subf/file2.txt": "bye"})
-        c = TestClient(light=True)
+        c = TestClient()
         c.run('config install "%s" -sf=subf -tf=newsubf' % folder)
         content = c.load_home("newsubf/file.txt")
         assert content == "hello"
@@ -197,7 +197,7 @@ class TestConfigInstall:
         save_files(folder, {"remotes.json": remotes_json,
                             "remotes.txt": remotes_txt})
 
-        c = TestClient(light=True)
+        c = TestClient()
         c.run(f'config install "{folder}"')
         assert "Defining remotes from remotes.json" in c.out
 
@@ -219,7 +219,7 @@ class TestConfigInstall:
         assert "repojson2: https://repojson2.com [Verify SSL: True, Enabled: True]" in c.out
 
     def test_without_profile_folder(self):
-        c = TestClient(light=True)
+        c = TestClient()
         shutil.rmtree(c.paths.profiles_path)
         zippath = self._create_zip()
 
@@ -230,7 +230,7 @@ class TestConfigInstall:
     def test_install_url(self):
         """ should install from a URL
         """
-        c = TestClient(light=True)
+        c = TestClient()
         for origin in ["", "--type=url"]:
             def my_download(obj, url, file_path, **kwargs):  # noqa
                 self._create_zip(file_path)
@@ -246,7 +246,7 @@ class TestConfigInstall:
     def test_install_url_query(self):
         """ should install from a URL
         """
-        c = TestClient(light=True)
+        c = TestClient()
 
         def my_download(obj, url, file_path, **kwargs):  # noqa
             self._create_zip(file_path)
@@ -260,7 +260,7 @@ class TestConfigInstall:
         def my_download(obj, url, file_path, **kwargs):  # noqa
             self._create_zip(file_path)
 
-        c = TestClient(light=True)
+        c = TestClient()
         with patch.object(FileDownloader, 'download', new=my_download):
             c.run("config install http://myfakeurl.com/myconf.zip")
             self._check(c)
@@ -272,7 +272,7 @@ class TestConfigInstall:
     def test_install_url_tgz(self):
         """ should install from a URL to tar.gz
         """
-        c = TestClient(light=True)
+        c = TestClient()
 
         def my_download(obj, url, file_path, **kwargs):  # noqa
             self._create_tgz(file_path)
@@ -284,14 +284,14 @@ class TestConfigInstall:
     def test_failed_install_repo(self):
         """ should install from a git repo
         """
-        c = TestClient(light=True)
+        c = TestClient()
         c.run('config install notexistingrepo.git', assert_error=True)
         assert "ERROR: Failed conan config install: Can't clone repo" in c.out
 
     def test_failed_install_http(self):
         """ should install from a http zip
         """
-        c = TestClient(light=True)
+        c = TestClient()
         c.run('config install httpnonexisting', assert_error=True)
         assert ("ERROR: Failed conan config install: "
                 "Error while installing config from httpnonexisting") in c.out
@@ -300,7 +300,7 @@ class TestConfigInstall:
     def test_install_repo(self):
         """ should install from a git repo
         """
-        c = TestClient(light=True)
+        c = TestClient()
         folder = self._create_profile_folder()
         with c.chdir(folder):
             c.run_command('git init .')
@@ -314,7 +314,7 @@ class TestConfigInstall:
 
     @pytest.mark.tool("git")
     def test_install_repo_relative(self):
-        c = TestClient(light=True)
+        c = TestClient()
         relative_folder = "./config"
         absolute_folder = os.path.join(c.current_folder, "config")
         mkdir(absolute_folder)
@@ -333,7 +333,7 @@ class TestConfigInstall:
     def test_install_custom_args(self):
         """ should install from a git repo
         """
-        c = TestClient(light=True)
+        c = TestClient()
         folder = self._create_profile_folder()
         with c.chdir(folder):
             c.run_command('git init .')
@@ -346,22 +346,22 @@ class TestConfigInstall:
         self._check(c)
 
     def test_force_git_type(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run('config install httpnonexisting --type=git', assert_error=True)
         assert "Can't clone repo" in client.out
 
     def test_force_dir_type(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.run('config install httpnonexisting --type=dir', assert_error=True)
         assert "ERROR: Failed conan config install: No such directory: 'httpnonexisting'" in c.out
 
     def test_force_file_type(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run('config install httpnonexisting --type=file', assert_error=True)
         assert "No such file or directory: 'httpnonexisting'" in client.out
 
     def test_force_url_type(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.run('config install httpnonexisting --type=url', assert_error=True)
         assert "Error downloading file httpnonexisting: 'Invalid URL 'httpnonexisting'" in client.out
 
@@ -406,7 +406,7 @@ class TestConfigInstall:
             assert url == fake_url_with_credentials
             self._create_zip(file_path)
 
-        c = TestClient(light=True)
+        c = TestClient()
         with patch.object(FileDownloader, 'download', new=my_download):
             c.run("config install %s" % fake_url_with_credentials)
 
@@ -418,7 +418,7 @@ class TestConfigInstall:
             self._check(c)
 
     def test_ssl_verify(self):
-        c = TestClient(light=True)
+        c = TestClient()
 
         fake_url = "https://fakeurl.com/myconf.zip"
 
@@ -445,7 +445,7 @@ class TestConfigInstall:
     @pytest.mark.tool("git")
     def test_git_checkout_is_possible(self):
         folder = self._create_profile_folder()
-        c = TestClient(light=True)
+        c = TestClient()
         with c.chdir(folder):
             c.run_command('git init .')
             c.run_command('git checkout -b master')
@@ -476,7 +476,7 @@ class TestConfigInstall:
     def test_config_install_requester(self):
         # https://github.com/conan-io/conan/issues/4169
         path = self._create_zip()
-        c = TestClient(light=True)
+        c = TestClient()
         file_server = TestFileServer(os.path.dirname(path))
         c.servers["file_server"] = file_server
 
@@ -485,7 +485,7 @@ class TestConfigInstall:
         assert "Copying file myfuncs.py" in c.out
 
     def test_overwrite_read_only_file(self):
-        c = TestClient(light=True)
+        c = TestClient()
         source_folder = self._create_profile_folder()
         c.run('config install "%s"' % source_folder)
         # make existing settings.yml read-only
@@ -501,12 +501,12 @@ class TestConfigInstall:
         # make source settings.yml read-only
         make_file_read_only(os.path.join(source_folder, 'remotes.json'))
 
-        c = TestClient(light=True)
+        c = TestClient()
         c.run('config install "%s"' % source_folder)
         assert os.access(c.paths.settings_path, os.W_OK)
 
     def test_maintain_executable(self):
-        c = TestClient(light=True)
+        c = TestClient()
         source_folder = self._create_profile_folder()
         filepath = os.path.join(source_folder, 'remotes.json')
         mode = os.stat(filepath).st_mode
@@ -524,7 +524,7 @@ class TestConfigInstallSched:
         """
         folder = temp_folder(path_with_spaces=False)
         save_files(folder, {"global.conf": "core.download:parallel=0"})
-        c = TestClient(light=True)
+        c = TestClient()
         c.run('config install "%s"' % folder)
         assert "Copying file global.conf" in c.out
 
@@ -537,7 +537,7 @@ class TestConfigInstallSched:
         """
         folder = temp_folder(path_with_spaces=False)
         save_files(folder, {"global.conf": "core.download:parallel=0"})
-        c = TestClient(light=True)
+        c = TestClient()
         with c.chdir(folder):
             c.run_command('git init .')
             c.run_command('git add .')

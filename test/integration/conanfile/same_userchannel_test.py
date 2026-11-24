@@ -8,7 +8,7 @@ class TestUserChannelTestPackage:
 
     def test(self):
         # https://github.com/conan-io/conan/issues/2501
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = """from conan import ConanFile
 class SayConan(ConanFile):
     pass
@@ -35,7 +35,7 @@ class TestSameUserChannel:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.client = TestClient(light=True)
+        self.client = TestClient()
         conanfile = """
 from conan import ConanFile
 
@@ -98,7 +98,7 @@ class HelloConan(ConanFile):
         assert "lasote/stable" not in self.client.out
 
         # Now use the default_ methods to declare user and channel
-        self.client = TestClient(light=True)
+        self.client = TestClient()
         conanfile = """
 from conan import ConanFile
 
@@ -124,7 +124,7 @@ class SayConan(ConanFile):
 class TestBuildRequireUserChannel:
     def test(self):
         # https://github.com/conan-io/conan/issues/2254
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = """
 from conan import ConanFile
 

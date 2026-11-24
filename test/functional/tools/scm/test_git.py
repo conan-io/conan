@@ -332,7 +332,7 @@ class TestGitBasicClone:
         folder = os.path.join(temp_folder(), "myrepo")
         url, _ = create_local_git_repo(files={"CMakeLists.txt": "mycmake"}, folder=folder)
 
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": conanfile.format(url=url)})
         c.run("create . -v")
         # Clone URL is explicitly printed
@@ -496,7 +496,7 @@ class TestGitShallowClone:
         folder = os.path.join(temp_folder(), "myrepo")
         url, commit = create_local_git_repo(files={"CMakeLists.txt": "mycmake"}, folder=folder)
 
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": conanfile.format(url=url, commit=commit)})
         c.run("create . -v")
         # Clone URL is explicitly printed

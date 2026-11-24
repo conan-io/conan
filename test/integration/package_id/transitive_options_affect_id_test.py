@@ -115,7 +115,7 @@ class TestPackageIDABIOptions:
       that necessary and mostly a linking optimization, so not that frequent
     """
     def test_package_id_abi_options(self):
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -147,6 +147,41 @@ class TestPackageIDABIOptions:
         c.assert_listed_binary({"app": ("8c15f2b19bd994dcd5b44780eda3f03bde74c217", "Build")})
         c.run("list app/0.1:8c15f2b19bd994dcd5b44780eda3f03bde74c217")
         assert "pkg/*:shared: True" in c.out
+
+    def test_package_id_abi_options_important(self):
+        # The "!" important marker only defines the precedence of the option value, it must
+        # not be part of the consumer package_id
+        c = TestClient()
+        conanfile = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+                package_id_abi_options = ["shared"]
+            """)
+        app = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "app"
+                version = "0.1"
+                package_type = "static-library"
+                requires = "pkg/0.1"
+            """)
+        c.save({"pkg/conanfile.py": conanfile,
+                "app/conanfile.py": app})
+        c.run("create pkg -o *:shared=True")
+
+        c.run("create app -o *:shared=True")
+        c.assert_listed_binary({"app": ("8c15f2b19bd994dcd5b44780eda3f03bde74c217", "Build")})
+        c.run("list app/0.1:8c15f2b19bd994dcd5b44780eda3f03bde74c217")
+        assert "pkg/*:shared: True" in c.out
+
+        c.run("create app -o pkg/*:shared!=True")
+        c.assert_listed_binary({"app": ("8c15f2b19bd994dcd5b44780eda3f03bde74c217", "Build")})
+        c.run("list app/0.1:*")
+        assert "shared!" not in c.out
 
     def test_package_id_abi_options_conditional(self):
         c = TestClient()
@@ -197,7 +232,7 @@ class TestPackageIDABIOptions:
         assert "pkg/*:shared: True" in c.out
 
     def test_package_id_abi_options_transitive(self):
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -254,3 +289,95 @@ class TestPackageIDABIOptions:
         c.assert_listed_binary({"app": ("321ad086fc1bbb3c2cf7f3e4d8d69c6d2096196d", "Build")})
         c.run("list app/0.1:321ad086fc1bbb3c2cf7f3e4d8d69c6d2096196d")
         assert "pkg/*:shared: True" in c.out
+
+    def test_package_id_abi_options_not_compatible(self):
+        # https://github.com/conan-io/conan/issues/20535
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "1.0"
+                package_type = "static-library"
+                settings = "os", "arch", "compiler", "build_type"
+                options = {"my_option": [True, False]}
+                default_options = {"my_option": True}
+            """)
+        pkg = (GenConanfile("pkg", "1.0").with_package_type("static-library")
+                                         .with_settings("os", "arch", "compiler", "build_type")
+                                         .with_requires("dep/1.0"))
+        c.save({"dep/conanfile.py": dep,
+                "pkg/conanfile.py": pkg})
+        # Pin a profile that has compatible configurations (cppstd) in the default plugin
+        settings = ("-s os=Linux -s arch=x86_64 -s build_type=Release -s compiler=gcc "
+                    "-s compiler.version=11 -s compiler.libcxx=libstdc++11 -s compiler.cppstd=17")
+        c.run(f"create dep {settings} -o dep/*:my_option=True")
+        assert "Exported: dep/1.0#4efc12119b7f473f935add98befdb4ee" in c.out
+        c.run(f"create pkg {settings} -o dep/*:my_option=True")
+
+        # dep now declares that "my_option" affects consumers' ABI
+        dep += '    package_id_abi_options = ["my_option"]\n'
+        c.save({"dep/conanfile.py": dep})
+        c.run(f"create dep {settings} -o dep/*:my_option=False")
+        assert "Exported: dep/1.0#f7918c0a0d520d7371abdd654efb5a06" in c.out
+        c.run(f"install --requires=pkg/1.0 {settings} -o dep/*:my_option=False", assert_error=True)
+        # The binary built against my_option=True must not be picked as "compatible"
+        assert "Found compatible package" not in c.out
+        assert "ERROR: Missing binary: pkg/1.0" in c.out
+
+    def test_package_id_abi_options_build_id(self):
+        # build_id() clones the info, that contains the dependency package_id_abi_options
+        c = TestClient()
+        dep = textwrap.dedent("""
+            from conan import ConanFile
+            class Dep(ConanFile):
+                name = "dep"
+                version = "0.1"
+                options = {"shared": [True, False]}
+                default_options = {"shared": False}
+                package_id_abi_options = ["shared"]
+            """)
+        pkg = textwrap.dedent("""
+            from conan import ConanFile
+            class Pkg(ConanFile):
+                name = "pkg"
+                version = "0.1"
+                package_type = "static-library"
+                settings = "build_type"
+                requires = "dep/0.1"
+
+                def build_id(self):
+                    self.info_build.settings.build_type = "Any"
+
+                def build(self):
+                    self.output.info("Building my code!")
+
+                def package(self):
+                    self.output.info(f"Packaging {self.settings.build_type}!")
+            """)
+        c.save({"dep/conanfile.py": dep,
+                "pkg/conanfile.py": pkg})
+        c.run("create dep")
+        c.run("create dep -o *:shared=True")
+
+        # Release builds, Debug reuses the build of Release, as build_type is not part of build_id
+        c.run("create pkg -s build_type=Release")
+        c.assert_listed_binary({"pkg": ("1decfe03fedc46d5c3d695988d84922400dc3f06", "Build")})
+        assert "Building my code!" in c.out
+        assert "Packaging Release!" in c.out
+        c.run("create pkg -s build_type=Debug")
+        assert "Building my code!" not in c.out
+        assert "Packaging Debug!" in c.out
+
+        # The dependency "shared" option is part of the build_id too, it must build again
+        c.run("create pkg -s build_type=Release -o *:shared=True")
+        c.assert_listed_binary({"pkg": ("ed472c627b10eb524ec5cd08f250776a988c7b31", "Build")})
+        assert "Building my code!" in c.out
+        assert "Packaging Release!" in c.out
+        c.run("create pkg -s build_type=Debug -o *:shared=True")
+        assert "Building my code!" not in c.out
+        assert "Packaging Debug!" in c.out
+
+        c.run("list pkg/0.1:*")
+        assert c.out.count("dep/*:shared: False") == 2
+        assert c.out.count("dep/*:shared: True") == 2

@@ -23,9 +23,7 @@ class MacrosTemplate(CMakeDepsFileTemplate):
     def context(self):
         return {}
 
-    @property
-    def template(self):
-        return textwrap.dedent("""
+    template = textwrap.dedent("""
        macro(conan_find_apple_frameworks FRAMEWORKS_FOUND FRAMEWORKS FRAMEWORKS_DIRS)
            if(APPLE)
                foreach(_FRAMEWORK ${FRAMEWORKS})

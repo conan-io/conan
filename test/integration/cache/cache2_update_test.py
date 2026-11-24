@@ -468,7 +468,7 @@ class TestUpdateFlows:
                                      "libb/1.1": "Downloaded (default)"}]
                          ])
 def test_muliref_update_pattern(update, result):
-    tc = TestClient(light=True, default_server_user=True)
+    tc = TestClient(default_server_user=True)
     tc.save({"liba/conanfile.py": GenConanfile("liba"),
              "libb/conanfile.py": GenConanfile("libb")})
     tc.run("create liba --version=1.0")
@@ -489,7 +489,7 @@ def test_muliref_update_pattern(update, result):
 
 def test_update_remote_older_revision():
     # https://github.com/conan-io/conan/issues/19313
-    c = TestClient(light=True, default_server_user=True)
+    c = TestClient(default_server_user=True)
     zlib = textwrap.dedent("""
        from conan import ConanFile
        class Zlib(ConanFile):
@@ -502,7 +502,7 @@ def test_update_remote_older_revision():
     c.run("export")
     c.run("upload * -r=default -c")
 
-    c2 = TestClient(light=True, servers=c.servers)
+    c2 = TestClient(servers=c.servers)
     c2.run("graph info --requires=zlib/[*]")
     rev1 = "2e87959c586811f8a4eaf12a327cc042"
     c2.assert_listed_require({f"zlib/1.2.11#{rev1}": "Downloaded (default)"})

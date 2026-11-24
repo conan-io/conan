@@ -158,7 +158,7 @@ def test_profile_show_json():
 
 @pytest.mark.parametrize("new_global", [None, 0, 1, True, False, ""])
 def test_settings_serialize(new_global):
-    tc = TestClient(light=True)
+    tc = TestClient()
     settings_user = "new_global: [null, 0, 1, True, False, '']"
     tc.save_home({"settings_user.yml": settings_user})
     tc.save({"conanfile.py": GenConanfile("foo", "1.0").with_settings("new_global")})

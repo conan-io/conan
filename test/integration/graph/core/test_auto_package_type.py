@@ -33,7 +33,7 @@ class Pkg(ConanFile):
 
 @pytest.mark.parametrize("conanfile", [simple, pkg_type, remove])
 def test_auto_package_type(conanfile):
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": conanfile})
     c.run("graph info . --filter package_type")
     assert "package_type: static-library" in c.out
@@ -50,7 +50,7 @@ def test_auto_package_type(conanfile):
 
 def test_package_type_and_header_library():
     """ Show that forcing a package_type and header_only=True does not change the package_type"""
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"conanfile.py": textwrap.dedent("""
     from conan import ConanFile
 
@@ -75,7 +75,7 @@ def test_package_type_shared_option_contradiction(package_type, shared_value):
     """
     Test that contradictory package_type and shared option raises an error.
     """
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"conanfile.py": textwrap.dedent(f"""
     from conan import ConanFile
 
@@ -99,7 +99,7 @@ def test_package_type_shared_option_warning(package_type, shared_value):
     Test that package_type with non-contradictory shared option emits warning.
     The package_type takes precedence over the option value.
     """
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"conanfile.py": textwrap.dedent(f"""
     from conan import ConanFile
 
@@ -121,7 +121,7 @@ def test_package_type_shared_option_unique_possible_option(package_type, shared_
     """
     Test that contradictory package_type and shared option raises an error.
     """
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"conanfile.py": textwrap.dedent(f"""
     from conan import ConanFile
 
@@ -140,7 +140,7 @@ def test_package_type_header_only(package_type):
     """
     Test that no error is raised when only header_only option is defined
     """
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"conanfile.py": textwrap.dedent(f"""
     from conan import ConanFile
 

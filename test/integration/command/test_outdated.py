@@ -8,7 +8,7 @@ from conan.test.utils.tools import TestClient, TestServer
 
 @pytest.fixture
 def create_libs():
-    tc = TestClient(default_server_user=True, light=True)
+    tc = TestClient(default_server_user=True)
     tc.save({"conanfile.py": GenConanfile()})
     tc.run("create . --name=zlib --version=1.0")
     tc.run("create . --name=zlib --version=2.0")
@@ -106,7 +106,7 @@ def test_two_remotes():
     # remote2: zlib/[1.0, 2.0], libcurl/1.0, foo/1.0
     # local cache: zlib/1.0, libcurl/1.0, foo/1.0
     servers = {f"remote{i}": TestServer() for i in (1, 2)}
-    tc = TestClient(servers=servers, inputs=2 * ["admin", "password"], light=True)
+    tc = TestClient(servers=servers, inputs=2 * ["admin", "password"])
 
     tc.save({"conanfile.py": GenConanfile()})
     tc.run("create . --name=zlib --version=1.0")
@@ -145,7 +145,7 @@ def test_two_remotes():
 
 
 def test_duplicated_tool_requires():
-    tc = TestClient(default_server_user=True, light=True)
+    tc = TestClient(default_server_user=True)
     # Create libraries needed to generate the dependency graph
     tc.save({"conanfile.py": GenConanfile()})
     tc.run("create . --name=cmake --version=1.0")
@@ -171,7 +171,7 @@ def test_duplicated_tool_requires():
 
 
 def test_no_outdated_dependencies():
-    tc = TestClient(default_server_user=True, light=True)
+    tc = TestClient(default_server_user=True)
 
     tc.save({"conanfile.py": GenConanfile()})
     tc.run("create . --name=foo --version=1.0")

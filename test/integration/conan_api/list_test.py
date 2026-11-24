@@ -12,7 +12,7 @@ def test_get_recipe_revisions():
     """
     Test the "api.list.recipe_revisions"
     """
-    client = TestClient(light=True, default_server_user=True)
+    client = TestClient(default_server_user=True)
     for rev in range(1, 4):
         client.save({"conanfile.py": GenConanfile("foo", "1.0").with_build_msg(f"{rev}")})
         client.run("create .")
@@ -32,7 +32,7 @@ def test_get_package_revisions():
     """
     Test the "api.list.package_revisions"
     """
-    client = TestClient(light=True, default_server_user=True)
+    client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile("foo", "1.0").with_package_file("f.txt",
                                                                               env_var="MYVAR")})
     for rev in range(3):
@@ -55,7 +55,7 @@ def test_get_package_revisions():
 
 
 def test_search_recipes_no_user_channel_only():
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name foo --version 1.0 --user user --channel channel")
     client.run("create . --name foo --version 1.0")
@@ -69,7 +69,7 @@ def test_latest_revision_not_found_returns(with_remote):
     """
     The latest revision endpoints should raise when the reference is not found
     """
-    client = TestClient(light=True, default_server_user=with_remote)
+    client = TestClient(default_server_user=with_remote)
 
     rref = RecipeReference.loads("foo/1.0")
     pref = PkgReference.loads("foo/1.0#1234567890abcdef1234567890abcdef:1234567890abcdef1234567890abcdef")
@@ -86,7 +86,7 @@ def test_latest_revision_not_found_returns(with_remote):
 
 
 def test_select_revision_iteration_no_info():
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": GenConanfile("foo", "1.0").with_settings("os").with_shared_option(True)})
     client.run("create .")
 

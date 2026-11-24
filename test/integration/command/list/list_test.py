@@ -46,7 +46,7 @@ class TestParamErrors:
         assert "--package-query and --filter-xxx can only be done for binaries" in c.out
 
     def test_wrong_package_query(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
         c.run("create .")
         c.run('list *:* -p "not os=Linux"')
@@ -54,7 +54,7 @@ class TestParamErrors:
 
     def test_graph_file_error(self):
         # This can happen when reusing the same file in input and output
-        c = TestClient(light=True)
+        c = TestClient()
         c.run("list --graph=graph.json", assert_error=True)
         assert "ERROR: Graph file not found" in c.out
         c.save({"graph.json": ""})
@@ -234,7 +234,7 @@ class TestListRefs:
         self.check_json(client, pattern, remote, expected_json)
 
     def test_version_range_prerelease(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"conanfile.py": GenConanfile("foo", "1.0-pre.1")})
         tc.run("export .")
         tc.run("list * ",)
@@ -875,7 +875,7 @@ class TestListCompact:
         "0ba8627bd47edc3a501e8f0eb9a79e5e"
     ])
     def test_list_compact_patterns(self, pattern):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0")})
         c.run("create pkg")
         c.run(f"list {pattern} --format=compact")
@@ -959,7 +959,7 @@ class TestListBinaryFilter:
 
 
 def test_overlapping_versions():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"conanfile.py": GenConanfile("foo")})
     tc.run("export . --version=1.0")
     tc.run("export . --version=1.0.0")
@@ -969,7 +969,7 @@ def test_overlapping_versions():
 
 
 def test_list_local_recipe_index():
-    c = TestClient(light=True)
+    c = TestClient()
     c.run(f"new local_recipes_index -d name=pkg -d version=0.1 -d url='https://conan-fake-url.com' ")
     c.run(f"remote add local '{c.current_folder}'")
 

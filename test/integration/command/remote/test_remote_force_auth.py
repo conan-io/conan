@@ -19,7 +19,7 @@ class TestRemoteForceAuth:
         server = TestServer(users={"admin": "password"})
         # Repeated on purpose: the fixture consumes one pair for the upload below, and each
         # test method that triggers a new authentication consumes one more pair
-        c = TestClient(light=True, servers={"default": server},
+        c = TestClient(servers={"default": server},
                        inputs=["admin", "password"] * 3)
         c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
         c.run("create .")

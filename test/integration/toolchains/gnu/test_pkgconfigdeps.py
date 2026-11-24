@@ -1258,7 +1258,7 @@ def test_pkg_none_requirement_without_components():
                 def package_info(self):
                     self.cpp_info.components["cmp2"].set_property("pkg_config_name", "none")
             """)
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"a/conanfile.py": conanfile_a,
              "b/conanfile.py": conanfile_b,
              "c/conanfile.py": conanfile_c})
@@ -1312,7 +1312,7 @@ def test_pkg_none_requirement_with_default_components():
                 self.cpp_info.components["cmp1"].set_property("pkg_config_name", "b-cmp1")
                 self.cpp_info.components["cmp1"].requires = ["pkg_a::pkg_a"]
         """)
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"a/conanfile.py": conanfile_a, "b/conanfile.py": conanfile_b})
     tc.run("create a")
     tc.run("create b")
@@ -1358,7 +1358,7 @@ def test_pkg_none_requirement_with_all_components():
                 self.cpp_info.components["cmp1"].set_property("pkg_config_name", "b-cmp1")
                 self.cpp_info.components["cmp1"].requires = ["pkg_a::pkg_a"]
         """)
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"a/conanfile.py": conanfile_a, "b/conanfile.py": conanfile_b})
     tc.run("create a")
     tc.run("create b")
