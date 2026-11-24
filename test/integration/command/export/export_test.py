@@ -412,10 +412,13 @@ def test_allow_temp_uppercase():
     c.save({"conanfile.py": GenConanfile()})
     c.run("export . --name=Pkg --version=0.1", assert_error=True)
     assert "ERROR: Conan packages names 'Pkg/0.1' must be all lowercase" in c.out
+    assert "core:allow_uppercase_pkg_names" not in c.out
     c.save_home({"global.conf": "core:allow_uppercase_pkg_names=True"})
     c.run("export . --name=Pkg --version=0.1")
     assert "WARN: Package name 'Pkg/0.1' has uppercase, " \
            "and has been allowed by temporary config." in c.out
+    assert "WARN: deprecated: The 'core:allow_uppercase_pkg_names' configuration is " \
+           "deprecated" in c.out
 
 
 def test_warn_special_chars_refs():

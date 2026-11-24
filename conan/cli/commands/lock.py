@@ -103,6 +103,9 @@ def lock_add(conan_api, parser, subparser, *args):
     lockfile = conan_api.lockfile.get_lockfile(lockfile=args.lockfile, partial=True)
 
     allow_uppercase = conan_api.config.get("core:allow_uppercase_pkg_names", check_type=bool)
+    if allow_uppercase is not None:
+        ConanOutput().warning("The 'core:allow_uppercase_pkg_names' configuration is deprecated "
+                              "and will be removed in a later 2.X version", warn_tag="deprecated")
 
     def _parse_requires(reqs):
         if reqs:
