@@ -437,7 +437,7 @@ class BinaryInstaller:
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile)
 
                 if hasattr(conanfile, "package_info"):
-                    with conanfile_remove_attr(conanfile, ['info', "source_folder", "build_folder"],
+                    with conanfile_remove_attr(conanfile, ('info', "source_folder", "build_folder"),
                                                "package_info"):
                         MockInfoProperty.package = str(conanfile)
                         conanfile.package_info()
@@ -506,7 +506,7 @@ class BinaryInstaller:
                 mkdir(finalize_folder)
                 conanfile.output.highlight("Calling finalize()")
                 with conanfile_exception_formatter(conanfile, "finalize"):
-                    with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'],
+                    with conanfile_remove_attr(conanfile, ('cpp_info', 'settings', 'options'),
                                                'finalize'):
                         conanfile.finalize()
 

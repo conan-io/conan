@@ -34,9 +34,11 @@ def conanfile_remove_attr(conanfile, names, method):
     """ remove some self.xxxx attribute from the class, so it raises an exception if used
     within a given conanfile method
     """
+    # A tuple, part of the key of the cached subclass. Not a str, like ("info") without the comma
+    assert isinstance(names, tuple), names
     original_class = type(conanfile)
     try:
-        conanfile.__class__ = _forbidden_class(original_class, tuple(names), method)
+        conanfile.__class__ = _forbidden_class(original_class, names, method)
         yield
     finally:
         conanfile.__class__ = original_class

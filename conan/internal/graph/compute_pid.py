@@ -81,7 +81,7 @@ def run_validate_package_id(conanfile, hook_manager):
     # IMPORTANT: This validation code must run before calling info.package_id(), to mark "invalid"
     if hasattr(conanfile, "validate_build"):
         with conanfile_exception_formatter(conanfile, "validate_build"):
-            with conanfile_remove_attr(conanfile, ['cpp_info'], "validate_build"):
+            with conanfile_remove_attr(conanfile, ('cpp_info',), "validate_build"):
                 try:
                     conanfile.validate_build()
                 except ConanInvalidConfiguration as e:
@@ -90,7 +90,7 @@ def run_validate_package_id(conanfile, hook_manager):
 
     if hasattr(conanfile, "validate") or hook_manager.validate_hook:
         with conanfile_exception_formatter(conanfile, "validate"):
-            with conanfile_remove_attr(conanfile, ['cpp_info'], "validate"):
+            with conanfile_remove_attr(conanfile, ('cpp_info',), "validate"):
                 try:
                     if hook_manager.validate_hook:
                         hook_manager.execute("pre_validate", conanfile=conanfile)
@@ -104,13 +104,13 @@ def run_validate_package_id(conanfile, hook_manager):
     # Once we are done, call package_id() to narrow and change possible values
     if hasattr(conanfile, "package_id"):
         with conanfile_exception_formatter(conanfile, "package_id"):
-            with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
+            with conanfile_remove_attr(conanfile, ('cpp_info', 'settings', 'options'), "package_id"):
                 conanfile.package_id()
     elif "auto_header_only" in conanfile.implements:
         auto_header_only_package_id(conanfile)
     if hook_manager.post_package_id_hook:
         with conanfile_exception_formatter(conanfile, "package_id"):
-            with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'], "package_id"):
+            with conanfile_remove_attr(conanfile, ('cpp_info', 'settings', 'options'), "package_id"):
                 hook_manager.execute("post_package_id", conanfile=conanfile)
 
     conanfile.info.validate()
