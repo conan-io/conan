@@ -30,12 +30,10 @@ class ConfigVersionTemplate(CMakeDepsFileTemplate):
         return {"version": version,
                 "policy": policy}
 
-    @property
-    def template(self):
-        # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
-        # This will be at XXX-config-version.cmake
-        # AnyNewerVersion|SameMajorVersion|SameMinorVersion|ExactVersion
-        ret = textwrap.dedent("""\
+    # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
+    # This will be at XXX-config-version.cmake
+    # AnyNewerVersion|SameMajorVersion|SameMinorVersion|ExactVersion
+    template = textwrap.dedent("""\
             set(PACKAGE_VERSION "{{ version }}")
 
             if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
@@ -93,4 +91,3 @@ class ConfigVersionTemplate(CMakeDepsFileTemplate):
                 endif()
             endif()
             """)
-        return ret

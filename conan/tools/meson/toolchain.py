@@ -1,7 +1,7 @@
 import os
 import textwrap
 
-from jinja2 import Template, StrictUndefined
+from jinja2 import StrictUndefined
 
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
@@ -19,6 +19,7 @@ from conan.tools.meson.helpers import get_apple_subsystem, to_cppstd_flag, to_cs
     to_meson_machine, to_meson_value
 from conan.tools.microsoft import VCVars, msvc_runtime_flag
 from conan.internal.util.files import save
+from conan.internal.util.templates import compiled_template
 
 
 class MesonToolchain:
@@ -609,8 +610,8 @@ class MesonToolchain:
         :return: ``str`` whole Meson context content.
         """
         context = self._context
-        content = Template(self._meson_file_template, trim_blocks=True, lstrip_blocks=True,
-                           undefined=StrictUndefined).render(context)
+        template = compiled_template(self._meson_file_template, undefined=StrictUndefined)
+        content = template.render(context)
         return content
 
     def generate(self):

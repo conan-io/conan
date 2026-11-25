@@ -29,11 +29,12 @@ import os
 import re
 import textwrap
 
-from jinja2 import Template, StrictUndefined
+from jinja2 import StrictUndefined
 from typing import Optional
 
 from conan.api.output import ConanOutput
 from conan.internal import check_duplicated_generator
+from conan.internal.util.templates import compiled_template
 from conan.tools.files import save
 
 
@@ -278,8 +279,8 @@ class GlobalContentGenerator:
         """
         context = {"deps_cpp_info_dirs": deps_cpp_info_dirs,
                    "deps_cpp_info_flags": deps_cpp_info_flags}
-        template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
-                            lstrip_blocks=True, undefined=StrictUndefined)
+        template = compiled_template(_jinja_format_list_values() + self.template,
+                                     undefined=StrictUndefined)
         return template.render(context)
 
     def deps_content(self, dependencies_names: list) -> str:
@@ -288,8 +289,8 @@ class GlobalContentGenerator:
         :param dependencies_names: Non-formatted dependencies names
         """
         context = {"deps": dependencies_names}
-        template = Template(_jinja_format_list_values() + self.template_deps, trim_blocks=True,
-                            lstrip_blocks=True, undefined=StrictUndefined)
+        template = compiled_template(_jinja_format_list_values() + self.template_deps,
+                                     undefined=StrictUndefined)
         return template.render(context)
 
 
@@ -398,8 +399,8 @@ class DepComponentContentGenerator:
             "cpp_info_flags": self._flags,
             "properties": _makefy_properties(_filter_properties(self._dep.cpp_info.components[self._name]._properties, self._output)),
         }
-        template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
-                            lstrip_blocks=True, undefined=StrictUndefined)
+        template = compiled_template(_jinja_format_list_values() + self.template,
+                                     undefined=StrictUndefined)
         return template.render(context)
 
 
@@ -464,8 +465,8 @@ class DepContentGenerator:
             "cpp_info_flags": self._flags,
             "properties": _makefy_properties(_filter_properties(self._dep.cpp_info._properties, self._output)),
         }
-        template = Template(_jinja_format_list_values() + self.template, trim_blocks=True,
-                            lstrip_blocks=True, undefined=StrictUndefined)
+        template = compiled_template(_jinja_format_list_values() + self.template,
+                                     undefined=StrictUndefined)
         return template.render(context)
 
 
