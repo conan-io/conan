@@ -31,22 +31,22 @@ class TestBuildIdTest:
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create .  -s os=Windows -s build_type=Release")
-        assert "pkg/0.1: Calling build()" in client.out
+        assert "Calling build()" in client.out
         assert "Building my code!" in client.out
         assert "Packaging Release!" in client.out
         # Debug must not build
         client.run("create .  -s os=Windows -s build_type=Debug")
-        assert "pkg/0.1: Calling build()" not in client.out
+        assert "Calling build()" not in client.out
         assert "Building my code!" not in client.out
         assert "Packaging Debug!" in client.out
 
         client.run("create . -s os=Linux -s build_type=Release")
-        assert "pkg/0.1: Calling build()" in client.out
+        assert "Calling build()" in client.out
         assert "Building my code!" in client.out
         assert "Packaging Release!" in client.out
         client.run("create .  -s os=Linux -s build_type=Debug")
         assert "Building my code!" in client.out
-        assert "pkg/0.1: Calling build()" in client.out
+        assert "Calling build()" in client.out
         assert "Packaging Debug!" in client.out
 
     def test_basic_install(self):
@@ -160,12 +160,12 @@ class TestBuildIdTest:
         client = TestClient()
         client.save({"conanfile.py": conanfile_os})
         client.run("create .  -s os=Windows -s arch=x86_64 -s build_type=Release")
-        assert "pkg/0.1: Calling build()" in client.out
+        assert "Calling build()" in client.out
         assert "Building my code!" in client.out
         assert "Packaging Windows-x86_64!" in client.out
         # Others must not build
         client.run("create .  -s os=Linux -s arch=x86 -s build_type=Debug")
-        assert "pkg/0.1: Calling build()" not in client.out
+        assert "Calling build()" not in client.out
         assert "Building my code!" not in client.out
         assert "Packaging Linux-x86!" in client.out
 

@@ -15,7 +15,7 @@ _sbom_zlib_1_2_11 = """
 {
   "components" : [ {
     "author" : "<Put your name here> <And your email here>",
-    "bom-ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4",
+    "bom-ref" : "pkg:conan/zlib@1.2.11?rrev=6754320047c5dd54830baaaf9fc733c4",
     "description" : "<Description of zlib package here>",
     "licenses" : [ {
       "license" : {
@@ -28,12 +28,12 @@ _sbom_zlib_1_2_11 = """
     "version" : "1.2.11"
   } ],
   "dependencies" : [ {
-    "ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4"
+    "ref" : "pkg:conan/zlib@1.2.11?rrev=6754320047c5dd54830baaaf9fc733c4"
   } ],
   "metadata" : {
     "component" : {
       "author" : "<Put your name here> <And your email here>",
-      "bom-ref" : "pkg:conan/zlib@1.2.11?rref=6754320047c5dd54830baaaf9fc733c4",
+      "bom-ref" : "pkg:conan/zlib@1.2.11?rrev=6754320047c5dd54830baaaf9fc733c4",
       "name" : "zlib/1.2.11",
       "type" : "library"
     },
@@ -105,7 +105,7 @@ def test_conan_audit_proxy():
         "error": None
     }
 
-    tc = TestClient(light=True, default_server_user=True)
+    tc = TestClient(default_server_user=True)
 
     tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11"),
              "sbom.cdx.json": _sbom_zlib_1_2_11})
@@ -119,7 +119,11 @@ def test_conan_audit_proxy():
     tc.run("audit list zlib/1.2.11", assert_error=True)
     assert "Authentication required for the CVE provider: 'conancenter" in tc.out
 
+    tc.run("audit provider list")
+    assert 'conancenter (type: conan-center-proxy) - https://fakeurl/' in tc.out
+
     tc.run("audit provider auth conancenter --token=valid_token")
+    assert "Provider 'conancenter' authenticated successfully" in tc.out
 
     with proxy_response(200, successful_response):
         tc.run("audit list zlib/1.2.11")
@@ -254,7 +258,7 @@ def test_conan_audit_private():
         }
     }
 
-    tc = TestClient(light=True)
+    tc = TestClient()
 
     tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11"),
              "sbom.cdx.json": _sbom_zlib_1_2_11})
@@ -273,6 +277,7 @@ def test_conan_audit_private():
     assert "Missing authentication token for 'myprivate' provider" in tc.out
 
     tc.run("audit provider auth myprivate --token=valid_token")
+    assert "Provider 'myprivate' authenticated successfully" in tc.out
 
     with proxy_response(200, successful_response):
         tc.run("audit list zlib/1.2.11 -p=myprivate")
@@ -326,7 +331,7 @@ def test_conan_audit_private():
 @pytest.mark.skipif(sys.version_info < (3, 10),
                     reason="Strict Base64 validation introduced in Python 3.10")
 def test_conan_audit_corrupted_token():
-    tc = TestClient(light=True)
+    tc = TestClient()
 
     json_path = os.path.join(tc.cache_folder, "audit_providers.json")
     with open(json_path, "r") as f:
@@ -342,32 +347,32 @@ def test_conan_audit_corrupted_token():
 
 
 def test_audit_list_conflicting_args():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"pkglist.json": '{"Local Cache": {"zlib/1.2.11": {}}}'})
     tc.run("audit list zlib/1.2.11 -l=pkglist.json", assert_error=True)
     assert "argument -l/--list: not allowed with argument reference" in tc.out
 
 
 def test_audit_provider_add_missing_url():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.run("audit provider add myprivate --type=private --token=valid_token", assert_error=True)
     assert "Name, URL and type are required to add a provider" in tc.out
 
 
 def test_audit_provider_remove_nonexistent():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.run("audit provider remove nonexistingprovider", assert_error=True)
     assert "Provider 'nonexistingprovider' not found" in tc.out
 
 
 def test_audit_list_missing_arguments():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.run("audit list", assert_error=True)
     assert "one of the arguments reference" in tc.out
 
 
 def test_audit_provider_env_credentials_with_proxy(monkeypatch):
-    tc = TestClient(light=True)
+    tc = TestClient()
     # Authenticate the provider with an old token to verify that the env variable overrides it
     tc.run("audit provider auth conancenter --token=old_token")
 
@@ -399,7 +404,7 @@ def test_audit_global_error_exception():
     Test that a global error returned by the provider results in ConanException
     raised by the formatter, using the 'details' field.
     """
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.run("audit provider auth conancenter --token=valid_token")
 
     mock_provider_result = {
@@ -469,7 +474,7 @@ def test_audit_scan_threshold_error(severity_level, threshold, should_fail):
         }
     }
 
-    tc = TestClient(light=True)
+    tc = TestClient()
 
     tc.save({"conanfile.py": GenConanfile("foobar", "0.1.0")})
     tc.run("export .")
@@ -513,7 +518,7 @@ def test_parse_error_crash_when_no_edges():
 @pytest.mark.parametrize("package_context", ["build", "host"])
 @pytest.mark.parametrize("filter_context", ["build", "host", None])
 def test_audit_scan_context_filter(package_context, filter_context):
-    tc = TestClient(light=True)
+    tc = TestClient()
 
     tc.save({"conanfile.py": GenConanfile("zlib", "1.2.11")})
     tc.run("export .")
@@ -590,7 +595,7 @@ def test_audit_cvss_versions(score, out):
         }
     }
 
-    tc = TestClient(light=True)
+    tc = TestClient()
 
     tc.save({"conanfile.py": GenConanfile("foobar", "0.1.0")})
     tc.run("export .")
@@ -616,7 +621,7 @@ def test_audit_cvss_versions(score, out):
 
 class TestAuditApiBranchouts:
     def test_audit_load_provider_default(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run("audit provider list -f=json", redirect_stdout="before.json")
         os.unlink(os.path.join(tc.cache_folder, "audit_providers.json"))
         tc.run("audit provider list -f=json", redirect_stdout="after.json")
@@ -628,7 +633,7 @@ class TestAuditApiBranchouts:
         assert before == after
 
     def test_audit_provider_add_duplicate(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run("audit provider add conancenter --url=foo --type=conan-center-proxy --token=valid_token",
                assert_error=True)
         assert "Provider 'conancenter' already exists" in tc.out
@@ -636,7 +641,7 @@ class TestAuditApiBranchouts:
 
 class TestAuditScanBranchouts:
     def test_audit_scan_graph_error(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"bar/conanfile.py": GenConanfile("bar", "1.0"),
                  "foo/conanfile.py": GenConanfile("foo", "1.0").with_provides("bar")})
         tc.run("export bar")
@@ -647,7 +652,7 @@ class TestAuditScanBranchouts:
 
 class TestAuditListBranchouts:
     def test_audit_list_pkglist_empty(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"pkglist.json": '{"Local Cache": {}}'})
         tc.run("audit provider auth conancenter --token=valid_token")
         tc.run("audit list -l=pkglist.json")
@@ -655,7 +660,7 @@ class TestAuditListBranchouts:
         assert "Total vulnerabilities found: 0" in tc.out
 
     def test_audit_list_sbom_non_cyclone(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"sbom.json": '{"bomFormat": "SPDX"}'})
         tc.run("audit list --sbom=sbom.json", assert_error=True)
         assert "Unsupported SBOM format, only CycloneDX is supported" in tc.out
@@ -663,35 +668,35 @@ class TestAuditListBranchouts:
 
 class TestAuditProviderBranchouts:
     def test_provider_json_format(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run("audit provider list -f=json", redirect_stdout="out.json")
         out = json.loads(tc.load("out.json"))
         assert len(out) == 1
 
     def test_provider_add_spaces_in_name(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run('audit provider add "my private" --url=foo --type=private --token=valid_token',
                assert_error=True)
         assert "Name cannot contain spaces" in tc.out
 
     def test_provider_add_user_input_token(self):
-        tc = TestClient(light=True, inputs=["valid_token"])
+        tc = TestClient(inputs=["valid_token"])
         tc.run('audit provider add private --url=foo --type=private')
         providers = json.loads(tc.load_home("audit_providers.json"))
         assert providers["private"]["token"] == 'dmFsaWRfdG9rZW4='
 
     def test_provider_remove_no_name(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run('audit provider remove ""', assert_error=True)
         assert "Name required to remove a provider" in tc.out
 
     def test_provider_auth_no_name(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run('audit provider auth ""', assert_error=True)
         assert "Name is required to authenticate on a provider" in tc.out
 
     def test_provider_auth_user_input_token(self):
-        tc = TestClient(light=True, inputs=["valid_token"])
+        tc = TestClient(inputs=["valid_token"])
         tc.run('audit provider auth conancenter')
         providers = json.loads(tc.load_home("audit_providers.json"))
         assert providers["conancenter"]["token"] == 'dmFsaWRfdG9rZW4='

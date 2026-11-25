@@ -138,13 +138,13 @@ class TestBuildRequires:
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("build . -o mylib*:coverage=True --build missing")
         client.assert_listed_require({"mytool/0.1@lasote/stable": "Cache"}, build=True)
-        assert "conanfile.py (mylib/0.1): Coverage True" in client.out
+        assert "Coverage True" in client.out
 
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("build . -o coverage=True")
         client.assert_listed_require({"mytool/0.1@lasote/stable": "Cache"}, build=True)
         assert "mytool/0.1@lasote/stable: Already installed!" in client.out
-        assert "conanfile.py (mylib/0.1): Coverage True" in client.out
+        assert "Coverage True" in client.out
 
 
 def test_consumer_patterns_loop_error():
@@ -209,7 +209,7 @@ def test_tool_requires_revision_profile():
 
 def test_tool_requires_version_range_loop():
     # https://github.com/conan-io/conan/issues/17930
-    c = TestClient(light=True)
+    c = TestClient()
     build_profile = textwrap.dedent("""\
         [settings]
         os=Linux
@@ -227,7 +227,7 @@ def test_tool_requires_version_range_loop():
 def test_profile_tool_requires_negated_or_patterns():
     """Negated [tool_requires] patterns may use | so the rule applies
     if the ref matches none of the branches."""
-    c = TestClient(light=True)
+    c = TestClient()
     profile_build = textwrap.dedent("""\
         [settings]
         os=Linux

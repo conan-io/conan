@@ -409,7 +409,9 @@ class GnuToolchain:
         # Objective C/C++
         self._include_obj_arc_flags(env)
         # Let's compose with user extra env variables defined (user ones have precedence)
-        return self.extra_env.compose_env(env)
+        # Working on a copy, as compose_env() modifies in place and this property can be called
+        # several times
+        return self.extra_env.copy().compose_env(env)
 
     def generate(self):
         check_duplicated_generator(self, self._conanfile)

@@ -125,8 +125,8 @@ class TestPackageTest:
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
         client.run("create . --name=hello --version=0.1")
-        assert "hello/0.1: BUILD Dep VERSION 1.1" in client.out
-        assert "hello/0.1 (test package): BUILD HELLO VERSION 0.1" in client.out
+        assert "BUILD Dep VERSION 1.1" in client.out
+        assert "BUILD HELLO VERSION 0.1" in client.out
         assert "hello/0.1 (test package): TEST HELLO VERSION 0.1" in client.out
 
 

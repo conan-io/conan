@@ -1,7 +1,9 @@
 import copy
 import os
 import textwrap
+import time
 
+import jwt
 import pytest
 from requests.models import Response
 
@@ -35,8 +37,7 @@ class TestAuthorize:
         """Bad login 2 times"""
         self.conan = TestClient(servers=self.servers, inputs=["bad", "1",
                                                               "bad2", "2",
-                                                              "nacho@gmail.com", "nachopass"],
-                                light=True)
+                                                              "nacho@gmail.com", "nachopass"])
         self.conan.save({"conanfile.py": GenConanfile("openssl", "2.0.1")})
         self.conan.run("export . --user=lasote --channel=testing")
         errors = self.conan.run("upload %s -r default --only-recipe -v=quiet" % str(self.ref))
@@ -89,7 +90,7 @@ class TestAuthorize:
         """Bad login 3 times"""
         client = TestClient(servers=self.servers, inputs=["baduser", "badpass",
                                                           "baduser", "badpass2",
-                                                          "baduser3", "badpass3"], light=True)
+                                                          "baduser3", "badpass3"])
         client.save({"conanfile.py": GenConanfile("openssl", "2.0.1")})
         client.run("export . --user=lasote --channel=testing")
         errors = client.run("upload %s -r default --only-recipe" % str(self.ref), assert_error=True)
@@ -108,8 +109,7 @@ class TestAuthorize:
         # Try with a load of names that contain special characters
         client = TestClient(servers=self.servers, inputs=["some_random.special!characters",
                                                           "badpass",
-                                                          "nacho@gmail.com", "nachopass"],
-                            light=True)
+                                                          "nacho@gmail.com", "nachopass"])
 
         client.save({"conanfile.py": GenConanfile("openssl", "2.0.1")})
         client.run("export . --user=lasote --channel=testing")
@@ -124,7 +124,7 @@ class TestAuthorize:
                 "on remote 'default'") in client.out
 
     def test_authorize_disabled_remote(self):
-        tc = TestClient(servers=self.servers, light=True)
+        tc = TestClient(servers=self.servers)
         # Sanity check, this should not fail
         tc.run("remote login default pepe -p pepepass")
         tc.run("remote logout default")
@@ -133,6 +133,9 @@ class TestAuthorize:
         tc.run("remote login default pepe -p pepepass")
         assert ("Changed user of remote 'default' "
                 "from 'None' (anonymous) to 'pepe' (authenticated)") in tc.out
+        tc.run("remote logout default")
+        assert ("Changed user of remote 'default' "
+                "from 'pepe' (authenticated) to 'None' (anonymous)") in tc.out
 
 
 class TestAuthenticationTest:
@@ -161,19 +164,18 @@ class TestAuthenticationTest:
                     resp_basic_auth.headers = {"Content-Type": "application/json"}
                 return resp_basic_auth
 
-        client = TestClient(requester_class=RequesterMock, default_server_user=True, light=True)
+        client = TestClient(requester_class=RequesterMock, default_server_user=True)
         client.run("remote login default user -p PASSWORD!")
         assert "Changed user of remote 'default' from 'None' (anonymous) to 'user'" in client.out
         client.run("search pkg -r=default")
         assert "ERROR: Recipe 'pkg' not found" in client.out
 
 
-@pytest.mark.xfail(reason="This test is randomly failing")
 def test_token_expired():
     server_folder = temp_folder()
     server_conf = textwrap.dedent("""
        [server]
-       jwt_expire_minutes: 0.02
+       jwt_expire_minutes: 60
        authorize_timeout: 0
        disk_authorize_timeout: 0
        disk_storage_path: ./data
@@ -188,18 +190,19 @@ def test_token_expired():
     save(os.path.join(server_folder, ".conan_server", "server.conf"), server_conf)
     server = TestServer(base_path=server_folder, users={"admin": "password", "other": "pass"})
 
-    c = TestClient(servers={"default": server}, inputs=["admin", "password", "other", "pass"],
-                   light=True)
+    c = TestClient(servers={"default": server}, inputs=["admin", "password", "other", "pass"])
     c.save({"conanfile.py": GenConanfile()})
     c.run("create . --name=pkg --version=0.1 --user=user --channel=stable")
     c.run("upload * -r=default -c")
     localdb = LocalDB(c.cache_folder)
-    user, token, _ = localdb.get_login(server.fake_url)
+    user, token, refresh_token = localdb.get_login(server.fake_url)
     assert user == "admin"
     assert token is not None
 
-    import time
-    time.sleep(3)
+    # Instead of waiting for the token to expire, replace it with an already expired one
+    expired_token = jwt.encode({"user": user, "exp": int(time.time()) - 60},
+                               "mysecretmysecretmysecretmysecret", algorithm="HS256")
+    localdb.store(user, expired_token, refresh_token, server.fake_url)
     c.users = {}
     c.run("remove * -c")
     c.run("install --requires=pkg/0.1@user/stable")
@@ -211,7 +214,7 @@ def test_token_expired():
 
 def test_auth_username_space():
     server = TestServer(users={"super admin": "password"})
-    c = TestClient(servers={"default": server}, inputs=["super admin", "password"], light=True)
+    c = TestClient(servers={"default": server}, inputs=["super admin", "password"])
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("export .")
     c.run("upload * -r=default -c")

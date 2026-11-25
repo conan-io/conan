@@ -208,7 +208,7 @@ def test_transitive_modules_found(find_mode_pkga, find_mode_pkgb, find_mode_cons
            "$<$<CONFIG:Release>:pkga::pkga>'" in client.out
 
     assert "MYPKGB_DEFINITIONS: -DDEFINE_MYPKGB" in client.out
-    assert "Conan: Target declared 'pkga::pkga'"
+    assert "Conan: Target declared 'pkga::pkga'" in client.out
 
     if find_mode_pkga == "module":
         assert 'Found unicorns: 1.0 (found version "1.0")' in client.out

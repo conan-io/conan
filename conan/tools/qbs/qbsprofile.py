@@ -3,7 +3,6 @@ import shutil
 import platform
 import textwrap
 
-from jinja2 import Template
 from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
 from conan.tools.env import VirtualBuildEnv
@@ -11,6 +10,7 @@ from conan.tools.microsoft import msvs_toolset
 from conan.tools.microsoft.visual import vs_installation_path, _vcvars_path, _vcvars_versions
 from conan.tools.qbs import common
 from conan.internal.util.files import save
+from conan.internal.util.templates import compiled_template
 
 
 def _find_msvc(conanfile):
@@ -138,7 +138,7 @@ class QbsProfile:
             {%- endfor %}
             defaultProfile: {{default_profile}}
         ''')
-        t = Template(template)
+        t = compiled_template(template, trim_blocks=False, lstrip_blocks=False)
         context = {
             'profile_values': self.content,
             'profile': self._profile,

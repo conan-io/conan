@@ -68,7 +68,8 @@ class _CMakePresets:
                                      "avoid collision with your CMakePresets.json")
         if os.path.exists(preset_path) and multiconfig:
             data = json.loads(load(preset_path))
-            build_preset = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix)
+            build_preset = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix,
+                                                              generator)
             test_preset = _CMakePresets._test_preset_fields(conanfile, multiconfig, preset_prefix,
                                                             runenv)
             _CMakePresets._insert_preset(data, "buildPresets", build_preset)
@@ -110,7 +111,7 @@ class _CMakePresets:
         conf = _CMakePresets._configure_preset(conanfile, generator, cache_variables, toolchain_file,
                                                multiconfig, preset_prefix, buildenv,
                                                cmake_executable, preset_file_path)
-        build = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix)
+        build = _CMakePresets._build_preset_fields(conanfile, multiconfig, preset_prefix, generator)
         test = _CMakePresets._test_preset_fields(conanfile, multiconfig, preset_prefix, runenv)
         ret = {"version": 3,
                "vendor": {"conan": {}},
@@ -188,7 +189,7 @@ class _CMakePresets:
         # only for consumer that is not a "test_package"
         if is_consumer(conanfile) and conanfile.tested_reference_str is None:
             # https://github.com/conan-io/conan/pull/12034#issuecomment-1253776285
-            vars_tip = " ".join([f"-D{k}={_format_val(v)}" for k, v in cache_variables.items()])
+            vars_tip = " ".join(f"-D{k}={_format_val(v)}" for k, v in cache_variables.items())
             tc_tip = f"-DCMAKE_TOOLCHAIN_FILE=<output_folder>/{toolchain_file} " \
                 if "CMAKE_TOOLCHAIN_FILE" not in vars_tip else ""
 
@@ -223,12 +224,23 @@ class _CMakePresets:
         return ret
 
     @staticmethod
-    def _build_preset_fields(conanfile, multiconfig, preset_prefix):
+    def _build_preset_fields(conanfile, multiconfig, preset_prefix, generator):
         ret = _CMakePresets._common_preset_fields(conanfile, multiconfig, preset_prefix)
-        build_preset_jobs = build_jobs(conanfile)
+        build_preset_jobs = _CMakePresets._build_preset_jobs(conanfile, generator)
         if build_preset_jobs:
             ret["jobs"] = build_preset_jobs
         return ret
+
+    @staticmethod
+    def _build_preset_jobs(conanfile, generator):
+        # "jobs" maps to "cmake --build --parallel", which for Visual Studio becomes MSBuild's
+        # "-maxCpuCount", a different parallelism than "tools.build:jobs", which already drives
+        # the compiler "/MP" flag in conan_toolchain.cmake. Reusing it here stacks both effects
+        # (tools.build:jobs**2 processes), so split by generator like _cmake_cmd_line_args() does.
+        # https://github.com/conan-io/conan/issues/19405
+        if generator and "Visual Studio" in generator:
+            return conanfile.conf.get("tools.microsoft.msbuild:max_cpu_count", check_type=int)
+        return build_jobs(conanfile)
 
     @staticmethod
     def _test_preset_fields(conanfile, multiconfig, preset_prefix, runenv):
@@ -245,7 +257,7 @@ class _CMakePresets:
         build_type = conanfile.settings.get_safe("build_type")
         custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
         if user_defined_build:
-            return custom_conf
+            return custom_conf or "default"
 
         if custom_conf:
             if build_type:
@@ -260,7 +272,7 @@ class _CMakePresets:
         custom_conf, user_defined_build = get_build_folder_custom_vars(conanfile)
 
         if user_defined_build:
-            return custom_conf
+            return custom_conf or "default"
 
         if multiconfig or not build_type:
             return "default" if not custom_conf else custom_conf

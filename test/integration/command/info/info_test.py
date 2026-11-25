@@ -480,7 +480,7 @@ def test_graph_info_user():
 
 
 def test_graph_info_bundle():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"subfolder/conanfile.py": GenConanfile("liba", "1.0")})
     c.run("create ./subfolder")
     conanfile = textwrap.dedent("""
@@ -505,7 +505,7 @@ def test_graph_info_bundle():
 
 def test_graph_info_provides_conflict_html():
     """ This test also makes sure that the serialization of the GraphProvidesConflict works"""
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"bar/conanfile.py": GenConanfile("bar", "1.0"),
              "foo/conanfile.py": GenConanfile("foo", "1.0").with_provides("bar")})
 
@@ -514,4 +514,4 @@ def test_graph_info_provides_conflict_html():
     tc.run("graph info --requires=bar/1.0 --requires=foo/1.0 --format=html", assert_error=True)
     # It got properly serialized
     assert '"type": "provide_conflict"' in tc.out
-    assert "Both 'bar/1.0' and 'foo/1.0' provide '['bar']'"
+    assert "Both 'bar/1.0' and 'foo/1.0' provide '['bar']'" in tc.out

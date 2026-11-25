@@ -32,7 +32,7 @@ class TestexportConan(ConanFile):
         python = os.path.join(self.recipe_folder, "mypython.py")
         self.output.info("PYTHON: %s" % load(self, python))
 """
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "patch.patch": "mypatch",
                      "mypython.py": "mypython"})
@@ -50,7 +50,7 @@ class TestexportConan(ConanFile):
         # https://github.com/conan-io/conan/issues/2327
         # Test if a patch can be applied in source() both in create
         # and local flow
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = """from conan import ConanFile
 from conan.tools.files import load
 import os
@@ -71,13 +71,13 @@ class Pkg(ConanFile):
 
     def test_source_warning_os_build(self):
         # https://github.com/conan-io/conan/issues/2368
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({CONANFILE: GenConanfile()})
         client.run("source .")
         assert "This package defines both 'os' and 'os_build'" not in client.out
 
     def test_source_with_path_errors(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.txt": "contents"}, clean_first=True)
 
         # Path with conanfile.txt
@@ -98,7 +98,7 @@ class ConanLib(ConanFile):
         self.output.info("Running source!")
         self.output.info("cwd=>%s" % os.getcwd())
 '''
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({CONANFILE: conanfile})
 
         client.run("install .")
@@ -119,12 +119,12 @@ class ConanLib(ConanFile):
         save(self, "file1.txt", "Hello World")
 '''
         # First, failing source()
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({CONANFILE: conanfile})
 
         client.run("source .", assert_error=True)
         assert "Running source!" in client.out
-        assert "ERROR: Error in source() method, line 9" in client.out
+        assert "ERROR: conanfile.py: Error in source() method, line 9" in client.out
 
         # Fix the error and repeat
         client.save({CONANFILE: conanfile.replace("err", "")})
@@ -157,14 +157,14 @@ class ConanLib(ConanFile):
                     self.output.info(f"In the build() method the Source folder is: {self.source_folder}")
                     load(self, f"{self.source_folder}/source_file.c")
             ''')
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({CONANFILE: conanfile})
 
         client.run("source .")
         # The build method will fail if source() and build() don't
         # both use the correct source_folder
         client.run("build .")
-        assert "conanfile.py: Calling build()" in client.out  # doesn't fail
+        assert "Calling build()" in client.out  # doesn't fail
 
     def test_retrieve_exports_sources(self):
         # For Conan 2.0 if we install a package from a remote and we want to upload to other
@@ -253,7 +253,7 @@ class ConanLib(ConanFile):
                     assert False
             ''')
 
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({CONANFILE: conanfile})
 
         client.run("create . --name=lib --version=1.0", assert_error=True)
@@ -328,7 +328,7 @@ def test_source_method_forbidden_attributes(attribute):
         def source(self):
             self.output.info(self.{attribute})
     """)
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": conanfile})
 
     client.run("source .", assert_error=True)

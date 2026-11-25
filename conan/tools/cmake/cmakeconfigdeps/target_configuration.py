@@ -1,7 +1,8 @@
 import textwrap
 
 import jinja2
-from jinja2 import Template
+
+from conan.internal.util.templates import compiled_template
 
 
 class TargetConfigurationTemplate2:
@@ -19,15 +20,12 @@ class TargetConfigurationTemplate2:
         return self._filename
 
     def content(self):
-        t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
-                     undefined=jinja2.StrictUndefined)
+        t = compiled_template(self._template, undefined=jinja2.StrictUndefined)
         return t.render(self._context)
 
-    @property
-    def _template(self):
-        # TODO: CMake 3.24: Apple Frameworks: https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html#genex:LINK_LIBRARY
-        # TODO: Check why not set_property instead of target_link_libraries
-        return textwrap.dedent("""\
+    # TODO: CMake 3.24: Apple Frameworks: https://cmake.org/cmake/help/latest/manual/cmake-generator-expressions.7.html#genex:LINK_LIBRARY
+    # TODO: Check why not set_property instead of target_link_libraries
+    _template = textwrap.dedent("""\
         {%- macro config_wrapper(config, value) -%}
              {% if config -%}
              $<$<CONFIG:{{config}}>:{{value}}>
@@ -50,12 +48,16 @@ class TargetConfigurationTemplate2:
         {% for lib, lib_info in libs.items() %}
         #################### {{lib}} ####################
         if(NOT TARGET {{ lib }})
-            message(STATUS "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
+            if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
+                message(STATUS "Conan: Target declared imported {{lib_info["type"]}} library '{{lib}}'")
+            endif()
             add_library({{lib}} {{lib_info["type"]}} IMPORTED)
         endif()
         {% for alias in lib_info.get("cmake_target_aliases", []) %}
         if(NOT TARGET {{alias}})
-            message(STATUS "Conan: Target declared alias '{{alias}}' for '{{lib}}'")
+            if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
+                message(STATUS "Conan: Target declared alias '{{alias}}' for '{{lib}}'")
+            endif()
             add_library({{alias}} ALIAS {{lib}})
         endif()
         {% endfor %}
@@ -117,6 +119,22 @@ class TargetConfigurationTemplate2:
         {% if lib_info.get("link_location") %}
         set_target_properties({{lib}} PROPERTIES IMPORTED_IMPLIB_{{config}}
                               "{{lib_info["link_location"]}}")
+        {% endif %}
+        {% if lib_info.get("objects") %}
+        # Prebuilt object files of '{{lib}}'. The objects of a target are only added to the link
+        # line of its direct consumers, so '{{lib}}' forwards them with $<TARGET_OBJECTS:...> to
+        # make them transitive too
+        if(CMAKE_VERSION VERSION_LESS "3.21")
+            message(FATAL_ERROR "The 'CMakeConfigDeps' generator cpp_info.objects only works with CMake >= 3.21")
+        endif()
+        if(NOT TARGET {{lib}}_OBJECTS)
+            add_library({{lib}}_OBJECTS OBJECT IMPORTED)
+        endif()
+        set_property(TARGET {{lib}}_OBJECTS APPEND PROPERTY IMPORTED_CONFIGURATIONS {{config}})
+        set_target_properties({{lib}}_OBJECTS PROPERTIES IMPORTED_OBJECTS_{{config}}
+                              "{{lib_info["objects"]}}")
+        set_property(TARGET {{lib}} APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+                     "{{config_wrapper(config, '$<TARGET_OBJECTS:' + lib + '_OBJECTS>')}}")
         {% endif %}
 
         {% if lib_info.get("requires") %}
@@ -182,14 +200,18 @@ class TargetConfigurationTemplate2:
         {% for exe, location in exes.items() %}
         #################### {{exe}} ####################
         if(NOT TARGET {{ exe }})
-            message(STATUS "Conan: Target declared imported executable '{{exe}}' {{context}}")
+            if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
+                message(STATUS "Conan: Target declared imported executable '{{exe}}' {{context}}")
+            endif()
             add_executable({{exe}} IMPORTED)
         else()
             get_property(_context TARGET {{exe}} PROPERTY CONAN_CONTEXT)
             if(NOT $${_context} STREQUAL "{{context}}")
-                message(STATUS "Conan: Exe {{exe}} was already defined in ${_context}")
                 get_property(_configurations TARGET {{exe}} PROPERTY IMPORTED_CONFIGURATIONS)
-                message(STATUS "Conan: Exe {{exe}} defined configurations: ${_configurations}")
+                if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
+                    message(STATUS "Conan: Exe {{exe}} was already defined in ${_context}")
+                    message(STATUS "Conan: Exe {{exe}} defined configurations: ${_configurations}")
+                endif()
                 foreach(_config ${_configurations})
                     set_property(TARGET {{exe}} PROPERTY IMPORTED_LOCATION_${_config})
                 endforeach()

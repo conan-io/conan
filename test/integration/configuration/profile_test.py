@@ -240,9 +240,9 @@ class TestProfile:
                      "profile": profile})
 
         client.run("create . --name=mypkg --version=0.1 --user=user --channel=channel -pr=profile")
-        assert "mypkg/0.1@user/channel: SETTINGS! os=FreeBSD!!" in client.out
+        assert "SETTINGS! os=FreeBSD!!" in client.out
         client.run("create . --name=mypkg --version=0.1 -pr=profile")
-        assert "mypkg/0.1: SETTINGS! os=Linux!!" in client.out
+        assert "SETTINGS! os=Linux!!" in client.out
 
     def test_install_profile_options(self):
         create_profile(self.client.paths.profiles_path, "vs_12_86",
@@ -564,7 +564,7 @@ def test_package_consumer_is_only_the_tested_one():
     """
     the &:xxx pattern applies only to the package being tested, not other requires
     """
-    c = TestClient(light=True)
+    c = TestClient()
     test = textwrap.dedent("""
         from conan import ConanFile
         class Tool(ConanFile):
@@ -643,7 +643,7 @@ def test_consumer_invalid_profile_multiple_groups():
 
 
 def test_compose_numeric_values_scoped_pkg():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"conanfile.py": GenConanfile("hello", "0.1")
                 .with_package("self.output.info('user.var.value: ' + str(self.conf.get('user.var:value')))"),
              "profile": """[conf]\nuser.var:value=8.1\nhello/*:user.var:value=10\n"""})

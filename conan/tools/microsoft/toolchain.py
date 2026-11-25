@@ -2,7 +2,6 @@ import os
 import textwrap
 from xml.dom import minidom
 
-from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
 from conan.internal.api.detect.detect_vs import vs_installation_path
@@ -12,6 +11,7 @@ from conan.tools.microsoft.visual import VCVars, msvs_toolset, msvc_runtime_flag
     msvc_platform_from_arch, vs_ide_version
 from conan.errors import ConanException
 from conan.internal.util.files import save, load
+from conan.internal.util.templates import compiled_template
 
 
 class MSBuildToolchain:
@@ -172,8 +172,8 @@ class MSBuildToolchain:
 
     def _write_config_toolchain(self, config_filename):
         config_filepath = os.path.join(self._conanfile.generators_folder, config_filename)
-        config_props = Template(self._config_toolchain_props, trim_blocks=True,
-                                lstrip_blocks=True).render(**self.context_config_toolchain)
+        config_props = compiled_template(self._config_toolchain_props).render(
+            **self.context_config_toolchain)
         self._conanfile.output.info("MSBuildToolchain created %s" % config_filename)
         save(config_filepath, config_props)
 
@@ -216,6 +216,7 @@ class MSBuildToolchain:
             import_group.appendChild(import_node)
 
         conan_toolchain = dom.toprettyxml()
+        dom.unlink()  # The DOM nodes reference each other, unlink() frees them without the GC
         conan_toolchain = "\n".join(line for line in conan_toolchain.splitlines() if line.strip())
         self._conanfile.output.info("MSBuildToolchain writing {}".format(self.filename))
         save(main_toolchain_path, conan_toolchain)
@@ -237,15 +238,15 @@ def _get_toolset_props(conanfile):
     msvc_update = conanfile.conf.get("tools.microsoft:msvc_update")
     compiler_update = msvc_update or conanfile.settings.get_safe("compiler.update")
     if compiler_update is None:
-        return
+        return None
 
     vs_version = vs_ide_version(conanfile)
     if int(vs_version) <= 14:
-        return
+        return None
     vs_install_path = conanfile.conf.get("tools.microsoft.msbuild:installation_path")
     vs_path = vs_install_path or vs_installation_path(vs_version)
     if not vs_path or not os.path.isdir(vs_path):
-        return
+        return None
 
     basebuild = os.path.normpath(os.path.join(vs_path, "VC/Auxiliary/Build"))
     # The equivalent of compiler 19.26 is toolset 14.26

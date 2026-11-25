@@ -24,19 +24,23 @@ class UploadAPI:
     def check_upstream(self, package_list: PackagesList, remote: Remote,
                        enabled_remotes: List[Remote], force=False):
         """ Checks ``remote`` for the existence of the recipes and packages in ``package_list``.
-        Items that are not present in the remote will add an ``upload`` key to the entry
-        with the value ``True``.
+        An ``upload`` key will be added to each entry, with the value ``True`` for the items
+        that are not present in the remote and need to be uploaded, and ``False`` otherwise.
 
-        If the recipe has an upload policy of ``skip``, it will be discarded from the upload list.
+        If the recipe has an upload policy of ``skip``, its packages will be discarded from the
+        upload list, and only the recipe will be considered.
 
         :parameter package_list: A ``PackagesList`` object with the recipes and packages to check.
         :parameter remote: Remote to check.
         :parameter enabled_remotes: List of enabled remotes. This is used to possibly load
             python_requires from the listed recipes if necessary.
-        :parameter force: If ``True``, it will skip the check and mark that all items need to be
-            uploaded. A ``force_upload`` key will be added to the entries that will be uploaded.
+        :parameter force: If ``True``, the items already present in the remote will also be
+            marked to be uploaded, adding a ``force_upload`` key with the value ``True`` to
+            their entries.
         """
-        loader = self._api_helpers.loader
+        self._check_upstream(self._api_helpers.loader, package_list, remote, enabled_remotes, force)
+
+    def _check_upstream(self, loader, package_list, remote, enabled_remotes, force):
         for ref, _ in package_list.items():
             layout = self._api_helpers.cache.recipe_layout(ref)
             conanfile_path = layout.conanfile()
@@ -50,9 +54,9 @@ class UploadAPI:
 
     def prepare(self, package_list: PackagesList, enabled_remotes: List[Remote],
                 metadata: List[str] = None):
-        """Compress the recipes and packages and fill the upload_data objects
-        with the complete information. It doesn't perform the upload nor checks upstream to see
-        if the recipe is still there
+        """Compress the recipes and packages and fill the ``package_list`` entries
+        with the complete information of the files to upload. It doesn't perform the upload
+        nor checks upstream to see if the recipe is still there
 
         :param package_list: A PackagesList object with the recipes and packages to upload.
         :param enabled_remotes: A list of remotes that are enabled in the client.
@@ -61,10 +65,12 @@ class UploadAPI:
             Default ``None`` means all metadata will be uploaded together with the package artifacts.
             If metadata contains an empty string (``""``),
             it means that no metadata files should be uploaded."""
+        self._prepare(self._api_helpers.loader, package_list, enabled_remotes, metadata)
+
+    def _prepare(self, loader, package_list, enabled_remotes, metadata):
         if metadata and metadata != [''] and '' in metadata:
             raise ConanException("Empty string and patterns can not be mixed for metadata.")
 
-        loader = self._api_helpers.loader
         preparator = PackagePreparator(loader, self._api_helpers.cache,
                                        self._api_helpers.remote_manager,
                                        self._api_helpers.global_conf)
@@ -87,10 +93,11 @@ class UploadAPI:
         per recipe based on the ``core.upload:parallel`` conf.
 
         The steps that this method performs are:
-            - calls ``conan_api.cache.check_integrity`` to ensure the packages are not corrupted
+            - if ``check_integrity`` is ``True``, calls ``conan_api.cache.check_integrity`` to
+              ensure the packages are not corrupted
             - checks the upload policy of the recipes
                 - (if it is ``"skip"``, it will not upload the binaries, but will still upload
-                  the metadata)
+                  the recipe)
             - checks which revisions already exist in the server so that it can skip the upload
             - prepares the artifacts to upload (compresses the conan_package.tgz)
             - executes the actual upload
@@ -113,6 +120,10 @@ class UploadAPI:
             but will still prepare the artifacts and check the upstream.
         """
 
+        # Creating a loader is not thread-safe (it invalidates the import system caches while
+        # other threads might be loading conanfiles), so all threads share this single one
+        loader = self._api_helpers.loader if not is_prepared else None
+
         def _upload_pkglist(pkglist, subtitle=lambda _: None):
             if not is_prepared:
                 if check_integrity:
@@ -120,9 +131,9 @@ class UploadAPI:
                     self._conan_api.cache.check_integrity(pkglist)
                 # Check if the recipes/packages are in the remote
                 subtitle("Checking server for existing packages")
-                self.check_upstream(pkglist, remote, enabled_remotes, force)
+                self._check_upstream(loader, pkglist, remote, enabled_remotes, force)
                 subtitle("Preparing artifacts for upload")
-                self.prepare(pkglist, enabled_remotes, metadata)
+                self._prepare(loader, pkglist, enabled_remotes, metadata)
 
             if not dry_run:
                 subtitle("Uploading artifacts")

@@ -1,5 +1,6 @@
 import json
 import os
+from unittest.mock import patch
 
 import pytest
 from requests import Response
@@ -111,7 +112,9 @@ def test_client_retries():
         return DownloadFilesBrokenRequester(1, *args, **kwargs)
     client = TestClient(servers=servers, inputs=["admin", "password"],
                         requester_class=DownloadFilesBrokenRequesterTimesOne)
-    client.run("install --requires=lib/1.0@lasote/stable")
+    with patch("time.sleep") as sleep:  # Do not really wait the retry_wait seconds
+        client.run("install --requires=lib/1.0@lasote/stable")
+    sleep.assert_called_once_with(1)
     assert "WARN: network: Error downloading file" in client.out
     assert 'Fake connection error exception' in client.out
     assert 1 == str(client.out).count("Waiting 1 seconds to retry...")
@@ -119,7 +122,9 @@ def test_client_retries():
     client = TestClient(servers=servers, inputs=["admin", "password"],
                         requester_class=DownloadFilesBrokenRequesterTimesOne)
     client.save_home({"global.conf": "core.download:retry_wait=2"})
-    client.run("install --requires=lib/1.0@lasote/stable")
+    with patch("time.sleep") as sleep:
+        client.run("install --requires=lib/1.0@lasote/stable")
+    sleep.assert_called_once_with(2)
     assert 1 == str(client.out).count("Waiting 2 seconds to retry...")
 
     def DownloadFilesBrokenRequesterTimesTen(*args, **kwargs):  # noqa

@@ -60,7 +60,7 @@ def test_component_error():
 
 
 def test_verify_get_property_check_type():
-    c = TestClient(light=True)
+    c = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class HelloConan(ConanFile):
@@ -81,7 +81,7 @@ def test_unused_requirement(component):
         This error is known when creating the package if the requirement is consumed.
     """
 
-    t = TestClient(light=True)
+    t = TestClient()
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
         class Consumer(ConanFile):
@@ -107,7 +107,7 @@ def test_ignored_requires(component):
     """ 'cpp_info.ignored_requires' lets a recipe declare that a direct dependency is intentionally
         not used in '(cpp_info/components).requires', silencing the check.
     """
-    t = TestClient(light=True)
+    t = TestClient()
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
         class Consumer(ConanFile):
@@ -147,7 +147,7 @@ def test_unused_requirement_not_propagated():
     t.run('create lib')
     t.run('create pkg')
     t.run("install app")
-    assert re.search(r"Skipped binaries(\s*)header/0.1", t.out)
+    assert re.search(r"Skipped host binaries(\s*)header/0.1", t.out)
 
 
 @pytest.mark.parametrize("component", [True, False])
@@ -155,7 +155,7 @@ def test_wrong_requirement(component):
     """ If we require a wrong requirement, we get a meaninful error.
         This error is known when creating the package if the requirement is not there.
     """
-    t = TestClient(light=True)
+    t = TestClient()
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
         class Consumer(ConanFile):
@@ -187,7 +187,7 @@ def test_missing_internal(component):
                 self.cpp_info{'.components["bar"]' if component else ''}.requires = ["other",
                                                                                      "another"]
     """)
-    t = TestClient(light=True)
+    t = TestClient()
     t.save({'conanfile.py': consumer})
     t.run('create . --name=wrong --version=version', assert_error=True)
     assert "ERROR: wrong/version: package_info(): There are '(cpp_info/components).requires' " \

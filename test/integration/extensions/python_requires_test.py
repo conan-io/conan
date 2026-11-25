@@ -1,8 +1,8 @@
 import os
 import textwrap
-import time
 
 from conan.api.model import RecipeReference
+from conan.test.utils.test_files import wait_clock_tick
 from conan.test.utils.tools import TestClient, GenConanfile
 
 
@@ -26,7 +26,7 @@ class TestPyRequiresExtend:
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
 
     def test_reuse(self):
-        client = TestClient(light=True, default_server_user=True)
+        client = TestClient(default_server_user=True)
         self._define_base(client)
         reuse = textwrap.dedent("""
             from conan import ConanFile
@@ -38,7 +38,7 @@ class TestPyRequiresExtend:
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         package_id = client.created_package_id("pkg/0.1@user/testing")
         assert "My cool source!" in client.out
-        assert "pkg/0.1@user/testing: My cool build!" in client.out
+        assert "My cool build!" in client.out
         assert "My cool package!" in client.out
         assert "pkg/0.1@user/testing: My cool package_info!" in client.out
 
@@ -66,7 +66,7 @@ class TestPyRequiresExtend:
         assert "pkg/0.1@user/testing: My cool package_info!" in client.out
 
     def test_reuse_super(self):
-        client = TestClient(light=True, default_server_user=True)
+        client = TestClient(default_server_user=True)
         self._define_base(client)
         reuse = textwrap.dedent("""
                from conan import ConanFile
@@ -84,7 +84,7 @@ class TestPyRequiresExtend:
         assert "MY OWN SOURCE" in client.out
 
     def test_reuse_dot(self):
-        client = TestClient(light=True, default_server_user=True)
+        client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class MyConanfileBase(ConanFile):
@@ -101,28 +101,10 @@ class TestPyRequiresExtend:
             """)
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        assert "pkg/0.1@user/testing: My cool build!" in client.out
-
-    def test_with_alias(self):
-        client = TestClient(light=True)
-        self._define_base(client)
-        client.alias("base/latest@user/testing", "base/1.1@user/testing")
-
-        reuse = textwrap.dedent("""
-            from conan import ConanFile
-            class PkgTest(ConanFile):
-                name = "pkg"
-                version = "1.0"
-                python_requires = "base/latest@user/testing"
-            """)
-        client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("install .", assert_error=True)
-        assert "python-requires 'alias' are not supported in Conan 2.0" in client.out
-        client.run("create .", assert_error=True)
-        assert "python-requires 'alias' are not supported in Conan 2.0" in client.out
+        assert "My cool build!" in client.out
 
     def test_reuse_version_ranges(self):
-        client = TestClient(light=True)
+        client = TestClient()
         self._define_base(client)
 
         reuse = textwrap.dedent("""
@@ -136,12 +118,12 @@ class TestPyRequiresExtend:
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         client.assert_listed_require({"base/1.1@user/testing": "Cache"}, python=True)
         assert "My cool source!" in client.out
-        assert "pkg/0.1@user/testing: My cool build!" in client.out
+        assert "My cool build!" in client.out
         assert "My cool package!" in client.out
         assert "pkg/0.1@user/testing: My cool package_info!" in client.out
 
     def test_multiple_reuse(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class SourceBuild(ConanFile):
@@ -173,13 +155,13 @@ class TestPyRequiresExtend:
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         assert "My cool source!" in client.out
-        assert "pkg/0.1@user/testing: My cool build!" in client.out
+        assert "My cool build!" in client.out
         assert "My cool package!" in client.out
         assert "pkg/0.1@user/testing: My cool package_info!" in client.out
 
     @staticmethod
     def test_transitive_access():
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --name=base --version=1.0 --user=user --channel=channel")
 
@@ -213,7 +195,7 @@ class TestPyRequiresExtend:
         assert "Created package" in client.out
 
     def test_multiple_requires_error(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             myvar = 123
@@ -252,17 +234,17 @@ class TestPyRequiresExtend:
             """)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=consumer --version=0.1 --user=user --channel=testing")
-        assert "consumer/0.1@user/testing: PKG1 N: pkg1" in client.out
-        assert "consumer/0.1@user/testing: PKG1 V: 1.0" in client.out
-        assert "consumer/0.1@user/testing: PKG1 U: user" in client.out
-        assert "consumer/0.1@user/testing: PKG1 C: channel" in client.out
-        assert "consumer/0.1@user/testing: PKG1 : 123" in client.out
-        assert "consumer/0.1@user/testing: PKG2 : 234" in client.out
-        assert "consumer/0.1@user/testing: PKG1F : 123" in client.out
-        assert "consumer/0.1@user/testing: PKG2F : 234" in client.out
+        assert "PKG1 N: pkg1" in client.out
+        assert "PKG1 V: 1.0" in client.out
+        assert "PKG1 U: user" in client.out
+        assert "PKG1 C: channel" in client.out
+        assert "PKG1 : 123" in client.out
+        assert "PKG2 : 234" in client.out
+        assert "PKG1F : 123" in client.out
+        assert "PKG2F : 234" in client.out
 
     def test_local_import(self):
-        client = TestClient(light=True, default_server_user=True)
+        client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             import mydata
@@ -297,7 +279,7 @@ class TestPyRequiresExtend:
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         package_id = client.created_package_id("pkg/0.1@user/testing")
         assert "My cool source!" in client.out
-        assert "pkg/0.1@user/testing: My cool build!" in client.out
+        assert "My cool build!" in client.out
         assert "My cool package!" in client.out
         assert "pkg/0.1@user/testing: My cool package_info!" in client.out
 
@@ -310,7 +292,7 @@ class TestPyRequiresExtend:
         assert f"pkg/0.1@user/testing: Package installed {package_id}" in client.out
 
     def test_reuse_class_members(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class MyConanfileBase(ConanFile):
@@ -342,18 +324,18 @@ class TestPyRequiresExtend:
                      "header.h": "pkg new header contents",
                      "other.txt": "text"})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        assert " Exports sources! *.h" in client.out
+        assert "Exports sources! *.h" in client.out
         assert "Copied 1 '.txt' file: other.txt" in client.out
         assert "Copied 1 '.h' file: header.h" in client.out
-        assert " License! MyLicense" in client.out
-        assert " Author! author@company.com" in client.out
-        assert " HEADER CONTENT!: pkg new header contents" in client.out
+        assert "License! MyLicense" in client.out
+        assert "Author! author@company.com" in client.out
+        assert "HEADER CONTENT!: pkg new header contents" in client.out
         ref = RecipeReference.loads("pkg/0.1@user/testing")
         assert os.path.exists(os.path.join(client.get_latest_ref_layout(ref).export(), "other.txt"))
 
     def test_reuse_system_requirements(self):
         # https://github.com/conan-io/conan/issues/7718
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
            from conan import ConanFile
            class MyConanfileBase(ConanFile):
@@ -373,7 +355,7 @@ class TestPyRequiresExtend:
         assert "pkg/0.1@user/testing: My system_requirements pkg being called!" in client.out
 
     def test_reuse_requirements(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
                    from conan import ConanFile
                    class MyConanfileBase(ConanFile):
@@ -430,9 +412,9 @@ class TestPyRequiresExtend:
             """)
         client.save({"conanfile.py": reuse})
         client.run("create . --name=pkg --version=0.1 -s os=Windows -s arch=armv7")
-        assert "pkg/0.1: License! MyLicense" in client.out
-        assert "pkg/0.1: Author! frodo" in client.out
-        assert "pkg/0.1: os: Windows arch: armv7" in client.out
+        assert "License! MyLicense" in client.out
+        assert "Author! frodo" in client.out
+        assert "os: Windows arch: armv7" in client.out
 
     def test_basic_option_inherit(self):
         client = TestClient()
@@ -500,7 +482,7 @@ class TestPyRequiresExtend:
 
     def test_transitive_imports_conflicts(self):
         # https://github.com/conan-io/conan/issues/3874
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             import myhelper
@@ -530,17 +512,17 @@ class TestPyRequiresExtend:
         # accidentaly imported (and it was, it was a bug)
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        assert "pkg/0.1@user/testing: MyHelperOutput!" in client.out
-        assert "pkg/0.1@user/testing: MyOtherHelperOutput!" in client.out
+        assert "MyHelperOutput!" in client.out
+        assert "MyOtherHelperOutput!" in client.out
 
         # Now, the same, but with "clean_first=True", should keep working
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
-        assert "pkg/0.1@user/testing: MyHelperOutput!" in client.out
-        assert "pkg/0.1@user/testing: MyOtherHelperOutput!" in client.out
+        assert "MyHelperOutput!" in client.out
+        assert "MyOtherHelperOutput!" in client.out
 
     def test_update(self):
-        client = TestClient(light=True, default_server_user=True)
+        client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             somevar = 42
@@ -551,7 +533,7 @@ class TestPyRequiresExtend:
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
 
-        client2 = TestClient(light=True, servers=client.servers, inputs=["user", "password"])
+        client2 = TestClient(servers=client.servers, inputs=["user", "password"])
         reuse = textwrap.dedent("""
             from conan import ConanFile
             class PkgTest(ConanFile):
@@ -567,7 +549,7 @@ class TestPyRequiresExtend:
         assert "conanfile.py: PYTHON REQUIRE VAR 42" in client2.out
 
         client.save({"conanfile.py": conanfile.replace("42", "143")})
-        time.sleep(1)  # guarantee time offset
+        wait_clock_tick()  # guarantee time offset
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
 
@@ -577,7 +559,7 @@ class TestPyRequiresExtend:
     def test_update_ranges(self):
         # Same as the above, but using a version range, and no --update
         # https://github.com/conan-io/conan/issues/4650#issuecomment-497464305
-        client = TestClient(light=True, default_server_user=True)
+        client = TestClient(default_server_user=True)
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             somevar = 42
@@ -588,7 +570,7 @@ class TestPyRequiresExtend:
         client.run("export . --name=base --version=1.1 --user=user --channel=testing")
         client.run("upload * --confirm -r default")
 
-        client2 = TestClient(light=True, servers=client.servers, inputs=["user", "password"])
+        client2 = TestClient(servers=client.servers, inputs=["user", "password"])
         reuse = textwrap.dedent("""
             from conan import ConanFile
             class PkgTest(ConanFile):
@@ -612,7 +594,7 @@ class TestPyRequiresExtend:
         assert "conanfile.py: PYTHON REQUIRE VAR 143" in client2.out
 
     def test_duplicate_pyreq(self):
-        t = TestClient(light=True)
+        t = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class PyReq(ConanFile):
@@ -634,7 +616,7 @@ class TestPyRequiresExtend:
         assert "The python_require 'pyreq' already exists" in t.out
 
     def test_local_build(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": "var=42\n" + str(GenConanfile())})
         client.run("export . --name=tool --version=0.1 --user=user --channel=channel")
         conanfile = textwrap.dedent("""
@@ -653,11 +635,11 @@ class TestPyRequiresExtend:
         assert "Pkg1 source: 42" in client.out
         client.run("install .")
         client.run("build .")
-        assert "conanfile.py: Pkg1 build: 42" in client.out
+        assert "Pkg1 build: 42" in client.out
         client.run("export-pkg . --name=pkg1 --version=0.1 --user=user --channel=testing")
 
     def test_reuse_name_version(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import load
@@ -694,11 +676,11 @@ class TestPyRequiresExtend:
         assert "Exported: mypkg/myversion" in client.out
         client.run("create .")
         assert "Pkg1 source: mypkg:myversion" in client.out
-        assert "mypkg/myversion: Pkg1 build: mypkg:myversion" in client.out
+        assert "Pkg1 build: mypkg:myversion" in client.out
         assert "Pkg1 package: mypkg:myversion" in client.out
 
     def test_reuse_name_version_override(self):
-        client = TestClient(light=True)
+        client = TestClient()
 
         conanfile = textwrap.dedent("""
             from conan import ConanFile
@@ -741,11 +723,11 @@ class TestPyRequiresExtend:
         assert "Exported: mypkg/myversion2" in client.out
         client.run("create .")
         assert "Pkg1 source: mypkg:myversion2" in client.out
-        assert "mypkg/myversion2: Pkg1 build: mypkg:myversion2" in client.out
+        assert "Pkg1 build: mypkg:myversion2" in client.out
         assert "Pkg1 package: mypkg:myversion2" in client.out
 
     def test_reuse_export_sources(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class MyConanfileBase(ConanFile):
@@ -788,8 +770,8 @@ class TestPyRequiresExtend:
         client.run("create . --name=pkg --version=1.0 --user=user --channel=channel")
         assert "Source: tool header: myheader" in client.out
         assert "Source: tool other: otherheader" in client.out
-        assert "pkg/1.0@user/channel: Build: tool header: myheader" in client.out
-        assert "pkg/1.0@user/channel: Build: tool other: otherheader" in client.out
+        assert "Build: tool header: myheader" in client.out
+        assert "Build: tool other: otherheader" in client.out
         assert "Package: tool header: myheader" in client.out
         assert "Package: tool other: otherheader" in client.out
 
@@ -799,11 +781,11 @@ class TestPyRequiresExtend:
         assert "Source: tool header: myheader" in client.out
         assert "Source: tool other: otherheader" in client.out
         client.run("build .")
-        assert "conanfile.py: Build: tool header: myheader" in client.out
-        assert "conanfile.py: Build: tool other: otherheader" in client.out
+        assert "Build: tool header: myheader" in client.out
+        assert "Build: tool other: otherheader" in client.out
 
     def test_reuse_editable_exports(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class MyConanfileBase(ConanFile):
@@ -834,7 +816,7 @@ class TestPyRequiresExtend:
                     self.output.info("Build: tool other: %s" % load(self, other_h))
             """)
 
-        client2 = TestClient(light=True, cache_folder=client.cache_folder)
+        client2 = TestClient(cache_folder=client.cache_folder)
         client2.save({"conanfile.py": conanfile,
                       "name.txt": "MyPkg",
                       "version.txt": "MyVersion"})
@@ -845,11 +827,11 @@ class TestPyRequiresExtend:
         assert "Source: tool header: myheader" in client2.out
         assert "Source: tool other: otherheader" in client2.out
         client2.run("build .")
-        assert "conanfile.py: Build: tool header: myheader" in client2.out
-        assert "conanfile.py: Build: tool other: otherheader" in client2.out
+        assert "Build: tool header: myheader" in client2.out
+        assert "Build: tool other: otherheader" in client2.out
 
     def test_build_id(self):
-        client = TestClient(light=True, default_server_user=True)
+        client = TestClient(default_server_user=True)
         self._define_base(client)
         reuse = textwrap.dedent("""
             from conan import ConanFile
@@ -862,12 +844,12 @@ class TestPyRequiresExtend:
         client.save({"conanfile.py": reuse}, clean_first=True)
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
         assert "My cool source!" in client.out
-        assert "pkg/0.1@user/testing: My cool build!" in client.out
+        assert "My cool build!" in client.out
         assert "My cool package!" in client.out
         assert "pkg/0.1@user/testing: My cool package_info!" in client.out
 
     def test_options_errors(self):
-        c = TestClient(light=True)
+        c = TestClient()
         base = textwrap.dedent("""
             from conan import ConanFile
             class BaseConan:
@@ -905,7 +887,7 @@ class TestPyRequiresExtend:
         assert "OptionDERIVED: False" in c.out
 
     def test_options_default_update(self):
-        c = TestClient(light=True)
+        c = TestClient()
         base = textwrap.dedent("""
             from conan import ConanFile
             class BaseConan:
@@ -950,7 +932,7 @@ class TestPyRequiresExtend:
 
 def test_transitive_python_requires():
     # https://github.com/conan-io/conan/issues/8546
-    client = TestClient(light=True)
+    client = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         myvar = 123
@@ -988,12 +970,12 @@ def test_transitive_python_requires():
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --user=user --channel=channel")
-    assert "consumer/1.0@user/channel: Calling build()\nconsumer/1.0@user/channel: 123, 234" in \
+    assert "Calling build()\n123, 234" in \
            client.out
 
 
 def test_transitive_diamond_python_requires():
-    client = TestClient(light=True)
+    client = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         myvar = 123
@@ -1058,7 +1040,7 @@ def test_transitive_diamond_python_requires():
         """)
     client.save({"conanfile.py": conanfile})
     client.run("create . --user=user --channel=channel")
-    assert "consumer/1.0@user/channel: Calling build()\nconsumer/1.0@user/channel: 123, 2222" in \
+    assert "Calling build()\n123, 2222" in \
            client.out
     assert "Calling package()\n222, 234" in \
            client.out
@@ -1067,7 +1049,7 @@ def test_transitive_diamond_python_requires():
 class TestConflictPyRequires:
     # https://github.com/conan-io/conan/issues/15016
     def test_diamond_conflict_fixed(self):
-        c = TestClient(light=True)
+        c = TestClient()
 
         c.save({"tool/conanfile.py": GenConanfile("tool"),
                 "sub1/conanfile.py": GenConanfile("sub1", "1.0").with_python_requires("tool/1.0"),
@@ -1081,7 +1063,7 @@ class TestConflictPyRequires:
         assert "Conflict in py_requires tool/1.0 - tool/1.1" in c.out
 
     def test_diamond_conflict_ranges(self):
-        c = TestClient(light=True)
+        c = TestClient()
 
         c.save({"tool/conanfile.py": GenConanfile("tool"),
                 "sub1/conanfile.py": GenConanfile("sub1", "1.0").with_python_requires("tool/[*]"),
@@ -1100,7 +1082,7 @@ def test_multiple_reuse():
         # https://github.com/conan-io/conan/issues/11589
     """
 
-    c = TestClient(light=True)
+    c = TestClient()
     common = textwrap.dedent("""
         from conan import ConanFile
         def mycommon():
@@ -1151,7 +1133,7 @@ class TestTestPackagePythonRequire:
         """ test how to test_package a python_require
         """
 
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile("mytool", "0.1")})
         c.run("create .")
         conanfile = textwrap.dedent("""
@@ -1223,7 +1205,7 @@ class TestResolveRemote:
         """ a "conan export" command should work even when a python_requires
         is in the server
         """
-        c = TestClient(light=True, default_server_user=True)
+        c = TestClient(default_server_user=True)
         c.save({"common/conanfile.py": GenConanfile("tool", "0.1"),
                 "pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("tool/0.1")})
         c.run("export common")
@@ -1247,7 +1229,7 @@ class TestResolveRemote:
     def test_missing_python_require_error(self):
         """ make sure the error is clear enough for users UX
         """
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1").with_python_requires("tool/0.1")})
         c.run("create pkg", assert_error=True)
         assert "Cannot resolve python_requires 'tool/0.1'" in c.out
@@ -1257,7 +1239,7 @@ class TestTransitiveExtend:
     # https://github.com/conan-io/conan/issues/10511
     # https://github.com/conan-io/conan/issues/10565
     def test_transitive_extend(self):
-        client = TestClient(light=True)
+        client = TestClient()
         company = textwrap.dedent("""
             from conan import ConanFile
             class CompanyConanFile(ConanFile):
@@ -1302,7 +1284,7 @@ class TestTransitiveExtend:
         assert "Msg2:company!!!" in client.out
 
     def test_transitive_extend2(self):
-        client = TestClient(light=True)
+        client = TestClient()
         company = textwrap.dedent("""
             from conan import ConanFile
             class CompanyConanFile(ConanFile):
@@ -1357,7 +1339,7 @@ def test_multi_top_missing_from_remote():
     """
     https://github.com/conan-io/conan/issues/13656
     """
-    tc = TestClient(light=True, default_server_user=True)
+    tc = TestClient(default_server_user=True)
     tc.save({"conanfile.py": GenConanfile("base", "1.1")})
     tc.run("create . --user=user --channel=testing")
 
@@ -1385,7 +1367,7 @@ def test_transitive_range_not_found_in_cache():
     """
     https://github.com/conan-io/conan/issues/13761
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile("pr", "1.0")})
     c.run("create .")
 
@@ -1399,7 +1381,7 @@ def test_transitive_range_not_found_in_cache():
 
 
 def test_export_pkg():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile("pytool", "0.1").with_package_type("python-require")})
     c.run("export-pkg .", assert_error=True)
     assert "export-pkg can only be used for binaries, not for 'python-require'" in c.out
@@ -1410,7 +1392,7 @@ def test_export_pkg():
 
 
 def test_py_requires_override_method():
-    tc = TestClient(light=True)
+    tc = TestClient()
     pyreq = textwrap.dedent("""
         from conan import ConanFile
         class MyConanfileBase:

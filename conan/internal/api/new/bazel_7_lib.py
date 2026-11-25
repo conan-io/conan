@@ -36,9 +36,7 @@ class {{package_name}}Recipe(ConanFile):
         # On Linux platforms, Bazel creates both shared and static libraries by default, and
         # it is getting naming conflicts if we use the cc_shared_library rule
         if self.options.shared and self.settings.os != "Linux":
-            # We need to add '--experimental_cc_shared_library' because the project uses
-            # cc_shared_library to create shared libraries
-            bazel.build(args=["--experimental_cc_shared_library"], target="//main:{{name}}_shared")
+            bazel.build(target="//main:{{name}}_shared")
         else:
             bazel.build(target="//main:{{name}}")
 
@@ -125,12 +123,14 @@ cc_shared_library(
 """
 
 _bazel_module = """\
+bazel_dep(name = "apple_support", version = "2.5.4")
 bazel_dep(name = "rules_cc", version = "0.2.17")
 """
 _bazel_rc = """\
 {% if output_root_dir is defined %}startup --output_user_root={{output_root_dir}}{% endif %}
 """
 _test_bazel_module_bazel = """\
+bazel_dep(name = "apple_support", version = "2.5.4")
 # This requires Bazel >= 7.2
 include("//conan:conan_deps.MODULE.bazel")
 """

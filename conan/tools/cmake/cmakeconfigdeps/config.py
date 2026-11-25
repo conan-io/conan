@@ -1,7 +1,8 @@
 import textwrap
 
 import jinja2
-from jinja2 import Template
+
+from conan.internal.util.templates import compiled_template
 
 
 class ConfigTemplate2:
@@ -19,13 +20,10 @@ class ConfigTemplate2:
         return self._filename
 
     def content(self):
-        t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
-                     undefined=jinja2.StrictUndefined)
+        t = compiled_template(self._template, undefined=jinja2.StrictUndefined)
         return t.render(self._context)
 
-    @property
-    def _template(self):
-        return textwrap.dedent("""\
+    _template = textwrap.dedent("""\
         # Requires CMake > 3.15
         if(${CMAKE_VERSION} VERSION_LESS "3.15")
             message(FATAL_ERROR "The 'CMakeDeps' generator only works with CMake >= 3.15")
@@ -44,8 +42,8 @@ class ConfigTemplate2:
         foreach(comp {%raw%}${{%endraw%}{{filename}}_FIND_COMPONENTS})
           if(NOT ${comp} IN_LIST {{filename}}_PACKAGE_PROVIDED_COMPONENTS)
             if({%raw%}${{%endraw%}{{filename}}_FIND_REQUIRED_${comp}})
-              message(STATUS "Conan: Error: '{{pkg_name}}' required COMPONENT '${comp}' not found")
               set({{filename}}_FOUND FALSE)
+              set({{filename}}_NOT_FOUND_MESSAGE "Conan: Error: '{{pkg_name}}' required COMPONENT '${comp}' not found")
             endif()
           endif()
         endforeach()
@@ -70,7 +68,9 @@ class ConfigTemplate2:
         # Some build modules in ConanCenter use try_compile variables and legacy, so this
         # include() needs to happen after the above variables are defined
         {% for build_module in build_modules_paths %}
-        message(STATUS "Conan: Including build module from '{{build_module}}'")
+        if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
+            message(STATUS "Conan: Including build module from '{{build_module}}'")
+        endif()
         include("{{ build_module }}")
         {% endfor %}
 

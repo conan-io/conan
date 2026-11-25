@@ -49,13 +49,14 @@ class ConanAPI:
     """
     def __init__(self, cache_folder=None):
         """
-        :param cache_folder: Conan cache/home folder. It will have less priority than the
-                             ``"home_folder"`` defined in a Workspace.
+        :param cache_folder: Absolute path to the Conan home folder. If ``None``, it will be
+                             resolved as explained in
+                             :attr:`home_folder <conan.api.conan_api.ConanAPI.home_folder>`.
         """
 
         version = sys.version_info
-        if version.major == 2 or version.minor < 7:
-            raise ConanException("Conan needs Python >= 3.7")
+        if version.major == 2 or version.minor < 8:
+            raise ConanException("Conan needs Python >= 3.8")
         if cache_folder is not None and not os.path.isabs(cache_folder):
             raise ConanException("cache_folder has to be an absolute path")
 

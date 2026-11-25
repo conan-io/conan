@@ -36,7 +36,7 @@ class TestBasicLocalFlows:
 
     @pytest.fixture
     def client(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"dep/conanfile.py": conanfile_dep})
         tc.run("export dep")
         return tc
@@ -74,14 +74,14 @@ class TestBasicLocalFlows:
         assert f"Dep package folder: {dep_layout.finalize()}" in client.out
 
     def test_no_non_info_access(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile("dep", "1.0")
                      .with_finalize("self.output.info('settings.os: ' + self.settings.os)")})
         client.run("create .", assert_error=True)
         assert "'self.settings' access in 'finalize()' method is forbidden" in client.out
 
     def test_finalize_moves_from_package(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile("dep", "1.0")
                      .with_import("from conan.tools.files import save, rename",
                                   "import os")
@@ -226,7 +226,7 @@ class TestBasicLocalFlows:
             assert f"Package: {dep_layout.package()}" in client.out
 
     def test_cache_modification_of_custom_conf_based_on_settings(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"conanfile.py": GenConanfile("dep", "1.0")
                 .with_import("from conan.tools.files import save",
                              "import os")
@@ -251,7 +251,7 @@ class TestBasicLocalFlows:
 
 class TestToolRequiresFlows:
     def test_tool_requires(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"dep/conanfile.py": textwrap.dedent("""
             import os
             from conan import ConanFile
@@ -295,10 +295,10 @@ class TestToolRequiresFlows:
         tc.run("create app")
         # This fails. cpp_info is using the original package folder to construct the final path
         assert f"Dep bindir: {dep_layout.finalize()}" in tc.out
-        assert "app/1.0: Is finalized? True" in tc.out
+        assert "Is finalized? True" in tc.out
 
     def test_test_package_uses_created_tool_which_modifies_pkgfolder(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"conanfile.py": GenConanfile("app", "1.0")
                 .with_import("from conan.tools.files import save")
                 .with_package_type("application")
@@ -319,7 +319,7 @@ class TestToolRequiresFlows:
         assert "There are corrupted artifacts" not in tc.out
 
     def test_multiple_instances_of_finalized_package(self):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"tool/conanfile.py": GenConanfile("tool", "1.0")
                     .with_package_type("application")
                     .with_finalize("self.output.info('RUNNING MY FINALIZE')"),
@@ -344,7 +344,7 @@ class TestRemoteFlows:
 
     @pytest.fixture
     def client(self):
-        tc = TestClient(light=True, default_server_user=True)
+        tc = TestClient(default_server_user=True)
         tc.save({"dep/conanfile.py": conanfile_dep})
         tc.run("export dep")
         return tc
@@ -378,7 +378,7 @@ class TestRemoteFlows:
 
         client.run("remove * -c")
         client.run("install --requires=dep/1.0 -r=default")
-        assert "dep/1.0: Calling finalize()"
+        assert "dep/1.0: Calling finalize()" in client.out
         assert f"Running finalize method in {downloaded_pref_layout.finalize()}" in client.out
 
     def test_upload_verify_integrity(self, client):

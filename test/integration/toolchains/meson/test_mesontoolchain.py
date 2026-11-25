@@ -776,6 +776,75 @@ def test_cross_x86_64_to_riscv64():
     assert "cpu = 'riscv64'" in cross  # This is the host machine
 
 
+@pytest.mark.parametrize("arch, android_target", [("armv7", "armv7a-linux-androideabi"),
+                                                  ("armv8", "aarch64-linux-android"),
+                                                  ("x86", "i686-linux-android"),
+                                                  ("x86_64", "x86_64-linux-android")])
+@pytest.mark.parametrize("os_build, ndk_os_folder, ext", [("Macos", "darwin", ""),
+                                                          ("Linux", "linux", ""),
+                                                          ("Windows", "windows", ".cmd")])
+def test_cross_to_android_ndk(arch, android_target, os_build, ndk_os_folder, ext):
+    """ With the NDK path defined, the compilers are the ones of the NDK for the target of the arch,
+    with the api_level, and the folder of the OS of the build machine
+    """
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile().with_settings("os", "compiler", "arch", "build_type")})
+    c.run(f"install . -g MesonToolchain -s os=Android -s os.api_level=21 -s arch={arch} "
+          f"-s compiler=clang -s compiler.version=18 -s compiler.libcxx=libc++ "
+          f"-s:b os={os_build} -s:b arch=x86_64 -c tools.android:ndk_path=/path/to/ndk")
+    cross = c.load(MesonToolchain.cross_filename)
+    ndk_bin = os.path.join("/path/to/ndk", "toolchains", "llvm", "prebuilt",
+                           f"{ndk_os_folder}-x86_64", "bin")
+    assert f"c = '{os.path.join(ndk_bin, f'{android_target}21-clang{ext}')}'" in cross
+    assert f"cpp = '{os.path.join(ndk_bin, f'{android_target}21-clang++{ext}')}'" in cross
+    assert f"ar = '{os.path.join(ndk_bin, 'llvm-ar')}'" in cross
+    assert "system = 'android'" in cross
+
+
+def test_cross_to_android_ndk_path_required():
+    c = TestClient()
+    c.save({"conanfile.py": GenConanfile().with_settings("os", "compiler", "arch", "build_type")})
+    c.run("install . -g MesonToolchain -s os=Android -s os.api_level=21 -s arch=armv8 "
+          "-s compiler=clang -s compiler.version=18 -s compiler.libcxx=libc++ "
+          "-s:b os=Linux -s:b arch=x86_64", assert_error=True)
+    assert "You must provide a NDK path. Use 'tools.android:ndk_path' configuration field." in c.out
+
+
+def test_objc_compilers_and_env_flags():
+    host = textwrap.dedent("""
+    [settings]
+    arch=x86_64
+    os=Macos
+    compiler=apple-clang
+    compiler.version=14.0
+    [buildenv]
+    OBJCFLAGS=-DMY_OBJC
+    OBJCXXFLAGS=-DMY_OBJCXX
+    LDFLAGS=-Lmy_libs
+    """)
+    c = TestClient()
+    c.save({"conanfile.txt": "[generators]\nMesonToolchain", "host": host})
+    c.run("install . -pr:a host")
+    tc = c.load("conan_meson_native.ini")
+    assert "objc = 'clang'" in tc
+    assert "objcpp = 'clang++'" in tc
+    assert re.search(r"objc_args = \[.*'-DMY_OBJC'.*\]", tc)
+    assert re.search(r"objcpp_args = \[.*'-DMY_OBJCXX'.*\]", tc)
+    assert re.search(r"objc_link_args = \[.*'-Lmy_libs'.*\]", tc)
+    assert re.search(r"objcpp_link_args = \[.*'-Lmy_libs'.*\]", tc)
+
+    # The compilers can be defined by conf
+    host = host + textwrap.dedent("""
+    [conf]
+    tools.build:compiler_executables={"objc": "myobjc", "objcpp": "myobjcpp"}
+    """)
+    c.save({"host": host})
+    c.run("install . -pr:a host")
+    tc = c.load("conan_meson_native.ini")
+    assert "objc = 'myobjc'" in tc
+    assert "objcpp = 'myobjcpp'" in tc
+
+
 def test_conf_extra_apple_flags():
     host = textwrap.dedent("""
     [settings]
@@ -908,15 +977,19 @@ def test_new_public_attributes():
 
 
 @pytest.mark.parametrize(
-    "package_type, shared_option, default_library, has_fpic",
+    "package_type, shared_option, default_library, fpic, staticpic",
     [
-        ("shared-library", None, "shared", False),
-        ("static-library", None, "static", True),
-        ("library", True, "shared", False),
-        ("library", False, "static", True),
+        ("shared-library", None, "shared", None, None),
+        ("shared-library", None, "shared", True, None),
+        ("static-library", None, "static", True, "true"),
+        ("static-library", None, "static", False, "false"),
+        ("static-library", None, "static", "unset", None),
+        ("library", True, "shared", None, None),
+        ("library", False, "static", True, "true"),
+        ("library", False, "static", False, "false"),
     ],
 )
-def test_package_type(package_type, shared_option, default_library, has_fpic):
+def test_package_type(package_type, shared_option, default_library, fpic, staticpic):
     client = TestClient()
 
     conanfile = (GenConanfile("pkg", "1.0")
@@ -926,18 +999,21 @@ def test_package_type(package_type, shared_option, default_library, has_fpic):
 
     if shared_option is not None:
         conanfile = conanfile.with_option("shared", [True, False], shared_option)
-    if has_fpic:
-        conanfile = conanfile.with_option("fPIC", [True, False], True)
+    if fpic == "unset":
+        conanfile = conanfile.with_option("fPIC", [True, False, None], None)
+    elif fpic is not None:
+        conanfile = conanfile.with_option("fPIC", [True, False], fpic)
 
     client.save({"conanfile.py": conanfile})
     client.run("install")
     content = client.load(MesonToolchain.native_filename)
     assert "buildtype = 'release'" in content
     assert f"default_library = '{default_library}'" in content
-    if has_fpic:
-        assert "b_staticpic = True" in content
+    if staticpic is not None:
+        assert f"b_staticpic = {staticpic}" in content
     else:
         assert "b_staticpic" not in content
+    assert "do not use a Conan option value directly" not in client.out
 
 
 def test_needs_exe_wrapper():

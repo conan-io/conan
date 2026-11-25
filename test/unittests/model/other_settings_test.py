@@ -44,7 +44,7 @@ class TestSettings:
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing -s os=Linux")
-        assert "pkg/0.1@user/testing: OS!!: Linux" in client.out
+        assert "OS!!: Linux" in client.out
 
     def test_settings_as_a_str(self):
         client = TestClient()

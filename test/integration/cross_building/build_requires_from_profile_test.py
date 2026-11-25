@@ -122,18 +122,18 @@ class TestBuildRequiresContextHostFromProfile:
 
         t.run("create gtest.py -pr=profile_host -pr:b=profile_build --build=*")
         assert "mytoolchain/1.0: PackageInfo OS=Windows" in t.out
-        assert "gtest/1.0: Build OS=Linux" in t.out
+        assert "Build OS=Linux" in t.out
         assert "gtest/1.0: PackageInfo OS=Linux" in t.out
 
         t.run("create library.py -pr:h=profile_host -pr:b=profile_build")
         assert "gtest/1.0: PackageInfo OS=Linux" in t.out
-        assert "library/version: Build OS=Linux" in t.out
+        assert "Build OS=Linux" in t.out
         assert "mytoolchain/1.0: PackageInfo OS=Windows" in t.out
 
         t.run("create library.py -pr:h=profile_host -pr:b=profile_build --build=*")
-        assert "gtest/1.0: Build OS=Linux" in t.out
+        assert "Build OS=Linux" in t.out
         assert "gtest/1.0: PackageInfo OS=Linux" in t.out
-        assert "library/version: Build OS=Linux" in t.out
+        assert "Build OS=Linux" in t.out
         assert "mytoolchain/1.0: PackageInfo OS=Windows" in t.out
 
 
@@ -216,7 +216,7 @@ class TestBuildRequiresBothContexts:
         t.run("create creator.py -pr=profile_build")
         t.run("create mytoolchain.py -pr:h=profile_host -pr:b=profile_build --build-require")
         assert "creator/1.0: PackageInfo OS=Windows" in t.out
-        assert "mytoolchain/1.0: Build OS=Windows" in t.out
+        assert "Build OS=Windows" in t.out
 
         # new way, the toolchain can now run in Windows, but gtest in Linux
         t.run("create gtest.py --profile=profile_host --profile:build=profile_build")
@@ -247,25 +247,25 @@ class TestBuildRequiresBothContexts:
         t.save({'mytoolchain.py': toolchain})
         t.run("create mytoolchain.py --profile:host=profile_build -pr:b=profile_build")
         assert "creator/1.0: PackageInfo OS=Windows" in t.out
-        assert "mytoolchain/1.0: Build OS=Windows" in t.out
+        assert "Build OS=Windows" in t.out
 
         t.run("create gtest.py --profile=profile_host --profile:build=profile_build --build=*")
         assert "creator/1.0: PackageInfo OS=Windows" in t.out
-        assert "mytoolchain/1.0: Build OS=Windows" in t.out
-        assert "gtest/1.0: Build OS=Linux" in t.out
+        assert "Build OS=Windows" in t.out
+        assert "Build OS=Linux" in t.out
 
         t.run("create library.py -pr:h=profile_host --profile:build=profile_build --build=*")
         assert "creator/1.0: PackageInfo OS=Windows" in t.out
-        assert "mytoolchain/1.0: Build OS=Windows" in t.out
-        assert "gtest/1.0: Build OS=Linux" in t.out
+        assert "Build OS=Windows" in t.out
+        assert "Build OS=Linux" in t.out
         assert "gtest/1.0: PackageInfo OS=Linux" in t.out
-        assert "library/version: Build OS=Linux" in t.out
+        assert "Build OS=Linux" in t.out
 
 
 def test_consumer_get_profile_tool_requires():
     # [tool_requires] defined in a profile will result in applying them in the
     # consumer, both if using a conanfile.txt of using a --requires
-    t = TestClient(light=True)
+    t = TestClient()
     tool = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):

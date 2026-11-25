@@ -1,15 +1,14 @@
-from time import sleep
-
 from conan.api.model import RecipeReference
 from conan.internal.paths import CONANFILE
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.test_files import wait_clock_tick
 from conan.test.utils.tools import TestClient, TestServer
 
 
 class TestExportsSourcesMissing:
 
     def test_exports_sources_missing(self):
-        client = TestClient(light=True, default_server_user=True)
+        client = TestClient(default_server_user=True)
         client.save({"conanfile.py": GenConanfile().with_exports_sources("*"),
                      "source.txt": "somesource"})
         client.run("create . --name=pkg --version=0.1 --user=user --channel=testing")
@@ -18,7 +17,7 @@ class TestExportsSourcesMissing:
         # Failure because remote is removed
         servers = dict(client.servers)
         servers["new_server"] = TestServer(users={"user": "password"})
-        client2 = TestClient(light=True, servers=servers, inputs=["user", "password"])
+        client2 = TestClient(servers=servers, inputs=["user", "password"])
         client2.run("install --requires=pkg/0.1@user/testing")
         client2.run("remote remove default")
         client2.run("upload pkg/0.1@user/testing -r=new_server", assert_error=True)
@@ -27,7 +26,7 @@ class TestExportsSourcesMissing:
         assert "Probably it was installed from a remote that is no longer available." in client2.out
 
         # Failure because remote removed the package
-        client2 = TestClient(light=True, servers=servers, inputs=2 * ["admin", "password"])
+        client2 = TestClient(servers=servers, inputs=2 * ["admin", "password"])
         client2.run("install --requires=pkg/0.1@user/testing")
         client2.run("remove * -r=default -c")
         client2.run("upload pkg/0.1@user/testing -r=new_server", assert_error=True)
@@ -50,14 +49,14 @@ class TestMultiRemotes:
         Checks conan install --update works with different remotes
         """
         servers = {"default": TestServer(), "local": TestServer()}
-        client_a = TestClient(light=True, servers=servers, inputs=2*["admin", "password"])
-        client_b = TestClient(light=True, servers=servers, inputs=2*["admin", "password"])
+        client_a = TestClient(servers=servers, inputs=2*["admin", "password"])
+        client_b = TestClient(servers=servers, inputs=2*["admin", "password"])
 
         # Upload hello0 to local and default from client_a
         self._export(client_a, "hello0", "0.0")
         client_a.run("upload hello0/0.0@lasote/stable -r local --only-recipe")
         client_a.run("upload hello0/0.0@lasote/stable -r default --only-recipe")
-        sleep(1)  # For timestamp and updates checks
+        wait_clock_tick()  # For timestamp and updates checks
 
         # Download hello0 from local with client_b
         client_b.run("install --requires=hello0/0.0@lasote/stable -r local --build missing")
@@ -78,7 +77,7 @@ class TestMultiRemotes:
 
         # Upload a new version from client A, but only to the default server (not the ref-listed)
         # Upload hello0 to local and default from client_a
-        sleep(1)  # For timestamp and updates checks
+        wait_clock_tick()  # For timestamp and updates checks
         self._export(client_a, "hello0", "0.0", modifier="\n\n")
         client_a.run("upload hello0/0.0@lasote/stable#latest -r default --only-recipe")
 
@@ -107,14 +106,14 @@ class TestMultiRemotes:
         Checks conan install --update works only with the remote associated
         """
         servers = {"default": TestServer(), "local": TestServer()}
-        client = TestClient(light=True, servers=servers, inputs=2*["admin", "password"])
+        client = TestClient(servers=servers, inputs=2*["admin", "password"])
 
         self._export(client, "hello0", "0.0")
         default_remote_rev = client.exported_recipe_revision()
         client.run("install --requires=hello0/0.0@lasote/stable --build missing")
 
         client.run("upload hello0/0.0@lasote/stable -r default")
-        sleep(1)  # For timestamp and updates checks
+        wait_clock_tick()  # For timestamp and updates checks
         self._export(client, "hello0", "0.0", modifier=" ")
         local_remote_rev = client.exported_recipe_revision()
         client.run("install --requires=hello0/0.0@lasote/stable --build missing")
@@ -131,9 +130,9 @@ class TestMultiRemotes:
         client.run("install --requires=hello0/0.0@lasote/stable --update -r default")
         assert f"hello0/0.0@lasote/stable#{local_remote_rev} - Newer" in client.out
 
-        sleep(1)  # For timestamp and updates checks
+        wait_clock_tick()  # For timestamp and updates checks
         # Check that it really updates in case of newer package uploaded to the associated remote
-        client_b = TestClient(light=True, servers=servers, inputs=3*["admin", "password"])
+        client_b = TestClient(servers=servers, inputs=3*["admin", "password"])
         self._export(client_b, "hello0", "0.0", modifier="  ")
         new_local_remote_rev = client_b.exported_recipe_revision()
         client_b.run("install --requires=hello0/0.0@lasote/stable --build missing")
@@ -151,14 +150,14 @@ class TestMultiRemote:
         """
         servers = {"s0": TestServer(), "s1": TestServer(), "s2": TestServer()}
 
-        client = TestClient(light=True, servers=servers)
+        client = TestClient(servers=servers)
         client.save({"conanfile.py": GenConanfile("mylib", "0.1")})
         client.run("create . --user=lasote --channel=testing")
         client.run("remote login s1 admin -p password")
         client.run("upload mylib* -r s1 -c")
 
         servers["s1"].fake_url = "http://asdlhaljksdhlajkshdljakhsd.com"  # Do not exist
-        client2 = TestClient(light=True, servers=servers)
+        client2 = TestClient(servers=servers)
         client2.run("install --requires=mylib/0.1@conan/testing --build=missing", assert_error=True)
         assert "mylib/0.1@conan/testing: Checking remote: s0" in client2.out
         assert "mylib/0.1@conan/testing: Checking remote: s1" in client2.out
@@ -168,7 +167,7 @@ class TestMultiRemote:
 
     def test_install_from_remotes(self):
         servers = {"remote%d" % i: TestServer() for i in range(3)}
-        client = TestClient(light=True, servers=servers, inputs=3 * ["admin", "password"])
+        client = TestClient(servers=servers, inputs=3 * ["admin", "password"])
         for i in range(3):
             ref = RecipeReference.loads("hello%d/0.1@lasote/stable" % i)
             client.save({"conanfile.py": GenConanfile("hello%d" % i, "0.1")})
@@ -176,7 +175,7 @@ class TestMultiRemote:
             client.run("upload %s -r=remote%d" % (str(ref), i))
 
         # Now install it in other machine from remote 0
-        client2 = TestClient(light=True, servers=servers)
+        client2 = TestClient(servers=servers)
 
         refs = ["hello0/0.1@lasote/stable", "hello1/0.1@lasote/stable", "hello2/0.1@lasote/stable"]
         client2.save({"conanfile.py": GenConanfile("helloX", "0.1").with_requires(*refs)})

@@ -7,7 +7,7 @@ from conan.test.utils.tools import TestClient, NO_SETTINGS_PACKAGE_ID
 
 def test_private_skip():
     # app -> pkg -(private)-> dep
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=dep --version=1.0")
     client.save({"conanfile.py": GenConanfile().with_requirement("dep/1.0", visible=False)})
@@ -21,7 +21,7 @@ def test_private_skip():
 
 def test_private_no_skip():
     # app -> pkg -(private)-> dep
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=dep --version=1.0")
     client.save({"conanfile.py": GenConanfile().with_requirement("dep/1.0", visible=False)})
@@ -38,7 +38,7 @@ def test_private_no_skip():
 
 def test_consumer_no_skip():
     # app -(private)-> pkg -> dep
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=dep --version=1.0")
     client.save({"conanfile.py": GenConanfile().with_requires("dep/1.0")})
@@ -54,7 +54,7 @@ def test_consumer_no_skip():
 
 def test_shared_link_static_skip():
     # app -> pkg (shared) -> dep (static)
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_shared_option(False)})
     client.run("create . --name=dep --version=1.0")
     package_id = client.created_package_id("dep/1.0")
@@ -71,7 +71,7 @@ def test_shared_link_static_skip():
 def test_test_requires():
     # Using a test_requires can be skipped if it is not necessary to build its consumer
     # app -> pkg (static) -(test_requires)-> gtest (static)
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": GenConanfile().with_shared_option(False)})
     client.run("create . --name=gtest --version=1.0")
     package_id = client.created_package_id("gtest/1.0")
@@ -83,14 +83,14 @@ def test_test_requires():
     client.save({"conanfile.py": GenConanfile().with_requires("pkg/1.0")})
     # Checking list of skipped binaries
     client.run("create . --name=app --version=1.0")
-    assert re.search(r"Skipped binaries(\s*)gtest/1.0", client.out)
+    assert re.search(r"Skipped test binaries(\s*)gtest/1.0", client.out)
     # Showing the complete information about the skipped binary
     client.run("create . --name=app --version=1.0 -v")
     client.assert_listed_binary({"gtest/1.0": (package_id, "Skip")}, test=True)
 
 
 def test_build_scripts_no_skip():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"scripts/conanfile.py": GenConanfile("script", "0.1").with_package_type("build-scripts"),
             "app/conanfile.py": GenConanfile().with_tool_requires("script/0.1")})
     c.run("create scripts")
@@ -106,7 +106,7 @@ def test_list_skip_printing():
     because some other part of the graph is skipping it. In this case, a tool_require might be
     necessary for some packages building from soures, but not for others
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"tool/conanfile.py": GenConanfile("tool", "0.1"),
             "pkga/conanfile.py": GenConanfile("pkga", "0.1").with_tool_requires("tool/0.1"),
             "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1")
@@ -122,7 +122,7 @@ def test_list_skip_printing():
 
 
 def test_conf_skip():
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": GenConanfile()})
     client.run("create . --name=maths --version=1.0")
     client.run("create . --name=ai --version=1.0")
@@ -184,7 +184,7 @@ def test_skipped_intermediate_header():
 
 def test_skip_visible_build():
     # https://github.com/conan-io/conan/issues/15346
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"liba/conanfile.py": GenConanfile("liba", "0.1"),
             "libb/conanfile.py": GenConanfile("libb", "0.1").with_requirement("liba/0.1",
                                                                               build=True),
@@ -195,7 +195,8 @@ def test_skip_visible_build():
     c.run("create libb")
     c.run("create libc")
     c.run("install app --format=json")
-    assert re.search(r"Skipped binaries(\s*)libb/0.1, liba/0.1", c.out)
+    assert re.search(r"Skipped host binaries(\s*)libb/0.1", c.out)
+    assert re.search(r"Skipped build binaries(\s*)liba/0.1", c.out)
 
 
 def test_skip_tool_requires_context():
@@ -244,7 +245,7 @@ def test_skip_intermediate_header():
     # app -> libc/0.1 (static) -> libb0.1 (header) -> liba0.1 (static)
     #  \------------------------------------------------/
     # libb
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("static-library"),
             "libb/conanfile.py": GenConanfile("libb", "0.1").with_requirement("liba/0.1")
                                                             .with_package_type("header-library"),
@@ -268,7 +269,7 @@ def test_skip_intermediate_static():
     # app -> libc/0.1 (shared) -> libb0.1 (static) -> liba0.1 (static)
     #  \------------------------------------------------/
     # libb
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("static-library"),
             "libb/conanfile.py": GenConanfile("libb", "0.1").with_requirement("liba/0.1")
                                                             .with_package_type("static-library"),
@@ -281,7 +282,7 @@ def test_skip_intermediate_static():
     c.run("create libc")
     c.run("remove libb:* -c")  # binary not necessary, can be skipped
     c.run("install app")
-    assert re.search(r"Skipped binaries(\s*)libb/0.1", c.out)
+    assert re.search(r"Skipped host binaries(\s*)libb/0.1", c.out)
     assert "libb/0.1: Already installed!" not in c.out
     assert "liba/0.1: Already installed!" in c.out
     assert "libc/0.1: Already installed!" in c.out
@@ -293,7 +294,7 @@ def test_skip_intermediate_static_complex():
     # app -> libe(shared)->libd(static) -> libc(static) -> libb(static) -> liba(static)
     #  \---------libf(static) --libg(header)---------------------------------/
     # libd and libc can be skipped
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"liba/conanfile.py": GenConanfile("liba", "0.1").with_package_type("static-library"),
             "libb/conanfile.py": GenConanfile("libb", "0.1").with_requirement("liba/0.1")
                                                             .with_package_type("static-library"),
@@ -323,7 +324,7 @@ def test_skip_intermediate_static_complex():
     c.run("remove libd:* -c")  # binary not necessary, can be skipped
     c.run("remove libc:* -c")  # binary not necessary, can be skipped
     c.run("install app")
-    assert re.search(r"Skipped binaries(\s*)libc/0.1, libd/0.1", c.out)
+    assert re.search(r"Skipped host binaries(\s*)libc/0.1, libd/0.1", c.out)
     assert "libd/0.1: Already installed!" not in c.out
     assert "libc/0.1: Already installed!" not in c.out
     for lib in ("a", "b", "e", "f", "g", "h", "i", "j"):

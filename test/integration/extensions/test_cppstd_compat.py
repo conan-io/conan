@@ -35,7 +35,7 @@ def test_compatible_cppstd():
     # package can be used with a profile gcc cppstd20 falling back to 17
     c.save({"conanfile.py": GenConanfile().with_require("pkg/0.1")})
     c.run("install . -pr=myprofile -s compiler.cppstd=20")
-    assert f"Using compatible package '{package_id}'"
+    assert f"Found compatible package '{package_id}'" in c.out
     assert "pkg/0.1: PackageInfo!: Cppstd version: 17!" in c.out
     c.assert_listed_binary({"pkg/0.1": (f"{package_id}", "Cache")})
     assert "pkg/0.1: Already installed!" in c.out

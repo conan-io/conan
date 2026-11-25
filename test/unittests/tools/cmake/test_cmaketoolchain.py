@@ -11,6 +11,7 @@ from conan.errors import ConanException
 from conan.internal.model.conf import Conf
 from conan.internal.model.options import Options
 from conan.internal.model.settings import Settings
+from conan.internal.util.templates import compiled_template
 
 
 @pytest.fixture
@@ -195,11 +196,57 @@ class TestGenericBlocks:
         assert 'Hello World!!!' in content
         assert 'set(CMAKE_SYSTEM_NAME potato)' in content
 
+    def test_compiled_templates_cache(self, conanfile):
+        """ The compiled jinja2 templates are cached by their full text, so customized
+        templates and user blocks don't leak into other CMakeToolchain instances
+        """
+        def custom_toolchain(block_template, myvar):
+            class MyBlock(Block):
+                template = block_template
+
+                def context(self):
+                    return {"myvar": myvar}
+
+            tc = CMakeToolchain(conanfile)
+            tmp = tc.blocks["generic_system"].template
+            tc.blocks["generic_system"].template = tmp.replace("CMAKE_SYSTEM_NAME", "OTHER_THING")
+            tc.blocks["mynewblock"] = MyBlock
+            return tc.content
+
+        custom = custom_toolchain("Hello {{myvar}}!!!", "World")
+        assert 'set(OTHER_THING potato)' in custom
+        assert 'set(CMAKE_SYSTEM_NAME potato)' not in custom
+        assert 'Hello World!!!' in custom
+
+        default = CMakeToolchain(conanfile).content
+        assert 'set(CMAKE_SYSTEM_NAME potato)' in default
+        assert 'OTHER_THING' not in default
+        assert "mynewblock" not in default
+
+        # Same templates with a different context, and a different user block with the same name
+        assert 'Hello Mars!!!' in custom_toolchain("Hello {{myvar}}!!!", "Mars")
+        other = custom_toolchain("Bye {{myvar}}!!!", "Moon")
+        assert 'Bye Moon!!!' in other
+        assert 'Hello' not in other
+
+        # The same toolchain doesn't compile any template again and renders the same content
+        misses = compiled_template.cache_info().misses
+        assert custom_toolchain("Hello {{myvar}}!!!", "World") == custom
+        assert CMakeToolchain(conanfile).content == default
+        assert compiled_template.cache_info().misses == misses
+
     def test_user_toolchain(self, conanfile):
         toolchain = CMakeToolchain(conanfile)
         toolchain.blocks["user_toolchain"].values["paths"] = ["myowntoolchain.cmake"]
         content = toolchain.content
         assert 'include("myowntoolchain.cmake")' in content
+
+    def test_user_toolchain_conf(self, conanfile):
+        conanfile.conf.define("tools.cmake.cmaketoolchain:user_toolchain",
+                              ["myowntoolchain.cmake", "other.cmake"])
+        content = CMakeToolchain(conanfile).content
+        assert 'include("myowntoolchain.cmake")' in content
+        assert 'include("other.cmake")' in content
 
 
 class TestBlocksFunctionality:
@@ -359,6 +406,28 @@ class TestMSVCToolset:
         content = toolchain.content
         assert 'CMAKE_GENERATOR_TOOLSET "ClangCL"' in content
         assert 'CMAKE_CXX_STANDARD 14' in content
+
+    @pytest.mark.parametrize("compiler, generator, expected_mp", [
+        ("msvc", "Visual Studio 17", True),
+        ("clang", "Visual Studio 17", True),  # clang-cl via the ClangCL toolset
+        ("msvc", "Ninja", False),
+        ("clang", "Ninja", False),
+    ])
+    def test_parallel_mp_flag(self, conanfile_msvc, compiler, generator, expected_mp):
+        # https://github.com/conan-io/conan/issues/20409
+        c = conanfile_msvc
+        c.settings.arch = "x86_64"
+        c.settings.compiler = compiler
+        if compiler == "clang":
+            c.settings.compiler.runtime_version = "v143"
+            c.settings.compiler.version = "18"
+        else:
+            c.settings.compiler.version = "194"
+        c.conf.define("tools.cmake.cmaketoolchain:generator", generator)
+        c.conf.define("tools.build:jobs", 8)
+        content = CMakeToolchain(c).content
+        assert ('string(APPEND CONAN_CXX_FLAGS " /MP8")' in content) == expected_mp
+        assert ('string(APPEND CONAN_C_FLAGS " /MP8")' in content) == expected_mp
 
     def test_older_msvc_toolset_update(self, conanfile_msvc):
         # https://github.com/conan-io/conan/issues/15787

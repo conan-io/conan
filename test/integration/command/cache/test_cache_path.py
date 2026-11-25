@@ -11,7 +11,7 @@ from conan.test.utils.tools import TestClient
 
 @pytest.fixture(scope="module")
 def created_package():
-    t = TestClient(light=True)
+    t = TestClient()
     t.save({"conanfile.py": GenConanfile()})
     t.run("create . --name foo --version 1.0")
     recipe_layout = t.exported_layout()
@@ -80,10 +80,10 @@ def test_cache_path_exist_errors(created_package):
     assert "ERROR: Recipe 'foo/1.0#rev' not found" in t.out
 
     t.run(f"cache path foo/1.0:pid1", assert_error=True)
-    assert f"ERROR: 'foo/1.0#{recipe_revision}:pid1' not found in cache" in t.out
+    assert f"ERROR: Package 'foo/1.0#{recipe_revision}:pid1' not found" in t.out
 
     t.run(f"cache path foo/1.0#{recipe_revision}:pid1", assert_error=True)
-    assert f"ERROR: 'foo/1.0#{recipe_revision}:pid1' not found in cache" in t.out
+    assert f"ERROR: Package 'foo/1.0#{recipe_revision}:pid1' not found" in t.out
 
     t.run(f"cache path foo/1.0#{recipe_revision}:{pref.package_id}#rev2", assert_error=True)
     assert f"ERROR: No entry for package 'foo/1.0#{recipe_revision}:{pref.package_id}#rev2" in t.out
@@ -153,7 +153,7 @@ class TestCacheRef:
         assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
 
     def test_downloaded_paths(self):
-        t = TestClient(light=True, default_server_user=True)
+        t = TestClient(default_server_user=True)
         t.save({"conanfile.py": GenConanfile()})
         t.run("create . --name foo --version 1.0")
         t.run("upload * -c -r=default")
@@ -177,7 +177,7 @@ class TestCacheRef:
         assert f"foo/1.0#{recipe_layout.reference.revision}" in t.out
 
     def test_errors(self):
-        t = TestClient(light=True)
+        t = TestClient()
         t.run('cache ref "/some/non/existing/path"', assert_error=True)
         assert "ERROR: Reference for this path not found in cache" in t.out
 

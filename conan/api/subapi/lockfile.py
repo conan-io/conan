@@ -44,7 +44,7 @@ class LockfileAPI:
         """
         if lockfile == "":
             # Allow a way with ``--lockfile=""`` to optout automatic usage of conan.lock
-            return
+            return None
 
         cwd = cwd or os.getcwd()
         if lockfile is None:  # Look for a default "conan.lock"
@@ -54,7 +54,7 @@ class LockfileAPI:
             if not os.path.isfile(lockfile_path):
                 if overrides:
                     raise ConanException("Cannot define overrides without a lockfile")
-                return
+                return None
         else:  # explicit lockfile given
             lockfile_path = make_abs_path(lockfile, cwd)
             if not os.path.isfile(lockfile_path):
@@ -103,8 +103,6 @@ class LockfileAPI:
                                      requires=[ref] if is_require else None,
                                      python_requires=python_requires,
                                      build_requires=[ref] if is_build_require else None)
-        if lockfile is None:  # If there was no lockfile, it is a partial one to lock export
-            new_lock.partial = True
         return new_lock
 
     @staticmethod
@@ -118,6 +116,7 @@ class LockfileAPI:
         """
         if lockfile is None or clean:
             lockfile = Lockfile(graph, lock_packages)
+            lockfile.partial = True
         else:
             lockfile.update_lock(graph, lock_packages)
         return lockfile
@@ -126,7 +125,7 @@ class LockfileAPI:
     def merge_lockfiles(lockfiles) -> Lockfile:
         """ Merge multiple lockfiles into a single lockfile.
 
-        :param lockfiles: list of lockfiles to merge
+        :param lockfiles: list of paths to the lockfile files to merge
         :return: the merged lockfile
         """
         result = Lockfile()
@@ -175,8 +174,8 @@ class LockfileAPI:
     def save_lockfile(lockfile: Lockfile, lockfile_out, path=None):
         """ Save lockfile to disk
 
-        :param lockfile: The lockfile object to save. If None, nothing will be saved
-        :param lockfile_out: The output lockfile filename
+        :param lockfile: The lockfile object to save
+        :param lockfile_out: The output lockfile filename. If None, nothing will be saved
         :param path: The path of the output lockfile, if None, it will be cwd
         """
         if lockfile_out is not None:

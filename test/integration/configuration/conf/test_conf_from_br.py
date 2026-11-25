@@ -103,7 +103,7 @@ class TestImportant:
                 def generate(self):
                     self.output.info("NDK: %s" % self.conf.get("tools.android:ndk_path"))
             """)
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": conanfile})
         c.run("create . --name=android_ndk --version=1.0")
         c.save({"conanfile.py": app}, clean_first=True)
@@ -433,7 +433,7 @@ def test_conf_both_build_and_host():
                                   'append("user.myorg:myconf", self.settings.os)',
                                   'prepend("user.myorg:myconf", self.settings.os)'])
 def test_error_bad_types(conf):
-    c = TestClient(light=True)
+    c = TestClient()
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
         class Pkg(ConanFile):
@@ -447,14 +447,14 @@ def test_error_bad_types(conf):
         """)
     c.save({"conanfile.py": conanfile})
     c.run("create .", assert_error=True)
-    assert "ERROR: tool/0.1: Error in package_info() method, line 10"
+    assert "ERROR: tool/0.1: Error in package_info() method, line 10" in c.out
     assert f'self.conf_info.{conf}' in c.out
     assert "Invalid 'conf' type, please use Python types (int, str, ...)" in c.out
 
 
 @pytest.mark.parametrize("conf", ["tools.myorg.myconf", "user.myorg.myconf"])
 def test_error_missing_colon_define(conf):
-    c = TestClient(light=True)
+    c = TestClient()
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
         class Pkg(ConanFile):
@@ -473,7 +473,7 @@ def test_error_missing_colon_define(conf):
 
 
 def test_error_missing_colon_consume():
-    c = TestClient(light=True)
+    c = TestClient()
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
         class Pkg(ConanFile):

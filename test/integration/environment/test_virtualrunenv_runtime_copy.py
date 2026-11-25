@@ -38,7 +38,7 @@ class TestVirtualRunEnvRuntimeCopy:
         """)
 
     def test_win_copy_folder(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"dep/conanfile.py": self.dep_conanfile,
                 "consumer/conanfile.py": self.consumer_conanfile})
 
@@ -49,13 +49,13 @@ class TestVirtualRunEnvRuntimeCopy:
         assert not os.path.exists(os.path.join(c.current_folder, "consumer",
                                                "myruntime", "dep_lib.so"))
 
-        runenv_files = glob.glob(os.path.join(c.current_folder, "consumer", "conanrunenv.*"))
+        runenv_files = glob.glob(os.path.join(c.current_folder, "consumer", "conanrunenv.[bs][ah]*"))
         assert len(runenv_files) == 1
         runenv = c.load(runenv_files[0])
         assert "myruntime" in runenv
 
     def test_win_copy_folder_absolute_path_error(self):
-        c = TestClient(light=True)
+        c = TestClient()
         abs_path = os.path.abspath("myruntime").replace("\\", "/")
         consumer = self.consumer_conanfile.replace('"myruntime"', f'r"{abs_path}"')
         c.save({"dep/conanfile.py": self.dep_conanfile,
@@ -68,7 +68,7 @@ class TestVirtualRunEnvRuntimeCopy:
     @pytest.mark.skipif(platform.system() != "Windows", reason="Requires Windows")
     def test_win_copy_folder_with_full_deploy(self):
         # Files must be copied from the deployed location, not the cache
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"dep/conanfile.py": self.dep_conanfile,
                 "consumer/conanfile.py": self.consumer_conanfile})
 
@@ -79,7 +79,7 @@ class TestVirtualRunEnvRuntimeCopy:
         assert c.load("deployed/full_deploy/host/dep/1.0/bin/dep_app.exe") == "APP_CONTENT"
         assert c.load("consumer/myruntime/dep_app.exe") == "APP_CONTENT"
 
-        runenv_files = glob.glob(os.path.join(c.current_folder, "consumer", "conanrunenv.*"))
+        runenv_files = glob.glob(os.path.join(c.current_folder, "consumer", "conanrunenv.[bs][ah]*"))
         assert len(runenv_files) == 1
         runenv = c.load(runenv_files[0])
         # PATH points to the deployed copy folder, not the cache or the deploy source

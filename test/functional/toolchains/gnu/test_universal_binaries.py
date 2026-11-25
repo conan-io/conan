@@ -6,6 +6,9 @@ import pytest
 from conan.test.utils.tools import TestClient
 
 
+# Same as test_autotools_universal_binary but with GnuToolchain, both use the same Apple
+# flags, run it only in develop2
+@pytest.mark.slow
 @pytest.mark.skipif(platform.system() != "Darwin", reason="Only OSX")
 def test_gnutoolchain_universal_binary():
     client = TestClient(path_with_spaces=False)

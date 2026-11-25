@@ -3,6 +3,8 @@ import json
 import logging
 import os
 import platform
+import ssl
+import sys
 
 import requests
 import urllib3
@@ -93,6 +95,28 @@ class _SourceURLCredentials:
                 break
 
 
+class _TrustStoreHTTPAdapter(HTTPAdapter):
+    """ Mounts a pre-built ssl.SSLContext (from the 'truststore' package), scoped to this
+    adapter/session only - never global ssl.SSLContext injection.
+    """
+    def __init__(self, ssl_context, **kwargs):
+        self._ssl_context = ssl_context
+        super().__init__(**kwargs)
+
+    def init_poolmanager(self, *args, **kwargs):
+        kwargs.setdefault("ssl_context", self._ssl_context)
+        return super().init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, proxy, **proxy_kwargs):
+        # HTTPS-over-proxy requests are built via a ProxyManager instead of the pool manager,
+        # so the context needs to be injected here too, or it silently stops applying once
+        # 'core.net.http:proxies' is also configured.
+        proxy_kwargs.setdefault("ssl_context", self._ssl_context)
+        if proxy.lower().startswith("https://"):
+            proxy_kwargs.setdefault("proxy_ssl_context", self._ssl_context)
+        return super().proxy_manager_for(proxy, **proxy_kwargs)
+
+
 class ConanRequester:
 
     def __init__(self, config, cache_folder=None):
@@ -106,9 +130,42 @@ class ConanRequester:
         self._no_proxy_match = config.get("core.net.http:no_proxy_match", check_type=list)
         self._proxies = config.get("core.net.http:proxies")
         self._cacert_path = config.get("core.net.http:cacert_path", check_type=str)
+        if config.get("core.net.http:trust_store", default=False, check_type=bool):
+            if sys.version_info < (3, 10):
+                raise ConanException("'core.net.http:trust_store' requires Python >= 3.10")
+            if self._cacert_path is not None:
+                raise ConanException("Cannot set both 'core.net.http:trust_store' and "
+                                     "'core.net.http:cacert_path'")
+            try:
+                import truststore  # noqa
+            except ImportError:
+                raise ConanException(
+                    "'core.net.http:trust_store' is enabled but the 'truststore' package is "
+                    "not installed. Run 'pip install truststore' (needs Python>=3.10)")
+            ctx = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            _trust_adapter = _TrustStoreHTTPAdapter(ctx, max_retries=self._get_retries(_max_retries))
+            self._http_requester.mount("https://", _trust_adapter)
         self._client_certificates = config.get("core.net.http:client_cert")
         self._clean_system_proxy = config.get("core.net.http:clean_system_proxy", default=False,
                                               check_type=bool)
+        if self._clean_system_proxy:
+            # Do not read proxies (nor .netrc, REQUESTS_CA_BUNDLE) from os.environ, also in
+            # redirects. Never mutate os.environ, as it is process-global and not thread-safe
+            self._http_requester.trust_env = False
+            # trust_env=False makes requests ignore REQUESTS_CA_BUNDLE, keep honoring it. Done
+            # after the trust_store check, which must not conflict with it
+            if self._cacert_path is None:
+                self._cacert_path = os.environ.get("REQUESTS_CA_BUNDLE") or None
+            # trust_env=False also disables .netrc, which is not supported in this mode
+            netrc_file = os.environ.get("NETRC")
+            for loc in (netrc_file,) if netrc_file else (f"~/{f}" for f in (".netrc", "_netrc")):
+                path = os.path.expanduser(loc)
+                if os.path.exists(path):
+                    ConanOutput().warning(f"Found '{path}', but it will be ignored because "
+                                          "'core.net.http:clean_system_proxy' is defined. If you "
+                                          "need .netrc support in this case, please report it at "
+                                          "https://github.com/conan-io/conan/issues")
+                    break
         platform_info = "; ".join([" ".join([platform.system(), platform.release()]),
                                    "Python " + platform.python_version(),
                                    platform.machine()])
@@ -145,17 +202,16 @@ class ConanRequester:
         # verify is the kwargs that comes from caller, RestAPI, it is defined in
         # Conan remote "verify_ssl"
         source_credentials = kwargs.pop("source_credentials", None)
-        if kwargs.get("verify", None) is not False:  # False means de-activate
-            if self._cacert_path is not None:
-                kwargs["verify"] = self._cacert_path
+        # verify=False means de-activate
+        if kwargs.get("verify", None) is not False and self._cacert_path is not None:
+            kwargs["verify"] = self._cacert_path
         kwargs["cert"] = self._client_certificates
-        if self._proxies:
-            if not self._should_skip_proxy(url):
-                kwargs["proxies"] = self._proxies
+        if self._proxies and not self._should_skip_proxy(url):
+            kwargs["proxies"] = self._proxies
         if self._timeout and self._timeout != INFINITE_TIMEOUT:
             kwargs["timeout"] = self._timeout
-        if not kwargs.get("headers"):
-            kwargs["headers"] = {}
+        # Copy, the caller headers can be reused for other urls, they must not get these urls auth
+        kwargs["headers"] = dict(kwargs.get("headers") or {})
 
         if source_credentials:
             self._url_creds.add_auth(url, kwargs)
@@ -182,25 +238,13 @@ class ConanRequester:
         return self._call_method("post", url, **kwargs)
 
     def _call_method(self, method, url, **kwargs):
-        popped = False
-        if self._clean_system_proxy:
-            old_env = dict(os.environ)
-            # Clean the proxies from the environ and use the conan specified proxies
-            for var_name in ("http_proxy", "https_proxy", "ftp_proxy", "all_proxy", "no_proxy"):
-                popped = True if os.environ.pop(var_name, None) else popped
-                popped = True if os.environ.pop(var_name.upper(), None) else popped
         ConanOutput(scope="HttpRequest").trace(f"{method}: {url}")
-        try:
-            all_kwargs = self._add_kwargs(url, kwargs)
-            tmp = getattr(self._http_requester, method)(url, **all_kwargs)
-            return tmp
-        finally:
-            if popped:
-                os.environ.clear()
-                os.environ.update(old_env)
+        all_kwargs = self._add_kwargs(url, kwargs)
+        return getattr(self._http_requester, method)(url, **all_kwargs)
 
 
 def _load_auth_source_plugin(auth_source_plugin_path):
     if os.path.exists(auth_source_plugin_path):
         mod, _ = load_python_file(auth_source_plugin_path)
         return getattr(mod, "auth_source_plugin", None)
+    return None

@@ -152,10 +152,11 @@ def deduce_subsystem(conanfile, scope):
 
     subsystem, _ = _extract_subsystem(conanfile)
     if not subsystem:
-        if conanfile.win_bash:
+        # win_bash only applies to the "build" scope, win_bash_run only to the "run" scope
+        if scope.startswith("build") and conanfile.win_bash:
             raise ConanException("win_bash=True but tools.microsoft.bash:subsystem "
                                  "configuration not defined")
-        if conanfile.win_bash_run:
+        if scope.startswith("run") and conanfile.win_bash_run:
             raise ConanException("win_bash_run=True but tools.microsoft.bash:subsystem "
                                  "configuration not defined")
         return WINDOWS

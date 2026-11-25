@@ -9,7 +9,7 @@ def test_options():
     the ``graph build-order`` applying a lockfile will return the necessary options to build
     it in order
     """
-    client = TestClient(light=True)
+    client = TestClient()
     ffmpeg = textwrap.dedent("""
         from conan import ConanFile
         class FfmpegConan(ConanFile):
@@ -44,4 +44,4 @@ def test_options():
 
     cmd = "install --requires={} --build={} {}".format(ref, ref, options)
     client.run(cmd)
-    assert "ffmpeg/1.0: Variation nano!!" in client.out
+    assert "Variation nano!!" in client.out

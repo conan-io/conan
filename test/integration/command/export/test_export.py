@@ -25,7 +25,7 @@ def test_basic():
 
 
 def test_export_cci():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile("mypkg", "cci.123")})
     c.run("export .")
     assert ("WARN: risk: Version 'cci.123' contains an alphanumeric "

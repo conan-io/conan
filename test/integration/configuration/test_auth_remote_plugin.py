@@ -58,6 +58,22 @@ class TestAuthRemotePlugin:
         assert ("Changed user of remote 'default' from 'None' (anonymous) to "
                 "'admin' (authenticated)") in c.out
 
+    def test_auth_remote_plugin_fallback_none(self):
+        """ Test when the plugin returns a plain None (not a tuple), the code continues with
+            the rest of the input methods, as documented
+            https://github.com/conan-io/conan/issues/20507
+        """
+        c = TestClient(default_server_user=True)
+        auth_plugin = textwrap.dedent("""\
+            def auth_remote_plugin(remote, user=None, **kwargs):
+                return None
+            """)
+        c.save_home({"extensions/plugins/auth_remote.py": auth_plugin})
+        c.run("remote logout default")
+        c.run("remote login default")
+        assert ("Changed user of remote 'default' from 'None' (anonymous) to "
+                "'admin' (authenticated)") in c.out
+
     def test_creds_caching_multiple_remotes(self):
         """ The auth plugin can cache partial results and credentials to avoid repeated
         multiple interactive requests, reusing the same inputs for all remotes

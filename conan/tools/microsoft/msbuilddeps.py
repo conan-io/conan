@@ -4,14 +4,13 @@ import re
 import textwrap
 from xml.dom import minidom
 
-from jinja2 import Template
-
 from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
 from conan.internal.api.install.generators import relativize_path
 from conan.internal.model.dependencies import get_transitive_requires
 from conan.tools.microsoft.visual import msvc_platform_from_arch
 from conan.internal.util.files import load, save
+from conan.internal.util.templates import compiled_template
 
 VALID_LIB_EXTENSIONS = (".so", ".lib", ".a", ".dylib", ".bc")
 
@@ -57,7 +56,6 @@ class MSBuildDeps:
           <PropertyGroup>
             <ConanDebugPath>$(Conan{{name}}BinaryDirectories);$(ConanDebugPath)</ConanDebugPath>
             <LocalDebuggerEnvironment>PATH=$(ConanDebugPath);%PATH%</LocalDebuggerEnvironment>
-            <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
             {% if ca_exclude %}
             <CAExcludePath>$(Conan{{name}}IncludeDirectories);$(CAExcludePath)</CAExcludePath>
             {% endif %}
@@ -234,8 +232,7 @@ class MSBuildDeps:
             'linker_flags': linker_flags,
             'host_context': not build
         }
-        formatted_template = Template(self._vars_props, trim_blocks=True,
-                                      lstrip_blocks=True).render(**fields)
+        formatted_template = compiled_template(self._vars_props).render(**fields)
         return formatted_template
 
     def _activate_props_file(self, dep_name, vars_filename, deps, build):
@@ -250,7 +247,7 @@ class MSBuildDeps:
         # TODO: This must include somehow the user/channel, most likely pattern to exclude/include
         # Probably also the negation pattern, exclude all not @mycompany/*
         ca_exclude = any(fnmatch.fnmatch(dep_name, p) for p in self.exclude_code_analysis or ())
-        template = Template(self._conf_props, trim_blocks=True, lstrip_blocks=True)
+        template = compiled_template(self._conf_props)
         content_multi = template.render(host_context=not build, name=dep_name, ca_exclude=ca_exclude,
                                         vars_filename=vars_filename, deps=deps)
         return content_multi
@@ -277,7 +274,8 @@ class MSBuildDeps:
               </PropertyGroup>
             </Project>
             """)
-            content_multi = Template(content_multi).render({"name": dep_name})
+            content_multi = compiled_template(content_multi, trim_blocks=False,
+                                              lstrip_blocks=False).render({"name": dep_name})
         # parse the multi_file and add new import statement if needed
         dom = minidom.parseString(content_multi)
         import_vars = dom.getElementsByTagName('ImportGroup')[0]
@@ -302,6 +300,7 @@ class MSBuildDeps:
             import_vars.appendChild(dedup_import)
 
         content_multi = dom.toprettyxml()
+        dom.unlink()  # The DOM nodes reference each other, unlink() frees them without the GC
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
         return content_multi
 

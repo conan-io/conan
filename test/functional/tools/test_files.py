@@ -37,7 +37,7 @@ class TestConanToolFiles:
     def test_imports(self):
         conanfile = GenConanfile().with_import("from conan.tools.files import load, save, "
                                                "mkdir, download, get, ftp_download")
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("install .")
 
@@ -54,12 +54,12 @@ class TestConanToolFiles:
                     save(self, "./myfolder/myfile", "some_content")
                     assert load(self, "./myfolder/myfile") == "some_content"
             """)
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("source .")
 
     def test_download(self):
-        client = TestClient(light=True)
+        client = TestClient()
         file_server = TestFileServer()
         client.servers["file_server"] = file_server
         save(os.path.join(file_server.store, "myfile.txt"), "some content")
@@ -88,7 +88,7 @@ class TestConanToolFiles:
         client.run("create . -pr=profile")
 
     def test_download_export_sources(self):
-        client = TestClient(light=True)
+        client = TestClient()
         file_server = TestFileServer()
         client.servers["file_server"] = file_server
         save(os.path.join(file_server.store, "myfile.txt"), "some content")
@@ -127,14 +127,14 @@ def test_patch(mock_patch_ng):
                 patch(self, patch_file='path/to/patch-file', patch_type='security')
         """)
 
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run('create .')
 
     # Note: This cannot exist anymore, because the path is moved when prev is computed
     # assert os.path.exists(mock_patch_ng.apply_args[0])
     assert mock_patch_ng.apply_args[1:] == (0, False)
-    assert 'mypkg/1.0: Apply patch (security)' in str(client.out)
+    assert 'Apply patch (security)' in str(client.out)
 
 
 @pytest.mark.parametrize("no_copy_source", [False, True])
@@ -170,7 +170,7 @@ def test_patch_real(no_copy_source):
                 self.output.info("BUILD: {}".format(load(self, "myfile.cpp")))
         """ % no_copy_source)
 
-    client = TestClient(light=True)
+    client = TestClient()
     patch_contents = textwrap.dedent("""\
         --- myfile.{ext}
         +++ myfile.{ext}
@@ -184,7 +184,7 @@ def test_patch_real(no_copy_source):
     client.run('create .')
     assert "Apply patch (security)" in client.out
     assert "SOURCE: //smart contents" in client.out
-    assert "mypkg/1.0: BUILD: //smart contents" in client.out
+    assert "BUILD: //smart contents" in client.out
 
     # Test local source too
     client.run("install .")
@@ -192,8 +192,8 @@ def test_patch_real(no_copy_source):
     assert "Apply patch (security)" in client.out
     assert "SOURCE: //smart contents" in client.out
     client.run("build .")
-    assert "conanfile.py (mypkg/1.0): Apply patch (security)" in client.out
-    assert "conanfile.py (mypkg/1.0): BUILD: //smart contents" in client.out
+    assert "Apply patch (security)" in client.out
+    assert "BUILD: //smart contents" in client.out
 
 
 def test_apply_conandata_patches(mock_patch_ng):
@@ -223,7 +223,7 @@ def test_apply_conandata_patches(mock_patch_ng):
             - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
     """)
 
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({'conanfile.py': conanfile,
                  'conandata.yml': conandata_yml})
     client.run('create .')
@@ -231,14 +231,14 @@ def test_apply_conandata_patches(mock_patch_ng):
     assert mock_patch_ng.apply_args[0].endswith('source_subfolder')
     assert mock_patch_ng.apply_args[1:] == (0, False)
 
-    assert 'mypkg/1.11.0: Apply patch (backport): Needed to build with modern' \
+    assert 'Apply patch (backport): Needed to build with modern' \
            ' clang compilers.' in str(client.out)
 
     # Test local methods
     client.run("install .")
     client.run("build .")
 
-    assert 'conanfile.py (mypkg/1.11.0): Apply patch (backport): Needed to build with modern' \
+    assert 'Apply patch (backport): Needed to build with modern' \
            ' clang compilers.' in str(client.out)
 
 
@@ -264,7 +264,7 @@ def test_apply_conandata_patches_relative_base_path(mock_patch_ng):
               base_path: "relative_dir"
     """)
 
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({'conanfile.py': conanfile,
                  'conandata.yml': conandata_yml})
     client.run('create .')
@@ -296,7 +296,7 @@ def test_no_patch_file_entry():
             - patch_file: "patches/0001-buildflatbuffers-cmake.patch"
     """)
 
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({'conanfile.py': conanfile,
                  'conandata.yml': conandata_yml})
     client.run('create .', assert_error=True)
@@ -324,7 +324,7 @@ def test_patch_string_entry(mock_patch_ng):
               patch_type: string
     """)
 
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({'conanfile.py': conanfile,
                  'conandata.yml': conandata_yml})
     client.run('create .')
@@ -333,7 +333,7 @@ def test_patch_string_entry(mock_patch_ng):
     # assert os.path.exists(mock_patch_ng.apply_args[0])
     assert mock_patch_ng.apply_args[1:] == (0, False)
     assert 'mock patch data' == mock_patch_ng.string.decode('utf-8')
-    assert 'mypkg/1.11.0: Apply patch (string)' in str(client.out)
+    assert 'Apply patch (string)' in str(client.out)
 
 
 def test_relate_base_path_all_versions(mock_patch_ng):
@@ -357,7 +357,7 @@ def test_relate_base_path_all_versions(mock_patch_ng):
             base_path: "relative_dir"
     """)
 
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({'conanfile.py': conanfile,
                  'conandata.yml': conandata_yml})
     client.run('create .')
@@ -391,7 +391,7 @@ def test_export_conandata_patches():
           - patch_file: "patches/mypatch.patch"
     """)
 
-    client = TestClient(light=True)
+    client = TestClient()
     client.save({"conanfile.py": conanfile})
     client.run("create .", assert_error=True)
     assert "conandata.yml not defined" in client.out
@@ -399,7 +399,7 @@ def test_export_conandata_patches():
     client.save({"conandata.yml": ""})
     client.run("create .", assert_error=True)
     assert "export_conandata_patches(): No patches defined in conandata" in client.out
-    assert "ERROR: Error in source() method" in client.out
+    assert "ERROR: mypkg/1.0: Error in source() method" in client.out
     # wrong patches
     client.save({"conandata.yml": "patches: 123"})
     client.run("create .", assert_error=True)
@@ -426,7 +426,7 @@ def test_export_conandata_patches():
 
 def test_export_conandata_patches_no_patches():
     # Patch exists but has no contents, this used to hard crash
-    client = TestClient(light=True)
+    client = TestClient()
     conandata_yml = textwrap.dedent("""
             patches:
                 "1.0":
@@ -475,7 +475,7 @@ def test_export_conandata_patches_extra_origin(trim):
                 self.output.info(load(self, os.path.join(self.export_sources_folder,
                                                          "patches/mypatch.patch")))
         """)
-    client = TestClient(light=True)
+    client = TestClient()
     patches_folder = temp_folder()
     conandata_yml = textwrap.dedent("""
         patches:

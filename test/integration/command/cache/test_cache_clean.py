@@ -1,17 +1,21 @@
+import hashlib
+import json
 import os.path
 import re
+import textwrap
 
 import pytest
 
 from conan.test.assets.genconanfile import GenConanfile
+from conan.test.utils.file_server import TestFileServer
 from conan.test.utils.test_files import temp_folder
 from conan.test.utils.tools import TestClient
-from conan.internal.util.files import save
+from conan.internal.util.files import save, load
 
 
 @pytest.mark.parametrize("use_pkglist", [True, False])
 def test_cache_clean(use_pkglist):
-    c = TestClient(default_server_user=True, light=True)
+    c = TestClient(default_server_user=True)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1").with_exports("*").with_exports_sources("*"),
             "sorces/file.txt": ""})
     c.run("create .")
@@ -42,8 +46,75 @@ def test_cache_clean(use_pkglist):
     assert "Cleaning 0 backup sources" in c.out
 
 
+def _recipe_with_backup_source(file_server, name, version="1.0"):
+    """ A recipe that downloads its own file in the source() method, so it generates a backup
+    source, that will be associated to this recipe in the backup sources metadata
+    """
+    content = f"{name} sources"
+    save(os.path.join(file_server.store, "internet", f"{name}.txt"), content)
+    sha256 = hashlib.sha256(content.encode()).hexdigest()
+    attrs = "" if name == "unknown" else f'name = "{name}"; version = "{version}"'
+    return textwrap.dedent(f"""
+        from conan import ConanFile
+        from conan.tools.files import download
+        class Pkg(ConanFile):
+            {attrs}
+            def source(self):
+                download(self, "{file_server.fake_url}/internet/{name}.txt", "{name}.txt",
+                         sha256="{sha256}")
+        """)
+
+
+@pytest.mark.parametrize("use_pkglist", [True, False])
+def test_cache_clean_backup_sources_only_selected(use_pkglist):
+    """ Cleaning the backup sources of some recipes must not remove the extra backup sources of
+    other recipes, neither the ones that do not belong to any recipe in the cache. Those can be
+    in the download cache if their recipe was removed from the Conan cache, if they were
+    downloaded by a local conanfile (conan source), or if the download cache is shared with other
+    Conan homes. Only a clean without pattern nor list removes them
+    """
+    c = TestClient()
+    file_server = TestFileServer()
+    c.servers["file_server"] = file_server
+    download_cache = temp_folder()
+    c.save_home({"global.conf": f"core.sources:download_cache={download_cache}"})
+    backups = os.path.join(download_cache, "s")
+
+    def backup_sources_references():
+        refs = set()
+        for f in os.listdir(backups):
+            if f.endswith(".json"):
+                refs.update(json.loads(load(os.path.join(backups, f)))["references"])
+        return refs
+
+    for name in ("pkg", "other", "removed"):
+        c.save({"conanfile.py": _recipe_with_backup_source(file_server, name)})
+        c.run("create .")
+    c.run("remove removed/1.0 -c")  # Its backup source is not removed
+    c.save({"conanfile.py": _recipe_with_backup_source(file_server, "unknown")})
+    c.run("source .")  # A local conanfile, not in the cache
+    assert backup_sources_references() == {"pkg/1.0", "other/1.0", "removed/1.0", "unknown"}
+
+    def clean(pattern):
+        if use_pkglist:
+            c.run(f"list {pattern}:*#* -f=json", redirect_stdout="pkglist.json")
+            c.run("cache clean --list=pkglist.json -bs")
+        else:
+            c.run(f"cache clean {pattern} -bs")
+
+    clean("pkg/*")
+    # Only the backup sources of the selected pkg were removed, not the extra ones
+    assert backup_sources_references() == {"other/1.0", "removed/1.0", "unknown"}
+    clean("*")
+    # The backup sources of the recipes in the cache are removed, the extra ones still not
+    assert backup_sources_references() == {"removed/1.0", "unknown"}
+    c.run("cache clean -bs")
+    # Only without pattern nor list, the extra ones are also removed
+    assert os.listdir(backups) == []
+
+
 def test_cache_clean_all():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"pkg1/conanfile.py": GenConanfile("pkg", "0.1").with_class_attribute("revision_mode='scm'"),
             "pkg2/conanfile.py": GenConanfile("pkg", "0.2").with_package("error"),
             "pkg3/conanfile.py": GenConanfile("pkg", "0.3")})
@@ -77,7 +148,7 @@ def test_cache_multiple_builds_same_prev_clean():
     Different consecutive builds will create exactly the same folder, for the
     same exact prev, not leaving trailing non-referenced folders
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     create_out = c.out
@@ -104,7 +175,7 @@ def test_cache_multiple_builds_diff_prev_clean():
     Different consecutive builds will create different folders, even if for the
     same exact prev, leaving trailing non-referenced folders
     """
-    c = TestClient(light=True)
+    c = TestClient()
     package_lines = 'save(self, os.path.join(self.package_folder, "foo.txt"), str(time.time()))'
     gen = GenConanfile("pkg", "0.1").with_package(package_lines).with_import("import os, time") \
                                     .with_import("from conan.tools.files import save")

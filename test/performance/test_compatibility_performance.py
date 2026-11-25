@@ -87,7 +87,7 @@ class TestCompatibilityPerformance:
     @pytest.mark.parametrize("with_optimization", [True, False])
     @pytest.mark.parametrize("factors", [pow(2, n) for n in range(1, 6)])
     def test_list_only_compatibility(self, timings, with_optimization, factors, runs):
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.run("remote add default https://conandev.jfrog.io/artifactory/api/conan/abril-tests")
         tc.run("remote login default abril")
         tc.run("remove * -c -r=default")
