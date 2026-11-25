@@ -426,10 +426,11 @@ class TestCyclonedx:
         assert len(liba_components) == 1
         assert len(liba_deps) == 1
 
-    def test_visible_false_different_packages(self, cyclone_version):
+    @pytest.mark.parametrize("header_only, count", [(False, 2), (True, 1)])
+    def test_visible_false_different_packages(self, cyclone_version, header_only, count):
         """
         Same reference with different options gives different package_ids, so each binary
-        gets its own bom-ref.
+        gets its own bom-ref. When the bom-ref matches, dependsOn is the union.
         """
         tc = TestClient(light=True)
         tc.save({"dep1/conanfile.py": GenConanfile("dep1", "1.0"),
@@ -437,14 +438,18 @@ class TestCyclonedx:
         tc.run("export dep1")
         tc.run("export dep2")
 
-        liba = textwrap.dedent("""
+        header_only_lines = ""
+        if header_only:
+            header_only_lines = ('package_type = "header-library"\n'
+                                 '            implements = ["auto_header_only"]\n            ')
+        liba = textwrap.dedent(f"""
         from conan import ConanFile
 
         class LibAConan(ConanFile):
             name = "liba"
             version = "1.0"
-            options = {"dep": ["dep1", "dep2"]}
-            default_options = {"dep": "dep1"}
+            {header_only_lines}options = {{"dep": ["dep1", "dep2"]}}
+            default_options = {{"dep": "dep1"}}
             def requirements(self):
                 if self.options.dep == "dep1":
                     self.requires("dep1/1.0")
@@ -465,9 +470,13 @@ class TestCyclonedx:
                "-c=tools.graph:skip_binaries=False")
         sbom = json.loads(tc.load(os.path.join("out", f"sbom-cyclonedx-{method}.json")))
         liba_components = [c["bom-ref"] for c in sbom["components"] if "/liba@" in c["bom-ref"]]
-        liba_deps = [d["ref"] for d in sbom["dependencies"] if "/liba@" in d["ref"]]
-        assert len(liba_components) == 2
-        assert len(liba_deps) == 2
+        liba_deps = [d for d in sbom["dependencies"] if "/liba@" in d["ref"]]
+        assert len(liba_components) == count
+        assert len(liba_deps) == count
+        if count == 1:
+            depends = liba_deps[0]["dependsOn"]
+            assert sum("/dep1@" in ref for ref in depends) == 1
+            assert sum("/dep2@" in ref for ref in depends) == 1
 
     def test_visible_false_different_rrevs_both_show(self, cyclone_version):
         """
