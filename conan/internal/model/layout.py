@@ -1,15 +1,25 @@
 import os
+from functools import cached_property
 
 from conan.internal.model.cpp_info import CppInfo
 from conan.internal.model.conf import Conf
 
 
 class Infos:
+    # Created on first access: package is only used by installed packages (package_info()) and
+    # serialization, source and build only when layout() fills them (cmake_layout() and similar)
 
-    def __init__(self):
-        self.source = CppInfo()
-        self.build = CppInfo()
-        self.package = CppInfo(set_defaults=True)
+    @cached_property
+    def source(self):
+        return CppInfo()
+
+    @cached_property
+    def build(self):
+        return CppInfo()
+
+    @cached_property
+    def package(self):
+        return CppInfo(set_defaults=True)
 
 
 class PartialLayout:
@@ -26,10 +36,20 @@ class PartialLayout:
 
 
 class Layouts:
-    def __init__(self):
-        self.source = PartialLayout()
-        self.build = PartialLayout()
-        self.package = PartialLayout()
+    # Created on first access: package is only used by installed packages (package_info()), source
+    # and build only by editables. Every node used to allocate 3 PartialLayout (6 Environment, 3 Conf)
+
+    @cached_property
+    def source(self):
+        return PartialLayout()
+
+    @cached_property
+    def build(self):
+        return PartialLayout()
+
+    @cached_property
+    def package(self):
+        return PartialLayout()
 
 
 class Folders:

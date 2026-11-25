@@ -55,7 +55,7 @@ def test_package_type_traits_run_trait(package_type_traits):
     """ a package_type=static-library that also contains a shared library, which the consumer
     has to find at runtime, so its location must be in the "conanrun" environment
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"liba/conanfile.py": liba.format(package_type_traits=f"{{ 'run': {package_type_traits} }}"),
             "app/conanfile.py": app.format(requires="liba/0.1")})
     c.run("create liba")
@@ -77,7 +77,7 @@ def test_package_type_traits_run_transitive(package_type_traits):
     The libs of liba are linked inside libb, so app doesn't need them, but the shared library
     that liba ships still has to be there at runtime, so its binary cannot be skipped
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"liba/conanfile.py": liba.format(package_type_traits=f"{{ 'run': {package_type_traits} }}"),
             "libb/conanfile.py": GenConanfile("libb", "0.1").with_package_type("shared-library")
                                                             .with_requires("liba/0.1"),

@@ -17,7 +17,7 @@ def test_lockfile_multiple_overrides_warning():
     libf/1.0 is not in the lockfile because all consumers override it.
     Applying lockfile to libe (which requires libf/1.0) should warn about multiple overrides.
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"libf/conanfile.py": GenConanfile("libf"),
             "libe/conanfile.py": GenConanfile("libe", "1.0").with_requires("libf/1.0"),
             "toola/conanfile.py": GenConanfile("toola", "1.0").with_requirement("libe/1.0")
@@ -53,7 +53,7 @@ def test_graph_build_order_override_error():
               |--------------/
       |-----override------> zlib/1.3
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"zlib/conanfile.py": GenConanfile("zlib"),
             "liba/conanfile.py": GenConanfile("liba", "0.1").with_requires("zlib/1.0"),
             "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1", "zlib/2.0"),
@@ -98,7 +98,7 @@ def test_graph_build_order_override_replace_requires(replace_pattern):
 
     replace_requires zlib -> zlib/system
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"zlib/conanfile.py": GenConanfile("zlib"),
             "liba/conanfile.py": GenConanfile("liba", "0.1").with_requires("zlib/1.0"),
             "libb/conanfile.py": GenConanfile("libb", "0.1").with_requires("liba/0.1", "zlib/2.0"),
@@ -147,7 +147,7 @@ def test_single_config_decentralized_overrides():
                 \------override-----> toolc/3.0
     pkgc -> toola/3.0 -> toolb/1.0 -> toolc/1.0
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"toolc/conanfile.py": GenConanfile("toolc"),
             "toolb/conanfile.py": GenConanfile("toolb").with_requires("toolc/1.0"),
             "toola/conanfile.py": GenConanfile("toola", "1.0").with_requirement("toolb/1.0")
@@ -210,7 +210,7 @@ def test_single_config_decentralized_overrides_nested():
                \                          \-----------override---------> libf/2.0
                 \--------------------override--------------------------> libf/3.0
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"libf/conanfile.py": GenConanfile("libf"),
             "libe/conanfile.py": GenConanfile("libe", "1.0").with_requires("libf/1.0"),
             "libd/conanfile.py": GenConanfile("libd", "1.0").with_requires("libe/1.0"),
@@ -271,7 +271,7 @@ def test_single_config_decentralized_overrides_multi(forced):
                                            \-----------override--------> libf/2.0
     """
     override, force = (True, False) if not forced else (False, True)
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"libf/conanfile.py": GenConanfile("libf"),
             "libe/conanfile.py": GenConanfile("libe", "1.0").with_requires("libf/1.0"),
             "libd/conanfile.py": GenConanfile("libd", "1.0").with_requires("libe/1.0"),
@@ -357,7 +357,7 @@ def test_single_config_decentralized_overrides_multi_replace_requires(replace_pa
                                            \-----------override--------> libf/2.0
     """
     override, force = (True, False) if not forced else (False, True)
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"libf/conanfile.py": GenConanfile("libf"),
             "libe/conanfile.py": GenConanfile("libe", "1.0").with_requires("libf/1.0"),
             "libd/conanfile.py": GenConanfile("libd", "1.0").with_requires("libe/1.0"),

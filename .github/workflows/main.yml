@@ -288,6 +288,10 @@ jobs:
     if: github.ref == 'refs/heads/develop2'
     needs: [linux_unit_integration, osx_unit_integration, windows_unit_integration,
             linux_functional, osx_functional, windows_functional]
+    environment: testpypi
+    permissions:
+      contents: read
+      id-token: write
     outputs:
       version: ${{ steps.bump.outputs.version }}
     steps:
@@ -302,7 +306,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install build twine
+          pip install build
 
       - name: Bump Dev Version
         id: bump
@@ -316,11 +320,9 @@ jobs:
           python -m build
 
       - name: Upload to TestPyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.TEST_PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_PASSWORD }}
-        run: |
-          python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
 
       - name: Build conan-server Package
         run: |
@@ -329,11 +331,9 @@ jobs:
           python -m build
 
       - name: Upload conan-server to TestPyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.TEST_PYPI_SERVER_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_SERVER_PASSWORD }}
-        run: |
-          python -m twine upload --verbose --repository-url https://test.pypi.org/legacy/ dist/*
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
 
   verify_testpypi:
     runs-on: ubuntu-26.04

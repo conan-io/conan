@@ -18,7 +18,7 @@ def test_exports():
             version = "0.1"
             exports = "*.h"
         """)
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": conanfile,
             "hello.h": "hello",
             "data.txt": "data"})
@@ -45,7 +45,7 @@ def test_exports_sources():
             version = "0.1"
             exports_sources = "*.h"
         """)
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": conanfile,
             "hello.h": "hello",
             "data.txt": "data"})
@@ -64,7 +64,7 @@ def test_exports_sources():
 def test_exports_sources_multiple_patterns():
     """ Several exports_sources patterns export the union of what they match, minus the excludes
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile("hello", "0.1")
                             .with_exports_sources("*.h", "src/*.cpp", "docs/*.md",
                                                   "!docs/private.md"),
@@ -83,7 +83,7 @@ def test_exports_sources_multiple_patterns():
 def test_exports_multiple_patterns():
     """ Same for the ``exports`` attribute: union of all the patterns, minus the excludes
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile("hello", "0.1")
                             .with_exports("*.h", "src/*.cpp", "docs/*.md", "!docs/private.md"),
             "hello.h": "", "other.h": "",
@@ -103,7 +103,7 @@ def test_export_walks_recipe_folder_once_per_exports_attribute():
     folder is walked once for exports_sources and once for exports, not once per pattern.
     copy() traces one "copy(pattern=...)" line per call, visible with -vv (debug)
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile("hello", "0.1")
                             .with_exports_sources("*.h", "src/*.cpp")
                             .with_exports("*.txt", "docs/*.md"),
@@ -123,7 +123,7 @@ def test_test_package_copied():
     """The exclusion of the test_package folder have been removed so now we test that indeed is
     exported"""
 
-    client = TestClient(light=True)
+    client = TestClient()
     conanfile = GenConanfile().with_exports("*").with_exports_sources("*")
     client.save({"conanfile.py": conanfile,
                  "test_package/foo.txt": "bar"})
@@ -132,7 +132,7 @@ def test_test_package_copied():
 
 
 def test_source_changes_generate_new_revisions():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"conanfile.py": GenConanfile("lib", "1.0").with_exports_sources("file.h"),
              "file.h": "Hello World!"})
 

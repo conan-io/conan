@@ -62,13 +62,14 @@ import shutil
 import textwrap
 from io import StringIO
 
-from jinja2 import Template, StrictUndefined
+from jinja2 import StrictUndefined
 
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
 from conan.internal.model.pkg_type import PackageType
 from conan.internal.util.files import save
+from conan.internal.util.templates import compiled_template
 from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
 from conan.tools.build import cmd_args_to_string
 from conan.tools.build.cross_building import cross_building
@@ -686,8 +687,8 @@ class BazelToolchain:
         return ctx
 
     def _render(self, template, context):
-        return Template(template, trim_blocks=True, lstrip_blocks=True,
-                        undefined=StrictUndefined).render(context)
+        return compiled_template(template, trim_blocks=True, lstrip_blocks=True,
+                                 undefined=StrictUndefined).render(context)
 
     def generate(self):
         """

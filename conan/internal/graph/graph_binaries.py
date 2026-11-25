@@ -442,7 +442,7 @@ class GraphBinariesAnalyzer:
     def _config_version(self):
         config_mode = self._global_conf.get("core.package_id:config_mode", default=None)
         if config_mode is None:
-            return
+            return None
         config_version_file = HomePaths(self._home_folder).config_version_path
         try:
             config_refs = loadconanconfig(config_version_file)

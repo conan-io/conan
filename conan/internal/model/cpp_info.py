@@ -3,7 +3,7 @@ import glob
 import json
 import os
 import re
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 
 from conan.api.output import ConanOutput
 from conan.errors import ConanException
@@ -20,8 +20,10 @@ _SINGLE_VALUE_VARS = "_type", "_exe", "_location", "_link_location", "_languages
 
 class MockInfoProperty:
     """
-    # TODO: Remove in 2.X
-    to mock user_info and env_info
+    Conan 1.X cpp_info.names/filenames/build_modules, user_info and env_info. They have no effect,
+    they only exist so already published recipe revisions that set them (many ConanCenter ones did,
+    to stay compatible with Conan 1) keep working
+    TODO: Remove in the next major version
     """
     counter = {}
     package = None
@@ -31,13 +33,17 @@ class MockInfoProperty:
 
     @staticmethod
     def message():
-        if not MockInfoProperty.counter:
+        # Reset first, so if core:warnings_as_errors raises below, API usage running more installs
+        # in the same process doesn't get this same usage reported again
+        counter, MockInfoProperty.counter = MockInfoProperty.counter, {}
+        if not counter:
             return
-        ConanOutput().warning("Usage of deprecated Conan 1.X features that will be removed in "
-                              "Conan 2.X:", warn_tag="deprecated")
-        for k, v in MockInfoProperty.counter.items():
-            ConanOutput().warning(f"    '{k}' used in: {', '.join(v)}", warn_tag="deprecated")
-        MockInfoProperty.counter = {}
+        # A single message, so core:warnings_as_errors=["deprecated"] reports all of it
+        msg = ["Usage of deprecated Conan 1.X features that will be removed in "
+               "Conan 2.X:"]
+        for k, v in counter.items():
+            msg.append(f"    '{k}' used in: {', '.join(sorted(v))}")
+        ConanOutput().warning("\n".join(msg), warn_tag="deprecated")
 
     def __getitem__(self, key):
         MockInfoProperty.counter.setdefault(self._name, set()).add(self.package)
@@ -57,6 +63,15 @@ class MockInfoProperty:
 
 
 class _Component:
+    # LEGACY 1.X fields, to remove in the next major version
+    # Class attributes, as MockInfoProperty has no state:
+    # CPython stops sharing the keys of the instance __dict__ above 29 attributes (30 in 3.14),
+    # which makes every instance ~5x bigger. __init__ sets 28, so if this ever gets more attributes,
+    # look into __slots__ plus a "__dict__" slot instead. Not strict __slots__: recipes set attributes
+    # that are not defined here (e.g. cpp_info.version), and that would raise
+    names = MockInfoProperty("cpp_info.names")
+    filenames = MockInfoProperty("cpp_info.filenames")
+    build_modules = MockInfoProperty("cpp_info.build_modules")
 
     def __init__(self, set_defaults=False):
         # ###### PROPERTIES
@@ -91,11 +106,6 @@ class _Component:
         self.ignored_requires = []
 
         self._consumer_conanfile = None
-
-        # LEGACY 1.X fields, can be removed in 2.X
-        self.names = MockInfoProperty("cpp_info.names")
-        self.filenames = MockInfoProperty("cpp_info.filenames")
-        self.build_modules = MockInfoProperty("cpp_info.build_modules")
 
         if set_defaults:
             self.includedirs = ["include"]
@@ -645,11 +655,11 @@ class _Component:
                                  f"or report in github.com/conan-io/conan/issues if you think it "
                                  f"should have been deduced correctly.")
         if self._type is not None and self._type != deduced_type:
-            ConanException(f"{conanfile}: Incorrect deduced type '{deduced_type}' for library"
-                           f" '{libname}' that declared .type='{self._type}'")
+            raise ConanException(f"{conanfile}: Incorrect deduced type '{deduced_type}' for library"
+                                 f" '{libname}' that declared .type='{self._type}'")
+        if self._type is None and deduced_type != pkg_type:
+            out.warning(f"Lib {libname} deduced as '{deduced_type}', but 'package_type={pkg_type}'")
         self._type = deduced_type
-        if self._type != pkg_type:
-            out.warning(f"Lib {libname} deduced as '{self._type}', but 'package_type={pkg_type}'")
 
     def deduce_locations(self, conanfile, component_name=""):
         name = f'{conanfile} cpp_info.components["{component_name}"]' if component_name \
@@ -782,10 +792,10 @@ class CppInfo:
 
         :return: ``OrderedDict`` {component_name: component}
         """
-        result = OrderedDict()
+        result = {}
         opened = self.components.copy()
         while opened:
-            new_open = OrderedDict()
+            new_open = {}
             for name, c in opened.items():
                 if not any(n in opened for n in c.required_component_names):
                     result[name] = c

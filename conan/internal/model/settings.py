@@ -6,7 +6,7 @@ from conan.internal.cache.home_paths import HomePaths
 from conan.internal.default_settings import default_settings_yml
 from conan.internal.internal_tools import is_universal_arch
 from conan.errors import ConanException
-from conan.internal.util.files import save, load
+from conan.internal.util.files import save, load, yaml_load
 
 # Settings and SettingsItem override __setattr__ for the "settings.os = value" syntax, the
 # internal attributes skip that Python call, a lot of these objects are created per graph
@@ -262,7 +262,7 @@ class Settings:
     @staticmethod
     def loads(text):
         try:
-            return Settings(yaml.safe_load(text) or {})
+            return Settings(yaml_load(text) or {})
         except (yaml.YAMLError, AttributeError) as ye:
             raise ConanException("Invalid settings.yml format: {}".format(ye))
 
@@ -382,7 +382,7 @@ def load_settings_yml(home_folder):
 
     def _load_settings(path):
         try:
-            return yaml.safe_load(load(path)) or {}
+            return yaml_load(load(path)) or {}
         except yaml.YAMLError as ye:
             raise ConanException("Invalid settings.yml format: {}".format(ye))
 

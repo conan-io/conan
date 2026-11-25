@@ -319,19 +319,19 @@ class GenConanfile:
 
     @property
     def _build_requires_render(self):
-        line = ", ".join(['"{}"'.format(r) for r in self._build_requires])
+        line = ", ".join('"{}"'.format(r) for r in self._build_requires)
         tmp = "build_requires = %s" % line
         return tmp
 
     @property
     def _python_requires_render(self):
-        line = ", ".join(['"{}"'.format(r) for r in self._python_requires])
+        line = ", ".join('"{}"'.format(r) for r in self._python_requires)
         tmp = "python_requires = %s" % line
         return tmp
 
     @property
     def _tool_requires_render(self):
-        line = ", ".join(['"{}"'.format(r) for r in self._tool_requires])
+        line = ", ".join('"{}"'.format(r) for r in self._tool_requires)
         tmp = "tool_requires = %s" % line
         return tmp
 

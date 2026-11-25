@@ -242,7 +242,7 @@ class Environment:
         :return: A string with a profile-like original definition, not the full environment
                  values
         """
-        return "\n".join([v.dumps() for v in reversed(self._values.values())])
+        return "\n".join(v.dumps() for v in reversed(self._values.values()))
 
     def define(self, name, value, separator=" "):
         """
@@ -959,7 +959,7 @@ def generate_aggregated_env(conanfile):
 
         if ps1s:
             def ps1_content(files):
-                content = "\r\n".join(['& "{}"'.format(b) for b in files])
+                content = "\r\n".join('& "{}"'.format(b) for b in files)
                 if deactivation_mode == "function":
                     content += f"\n\nfunction global:deactivate_conan{group} {{\n"
                     for deactivate_name in deactivate_function_names(ps1s):

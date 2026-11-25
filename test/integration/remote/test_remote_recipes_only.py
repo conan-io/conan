@@ -14,7 +14,7 @@ RREV = "a9ec2e5fbb166568d4670a9cd1ef4b26"
 
 @pytest.fixture(scope="module")
 def client():
-    tc = TestClient(light=True, default_server_user=True)
+    tc = TestClient(default_server_user=True)
     tc.save({"conanfile.py": GenConanfile("pkg")})
     tc.run("create . --version=1.0")
     assert RREV == tc.exported_recipe_revision()

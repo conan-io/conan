@@ -52,7 +52,7 @@ class PackagesDBTable(BaseDbTable):
             self.columns.timestamp: pref.timestamp,
             self.columns.build_id: build_id,
         }
-        set_expr = ', '.join([f"{k} = '{v}'" for k, v in set_dict.items() if v is not None])
+        set_expr = ', '.join(f"{k} = '{v}'" for k, v in set_dict.items() if v is not None)
         return set_expr
 
     def get(self, pref: PkgReference):
@@ -75,7 +75,7 @@ class PackagesDBTable(BaseDbTable):
         # we set the timestamp to 0 until they get a complete reference, here they
         # are saved with the temporary uuid one, we don't want to consider these
         # not yet built packages for search and so on
-        placeholders = ', '.join(['?' for _ in range(len(self.columns))])
+        placeholders = ', '.join('?' for _ in range(len(self.columns)))
         lru = timestamp_now()
         with self.db_connection() as conn:
             try:

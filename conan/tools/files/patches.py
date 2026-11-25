@@ -129,7 +129,7 @@ def export_conandata_patches(conanfile):
     def _handle_patches(patches, patches_folder):
         if patches is None:
             conanfile.output.info("export_conandata_patches(): No patches defined in conandata")
-            return
+            return None
 
         if isinstance(patches, dict):
             assert conanfile.version, "Can only be exported if conanfile.version is already defined"
@@ -137,7 +137,7 @@ def export_conandata_patches(conanfile):
             if entries is None:
                 conanfile.output.warning("export_conandata_patches(): No patches defined for "
                                          f"version {conanfile.version} in conandata.yml")
-                return
+                return None
         elif isinstance(patches, list):
             entries = patches
         else:

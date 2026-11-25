@@ -1,7 +1,6 @@
 import fnmatch
 import json
 import os
-from collections import OrderedDict
 from urllib.parse import urlparse
 
 from conan.api.model import Remote, LOCAL_RECIPES_INDEX
@@ -236,7 +235,7 @@ class RemotesAPI:
     def login(self, remotes, username=None, password=None):
         creds = RemoteCredentials(self._conan_api.cache_folder, self._api_helpers.global_conf)
 
-        ret = OrderedDict()
+        ret = {}
         for r in remotes:
             previous_info = self.user_info(r)
 
@@ -279,7 +278,7 @@ class RemotesAPI:
                 var_name = f"CONAN_LOGIN_USERNAME_{remote.name.replace('-', '_').upper()}"
                 user = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
             if not user:
-                return
+                return None
         self._api_helpers.remote_manager.check_credentials(remote, force)
         user, token, _ = localdb.get_login(remote.url)
         if not force and user is None:

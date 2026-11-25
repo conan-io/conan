@@ -180,11 +180,11 @@ class BinaryInstaller:
         download_source = conanfile.conf.get("tools.build:download_source", check_type=bool)
 
         if not download_source and (need_conf or node.binary != BINARY_BUILD):
-            return
+            return None
 
         conanfile = node.conanfile
         if node.binary in (BINARY_EDITABLE, BINARY_EDITABLE_BUILD):
-            return
+            return None
 
         ConanOutput().step(f"Source step")
 
@@ -259,9 +259,9 @@ class BinaryInstaller:
 
         ConanOutput().title("Installing packages")
 
-        package_count = sum([sum(len(install_reference.packages.values())
-                                 for level in install_order
-                                 for install_reference in level)])
+        package_count = sum(len(install_reference.packages)
+                            for level in install_order
+                            for install_reference in level)
         handled_count = 1
 
         self._download_bulk(install_order)
@@ -437,7 +437,7 @@ class BinaryInstaller:
                 self._hook_manager.execute("pre_package_info", conanfile=conanfile)
 
                 if hasattr(conanfile, "package_info"):
-                    with conanfile_remove_attr(conanfile, ['info', "source_folder", "build_folder"],
+                    with conanfile_remove_attr(conanfile, ('info', "source_folder", "build_folder"),
                                                "package_info"):
                         MockInfoProperty.package = str(conanfile)
                         conanfile.package_info()
@@ -506,7 +506,7 @@ class BinaryInstaller:
                 mkdir(finalize_folder)
                 conanfile.output.highlight("Calling finalize()")
                 with conanfile_exception_formatter(conanfile, "finalize"):
-                    with conanfile_remove_attr(conanfile, ['cpp_info', 'settings', 'options'],
+                    with conanfile_remove_attr(conanfile, ('cpp_info', 'settings', 'options'),
                                                'finalize'):
                         conanfile.finalize()
 

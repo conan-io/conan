@@ -2,7 +2,7 @@ from conan.test.utils.tools import TestClient
 
 
 def test_global_user_conf_overrides():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save_home({
         "global.conf": "tools.build:jobs=4\n",
         "global_user.conf": "tools.build:jobs=16\n",
@@ -12,7 +12,7 @@ def test_global_user_conf_overrides():
 
 
 def test_global_user_conf_adds_new_key():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save_home({
         "global.conf": "tools.build:jobs=4\n",
         "global_user.conf": "tools.build:verbosity=verbose\n",

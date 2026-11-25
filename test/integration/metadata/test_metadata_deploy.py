@@ -43,7 +43,7 @@ class TestMetadataDeploy:
            """)
 
         servers = {"default": TestServer(), "remote2": TestServer()}
-        c = TestClient(servers=servers, inputs=2 * ["admin", "password"], light=True)
+        c = TestClient(servers=servers, inputs=2 * ["admin", "password"])
         c.save({"conanfile.py": conanfile,
                 "deploy.py": deploy})
         c.run("create . --name=pkg1")

@@ -39,7 +39,7 @@ class FailPairFilesUploader(BadConnectionUploader):
 
 
 def test_try_upload_bad_recipe():
-    client = TestClient(default_server_user=True, light=True)
+    client = TestClient(default_server_user=True)
     client.save({"conanfile.py": GenConanfile("hello0", "1.2.1")})
     client.run("export . --user=frodo --channel=stable")
     layout = client.exported_layout()
@@ -49,7 +49,7 @@ def test_try_upload_bad_recipe():
 
 
 def test_upload_with_pattern():
-    client = TestClient(default_server_user=True, light=True)
+    client = TestClient(default_server_user=True)
     for num in range(3):
         client.save({"conanfile.py": GenConanfile("hello{}".format(num), "1.2.1")})
         client.run("export . --user=frodo --channel=stable")
@@ -68,7 +68,7 @@ def test_upload_with_pattern():
 def test_check_upload_confirm_question():
     server = TestServer()
     client = TestClient(servers={"default": server},
-                        inputs=["yes", "admin", "password", "n", "n", "n"], light=True)
+                        inputs=["yes", "admin", "password", "n", "n", "n"])
     client.save({"conanfile.py": GenConanfile("hello1", "1.2.1")})
     client.run("export . --user=frodo --channel=stable")
     client.run("upload hello* -r default")
@@ -85,8 +85,7 @@ def test_check_upload_confirm_question():
 def test_check_upload_confirm_question_yes():
     server = TestServer()
     client = TestClient(servers={"default": server},
-                        inputs=["yes", "yes", "yes", "yes", "yes", "admin", "password"],
-                        light=True)
+                        inputs=["yes", "yes", "yes", "yes", "yes", "admin", "password"])
     client.save({"conanfile.py": GenConanfile("hello1", "1.2.1")})
     client.run("create . ")
     client.save({"conanfile.py": GenConanfile("hello1", "1.2.1").with_package_file("file.txt",
@@ -109,7 +108,7 @@ class TestUpload:
                                       users={"lasote": "mypass"})
         servers["default"] = self.test_server
         test_client = TestClient(servers=servers, inputs=["lasote", "mypass"],
-                                 requester_class=requester, light=True)
+                                 requester_class=requester)
         return test_client
 
     def test_upload_error(self):

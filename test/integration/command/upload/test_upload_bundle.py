@@ -9,7 +9,7 @@ from conan.test.utils.tools import TestClient
 def test_upload_pkg_list():
     """ Test how a custom command can create an upload pkglist and print it
     """
-    c = TestClient(default_server_user=True, light=True)
+    c = TestClient(default_server_user=True)
     mycommand = textwrap.dedent("""
         import json
         import os

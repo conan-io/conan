@@ -125,8 +125,8 @@ def vswhere(all_=False, prerelease=True, products=None, requires=None, version="
         output = check_output_runner(cmd).strip()
         # Ignore the "description" field, that even decoded contains non valid charsets for json
         # (ignored ones)
-        output = "\n".join([line for line in output.splitlines()
-                            if not line.strip().startswith('"description"')])
+        output = "\n".join(line for line in output.splitlines()
+                           if not line.strip().startswith('"description"'))
 
     except (ValueError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))

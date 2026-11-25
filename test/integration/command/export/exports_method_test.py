@@ -9,7 +9,7 @@ from conan.internal.util.files import save_files, load
 class TestExportsMethod:
 
     def test_export_method(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import copy
@@ -56,7 +56,7 @@ class TestExportsMethod:
         assert os.path.isfile(os.path.join(layout.export(), "subdir2", "file2.txt"))
 
     def test_export_no_settings_options_method(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import copy
@@ -104,7 +104,7 @@ class TestExportsMethod:
         assert "MYOPT: myval" in client.out
 
     def test_export_folders(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
            from conan import ConanFile
            from conan.tools.files import save, load
@@ -125,7 +125,7 @@ class TestExportsMethod:
         assert "mycontent" == load(os.path.join(layout.export(), "myfile.txt"))
 
     def test_export_attribute_error(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class MethodConan(ConanFile):
@@ -136,7 +136,7 @@ class TestExportsMethod:
         assert "ERROR: conanfile 'export' must be a method" in client.out
 
     def test_exports_method_error(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class MethodConan(ConanFile):
@@ -151,7 +151,7 @@ class TestExportsMethod:
 class TestExportsSourcesMethod:
 
     def test_export_sources_method(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             from conan.tools.files import copy
@@ -173,7 +173,7 @@ class TestExportsSourcesMethod:
         assert "LICENSE.md" in exported_files
 
     def test_export_source_folders(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
            from conan import ConanFile
            from conan.tools.files import save, load
@@ -194,7 +194,7 @@ class TestExportsSourcesMethod:
         assert "mycontent" == load(os.path.join(layout.export_sources(), "myfile.txt"))
 
     def test_export_sources_attribute_error(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class MethodConan(ConanFile):
@@ -205,7 +205,7 @@ class TestExportsSourcesMethod:
         assert "ERROR: conanfile 'export_sources' must be a method" in client.out
 
     def test_exports_sources_method_error(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class MethodConan(ConanFile):

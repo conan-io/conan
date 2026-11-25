@@ -42,7 +42,7 @@ from conan.test.utils.tools import TestClient
 @pytest.mark.parametrize("tool_require", [False, True])
 class TestReplaceRequires:
     def test_alternative(self, tool_require, require, pattern, alternative, pkg):
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = GenConanfile().with_tool_requires(require) if tool_require else \
             GenConanfile().with_requires(require)
         profile_tag = "replace_requires" if not tool_require else "replace_tool_requires"
@@ -71,7 +71,7 @@ class TestReplaceRequires:
         c.assert_listed_require({f"{pkg}#{rrev}": "Cache"}, build=tool_require)
 
     def test_diamond(self, tool_require, require, pattern, alternative, pkg):
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = GenConanfile().with_tool_requires(require) if tool_require else \
             GenConanfile().with_requires(require)
         profile_tag = "replace_requires" if not tool_require else "replace_tool_requires"
@@ -118,7 +118,7 @@ class TestReplaceRequires:
     ("pkg/version:pid", ":")
 ])
 def test_replace_requires_errors(pattern, replace):
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
             "app/conanfile.py": GenConanfile().with_requires("pkg/0.2"),
             "profile": f"[replace_requires]\n{pattern}: {replace}"})
@@ -132,7 +132,7 @@ def test_replace_requires_invalid_requires_errors():
     replacing for something incorrect not existing is not an error per-se, it is valid that
     a recipe requires("pkg/2.*"), and then it will fail because such package doesn't exist
     """
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"app/conanfile.py": GenConanfile().with_requires("pkg/0.2"),
             "profile": f"[replace_requires]\npkg/0.2: pkg/2.*"})
     c.run("install app -pr=profile", assert_error=True)
@@ -141,7 +141,7 @@ def test_replace_requires_invalid_requires_errors():
 
 
 def test_replace_requires_json_format():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"pkg/conanfile.py": GenConanfile("pkg", "0.2"),
             "app/conanfile.py": GenConanfile().with_requires("pkg/0.1"),
             "profile": f"[replace_requires]\npkg/0.1: pkg/0.2"})
@@ -155,7 +155,7 @@ def test_replace_requires_json_format():
 
 
 def test_replace_requires_test_requires():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"gtest/conanfile.py": GenConanfile("gtest", "0.2"),
             "app/conanfile.py": GenConanfile().with_test_requires("gtest/0.1"),
             "profile": f"[replace_requires]\ngtest/0.1: gtest/0.2"})
@@ -746,7 +746,7 @@ class TestReplaceRequiresTransitiveGenerators:
     ]
  )
 def test_replace_requires_ranges(require, pattern, alternative, expected):
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"dep/conanfile.py": GenConanfile("dep"),
             "app/conanfile.py": GenConanfile().with_requires(require),
             "profile": f"[replace_requires]\n{pattern}: {alternative}"})
@@ -767,7 +767,7 @@ def test_host_version_replace():
     pkg/*: pkg/0.1@user/channel
     """)
 
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"pkg/conanfile.py": GenConanfile("pkg", "0.1"),
              "conanfile.py": GenConanfile().with_requires("pkg/0.1@user/channel")
                                            .with_tool_requires("pkg/<host_version>"),
@@ -803,7 +803,7 @@ class TestReplaceRequiresCompose:
     def test_rules_merged_from_multiple_profiles(self):
         """[replace_requires] rules from multiple -pr profiles are merged into one combined
         ruleset, each rule independently applied."""
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"zlib/conanfile.py": GenConanfile("zlib"),
                 "openssl/conanfile.py": GenConanfile("openssl"),
                 "app/conanfile.py": GenConanfile().with_requires("zlib/1.0", "openssl/1.0"),
@@ -838,7 +838,7 @@ class TestReplaceRequiresCompose:
     def test_no_chaining(self):
         """Replacements are applied in a single pass — results are NOT re-evaluated, so
         profile1: A->B plus profile2: B->C does not transitively replace A->C."""
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"dep/conanfile.py": GenConanfile("dep"),
                 "app/conanfile.py": GenConanfile().with_requires("dep/1.0"),
                 "profile1": "[replace_requires]\ndep/1.0: dep/2.0",
@@ -854,7 +854,7 @@ class TestReplaceRequiresCompose:
 
     def test_last_profile_wins_on_same_pattern(self):
         """When two profiles define a replacement for the same pattern, the last profile wins."""
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"dep/conanfile.py": GenConanfile("dep"),
                 "app/conanfile.py": GenConanfile().with_requires("dep/1.0"),
                 "profile1": "[replace_requires]\ndep/1.0: dep/2.0",
@@ -881,7 +881,7 @@ class TestReplaceRequiresCompose:
         else:
             profile2 = f"include(profile1)\n[{section}]\ndep/1.0: !"
             both_cmd = "install app -pr=profile2"
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"dep/conanfile.py": GenConanfile("dep"), "app/conanfile.py": app,
                 "profile1": profile1, "profile2": profile2})
         c.run("create dep --version=1.0")
@@ -899,7 +899,7 @@ class TestReplaceRequiresCompose:
 
     def test_invalidate_all(self):
         """'*: !' invalidates all replace_requires rules defined in earlier profiles at once."""
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"dep/conanfile.py": GenConanfile("dep"),
                 "app/conanfile.py": GenConanfile().with_requires("dep/1.0", "dep2/1.0"),
                 "dep2/conanfile.py": GenConanfile("dep2"),
@@ -931,7 +931,7 @@ class TestReplaceRequiresCLIPriority:
 
     def test_install_requires_cli_not_replaced(self):
         """conan install --requires=pkg/1.0 should install pkg/1.0, not the replacement."""
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0"),
                 "other/conanfile.py": GenConanfile("other", "2.0"),
                 "profile": "[replace_requires]\npkg/*: other/2.0"})
@@ -944,7 +944,7 @@ class TestReplaceRequiresCLIPriority:
 
     def test_install_tool_requires_cli_not_replaced(self):
         """conan install --tool-requires=cmake/3.20 should use cmake/3.20, not the replacement."""
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"cmake/conanfile.py": GenConanfile("cmake", "3.20"),
                 "cmake_old/conanfile.py": GenConanfile("cmake", "3.19"),
                 "profile": "[replace_tool_requires]\ncmake/*: cmake/3.19"})
@@ -957,7 +957,7 @@ class TestReplaceRequiresCLIPriority:
 
     def test_create_cli_not_replaced(self):
         """conan create --name=pkg --version=1.0 should create pkg/1.0, not the replacement."""
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile(),
                 "other/conanfile.py": GenConanfile("other", "2.0"),
                 "profile": "[replace_requires]\npkg/*: other/2.0"})
@@ -969,7 +969,7 @@ class TestReplaceRequiresCLIPriority:
 
     def test_create_build_require_cli_not_replaced(self):
         """conan create --build-require --name=cmake --version=3.20 should create cmake/3.20."""
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile(),
                 "old/conanfile.py": GenConanfile("cmake", "3.19"),
                 "profile": "[replace_tool_requires]\ncmake/*: cmake/3.19"})
@@ -980,7 +980,7 @@ class TestReplaceRequiresCLIPriority:
 
     def test_install_requires_cli_transitive_still_replaced(self):
         """Transitive dependencies of CLI-specified requires SHOULD still be replaced."""
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"dep/conanfile.py": GenConanfile("dep", "2.0"),
                 "pkg/conanfile.py": GenConanfile("pkg", "1.0").with_requires("dep/1.0"),
                 "profile": "[replace_requires]\ndep/*: dep/2.0"})
@@ -994,7 +994,7 @@ class TestReplaceRequiresCLIPriority:
 
     def test_install_requires_cli_name_change_not_replaced(self):
         """conan install --requires=pkg/1.0 should not be replaced even if name changes."""
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0"),
                 "pkgng/conanfile.py": GenConanfile("pkgng", "1.0"),
                 "profile": "[replace_requires]\npkg/*: pkgng/*"})
@@ -1008,7 +1008,7 @@ class TestReplaceRequiresCLIPriority:
 
 class TestReplaceRequiresRecipeOverride:
     def test_unused_override(self):
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"zlib/conanfile.py": GenConanfile("zlib", "1.0"),
                 "openssl/conanfile.py": GenConanfile("openssl", "1.0"),
                 "conanfile.py": GenConanfile().with_requirement("openssl/1.0")
@@ -1021,7 +1021,7 @@ class TestReplaceRequiresRecipeOverride:
 
     def test_replace_requires_override_priority(self):
         # the profile replace_requires has more priority
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"zlib/conanfile.py": GenConanfile("zlib"),
                 "openssl/conanfile.py": GenConanfile("openssl", "1.0").with_requires("zlib/1.0"),
                 "conanfile.py": GenConanfile().with_requirement("openssl/1.0")
@@ -1040,7 +1040,7 @@ def test_replace_requires_cpp_info_requires_issue(replace, requires_first):
     """ See https://github.com/conan-io/conan/issues/20138
     A replace_require'ed divergent diamond structure like this used to give
     a wrong error about cpp_info requires not being valid"""
-    tc = TestClient(light=True)
+    tc = TestClient()
 
     ref = "replaced" if replace else "common"
     profile = "include(default)\n[replace_requires]\nreplaced/*: common/1.0" \

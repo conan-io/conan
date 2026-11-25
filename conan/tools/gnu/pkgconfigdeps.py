@@ -2,12 +2,13 @@ import os
 import re
 import textwrap
 
-from jinja2 import Template, StrictUndefined
+from jinja2 import StrictUndefined
 
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.model.dependencies import get_transitive_requires
 from conan.internal.util.files import save
+from conan.internal.util.templates import compiled_template
 
 
 class _PCFilesDeps:
@@ -321,13 +322,12 @@ class _PCFilesDeps:
         return pc_files.items()
 
     def _get_pc_content(self, context):
-        template = Template(self.template, trim_blocks=True, lstrip_blocks=True,
-                            undefined=StrictUndefined)
+        template = compiled_template(self.template, undefined=StrictUndefined)
         return template.render(context)
 
     def _get_alias_pc_content(self, context):
-        template = Template(self.alias_template, trim_blocks=True, lstrip_blocks=True,
-                            undefined=StrictUndefined, keep_trailing_newline=True)
+        template = compiled_template(self.alias_template, undefined=StrictUndefined,
+                                     keep_trailing_newline=True)
         return template.render(context)
 
 

@@ -150,7 +150,7 @@ def test_transitive_libs_consuming_7x(shared, bazel_output_root_dir):
         conanfile = conanfile.replace('generators = "BazelToolchain"',
                                       'generators = "BazelToolchain", "BazelDeps"\n'
                                       '    requires = "myfirstlib/1.2.11"')
-        module = textwrap.dedent("""
+        module = client.load("MODULE.bazel") + textwrap.dedent("""
         bazel_dep(name = "rules_cc", version = "0.2.17")
         bazel_dep(name = "platforms", version = "1.1.0")
         include("//conan:conan_toolchain.MODULE.bazel")

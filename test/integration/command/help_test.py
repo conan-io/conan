@@ -48,7 +48,7 @@ class TestHelp:
 
 
 def test_all_commands_call_args_parse():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.run("-h")
     commands = tc.api.command.cli._builtin_commands
 

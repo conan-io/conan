@@ -4,6 +4,7 @@ from conan.errors import ConanException
 from conan.internal.model.dependencies import UserRequirementsDict
 from conan.api.model import PkgReference
 from conan.api.model import RecipeReference
+from conan.api.model.refs import _format_reference
 from conan.internal.util.config_parser import TextINIParse
 
 
@@ -103,7 +104,13 @@ class RequirementInfo:
         return PkgReference(ref, self.package_id)
 
     def dumps(self):
-        return repr(self.pref())
+        # Same as repr(self.pref()), without creating the references, which would also parse again
+        # the version string of most modes ("1.2.Z"): this runs for every requirement of every node
+        result = _format_reference(self.name, self.version, self.user, self.channel,
+                                   self.recipe_revision)
+        if self.package_id:  # as in PkgReference.__repr__
+            result += f":{self.package_id}"
+        return result
 
     def unrelated_mode(self):
         self.name = self.version = self.user = self.channel = self.package_id = None

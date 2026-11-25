@@ -9,7 +9,7 @@ from conan.test.utils.tools import TestClient
 class TestConanfileErrors:
 
     def test_copy_error(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent('''
             from conan import ConanFile
 
@@ -29,7 +29,7 @@ class TestConanfileErrors:
         assert "'HelloConan' object has no attribute 'copy2'" in client.out
 
     def test_copy_error2(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent('''
             from conan import ConanFile
 
@@ -50,7 +50,7 @@ class TestConanfileErrors:
         # assert "'list' object has no attribute 'replace'" in client.out
 
     def test_package_info_error(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent('''
             from conan import ConanFile
 
@@ -70,7 +70,7 @@ class TestConanfileErrors:
         assert "'HelloConan' object has no attribute 'copy2'" in client.out
 
     def test_config_error(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent('''
             from conan import ConanFile
 
@@ -91,7 +91,7 @@ class TestConanfileErrors:
         assert "AttributeError: 'HelloConan' object has no attribute 'copy2'""" in client.out
 
     def test_source_error(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent('''
             from conan import ConanFile
 
@@ -111,7 +111,7 @@ class TestConanfileErrors:
         assert "'HelloConan' object has no attribute 'copy2'" in client.out
 
     def test_duplicate_requires(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent('''
             [requires]
             foo/0.1@user/testing
@@ -123,7 +123,7 @@ class TestConanfileErrors:
         assert "ERROR: Duplicated requirement" in client.out
 
     def test_duplicate_requires_py(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent('''
             from conan import ConanFile
 
@@ -140,7 +140,7 @@ class TestConanfileErrors:
     @pytest.mark.parametrize("version", ["0.1", "[*]"])
     def test_error_requirement_casing(self, version):
         # https://github.com/conan-io/conan/issues/19796
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"mypkg/conanfile.py": GenConanfile("mypkg", "0.1"),
                 "app/conanfile.py": GenConanfile("app", "0.1").with_requires(f"myPkg/{version}")})
         c.run("create mypkg")
@@ -156,7 +156,7 @@ class TestWrongMethods:
         """ this is expected to be a relatively frequent user error, and the trace was
         very ugly and debugging complicated
         """
-        c = TestClient(light=True)
+        c = TestClient()
         conanfile = textwrap.dedent(f"""
             from conan import ConanFile
             class Pkg(ConanFile):
@@ -170,7 +170,7 @@ class TestWrongMethods:
 
 
 def test_notduplicate_requires_py():
-    client = TestClient(light=True)
+    client = TestClient()
     conanfile = textwrap.dedent('''
         from conan import ConanFile
 
@@ -187,7 +187,7 @@ def test_notduplicate_requires_py():
 
 
 def test_requirements_change_options():
-    c = TestClient(light=True)
+    c = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
 
@@ -206,7 +206,7 @@ def test_requirements_change_options():
 @pytest.mark.parametrize("property_name", ["libdir", "bindir", "includedir"])
 @pytest.mark.parametrize("property_content", [[], ["mydir1", "mydir2"]])
 def test_shorthand_bad_interface(property_name, property_content):
-    c = TestClient(light=True)
+    c = TestClient()
     conanfile = textwrap.dedent(f"""
         from conan import ConanFile
 
@@ -229,7 +229,7 @@ def test_shorthand_bad_interface(property_name, property_content):
 
 
 def test_consumer_unexpected():
-    tc = TestClient(light=True)
+    tc = TestClient()
     cmake_conanfile = textwrap.dedent("""
     from conan import ConanFile
 
@@ -258,14 +258,14 @@ def test_consumer_unexpected():
     "'CXX'",
 ])
 def test_language_unexpected(languages):
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"conanfile.py": GenConanfile().with_class_attribute(f"languages = {languages}")})
     tc.run("inspect .", assert_error=True)
     assert "Only 'C' and 'C++' languages are allowed in 'languages' attribute" in tc.out
 
 
 def test_empty_languages():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"conanfile.py": GenConanfile().with_class_attribute("languages = []")})
     tc.run("inspect .")
     assert "Only 'C' and 'C++' languages are allowed in 'languages' attribute" not in tc.out
