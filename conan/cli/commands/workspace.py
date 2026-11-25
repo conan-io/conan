@@ -444,7 +444,7 @@ def workspace_create(conan_api: ConanAPI, parser, subparser, *args):
                         ConanOutput().info(f"Build command: {cmd}\n")
                         conan_api.command.run(cmd, raise_on_errors=True)
                     else:  # Package in workspace
-                        path = packages[ref]["path"]
+                        path = all_packages[ref]["path"]
                         # TODO: Missing --lockfile-overrides arg here
                         build = "--build-require" if package["context"] == "build" else ""
                         ref_args = " ".join(f"--{k}={getattr(ref, k)}"
