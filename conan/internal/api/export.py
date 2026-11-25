@@ -14,13 +14,18 @@ from conan.internal.util.files import is_dirty, rmdir, set_dirty, mkdir, clean_d
 
 def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
                name, version, user, channel,
-               graph_lock=None, remotes=None):
+               graph_lock=None, remotes=None, revision_mode_scm=False):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
+    param revision_mode_scm: force revision_mode='scm' regardless of what the recipe
+                       declares. Used by git= sources so the recipe revision IS the
+                       git commit — see GitRemotesResolver.
     """
     conanfile = loader.load_export(conanfile_path, name, version, user, channel, graph_lock,
                                    remotes=remotes)
+    if revision_mode_scm:
+        conanfile.revision_mode = "scm"
 
     ref = RecipeReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
     ref.validate_ref(allow_uppercase=global_conf.get("core:allow_uppercase_pkg_names",
