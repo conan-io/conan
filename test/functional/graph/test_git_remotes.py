@@ -39,7 +39,7 @@ class TestGitRemotesBasic:
 
     def test_basic_resolution_from_git(self, git_repos):
         git_repos("conan-io/zlib", {"conanfile.py": GenConanfile("zlib", "1.2.11")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.2.11",
                                                                 git="conan-io/zlib")})
         c.run("install . --build=missing")
@@ -48,7 +48,7 @@ class TestGitRemotesBasic:
 
     def test_cache_first_no_reclone_on_second_run(self, git_repos):
         git_repos("conan-io/zlib", {"conanfile.py": GenConanfile("zlib", "1.2.11")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.2.11",
                                                                 git="conan-io/zlib")})
         c.run("install . --build=missing")
@@ -60,7 +60,7 @@ class TestGitRemotesBasic:
 
     def test_update_flag_forces_reclone(self, git_repos):
         git_repos("conan-io/zlib", {"conanfile.py": GenConanfile("zlib", "1.2.11")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.2.11",
                                                                 git="conan-io/zlib")})
         c.run("install . --build=missing")
@@ -72,7 +72,7 @@ class TestGitRemotesBasic:
     def test_update_fetches_new_upstream_commit(self, git_repos):
         """--update refreshes the existing clone in place, picking up new upstream commits"""
         repo_path, _ = git_repos("conan-io/zlib", {"conanfile.py": GenConanfile("zlib", "1.0")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.0", git="conan-io/zlib")})
         c.run("install . --build=missing")
 
@@ -86,7 +86,7 @@ class TestGitRemotesBasic:
     def test_update_commit_ref_skips_fetch(self, git_repos):
         """A full commit SHA is immutable: --update neither clones nor fetches"""
         _, sha = git_repos("conan-io/zlib", {"conanfile.py": GenConanfile("zlib", "1.0")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.0",
                                                                 git=f"conan-io/zlib@{sha}")})
         c.run("install . --build=missing")
@@ -98,7 +98,7 @@ class TestGitRemotesBasic:
     def test_update_tag_and_branch_ref(self, git_repos):
         repo_path, _ = git_repos("conan-io/zlib", {"conanfile.py": GenConanfile("zlib", "1.0")},
                                  branch="dev")
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.0",
                                                                 git="conan-io/zlib@dev")})
         c.run("install . --build=missing")
@@ -117,7 +117,7 @@ class TestGitRemotesBasic:
     def test_resolution_by_require_type(self, method, git_repos):
         git_repos("myorg/mypkg", {"conanfile.py": GenConanfile("mypkg", "1.0")})
         consumer = getattr(GenConanfile(), method)("mypkg/1.0", git="myorg/mypkg")
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": str(consumer)})
         c.run("install . --build=missing")
         assert "resolving from git remote" in c.out
@@ -131,7 +131,7 @@ class TestGitRemotesRef:
 
     def test_branch_ref(self, git_repos):
         git_repos("myorg/mypkg", {"conanfile.py": GenConanfile("mypkg", "1.0")}, branch="dev")
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
                                                                 git="myorg/mypkg@dev")})
         c.run("install . --build=missing")
@@ -140,7 +140,7 @@ class TestGitRemotesRef:
 
     def test_tag_ref(self, git_repos):
         git_repos("myorg/mypkg", {"conanfile.py": GenConanfile("mypkg", "2.0")}, tags=["v2.0"])
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/2.0",
                                                                 git="myorg/mypkg@v2.0")})
         c.run("install . --build=missing")
@@ -149,7 +149,7 @@ class TestGitRemotesRef:
 
     def test_commit_ref(self, git_repos):
         _, commit = git_repos("myorg/mypkg", {"conanfile.py": GenConanfile("mypkg", "3.0")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/3.0",
                                                                 git=f"myorg/mypkg@{commit}")})
         c.run("install . --build=missing")
@@ -163,7 +163,7 @@ class TestGitRemotesRef:
         """
         git_repos("myorg/mypkg", {"conanfile.py": GenConanfile("mypkg", "1.0")},
                   branch="foo@bar")
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
                                                                 git="myorg/mypkg@foo@bar")})
         c.run("install . --build=missing")
@@ -179,7 +179,7 @@ class TestGitRemotesRef:
         tag = "v1&hotfix"
         subprocess.run(["git", "-C", repo_path, "tag", tag], check=True, capture_output=True)
 
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
                                                                 git=f"myorg/mypkg@{tag}")})
         c.run("install . --build=missing")
@@ -189,7 +189,7 @@ class TestGitRemotesRef:
     def test_invalid_ref_is_error(self, git_repos):
         """A ref is a single branch/tag/commit name: options like '--detach' or several
         space-separated arguments must never reach 'git checkout'."""
-        c = TestClient(light=True)
+        c = TestClient()
         for bad_ref in ["--detach", "-b", "main --detach", "a b", "a..b", "a~1", "a^", "a:b",
                         "a?", "a*", "a[", "a@{1}", "a/", "a.lock"]:
             c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
@@ -202,7 +202,7 @@ class TestGitRemotesRef:
         """A trailing '@' with an empty ref is almost always a typo. Reject it
         rather than silently falling back to the default branch."""
         git_repos("myorg/mypkg", {"conanfile.py": GenConanfile("mypkg", "1.0")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0", git="myorg/mypkg@")})
         c.run("install . --build=missing", assert_error=True)
         assert "trailing '@'" in c.out
@@ -214,7 +214,7 @@ class TestGitRemotesRef:
         OR by ref in git= ('org/repo@<sha>') — not both. Under revision_mode='scm'
         those two pins refer to the same identity, so specifying both from the
         recipe is ambiguous. Missing conflict is reported clearly."""
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement(
             "zlib/1.2.11#" + "a" * 32, git="conan-io/zlib@main")})
         c.run("install . --build=missing", assert_error=True)
@@ -240,7 +240,7 @@ class TestGitRemotesContract:
 
     def test_missing_conanfile_in_repo(self, git_repos):
         git_repos("myorg/myrepo", {"README.md": "# hello"})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.2.11",
                                                                 git="myorg/myrepo")})
         c.run("install . --build=missing", assert_error=True)
@@ -250,7 +250,7 @@ class TestGitRemotesContract:
         """The tag predates the recipe, while the default branch has one: the error must
         name the ref, otherwise it reads as if the repo had no recipe at all."""
         path, _ = git_repos("myorg/myrepo", {"README.md": "# hello"}, tags=["v1.0"])
-        c = TestClient(light=True)
+        c = TestClient()
         save(os.path.join(path, "conanfile.py"), str(GenConanfile("zlib", "1.0")))
         git_add_changes_commit(path)
         c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.0",
@@ -261,7 +261,7 @@ class TestGitRemotesContract:
 
     def test_repo_hardcodes_different_name_errors(self, git_repos):
         git_repos("myorg/mypkg", {"conanfile.py": GenConanfile("wrongname", "1.0")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
                                                                 git="myorg/mypkg")})
         c.run("install . --build=missing", assert_error=True)
@@ -269,7 +269,7 @@ class TestGitRemotesContract:
 
     def test_repo_hardcodes_different_version_errors(self, git_repos):
         git_repos("myorg/mypkg", {"conanfile.py": GenConanfile("mypkg", "9.9.9")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
                                                                 git="myorg/mypkg")})
         c.run("install . --build=missing", assert_error=True)
@@ -286,7 +286,7 @@ class TestGitRemotesContract:
                     self.version = "7.1.0"
             """)
         git_repos("myorg/mypkg", {"conanfile.py": conanfile})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/7.0.3",
                                                                 git="myorg/mypkg")})
         c.run("install . --build=missing", assert_error=True)
@@ -296,7 +296,7 @@ class TestGitRemotesContract:
     def test_repo_declares_nothing_git_is_authoritative(self, git_repos):
         """No name/version declared by the recipe → the require's values win."""
         git_repos("myorg/mypkg", {"conanfile.py": GenConanfile()})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
                                                                 git="myorg/mypkg")})
         c.run("install . --build=missing")
@@ -306,7 +306,7 @@ class TestGitRemotesContract:
         """Version range + git=: the recipe's declared version is checked
         against the range and, if it fits, becomes the resolved version."""
         git_repos("myorg/mypkg", {"conanfile.py": GenConanfile("mypkg", "1.2.11")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/[>=1.0]",
                                                                 git="myorg/mypkg")})
         c.run("install . --build=missing")
@@ -315,7 +315,7 @@ class TestGitRemotesContract:
 
     def test_version_range_out_of_range_errors(self, git_repos):
         git_repos("myorg/mypkg", {"conanfile.py": GenConanfile("mypkg", "0.5")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/[>=1.0]",
                                                                 git="myorg/mypkg")})
         c.run("install . --build=missing", assert_error=True)
@@ -331,7 +331,7 @@ class TestGitRemotesTransitive:
         git_repos("myorg/pkga",
                   {"conanfile.py": GenConanfile("pkga", "1.0")
                    .with_requirement("pkgb/1.0", git="myorg/pkgb")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("pkga/1.0", git="myorg/pkga")})
         c.run("install . --build=missing")
         assert "pkga/1.0" in c.out
@@ -348,7 +348,7 @@ class TestGitRemotesTransitive:
         git_repos("myorg/pkgb",
                   {"conanfile.py": GenConanfile("pkgb", "1.0")
                    .with_requirement("pkgc/1.0", git="myorg/pkgc")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": str(
             GenConanfile()
             .with_requirement("pkga/1.0", git="myorg/pkga")
@@ -368,7 +368,7 @@ class TestGitRemotesLockfile:
 
     def test_lockfile_happy_path(self, git_repos):
         git_repos("conan-io/zlib", {"conanfile.py": GenConanfile("zlib", "1.2.11")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.2.11",
                                                                 git="conan-io/zlib")})
 
@@ -400,7 +400,7 @@ class TestGitRemotesLockfile:
         equals the HEAD commit SHA of the cloned repo."""
         _, expected_sha = git_repos("myorg/mypkg",
                                     {"conanfile.py": GenConanfile("mypkg", "1.0")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
                                                                 git="myorg/mypkg")})
         c.run("install . --build=missing --lockfile-out=conan.lock")
@@ -417,7 +417,7 @@ class TestGitRemotesLockfile:
         out because the lockfile pins the SHA."""
         repo_path, first_sha = git_repos("myorg/mypkg",
                                          {"conanfile.py": GenConanfile("mypkg", "1.0")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
                                                                 git="myorg/mypkg")})
         c.run("install . --build=missing --lockfile-out=conan.lock")
@@ -439,7 +439,7 @@ class TestGitRemotesLockfile:
         locked revision → clear error."""
         repo_path, _ = git_repos("conan-io/zlib",
                                  {"conanfile.py": GenConanfile("zlib", "1.2.11")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("zlib/1.2.11",
                                                                 git="conan-io/zlib")})
 
@@ -478,7 +478,7 @@ class TestGitRemotesPrecedence:
 
     def test_replace_requires_wins_over_git(self, git_repos):
         git_repos("myorg/zlib", {"conanfile.py": GenConanfile("zlib", "1.2.11")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"replacement/conanfile.py": GenConanfile("my_zlib", "1.0")})
         c.run("export replacement")
 
@@ -507,7 +507,7 @@ class TestGitRemotesPrecedence:
         second_sha = git_add_changes_commit(repo_path)
         assert second_sha != first_sha
 
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement(
             f"mypkg/1.0#{first_sha}", git="myorg/mypkg")})
         c.run("install . --build=missing")
@@ -528,7 +528,7 @@ class TestGitRemotesPrecedence:
         """
         repo_path, first_sha = git_repos("myorg/mypkg",
                                          {"conanfile.py": GenConanfile("mypkg", "1.0")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement(
             "mypkg/1.0", git="myorg/mypkg@main")})
 
@@ -556,7 +556,7 @@ class TestGitRemotesPrecedence:
         """
         repo_path, first_sha = git_repos("myorg/mypkg",
                                          {"conanfile.py": GenConanfile("mypkg", "1.0")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
                                                                 git="myorg/mypkg")})
 
@@ -580,7 +580,7 @@ class TestGitRemotesPrecedence:
         The git URL is intentionally bad (no conanfile.py) so a stray clone
         would blow up — proving the editable path took over."""
         git_repos("myorg/mypkg", {"README.md": "not a conanfile"})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"editable/conanfile.py": GenConanfile("mypkg", "1.0")})
         c.run("editable add editable")
 
@@ -599,7 +599,7 @@ class TestGitRemotesLifecycle:
 
     def test_cache_clean_removes_git_clones(self, git_repos):
         git_repos("myorg/mypkg", {"conanfile.py": GenConanfile("mypkg", "1.0")})
-        c = TestClient(light=True)
+        c = TestClient()
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0", git="myorg/mypkg")})
         c.run("install . --build=missing")
 
@@ -615,7 +615,7 @@ class TestGitRemotesLifecycle:
         without --update or manual cleanup."""
         repo_path, _ = git_repos("myorg/mypkg",
                                  {"conanfile.py": GenConanfile("mypkg", "1.0")})
-        c = TestClient(light=True)
+        c = TestClient()
 
         # First attempt: tag doesn't exist yet → checkout fails → dirty stays
         c.save({"conanfile.py": GenConanfile().with_requirement("mypkg/1.0",
