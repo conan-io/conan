@@ -521,7 +521,7 @@ class TestCyclonedx:
         """
         Same reference with two recipe revisions. Each revision is a different component.
         """
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"liba/conanfile.py": GenConanfile("liba", "1.0")})
         tc.run("export liba")
         liba_first_rrev = tc.exported_recipe_revision()
