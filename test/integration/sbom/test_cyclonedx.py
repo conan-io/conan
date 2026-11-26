@@ -474,7 +474,7 @@ class TestCyclonedx:
         Header-only clears the package_id, so both nodes share one bom-ref even though their
         requirements differ. dependsOn is the union of both.
         """
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"dep1/conanfile.py": GenConanfile("dep1", "1.0"),
                  "dep2/conanfile.py": GenConanfile("dep2", "1.0")})
         tc.run("export dep1")
