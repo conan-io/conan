@@ -60,7 +60,13 @@ values = [
     # Build metadata
     ['>=1.0.0+2', [[['>=', '1.0.0+2']]], ["1.0.0+2", "1.0.0+3"], ["1.0.0+1"]],
     ['>=2.2.0+build.en.305 <2.2.0+build.en.306', [[['>=', '2.2.0+build.en.305'], ['<', '2.2.0+build.en.306']]],
-                                                 ["2.2.0+build.en.305", "2.2.0+build.en.305.1", "2.2.0+build.en.305.2"], ["2.2.0+build.en.306"]]
+                                                 ["2.2.0+build.en.305", "2.2.0+build.en.305.1", "2.2.0+build.en.305.2"], ["2.2.0+build.en.306"]],
+    # Tilde with build metadata, https://github.com/conan-io/conan/issues/20550
+    # It must be equivalent to ">=1.2.3+b1 <1.3-", not append a "-" to the build metadata
+    ['~1.2.3+b1', [[['>=', '1.2.3+b1'], ['<', '1.3-']]],
+                  ["1.2.3+b1", "1.2.3+b2", "1.2.4", "1.2.4+x"], ["1.2.2", "1.2.3", "1.2.3+a", "1.3.0", "1.3.0+b1"]],
+    ['>=1.2.3+b1 <1.3-', [[['>=', '1.2.3+b1'], ['<', '1.3-']]],
+                         ["1.2.3+b1", "1.2.3+b2", "1.2.4", "1.2.4+x"], ["1.2.2", "1.2.3", "1.2.3+a", "1.3.0", "1.3.0+b1"]],
 ]
 
 
@@ -159,6 +165,14 @@ def test_wrong_range_option_syntax(version_range):
     but for now this test ensures we don't change it without realizing"""
     vr = VersionRange(version_range)
     assert all(cs.prerelease for cs in vr.condition_sets)
+
+
+@pytest.mark.parametrize("version_range", ["~1.2.3+b1", "^1.2.3+b1", ">=1.2.3+b1 <1.3.0"])
+def test_version_in_range_with_build_metadata(version_range):
+    # https://github.com/conan-io/conan/issues/20550
+    # The lower bound of a range with build metadata must match the version itself
+    assert Version("1.2.3+b1").in_range(version_range)
+    assert not Version("1.2.3").in_range(version_range)
 
 
 def test_version_range_error_ux():

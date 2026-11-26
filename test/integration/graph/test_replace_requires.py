@@ -742,7 +742,14 @@ class TestReplaceRequiresTransitiveGenerators:
      # RANGE REQUIRE VERSION
      ("dep/[>=1.2 <2]", "dep/[>=1.0 <2]", "dep/1.3", "dep/1.3"),
      ("dep/[>=1.0 <1.5]", "dep/[>=1.2 <2]", "dep/1.3", "dep/1.3"),
-     ("dep/[>=1.0 <1.5]", "dep/[>=1.5 <2]", "dep/1.3", False)
+     ("dep/[>=1.0 <1.5]", "dep/[>=1.5 <2]", "dep/1.3", False),
+     # Tilde ranges that only touch (upper bound of one == lower bound of the other) don't overlap
+     ("dep/[~1.3]", "dep/[~1.2]", "dep/1.3", False),
+     ("dep/[~1]", "dep/[~2]", "dep/1.3", False),
+     ("dep/[~1]", "dep/[<1]", "dep/1.3", False),
+     # Control: tilde ranges that do overlap are replaced
+     ("dep/[~1]", "dep/[~1.3]", "dep/1.3", "dep/1.3"),
+     ("dep/[~1.3]", "dep/[>=1.3 <2]", "dep/1.3", "dep/1.3"),
     ]
  )
 def test_replace_requires_ranges(require, pattern, alternative, expected):

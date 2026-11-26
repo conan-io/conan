@@ -138,8 +138,6 @@ class _ConditionSet:
         if version == "":
             raise ConanException(f'Error parsing version range "{expression}"')
         if operator == "~":  # tilde minor
-            if "-" not in version:
-                version += "-"
             v = Version(version)
             index = 1 if len(v.main) > 1 else 0
             return [_Condition(">=", v), _Condition("<", v.upper_bound(index))]
