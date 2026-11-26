@@ -1763,6 +1763,19 @@ class TestCreate:
         c.run("workspace create")
         assert "Workspace create pkga/0.1" in c.out
 
+    def test_create_pkg_builds_workspace_dependency(self):
+        # --pkg selecting only a consumer also creates its workspace dependencies without binary
+        c = TestClient()
+        c.save({"pkga/conanfile.py": GenConanfile("pkga", "0.1").with_build_msg("BUILD PKGA!"),
+                "pkgb/conanfile.py": GenConanfile("pkgb", "0.1").with_requires("pkga/0.1")
+               .with_build_msg("BUILD PKGB!")})
+        c.run("workspace init .")
+        c.run("workspace add pkga")
+        c.run("workspace add pkgb")
+        c.run("workspace create --pkg=pkgb/*")
+        assert "WARN: BUILD PKGA!" in c.out
+        assert "WARN: BUILD PKGB!" in c.out
+
     def test_host_build_require(self):
         c = TestClient()
         protobuf = textwrap.dedent("""\
