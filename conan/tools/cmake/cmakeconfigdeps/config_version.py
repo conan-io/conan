@@ -1,7 +1,8 @@
 import textwrap
 
 import jinja2
-from jinja2 import Template
+
+from conan.internal.util.templates import compiled_template
 
 
 class ConfigVersionTemplate2:
@@ -19,16 +20,13 @@ class ConfigVersionTemplate2:
         return self._filename
 
     def content(self):
-        t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
-                     undefined=jinja2.StrictUndefined)
+        t = compiled_template(self._template, undefined=jinja2.StrictUndefined)
         return t.render(self._context)
 
-    @property
-    def _template(self):
-        # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
-        # This will be at XXX-config-version.cmake
-        # AnyNewerVersion|SameMajorVersion|SameMinorVersion|ExactVersion
-        ret = textwrap.dedent("""\
+    # https://gitlab.kitware.com/cmake/cmake/blob/master/Modules/BasicConfigVersion-SameMajorVersion.cmake.in
+    # This will be at XXX-config-version.cmake
+    # AnyNewerVersion|SameMajorVersion|SameMinorVersion|ExactVersion
+    _template = textwrap.dedent("""\
             set(PACKAGE_VERSION "{{ version }}")
 
             if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
@@ -86,4 +84,3 @@ class ConfigVersionTemplate2:
                 endif()
             endif()
             """)
-        return ret

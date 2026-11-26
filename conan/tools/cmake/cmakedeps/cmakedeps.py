@@ -1,7 +1,6 @@
 import textwrap
 
 import jinja2
-from jinja2 import Template
 
 from conan.api.output import Color
 from conan.internal import check_duplicated_generator
@@ -16,6 +15,7 @@ from conan.tools.cmake.cmakedeps.templates.targets import TargetsTemplate
 from conan.tools.files import save
 from conan.errors import ConanException
 from conan.internal.model.dependencies import get_transitive_requires
+from conan.internal.util.templates import compiled_template
 
 
 class CMakeDeps:
@@ -218,8 +218,7 @@ class CMakeDeps:
             set(CONANDEPS_LEGACY {% for t in configs %} {{t.root_target_name}} {% endfor %})
             """)
 
-        template = Template(template, trim_blocks=True, lstrip_blocks=True,
-                            undefined=jinja2.StrictUndefined)
+        template = compiled_template(template, undefined=jinja2.StrictUndefined)
         conandeps = template.render({"configs": configs})
         save(self._conanfile, "conandeps_legacy.cmake", conandeps)
 

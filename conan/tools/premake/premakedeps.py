@@ -172,11 +172,6 @@ class PremakeDeps:
     def _output_lua_file(self, filename, content):
         self.output_files[filename] = "\n".join(["#!lua", *content])
 
-    def _indent_string(self, string, indent=1):
-        return "\n".join([
-            f"{self.tab * indent}{line}" for line in list(filter(None, string.splitlines()))
-        ])
-
     def _premake_filtered(self, content, configuration, architecture, indent=0):
         """
         - Surrounds the lua line(s) contained within ``content`` with a premake "filter" and returns the result.

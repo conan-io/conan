@@ -47,7 +47,7 @@ def test_error_config_package_id():
     ("myconfig/1.2.3#rev1", "patch_mode", "myconfig/1.2.3"),
 ])
 def test_config_package_id_clear(config_version, mode, result):
-    c = TestClient(light=True)
+    c = TestClient()
     config_version = json.dumps({"config_version": [config_version]})
     save(c.paths.config_version_path, config_version)
     save(c.paths.global_conf_path, f"core.package_id:config_mode={mode}")
@@ -87,7 +87,7 @@ def test_recipe_revision_mode():
 
 def test_config_package_id_mode():
     # chicken and egg problem when the configuration package itself is affected by the mode
-    c = TestClient(light=True)
+    c = TestClient()
     config_version = json.dumps({"config_version": ["myconfig/0.1"]})
     save(c.paths.config_version_path, config_version)
     c.save_home({"global.conf": "core.package_id:config_mode=minor_mode"})

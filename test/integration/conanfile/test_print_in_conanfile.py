@@ -8,7 +8,7 @@ def test_print_in_conanfile():
     """
     Tests that prints in conanfiles will not ruin json stdout outputs
     """
-    c = TestClient(light=True)
+    c = TestClient()
     other = textwrap.dedent("""
         def myprint(text):
             print(text)

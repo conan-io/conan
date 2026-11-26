@@ -94,7 +94,7 @@ def test_editable_add_output_folder_relative_to_cwd():
     """ A relative output_folder is relative to the given cwd, as the path is,
     not to the current directory of the process
     """
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"pkg/conanfile.py": GenConanfile("pkg", "1.0")})
     cwd = os.path.join(tc.current_folder, "pkg")
     api = ConanAPI(tc.cache_folder)

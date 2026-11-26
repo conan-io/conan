@@ -104,7 +104,7 @@ class WorkspaceAPI:
         @return: Returns {RecipeReference: {"path": full abs-path, "output_folder": abs-path}}
         """
         if not self._folder or not self._enabled:
-            return
+            return None
         packages = {}
         for editable_info in self._ws.packages():
             rel_path = editable_info["path"]
@@ -137,7 +137,7 @@ class WorkspaceAPI:
                     f"  - 'get_ref(folder)' method in conanws.py (typically needed when "
                     f"set_name/set_version are inherited from a python_requires, since "
                     f"python_requires are not resolved during workspace discovery)")
-            reference.validate_ref(reference)
+            reference.validate_ref()
             if reference in packages:
                 raise ConanException(f"Workspace package '{str(reference)}' already exists.")
             packages[reference] = {"path": path, "conanfile": conanfile}

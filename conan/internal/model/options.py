@@ -326,9 +326,9 @@ class Options:
         self._package_options.__delattr__(field)
 
     def __getitem__(self, item):
-        if isinstance(item, str):
-            if "/" not in item and "*" not in item:  # FIXME: To allow patterns like "*" or "foo*"
-                item += "/*"
+        # FIXME: To allow patterns like "*" or "foo*"
+        if isinstance(item, str) and "/" not in item and "*" not in item:
+            item += "/*"
         return self._deps_package_options.setdefault(item, _PackageOptions())
 
     def conan_scope(self, ref):
@@ -343,11 +343,8 @@ class Options:
         # To generate the package_id info.options copy, that can destroy, change and remove things
         result = Options()
         result._package_options = self._package_options.copy_conaninfo_options()
-        # In most scenarios this should be empty at this stage, because it was cleared
-        if self._deps_package_options:
-            raise ConanException("Dependencies options were defined incorrectly. Maybe you"
-                                 " tried to define options values in 'requirements()' or other"
-                                 " invalid place")
+        result._deps_package_options = {k: v.copy_conaninfo_options()
+                                        for k, v in self._deps_package_options.items()}
         return result
 
     def update(self, options=None, options_values=None):

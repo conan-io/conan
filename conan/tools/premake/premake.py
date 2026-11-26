@@ -2,13 +2,13 @@ import textwrap
 from pathlib import Path
 
 from conan.tools.build.cpu import build_jobs
-from jinja2 import Template
 
 from conan.errors import ConanException
 from conan.tools.files import save
 from conan.tools.microsoft.msbuild import MSBuild
 from conan.tools.premake.toolchain import PremakeToolchain
 from conan.tools.premake.constants import CONAN_TO_PREMAKE_ARCH
+from conan.internal.util.templates import compiled_template
 
 # Source: https://learn.microsoft.com/en-us/cpp/overview/compiler-versions?view=msvc-170
 PREMAKE_VS_VERSION = {
@@ -67,7 +67,9 @@ class Premake:
         Runs ``premake5 <action> [FILE]`` which will generate respective build scripts depending on the ``action``.
         """
         if self._premake_conan_toolchain.exists():
-            content = Template(self._premake_file_template).render(
+            template = compiled_template(self._premake_file_template, trim_blocks=False,
+                                         lstrip_blocks=False)
+            content = template.render(
                 premake_conan_toolchain=self._premake_conan_toolchain.as_posix(), luafile=self.luafile
             )
             conan_luafile = Path(self._conanfile.build_folder) / self.filename

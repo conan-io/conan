@@ -59,9 +59,7 @@ class ConfigTemplate(CMakeDepsFileTemplate):
                 "check_components_exist": self.cmakedeps.check_components_exist,
                 "targets_include_file": targets_include}
 
-    @property
-    def template(self):
-        return textwrap.dedent("""\
+    template = textwrap.dedent("""\
         {%- macro pkg_var(pkg_name, var, config_suffix) -%}
              {{'${'+pkg_name+'_'+var+config_suffix+'}'}}
         {%- endmacro -%}

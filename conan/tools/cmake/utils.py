@@ -16,9 +16,8 @@ def parse_extra_variable(source, key, value):
     elif isinstance(value, dict):
         var_value = parse_extra_variable(source, key, value.get("value"))
         is_force = value.get("force")
-        if is_force:
-            if not isinstance(is_force, bool):
-                raise ConanException(f'{source} "{key}" "force" must be a boolean')
+        if is_force and not isinstance(is_force, bool):
+            raise ConanException(f'{source} "{key}" "force" must be a boolean')
         is_cache = value.get("cache")
         if is_cache:
             if not isinstance(is_cache, bool):

@@ -23,7 +23,7 @@ def run_source_method(conanfile, hook_manager):
         if hasattr(conanfile, "source"):
             scoped_output.highlight(f"Calling source() in {conanfile.source_folder}")
             with conanfile_exception_formatter(conanfile, "source", ref=old_display):
-                with conanfile_remove_attr(conanfile, ['info', 'settings', "options"], "source"):
+                with conanfile_remove_attr(conanfile, ('info', 'settings', "options"), "source"):
                     conanfile.source()
         hook_manager.execute("post_source", conanfile=conanfile)
     conanfile.display_name = old_display
@@ -75,7 +75,7 @@ def run_package_method(conanfile, package_id, hook_manager, ref):
         scoped_output.highlight("Calling package()")
         with conanfile_exception_formatter(conanfile, "package", ref=old_display):
             with chdir(conanfile.build_folder):
-                with conanfile_remove_attr(conanfile, ['info'], "package"):
+                with conanfile_remove_attr(conanfile, ('info',), "package"):
                     conanfile.package()
     hook_manager.execute("post_package", conanfile=conanfile)
 
@@ -145,6 +145,13 @@ def run_configure_method(conanfile, down_options, profile_options, ref):
     if hasattr(conanfile, "build_requirements"):
         with conanfile_exception_formatter(conanfile, "build_requirements"):
             conanfile.build_requirements()
+
+    # get_upstream_options() above consumed the dependencies options definitions, so anything
+    # defined now (like self.options["dep"].opt = value in requirements()) would be silently lost
+    if conanfile.options._deps_package_options:  # noqa
+        raise ConanException(f"{conanfile}: Dependencies options were defined incorrectly. Maybe "
+                             "you tried to define options values in 'requirements()' or other "
+                             "invalid place")
 
     if conanfile.build_requires._called:  # noqa
         conanfile.output.warning(

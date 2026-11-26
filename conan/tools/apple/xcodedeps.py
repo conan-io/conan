@@ -1,11 +1,11 @@
 import os
 import re
 import textwrap
-from jinja2 import Template
 
 from conan.internal import check_duplicated_generator
 from conan.errors import ConanException
 from conan.internal.util.files import load, save
+from conan.internal.util.templates import compiled_template
 from conan.tools.apple.apple import _to_apple_arch
 
 GLOBAL_XCCONFIG_TEMPLATE = textwrap.dedent("""\
@@ -165,7 +165,7 @@ class XcodeDeps:
             fields["linker_flags"] = ""
             fields["exe_flags"] = ""
 
-        template = Template(self._conf_xconfig)
+        template = compiled_template(self._conf_xconfig, trim_blocks=False, lstrip_blocks=False)
         content_multi = template.render(**fields)
         return content_multi
 
@@ -184,10 +184,11 @@ class XcodeDeps:
                         else f"conan_{_format_name(component[0])}_{_format_name(component[1])}.xcconfig"
                         for component in components]
 
-            content_multi = Template(content_multi).render({"pkg_name": pkg_name,
-                                                            "comp_name": comp_name,
-                                                            "dep_xconfig_filename": dep_xconfig_filename,
-                                                            "deps_includes": _get_includes(reqs)})
+            template = compiled_template(content_multi, trim_blocks=False, lstrip_blocks=False)
+            content_multi = template.render({"pkg_name": pkg_name,
+                                             "comp_name": comp_name,
+                                             "dep_xconfig_filename": dep_xconfig_filename,
+                                             "deps_includes": _get_includes(reqs)})
 
         if dep_xconfig_filename not in content_multi:
             content_multi = content_multi.replace('.xcconfig"',

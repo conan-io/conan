@@ -22,7 +22,7 @@ from conan.test.utils.tools import TestClient, TestServer
 def _client() -> TestClient:
     """ A client already authenticated, so the several commands each test runs don't have to
     consume the interactive credentials """
-    c = TestClient(default_server_user=True, light=True)
+    c = TestClient(default_server_user=True)
     c.run("remote login default admin -p password")
     return c
 
@@ -30,7 +30,7 @@ def _client() -> TestClient:
 def _two_servers_client():
     servers = {f"server{i}": TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                         users={"user": "password"}) for i in range(2)}
-    c = TestClient(servers=servers, inputs=8 * ["user", "password"], light=True)
+    c = TestClient(servers=servers, inputs=8 * ["user", "password"])
     for name in servers:
         c.run(f"remote login {name} user -p password")
     return c
@@ -79,7 +79,7 @@ def test_dry_run_then_upload():
     assert "pkg/1.0: Uploading package" in c.out
 
     # And the artifacts in the server are complete, a different client can consume them
-    c2 = TestClient(servers=c.servers, inputs=["admin", "password"], light=True)
+    c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
     c2.run("install --requires=pkg/1.0")
     assert "pkg/1.0: Downloaded recipe revision" in c2.out
     assert "pkg/1.0: Downloaded package revision" in c2.out
@@ -119,7 +119,7 @@ def test_upload_of_a_prepared_list_does_not_load_the_recipes():
     assert "pyreq/1.0: Uploading recipe" in c.out
 
     # And what reached the server is usable, not a poisoned copy
-    c2 = TestClient(servers=c.servers, inputs=["admin", "password"], light=True)
+    c2 = TestClient(servers=c.servers, inputs=["admin", "password"])
     c2.run("install --requires=pkg/1.0")
     assert "pkg/1.0: Downloaded package revision" in c2.out
 
@@ -158,7 +158,7 @@ def test_upstream_is_not_re_checked_for_a_prepared_list():
     assert "Checking which revisions exist in the remote server" in c.out
 
     # Someone else uploads that very revision in the meantime
-    other = TestClient(servers=c.servers, inputs=2 * ["admin", "password"], light=True)
+    other = TestClient(servers=c.servers, inputs=2 * ["admin", "password"])
     other.save({"conanfile.py": GenConanfile("pkg", "1.0")})
     other.run("create .")
     other.run("upload * -r=default -c")
@@ -243,7 +243,7 @@ def test_dry_run_does_not_write_to_the_remote():
     here so that adding any write to it fails """
     server = TestServer(read_permissions=[("*/*@*/*", "*")], write_permissions=[],
                         users={"reader": "password"})
-    c = TestClient(servers={"default": server}, inputs=4 * ["reader", "password"], light=True)
+    c = TestClient(servers={"default": server}, inputs=4 * ["reader", "password"])
     c.run("remote login default reader -p password")
     c.save({"conanfile.py": GenConanfile("pkg", "1.0")})
     c.run("create .")

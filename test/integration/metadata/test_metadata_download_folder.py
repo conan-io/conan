@@ -35,7 +35,7 @@ custom_command = textwrap.dedent("""
 
 
 def _server_with_metadata():
-    c = TestClient(default_server_user=True, light=True)
+    c = TestClient(default_server_user=True)
     c.save({"conanfile.py": GenConanfile("pkg", "0.1")})
     c.run("create .")
     pid = c.created_package_id("pkg/0.1")

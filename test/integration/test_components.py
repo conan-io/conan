@@ -153,7 +153,7 @@ def test_components_overrides():
 
 def test_duplication_component_properties():
     """ Regression for PR 17503 - component lists would be incorrectly aggregated """
-    tc = TestClient(light=True)
+    tc = TestClient()
 
     dep = textwrap.dedent("""
     from conan import ConanFile

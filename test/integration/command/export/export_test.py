@@ -16,7 +16,7 @@ from conan.internal.util.files import load, save
 class TestExportSettings:
 
     def test_export_without_full_reference(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
         client.run("export . --user=lasote --channel=stable", assert_error=True)
         assert "conanfile didn't specify name" in client.out
@@ -49,7 +49,7 @@ class TestExportSettings:
         assert "Exported: lib/1.0@user/channel" in client.out
 
     def test_export_read_only(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             from conan import ConanFile
             class TestConan(ConanFile):
@@ -125,7 +125,7 @@ class TestConan(ConanFile):
              dst=self.export_folder)
 """
         for conanfile in (base, base.replace("../*.txt", "../sibling*")):
-            client = TestClient(light=True)
+            client = TestClient()
             client.save({"recipe/conanfile.py": conanfile,
                          "sibling/file.txt": "Hello World!"})
             client.current_folder = os.path.join(client.current_folder, "recipe")
@@ -137,7 +137,7 @@ class TestConan(ConanFile):
 
     def test_code_sibling(self):
         # if provided a path with slash, it will use as a export base
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = """
 import os
 from conan import ConanFile
@@ -161,7 +161,7 @@ class TestConan(ConanFile):
 
     def test_code_several_sibling(self):
         # if provided a path with slash, it will use as a export base
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = textwrap.dedent("""
             import os
             from conan import ConanFile
@@ -191,7 +191,7 @@ class TestConan(ConanFile):
 
     @pytest.mark.parametrize("filename", ["myconanfile.py", "Conanfile.py"])
     def test_filename(self, filename):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({filename: GenConanfile("hello", "1.2")})
         client.run("export %s --user=user --channel=stable" % filename)
         assert "Exported: hello/1.2@user/stable" in client.out
@@ -203,7 +203,7 @@ class TestConan(ConanFile):
         assert 'conanfile.py: 5dc49e518e15f3889cb2e097ce4d1dff' in manifest
 
     def test_exclude_basic(self):
-        client = TestClient(light=True)
+        client = TestClient()
         conanfile = """
 from conan import ConanFile
 class TestConan(ConanFile):
@@ -228,7 +228,7 @@ class TestConan(ConanFile):
         assert not os.path.exists(os.path.join(exports_sources_path, "file_temp.cpp"))
 
     def test_exclude_folders(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({CONANFILE: GenConanfile("hello", "1.2").with_exports("*.txt", "!*/temp/*"),
                      "file.txt": "",
                      "any/temp/file1.txt": "",
@@ -245,7 +245,7 @@ class TestExport:
 
     @pytest.fixture(autouse=True)
     def setup(self):
-        self.client = TestClient(light=True)
+        self.client = TestClient()
         self.files = {"conanfile.py": GenConanfile("hello0", "0.1").with_exports("*"),
                       "main.cpp": "MyMain",
                       "CMakeLists.txt": "MyCmake",
@@ -317,26 +317,26 @@ class OpenSSLConan(ConanFile):
 class TestExportMetadata:
 
     def test_revision_mode_hash(self):
-        t = TestClient(light=True)
+        t = TestClient()
         t.save({'conanfile.py': GenConanfile().with_revision_mode("hash")})
         t.run(f"export . --name=name --version=version")
         layout = t.exported_layout()
         assert layout.reference.revision == "99c241d3d47396772cd1ac5a36307a29"
 
     def test_revision_mode_invalid(self):
-        t = TestClient(light=True)
+        t = TestClient()
         t.save({'conanfile.py': GenConanfile().with_revision_mode("auto")})
         t.run("export . --name=name --version=version", assert_error=True)
         assert "ERROR: Revision mode should be one of 'hash' (default) or 'scm'" in t.out
 
     def test_export_no_params(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile("lib", "1.0")})
         client.run('export .')
         assert "Exported: lib/1.0" in client.out
 
     def test_export_with_name_and_version(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
 
         client.run('export . --name=lib --version=1.0')
@@ -344,14 +344,14 @@ class TestExportMetadata:
 
     def test_export_with_only_user_channel(self):
         """This should be the recommended way and only from Conan 2.0"""
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile("lib", "1.0")})
 
         client.run('export .  --version= --user=user --channel=channel')
         assert "Exported: lib/1.0@user/channel" in client.out
 
     def test_export_conflict_no_user_channel(self):
-        client = TestClient(light=True)
+        client = TestClient()
         client.save({"conanfile.py": GenConanfile()})
 
         client.run('export . --name=pkg --version=0.1 --user=user --channel=channel')
@@ -367,7 +367,7 @@ class TestExportMetadata:
 @pytest.mark.skipif(platform.system() != "Linux", reason="Needs case-sensitive filesystem")
 def test_export_casing():
     # https://github.com/conan-io/conan/issues/8583
-    client = TestClient(light=True)
+    client = TestClient()
     conanfile = textwrap.dedent("""
         from conan import ConanFile
         class Pkg(ConanFile):
@@ -395,7 +395,7 @@ def test_export_casing():
 
 
 def test_export_invalid_refs():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile()})
     c.run("export . --name=pkg% --version=0.1", assert_error=True)
     assert "ERROR: Invalid package name 'pkg%'" in c.out
@@ -408,7 +408,7 @@ def test_export_invalid_refs():
 
 
 def test_allow_temp_uppercase():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile()})
     c.run("export . --name=Pkg --version=0.1", assert_error=True)
     assert "ERROR: Conan packages names 'Pkg/0.1' must be all lowercase" in c.out
@@ -419,7 +419,7 @@ def test_allow_temp_uppercase():
 
 
 def test_warn_special_chars_refs():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile()})
     c.run("export . --name=pkg.name --version=0.1")
     assert "WARN: Name containing special chars is discouraged 'pkg.name'" in c.out
@@ -430,7 +430,7 @@ def test_warn_special_chars_refs():
 
 
 def test_export_json():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile()})
     c.run("export . --name=foo --version=0.1 --format json")
     info = json.loads(c.stdout)

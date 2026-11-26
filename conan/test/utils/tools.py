@@ -26,8 +26,7 @@ from webtest.app import TestApp
 from conan.api.subapi.audit import CONAN_CENTER_AUDIT_PROVIDER_NAME, _save_providers
 from conan.api.subapi.remotes import _save
 from conan.cli.exit_codes import SUCCESS
-from conan.internal.api.detect.detect_api import detect_os, detect_msvc_compiler, \
-    default_msvc_ide_version
+from conan.internal.api.detect.detect_api import detect_msvc_compiler, default_msvc_ide_version
 from conan.internal.cache.cache import PackageLayout, RecipeLayout, PkgCache
 from conan.internal.cache.home_paths import HomePaths
 from conan.internal import REVISIONS
@@ -90,7 +89,7 @@ default_profiles = {
         os=Macos
         arch={arch_setting}
         compiler=apple-clang
-        compiler.version=17
+        compiler.version=21
         compiler.libcxx=libc++
         build_type=Release
         """)
@@ -399,7 +398,7 @@ class TestClient:
 
     def __init__(self, cache_folder=None, current_folder=None, servers=None, inputs=None,
                  requester_class=None, path_with_spaces=True,
-                 default_server_user=None, light=False, custom_commands_folder=None):
+                 default_server_user=None, custom_commands_folder=None):
         """
         current_folder: Current execution folder
         servers: dict of {remote_name: TestServer}
@@ -442,12 +441,8 @@ class TestClient:
         self.inputs = inputs or []
 
         # create default profile
-        if light:
-            text = f"[settings]\nos={detect_os()}"  # Needed at least build-os
-            save(self.paths.settings_path, "os: [Linux, Windows, Macos]")
-        else:
-            text = default_profiles[platform.system()]
-        save(os.path.join(self.cache_folder, "profiles", "default"), text)
+        save(os.path.join(self.cache_folder, "profiles", "default"),
+             default_profiles[platform.system()])
         # Using internal env variable to add another custom commands folder
         self._custom_commands_folder = custom_commands_folder
 

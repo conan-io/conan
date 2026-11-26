@@ -1,7 +1,8 @@
 import textwrap
 
 import jinja2
-from jinja2 import Template
+
+from conan.internal.util.templates import compiled_template
 
 
 class TargetsTemplate2:
@@ -19,13 +20,10 @@ class TargetsTemplate2:
         return self._filename
 
     def content(self):
-        t = Template(self._template, trim_blocks=True, lstrip_blocks=True,
-                     undefined=jinja2.StrictUndefined)
+        t = compiled_template(self._template, undefined=jinja2.StrictUndefined)
         return t.render(self._context)
 
-    @property
-    def _template(self):
-        return textwrap.dedent("""\
+    _template = textwrap.dedent("""\
             include_guard()
             if(NOT ${CMAKE_FIND_PACKAGE_NAME}_FIND_QUIETLY)
                 message(STATUS "Conan: Configuring Targets for {{ filename }}")

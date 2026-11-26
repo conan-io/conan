@@ -3,8 +3,6 @@ import os
 import re
 import textwrap
 
-from jinja2 import Template
-
 from conan.api.output import Color, ConanOutput
 from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
@@ -18,6 +16,7 @@ from conan.tools.cmake.cmakeconfigdeps.targets import TargetsTemplate2
 from conan.tools.cmake.utils import cmake_escape_value, parse_extra_variable
 from conan.tools.files import save
 from conan.internal.util.files import load
+from conan.internal.util.templates import compiled_template
 
 FIND_MODE_MODULE = "module"
 FIND_MODE_CONFIG = "config"
@@ -659,7 +658,7 @@ class _CMakeContextGenerator:
             if info.exe or not (info.package_framework or info.frameworks or info.includedirs
                                 or info.libs or info.system_libs or info.defines or info.requires
                                 or info.sources or info.objects):
-                return
+                return None
 
             includedirs = ";".join(self._cmake_pkg_path(i)
                                    for i in info.includedirs) if info.includedirs else ""
@@ -702,7 +701,7 @@ class _CMakeContextGenerator:
                 target["objects"] = ";".join(objects)
             # System frameworks (only Apple OS)
             if info.frameworks:
-                target['frameworks'] = " ".join([f"-framework {frw}" for frw in info.frameworks])
+                target['frameworks'] = " ".join(f"-framework {frw}" for frw in info.frameworks)
             # FIXME: Ignoring this value for now. Relies on cmake_target_name or lib name.
             #        Revisit when cpp.exe value is used too.
             if info.package_framework:
@@ -852,7 +851,7 @@ class _CMakeContextGenerator:
 def _join_paths(conanfile, paths):
     paths = [p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"') for p in paths]
     paths = [relativize_path(p, conanfile, "${CMAKE_CURRENT_LIST_DIR}") for p in paths]
-    return " ".join([f'"{p}"' for p in paths])
+    return " ".join(f'"{p}"' for p in paths)
 
 
 class _PathGenerator:
@@ -1039,7 +1038,7 @@ class _PathGenerator:
                    "cmake_framework_path": _join_paths(self._conanfile, cmake_framework_path),
                    "cmake_module_path": _join_paths(self._conanfile, cmake_module_path)
                    }
-        content = Template(template, trim_blocks=True, lstrip_blocks=True).render(context)
+        content = compiled_template(template).render(context)
         save(self._conanfile, self._conan_cmakedeps_paths, content)
 
     def _get_host_runtime_dirs(self):

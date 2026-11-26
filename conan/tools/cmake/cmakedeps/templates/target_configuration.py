@@ -34,9 +34,7 @@ class TargetConfigurationTemplate(CMakeDepsFileTemplate):
                 "components_names": components_names,
                 "configuration": self.cmakedeps.configuration}
 
-    @property
-    def template(self):
-        return textwrap.dedent("""\
+    template = textwrap.dedent("""\
         # Avoid multiple calls to find_package to append duplicated properties to the targets
         include_guard()
 

@@ -127,7 +127,7 @@ class TestConfigureOptions:
 
 
 def test_config_options_override_behaviour():
-    tc = TestClient(light=True)
+    tc = TestClient()
     tc.save({"conanfile.py": textwrap.dedent("""
     from conan import ConanFile
 
@@ -153,7 +153,7 @@ def test_config_options_override_behaviour():
 
 
 def test_configure_transitive_option():
-    c = TestClient(light=True)
+    c = TestClient()
     c.save({"conanfile.py": GenConanfile("zlib", "0.1").with_shared_option(False)})
     c.run("create . -o *:shared=True")
 

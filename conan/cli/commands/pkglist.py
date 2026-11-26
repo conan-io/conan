@@ -34,8 +34,8 @@ def pkglist_find_remote(conan_api, parser, subparser, *args):
     return {
         "results": result.serialize(),
         "conan_api": conan_api,
-        "cli_args": " ".join([f"{arg}={getattr(args, arg)}"
-                              for arg in vars(args) if getattr(args, arg)])
+        "cli_args": " ".join(f"{arg}={getattr(args, arg)}"
+                             for arg in vars(args) if getattr(args, arg))
     }
 
 
@@ -58,6 +58,6 @@ def pkglist_merge(conan_api, parser, subparser, *args):
     return {
         "results": result.serialize(),
         "conan_api": conan_api,
-        "cli_args": " ".join([f"{arg}={getattr(args, arg)}"
-                              for arg in vars(args) if getattr(args, arg)])
+        "cli_args": " ".join(f"{arg}={getattr(args, arg)}"
+                             for arg in vars(args) if getattr(args, arg))
     }
