@@ -326,6 +326,22 @@ class TestAddRemove:
         c.run("workspace add . --name=Pkg --version=0.1", assert_error=True)
         assert "ERROR: Conan packages names 'Pkg/0.1' must be all lowercase" in c.out
 
+    def test_error_uppercase_discovery(self):
+        # https://github.com/conan-io/conan/issues/20553
+        # Uppercase names defined in conanws.yml must also be rejected during workspace discovery,
+        # not only by "workspace add"
+        c = TestClient()
+        c.save({"conanws.yml": "packages:\n  - path: pkg\n",
+                "pkg/conanfile.py": GenConanfile("Pkg", "0.1")})
+        c.run("workspace install", assert_error=True)
+        assert "ERROR: Conan packages names 'Pkg/0.1' must be all lowercase" in c.out
+
+        # Same if the reference is defined in the conanws.yml
+        c.save({"conanws.yml": "packages:\n  - path: pkg\n    ref: Pkg/0.1\n",
+                "pkg/conanfile.py": GenConanfile()})
+        c.run("workspace install", assert_error=True)
+        assert "ERROR: Conan packages names 'Pkg/0.1' must be all lowercase" in c.out
+
     def test_add_open_error(self):
         c = TestClient()
         c.save({"conanws.yml": "",
