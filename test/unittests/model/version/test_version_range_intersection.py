@@ -129,7 +129,12 @@ incompatible_values = [
     ['>1.0 <2.0', "<1.0"],
     ['>1.0 <2.0', ">3.0 <4.0"],
     ['<1.0', ">3.0 <4.0"],
-    ['>=1.0 <2 || >2 <3', ">4 <5"]
+    ['>=1.0 <2 || >2 <3', ">4 <5"],
+    # https://github.com/conan-io/conan/issues/20552
+    # Disjoint >= and < bounds at the same version, with pre-release in the version
+    ['>=2.0.0-rc.1', "<2.0.0-rc.1"],
+    ['>=2.0.0-rc.1, include_prerelease', "<2.0.0-rc.1, include_prerelease"],
+    ['>=1.2.0-rc.1, include_prerelease', "<1.2.0-rc.1, include_prerelease"],
 ]
 
 

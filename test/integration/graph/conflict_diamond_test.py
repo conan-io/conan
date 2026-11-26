@@ -131,6 +131,23 @@ def test_no_conflict_exact_version_ranges():
     c.assert_listed_require({"libb/0.1.0": "Cache"})
 
 
+def test_conflict_disjoint_ranges_same_bound():
+    # https://github.com/conan-io/conan/issues/20552
+    # The intersection of the 2 ranges is void, it must be reported as a conflict, not as a
+    # "missing" error from trying to resolve the void range
+    range1 = "[>=2.0.0-rc.1, include_prerelease]"
+    range2 = "[<2.0.0-rc.1, include_prerelease]"
+    c = TestClient()
+    c.save({"libb/conanfile.py": GenConanfile("libb"),
+            "libc/conanfile.py": GenConanfile("libc", "1.0.0").with_requires(f"libb/{range1}")})
+    c.run("export libb --version=1.8.4")
+    c.run("export libb --version=2.0.0-rc.1")
+    c.run("export libc")
+    c.run(f'graph info --requires="libc/[>=1.0.0]" --requires="libb/{range2}"', assert_error=True)
+    assert f"Version conflict: Conflict between libb/{range1} and libb/{range2} in the graph" in c.out
+    assert "could not be resolved" not in c.out
+
+
 @pytest.mark.parametrize("test", [True, False])
 @pytest.mark.parametrize("order", [True, False])
 class TestErrorVisibleFalse:

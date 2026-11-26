@@ -80,6 +80,9 @@ class _Condition:
                 # by comparing >= & <= for lower limit <= upper limit
                 elif other.operator == "<=":
                     return True
+                # >=V and <V on the same version is always void, with or without a pre-release
+                elif other.operator == "<":
+                    return False
                 else:
                     return self.display_version.pre is not None
         return False
