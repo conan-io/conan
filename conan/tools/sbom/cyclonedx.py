@@ -81,7 +81,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
         "metadata": {
             "component": {
                 "author": conanfile.author or "Unknown",
-                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile._conan_node),
+                "bom-ref": special_id if has_special_root_node else _calculate_bomref(graph.root),
                 "name": name if name else name_default,
                 "type": "application" if conanfile.package_type == "application" else "library",
             },
@@ -183,7 +183,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
         "metadata": {
             "component": {
                 **({"authors": [{"name": conanfile.author}]} if conanfile.author else {}),
-                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile._conan_node),
+                "bom-ref": special_id if has_special_root_node else _calculate_bomref(graph.root),
                 "name": name if name else name_default,
                 "type": "application" if conanfile.package_type == "application" else "library"
             },
@@ -252,9 +252,7 @@ def _component_extra_info(extra_info, node):
 def _calculate_bomref(component):
     user = f"&user={component.ref.user}" if component.ref.user else ""
     channel = f"&channel={component.ref.channel}" if component.ref.channel else ""
-    package_id = getattr(component, "package_id", None)
-
-    package_id = f"&package_id={package_id}" if package_id else ""
+    package_id = f"&package_id={component.package_id}" if component.package_id else ""
     return (f"pkg:conan/{component.name}@{component.ref.version}"
             f"?rrev={component.ref.revision}{package_id}{user}{channel}")
 

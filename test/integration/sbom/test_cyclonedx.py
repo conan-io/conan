@@ -466,8 +466,8 @@ class TestCyclonedx:
         sbom = json.loads(tc.load(os.path.join("out", f"sbom-cyclonedx-{method}.json")))
         liba_components = [c["bom-ref"] for c in sbom["components"] if "/liba@" in c["bom-ref"]]
         liba_deps = [d["ref"] for d in sbom["dependencies"] if "/liba@" in d["ref"]]
-        assert len(liba_components) == 2
-        assert len(liba_deps) == 2
+        assert len(set(liba_components)) == len(liba_components) == 2
+        assert len(set(liba_deps)) == len(liba_deps) == 2
 
     def test_visible_false_same_bomref_merges_depends(self, cyclone_version):
         """
@@ -538,8 +538,9 @@ class TestCyclonedx:
         sbom = json.loads(tc.load(os.path.join("out", f"sbom-cyclonedx-{method}.json")))
         liba_components = [c["bom-ref"] for c in sbom["components"] if "/liba@" in c["bom-ref"]]
         liba_deps = [d["ref"] for d in sbom["dependencies"] if "/liba@" in d["ref"]]
-        assert len(liba_components) == 2
-        assert len(liba_deps) == 2
+        assert len(set(liba_components)) == len(liba_components) == 2
+        assert len(set(liba_deps)) == len(liba_deps) == 2
+
 
 class TestCyclonedx2:
     # Using the sbom tool with "conan create"
