@@ -431,7 +431,7 @@ class TestCyclonedx:
         Same reference with different options gives different package_ids, so each binary
         gets its own bom-ref.
         """
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"dep1/conanfile.py": GenConanfile("dep1", "1.0"),
                  "dep2/conanfile.py": GenConanfile("dep2", "1.0")})
         tc.run("export dep1")
