@@ -410,7 +410,7 @@ class TestCyclonedx:
 
     def test_visible_false_duplicate_bomref(self, cyclone_version):
         # https://github.com/conan-io/conan/issues/20489
-        tc = TestClient(light=True)
+        tc = TestClient()
         tc.save({"liba/conanfile.py": GenConanfile("liba", "1.0"),
                  "libb/conanfile.py": GenConanfile("libb", "1.0")
                 .with_requirement("liba/1.0", visible=False),
