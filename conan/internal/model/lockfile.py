@@ -99,15 +99,21 @@ class _LockRequires:
 
     def merge(self, other):
         """
+        If the same reference is defined with and without revision, the one with revision is
+        more specific and prevails, independently of the order of the merged lockfiles.
+        Different revisions of the same reference are kept, they are not the same entry
+
         :type other: _LockRequires
         """
-        # TODO: What happens when merging incomplete refs? Probably str(ref) should be used
         for k, v in other._requires.items():
             if k in self._requires:
-                if v is not None:
-                    self._requires.setdefault(k, {}).update(v)
-            else:
-                self._requires[k] = v
+                package_ids = self._requires[k]
+                if package_ids is not None:  # add the new package ids to the existing ones
+                    package_ids.update(v or {})
+                    v = package_ids
+                if k.revision is not None:  # the stored key might not have revision, replace it
+                    del self._requires[k]
+            self._requires[k] = v
         self.sort()
 
 
