@@ -117,14 +117,12 @@ class DownloadAPI:
         t = time.time()
         parallel = self._api_helpers.global_conf.get("core.download:parallel", default=1,
                                                      check_type=int)
-        thread_pool = ThreadPool(parallel) if parallel > 1 else None
-        if not thread_pool or len(package_list._data) <= 1:  # FIXME: Iteration when multiple rrevs
+        if parallel <= 1 or len(package_list._data) <= 1:  # FIXME: Iteration when multiple rrevs
             _download_pkglist(package_list)
         else:
             ConanOutput().subtitle(f"Downloading with {parallel} parallel threads")
+            thread_pool = ThreadPool(parallel)
             thread_pool.map(_download_pkglist, package_list.split())
-
-        if thread_pool:
             thread_pool.close()
             thread_pool.join()
 
