@@ -1,168 +1,743 @@
 """
-Creates a simple conan_bzl.rc file which defines a conan-config configuration with all the
-attributes defined by the consumer. Bear in mind that this is not a complete toolchain, it
-only fills some common CLI attributes and save them in a ``*.rc`` file.
+PROPOSAL: BazelToolchain based on Bazel platforms + toolchain resolution.
 
-Important: Maybe, this toolchain should create a new Conan platform with the user
-constraints, but it's not the goal for now as Bazel has tons of platforms and toolchains
-already available in its bazel_tools repo. For now, it only admits a list of platforms defined
-by the user.
+Instead of filling a bazelrc file with loose CLI flags (``--cpu``, ``--crosstool_top``,
+``--copt``...), this generator models the Conan configuration the way Bazel >= 7 expects:
 
-More information related:
-    * Toolchains: https://bazel.build/extending/toolchains (deprecated)
-    * Platforms: https://bazel.build/concepts/platforms (new default since Bazel 7.x)
-    * Migrating to platforms: https://bazel.build/concepts/platforms
-    * Issue related: https://github.com/bazelbuild/bazel/issues/6516
+* ``platform()`` targets for the host (``settings``) and build (``settings_build``) machines,
+  built from ``@platforms//os`` and ``@platforms//cpu`` constraints.
+* A real C/C++ toolchain: the official rules_cc Unix ``cc_toolchain_config`` rule (the same one
+  used by Bazel's auto-configured ``@local_config_cc``) with absolute ``tool_paths`` and all the
+  Conan flags, a ``cc_toolchain`` and a ``toolchain()`` registered for the
+  ``@bazel_tools//tools/cpp:toolchain_type``. Flags without an equivalent attribute (exe/shared
+  link flags, ObjC flags) are injected as rules_cc rule-based ``cc_feature``.
+* A ``conan_toolchain.MODULE.bazel`` snippet that registers the toolchain. Toolchains
+  registered by the root module have priority over Bazel's auto-configured
+  ``@local_config_cc``, so native builds need no extra flags at all: Bazel's auto-detected
+  host platform matches the toolchain ``os``/``cpu`` constraints.
+* Everything that used to be a CLI flag lives in the toolchain itself: PIC (``-fPIC`` in the
+  compile flags) and optimization/debug flags (Conan ``build_type`` flags).
+* A minimal ``conan_bzl.rc`` (``conan-config``), always generated, with what Bazel only admits
+  from the command line/bazelrc: ``--strip=never`` (Bazel default ``fastbuild`` mode strips the
+  debug symbols with ``--strip=sometimes``, the Conan flags decide them), and, **only when
+  cross-building**, ``--platforms`` and ``--host_platform``. The ``Bazel`` helper uses it
+  automatically. Add ``--config=conan-config`` if you call Bazel directly.
 
-Others:
-    * CROOSTOOL: https://github.com/bazelbuild/bazel/blob/cb0fb033bad2a73e0457f206afb87e195be93df2/tools/cpp/CROSSTOOL
-    * Cross-compiling with Bazel: https://ltekieli.com/cross-compiling-with-bazel/
-    * bazelrc files: https://bazel.build/run/bazelrc
-    * CLI options: https://bazel.build/reference/command-line-reference
-    * User manual: https://bazel.build/docs/user-manual
+Generated files (with ``bazel_layout``, inside ``<build>/conan``)::
+
+    conan/
+    ├── BUILD.bazel                         # empty, makes //conan a package
+    ├── conan_toolchain.MODULE.bazel        # register_toolchains(...)
+    ├── conan_bzl.rc                        # --config=conan-config
+    └── conan_toolchain/
+        └── BUILD.bazel                     # platforms, cc_toolchain_config, toolchain
+
+Requirements in the consumer ``MODULE.bazel`` (Bazel >= 7.2 for ``include()``)::
+
+    bazel_dep(name = "platforms", version = "1.1.0")
+    bazel_dep(name = "rules_cc", version = "0.2.17")   # >= 0.2.17 (cc_toolchain_config)
+    include("//conan:conan_toolchain.MODULE.bazel")
+
+Notice that the registered toolchain is selected for any target platform with the same
+``os``/``cpu`` constraints, not only for the Conan generated ones.
+
+MSVC: the rules_cc Windows ``cc_toolchain_config`` needs the whole ``vcvars`` environment
+(``PATH``, ``INCLUDE``, ``LIB``), so for it (or when ``generate_cc_toolchain = False``), only the
+platforms are generated and Bazel keeps using its auto-configured ``@local_config_cc`` toolchain.
+Conan points it to the right installation
+(``--repo_env=BAZEL_VC/BAZEL_VC_FULL_VERSION/BAZEL_WINSDK_FULL_VERSION``), selects the runtime
+with the ``static_link_msvcrt`` feature, and passes the Conan flags as
+``--copt/--cxxopt/--conlyopt/--linkopt`` in the bazelrc file. clang-cl is not supported yet.
+
+More information:
+    * Platforms: https://bazel.build/extending/platforms
+    * Toolchain resolution: https://bazel.build/extending/toolchains
+    * C++ toolchain configuration: https://bazel.build/docs/cc-toolchain-config-reference
+    * Tutorial: https://bazel.build/tutorials/ccp-toolchain-config
 """
+import ntpath
+import os
+import posixpath
+import shutil
 import textwrap
+from io import StringIO
 
+from jinja2 import StrictUndefined
 
+from conan.errors import ConanException
 from conan.internal import check_duplicated_generator
 from conan.internal.internal_tools import raise_on_universal_arch
+from conan.internal.model.pkg_type import PackageType
+from conan.internal.util.files import save
 from conan.internal.util.templates import compiled_template
-from conan.tools.apple import to_apple_arch, is_apple_os
+from conan.tools.apple.apple import is_apple_os, resolve_apple_flags, apple_extra_flags
+from conan.tools.build import cmd_args_to_string
 from conan.tools.build.cross_building import cross_building
-from conan.tools.build.flags import cppstd_flag
-from conan.tools.files import save
+from conan.tools.build.flags import architecture_flag, architecture_link_flag, threads_flags, \
+    libcxx_flags, cppstd_flag, cstd_flag, build_type_flags
+from conan.tools.env import VirtualBuildEnv
+from conan.tools.google.helpers import to_bazel_os_constraint, to_bazel_cpu_constraint, \
+    to_bazel_compiler, to_starlark
+from conan.internal.api.detect.detect_vs import vs_installation_path
+from conan.tools.microsoft import msvc_runtime_flag, is_msvc
+from conan.tools.microsoft.visual import _vcvars_versions
 
 
-def _get_cpu_name(conanfile):
-    host_os = conanfile.settings.get_safe('os').lower()
-    host_arch = conanfile.settings.get_safe('arch')
-    if is_apple_os(conanfile):
-        host_os = "darwin" if host_os == "macos" else host_os
-        host_arch = to_apple_arch(conanfile)
-    # FIXME: Probably it's going to fail, but let's try it because it normally follows this syntax
-    return f"{host_os}_{host_arch}"
+def _bazelrc_quote(flag):
+    """
+    Bazel splits every bazelrc line into tokens like a shell does, so a flag with spaces (e.g.,
+    ``--repo_env=BAZEL_VC=C:/Program Files/Microsoft Visual Studio/2022/VC``) has to be quoted
+    """
+    if not any(c.isspace() or c in "\"'\\" for c in flag):
+        return flag
+    escaped = flag.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
 
 
-# FIXME: In the future, it could be BazelPlatform instead? Check https://bazel.build/concepts/platforms
+def _parse_include_dirs(output):
+    """
+    Directories of the ``#include <...>`` search list printed by ``gcc/clang -E -v``. The macOS
+    frameworks ones are marked with `` (framework directory)``.
+    """
+    listing = output.partition("#include <...> search starts here:")[2]
+    listing = listing.partition("End of search list.")[0]
+    return [line.strip().replace(" (framework directory)", "").replace("\\", "/")
+            for line in listing.splitlines() if line.strip()]
+
+
 class BazelToolchain:
+    """
+    BazelToolchain generator (platforms + C/C++ toolchain)
+    """
+    #: Name of the bazelrc file. Kept for compatibility with the ``Bazel`` build helper.
     bazelrc_name = "conan_bzl.rc"
+    #: Name of the bazelrc configuration. Kept for compatibility with the ``Bazel`` build helper.
     bazelrc_config = "conan-config"
-    bazelrc_template = textwrap.dedent("""\
-    # Automatic bazelrc file created by Conan
-    {% if copt %}build:conan-config {{copt}}{% endif %}
-    {% if conlyopt %}build:conan-config {{conlyopt}}{% endif %}
-    {% if cxxopt %}build:conan-config {{cxxopt}}{% endif %}
-    {% if linkopt %}build:conan-config {{linkopt}}{% endif %}
-    {% if force_pic %}build:conan-config --force_pic={{force_pic}}{% endif %}
-    {% if dynamic_mode %}build:conan-config --dynamic_mode={{dynamic_mode}}{% endif %}
-    {% if compilation_mode %}build:conan-config --compilation_mode={{compilation_mode}}{% endif %}
-    {% if compiler %}build:conan-config --compiler={{compiler}}{% endif %}
-    {% if cpu %}build:conan-config --cpu={{cpu}}{% endif %}
-    {% if crosstool_top %}build:conan-config --crosstool_top={{crosstool_top}}{% endif %}""")
+    #: Bazel package (sub-folder of the generators folder) where the toolchain is generated
+    toolchain_folder = "conan_toolchain"
+    #: MODULE.bazel snippet to be included by the consumer's MODULE.bazel
+    module_filename = "conan_toolchain.MODULE.bazel"
+
+    _bazelrc_template = textwrap.dedent("""\
+        # Automatic bazelrc file created by Conan
+        {% if cross_building %}
+        build:conan-config --platforms={{ package }}:host_platform
+        build:conan-config --host_platform={{ package }}:build_platform
+        {% endif %}
+        {% for flag in rc_flags %}
+        build:conan-config {{ flag }}
+        {% endfor %}
+        """)
+
+    _module_template = textwrap.dedent("""\
+        # Automatically generated by Conan BazelToolchain. Include it in your MODULE.bazel:
+        # include("{{ module_label }}")
+        {% if generate_cc_toolchain %}
+        register_toolchains("{{ package }}:cc_toolchain")
+        {% endif %}
+        """)
+
+    _build_template = textwrap.dedent("""\
+        # Automatically generated by Conan BazelToolchain. Do not edit it.
+        {% if generate_cc_toolchain %}
+        load("@rules_cc//cc:defs.bzl", "cc_toolchain")
+        load("@rules_cc//cc/private/toolchain:unix_cc_toolchain_config.bzl", "cc_toolchain_config")
+        {% if extra_features %}
+        load("@rules_cc//cc/toolchains:args.bzl", "cc_args")
+        load("@rules_cc//cc/toolchains:feature.bzl", "cc_feature")
+        {% endif %}
+        {% endif %}
+
+        package(default_visibility = ["//visibility:public"])
+
+        # Host machine: Conan "settings" (where the binaries will run)
+        platform(
+            name = "host_platform",
+            constraint_values = {{ host_constraints }},
+        )
+
+        # Build machine: Conan "settings_build" (where the build tools run)
+        platform(
+            name = "build_platform",
+            constraint_values = {{ build_constraints }},
+        )
+        {% if generate_cc_toolchain %}
+
+        filegroup(name = "empty")
+        {% for name, feature in extra_features.items() %}
+
+        cc_args(
+            name = "{{ name }}_args",
+            actions = {{ feature.actions }},
+            args = {{ feature.flags }},
+        )
+
+        cc_feature(
+            name = "{{ name }}",
+            feature_name = "{{ name }}",
+            args = [":{{ name }}_args"],
+        )
+        {% endfor %}
+
+        # Same rule used by the Bazel auto-configured toolchain (@local_config_cc)
+        cc_toolchain_config(
+            name = "cc_toolchain_config",
+            toolchain_identifier = "{{ toolchain_identifier }}",
+            compiler = "{{ compiler }}",
+            cpu = "{{ target_cpu }}",
+            host_system_name = "local",
+            target_system_name = "{{ target_system_name }}",
+            target_libc = "{{ target_libc }}",
+            abi_version = "local",
+            abi_libc_version = "local",
+            tool_paths = {{ tool_paths }},
+            cxx_builtin_include_directories = {{ cxx_builtin_include_directories }},
+            builtin_sysroot = "{{ builtin_sysroot }}",
+            compile_flags = {{ compile_flags }},
+            conly_flags = {{ c_flags }},
+            cxx_flags = {{ cxx_flags }},
+            link_flags = {{ link_flags }},
+            link_libs = {{ link_libs }},
+            {% if extra_features %}
+            extra_enabled_features = {{ extra_features_labels }},
+            {% endif %}
+        )
+
+        cc_toolchain(
+            name = "conan_cc_toolchain",
+            all_files = ":empty",
+            ar_files = ":empty",
+            as_files = ":empty",
+            compiler_files = ":empty",
+            dwp_files = ":empty",
+            linker_files = ":empty",
+            objcopy_files = ":empty",
+            strip_files = ":empty",
+            toolchain_config = ":cc_toolchain_config",
+        )
+
+        toolchain(
+            name = "cc_toolchain",
+            exec_compatible_with = {{ exec_compatible_with }},
+            target_compatible_with = {{ host_constraints }},
+            toolchain = ":conan_cc_toolchain",
+            toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
+        )
+        {% endif %}
+        """)
 
     def __init__(self, conanfile):
         """
         :param conanfile: ``< ConanFile object >`` The current recipe object. Always use ``self``.
         """
         raise_on_universal_arch(conanfile)
-
         self._conanfile = conanfile
+        self._conf = conanfile.conf
+        self._is_apple_system = is_apple_os(conanfile)
+        self._is_cross_building = cross_building(conanfile)
 
-        # Bazel build parameters
-        shared = self._conanfile.options.get_safe("shared")
-        fpic = self._conanfile.options.get_safe("fPIC")
-        #: Boolean used to add --force_pic=True. Depends on self.options.shared and
-        #: self.options.fPIC values
-        self.force_pic = fpic if (not shared and fpic is not None) else None
-        # FIXME: Keeping this option but it's not working as expected. It's not creating the shared
-        #        libraries at all.
-        #: String used to add --dynamic_mode=["fully"|"off"]. None if self.options.shared is undefined.
-        self.dynamic_mode = None if shared is None else ("fully" if shared else "off")
-        #: String used to add --cxxopt=[FLAG]. Depends on your settings.
-        self.cppstd = cppstd_flag(self._conanfile)
-        #: List of flags used to add --copt=flag1 ... --copt=flagN
-        self.copt = []
-        #: List of flags used to add --conlyopt=flag1 ... --conlyopt=flagN
-        self.conlyopt = []
-        #: List of flags used to add --cxxopt=flag1 ... --cxxopt=flagN
-        self.cxxopt = []
-        #: List of flags used to add --linkopt=flag1 ... --linkopt=flagN
-        self.linkopt = []
-        #: String used to add --compilation_mode=["opt"|"dbg"]. Depends on self.settings.build_type
-        self.compilation_mode = {'Release': 'opt', 'Debug': 'dbg'}.get(
-            self._conanfile.settings.get_safe("build_type")
-        )
-        # Be aware that this parameter does not admit a compiler absolute path
-        # If you want to add it, you will have to use a specific Bazel toolchain
-        #: String used to add --compiler=xxxx.
-        self.compiler = None
-        # cpu is the target architecture, and it's a bit tricky. If it's not a cross-compilation,
-        # let Bazel guess it.
-        #: String used to add --cpu=xxxxx. At the moment, it's only added if cross-building.
-        self.cpu = None
-        # TODO: cross-compilation process is so powerless. Needs to use the new platforms.
-        if cross_building(self._conanfile):
-            # Bazel is using those toolchains/platforms by default.
-            # It's better to let it configure the project in that case
-            self.cpu = _get_cpu_name(conanfile)
-        # This is itself a toolchain but just in case
-        #: String used to add --crosstool_top.
-        self.crosstool_top = None
-        # TODO: Have a look at https://bazel.build/reference/be/make-variables
-        # FIXME: Missing host_xxxx options. When are they needed? Cross-compilation?
+        settings = conanfile.settings
+        compiler = settings.get_safe("compiler")
+        if compiler is None:
+            raise ConanException("BazelToolchain needs 'settings.compiler', but it is not defined")
+        self._compiler = compiler
+        self._os = settings.get_safe("os")
+        self._is_windows = self._os in ("Windows", "WindowsStore", "WindowsCE")
+        self._arch = settings.get_safe("arch")
+
+        # ---------------------------------------------------------------------------------------
+        # Platforms
+        # ---------------------------------------------------------------------------------------
+        #: List of constraint labels of the host platform (``settings``). The registered
+        #: toolchain is selected for any platform that satisfies them.
+        self.host_constraints = [c for c in (to_bazel_os_constraint(self._os),
+                                             to_bazel_cpu_constraint(self._arch)) if c]
+        #: List of constraint labels of the build platform (``settings_build``)
+        self.build_constraints = list(self.host_constraints)
+        if self._is_cross_building:
+            settings_build = conanfile.settings_build
+            self.build_constraints = [
+                c for c in (to_bazel_os_constraint(settings_build.get_safe("os")),
+                            to_bazel_cpu_constraint(settings_build.get_safe("arch"))) if c]
+
+        build_type = settings.get_safe("build_type")
+        fpic = conanfile.options.get_safe("fPIC")
+        shared = conanfile.package_type is PackageType.SHARED
+        #: Compile everything as position independent code (``-fPIC``). Defined by the ``fPIC``
+        #: option if the library is not shared (shared libraries are always PIC in Bazel).
+        self.fpic = bool(fpic) if (not shared and fpic is not None) else False
+
+        # ---------------------------------------------------------------------------------------
+        # C/C++ toolchain
+        # ---------------------------------------------------------------------------------------
+        if compiler == "clang" and settings.get_safe("compiler.runtime") is not None:
+            raise ConanException("BazelToolchain: clang-cl is not supported yet")
+        is_msvc_compiler = is_msvc(conanfile)
+        if is_msvc_compiler and self._arch not in ("x86_64", "armv8"):
+            # Bazel does not provide a toolchain for other targets (e.g., x86) in Windows
+            raise ConanException(f"BazelToolchain: MSVC with arch={self._arch} is not supported, "
+                                 "the Bazel auto-configured MSVC toolchain only builds for "
+                                 "x86_64 and armv8")
+        #: Generate the ``cc_toolchain`` (and register it with ``--extra_toolchains``).
+        #: If ``False``, Bazel's auto-configured toolchain is used and the Conan flags are passed
+        #: as ``--copt/--cxxopt/--conlyopt/--linkopt``. ``False`` by default for MSVC.
+        self.generate_cc_toolchain = not is_msvc_compiler
+
+        build_env = VirtualBuildEnv(conanfile, auto_generate=True).vars()
+        self._build_env = build_env
+        compilers_by_conf = self._conf.get("tools.build:compiler_executables", default={},
+                                           check_type=dict)
+        default_c, default_cpp = {"gcc": ("gcc", "g++"),
+                                  "apple-clang": ("clang", "clang++"),
+                                  "clang": ("clang", "clang++")}.get(compiler, ("cc", "c++"))
+        # Bazel links with the "gcc" tool (the C driver), as its own autoconfiguration does,
+        # so the C++ runtime is added explicitly in ``link_libs``
+        #: C compiler. Used by Bazel for every compile (C, C++, asm) and link action.
+        self.c = compilers_by_conf.get("c") or build_env.get("CC") or default_c
+        #: C++ compiler. Only used to locate the toolchain installation directories.
+        self.cpp = compilers_by_conf.get("cpp") or build_env.get("CXX") or default_cpp
+        #: Archiver. ``libtool`` in Apple systems, ``ar`` otherwise.
+        self.ar = build_env.get("AR") or ("libtool" if self._is_apple_system else "ar")
+        #: Linker. Bazel does not call it directly (it links through the compiler driver).
+        self.ld = build_env.get("LD") or "ld"
+        #: Other binutils
+        self.strip = build_env.get("STRIP") or "strip"
+        self.nm = build_env.get("NM") or "nm"
+        self.objdump = build_env.get("OBJDUMP") or "objdump"
+        self.objcopy = build_env.get("OBJCOPY") or "objcopy"
+        self.gcov = "gcov"
+        #: Dict of extra/overridden Bazel ``tool_paths`` (``{"gcc": "/path/to/cc", ...}``)
+        self.tool_paths = {}
+
+        #: Sysroot. Defined by ``tools.build:sysroot``. Passed as ``builtin_sysroot``.
+        self.sysroot = self._conf.get("tools.build:sysroot", check_type=str)
+        #: List of extra absolute directories where the compiler looks for system headers, added
+        #: to the ones reported by the compiler (``-E -v``). Bazel fails with "undeclared
+        #: inclusion" errors if a used header is outside them.
+        self.cxx_builtin_include_directories = []
+
+        # Flags (same naming/semantics as MesonToolchain)
+        #: List of extra ``C`` flags.
+        self.extra_cflags = []
+        #: List of extra ``C++`` flags.
+        self.extra_cxxflags = []
+        #: List of extra linker flags.
+        self.extra_ldflags = []
+        #: List of extra preprocessor definitions (``-D`` is added automatically).
+        self.extra_defines = []
+        #: Architecture flag deduced by Conan
+        self.arch_flag = architecture_flag(conanfile)
+        #: Architecture link flag deduced by Conan
+        self.arch_link_flag = architecture_link_flag(conanfile)
+        #: Threads flags deduced by Conan
+        self.threads_flags = threads_flags(conanfile)
+        #: Build type flags deduced by Conan (``-O3``, ``-g``...)
+        self.build_type_flags = build_type_flags(conanfile)
+        if is_msvc_compiler:
+            # Bazel runs several cl.exe at the same time and /Zi makes them share one .pdb file
+            # (error C1041). Bazel itself uses /Z7, which embeds the debug info in each object
+            self.build_type_flags = ["-Z7" if f == "-Zi" else f for f in self.build_type_flags]
+        #: Disable asserts (``-DNDEBUG``) if not Debug
+        self.ndebug = build_type not in (None, "Debug")
+        #: C++ standard flag
+        self.cppstd = cppstd_flag(conanfile)
+        #: C standard flag
+        self.cstd = cstd_flag(conanfile)
+        self.libcxx, self.gcc_cxx11_abi = libcxx_flags(conanfile)
+        #: Static MSVC runtime (``static_link_msvcrt`` Bazel feature). Only used if
+        #: not ``generate_cc_toolchain``
+        self.msvc_static_runtime = is_msvc_compiler and "MT" in msvc_runtime_flag(conanfile)
+        #: Apple flags
+        self.apple_arch_flag = []
+        self.apple_isysroot_flag = []
+        self.apple_min_version_flag = []
+        self.apple_extra_flags = apple_extra_flags(conanfile)
+        self._resolve_apple_flags()
+        self._resolve_android_cross_compilation()
+
+    def _resolve_apple_flags(self):
+        if not self._is_apple_system:
+            return
+        try:
+            min_flag, arch_flag, isysroot_flag = resolve_apple_flags(
+                self._conanfile, is_cross_building=self._is_cross_building)
+        except ConanException as e:
+            # Cross-building to Apple needs the SDK path: "xcrun" only exists in macOS
+            raise ConanException(f"BazelToolchain: could not get the Apple SDK path ({e}). "
+                                 "Define it with the 'tools.apple:sdk_path' conf") from e
+        self.apple_arch_flag = arch_flag.split() if arch_flag else []
+        self.apple_isysroot_flag = isysroot_flag.split() if isysroot_flag else []
+        self.apple_min_version_flag = [min_flag]
+
+    def _resolve_android_cross_compilation(self):
+        if not self._is_cross_building or self._os != "Android":
+            return
+        ndk_path = self._conf.get("tools.android:ndk_path")
+        if not ndk_path:
+            raise ConanException("You must provide a NDK path. Use 'tools.android:ndk_path' "
+                                 "configuration field.")
+        os_build = self._conanfile.settings_build.get_safe("os")
+        host_tag = {"Macos": "darwin", "Windows": "windows"}.get(os_build, "linux")
+        ndk_bin = self._path.join(ndk_path, "toolchains", "llvm", "prebuilt",
+                                  f"{host_tag}-x86_64", "bin")
+        api_level = self._conanfile.settings.get_safe("os.api_level")
+        target = {"armv7": "armv7a-linux-androideabi",
+                  "armv8": "aarch64-linux-android",
+                  "x86": "i686-linux-android",
+                  "x86_64": "x86_64-linux-android"}.get(self._arch)
+        ext = ".cmd" if os_build == "Windows" else ""
+        self.c = self._path.join(ndk_bin, f"{target}{api_level}-clang{ext}")
+        self.cpp = self._path.join(ndk_bin, f"{target}{api_level}-clang++{ext}")
+        self.ar = self._path.join(ndk_bin, "llvm-ar")
+        self.strip = self._path.join(ndk_bin, "llvm-strip")
+        self.nm = self._path.join(ndk_bin, "llvm-nm")
+        self.objdump = self._path.join(ndk_bin, "llvm-objdump")
+        self.objcopy = self._path.join(ndk_bin, "llvm-objcopy")
+        self.cxx_builtin_include_directories.append(ndk_path)
+
+    # -------------------------------------------------------------------------------------------
+    # Context
+    # -------------------------------------------------------------------------------------------
+    # Tools that every build needs (compile/link and static libraries). The rest are optional
+    _required_tools = ("gcc", "ar")
 
     @staticmethod
-    def _filter_list_empty_fields(v):
-        return list(filter(bool, v))
+    def _filter(v):
+        return [f for f in v if f]
 
     @property
-    def cxxflags(self):
-        ret = [self.cppstd]
-        conf_flags = self._conanfile.conf.get("tools.build:cxxflags", default=[], check_type=list)
-        ret = ret + self.cxxopt + conf_flags
-        return self._filter_list_empty_fields(ret)
+    def _path(self):
+        """ Path flavor of the build machine (settings_build), where the tools are located """
+        os_build = self._conanfile.settings_build.get_safe("os")
+        return ntpath if os_build in ("Windows", "WindowsStore", "WindowsCE") else posixpath
 
-    @property
-    def cflags(self):
-        conf_flags = self._conanfile.conf.get("tools.build:cflags", default=[], check_type=list)
-        ret = self.conlyopt + conf_flags
-        return self._filter_list_empty_fields(ret)
+    def _to_abs_tool(self, tool, name=None):
+        """
+        Bazel resolves relative ``tool_paths`` against the toolchain package, so every tool
+        has to be an absolute path. Unknown tools point to a failing binary, as Bazel suggests.
+        A warning is raised if ``name`` is one of the tools needed by any build.
+        """
+        if isinstance(tool, list) or (tool and len(tool.split()) > 1):
+            raise ConanException(f"BazelToolchain: '{tool}' is not a single executable. Bazel "
+                                 "tool_paths do not admit wrappers/arguments (e.g., ccache), "
+                                 "use a wrapper script instead.")
+        if tool and self._path.isabs(tool):
+            return tool.replace("\\", "/")
+        found = shutil.which(tool) if tool else None
+        if found:
+            return found.replace("\\", "/")
+        if name in self._required_tools:
+            self._conanfile.output.warning(
+                f"BazelToolchain: the '{name}' tool ('{tool}') was not found, the Bazel build "
+                "will fail when using it. Define its absolute path with "
+                "'tools.build:compiler_executables', the build environment or "
+                f"'tool_paths[\"{name}\"]'")
+        return "C:/Windows/System32/false.exe" if self._path is ntpath else "/bin/false"
 
-    @property
-    def ldflags(self):
-        shared = self._conanfile.conf.get("tools.build:sharedlinkflags", default=[],
-                                          check_type=list)
-        exe = self._conanfile.conf.get("tools.build:exelinkflags", default=[], check_type=list)
-        linker_scripts = self._conanfile.conf.get("tools.build:linker_scripts", default=[],
-                                                  check_type=list)
-        ret = self.linkopt + shared + exe + ["-T'" + script + "'" for script in linker_scripts]
-        return self._filter_list_empty_fields(ret)
+    def _cpp_tool(self):
+        """
+        C preprocessor (Bazel barely uses it). GCC provides it next to the compiler with the
+        same cross prefix and version: ``/bin/aarch64-linux-gnu-gcc-12`` is
+        ``/bin/aarch64-linux-gnu-cpp-12``. Otherwise, the one in the ``PATH``.
+        """
+        folder, name = self._path.split(self.c or "")
+        if self._compiler == "gcc" and "gcc" in name:
+            return self._path.join(folder, name.replace("gcc", "cpp"))
+        return "cpp"
 
-    def _context(self):
+    def _get_tool_paths(self):
+        ret = {
+            "gcc": self.c,
+            "cpp": self._cpp_tool(),
+            "ar": self.ar,
+            "ld": self.ld,
+            "strip": self.strip,
+            "nm": self.nm,
+            "objdump": self.objdump,
+            "objcopy": self.objcopy,
+            "gcov": self.gcov,
+        }
+        ret.update(self.tool_paths)
+        return {k: self._to_abs_tool(v, name=k) for k, v in ret.items()}
+
+    def _compiler_include_directories(self, compiler):
+        """
+        System include directories reported by the compiler (``-E -v``) with the flags that
+        change them, as Bazel's auto-configured toolchain does. Empty if the compiler cannot
+        be run in this machine.
+        """
+        if not os.path.isfile(compiler):
+            return []
+        flags = ([self.arch_flag, self.libcxx] + self.apple_arch_flag + self.apple_isysroot_flag +
+                 ([f"--sysroot={self.sysroot}"] if self.sysroot else []))
+        args = [compiler] + [f for f in flags if f] + ["-E", "-v", "-x", "c++", os.devnull]
+        command = cmd_args_to_string(args)
+        stderr = StringIO()
+        with self._build_env.apply():
+            code = self._conanfile.run(command, stdout=StringIO(), stderr=stderr, quiet=True,
+                                       ignore_errors=True, env=None)
+        dirs = _parse_include_dirs(stderr.getvalue()) if code == 0 else []
+        if not dirs:
+            self._conanfile.output.warning(f"BazelToolchain: could not get the system include "
+                                           f"directories from '{compiler}', using default ones")
+        return dirs
+
+    def _get_builtin_include_directories(self, tool_paths):
+        dirs = list(self.cxx_builtin_include_directories)
+        compiler = tool_paths["gcc"]
+        reported = []
+        if not compiler.endswith("false"):
+            reported = self._compiler_include_directories(compiler)
+        if reported:
+            for d in reported:
+                d = self._path.normpath(d).replace("\\", "/")  # e.g., /lib/gcc/../../include
+                # Bazel compares them with the real path of the included headers
+                real = os.path.realpath(d).replace("\\", "/") if os.path.isdir(d) else d
+                dirs += [d, real]
+        else:
+            # The compiler installation prefix, e.g., /usr for /usr/bin/gcc
+            for tool in (compiler, self._to_abs_tool(self.cpp)):
+                real = os.path.realpath(tool) if os.path.exists(tool) else tool  # symlinks
+                prefix = self._path.dirname(self._path.dirname(real))
+                if prefix not in ("/", "") and not tool.endswith("false"):
+                    dirs.append(prefix.replace("\\", "/"))
+            if not self._is_apple_system:
+                dirs += ["/usr/include", "/usr/local/include", "/usr/lib"]
+        if self._is_apple_system:
+            # Same defaults as Bazel's auto-configured Apple toolchain
+            dirs += ["/Applications/", "/Library/"]
+            dirs += [f for f in self.apple_isysroot_flag if self._path.isabs(f)]
+        if self.sysroot:
+            dirs.append("%sysroot%")
+        return list(dict.fromkeys(dirs))  # remove duplicates keeping order
+
+    def _get_flags(self):
+        conf = self._conf
+        defines = conf.get("tools.build:defines", default=[], check_type=list) + self.extra_defines
+        if self.ndebug:
+            defines.append("NDEBUG")
+        apple_flags = self.apple_isysroot_flag + self.apple_arch_flag + self.apple_min_version_flag
+        compile_flags = ([self.arch_flag] + apple_flags + self.apple_extra_flags +
+                         self.threads_flags + self.build_type_flags +
+                         [f"-D{d}" for d in defines])
+        c_flags = ([self.cstd] + conf.get("tools.build:cflags", default=[], check_type=list) +
+                   self.extra_cflags)
+        cxx_flags = ([self.cppstd, self.libcxx] +
+                     ([f"-D{self.gcc_cxx11_abi}"] if self.gcc_cxx11_abi else []) +
+                     conf.get("tools.build:cxxflags", default=[], check_type=list) +
+                     self.extra_cxxflags)
+        linker_scripts = conf.get("tools.build:linker_scripts", default=[], check_type=list)
+        link_flags = ([self.arch_flag, self.arch_link_flag] + apple_flags +
+                      self.apple_extra_flags + self.threads_flags +
+                      [f"-T{s}" for s in linker_scripts] + self.extra_ldflags)
+        exe_link_flags = conf.get("tools.build:exelinkflags", default=[], check_type=list)
+        shared_link_flags = conf.get("tools.build:sharedlinkflags", default=[], check_type=list)
+        if self.fpic and not self._is_windows:
+            compile_flags.append("-fPIC")
         return {
-            "copt": " ".join(f"--copt={flag}" for flag in self.copt),
-            "conlyopt": " ".join(f"--conlyopt={flag}" for flag in self.cflags),
-            "cxxopt": " ".join(f"--cxxopt={flag}" for flag in self.cxxflags),
-            "linkopt": " ".join(f"--linkopt={flag}" for flag in self.ldflags),
-            "force_pic": self.force_pic,
-            "dynamic_mode": self.dynamic_mode,
-            "compilation_mode": self.compilation_mode,
-            "compiler": self.compiler,
-            "cpu": self.cpu,
-            "crosstool_top": self.crosstool_top,
+            "compile_flags": self._filter(compile_flags),
+            "c_flags": self._filter(c_flags),
+            "cxx_flags": self._filter(cxx_flags),
+            "objc_flags": self._filter(self._objc_flags),
+            "link_flags": self._filter(link_flags),
+            "exe_link_flags": self._filter(exe_link_flags),
+            "shared_link_flags": self._filter(shared_link_flags),
         }
 
     @property
-    def _content(self):
-        context = self._context()
-        template = compiled_template(self.bazelrc_template, trim_blocks=False, lstrip_blocks=False)
-        content = template.render(context)
-        return content
+    def _objc_flags(self):
+        enable_arc = self._conf.get("tools.apple:enable_arc", check_type=bool)
+        return {True: ["-fobjc-arc"], False: ["-fno-objc-arc"]}.get(enable_arc, [])
+
+    @property
+    def _link_libs(self):
+        """ C++ runtime, as Bazel links with the C driver """
+        if self.libcxx and "libc++" in self.libcxx or self._compiler == "apple-clang":
+            cpp_runtime = "-lc++"
+        elif self._os == "Android":
+            cpp_runtime = "-lc++"  # The NDK clang driver handles libc++ (static/shared)
+        else:
+            cpp_runtime = "-lstdc++"
+        return [cpp_runtime, "-lm"]
+
+    @property
+    def _rc_flags(self):
+        """ Flags passed via bazelrc, only the ones that cannot be defined in the toolchain """
+        if self.generate_cc_toolchain:
+            # Bazel strips the debug symbols in the default "fastbuild" mode (--strip=sometimes)
+            # and it cannot be avoided from the toolchain. The Conan flags (-g) decide them
+            ret = ["--strip=never"]
+            if self._is_apple_system and self._os != "Macos":
+                # rules_cc adds -mmacosx-version-min for any "macosx" libc, it collides with
+                # the Conan -mios-version-min, -mtvos-version-min, etc.
+                ret.append("--features=-macos_minimum_os")
+            return ret
+        # Bazel's auto-configured toolchain (@local_config_cc)
+        flags = self._get_flags()
+        compilation_mode = {"Release": "opt", "Debug": "dbg", "RelWithDebInfo": "opt",
+                            "MinSizeRel": "opt"}.get(self._conanfile.settings.get_safe("build_type"))
+        ret = [f"--compilation_mode={compilation_mode}"] if compilation_mode else []
+        # The MSVC runtime is managed by Bazel features: /MD (/MDd if "dbg") by default
+        if self.msvc_static_runtime:
+            ret.append("--features=static_link_msvcrt")
+        ret += [f"--repo_env={k}={v}" for k, v in self._msvc_repo_env().items()]
+        ret += [f"--copt={f}" for f in flags["compile_flags"]]
+        ret += [f"--conlyopt={f}" for f in flags["c_flags"]]
+        ret += [f"--cxxopt={f}" for f in flags["cxx_flags"]]
+        ret += [f"--linkopt={f}" for f in flags["link_flags"] + flags["exe_link_flags"] +
+                flags["shared_link_flags"]]
+        return ret
+
+    def _msvc_repo_env(self):
+        """
+        Environment variables used by the Bazel MSVC auto-configuration
+        (https://bazel.build/configure/windows) to pick the Conan defined Visual Studio, MSVC
+        toolset and Windows SDK installations.
+        """
+        ret = {}
+        vs_version, vcvars_ver = _vcvars_versions(self._conanfile)
+        vs_path = (self._conf.get("tools.microsoft.msbuild:installation_path") or
+                   (vs_installation_path(vs_version) if vs_version else None))
+        if vs_path:
+            vc_path = os.path.join(vs_path, "VC")
+            ret["BAZEL_VC"] = vc_path.replace("\\", "/")
+            # Bazel needs the full toolset version (14.38.33130), Conan only knows the prefix
+            msvc_tools = os.path.join(vc_path, "Tools", "MSVC")
+            if vcvars_ver and os.path.isdir(msvc_tools):
+                versions = [v for v in os.listdir(msvc_tools) if v.startswith(vcvars_ver)]
+                if versions:
+                    ret["BAZEL_VC_FULL_VERSION"] = max(
+                        versions, key=lambda v: [int(i) for i in v.split(".") if i.isdigit()])
+        winsdk_version = self._conf.get("tools.microsoft:winsdk_version")
+        if winsdk_version:
+            ret["BAZEL_WINSDK_FULL_VERSION"] = winsdk_version
+        return ret
+
+    @property
+    def _package_label(self):
+        """
+        Bazel package label of the generated toolchain folder, relative to the Bazel workspace
+        root (the source folder), e.g., ``//conan/conan_toolchain``.
+        """
+        package = self._generators_package
+        return f"{package}{self.toolchain_folder}" if package == "//" else \
+            f"{package}/{self.toolchain_folder}"
+
+    @property
+    def _generators_package(self):
+        """ Bazel package label of the generators folder, e.g., ``//conan`` """
+        folder = self._conanfile.generators_folder
+        rel = os.path.relpath(folder, self._conanfile.source_folder).replace("\\", "/")
+        if rel.startswith(".."):
+            raise ConanException(f"BazelToolchain: the generators folder '{folder}' must be "
+                                 f"inside the Bazel workspace '{self._conanfile.source_folder}'. "
+                                 "Use 'bazel_layout()'.")
+        return "//" if rel == "." else f"//{rel}"
+
+    @property
+    def _context(self):
+        if not self.host_constraints:
+            raise ConanException(f"BazelToolchain: could not deduce any Bazel constraint for "
+                                 f"os={self._os}, arch={self._arch}. Define "
+                                 "'tc.host_constraints' in your generate() method.")
+        ctx = {
+            "generate_cc_toolchain": self.generate_cc_toolchain,
+            "host_constraints": to_starlark(self.host_constraints),
+            "build_constraints": to_starlark(self.build_constraints),
+            "exec_compatible_with": to_starlark(self.build_constraints),
+        }
+        if self.generate_cc_toolchain:
+            tool_paths = self._get_tool_paths()
+            flags = self._get_flags()
+            # Flags without an equivalent attribute in rules_cc "cc_toolchain_config", injected
+            # as rule-based "cc_feature"s
+            actions = "@rules_cc//cc/toolchains/actions"
+            extra_features = {name: {"actions": to_starlark([f"{actions}:{a}" for a in acts]),
+                                     "flags": to_starlark(flags[key])}
+                              for name, key, acts in (
+                                  ("conan_exe_link_flags", "exe_link_flags",
+                                   ["cpp_link_executable"]),
+                                  ("conan_shared_link_flags", "shared_link_flags",
+                                   ["dynamic_library_link_actions"]),
+                                  ("conan_objc_flags", "objc_flags",
+                                   ["objc_compile", "objcpp_compile"]))
+                              if flags[key]}
+            ctx.update({
+                "toolchain_identifier": "_".join(str(v) for v in (
+                    "conan", self._os, self._arch, self._compiler,
+                    self._conanfile.settings.get_safe("compiler.version")) if v).lower(),
+                "compiler": to_bazel_compiler(self._compiler),
+                "target_cpu": (to_bazel_cpu_constraint(self._arch) or
+                               f":{self._arch}").split(":")[-1],
+                "target_system_name": str(self._os).lower(),
+                # rules_cc uses "libtool" as archiver (from tool_paths "ar") if "macosx"
+                "target_libc": "macosx" if self._is_apple_system else "unknown",
+                "tool_paths": to_starlark(tool_paths),
+                "cxx_builtin_include_directories": to_starlark(
+                    self._get_builtin_include_directories(tool_paths)),
+                "builtin_sysroot": (self.sysroot or "").replace("\\", "/"),
+                "compile_flags": to_starlark(flags["compile_flags"]),
+                "c_flags": to_starlark(flags["c_flags"]),
+                "cxx_flags": to_starlark(flags["cxx_flags"]),
+                "link_flags": to_starlark(flags["link_flags"]),
+                "link_libs": to_starlark(self._link_libs),
+                "extra_features": extra_features,
+                "extra_features_labels": to_starlark([f":{n}" for n in extra_features]),
+            })
+        return ctx
+
+    def _render(self, template, context):
+        return compiled_template(template, trim_blocks=True, lstrip_blocks=True,
+                                 undefined=StrictUndefined).render(context)
 
     def generate(self):
         """
-        Creates a ``conan_bzl.rc`` file with some bazel-build configuration. This last mentioned
-        is put as ``conan-config``.
+        Generates:
+
+        * ``conan_toolchain/`` Bazel package (platforms + C/C++ toolchain).
+        * ``conan_toolchain.MODULE.bazel`` to be included by your MODULE.bazel file:
+          ``include("//conan:conan_toolchain.MODULE.bazel")``.
+        * ``conan_bzl.rc`` (``--config=conan-config``) always. It defines the flags that
+          cannot be part of the toolchain: ``--strip=never``, ``--platforms`` and
+          ``--host_platform`` if cross-building, or the Conan flags as ``--copt``, etc. if the
+          Bazel auto-configured toolchain is used.
         """
         check_duplicated_generator(self, self._conanfile)
-        save(self._conanfile, BazelToolchain.bazelrc_name, self._content)
+        package = self._package_label
+        # Do not depend on the current working directory
+        generators_folder = self._conanfile.generators_folder
+        save(os.path.join(generators_folder, self.toolchain_folder, "BUILD.bazel"),
+             self._render(self._build_template, self._context))
+        # The generators folder has to be a Bazel package to include() the module snippet.
+        # BazelDeps creates the same empty file, do not overwrite it.
+        build_file = os.path.join(generators_folder, "BUILD.bazel")
+        if not os.path.exists(build_file):
+            save(build_file, "# This is an empty BUILD file.")
+        module_label = f"{self._generators_package}:{self.module_filename}"
+        save(os.path.join(generators_folder, self.module_filename),
+             self._render(self._module_template, {
+                 "module_label": module_label,
+                 "package": package,
+                 "generate_cc_toolchain": self.generate_cc_toolchain,
+             }))
+
+        save(os.path.join(generators_folder, self.bazelrc_name),
+             self._render(self._bazelrc_template, {
+                 "package": package,
+                 "cross_building": self._is_cross_building,
+                 "rc_flags": [_bazelrc_quote(flag) for flag in self._rc_flags],
+             }))
+        output = self._conanfile.output
+        output.info(f"BazelToolchain generated: {module_label} and "
+                    f"{self.bazelrc_name} (--config={self.bazelrc_config})")
+        # The "Bazel" helper adds the rc and the config, but not a direct call to Bazel
+        rc_path = os.path.join(generators_folder, self.bazelrc_name).replace("\\", "/")
+        command = cmd_args_to_string(["bazel", f"--bazelrc={rc_path}", "build",
+                                      f"--config={self.bazelrc_config}"]) + " <targets>"
+        if self.generate_cc_toolchain:
+            output.info("Calling Bazel without the Conan 'Bazel' helper applies the toolchain, but "
+                        "not the flags of the rc file (--strip=never, target platform if "
+                        f"cross-building). Use: {command}")
+        else:
+            output.info("The Conan flags of the MSVC build are only defined in the rc file, so "
+                        f"call Bazel with it: {command}")
