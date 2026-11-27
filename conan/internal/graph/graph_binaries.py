@@ -17,6 +17,7 @@ from conan.errors import ConanException
 from conan.internal.model.conanconfig import loadconanconfig
 from conan.internal.model.info import RequirementInfo, RequirementsInfo
 from conan.internal.model.pkg_type import PackageType
+from conan.internal.model.requires import RequiredNodes
 
 
 class GraphBinariesAnalyzer:
@@ -554,10 +555,12 @@ class GraphBinariesAnalyzer:
                                    node.binary not in (BINARY_BUILD, BINARY_EDITABLE_BUILD,
                                                        BINARY_EDITABLE))
                 deps_required = set()
+                deps_nodes = RequiredNodes.EMPTY
                 for req, t in node.transitive_deps.items():
                     if req.files or (req.direct and is_consumer):
                         deps_required.add(t.node)
-                        deps_required.update(req.required_nodes)
+                        deps_nodes = RequiredNodes.union(deps_nodes, req.required_nodes)
+                deps_required.update(graph.required_nodes.nodes(deps_nodes))
 
                 # Third pass, mark requires as skippeable
                 for dep in node.transitive_deps.values():
