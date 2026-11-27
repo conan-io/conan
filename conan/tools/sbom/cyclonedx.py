@@ -43,6 +43,10 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
     nodes = [node for node in graph.nodes if should_add_node(node, add_build, add_tests)]
     if has_special_root_node:
         nodes = nodes[1:]
+    # visible=False can repeat a recipe. bom-ref includes package_id, so this keeps one node per binary.
+    # Same bom-ref merges dependsOn, whatever the package type.
+    depends_on_by_ref = _depends_on_by_ref(nodes, add_build, add_tests)
+    nodes = list({_calculate_bomref(node): node for node in nodes}.values())
 
     dependencies = []
     if has_special_root_node:
@@ -52,10 +56,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
         dependencies.append(deps)
     for c in nodes:
         deps = {"ref": _calculate_bomref(c)}
-        dep = [d for d in c.edges if should_add_node(d.dst, add_build, add_tests)]
-
-        depends_on = [_calculate_bomref(d.dst) for d in dep
-                      if should_add_node(d.dst, add_build, add_tests)]
+        depends_on = depends_on_by_ref[_calculate_bomref(c)]
         if depends_on:
             deps["dependsOn"] = depends_on
         dependencies.append(deps)
@@ -80,7 +81,7 @@ def cyclonedx_1_4(conanfile, name=None, add_build=False, add_tests=False, extra_
         "metadata": {
             "component": {
                 "author": conanfile.author or "Unknown",
-                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile),
+                "bom-ref": special_id if has_special_root_node else _calculate_bomref(graph.root),
                 "name": name if name else name_default,
                 "type": "application" if conanfile.package_type == "application" else "library",
             },
@@ -143,6 +144,10 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
     nodes = [node for node in graph.nodes if should_add_node(node, add_build, add_tests)]
     if has_special_root_node:
         nodes = nodes[1:]
+    # visible=False can repeat a recipe. bom-ref includes package_id, so this keeps one node per binary.
+    # Same bom-ref merges dependsOn, whatever the package type.
+    depends_on_by_ref = _depends_on_by_ref(nodes, add_build, add_tests)
+    nodes = list({_calculate_bomref(node): node for node in nodes}.values())
 
     dependencies = []
     if has_special_root_node:
@@ -153,10 +158,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
         dependencies.append(deps)
     for c in nodes:
         deps = {"ref": _calculate_bomref(c)}
-        dep = [d for d in c.edges if should_add_node(d.dst, add_build, add_tests)]
-
-        depends_on = [_calculate_bomref(d.dst) for d in dep
-                      if should_add_node(d.dst, add_build, add_tests)]
+        depends_on = depends_on_by_ref[_calculate_bomref(c)]
         if depends_on:
             deps["dependsOn"] = depends_on
         dependencies.append(deps)
@@ -181,7 +183,7 @@ def cyclonedx_1_6(conanfile, name=None, add_build=False, add_tests=False, extra_
         "metadata": {
             "component": {
                 **({"authors": [{"name": conanfile.author}]} if conanfile.author else {}),
-                "bom-ref": special_id if has_special_root_node else _calculate_bomref(conanfile),
+                "bom-ref": special_id if has_special_root_node else _calculate_bomref(graph.root),
                 "name": name if name else name_default,
                 "type": "application" if conanfile.package_type == "application" else "library"
             },
@@ -267,8 +269,23 @@ def _component_extra_info(extra_info, node):
 def _calculate_bomref(component):
     user = f"&user={component.ref.user}" if component.ref.user else ""
     channel = f"&channel={component.ref.channel}" if component.ref.channel else ""
-    return f"pkg:conan/{component.name}@{component.ref.version}?rrev={component.ref.revision}{user}{channel}"
+    package_id = f"&package_id={component.package_id}" if component.package_id else ""
+    return (f"pkg:conan/{component.name}@{component.ref.version}"
+            f"?rrev={component.ref.revision}{package_id}{user}{channel}")
 
 
 def should_add_node(node, add_build, add_tests):
     return (node.context == "host" or add_build) and (not node.test or add_tests)
+
+
+def _depends_on_by_ref(nodes, add_build, add_tests):
+    depends_on_by_ref = {}
+    for node in nodes:
+        ref = _calculate_bomref(node)
+        merged = depends_on_by_ref.setdefault(ref, [])
+        for edge in node.edges:
+            if should_add_node(edge.dst, add_build, add_tests):
+                dep_ref = _calculate_bomref(edge.dst)
+                if dep_ref not in merged:
+                    merged.append(dep_ref)
+    return depends_on_by_ref

@@ -396,6 +396,151 @@ class TestCyclonedx:
         assert bar["supplier"] == {"name": "Acme"}
         assert bar["cpe"] == "cpe:2.3:a:acme:bar:1.0:*:*:*:*:*:*:*"
 
+    def test_metadata_bomref_package_id(self, hook_setup_post_package):
+        # The root has name, version and revision, so the metadata bom-ref is built
+        # from the conanfile. package_id is read from its graph node.
+        tc = hook_setup_post_package
+        tc.save({"conanfile.py": GenConanfile("pkg", "1.0")})
+        tc.run("create .")
+        package_id = tc.created_package_id("pkg/1.0")
+        sbom = json.loads(tc.load(os.path.join(tc.created_layout().metadata(), "sbom.cdx.json")))
+        metadata_ref = sbom["metadata"]["component"]["bom-ref"]
+        assert f"&package_id={package_id}" in metadata_ref
+        assert metadata_ref == sbom["components"][0]["bom-ref"]
+
+    def test_visible_false_duplicate_bomref(self, cyclone_version):
+        # https://github.com/conan-io/conan/issues/20489
+        tc = TestClient()
+        tc.save({"liba/conanfile.py": GenConanfile("liba", "1.0"),
+                 "libb/conanfile.py": GenConanfile("libb", "1.0")
+                .with_requirement("liba/1.0", visible=False),
+                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires(
+                     "libb/1.0", "liba/1.0")})
+        tc.run("export liba")
+        tc.run("export libb")
+        method = {"cyclonedx_1_4": "1.4", "cyclonedx_1_6": "1.6"}[cyclone_version]
+        tc.run(f"graph info app --deployer=cyclone_{method} --deployer-folder=out")
+        sbom = json.loads(tc.load(os.path.join("out", f"sbom-cyclonedx-{method}.json")))
+        liba_components = [c["bom-ref"] for c in sbom["components"] if "/liba@" in c["bom-ref"]]
+        liba_deps = [d["ref"] for d in sbom["dependencies"] if "/liba@" in d["ref"]]
+        assert len(liba_components) == 1
+        assert len(liba_deps) == 1
+
+    def test_visible_false_different_packages(self, cyclone_version):
+        """
+        Same reference with different options gives different package_ids, so each binary
+        gets its own bom-ref.
+        """
+        tc = TestClient()
+        tc.save({"dep1/conanfile.py": GenConanfile("dep1", "1.0"),
+                 "dep2/conanfile.py": GenConanfile("dep2", "1.0")})
+        tc.run("export dep1")
+        tc.run("export dep2")
+
+        liba = textwrap.dedent("""
+        from conan import ConanFile
+
+        class LibAConan(ConanFile):
+            name = "liba"
+            version = "1.0"
+            options = {"dep": ["dep1", "dep2"]}
+            default_options = {"dep": "dep1"}
+            def requirements(self):
+                if self.options.dep == "dep1":
+                    self.requires("dep1/1.0")
+                else:
+                    self.requires("dep2/1.0")
+        """)
+        tc.save({"liba/conanfile.py": liba})
+        tc.run("export liba")
+
+        tc.save({"libb/conanfile.py": GenConanfile("libb", "1.0").with_requirement(
+                     "liba/1.0", visible=False, options={"liba/*:dep": "dep2"}),
+                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires(
+                     "libb/1.0", "liba/1.0")})
+
+        tc.run("export libb")
+        method = {"cyclonedx_1_4": "1.4", "cyclonedx_1_6": "1.6"}[cyclone_version]
+        tc.run(f"graph info app --deployer=cyclone_{method} --deployer-folder=out "
+               "-c=tools.graph:skip_binaries=False")
+        sbom = json.loads(tc.load(os.path.join("out", f"sbom-cyclonedx-{method}.json")))
+        liba_components = [c["bom-ref"] for c in sbom["components"] if "/liba@" in c["bom-ref"]]
+        liba_deps = [d["ref"] for d in sbom["dependencies"] if "/liba@" in d["ref"]]
+        assert len(set(liba_components)) == len(liba_components) == 2
+        assert len(set(liba_deps)) == len(liba_deps) == 2
+
+    def test_visible_false_same_bomref_merges_depends(self, cyclone_version):
+        """
+        Header-only clears the package_id, so both nodes share one bom-ref even though their
+        requirements differ. dependsOn is the union of both.
+        """
+        tc = TestClient()
+        tc.save({"dep1/conanfile.py": GenConanfile("dep1", "1.0"),
+                 "dep2/conanfile.py": GenConanfile("dep2", "1.0")})
+        tc.run("export dep1")
+        tc.run("export dep2")
+
+        liba = textwrap.dedent("""
+        from conan import ConanFile
+
+        class LibAConan(ConanFile):
+            name = "liba"
+            version = "1.0"
+            package_type = "header-library"
+            implements = ["auto_header_only"]
+            options = {"dep": ["dep1", "dep2"]}
+            default_options = {"dep": "dep1"}
+            def requirements(self):
+                if self.options.dep == "dep1":
+                    self.requires("dep1/1.0")
+                else:
+                    self.requires("dep2/1.0")
+        """)
+        tc.save({"liba/conanfile.py": liba})
+        tc.run("export liba")
+
+        tc.save({"libb/conanfile.py": GenConanfile("libb", "1.0").with_requirement(
+                     "liba/1.0", visible=False, options={"liba/*:dep": "dep2"}),
+                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires(
+                     "libb/1.0", "liba/1.0")})
+
+        tc.run("export libb")
+        method = {"cyclonedx_1_4": "1.4", "cyclonedx_1_6": "1.6"}[cyclone_version]
+        tc.run(f"graph info app --deployer=cyclone_{method} --deployer-folder=out "
+               "-c=tools.graph:skip_binaries=False")
+        sbom = json.loads(tc.load(os.path.join("out", f"sbom-cyclonedx-{method}.json")))
+        liba_components = [c["bom-ref"] for c in sbom["components"] if "/liba@" in c["bom-ref"]]
+        liba_deps = [d for d in sbom["dependencies"] if "/liba@" in d["ref"]]
+        assert len(liba_components) == 1
+        assert len(liba_deps) == 1
+        depends = liba_deps[0]["dependsOn"]
+        assert sum("/dep1@" in ref for ref in depends) == 1
+        assert sum("/dep2@" in ref for ref in depends) == 1
+
+    def test_visible_false_different_rrevs_both_show(self, cyclone_version):
+        """
+        Same reference with two recipe revisions. Each revision is a different component.
+        """
+        tc = TestClient()
+        tc.save({"liba/conanfile.py": GenConanfile("liba", "1.0")})
+        tc.run("export liba")
+        liba_first_rrev = tc.exported_recipe_revision()
+        tc.save({"liba/conanfile.py": GenConanfile("liba", "1.0").with_build_msg("new revision")})
+        tc.run("export liba")
+        liba_second_rrev = tc.exported_recipe_revision()
+        tc.save({"libb/conanfile.py": GenConanfile("libb", "1.0").with_requirement(
+                     f"liba/1.0#{liba_first_rrev}", visible=False),
+                 "app/conanfile.py": GenConanfile("app", "1.0").with_requires(
+                     "libb/1.0", f"liba/1.0#{liba_second_rrev}")})
+        tc.run("export libb")
+        method = {"cyclonedx_1_4": "1.4", "cyclonedx_1_6": "1.6"}[cyclone_version]
+        tc.run(f"graph info app --deployer=cyclone_{method} --deployer-folder=out")
+        sbom = json.loads(tc.load(os.path.join("out", f"sbom-cyclonedx-{method}.json")))
+        liba_components = [c["bom-ref"] for c in sbom["components"] if "/liba@" in c["bom-ref"]]
+        liba_deps = [d["ref"] for d in sbom["dependencies"] if "/liba@" in d["ref"]]
+        assert len(set(liba_components)) == len(liba_components) == 2
+        assert len(set(liba_deps)) == len(liba_deps) == 2
+
 
 class TestCyclonedx2:
     # Using the sbom tool with "conan create"
