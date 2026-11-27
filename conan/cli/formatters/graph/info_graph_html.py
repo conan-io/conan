@@ -31,7 +31,8 @@ graph_info_html = r"""
             [hidden] { display: none !important; }
             #container {
                 display: grid;
-                grid-template-columns: minmax(0, 1fr) 340px;
+                --sidebar-width: 340px;
+                grid-template-columns: minmax(0, 1fr) var(--sidebar-width);
                 grid-template-rows: auto minmax(0, 1fr);
                 height: 100vh;
             }
@@ -46,7 +47,7 @@ graph_info_html = r"""
             .chip { padding: 1px 8px; border: 1.5px solid #64748b; border-radius: 4px; background: white;
                     font: 12px/1.5 ui-monospace, Menlo, Consolas, monospace; white-space: nowrap; }
             .legend-sep { width: 1px; height: 18px; margin: 0 6px; background: #dbe1e8; }
-            #fit { position: fixed; right: 356px; bottom: 16px; padding: 6px 12px; font-size: 13px; }
+            #fit { position: fixed; right: calc(var(--sidebar-width) + 16px); bottom: 16px; padding: 6px 12px; font-size: 13px; }
             #sidebar {
                 background-color: #f8fafc;
                 border-left: 1px solid #dbe1e8;
@@ -70,6 +71,10 @@ graph_info_html = r"""
             input[type="search"] { width: 100%; padding: 7px 10px; border: 1px solid #dbe1e8; border-radius: 8px; font: inherit; outline: none; }
             input[type="search"]:focus { border-color: #6366f1; box-shadow: 0 0 0 3px #eef2ff; }
             summary { cursor: pointer; color: #5b6b80; }
+            #controls .vis-configuration-wrapper, #controls .vis-config-item { width: auto; float: none; }  /* vis uses fixed widths */
+            #controls .vis-config-range { width: 80px; }
+            #controls .vis-config-rangeinput { width: 50px; }
+            #controls { overflow: hidden; }
             #details { font-size: 13px; }
             .detail-title { font-weight: 600; font-size: 15px; margin-bottom: 6px; word-break: break-all; }
             #details pre { margin: 8px 0 0; padding: 8px; overflow: auto; background: white; border: 1px solid #dbe1e8; border-radius: 6px; }
@@ -84,6 +89,7 @@ graph_info_html = r"""
             .kv .kv > span, .kv .kv > details { padding: 2px 0; border-bottom: none; }
             #error:not(:empty) { border: 1px solid #dc2626; background: #fef2f2; border-radius: 8px; padding: 8px 12px; }
             #error strong { color: #dc2626; }
+            #error .button { display: block; margin-top: 6px; }
         </style>
 
         <div id="container">
@@ -300,7 +306,7 @@ graph_info_html = r"""
                             label: conflict.name,
                             shape: "circle",
                             color: {background: "black",
-                                    highlight: {background: "black", border: "Blue"}},
+                                    highlight: {background: "black", border: "#6366f1"}},
                         });
                         edges.push({id: edge_counter, from: conflict.branch1.src_id, to: conflict_id,
                                     color: {color: "Red", highlight: "Red"},
@@ -403,20 +409,43 @@ graph_info_html = r"""
                 };
                 const copy = toggle.cloneNode();
                 copy.textContent = "Copy";
-                copy.onclick = () => navigator.clipboard.writeText(raw.textContent).then(() => {
-                    copy.textContent = "Copied!";
-                    setTimeout(() => copy.textContent = "Copy", 1500);
-                });
+                copy.onclick = () => navigator.clipboard.writeText(raw.textContent).then(
+                    () => copy.textContent = "Copied!",
+                    () => copy.textContent = "Copy failed"
+                ).finally(() => setTimeout(() => copy.textContent = "Copy", 1500));
                 control.append(name, toggle, " ", copy, formatted, raw);
             }
             showDetails();
             define_legend();
             if (graph_data["error"]) {
-                const details = document.createElement('details');
-                details.innerHTML = "<summary><strong>Error in the graph:</strong> </summary>";
-                details.firstChild.append(graph_data["error"]["type"]);
-                details.append(renderEntries(graph_data["error"]));
-                document.getElementById("error").append(details);
+                const error = graph_data["error"];
+                const label = (id) => graph_data["nodes"][id] ? getNodeLabel(graph_data["nodes"][id]) : id;
+                const messages = {  // [message, node to focus]
+                    conflict: () => [`Version conflict: ${error.branch2.require.ref} required by ${label(error.branch2.src_id)} ` +
+                                     `conflicts with ${error.branch1.require.ref} required by ${label(error.branch1.src_id)}`,
+                                     error.branch1.dst_id || "conflict_id"],
+                    provide_conflict: () => [`Provide conflict: ${label(error.node.id)} and ${label(error.conflicting_node.id)} ` +
+                                             `both provide ${error.provided.join(", ")}`, error.node.id],
+                    missing: () => [`Package ${error.require.ref} required by ${label(error.node.id)} not resolved: ${error.error}`,
+                                    "missing_node"],
+                    loop: () => [`Loop in the graph: ${label(error.node.id)} requires ${error.require.ref}, ` +
+                                 `which is already one of its ancestors`, error.node.id],
+                };
+                const [message, node_id] = messages[error.type] ? messages[error.type]() : [error.type, null];
+                const box = document.getElementById("error");
+                box.innerHTML = "<strong>Error:</strong> ";
+                box.append(message);
+                if (node_id) {
+                    const show = document.createElement('button');
+                    show.className = "button";
+                    show.textContent = "Show in graph";
+                    show.onclick = () => {
+                        if (network.findNode(node_id).length == 0) return;  // hidden by the filters
+                        network.selectNodes([node_id]);
+                        network.focus(node_id, {scale: 1, animation: true});
+                    };
+                    box.append(show);
+                }
             }
             let container = document.getElementById('mynetwork');
             let controls = document.getElementById('controls');
@@ -452,6 +481,11 @@ graph_info_html = r"""
 
             let data = define_data();
             let network = new vis.Network(container, data, options);
+            // With "DU" direction vis stores levelSeparation as negative, show the real value in the slider
+            const getConfigValue = network.configurator._getValue.bind(network.configurator);
+            network.configurator._getValue = (path) => path.at(-1) === "levelSeparation" ?
+                Math.abs(getConfigValue(path)) : getConfigValue(path);
+            network.setOptions({configure: options.configure});
 
             network.on('click', function (properties) {
                 let ids = properties.nodes;
