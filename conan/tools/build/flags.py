@@ -226,7 +226,7 @@ def build_type_flags(conanfile):
         # Modules/Compiler/GNU.cmake
         # clang include the gnu (overriding some things, but not build type) and apple clang
         # overrides clang but it doesn't touch clang either
-        if compiler in ["clang", "gcc", "apple-clang", "qcc", "mcst-lcc"]:
+        if compiler in ["clang", "gcc", "apple-clang", "qcc", "mcst-lcc", "emcc"]:
             flags = {"Debug": ["-g"],
                      "Release": ["-O3"],
                      "RelWithDebInfo": ["-O2", "-g"],
