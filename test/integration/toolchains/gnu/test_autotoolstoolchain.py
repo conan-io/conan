@@ -450,12 +450,12 @@ def test_thread_flags(threads, flags):
     client.run("install . -pr=./profile")
     toolchain = client.load("conanautotoolstoolchain{}".format('.bat' if is_win else '.sh'))
     if is_win:
-        assert f'set "CXXFLAGS=%CXXFLAGS% -stdlib=libc++ {flags}"' in toolchain
-        assert f'set "CFLAGS=%CFLAGS% {flags}"' in toolchain
+        assert f'set "CXXFLAGS=%CXXFLAGS% -stdlib=libc++ {flags} -O3"' in toolchain
+        assert f'set "CFLAGS=%CFLAGS% {flags} -O3"' in toolchain
         assert f'set "LDFLAGS=%LDFLAGS% {flags}' in toolchain
     else:
-        assert f'export CXXFLAGS="${{CXXFLAGS:-}}${{CXXFLAGS:+ }}-stdlib=libc++ {flags}"' in toolchain
-        assert f'export CFLAGS="${{CFLAGS:-}}${{CFLAGS:+ }}{flags}"' in toolchain
+        assert f'export CXXFLAGS="${{CXXFLAGS:-}}${{CXXFLAGS:+ }}-stdlib=libc++ {flags} -O3"' in toolchain
+        assert f'export CFLAGS="${{CFLAGS:-}}${{CFLAGS:+ }}{flags} -O3"' in toolchain
         assert f'export LDFLAGS="${{LDFLAGS:-}}${{LDFLAGS:+ }}{flags}"' in toolchain
 
 
