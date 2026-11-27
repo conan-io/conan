@@ -4,7 +4,7 @@ import fasteners
 
 from conan.internal.errors import NotFoundException
 from conan.internal.util.files import rmdir
-from conans.server.utils.files import path_exists, relative_dirs
+from conans.server.utils.files import relative_dirs
 
 
 class ServerDiskAdapter:
@@ -19,7 +19,7 @@ class ServerDiskAdapter:
         self._store_folder = base_storage_path
 
     def get_file_list(self, absolute_path=""):
-        if not path_exists(absolute_path, self._store_folder):
+        if not os.path.exists(absolute_path):
             raise NotFoundException("")
         paths = relative_dirs(absolute_path)
         abs_paths = [os.path.join(absolute_path, relpath) for relpath in paths]
@@ -27,7 +27,7 @@ class ServerDiskAdapter:
 
     def delete_folder(self, path):
         """Delete folder from disk. Path already contains base dir"""
-        if not path_exists(path, self._store_folder):
+        if not os.path.exists(path):
             raise NotFoundException("")
         rmdir(path)
 

@@ -1,5 +1,4 @@
 import os
-import sys
 
 
 def list_folder_subdirs(basedir, level):
@@ -13,26 +12,6 @@ def list_folder_subdirs(basedir, level):
             ret.append("/".join(dir_split))
             dirs[:] = []  # Stop iterate subdirs
     return ret
-
-
-def path_exists(path, basedir):
-    """Case sensitive, for windows, optional
-    basedir for skip caps check for tmp folders in testing for example (returned always
-    in lowercase for some strange reason)"""
-    exists = os.path.exists(path)
-    if not exists or sys.platform == "linux2":
-        return exists
-
-    path = os.path.normpath(path)
-    path = os.path.relpath(path, basedir)
-    chunks = path.split(os.sep)
-    tmp = basedir
-
-    for chunk in chunks:
-        if chunk and chunk not in os.listdir(tmp):
-            return False
-        tmp = os.path.normpath(tmp + os.sep + chunk)
-    return True
 
 
 def relative_dirs(path):

@@ -28,8 +28,11 @@ def cmd_export(loader, cache, hook_manager, global_conf, conanfile_path,
         conanfile.revision_mode = "scm"
 
     ref = RecipeReference(conanfile.name, conanfile.version,  conanfile.user, conanfile.channel)
-    ref.validate_ref(allow_uppercase=global_conf.get("core:allow_uppercase_pkg_names",
-                                                     check_type=bool))
+    allow_uppercase = global_conf.get("core:allow_uppercase_pkg_names", check_type=bool)
+    if allow_uppercase is not None:
+        ConanOutput().warning("The 'core:allow_uppercase_pkg_names' configuration is deprecated "
+                              "and will be removed in a later 2.X version", warn_tag="deprecated")
+    ref.validate_ref(allow_uppercase=allow_uppercase)
 
     conanfile.conf = global_conf.get_conanfile_conf(ref, is_consumer=True)
     conanfile.display_name = str(ref)
